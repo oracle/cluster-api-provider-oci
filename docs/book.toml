@@ -1,0 +1,11 @@
+[book]
+authors = ["The Cluster API Provider for OCI Maintainers"]
+language = "en"
+multilingual = false
+src = "src"
+title = "Kubernetes Cluster API Provider for Oracle Cloud Infrastructure"
+
+[output.html]
+curly-quotes = true
+# git-repository-url = "https://sigs.k8s.io/cluster-api-provider-oci"
+# no-section-label = true
