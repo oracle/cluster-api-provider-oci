@@ -10,7 +10,7 @@ Kubernetes-native declarative infrastructure for OCI.
 
 ## Kubernetes Cluster API Provider for Oracle Cloud Infrastructure
 
-The [Cluster API Provier for OCI (CAPOCI)][cluster_api] brings declarative, Kubernetes-style APIs to cluster creation, configuration and management.
+The [Cluster API Provider for OCI (CAPOCI)][cluster_api] brings declarative, Kubernetes-style APIs to cluster creation, configuration and management.
 
 The Cluster API itself is shared across multiple cloud providers allowing for true hybrid deployments of Kubernetes.
 
