@@ -1,6 +1,6 @@
 # Kubernetes Cluster API Provider OCI
 
-[![Go Report Card](https://goreportcard.com/badge/oracle/cluster-api-provider-oci)](https://goreportcard.com/report/oracle/cluster-api-provider-oci)
+[![Go Report Card](https://goreportcard.com/badge/github.com/oracle/cluster-api-provider-oci)](https://goreportcard.com/report/github.com/oracle/cluster-api-provider-oci)
 
 <img src="https://github.com/kubernetes/kubernetes/raw/master/logo/logo.png"  width="100">
 
