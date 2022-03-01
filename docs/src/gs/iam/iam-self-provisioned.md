@@ -9,13 +9,17 @@ Although some policies required for Oracle Container Engine for Kubernetes (OKE)
    - `Allow group cluster_api_grp to manage load-balancers in <compartment>`
    - `Allow group cluster_api_grp to manage instance-family in <compartment>`
 
-where `<compartment>` is the name of the OCI compartment of the workload cluster. Your workload compartment may be different from the management compartment. Refer to the [OCI Documentation](https://docs.oracle.com/en-us/iaas/Content/Identity/Tasks/managingcompartments.htm) if you have not created a compartment yet.
+where `<compartment>` is the name of the OCI compartment of the workload cluster. Your workload compartment may be different from the management compartment. Refer to the [OCI documentation](https://docs.oracle.com/en-us/iaas/Content/Identity/Tasks/managingcompartments.htm) if you have not created a compartment yet.
 
-> If you are an administrator and you are experimenting with CAPOCI, you can skip creating the policies.
+```admonish info
+If you are an administrator and you are experimenting with CAPOCI, you can skip creating the policies.
+```
 
 1. Repeat the procedure as for the `iaas_oke_usr` above to obtain the IAM details.
 
-> You should not create your workload cluster in the root compartment.
+```admonish warning
+You should not create your workload cluster in the root compartment.
+```
 
 [kind]: https://kind.sigs.k8s.io/
 [oke]: https://docs.oracle.com/en-us/iaas/Content/ContEng/home.htm

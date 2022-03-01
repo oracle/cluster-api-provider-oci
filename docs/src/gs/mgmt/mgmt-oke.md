@@ -26,7 +26,9 @@ For this release, if you use [Oracle Container Engine for Kubernetes][oke] (OKE)
    - [OCI Cloud Shell](https://docs.oracle.com/en-us/iaas/Content/ContEng/Tasks/contengdownloadkubeconfigfile.htm#cloudshelldownload)
    - or [your local terminal](https://docs.oracle.com/en-us/iaas/Content/ContEng/Tasks/contengdownloadkubeconfigfile.htm#localdownload).
 
-> If you are working with an existing Kubernetes cluster and have an existing `kubeconfig` in your `$HOME/.kube/config` directory, running the command to set up local access will overwrite your existing `kubeconfig`.
+```admonish warning
+If you are working with an existing Kubernetes cluster and have an existing `kubeconfig` in your `$HOME/.kube/config` directory, running the command to set up local access will add a new cluster context to your existing `kubeconfig`.
+```
 
 [management_cluster]: https://cluster-api.sigs.k8s.io/user/concepts.html#management-cluster
 [oke]: https://docs.oracle.com/en-us/iaas/Content/ContEng/home.htm
