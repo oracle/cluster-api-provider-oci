@@ -7,7 +7,7 @@
 1. Before downloading the YAML files below, set the version you want to install e.g.
 
    ```shell
-   export CCM_RELEASE_VERSION=0.12.0
+   export CCM_RELEASE_VERSION=0.13.0
    ```
 
 1. Download the example configuration file:
