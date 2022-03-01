@@ -54,7 +54,7 @@ Initialize management cluster and install CAPOCI
 
 When installing CAPOCI, the following components will be installed in the management cluster:
 
- 1. A custom resource definition (`CRD`) for `OCICluste`, which is a Kubernetes custom resource that represents a workload cluster created in OCI by CAPOCI.
+ 1. A custom resource definition (`CRD`) for `OCICluster`, which is a Kubernetes custom resource that represents a workload cluster created in OCI by CAPOCI.
  2. A custom resource definition (`CRD`) for `OCIMachine`, which is a Kubernetes custom resource that represents one node in the workload cluster created in OCI by CAPOCI.
  3. Role-based access control resources for a Kubernetes `Deployment`, `ServiceAccount`, `Role`, `ClusterRole` and `ClusterRoleBinding`
  4. A Kubernetes `Secret` which will hold OCI credentials
