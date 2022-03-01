@@ -60,7 +60,9 @@ Get a list of [Availability Domains](../reference/glossary.md#ad) of the region:
 oci iam availability-domain list
 ```
 
-> Review the [OCI CLI documentation](https://docs.oracle.com/en-us/iaas/Content/API/Concepts/cliconcepts.htm) for more information regarding this tool.
+```admonish info
+Review the [OCI CLI documentation](https://docs.oracle.com/en-us/iaas/Content/API/Concepts/cliconcepts.htm) for more information regarding this tool.
+```
 
 For 1-AD regions, use the following cURL command to update the status object:
 

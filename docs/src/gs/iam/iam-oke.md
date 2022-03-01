@@ -10,9 +10,11 @@ These steps are applicable if you intend to run your management cluster using [O
    - `Allow group iaas_oke_grp to manage cluster family in <compartment>`
    - `Allow group iaas_oke_grp to manage instance-family in <compartment>`
 
-where `<compartment>` is the name of the OCI compartment of the management cluster. Refer to the [OCI Documentation](https://docs.oracle.com/en-us/iaas/Content/Identity/Tasks/managingcompartments.htm) if you have not created a compartment yet.
+where `<compartment>` is the name of the OCI compartment of the management cluster. Refer to the [OCI documentation](https://docs.oracle.com/en-us/iaas/Content/Identity/Tasks/managingcompartments.htm) if you have not created a compartment yet.
 
-> You should not create your management cluster in the root compartment.
+```admonish warning
+You should not create your management cluster in the root compartment.
+```
 
 [kind]: https://kind.sigs.k8s.io/
 [oke]: https://docs.oracle.com/en-us/iaas/Content/ContEng/home.htm

@@ -5,7 +5,11 @@ multilingual = false
 src = "src"
 title = "Kubernetes Cluster API Provider for Oracle Cloud Infrastructure"
 
+[preprocessor.admonish]
+command = "mdbook-admonish"
+
 [output.html]
-curly-quotes = true
-# git-repository-url = "https://sigs.k8s.io/cluster-api-provider-oci"
+curly-quotes = false
+git-repository-url = "https://github.com/oracle/cluster-api-provider-oci"
+additional-css = ["./src/css/mdbook-admonish.css"]
 # no-section-label = true
