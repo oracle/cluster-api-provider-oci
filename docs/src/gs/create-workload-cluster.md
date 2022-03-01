@@ -1,5 +1,11 @@
 # Create a workload cluster
 
+## Workload Cluster Templates
+
+The workload cluster templates can be downloaded from the [latest released artifacts][latest-release].
+
+## Workload Cluster Parameters
+
 The following Oracle Cloud Infrastructure (OCI) configuration parameters are available when creating a workload cluster on OCI:
 
 | Parameter                      | Default Value       | Description                                                                                                                                                                                                                                                                                                                                                                                               |
@@ -41,7 +47,7 @@ KUBERNETES_VERSION=v1.20.10 \
 NAMESPACE=default \
 WORKER_MACHINE_COUNT=1 \
 clusterctl generate cluster <cluster-name>\
---from <DEFAULT_TEMPLATE_FILE_URL> | kubectl apply -f -
+--from cluster-template.yaml | kubectl apply -f -
 ```
 
 ## Using an Ubuntu custom image on bare metal instances
@@ -61,7 +67,7 @@ KUBERNETES_VERSION=v1.20.10 \
 NAMESPACE=default \
 WORKER_MACHINE_COUNT=1 \
 clusterctl generate cluster <cluster-name>\
---from <DEFAULT_TEMPLATE_FILE_URL> | kubectl apply -f -
+--from cluster-template.yaml| kubectl apply -f -
 ```
 
 ## Using an Oracle Linux custom image on virtual instances
@@ -78,7 +84,7 @@ KUBERNETES_VERSION=v1.20.10 \
 NAMESPACE=default \
 WORKER_MACHINE_COUNT=1 \
 clusterctl generate cluster <cluster-name>\
---from <ORACLE_LINUX_TEMPLATE_FILE_URL> | kubectl apply -f -
+--from cluster-template-oraclelinux.yaml | kubectl apply -f -
 ```
 
 ### Access workload cluster Kubeconfig
@@ -137,10 +143,11 @@ OCI_SSH_KEY=<ssh-key>  \
 clusterctl generate cluster <cluster-name> --kubernetes-version v1.20.10 \
 --target-namespace default \
 --control-plane-machine-count=1 \
---from <ADDONS_TEMPLATE_FILE_URL> | kubectl apply -f -
+--from cluster-template-oci-addons.yaml | kubectl apply -f -
 ```
 
 [antrea]: ../networking/antrea.md
 [calico]: ../networking/calico.md
 [cni]: https://www.cni.dev/
 [oci-ccm]: https://github.com/oracle/oci-cloud-controller-manager
+[latest-release]: https://github.com/oracle/cluster-api-provider-oci/releases/tag/v0.1.0
