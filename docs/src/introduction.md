@@ -28,7 +28,7 @@ The API itself is shared across multiple cloud providers allowing for true hybri
 - [Networking][networking]: Networking guide
 - Installation:
   - [Install Cluster API for OCI][install_cluster_api]
-  - [Install Workload Cluster][install_workload_cluster]
+  - [Create Workload Cluster][create_workload_cluster]
 
 ## Support Policy
 
@@ -52,7 +52,7 @@ policy may be made to more closely align with other providers in the Cluster API
 [cluster_api]: https://github.com/kubernetes-sigs/cluster-api-oci
 [image_builder_book]: https://image-builder.sigs.k8s.io/capi/providers/oci.html
 [deployment]: ./gs/overview.md
-[install_cluster_api]: ./gs/install_cluster_api.md
-[install_workload_cluster]: ./gs/install_workload_cluster.md
+[install_cluster_api]: ./gs/install-cluster-api.md
+[create_workload_cluster]: ./gs/create-workload-cluster.md
 [networking]: ./networking/networking.md
 [prerequisites]: ./prerequisites.md
