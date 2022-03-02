@@ -48,7 +48,7 @@ ARTIFACTS ?= $(ROOT_DIR)/_artifacts
 KUBETEST_CONF_PATH ?= $(abspath $(E2E_DATA_DIR)/kubetest/conformance.yaml)
 KUBETEST_FAST_CONF_PATH ?= $(abspath $(E2E_DATA_DIR)/kubetest/conformance-fast.yaml)
 GINKGO_FOCUS ?= Workload cluster creation
-GINKGO_SKIP ?=
+GINKGO_SKIP ?= "Bare Metal"
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
@@ -233,6 +233,7 @@ endef
 .PHONY: generate-e2e-templates ## Generate OCI infrastructure templates for e2e test suite.
 generate-e2e-templates: kustomize
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-bare-metal --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-bare-metal.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-md-remediation --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-md-remediation.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-kcp-remediation --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-kcp-remediation.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-node-drain --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-node-drain.yaml

@@ -40,6 +40,7 @@ test/e2e/data/infrastructure-oci/v1beta1/cluster-template-md-remediation.yaml
 test/e2e/data/infrastructure-oci/v1beta1/cluster-template-node-drain.yaml
 test/e2e/data/infrastructure-oci/v1beta1/cluster-template-oracle-linux.yaml
 test/e2e/data/infrastructure-oci/v1beta1/cluster-template.yaml
+test/e2e/data/infrastructure-oci/v1beta1/cluster-template-bare-metal.yaml
 test/e2e/data/infrastructure-oci/v1beta1/cluster-template-custom-networking-seclist.yaml
 test/e2e/data/infrastructure-oci/v1beta1/cluster-template-custom-networking-nsg.yaml
 test/e2e/data/infrastructure-oci/v1beta1/cluster-template-multiple-node-nsg.yaml
