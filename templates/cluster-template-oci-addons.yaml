@@ -80,13 +80,13 @@ spec:
     spec:
       imageId: "${OCI_IMAGE_ID}"
       compartmentId: "${OCI_COMPARTMENT_ID}"
-      shape: "${OCI_SHAPE}"
+      shape: "${OCI_CONTROL_PLANE_SHAPE=VM.Standard.E4.Flex}"
       shapeConfig:
-        ocpus: "${OCI_SHAPE_OCPUS}"
-        memoryInGBs: "${OCI_SHAPE_MEMORY_IN_GBS}"
+        ocpus: "${OCI_CONTROL_PLANE_SHAPE_OCPUS=1}"
+        memoryInGBs: "${OCI_CONTROL_PLANE_SHAPE_MEMORY_IN_GBS=16}"
       metadata:
         ssh_authorized_keys: "${OCI_SSH_KEY}"
-      isPvEncryptionInTransitEnabled: ${OCI_PV_TRANSIT_ENCRYPTION=true}
+      isPvEncryptionInTransitEnabled: ${OCI_CONTROL_PLANE_PV_TRANSIT_ENCRYPTION=true}
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: OCIMachineTemplate
@@ -97,13 +97,13 @@ spec:
     spec:
       imageId: "${OCI_IMAGE_ID}"
       compartmentId: "${OCI_COMPARTMENT_ID}"
-      shape: "${OCI_SHAPE}"
+      shape: "${OCI_WORKER_SHAPE=VM.Standard.E4.Flex}"
       shapeConfig:
-        ocpus: "${OCI_SHAPE_OCPUS}"
-        memoryInGBs: "${OCI_SHAPE_MEMORY_IN_GBS}"
+        ocpus: "${OCI_WORKER_SHAPE_OCPUS=1}"
+        memoryInGBs: "${OCI_WORKER_SHAPE_MEMORY_IN_GBS=16}"
       metadata:
         ssh_authorized_keys: "${OCI_SSH_KEY}"
-      isPvEncryptionInTransitEnabled: ${OCI_PV_TRANSIT_ENCRYPTION=true}
+      isPvEncryptionInTransitEnabled: ${OCI_NODE_PV_TRANSIT_ENCRYPTION=true}
 ---
 apiVersion: bootstrap.cluster.x-k8s.io/v1alpha4
 kind: KubeadmConfigTemplate

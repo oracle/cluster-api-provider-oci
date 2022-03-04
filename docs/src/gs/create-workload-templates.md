@@ -21,9 +21,6 @@ You can then reuse the `ConfigMap` to create your clusters. For example, to crea
 ```shell
 OCI_COMPARTMENT_ID=<compartment-id> \
 OCI_IMAGE_ID=<oracle-linux-custom-image-id> \
-OCI_SHAPE=VM.Standard.E4.Flex \
-OCI_SHAPE_OCPUS=1 \
-OCI_SHAPE_MEMORY_IN_GBS= \
 OCI_SSH_KEY=<ssh-key>  \
 CONTROL_PLANE_MACHINE_COUNT=1 \
 KUBERNETES_VERSION=v1.20.10 \
@@ -38,9 +35,6 @@ Likewise, to create a workload cluster using Ubuntu:
 ```shell
 OCI_COMPARTMENT_ID=<compartment-id> \
 OCI_IMAGE_ID=<ubuntu-custom-image-id> \
-OCI_SHAPE=VM.Standard.E4.Flex \
-OCI_SHAPE_OCPUS=1 \
-OCI_SHAPE_MEMORY_IN_GBS= \
 OCI_SSH_KEY=<ssh-key>  \
 CONTROL_PLANE_MACHINE_COUNT=1 \
 KUBERNETES_VERSION=v1.20.10 \
