@@ -18,7 +18,8 @@ One or more isolated, fault-tolerant Oracle data centers that host cloud resourc
 
 Or __Container Network Interface__
 
-A [Cloud Native Computing Foundation](https://cncf.io) projet that  consists of a specification and libraries for writing plugins to configure network interfaces in Linux containers, along with a number of supported plugins.
+A [Cloud Native Computing Foundation](https://cncf.io) project that  consists of a specification and libraries for 
+writing plugins to configure network interfaces in Linux containers, along with a number of supported plugins.
 
 
 # F
@@ -48,7 +49,7 @@ A NAT Gateway gives cloud resources without public IP addresses access to the In
 
 Or __Network Security Group__
 
-A [Network security group (NSG)][oci_nsg] acts as a virtual firewall for your compute instances and other kinds of resources. An NSG consists of a set of ingress and egress security rules that apply only to a set of VNICs of your choice in a single VCN (for example: all the compute instances that act as web servers in the web tier of a multi-tier application in your VCN).
+A [Network security group (NSG)][oci_nsg] acts as a virtual firewall for your compute instances and other kinds of resources. An NSG consists of a set of ingress and egress security rules that apply only to a set of VNICs of your choice in a single VCN (for example: all compute instances that act as web servers in the web tier of a multi-tier application in your VCN).
 
 # R
 ---
