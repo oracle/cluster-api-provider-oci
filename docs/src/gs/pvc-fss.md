@@ -77,7 +77,7 @@ Provisioning PVCs on FSS consists of 3 steps:
 
 1. In the YAML file, set:
    1. `storageClassName` to `""`
-   2. `volumeName` to the name of of the PV created earlier
+   2. `volumeName` to the name of the PV created earlier
 
 1. Create the PVC from the manifest file:
 

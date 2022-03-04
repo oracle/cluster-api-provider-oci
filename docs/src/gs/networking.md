@@ -1,6 +1,6 @@
 # Networking architecture for a workload cluster
 
-Each workload cluster requires an Oracle Cloude Infrastructure (OCI) Virtual Cloud Network (VCN) which will house all the resources created for the workload cluster. The default VCN will have the following resources:
+Each workload cluster requires an Oracle Cloud Infrastructure (OCI) Virtual Cloud Network (VCN) which will house all the resources created for the workload cluster. The default VCN will have the following resources:
 
 * Gateways:
   1. An Internet gateway.

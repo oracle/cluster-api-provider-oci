@@ -1,12 +1,13 @@
-# Getting started with Kubernetes Cluster API Provider for Oracle Cloud Infracture
+# Getting started with Kubernetes Cluster API Provider for Oracle Cloud Infrastructure
 
-Before deploying the Cluster API Provider for Oracle Cloud Infrastructrure (CAPOCI), you must first configure the required Identity and Access Management (IAM) policies:
+Before deploying the Cluster API Provider for Oracle Cloud Infrastructure (CAPOCI), you must first configure the 
+required Identity and Access Management (IAM) policies:
 
 ![CAPOCI Installation Process](../images/iam.svg)
 
 The following deployment options are available:
 
-- [Getting started with Kubernetes Cluster API Provider for Oracle Cloud Infracture](#getting-started-with-kubernetes-cluster-api-provider-for-oracle-cloud-infracture)
+- [Getting started with Kubernetes Cluster API Provider for Oracle Cloud Infrastructure](#getting-started-with-kubernetes-cluster-api-provider-for-oracle-cloud-infracture)
   - [Setting up a non-production management cluster](#setting-up-a-non-production-management-cluster)
   - [Setting up a management cluster using an initial bootstrap cluster](#setting-up-a-management-cluster-using-an-initial-bootstrap-cluster)
   - [Setting up a management cluster using OKE](#setting-up-a-management-cluster-using-oke)
@@ -34,7 +35,7 @@ Complete the following steps in order to install and use CAPOCI:
 
 1. Choose your management cluster. You can use [kind][kind], [OKE][oke] or any other compliant Kubernetes clusters.
 1. [Prepare custom machine images][custom-machine-images]
-1. [Configure uers and policies for the management cluster if required][iam]
+1. [Configure users and policies for the management cluster if required][iam]
 1. [Provision a management cluster][provision-management-cluster]. You can use [kind][kind], [OKE][oke] or any other compliant Kubernetes clusters.
 1. Install the necessary tools:
    - [OCI CLI][oci-cli]

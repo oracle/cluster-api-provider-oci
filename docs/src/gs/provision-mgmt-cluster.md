@@ -6,7 +6,7 @@ You may use [kind][kind] for experimental purposes or for creating a [local boot
 
 * [Create a local management or bootstrap cluster with kind](./mgmt/mgmt-kind.md)
 
-For a more durable environment, we recommend using a managed Kubernetes service such as [Oracke Container Engine for Kubernetes][oke] (OKE).
+For a more durable environment, we recommend using a managed Kubernetes service such as [Oracle Container Engine for Kubernetes][oke] (OKE).
 
 * [Create a management cluster with OKE](./mgmt/mgmt-oke.md)
 
