@@ -156,6 +156,16 @@ spec:
                   destinationPortRange:
                     max: 22
                     min: 22
+            - ingressRule:
+                description: Control Plane to Control Plane Kubelet Communication
+                isStateless: false
+                protocol: "6"
+                source: 10.0.0.0/29
+                sourceType: CIDR_BLOCK
+                tcpOptions:
+                  destinationPortRange:
+                    max: 10250
+                    min: 10250
           name: control-plane
           role: control-plane
         - egressRules:
@@ -290,7 +300,7 @@ spec:
         memoryInGBs: "${OCI_SHAPE_MEMORY_IN_GBS}"
       metadata:
         ssh_authorized_keys: "${OCI_SSH_KEY}"
-      IsPvEncryptionInTransitEnabled: ${OCI_PV_TRANSIT_ENCRYPTION=true}
+      isPvEncryptionInTransitEnabled: ${OCI_PV_TRANSIT_ENCRYPTION=true}
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: OCIMachineTemplate
@@ -307,7 +317,7 @@ spec:
         memoryInGBs: "${OCI_SHAPE_MEMORY_IN_GBS}"
       metadata:
         ssh_authorized_keys: "${OCI_SSH_KEY}"
-      IsPvEncryptionInTransitEnabled: ${OCI_PV_TRANSIT_ENCRYPTION=true}
+      isPvEncryptionInTransitEnabled: ${OCI_PV_TRANSIT_ENCRYPTION=true}
 ---
 apiVersion: bootstrap.cluster.x-k8s.io/v1alpha4
 kind: KubeadmConfigTemplate

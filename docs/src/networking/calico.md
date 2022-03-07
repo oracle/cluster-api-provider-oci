@@ -31,10 +31,11 @@ The OCI compute instances running the Kubernetes control plane components will b
 #### Ingress Rules
 
 | Source Type      | Source            |  Destination Port | Protocol             | Description                                                           |
-| ---------------- | ----------------- | ----------------- | -------------------- | --------------------------------------------------------------------- |
+| ---------------- | ----------------- | ----------------- | -------------------- |-----------------------------------------------------------------------|
 | CIDR block       | 10.0.0.8/29       | 6443              |  TCP                 | Kubernetes API endpoint to Kubernetes control plane communication     |
 | CIDR block       | 10.0.0.0/29       | 6443              |  TCP                 | Control plane to control plane (API server port) communication        |
 | CIDR block       | 10.0.64.0/20      | 6443              |  TCP                 | Worker Node to Kubernetes control plane (API Server) communication    |
+| CIDR block       | 10.0.0.0/29       | 10250             |  TCP                 | Control Plane to Control Plane Kubelet Communication                  |
 | CIDR block       | 10.0.0.0/29       | 2379              |  TCP                 | etcd client communication                                             |
 | CIDR block       | 10.0.0.0/29       | 2380              |  TCP                 | etcd peer communication                                               |
 | CIDR block       | 10.0.0.0/29       | 179               |  TCP                 | Calico networking (BGP)                                               |

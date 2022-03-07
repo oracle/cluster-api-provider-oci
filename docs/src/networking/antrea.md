@@ -35,6 +35,7 @@ The OCI Compute instances running the Kubernetes Control plane components will b
 | CIDR Block       | 10.0.0.8/29       | 6443              |  TCP                 | Kubernetes API endpoint to Kubernetes Control plane communication     |
 | CIDR Block       | 10.0.0.0/29       | 6443              |  TCP                 | Control plane to Control plane (API Server port) communication        |
 | CIDR Block       | 10.0.64.0/20      | 6443              |  TCP                 | Worker Node to Kubernetes Control plane (API Server port)communication|
+| CIDR block       | 10.0.0.0/29       | 10250             |  TCP                 | Control Plane to Control Plane Kubelet Communication                  |
 | CIDR Block       | 10.0.0.0/29       | 2379              |  TCP                 | etcd client communication                                             |
 | CIDR Block       | 10.0.0.0/29       | 2380              |  TCP                 | etcd peer communication                                               |
 | CIDR Block       | 10.0.0.0/29       | 10349             |  TCP                 | Antrea Service                                                        |

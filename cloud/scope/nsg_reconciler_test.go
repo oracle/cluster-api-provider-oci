@@ -308,6 +308,20 @@ func TestClusterScope_NSGSpec(t *testing.T) {
 								},
 							},
 						},
+						{
+							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
+								Description: common.String("Control Plane to Control Plane Kubelet Communication"),
+								Protocol:    common.String("6"),
+								TcpOptions: &infrastructurev1beta1.TcpOptions{
+									DestinationPortRange: &infrastructurev1beta1.PortRange{
+										Max: common.Int(10250),
+										Min: common.Int(10250),
+									},
+								},
+								SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
+								Source:     common.String(ControlPlaneMachineSubnetDefaultCIDR),
+							},
+						},
 					},
 				},
 				{
@@ -726,6 +740,20 @@ func TestClusterScope_NSGSpec(t *testing.T) {
 										Min: common.Int(22),
 									},
 								},
+							},
+						},
+						{
+							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
+								Description: common.String("Control Plane to Control Plane Kubelet Communication"),
+								Protocol:    common.String("6"),
+								TcpOptions: &infrastructurev1beta1.TcpOptions{
+									DestinationPortRange: &infrastructurev1beta1.PortRange{
+										Max: common.Int(10250),
+										Min: common.Int(10250),
+									},
+								},
+								SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
+								Source:     common.String(ControlPlaneMachineSubnetDefaultCIDR),
 							},
 						},
 					},
