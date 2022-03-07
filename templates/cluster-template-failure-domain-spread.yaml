@@ -86,7 +86,7 @@ spec:
         memoryInGBs: "${OCI_SHAPE_MEMORY_IN_GBS}"
       metadata:
         ssh_authorized_keys: "${OCI_SSH_KEY}"
-      IsPvEncryptionInTransitEnabled: ${OCI_PV_TRANSIT_ENCRYPTION=true}
+      isPvEncryptionInTransitEnabled: ${OCI_PV_TRANSIT_ENCRYPTION=true}
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: OCIMachineTemplate
@@ -103,7 +103,7 @@ spec:
         memoryInGBs: "${OCI_SHAPE_MEMORY_IN_GBS}"
       metadata:
         ssh_authorized_keys: "${OCI_SSH_KEY}"
-      IsPvEncryptionInTransitEnabled: ${OCI_PV_TRANSIT_ENCRYPTION=true}
+      isPvEncryptionInTransitEnabled: ${OCI_PV_TRANSIT_ENCRYPTION=true}
 ---
 apiVersion: bootstrap.cluster.x-k8s.io/v1alpha4
 kind: KubeadmConfigTemplate
