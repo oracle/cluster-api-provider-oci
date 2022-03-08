@@ -2,7 +2,7 @@
 
 ## Workload Cluster Templates
 
-The workload cluster templates can be downloaded from the [latest released artifacts][latest-release].
+Choose one of the available templates for to create your workload clusters from the [latest released artifacts][latest-release]. Each workload cluster template can be further configured with the parameters below.
 
 ## Workload Cluster Parameters
 
@@ -31,7 +31,7 @@ The following Cluster API parameters are also available:
 | `SERVICE_DOMAIN`               |                        |  |
 | `WORKER_MACHINE_COUNT`         |                        | The number of worker machines for the workload cluster. |
 
-## Using an Ubuntu custom image on virtual instances
+## Create a new workload cluster on virtual instances using an Ubuntu custom image
 
 Run the command below to create a Kubernetes cluster with 1 control plane node and 1 worker node:
 
@@ -50,7 +50,7 @@ clusterctl generate cluster <cluster-name>\
 --from cluster-template.yaml | kubectl apply -f -
 ```
 
-## Using an Ubuntu custom image on bare metal instances
+## Create a new workload cluster on bare metal instances using an Ubuntu custom image
 
 Note the addition of `OCI_PV_TRANSIT_ENCRYPTION=false` which is required for most BM shapes.
 
@@ -70,7 +70,7 @@ clusterctl generate cluster <cluster-name>\
 --from cluster-template.yaml| kubectl apply -f -
 ```
 
-## Using an Oracle Linux custom image on virtual instances
+## Create a new workload cluster on virtual instances using an Oracle Linux custom image
 
 ```bash
 OCI_COMPARTMENT_ID=<compartment-id> \
@@ -126,28 +126,11 @@ If you have an issue with your alternative CNI provider, please raise an issue o
 
 ### Install OCI Cloud Controller Manager and CSI in a self-provisioned cluster
 
-By default, the [OCI Cloud Controller Manager (CCM)][oci-ccm] is not installed into a workload cluster. To install the OCI CCM, run the following command:
-
-<!-- The above templates do not install the OCI CCM and CSI Driver in the workload cluster. The following command can be used
-to install CCM and CSI by default in the workload clusters using ClusterResourceSet functionality provided by
-Cluster API. -->
-
-```bash
-OCI_IMAGE_ID=<ubuntu-custom-image-id> \
-OCI_COMPARTMENT_ID=<compartment-id> \
-WORKER_MACHINE_COUNT=1 \
-OCI_SHAPE=VM.Standard.E4.Flex \
-OCI_SHAPE_OCPUS=1 \
-OCI_SHAPE_MEMORY_IN_GBS= \
-OCI_SSH_KEY=<ssh-key>  \
-clusterctl generate cluster <cluster-name> --kubernetes-version v1.20.10 \
---target-namespace default \
---control-plane-machine-count=1 \
---from cluster-template-oci-addons.yaml | kubectl apply -f -
-```
+By default, the [OCI Cloud Controller Manager (CCM)][oci-ccm] is not installed into a workload cluster. To install the OCI CCM, follow [these instructions][install-oci-ccm].
 
 [antrea]: ../networking/antrea.md
 [calico]: ../networking/calico.md
 [cni]: https://www.cni.dev/
 [oci-ccm]: https://github.com/oracle/oci-cloud-controller-manager
 [latest-release]: https://github.com/oracle/cluster-api-provider-oci/releases/tag/v0.1.0
+[install-oci-ccm]: ./install-oci-ccm.md
