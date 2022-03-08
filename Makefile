@@ -48,7 +48,7 @@ ARTIFACTS ?= $(ROOT_DIR)/_artifacts
 KUBETEST_CONF_PATH ?= $(abspath $(E2E_DATA_DIR)/kubetest/conformance.yaml)
 KUBETEST_FAST_CONF_PATH ?= $(abspath $(E2E_DATA_DIR)/kubetest/conformance-fast.yaml)
 GINKGO_FOCUS ?= Workload cluster creation
-GINKGO_SKIP ?= "Bare Metal"
+GINKGO_SKIP ?= "Bare Metal|Multi-Region"
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
@@ -106,7 +106,8 @@ ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
 test: manifests generate fmt vet ## Run tests.
 	mkdir -p ${ENVTEST_ASSETS_DIR}
 	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.8.3/hack/setup-envtest.sh
-	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./... -coverprofile cover.out
+	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./... -coverprofile cover.out && go tool cover -html=cover.out -o cover.html
+
 
 ##@ Build
 
@@ -241,6 +242,7 @@ serve-book: build-book ## Build and serve the book with live-reloading enabled
 .PHONY: generate-e2e-templates ## Generate OCI infrastructure templates for e2e test suite.
 generate-e2e-templates: kustomize
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-alternative-region --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-alternative-region.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-bare-metal --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-bare-metal.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-md-remediation --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-md-remediation.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-kcp-remediation --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-kcp-remediation.yaml
@@ -256,7 +258,7 @@ generate-e2e-templates: kustomize
 .PHONY: test-e2e-run
 test-e2e-run: generate-e2e-templates ginkgo $(ENVSUBST) ## Run e2e tests
 	envsubst < $(E2E_CONF_FILE) > $(E2E_CONF_FILE_ENVSUBST) && \
-    $(GINKGO) -v -trace -tags=e2e -focus="$(GINKGO_FOCUS)" -skip="$(GINKGO_SKIP)" -nodes=$(GINKGO_NODES) --noColor=$(GINKGO_NOCOLOR) $(GINKGO_ARGS) ./test/e2e -- \
+    $(GINKGO) -v -trace -tags=e2e -focus="$(GINKGO_FOCUS)" -skip=$(GINKGO_SKIP) -nodes=$(GINKGO_NODES) --noColor=$(GINKGO_NOCOLOR) $(GINKGO_ARGS) ./test/e2e -- \
     	-e2e.artifacts-folder="$(ARTIFACTS)" \
     	-e2e.config="$(E2E_CONF_FILE_ENVSUBST)" \
     	-e2e.skip-resource-cleanup=$(SKIP_CLEANUP) -e2e.use-existing-cluster=$(SKIP_CREATE_MGMT_CLUSTER) $(E2E_ARGS)

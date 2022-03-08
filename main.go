@@ -21,19 +21,17 @@ import (
 	"os"
 
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
-	"github.com/oracle/cluster-api-provider-oci/cloud/config"
-	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
-	"github.com/oracle/cluster-api-provider-oci/controllers"
-	"github.com/oracle/oci-go-sdk/v63/core"
-	"github.com/oracle/oci-go-sdk/v63/identity"
-	"github.com/oracle/oci-go-sdk/v63/networkloadbalancer"
-	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
-	"k8s.io/klog/v2/klogr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
+
+	"github.com/oracle/cluster-api-provider-oci/cloud/config"
+	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
+	"github.com/oracle/cluster-api-provider-oci/controllers"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/klog/v2/klogr"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -121,50 +119,34 @@ func main() {
 		os.Exit(1)
 	}
 
-	vcnClient, err := core.NewVirtualNetworkClientWithConfigurationProvider(ociAuthConfigProvider)
+	clientProvider, err := scope.NewClientProvider(ociAuthConfigProvider)
 	if err != nil {
-		setupLog.Error(err, "unable to create OCI VCN Client")
+		setupLog.Error(err, "unable to create OCI ClientProvider")
 		os.Exit(1)
 	}
-
-	lbClient, err := networkloadbalancer.NewNetworkLoadBalancerClientWithConfigurationProvider(ociAuthConfigProvider)
+	_, err = clientProvider.GetOrBuildClient(region)
 	if err != nil {
-		setupLog.Error(err, "unable to create OCI LB Client")
-		os.Exit(1)
-	}
-
-	identityClient, err := identity.NewIdentityClientWithConfigurationProvider(ociAuthConfigProvider)
-	if err != nil {
-		setupLog.Error(err, "unable to create OCI Identity Client")
+		setupLog.Error(err, "authentication provider could not be initialised")
 		os.Exit(1)
 	}
 
 	if err = (&controllers.OCIClusterReconciler{
-		Client:                    mgr.GetClient(),
-		Scheme:                    mgr.GetScheme(),
-		VCNClient:                 vcnClient,
-		NetworkLoadBalancerClient: lbClient,
-		IdentityClient:            identityClient,
-		Region:                    region,
-		Recorder:                  mgr.GetEventRecorderFor("ocicluster-controller"),
+		Client:         mgr.GetClient(),
+		Scheme:         mgr.GetScheme(),
+		Region:         region,
+		ClientProvider: clientProvider,
+		Recorder:       mgr.GetEventRecorderFor("ocicluster-controller"),
 	}).SetupWithManager(ctx, mgr, controller.Options{}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", scope.OCIClusterKind)
 		os.Exit(1)
 	}
 
-	computeClient, err := core.NewComputeClientWithConfigurationProvider(ociAuthConfigProvider)
-	if err != nil {
-		setupLog.Error(err, "unable to create OCI Compute Client")
-		os.Exit(1)
-	}
-
 	if err = (&controllers.OCIMachineReconciler{
-		Client:                    mgr.GetClient(),
-		Scheme:                    mgr.GetScheme(),
-		ComputeClient:             computeClient,
-		VCNClient:                 vcnClient,
-		NetworkLoadBalancerClient: lbClient,
-		Recorder:                  mgr.GetEventRecorderFor("ocimachine-controller"),
+		Client:         mgr.GetClient(),
+		Scheme:         mgr.GetScheme(),
+		ClientProvider: clientProvider,
+		Region:         region,
+		Recorder:       mgr.GetEventRecorderFor("ocimachine-controller"),
 	}).SetupWithManager(ctx, mgr, controller.Options{}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", scope.OCIMachineKind)
 		os.Exit(1)

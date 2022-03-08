@@ -34,10 +34,13 @@ import (
 	"github.com/onsi/ginkgo/reporters"
 	. "github.com/onsi/gomega"
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	oci_config "github.com/oracle/cluster-api-provider-oci/cloud/config"
+	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
+	"github.com/oracle/cluster-api-provider-oci/cloud/services/compute"
+	nlb "github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer"
+	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
 	"github.com/oracle/oci-go-sdk/v63/common"
-	"github.com/oracle/oci-go-sdk/v63/core"
 	"github.com/oracle/oci-go-sdk/v63/identity"
-	"github.com/oracle/oci-go-sdk/v63/networkloadbalancer"
 	"k8s.io/apimachinery/pkg/runtime"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	clusterv1exp "sigs.k8s.io/cluster-api/exp/api/v1beta1"
@@ -94,11 +97,11 @@ var (
 	// usePRArtifacts specifies whether or not to use the build from a PR of the Kubernetes repository
 	usePRArtifacts bool
 
-	computeClient core.ComputeClient
+	computeClient compute.ComputeClient
 
-	vcnClient core.VirtualNetworkClient
+	vcnClient vcn.Client
 
-	lbClient networkloadbalancer.NetworkLoadBalancerClient
+	lbClient nlb.NetworkLoadBalancerClient
 
 	adCount int
 )
@@ -192,21 +195,30 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	Expect(err).NotTo(HaveOccurred())
 	region, err := base64.StdEncoding.DecodeString(os.Getenv("OCI_REGION_B64"))
 	Expect(err).NotTo(HaveOccurred())
-	conf := common.NewRawConfigurationProvider(
-		string(tenancyId),
-		string(userId),
-		string(region),
-		string(fingerprint),
-		string(key),
-		common.String(string(passphrase)))
-	computeClient, err = core.NewComputeClientWithConfigurationProvider(conf)
+
+	ociAuthConfigProvider, err := oci_config.NewConfigurationProvider(&oci_config.AuthConfig{
+		Region:                string(region),
+		TenancyID:             string(tenancyId),
+		UserID:                string(userId),
+		PrivateKey:            string(key),
+		Fingerprint:           string(fingerprint),
+		Passphrase:            string(passphrase),
+		UseInstancePrincipals: false,
+	})
 	Expect(err).NotTo(HaveOccurred())
-	identityClient, err := identity.NewIdentityClientWithConfigurationProvider(conf)
+
+	clientProvider, err := scope.NewClientProvider(ociAuthConfigProvider)
 	Expect(err).NotTo(HaveOccurred())
-	vcnClient, err = core.NewVirtualNetworkClientWithConfigurationProvider(conf)
+
+	ociClients, err := clientProvider.GetOrBuildClient(string(region))
 	Expect(err).NotTo(HaveOccurred())
-	lbClient, err = networkloadbalancer.NewNetworkLoadBalancerClientWithConfigurationProvider(conf)
-	Expect(err).NotTo(HaveOccurred())
+
+	computeClient = ociClients.ComputeClient
+	identityClient := ociClients.IdentityClient
+	vcnClient = ociClients.VCNClient
+	lbClient = ociClients.LoadBalancerClient
+	Expect(identityClient).NotTo(BeNil())
+	Expect(lbClient).NotTo(BeNil())
 
 	req := identity.ListAvailabilityDomainsRequest{CompartmentId: common.String(os.Getenv("OCI_COMPARTMENT_ID"))}
 	resp, err := identityClient.ListAvailabilityDomains(context.Background(), req)

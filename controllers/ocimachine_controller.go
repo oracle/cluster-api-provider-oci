@@ -19,15 +19,13 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"github.com/oracle/oci-go-sdk/v63/common"
 	"time"
 
 	"github.com/go-logr/logr"
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
-	"github.com/oracle/cluster-api-provider-oci/cloud/services/compute"
-	nlb "github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer"
+	"github.com/oracle/oci-go-sdk/v63/common"
 	"github.com/oracle/oci-go-sdk/v63/core"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -53,11 +51,10 @@ import (
 // OCIMachineReconciler reconciles a OciMachine object
 type OCIMachineReconciler struct {
 	client.Client
-	Scheme                    *runtime.Scheme
-	ComputeClient             compute.ComputeClient
-	Recorder                  record.EventRecorder
-	VCNClient                 core.VirtualNetworkClient
-	NetworkLoadBalancerClient nlb.NetworkLoadBalancerClient
+	Scheme         *runtime.Scheme
+	Recorder       record.EventRecorder
+	ClientProvider *scope.ClientProvider
+	Region         string
 }
 
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=ocimachines,verbs=get;list;watch;create;update;patch;delete
@@ -119,17 +116,30 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, nil
 	}
 
+	regionOverride := r.Region
+	if len(ociCluster.Spec.Region) > 0 {
+		regionOverride = ociCluster.Spec.Region
+	}
+	if len(regionOverride) <= 0 {
+		return ctrl.Result{}, errors.New("OCIMachineReconciler Region can't be nil")
+	}
+
+	clients, err := r.ClientProvider.GetOrBuildClient(regionOverride)
+	if err != nil {
+		logger.Error(err, "Couldn't get the clients for region")
+	}
+
 	// Create the machine scope
 	machineScope, err := scope.NewMachineScope(scope.MachineScopeParams{
 		Client:                    r.Client,
-		ComputeClient:             r.ComputeClient,
+		ComputeClient:             clients.ComputeClient,
 		Logger:                    &logger,
 		Cluster:                   cluster,
 		OCICluster:                ociCluster,
 		Machine:                   machine,
 		OCIMachine:                ociMachine,
-		VCNClient:                 r.VCNClient,
-		NetworkLoadBalancerClient: r.NetworkLoadBalancerClient,
+		VCNClient:                 clients.VCNClient,
+		NetworkLoadBalancerClient: clients.LoadBalancerClient,
 	})
 	if err != nil {
 		return ctrl.Result{}, errors.Errorf("failed to create scope: %+v", err)

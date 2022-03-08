@@ -48,6 +48,10 @@ type OCIClusterSpec struct {
 	// Compartment to create the cluster network.
 	CompartmentId string `mandatory:"true" json:"compartmentId"`
 
+	// Region the cluster operates in. It must be one of available regions in Region Identifier format.
+	// See https://docs.oracle.com/en-us/iaas/Content/General/Concepts/regions.htm
+	Region string `json:"region,omitempty"`
+
 	// ControlPlaneEndpoint represents the endpoint used to communicate with the control plane.
 	// +optional
 	ControlPlaneEndpoint clusterv1.APIEndpoint `json:"controlPlaneEndpoint"`

@@ -106,6 +106,11 @@ func TestMachineReconciliation(t *testing.T) {
 		},
 	}
 
+	clientProvider, err := scope.MockNewClientProvider(scope.MockOCIClients{})
+	if err != nil {
+		t.Error(err)
+	}
+
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
@@ -114,9 +119,11 @@ func TestMachineReconciliation(t *testing.T) {
 
 			client := fake.NewClientBuilder().WithObjects(tc.objects...).Build()
 			r = OCIMachineReconciler{
-				Client:   client,
-				Scheme:   runtime.NewScheme(),
-				Recorder: recorder,
+				Client:         client,
+				Scheme:         runtime.NewScheme(),
+				Recorder:       recorder,
+				ClientProvider: clientProvider,
+				Region:         MockTestRegion,
 			}
 			req = reconcile.Request{
 				NamespacedName: types.NamespacedName{
@@ -178,10 +185,9 @@ func TestNormalReconciliationFunction(t *testing.T) {
 
 		recorder = record.NewFakeRecorder(2)
 		r = OCIMachineReconciler{
-			Client:        client,
-			Scheme:        runtime.NewScheme(),
-			Recorder:      recorder,
-			ComputeClient: computeClient,
+			Client:   client,
+			Scheme:   runtime.NewScheme(),
+			Recorder: recorder,
 		}
 		g.Expect(err).To(BeNil())
 	}
@@ -585,11 +591,19 @@ func TestMachineReconciliationDelete(t *testing.T) {
 		now := metav1.NewTime(time.Now())
 		ociMachine.DeletionTimestamp = &now
 		client := fake.NewClientBuilder().WithObjects(getSecret(), getMachine(), ociMachine, getCluster(), getOCICluster()).Build()
-		r = OCIMachineReconciler{
-			Client:        client,
-			Scheme:        runtime.NewScheme(),
-			Recorder:      recorder,
+		clientProvider, err := scope.MockNewClientProvider(scope.MockOCIClients{
 			ComputeClient: computeClient,
+		})
+		if err != nil {
+			t.Errorf("Expected %v to equal nil", err)
+		}
+
+		r = OCIMachineReconciler{
+			Client:         client,
+			Scheme:         runtime.NewScheme(),
+			Recorder:       recorder,
+			ClientProvider: clientProvider,
+			Region:         scope.MockTestRegion,
 		}
 		g.Expect(err).To(BeNil())
 	}
@@ -667,10 +681,9 @@ func TestMachineReconciliationDeletionNormal(t *testing.T) {
 
 		recorder = record.NewFakeRecorder(2)
 		r = OCIMachineReconciler{
-			Client:        client,
-			Scheme:        runtime.NewScheme(),
-			Recorder:      recorder,
-			ComputeClient: computeClient,
+			Client:   client,
+			Scheme:   runtime.NewScheme(),
+			Recorder: recorder,
 		}
 		g.Expect(err).To(BeNil())
 	}

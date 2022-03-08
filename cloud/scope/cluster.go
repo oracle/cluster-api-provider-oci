@@ -19,6 +19,7 @@ package scope
 import (
 	"context"
 	"fmt"
+	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
 	"reflect"
 	"strconv"
 
@@ -27,7 +28,6 @@ import (
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	identityClent "github.com/oracle/cluster-api-provider-oci/cloud/services/identity"
 	nlb "github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer"
-	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
 	"github.com/oracle/oci-go-sdk/v63/common"
 	"github.com/oracle/oci-go-sdk/v63/identity"
 	"github.com/pkg/errors"
@@ -45,14 +45,15 @@ const (
 
 // ClusterScopeParams defines the params need to create a new ClusterScope
 type ClusterScopeParams struct {
-	Client             client.Client
-	Logger             *logr.Logger
-	Cluster            *clusterv1.Cluster
-	OCICluster         *infrastructurev1beta1.OCICluster
-	VCNClient          vcn.Client
-	LoadBalancerClient nlb.NetworkLoadBalancerClient
-	IdentityClient     identityClent.Client
-	Region             string
+	Client                client.Client
+	Logger                *logr.Logger
+	Cluster               *clusterv1.Cluster
+	OCICluster            *infrastructurev1beta1.OCICluster
+	VCNClient             vcn.Client
+	LoadBalancerClient    nlb.NetworkLoadBalancerClient
+	IdentityClient        identityClent.Client
+	Region                string
+	OCIAuthConfigProvider common.ConfigurationProvider
 }
 
 type ClusterScope struct {
@@ -87,6 +88,7 @@ func NewClusterScope(params ClusterScopeParams) (*ClusterScope, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init patch helper")
 	}
+
 	return &ClusterScope{
 		Logger:             params.Logger,
 		client:             params.Client,

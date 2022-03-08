@@ -1,0 +1,790 @@
+apiVersion: v1
+data:
+  cloud-controller-manager.yaml: |
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: oci-cloud-controller-manager
+      namespace: kube-system
+    stringData:
+      cloud-provider.yaml: |-
+        useInstancePrincipals: true
+
+        # compartment configures Compartment within which the cluster resides.
+        compartment: ${OCI_COMPARTMENT_ID}
+
+        loadBalancer:
+          disabled: true
+        # Optional rate limit controls for accessing OCI API
+        rateLimiter:
+          rateLimitQPSRead: 20.0
+          rateLimitBucketRead: 5
+          rateLimitQPSWrite: 20.0
+          rateLimitBucketWrite: 5
+    ---
+    apiVersion: apps/v1
+    kind: DaemonSet
+    metadata:
+      name: oci-cloud-controller-manager
+      namespace: kube-system
+      labels:
+        k8s-app: oci-cloud-controller-manager
+    spec:
+      selector:
+        matchLabels:
+          component: oci-cloud-controller-manager
+          tier: control-plane
+      updateStrategy:
+        type: RollingUpdate
+      template:
+        metadata:
+          labels:
+            component: oci-cloud-controller-manager
+            tier: control-plane
+        spec:
+          serviceAccountName: cloud-controller-manager
+          hostNetwork: true
+          nodeSelector:
+            node-role.kubernetes.io/master: ""
+          tolerations:
+          - key: node.cloudprovider.kubernetes.io/uninitialized
+            value: "true"
+            effect: NoSchedule
+          - key: node-role.kubernetes.io/master
+            operator: Exists
+            effect: NoSchedule
+          volumes:
+            - name: cfg
+              secret:
+                secretName: oci-cloud-controller-manager
+            - name: kubernetes
+              hostPath:
+                path: /etc/kubernetes
+          containers:
+            - name: oci-cloud-controller-manager
+              image: iad.ocir.io/oracle/cloud-provider-oci:0.12.0
+              command: ["/usr/local/bin/oci-cloud-controller-manager"]
+              args:
+                - --cloud-config=/etc/oci/cloud-provider.yaml
+                - --cloud-provider=oci
+                - --leader-elect-resource-lock=configmaps
+                - -v=2
+              volumeMounts:
+                - name: cfg
+                  mountPath: /etc/oci
+                  readOnly: true
+                - name: kubernetes
+                  mountPath: /etc/kubernetes
+                  readOnly: true
+    ---
+    apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      name: cloud-controller-manager
+      namespace: kube-system
+    ---
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRole
+    metadata:
+      name: system:cloud-controller-manager
+      labels:
+        kubernetes.io/cluster-service: "true"
+    rules:
+    - apiGroups:
+      - ""
+      resources:
+      - nodes
+      verbs:
+      - '*'
+
+    - apiGroups:
+      - ""
+      resources:
+      - nodes/status
+      verbs:
+      - patch
+
+    - apiGroups:
+      - ""
+      resources:
+      - services
+      verbs:
+      - list
+      - watch
+      - patch
+
+    - apiGroups:
+      - ""
+      resources:
+      - services/status
+      verbs:
+      - patch
+      - get
+      - update
+
+    - apiGroups:
+        - ""
+      resources:
+        - configmaps
+      resourceNames:
+        - "extension-apiserver-authentication"
+      verbs:
+        - get
+
+    - apiGroups:
+      - ""
+      resources:
+      - events
+      verbs:
+      - list
+      - watch
+      - create
+      - patch
+      - update
+
+    # For leader election
+    - apiGroups:
+      - ""
+      resources:
+      - endpoints
+      verbs:
+      - create
+
+    - apiGroups:
+      - ""
+      resources:
+      - endpoints
+      resourceNames:
+      - "cloud-controller-manager"
+      verbs:
+      - get
+      - list
+      - watch
+      - update
+
+    - apiGroups:
+      - ""
+      resources:
+      - configmaps
+      verbs:
+      - create
+
+    - apiGroups:
+      - ""
+      resources:
+      - configmaps
+      resourceNames:
+      - "cloud-controller-manager"
+      verbs:
+      - get
+      - update
+
+    - apiGroups:
+        - ""
+      resources:
+        - configmaps
+      resourceNames:
+        - "extension-apiserver-authentication"
+      verbs:
+        - get
+
+    - apiGroups:
+      - ""
+      resources:
+      - serviceaccounts
+      verbs:
+      - create
+    - apiGroups:
+      - ""
+      resources:
+      - secrets
+      verbs:
+      - get
+      - list
+
+    # For the PVL
+    - apiGroups:
+      - ""
+      resources:
+      - persistentvolumes
+      verbs:
+      - list
+      - watch
+      - patch
+    ---
+    kind: ClusterRoleBinding
+    apiVersion: rbac.authorization.k8s.io/v1
+    metadata:
+      name: oci-cloud-controller-manager
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: system:cloud-controller-manager
+    subjects:
+    - kind: ServiceAccount
+      name: cloud-controller-manager
+      namespace: kube-system
+kind: ConfigMap
+metadata:
+  annotations:
+    note: generated
+  labels:
+    type: generated
+  name: ${CLUSTER_NAME}-oci-cloud-controller-manager
+  namespace: default
+---
+apiVersion: v1
+data:
+  csi.yaml: |
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: oci-volume-provisioner
+      namespace: kube-system
+    stringData:
+      config.yaml: |-
+        useInstancePrincipals: true
+
+        # compartment configures Compartment within which the cluster resides.
+        compartment: ${OCI_COMPARTMENT_ID}
+
+        # Optional rate limit controls for accessing OCI API
+        rateLimiter:
+          rateLimitQPSRead: 20.0
+          rateLimitBucketRead: 5
+          rateLimitQPSWrite: 20.0
+          rateLimitBucketWrite: 5
+    ---
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      annotations:
+        deprecated.daemonset.template.generation: "1"
+      generation: 1
+      name: csi-oci-controller
+      namespace: kube-system
+    spec:
+      revisionHistoryLimit: 10
+      selector:
+        matchLabels:
+          app: csi-oci-controller
+      template:
+        metadata:
+          creationTimestamp: null
+          labels:
+            app: csi-oci-controller
+            role: csi-oci
+        spec:
+          nodeSelector:
+            node-role.kubernetes.io/master: ""
+          containers:
+            - name: csi-volume-provisioner
+              image: quay.io/k8scsi/csi-provisioner:v1.6.0
+              args:
+                - --csi-address=/var/run/shared-tmpfs/csi.sock
+                - --volume-name-prefix=csi
+                - --feature-gates=Topology=true
+                - --timeout=120s
+                - --enable-leader-election=true
+                - --leader-election-type=leases
+                - --leader-election-namespace=kube-system
+              volumeMounts:
+                - name: config
+                  mountPath: /etc/oci/
+                  readOnly: true
+                - mountPath: /var/run/shared-tmpfs
+                  name: shared-tmpfs
+            - name: csi-attacher
+              image: quay.io/k8scsi/csi-attacher:v2.2.0
+              args:
+                - --csi-address=/var/run/shared-tmpfs/csi.sock
+                - --timeout=120s
+                - --leader-election=true
+                - --leader-election-namespace=kube-system
+              volumeMounts:
+                - name: config
+                  mountPath: /etc/oci/
+                  readOnly: true
+                - mountPath: /var/run/shared-tmpfs
+                  name: shared-tmpfs
+            - name: oci-csi-controller-driver
+              args:
+                - --v=2
+                - --endpoint=unix://var/run/shared-tmpfs/csi.sock
+              command:
+                - /usr/local/bin/oci-csi-controller-driver
+              image: iad.ocir.io/oracle/cloud-provider-oci:0.12.0
+              imagePullPolicy: IfNotPresent
+              volumeMounts:
+                - name: config
+                  mountPath: /etc/oci/
+                  readOnly: true
+                - name: kubernetes
+                  mountPath: /etc/kubernetes
+                  readOnly: true
+                - mountPath: /var/run/shared-tmpfs
+                  name: shared-tmpfs
+          volumes:
+            - name: config
+              secret:
+                secretName: oci-volume-provisioner
+            - name: kubernetes
+              hostPath:
+                path: /etc/kubernetes
+            - name: shared-tmpfs
+              emptyDir: {}
+          dnsPolicy: ClusterFirst
+          hostNetwork: true
+          imagePullSecrets:
+            - name: image-pull-secret
+          restartPolicy: Always
+          schedulerName: default-scheduler
+          serviceAccount: csi-oci-node-sa
+          serviceAccountName: csi-oci-node-sa
+          terminationGracePeriodSeconds: 30
+          tolerations:
+            - operator: Exists
+    ---
+    ---
+    kind: ConfigMap
+    apiVersion: v1
+    metadata:
+      name: oci-csi-iscsiadm
+      namespace: kube-system
+    data:
+      iscsiadm: |
+        #!/bin/sh
+        if [ -x /host/sbin/iscsiadm ]; then
+          chroot /host /sbin/iscsiadm "$@"
+        elif [ -x /host/usr/local/sbin/iscsiadm ]; then
+          chroot /host /usr/local/sbin/iscsiadm "$@"
+        elif [ -x /host/bin/iscsiadm ]; then
+          chroot /host /bin/iscsiadm "$@"
+        elif [ -x /host/usr/local/bin/iscsiadm ]; then
+          chroot /host /usr/local/bin/iscsiadm "$@"
+        else
+          chroot /host iscsiadm "$@"
+        fi
+    ---
+    apiVersion: apps/v1
+    kind: DaemonSet
+    metadata:
+      annotations:
+        deprecated.daemonset.template.generation: "1"
+      generation: 1
+      name: csi-oci-node
+      namespace: kube-system
+    spec:
+      revisionHistoryLimit: 10
+      selector:
+        matchLabels:
+          app: csi-oci-node
+      template:
+        metadata:
+          creationTimestamp: null
+          labels:
+            app: csi-oci-node
+            role: csi-oci
+        spec:
+          containers:
+            - name: oci-csi-node-driver
+              args:
+                - --v=2
+                - --endpoint=unix:///csi/csi.sock
+                - --nodeid=$(KUBE_NODE_NAME)
+                - --loglevel=debug
+              command:
+                - /usr/local/bin/oci-csi-node-driver
+              env:
+                - name: KUBE_NODE_NAME
+                  valueFrom:
+                    fieldRef:
+                      apiVersion: v1
+                      fieldPath: spec.nodeName
+                - name: PATH
+                  value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/host/usr/bin:/host/sbin
+              image: iad.ocir.io/oracle/cloud-provider-oci:0.12.0
+              securityContext:
+                privileged: true
+              volumeMounts:
+                - mountPath: /csi
+                  name: plugin-dir
+                - mountPath: /var/lib/kubelet
+                  mountPropagation: Bidirectional
+                  name: pods-mount-dir
+                - mountPath: /dev
+                  name: device-dir
+                - mountPath: /registration
+                  name: registration-dir
+                - mountPath: /host
+                  name: host-root
+                - mountPath: /sbin/iscsiadm
+                  name: chroot-iscsiadm
+                  subPath: iscsiadm
+            - name: csi-node-registrar
+              args:
+                - --csi-address=/csi/csi.sock
+                - --kubelet-registration-path=/var/lib/kubelet/plugins/blockvolume.csi.oraclecloud.com/csi.sock
+              image: quay.io/k8scsi/csi-node-driver-registrar:v1.0.2
+              securityContext:
+                privileged: true
+              lifecycle:
+                preStop:
+                  exec:
+                    command:
+                      - /bin/sh
+                      - -c
+                      - rm -rf /registration/blockvolume.csi.oraclecloud.com /registration/blockvolume.csi.oraclecloud.com-reg.sock
+              volumeMounts:
+                - mountPath: /csi
+                  name: plugin-dir
+                - mountPath: /var/lib/kubelet
+                  mountPropagation: Bidirectional
+                  name: pods-mount-dir
+                - mountPath: /dev
+                  name: device-dir
+                - mountPath: /registration
+                  name: registration-dir
+          dnsPolicy: ClusterFirst
+          hostNetwork: true
+          imagePullSecrets:
+            - name: image-pull-secret
+          restartPolicy: Always
+          schedulerName: default-scheduler
+          serviceAccount: csi-oci-node-sa
+          serviceAccountName: csi-oci-node-sa
+          terminationGracePeriodSeconds: 30
+          tolerations:
+            - operator: Exists
+          volumes:
+            - hostPath:
+                path: /var/lib/kubelet/plugins_registry/
+                type: DirectoryOrCreate
+              name: registration-dir
+            - hostPath:
+                path: /var/lib/kubelet/plugins/blockvolume.csi.oraclecloud.com
+                type: DirectoryOrCreate
+              name: plugin-dir
+            - hostPath:
+                path: /var/lib/kubelet
+                type: Directory
+              name: pods-mount-dir
+            - hostPath:
+                path: /dev
+                type: ""
+              name: device-dir
+            - hostPath:
+                path: /
+                type: Directory
+              name: host-root
+            - configMap:
+                name: oci-csi-iscsiadm
+                defaultMode: 0755
+              name: chroot-iscsiadm
+      updateStrategy:
+        rollingUpdate:
+          maxUnavailable: 1
+        type: RollingUpdate
+    ---
+    apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+     name: csi-oci-node-sa
+     namespace: kube-system
+    ---
+
+    kind: ClusterRole
+    apiVersion: rbac.authorization.k8s.io/v1
+    metadata:
+     name: csi-oci
+     namespace: kube-system
+    rules:
+     - apiGroups: [""]
+       resources: ["events"]
+       verbs: ["get", "list", "watch", "create", "update", "patch"]
+     - apiGroups: [""]
+       resources: ["nodes"]
+       verbs: ["get", "list", "watch"]
+     - apiGroups: ["volume.oci.oracle.com"]
+       resources: ["blockscsiinfos"]
+       verbs: ["get", "list", "watch", "create", "delete", "update", "patch"]
+     - apiGroups: [""]
+       resources: ["persistentvolumes"]
+       verbs: ["get", "list", "watch", "create", "delete", "patch"]
+     - apiGroups: [""]
+       resources: ["persistentvolumeclaims"]
+       verbs: ["get", "list", "watch", "update", "create"]
+     - apiGroups: ["storage.k8s.io"]
+       resources: ["storageclasses", "volumeattachments", "csinodes"]
+       verbs: ["get", "list", "watch", "patch"]
+     - apiGroups: ["coordination.k8s.io"]
+       resources: ["leases"]
+       verbs: ["get", "list", "watch", "create", "delete", "update", "patch"]
+     - apiGroups: [""]
+       resources: ["endpoints"]
+       verbs: ["get", "watch", "create", "update"]
+    ---
+
+    kind: ClusterRoleBinding
+    apiVersion: rbac.authorization.k8s.io/v1
+    metadata:
+     name: csi-oci-binding
+    subjects:
+     - kind: ServiceAccount
+       name: csi-oci-node-sa
+       namespace: kube-system
+    roleRef:
+     kind: ClusterRole
+     name: csi-oci
+     apiGroup: rbac.authorization.k8s.io
+    ---
+    apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+     name: csi-oci-node-sa
+     namespace: kube-system
+    ---
+
+    kind: ClusterRole
+    apiVersion: rbac.authorization.k8s.io/v1
+    metadata:
+     name: csi-oci
+     namespace: kube-system
+    rules:
+     - apiGroups: [""]
+       resources: ["events"]
+       verbs: ["get", "list", "watch", "create", "update", "patch"]
+     - apiGroups: [""]
+       resources: ["nodes"]
+       verbs: ["get", "list", "watch"]
+     - apiGroups: ["volume.oci.oracle.com"]
+       resources: ["blockscsiinfos"]
+       verbs: ["get", "list", "watch", "create", "delete", "update", "patch"]
+     - apiGroups: [""]
+       resources: ["persistentvolumes"]
+       verbs: ["get", "list", "watch", "create", "delete", "patch"]
+     - apiGroups: [""]
+       resources: ["persistentvolumeclaims"]
+       verbs: ["get", "list", "watch", "update", "create"]
+     - apiGroups: ["storage.k8s.io"]
+       resources: ["storageclasses", "volumeattachments", "csinodes"]
+       verbs: ["get", "list", "watch", "patch"]
+     - apiGroups: ["coordination.k8s.io"]
+       resources: ["leases"]
+       verbs: ["get", "list", "watch", "create", "delete", "update", "patch"]
+     - apiGroups: [""]
+       resources: ["endpoints"]
+       verbs: ["get", "watch", "create", "update"]
+    ---
+
+    kind: ClusterRoleBinding
+    apiVersion: rbac.authorization.k8s.io/v1
+    metadata:
+     name: csi-oci-binding
+    subjects:
+     - kind: ServiceAccount
+       name: csi-oci-node-sa
+       namespace: kube-system
+    roleRef:
+     kind: ClusterRole
+     name: csi-oci
+     apiGroup: rbac.authorization.k8s.io
+kind: ConfigMap
+metadata:
+  annotations:
+    note: generated
+  labels:
+    type: generated
+  name: ${CLUSTER_NAME}-oci-csi
+  namespace: default
+---
+apiVersion: v1
+binaryData: null
+data: ${CNI_RESOURCES}
+kind: ConfigMap
+metadata:
+  name: cni-${CLUSTER_NAME}-crs-0
+---
+apiVersion: addons.cluster.x-k8s.io/v1beta1
+kind: ClusterResourceSet
+metadata:
+  name: ${CLUSTER_NAME}-ccm-resource-set
+  namespace: default
+spec:
+  clusterSelector:
+    matchLabels:
+      cluster.x-k8s.io/cluster-name: ${CLUSTER_NAME}
+  resources:
+  - kind: ConfigMap
+    name: ${CLUSTER_NAME}-oci-cloud-controller-manager
+  strategy: ApplyOnce
+---
+apiVersion: addons.cluster.x-k8s.io/v1beta1
+kind: ClusterResourceSet
+metadata:
+  name: ${CLUSTER_NAME}-csi-resource-set
+  namespace: default
+spec:
+  clusterSelector:
+    matchLabels:
+      cluster.x-k8s.io/cluster-name: ${CLUSTER_NAME}
+  resources:
+  - kind: ConfigMap
+    name: ${CLUSTER_NAME}-oci-csi
+  strategy: ApplyOnce
+---
+apiVersion: addons.cluster.x-k8s.io/v1beta1
+kind: ClusterResourceSet
+metadata:
+  name: ${CLUSTER_NAME}-crs-0
+spec:
+  clusterSelector:
+    matchLabels:
+      cni: calico
+  resources:
+  - kind: ConfigMap
+    name: cni-${CLUSTER_NAME}-crs-0
+  strategy: ApplyOnce
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1alpha4
+kind: KubeadmConfigTemplate
+metadata:
+  name: ${CLUSTER_NAME}-md-0
+spec:
+  template:
+    spec:
+      joinConfiguration:
+        nodeRegistration:
+          kubeletExtraArgs:
+            cloud-provider: external
+            provider-id: oci://{{ ds["id"] }}
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Cluster
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: ${CLUSTER_NAME}
+    cni: calico
+  name: ${CLUSTER_NAME}
+  namespace: default
+spec:
+  clusterNetwork:
+    pods:
+      cidrBlocks:
+      - ${POD_CIDR:="192.168.0.0/16"}
+    serviceDomain: ${SERVICE_DOMAIN:="cluster.local"}
+    services:
+      cidrBlocks:
+      - ${SERVICE_CIDR:="10.128.0.0/12"}
+  controlPlaneRef:
+    apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+    kind: KubeadmControlPlane
+    name: ${CLUSTER_NAME}-control-plane
+    namespace: ${NAMESPACE}
+  infrastructureRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+    kind: OCICluster
+    name: ${CLUSTER_NAME}
+    namespace: ${NAMESPACE}
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  name: ${CLUSTER_NAME}-md-0
+spec:
+  clusterName: ${CLUSTER_NAME}
+  replicas: ${WORKER_MACHINE_COUNT}
+  selector:
+    matchLabels: null
+  template:
+    spec:
+      bootstrap:
+        configRef:
+          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+          kind: KubeadmConfigTemplate
+          name: ${CLUSTER_NAME}-md-0
+      clusterName: ${CLUSTER_NAME}
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        kind: OCIMachineTemplate
+        name: ${CLUSTER_NAME}-md-0
+      version: ${KUBERNETES_VERSION}
+---
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+kind: KubeadmControlPlane
+metadata:
+  name: ${CLUSTER_NAME}-control-plane
+  namespace: default
+spec:
+  kubeadmConfigSpec:
+    clusterConfiguration:
+      apiServer:
+        certSANs:
+        - localhost
+        - 127.0.0.1
+      dns: {}
+      etcd: {}
+      kubernetesVersion: ${KUBERNETES_VERSION}
+      networking: {}
+      scheduler: {}
+    initConfiguration:
+      nodeRegistration:
+        criSocket: /var/run/containerd/containerd.sock
+        kubeletExtraArgs:
+          cloud-provider: external
+          provider-id: oci://{{ ds["id"] }}
+    joinConfiguration:
+      discovery: {}
+      nodeRegistration:
+        criSocket: /var/run/containerd/containerd.sock
+        kubeletExtraArgs:
+          cloud-provider: external
+          provider-id: oci://{{ ds["id"] }}
+  machineTemplate:
+    infrastructureRef:
+      apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+      kind: OCIMachineTemplate
+      name: ${CLUSTER_NAME}-control-plane
+      namespace: ${NAMESPACE}
+  replicas: ${CONTROL_PLANE_MACHINE_COUNT}
+  version: ${KUBERNETES_VERSION}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: OCICluster
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: ${CLUSTER_NAME}
+  name: ${CLUSTER_NAME}
+spec:
+  compartmentId: ${OCI_COMPARTMENT_ID}
+  region: ${OCI_ALTERNATIVE_REGION}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: OCIMachineTemplate
+metadata:
+  name: ${CLUSTER_NAME}-control-plane
+spec:
+  template:
+    spec:
+      compartmentId: ${OCI_COMPARTMENT_ID}
+      imageId: ${OCI_ALTERNATIVE_REGION_IMAGE_ID}
+      metadata:
+        ssh_authorized_keys: ${OCI_SSH_KEY}
+      shape: ${OCI_CONTROL_PLANE_MACHINE_TYPE}
+      shapeConfig:
+        ocpus: "1"
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: OCIMachineTemplate
+metadata:
+  name: ${CLUSTER_NAME}-md-0
+spec:
+  template:
+    spec:
+      compartmentId: ${OCI_COMPARTMENT_ID}
+      imageId: ${OCI_ALTERNATIVE_REGION_IMAGE_ID}
+      metadata:
+        ssh_authorized_keys: ${OCI_SSH_KEY}
+      shape: ${OCI_NODE_MACHINE_TYPE}
+      shapeConfig:
+        ocpus: "1"

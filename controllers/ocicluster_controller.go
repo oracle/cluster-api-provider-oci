@@ -25,9 +25,6 @@ import (
 	"github.com/oracle/cluster-api-provider-oci/api/v1beta1"
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
-	nlb "github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer"
-	"github.com/oracle/oci-go-sdk/v63/core"
-	"github.com/oracle/oci-go-sdk/v63/identity"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -52,12 +49,10 @@ import (
 // OCIClusterReconciler reconciles a OciCluster object
 type OCIClusterReconciler struct {
 	client.Client
-	Scheme                    *runtime.Scheme
-	VCNClient                 core.VirtualNetworkClient
-	NetworkLoadBalancerClient nlb.NetworkLoadBalancerClient
-	Recorder                  record.EventRecorder
-	IdentityClient            identity.IdentityClient
-	Region                    string
+	Scheme         *runtime.Scheme
+	Recorder       record.EventRecorder
+	Region         string
+	ClientProvider *scope.ClientProvider
 }
 
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=ociclusters,verbs=get;list;watch;create;update;patch;delete
@@ -84,6 +79,13 @@ func (r *OCIClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 		return ctrl.Result{}, err
 	}
+	regionOverride := r.Region
+	if len(ociCluster.Spec.Region) > 0 {
+		regionOverride = ociCluster.Spec.Region
+	}
+	if len(regionOverride) <= 0 {
+		return ctrl.Result{}, errors.New("OCIClusterReconciler Region can't be nil")
+	}
 
 	// Fetch the Cluster.
 	cluster, err := util.GetOwnerCluster(ctx, r.Client, ociCluster.ObjectMeta)
@@ -96,15 +98,21 @@ func (r *OCIClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, nil
 	}
 	var clusterScope scope.ClusterScopeClient
+
+	clients, err := r.ClientProvider.GetOrBuildClient(regionOverride)
+	if err != nil {
+		logger.Error(err, "Couldn't get the clients for region")
+	}
+
 	clusterScope, err = scope.NewClusterScope(scope.ClusterScopeParams{
 		Client:             r.Client,
 		Logger:             &logger,
 		Cluster:            cluster,
 		OCICluster:         ociCluster,
-		VCNClient:          r.VCNClient,
-		LoadBalancerClient: r.NetworkLoadBalancerClient,
-		IdentityClient:     r.IdentityClient,
-		Region:             r.Region,
+		VCNClient:          clients.VCNClient,
+		LoadBalancerClient: clients.LoadBalancerClient,
+		IdentityClient:     clients.IdentityClient,
+		Region:             regionOverride,
 	})
 
 	// Always close the scope when exiting this function so we can persist any OCICluster changes.
