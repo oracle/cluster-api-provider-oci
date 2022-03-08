@@ -22,7 +22,6 @@ source "${REPO_ROOT}/hack/ensure-tags.sh"
 : "${OCI_IMAGE_ID:?Environment variable empty or not defined.}"
 : "${OCI_ORACLE_LINUX_IMAGE_ID:?Environment variable empty or not defined.}"
 : "${OCI_UPGRADE_IMAGE_ID:?Environment variable empty or not defined.}"
-: "${OCI_CCM_TEST_IMAGE_ID:?Environment variable empty or not defined.}"
 : "${OCI_ALTERNATIVE_REGION_IMAGE_ID:?Environment variable empty or not defined.}"
 
 export LOCAL_ONLY=${LOCAL_ONLY:-"true"}

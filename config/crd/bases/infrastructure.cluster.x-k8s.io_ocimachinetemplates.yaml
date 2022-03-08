@@ -22,7 +22,7 @@ spec:
     schema:
       openAPIV3Schema:
         description: OCIMachineTemplate is the schema for the OCI compute instance
-          machine template
+          machine template.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -67,13 +67,13 @@ spec:
                       freeformTags:
                         additionalProperties:
                           type: string
-                        description: Free-form tags for this resource
+                        description: Free-form tags for this resource.
                         type: object
                       imageId:
-                        description: OCID of the image to be used to launch the instance
+                        description: OCID of the image to be used to launch the instance.
                         type: string
                       instanceId:
-                        description: OCID of launched compute instance
+                        description: OCID of launched compute instance.
                         type: string
                       isPvEncryptionInTransitEnabled:
                         default: true
@@ -87,7 +87,7 @@ spec:
                         type: object
                       networkDetails:
                         description: PrimaryNetworkInterface is required to specify
-                          subnet
+                          subnet.
                         properties:
                           assignPublicIp:
                             type: boolean
@@ -110,11 +110,11 @@ spec:
                           parameter.
                         type: string
                       shape:
-                        description: Shape of the instance
+                        description: Shape of the instance.
                         type: string
                       shapeConfig:
                         description: The shape configuration of rhe instance, applicable
-                          for flex instances
+                          for flex instances.
                         properties:
                           baselineOcpuUtilization:
                             description: 'The baseline OCPU utilization for a subcore

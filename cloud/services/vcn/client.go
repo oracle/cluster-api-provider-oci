@@ -18,6 +18,7 @@ package vcn
 
 import (
 	"context"
+
 	"github.com/oracle/oci-go-sdk/v63/core"
 )
 
@@ -78,4 +79,21 @@ type Client interface {
 	DeleteNetworkSecurityGroup(ctx context.Context, request core.DeleteNetworkSecurityGroupRequest) (response core.DeleteNetworkSecurityGroupResponse, err error)
 	ListNetworkSecurityGroupSecurityRules(ctx context.Context, request core.ListNetworkSecurityGroupSecurityRulesRequest) (response core.ListNetworkSecurityGroupSecurityRulesResponse, err error)
 	RemoveNetworkSecurityGroupSecurityRules(ctx context.Context, request core.RemoveNetworkSecurityGroupSecurityRulesRequest) (response core.RemoveNetworkSecurityGroupSecurityRulesResponse, err error)
+	// Dynamic Routing Gateways (DRG)
+	GetDrg(ctx context.Context, request core.GetDrgRequest) (response core.GetDrgResponse, err error)
+	CreateDrg(ctx context.Context, request core.CreateDrgRequest) (response core.CreateDrgResponse, err error)
+	UpdateDrg(ctx context.Context, request core.UpdateDrgRequest) (response core.UpdateDrgResponse, err error)
+	DeleteDrg(ctx context.Context, request core.DeleteDrgRequest) (response core.DeleteDrgResponse, err error)
+	ListDrgs(ctx context.Context, request core.ListDrgsRequest) (response core.ListDrgsResponse, err error)
+	ListDrgAttachments(ctx context.Context, request core.ListDrgAttachmentsRequest) (response core.ListDrgAttachmentsResponse, err error)
+	CreateDrgAttachment(ctx context.Context, request core.CreateDrgAttachmentRequest) (response core.CreateDrgAttachmentResponse, err error)
+	GetDrgAttachment(ctx context.Context, request core.GetDrgAttachmentRequest) (response core.GetDrgAttachmentResponse, err error)
+	UpdateDrgAttachment(ctx context.Context, request core.UpdateDrgAttachmentRequest) (response core.UpdateDrgAttachmentResponse, err error)
+	DeleteDrgAttachment(ctx context.Context, request core.DeleteDrgAttachmentRequest) (response core.DeleteDrgAttachmentResponse, err error)
+	GetRemotePeeringConnection(ctx context.Context, request core.GetRemotePeeringConnectionRequest) (response core.GetRemotePeeringConnectionResponse, err error)
+	CreateRemotePeeringConnection(ctx context.Context, request core.CreateRemotePeeringConnectionRequest) (response core.CreateRemotePeeringConnectionResponse, err error)
+	DeleteRemotePeeringConnection(ctx context.Context, request core.DeleteRemotePeeringConnectionRequest) (response core.DeleteRemotePeeringConnectionResponse, err error)
+	UpdateRemotePeeringConnection(ctx context.Context, request core.UpdateRemotePeeringConnectionRequest) (response core.UpdateRemotePeeringConnectionResponse, err error)
+	ListRemotePeeringConnections(ctx context.Context, request core.ListRemotePeeringConnectionsRequest) (response core.ListRemotePeeringConnectionsResponse, err error)
+	ConnectRemotePeeringConnections(ctx context.Context, request core.ConnectRemotePeeringConnectionsRequest) (response core.ConnectRemotePeeringConnectionsResponse, err error)
 }

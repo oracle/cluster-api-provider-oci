@@ -19,10 +19,7 @@ package scope
 import (
 	"context"
 	"fmt"
-	"github.com/pkg/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"reflect"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -30,7 +27,10 @@ import (
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn/mock_vcn"
 	"github.com/oracle/oci-go-sdk/v63/common"
 	"github.com/oracle/oci-go-sdk/v63/core"
+	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 func TestClusterScope_CreateVCN(t *testing.T) {

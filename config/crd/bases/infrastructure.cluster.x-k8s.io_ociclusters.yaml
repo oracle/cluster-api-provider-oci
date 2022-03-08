@@ -19,7 +19,7 @@ spec:
   - name: v1beta1
     schema:
       openAPIV3Schema:
-        description: OCICluster is the Schema for the ociclusters API
+        description: OCICluster is the Schema for the ociclusters API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -67,51 +67,51 @@ spec:
               freeformTags:
                 additionalProperties:
                   type: string
-                description: Free-form tags for this resource
+                description: Free-form tags for this resource.
                 type: object
               networkSpec:
                 description: NetworkSpec encapsulates all things related to OCI network.
                 properties:
                   apiServerLoadBalancer:
-                    description: API Server LB configuration
+                    description: API Server LB configuration.
                     properties:
                       loadBalancerId:
-                        description: ID of Load Balancer
+                        description: ID of Load Balancer.
                         type: string
                       name:
-                        description: LoadBalancer Name
+                        description: LoadBalancer Name.
                         type: string
                     type: object
                   vcn:
-                    description: VCN configuration
+                    description: VCN configuration.
                     properties:
                       cidr:
-                        description: VCN CIDR
+                        description: VCN CIDR.
                         type: string
                       id:
-                        description: VCN OCID
+                        description: VCN OCID.
                         type: string
                       internetGatewayId:
-                        description: ID of Internet Gateway
+                        description: ID of Internet Gateway.
                         type: string
                       name:
-                        description: VCN Name
+                        description: VCN Name.
                         type: string
                       natGatewayId:
-                        description: ID of Nat Gateway
+                        description: ID of Nat Gateway.
                         type: string
                       networkSecurityGroups:
                         description: NetworkSecurityGroups is the configuration for
-                          the Network Security Groups required in the VCN
+                          the Network Security Groups required in the VCN.
                         items:
                           description: NSG defines configuration for a Network Security
-                            Group https://docs.oracle.com/en-us/iaas/Content/Network/Concepts/networksecuritygroups.htm
+                            Group. https://docs.oracle.com/en-us/iaas/Content/Network/Concepts/networksecuritygroups.htm
                           properties:
                             egressRules:
-                              description: EgressRules on the NSG
+                              description: EgressRules on the NSG.
                               items:
                                 description: EgressSecurityRuleForNSG is EgressSecurityRule
-                                  for NSG
+                                  for NSG.
                                 properties:
                                   egressRule:
                                     description: EgressSecurityRule A rule for allowing
@@ -200,7 +200,7 @@ spec:
                                         properties:
                                           destinationPortRange:
                                             description: PortRange The representation
-                                              of PortRange
+                                              of PortRange.
                                             properties:
                                               max:
                                                 description: The maximum port number,
@@ -217,7 +217,7 @@ spec:
                                             type: object
                                           sourcePortRange:
                                             description: PortRange The representation
-                                              of PortRange
+                                              of PortRange.
                                             properties:
                                               max:
                                                 description: The maximum port number,
@@ -242,7 +242,7 @@ spec:
                                         properties:
                                           destinationPortRange:
                                             description: PortRange The representation
-                                              of PortRange
+                                              of PortRange.
                                             properties:
                                               max:
                                                 description: The maximum port number,
@@ -259,7 +259,7 @@ spec:
                                             type: object
                                           sourcePortRange:
                                             description: PortRange The representation
-                                              of PortRange
+                                              of PortRange.
                                             properties:
                                               max:
                                                 description: The maximum port number,
@@ -277,21 +277,21 @@ spec:
                                         type: object
                                     type: object
                                   id:
-                                    description: EgressSecurityRule ID for NSG
+                                    description: EgressSecurityRule ID for NSG.
                                     type: string
                                 type: object
                               type: array
                             id:
-                              description: NSG OCID
+                              description: NSG OCID.
                               type: string
                             ingressRules:
-                              description: IngressRules on the NSG
+                              description: IngressRules on the NSG.
                               items:
                                 description: IngressSecurityRuleForNSG is IngressSecurityRule
                                   for NSG
                                 properties:
                                   id:
-                                    description: IngressSecurityRule ID for NSG
+                                    description: IngressSecurityRule ID for NSG.
                                     type: string
                                   ingressRule:
                                     description: IngressSecurityRule A rule for allowing
@@ -379,7 +379,7 @@ spec:
                                         properties:
                                           destinationPortRange:
                                             description: PortRange The representation
-                                              of PortRange
+                                              of PortRange.
                                             properties:
                                               max:
                                                 description: The maximum port number,
@@ -396,7 +396,7 @@ spec:
                                             type: object
                                           sourcePortRange:
                                             description: PortRange The representation
-                                              of PortRange
+                                              of PortRange.
                                             properties:
                                               max:
                                                 description: The maximum port number,
@@ -421,7 +421,7 @@ spec:
                                         properties:
                                           destinationPortRange:
                                             description: PortRange The representation
-                                              of PortRange
+                                              of PortRange.
                                             properties:
                                               max:
                                                 description: The maximum port number,
@@ -438,7 +438,7 @@ spec:
                                             type: object
                                           sourcePortRange:
                                             description: PortRange The representation
-                                              of PortRange
+                                              of PortRange.
                                             properties:
                                               max:
                                                 description: The maximum port number,
@@ -458,48 +458,48 @@ spec:
                                 type: object
                               type: array
                             name:
-                              description: NSG Name
+                              description: NSG Name.
                               type: string
                             role:
                               description: Role defines the NSG role (eg. control-plane,
-                                control-plane-endpoint, service-lb, worker)
+                                control-plane-endpoint, service-lb, worker).
                               type: string
                           type: object
                         type: array
                       privateRouteTableId:
-                        description: ID of Private Route Table
+                        description: ID of Private Route Table.
                         type: string
                       publicRouteTableId:
-                        description: ID of Public Route Table
+                        description: ID of Public Route Table.
                         type: string
                       serviceGatewayId:
-                        description: ID of Service Gateway
+                        description: ID of Service Gateway.
                         type: string
                       subnets:
                         description: Subnets is the configuration for subnets required
-                          in the VCN
+                          in the VCN.
                         items:
-                          description: Subnet defines the configuration for a newwork's
+                          description: Subnet defines the configuration for a network's
                             subnet https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/managingVCNs_topic-Overview_of_VCNs_and_Subnets.htm#Overview
                           properties:
                             cidr:
-                              description: Subnet CIDR
+                              description: Subnet CIDR.
                               type: string
                             id:
-                              description: Subnet OCID
+                              description: Subnet OCID.
                               type: string
                             name:
-                              description: Subnet Name
+                              description: Subnet Name.
                               type: string
                             role:
                               description: Role defines the subnet role (eg. control-plane,
-                                control-plane-endpoint, service-lb, worker)
+                                control-plane-endpoint, service-lb, worker).
                               type: string
                             securityList:
-                              description: The security list associated with Subnet
+                              description: The security list associated with Subnet.
                               properties:
                                 egressRules:
-                                  description: EgressRules on the SecurityList
+                                  description: EgressRules on the SecurityList.
                                   items:
                                     description: EgressSecurityRule A rule for allowing
                                       outbound IP packets.
@@ -587,7 +587,7 @@ spec:
                                         properties:
                                           destinationPortRange:
                                             description: PortRange The representation
-                                              of PortRange
+                                              of PortRange.
                                             properties:
                                               max:
                                                 description: The maximum port number,
@@ -604,7 +604,7 @@ spec:
                                             type: object
                                           sourcePortRange:
                                             description: PortRange The representation
-                                              of PortRange
+                                              of PortRange.
                                             properties:
                                               max:
                                                 description: The maximum port number,
@@ -629,7 +629,7 @@ spec:
                                         properties:
                                           destinationPortRange:
                                             description: PortRange The representation
-                                              of PortRange
+                                              of PortRange.
                                             properties:
                                               max:
                                                 description: The maximum port number,
@@ -646,7 +646,7 @@ spec:
                                             type: object
                                           sourcePortRange:
                                             description: PortRange The representation
-                                              of PortRange
+                                              of PortRange.
                                             properties:
                                               max:
                                                 description: The maximum port number,
@@ -665,10 +665,10 @@ spec:
                                     type: object
                                   type: array
                                 id:
-                                  description: SecurityList Name
+                                  description: ID of the SecurityList.
                                   type: string
                                 ingressRules:
-                                  description: IngressRules on the SecurityList
+                                  description: IngressRules on the SecurityList.
                                   items:
                                     description: IngressSecurityRule A rule for allowing
                                       inbound IP packets.
@@ -755,7 +755,7 @@ spec:
                                         properties:
                                           destinationPortRange:
                                             description: PortRange The representation
-                                              of PortRange
+                                              of PortRange.
                                             properties:
                                               max:
                                                 description: The maximum port number,
@@ -772,7 +772,7 @@ spec:
                                             type: object
                                           sourcePortRange:
                                             description: PortRange The representation
-                                              of PortRange
+                                              of PortRange.
                                             properties:
                                               max:
                                                 description: The maximum port number,
@@ -797,7 +797,7 @@ spec:
                                         properties:
                                           destinationPortRange:
                                             description: PortRange The representation
-                                              of PortRange
+                                              of PortRange.
                                             properties:
                                               max:
                                                 description: The maximum port number,
@@ -814,7 +814,7 @@ spec:
                                             type: object
                                           sourcePortRange:
                                             description: PortRange The representation
-                                              of PortRange
+                                              of PortRange.
                                             properties:
                                               max:
                                                 description: The maximum port number,
@@ -833,14 +833,96 @@ spec:
                                     type: object
                                   type: array
                                 name:
+                                  description: SecurityList Name.
                                   type: string
                               type: object
                             type:
                               description: Type defines the subnet type (e.g. public,
-                                private)
+                                private).
                               type: string
                           required:
                           - role
+                          type: object
+                        type: array
+                    type: object
+                  vcnPeering:
+                    description: VCNPeering configuration.
+                    properties:
+                      drg:
+                        description: DRG configuration refers to the DRG which has
+                          to be created if required. If management cluster and workload
+                          cluster shares the same DRG, this fields is not required
+                          to be specified.
+                        properties:
+                          id:
+                            description: ID is the OCID for the created DRG.
+                            type: string
+                          manage:
+                            description: Manage defines whether the DRG has to be
+                              managed(including create). If set to false(the default)
+                              the ID has to be specified by the user to a valid DRG
+                              ID to which the VCN has to be attached.
+                            type: boolean
+                          name:
+                            description: Name is the name of the created DRG.
+                            type: string
+                          vcnAttachmentId:
+                            description: VcnAttachmentId is the ID of the VCN attachment
+                              of the DRG. The workload cluster VCN can be attached
+                              to either the management cluster VCN if they are sharing
+                              the same DRG or to the workload cluster DRG.
+                            type: string
+                        type: object
+                      peerRouteRules:
+                        description: PeerRouteRules defines the routing rules which
+                          will be added to the private route tables of the workload
+                          cluster VCN. The routes defined here will be directed to
+                          DRG.
+                        items:
+                          description: PeerRouteRule defines a Route Rule to be routed
+                            via a DRG.
+                          properties:
+                            vcnCIDRRange:
+                              description: VCNCIDRRange is the CIDR Range of peer
+                                VCN to which the workload cluster VCN will be peered.
+                                The CIDR range is required to add the route rule in
+                                the workload cluster VCN, the route rule will forward
+                                any traffic to the CIDR to the DRG.
+                              type: string
+                          type: object
+                        type: array
+                      remotePeeringConnections:
+                        description: RemotePeeringConnections defines the RPC connections
+                          which be established with the workload cluster DRG.
+                        items:
+                          description: RemotePeeringConnection is used to peer VCNs
+                            residing in different regions(typically). Remote VCN Peering
+                            is explained here - https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/remoteVCNpeering.htm
+                          properties:
+                            managePeerRPC:
+                              description: ManagePeerRPC will define if the Peer VCN
+                                needs to be managed. If set to true a Remote Peering
+                                Connection will be created in the Peer DRG and the
+                                connection will be created between local and peer
+                                RPC.
+                              type: boolean
+                            peerDRGId:
+                              description: PeerDRGId defines the DRG ID of the peer.
+                              type: string
+                            peerRPCConnectionId:
+                              description: PeerRPCConnectionId defines the RPC ID
+                                of peer. If ManagePeerRPC is set to true this will
+                                be created by Cluster API Provider for OCI, otherwise
+                                this has be defined by the user.
+                              type: string
+                            peerRegionName:
+                              description: PeerRegionName defined the region name
+                                of Peer VCN.
+                              type: string
+                            rpcConnectionId:
+                              description: RPCConnectionId is the connection ID of
+                                the connection between peer and local RPC.
+                              type: string
                           type: object
                         type: array
                     type: object

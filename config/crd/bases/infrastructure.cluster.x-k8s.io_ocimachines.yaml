@@ -19,7 +19,7 @@ spec:
   - name: v1beta1
     schema:
       openAPIV3Schema:
-        description: OCIMachine is the Schema for the ocimachines API
+        description: OCIMachine is the Schema for the ocimachines API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -58,13 +58,13 @@ spec:
               freeformTags:
                 additionalProperties:
                   type: string
-                description: Free-form tags for this resource
+                description: Free-form tags for this resource.
                 type: object
               imageId:
-                description: OCID of the image to be used to launch the instance
+                description: OCID of the image to be used to launch the instance.
                 type: string
               instanceId:
-                description: OCID of launched compute instance
+                description: OCID of launched compute instance.
                 type: string
               isPvEncryptionInTransitEnabled:
                 default: true
@@ -77,7 +77,7 @@ spec:
                   as the SSH public key required to connect to the instance.
                 type: object
               networkDetails:
-                description: PrimaryNetworkInterface is required to specify subnet
+                description: PrimaryNetworkInterface is required to specify subnet.
                 properties:
                   assignPublicIp:
                     type: boolean
@@ -98,11 +98,11 @@ spec:
                   API provider itself, users should not set this parameter.
                 type: string
               shape:
-                description: Shape of the instance
+                description: Shape of the instance.
                 type: string
               shapeConfig:
                 description: The shape configuration of rhe instance, applicable for
-                  flex instances
+                  flex instances.
                 properties:
                   baselineOcpuUtilization:
                     description: 'The baseline OCPU utilization for a subcore burstable
@@ -128,7 +128,7 @@ spec:
                 type: string
             type: object
           status:
-            description: OCIMachineStatus defines the observed state of OciMachine
+            description: OCIMachineStatus defines the observed state of OCIMachine.
             properties:
               addresses:
                 description: Addresses contains the addresses of the associated OCI
@@ -195,22 +195,22 @@ spec:
                   type: object
                 type: array
               createBackendWorkRequestId:
-                description: Create Backend OPC work request ID for the machine backend
+                description: Create Backend OPC work request ID for the machine backend.
                 type: string
               deleteBackendWorkRequestId:
-                description: Delete Backend OPC work request ID for the machine backend
+                description: Delete Backend OPC work request ID for the machine backend.
                 type: string
               failureMessage:
-                description: The error message corresponding tot he error on the machine
+                description: The error message corresponding to the error on the machine.
                 type: string
               failureReason:
-                description: Error status on the machine
+                description: Error status on the machine.
                 type: string
               launchInstanceWorkRequestId:
-                description: Launch instance work request Id
+                description: Launch instance work request ID.
                 type: string
               ready:
-                description: Flag set to true when machine is ready
+                description: Flag set to true when machine is ready.
                 type: boolean
             type: object
         type: object

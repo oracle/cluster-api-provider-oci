@@ -19,9 +19,10 @@ package scope
 import (
 	"context"
 	"fmt"
-	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
 	"reflect"
 	"strconv"
+
+	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
 
 	"github.com/go-logr/logr"
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
@@ -54,6 +55,7 @@ type ClusterScopeParams struct {
 	IdentityClient        identityClent.Client
 	Region                string
 	OCIAuthConfigProvider common.ConfigurationProvider
+	ClientProvider        *ClientProvider
 }
 
 type ClusterScope struct {
@@ -67,6 +69,7 @@ type ClusterScope struct {
 	LoadBalancerClient nlb.NetworkLoadBalancerClient
 	IdentityClient     identityClent.Client
 	Region             string
+	ClientProvider     *ClientProvider
 }
 
 // NewClusterScope creates a ClusterScope given the ClusterScopeParams
@@ -99,6 +102,7 @@ func NewClusterScope(params ClusterScopeParams) (*ClusterScope, error) {
 		LoadBalancerClient: params.LoadBalancerClient,
 		IdentityClient:     params.IdentityClient,
 		Region:             params.Region,
+		ClientProvider:     params.ClientProvider,
 	}, nil
 }
 
@@ -256,4 +260,16 @@ func (s *ClusterScope) GetFreeFormTags() map[string]string {
 
 func (s *ClusterScope) GetOCICluster() *infrastructurev1beta1.OCICluster {
 	return s.OCICluster
+}
+
+func (s *ClusterScope) getDRG() *infrastructurev1beta1.DRG {
+	return s.OCICluster.Spec.NetworkSpec.VCNPeering.DRG
+}
+
+func (s *ClusterScope) getDrgID() *string {
+	return s.getDRG().ID
+}
+
+func (s *ClusterScope) isPeeringEnabled() bool {
+	return s.OCICluster.Spec.NetworkSpec.VCNPeering != nil
 }
