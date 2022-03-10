@@ -81,7 +81,7 @@ spec:
     spec:
       imageId: "${OCI_IMAGE_ID}"
       compartmentId: "${OCI_COMPARTMENT_ID}"
-      shape: "${OCI_CONTROL_PLANE_SHAPE}"
+      shape: "${OCI_CONTROL_PLANE_MACHINE_TYPE}"
       shapeConfig:
         ocpus: "1"
       metadata:

@@ -102,12 +102,11 @@ spec:
     spec:
       imageId: "${OCI_IMAGE_ID}"
       compartmentId: "${OCI_COMPARTMENT_ID}"
-      shape: "${OCI_CONTROL_PLANE_SHAPE=VM.Standard.E4.Flex}"
+      shape: "${OCI_CONTROL_PLANE_MACHINE_TYPE=VM.Standard.E4.Flex}"
       networkDetails:
         assignPublicIp: true
       shapeConfig:
-        ocpus: "${OCI_CONTROL_PLANE_SHAPE_OCPUS=1}"
-        memoryInGBs: "${OCI_CONTROL_PLANE_SHAPE_MEMORY_IN_GBS=16}"
+        ocpus: "${OCI_CONTROL_PLANE_MACHINE_TYPE_OCPUS=1}"
       metadata:
         ssh_authorized_keys: "${OCI_SSH_KEY}"
       IsPvEncryptionInTransitEnabled: ${OCI_CONTROL_PLANE_PV_TRANSIT_ENCRYPTION=true}
@@ -121,12 +120,11 @@ spec:
     spec:
       imageId: "${OCI_IMAGE_ID}"
       compartmentId: "${OCI_COMPARTMENT_ID}"
-      shape: "${OCI_WORKER_SHAPE=VM.Standard.E4.Flex}"
+      shape: "${OCI_NODE_MACHINE_TYPE=VM.Standard.E4.Flex}"
       networkDetails:
         assignPublicIp: true
       shapeConfig:
-        ocpus: "${OCI_WORKER_SHAPE_OCPUS=1}"
-        memoryInGBs: "${OCI_WORKER_SHAPE_MEMORY_IN_GBS=16}"
+        ocpus: "${OCI_NODE_MACHINE_TYPE_OCPUS=1}"
       metadata:
         ssh_authorized_keys: "${OCI_SSH_KEY}"
       IsPvEncryptionInTransitEnabled: ${OCI_NODE_PV_TRANSIT_ENCRYPTION=true}
@@ -153,7 +151,7 @@ metadata:
   name: "${CLUSTER_NAME}-md-0"
 spec:
   clusterName: "${CLUSTER_NAME}"
-  replicas: ${WORKER_MACHINE_COUNT}
+  replicas: ${NODE_MACHINE_COUNT}
   selector:
     matchLabels:
   template:

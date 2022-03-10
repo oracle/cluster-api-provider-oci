@@ -188,7 +188,7 @@ func makeOCIMachineTemplate(namespace, name string) *infrastructurev1beta1.OCIMa
 			Template: infrastructurev1beta1.OCIMachineTemplateResource{
 				Spec: infrastructurev1beta1.OCIMachineSpec{
 					ImageId: os.Getenv("OCI_UPGRADE_IMAGE_ID"),
-					Shape:   os.Getenv("OCI_WORKER_SHAPE"),
+					Shape:   os.Getenv("OCI_NODE_MACHINE_TYPE"),
 					ShapeConfig: infrastructurev1beta1.ShapeConfig{
 						Ocpus: "1",
 					},
