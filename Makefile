@@ -225,6 +225,14 @@ rm -rf $$TMP_DIR ;\
 }
 endef
 
+MDBOOK = /tmp/mdbook
+.PHONY: build-book
+build-book: ## Download mdbook locally if necessary.
+	docs/build.sh
+
+.PHONY: serve-book
+serve-book: build-book ## Build and serve the book with live-reloading enabled
+	$(MDBOOK) serve docs
 
 ## --------------------------------------
 ## e2e
