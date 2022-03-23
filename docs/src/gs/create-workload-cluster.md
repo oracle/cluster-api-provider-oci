@@ -2,66 +2,80 @@
 
 ## Workload Cluster Templates
 
-Choose one of the available templates for to create your workload clusters from the [latest released artifacts][latest-release]. Each workload cluster template can be further configured with the parameters below.
+Choose one of the available templates for to create your workload clusters from the
+[latest released artifacts][latest-release]. Each workload cluster template can be
+further configured  with the parameters below.
 
 ## Workload Cluster Parameters
 
-The following Oracle Cloud Infrastructure (OCI) configuration parameters are available when creating a workload cluster on OCI:
+The following Oracle Cloud Infrastructure (OCI) configuration parameters are available
+when creating a workload cluster on OCI using one of our predefined templates:
 
-| Parameter                      | Default Value       | Description                                                                                                                                                                                                                                                                                                                                                                                               |
-| ----------------------------   |---------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `OCI_COMPARTMENT_ID`           |                     | The OCID of the compartment where the OCI resources are to be created                                                                                                                                                                                                                                                                                                                                     |
-| `OCI_IMAGE_ID`                 |                     | The OCID of the Compute Image (Oracle Linux or Ubuntu) with which to create the Kubernetes nodes                                                                                                                                                                                                                                                                                                                |
-| `OCI_SHAPE`                    | VM.Standard.E4.Flex | The shape of the Kubernetes nodes                                                                                                                                                                                                                                                                                                                                                                         |
-| `OCI_SHAPE_MEMORY_IN_GBS`      |                     | The amount of memory to be allocated to the instances. If not provided it is automatically computed by compute API.                                                                                                                                                                                                                                                                                       |
-| `OCI_SHAPE_OCPUS`              | 1                   | The number of OCPUs allocated to the instance                                                                                                                                                                                                                                                                                                                                                             |
-| `OCI_SSH_KEY`                   |                     | The public SSH key to be added to the Kubernetes nodes. It can be used to login to the node and troubleshoot failures.                                                                                                                                                                                                                                                                                    |
-| `OCI_PV_TRANSIT_ENCRYPTION`     | true                | [In-transit encryption](https://docs.oracle.com/en-us/iaas/Content/File/Tasks/intransitencryption.htm) provides a way to secure your data between instances and mounted file systems using TLS v.1.2 (Transport Layer Security) encryption. Only [some bare metal instances](https://docs.oracle.com/en-us/iaas/releasenotes/changes/60d602f5-abb3-4639-aa19-292a5744a808/) support In-transit encryption |
+| Parameter                                 | Default Value       | Description                                                                                                                                                                                                                      |
+|-------------------------------------------|---------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `OCI_COMPARTMENT_ID`                      |                     | The OCID of the compartment in which to create the required compute, storage and network resources.                                                                                                                              |
+| `OCI_IMAGE_ID`                            |                     | The OCID of the image for the kubernetes nodes. This same image is used for both the control plane and the worker nodes.                                                                                                         |
+| `OCI_CONTROL_PLANE_MACHINE_TYPE`          | VM.Standard.E4.Flex | The [shape](https://docs.oracle.com/en-us/iaas/Content/Compute/References/computeshapes.htm) of the Kubernetes control plane machine.                                                                                            |
+| `OCI_CONTROL_PLANE_MACHINE_TYPE_OCPUS`    | 1                   | The number of OCPUs allocated to the control plane instance.                                                                                                                                                                     |
+| `OCI_NODE_MACHINE_TYPE`                   | VM.Standard.E4.Flex | The [shape](https://docs.oracle.com/en-us/iaas/Content/Compute/References/computeshapes.htm) of the Kubernetes worker machine.                                                                                                   |
+| `OCI_NODE_MACHINE_TYPE_OCPUS`             | 1                   | The number of OCPUs allocated to the worker instance.                                                                                                                                                                            |
+| `OCI_SSH_KEY`                             |                     | The public SSH key to be added to the Kubernetes nodes. It can be used to login to the node and troubleshoot failures.                                                                                                           |
+| `OCI_CONTROL_PLANE_PV_TRANSIT_ENCRYPTION` | true                | Enables [in-flight Transport Layer Security (TLS) 1.2 encryption](https://docs.oracle.com/en-us/iaas/Content/File/Tasks/intransitencryption.htm) of data between control plane nodes and their associated block storage devices. |
+| `OCI_NODE_PV_TRANSIT_ENCRYPTION`          | true                | Enables [in-flight Transport Layer Security (TLS) 1.2 encryption](https://docs.oracle.com/en-us/iaas/Content/File/Tasks/intransitencryption.htm) of data between worker nodes and their associated block storage devices.        |
+
+*NOTE* Only specific [bare metal shapes](https://docs.oracle.com/en-us/iaas/releasenotes/changes/60d602f5-abb3-4639-aa19-292a5744a808/)
+support in-transit encryption. If an unsupported shape is specified, the deployment will fail completely.
+
+*NOTE:* Using the predefined templates the machine's memory size is automatically allocated based on the chosen shape 
+and OCPU count.
 
 The following Cluster API parameters are also available:
 
-| Parameter                      | Default Value          | Description |
-| ----------------------------   | ---------------------- | ----------- |
-| `CLUSTER_NAME`                 |                        | The name of the workload cluster to create |
-| `CONTROL_PLANE_MACHINE_COUNT`  |       1                | The number of control plane machines for the workload cluster.|
-| `KUBERNETES_VERSION`           |                        | The Kubernetes version to use for the workload cluster. If unspecified, the value from OS environment variables or the .cluster-api/clusterctl.yaml config file will be used. |
-| `NAMESPACE`                    |                        | The namespace to use for the workload cluster. If unspecified, the current namespace will be used |
-| `POD_CIDR`                     |       1                | The CIDR range for the Kubernetes POD network. |
-| `SERVICE_CIDR`                 |                        | The CIDR for the Kubernetes services network.  |
-| `SERVICE_DOMAIN`               |                        |  |
-| `WORKER_MACHINE_COUNT`         |                        | The number of worker machines for the workload cluster. |
+| Parameter                     | Default Value  | Description                                                                                                                                                                               |
+|-------------------------------|----------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `CLUSTER_NAME`                |                | The name of the workload cluster to create.                                                                                                                                               |
+| `CONTROL_PLANE_MACHINE_COUNT` | 1              | The number of control plane machines for the workload cluster.                                                                                                                            |
+| `KUBERNETES_VERSION`          |                | The Kubernetes version installed on the workload cluster nodes. If this environement variable is not configured, the version must be specifed in the `.cluster-api/clusterctl.yaml` file  |
+| `NAMESPACE`                   |                | The namespace for the workload cluster. If not specified, the current namespace is used.                                                                                                  |
+| `POD_CIDR`                    | 192.168.0.0/16 | CIDR range of the Kubernetes pod-to-pod network.                                                                                                                                          |
+| `SERVICE_CIDR`                | 10.128.0.0/12  | CIDR range of the Kubernetes pod-to-services network.                                                                                                                                     |
+| `NODE_MACHINE_COUNT`          |                | The number of worker machines for the workload cluster.                                                                                                                                   |
 
 ## Create a new workload cluster on virtual instances using an Ubuntu custom image
 
-Run the command below to create a Kubernetes cluster with 1 control plane node and 1 worker node:
+The following command will create a workload cluster comprising a single 
+control plane node and single worker node using the default values as specified in the preceding 
+[Workload Cluster Parameters](#workload-cluster-parameters) table:
 
 ```bash
 OCI_COMPARTMENT_ID=<compartment-id> \
 OCI_IMAGE_ID=<ubuntu-custom-image-id> \
-OCI_SHAPE=VM.Standard.E4.Flex \
-OCI_SHAPE_OCPUS=1 \
-OCI_SHAPE_MEMORY_IN_GBS= \
 OCI_SSH_KEY=<ssh-key>  \
 CONTROL_PLANE_MACHINE_COUNT=1 \
 KUBERNETES_VERSION=v1.20.10 \
 NAMESPACE=default \
-WORKER_MACHINE_COUNT=1 \
+NODE_MACHINE_COUNT=1 \
 clusterctl generate cluster <cluster-name>\
 --from cluster-template.yaml | kubectl apply -f -
 ```
 
 ## Create a new workload cluster on bare metal instances using an Ubuntu custom image
 
-Note the addition of `OCI_PV_TRANSIT_ENCRYPTION=false` which is required for most BM shapes.
+The following command uses the `OCI_CONTROL_PLANE_MACHINE_TYPE` and `OCI_NODE_MACHINE_TYPE` 
+parameters to specify bare metal shapes instead of using CAPOCI's default virtual 
+instance shape. The `OCI_CONTROL_PLANE_PV_TRANSIT_ENCRYPTION` and `OCI_NODE_PV_TRANSIT_ENCRYPTION` 
+parameters disable encryption of data in flight between the bare metal instance and the block storage resources.
 
 ```bash
 OCI_COMPARTMENT_ID=<compartment-id> \
 OCI_IMAGE_ID=<ubuntu-custom-image-id> \
-OCI_SHAPE=BM.Standard2.52 \
-OCI_SHAPE_OCPUS=52 \
-OCI_SHAPE_MEMORY_IN_GBS= \
 OCI_SSH_KEY=<ssh-key>  \
-OCI_PV_TRANSIT_ENCRYPTION=false \
+OCI_CONTROL_PLANE_MACHINE_TYPE=BM.Standard2.52 \
+OCI_CONTROL_PLANE_MACHINE_TYPE_OCPUS=52 \
+OCI_CONTROL_PLANE_PV_TRANSIT_ENCRYPTION=false \
+OCI_NODE_MACHINE_TYPE=BM.Standard2.52 \
+OCI_NODE_MACHINE_TYPE_OCPUS=52 \
+OCI_NODE_PV_TRANSIT_ENCRYPTION=false \
 CONTROL_PLANE_MACHINE_COUNT=1 \
 KUBERNETES_VERSION=v1.20.10 \
 NAMESPACE=default \
@@ -75,9 +89,6 @@ clusterctl generate cluster <cluster-name>\
 ```bash
 OCI_COMPARTMENT_ID=<compartment-id> \
 OCI_IMAGE_ID=<oracle-linux-custom-image-id> \
-OCI_SHAPE=VM.Standard.E4.Flex \
-OCI_SHAPE_OCPUS=1 \
-OCI_SHAPE_MEMORY_IN_GBS= \
 OCI_SSH_KEY=<ssh-key>  \
 CONTROL_PLANE_MACHINE_COUNT=1 \
 KUBERNETES_VERSION=v1.20.10 \
