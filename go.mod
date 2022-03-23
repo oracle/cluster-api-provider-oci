@@ -7,7 +7,7 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.17.0
-	github.com/oracle/oci-go-sdk/v53 v53.1.0
+	github.com/oracle/oci-go-sdk/v63 v63.0.0
 	github.com/pkg/errors v0.9.1
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.23.0

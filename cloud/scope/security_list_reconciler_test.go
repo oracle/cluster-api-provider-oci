@@ -22,8 +22,8 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn/mock_vcn"
-	"github.com/oracle/oci-go-sdk/v53/common"
-	"github.com/oracle/oci-go-sdk/v53/core"
+	"github.com/oracle/oci-go-sdk/v63/common"
+	"github.com/oracle/oci-go-sdk/v63/core"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/log"

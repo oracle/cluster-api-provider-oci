@@ -18,7 +18,7 @@ package nlb
 
 import (
 	"context"
-	"github.com/oracle/oci-go-sdk/v53/networkloadbalancer"
+	"github.com/oracle/oci-go-sdk/v63/networkloadbalancer"
 )
 
 type NetworkLoadBalancerClient interface {
