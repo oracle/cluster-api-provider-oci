@@ -39,7 +39,7 @@ Before installing Cluster API Provider for OCI (CAPOCI), you must first set up y
       export OCI_REGION_B64="$(echo -n "$OCI_REGION" | base64 | tr -d '\n')"
       export OCI_CREDENTIALS_KEY_B64=$(base64 < <path-to-api-private-key-file> | tr -d '\n')
       # if Passphrase is present
-      export OCI_CREDENTIALS_PASSPHRASE_B64="$(echo -n "OCI_CREDENTIALS_PASSPHRASE" | base64 | tr -d '\n')"
+      export OCI_CREDENTIALS_PASSPHRASE_B64="$(echo -n "$OCI_CREDENTIALS_PASSPHRASE" | base64 | tr -d '\n')"
    ```
 
 ## Initialize management cluster
