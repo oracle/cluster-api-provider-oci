@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	identity "github.com/oracle/oci-go-sdk/v53/identity"
+	identity "github.com/oracle/oci-go-sdk/v63/identity"
 )
 
 // MockClient is a mock of Client interface.

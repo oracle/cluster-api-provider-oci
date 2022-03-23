@@ -20,8 +20,8 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/oracle/oci-go-sdk/v53/common"
-	"github.com/oracle/oci-go-sdk/v53/common/auth"
+	"github.com/oracle/oci-go-sdk/v63/common"
+	"github.com/oracle/oci-go-sdk/v63/common/auth"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )

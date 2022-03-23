@@ -21,7 +21,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/oracle/oci-go-sdk/v53/core"
+	"github.com/oracle/oci-go-sdk/v63/core"
 )
 
 func TestGetCloudProviderConfig(t *testing.T) {

@@ -22,8 +22,8 @@ import (
 
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
-	"github.com/oracle/oci-go-sdk/v53/common"
-	"github.com/oracle/oci-go-sdk/v53/networkloadbalancer"
+	"github.com/oracle/oci-go-sdk/v63/common"
+	"github.com/oracle/oci-go-sdk/v63/networkloadbalancer"
 	"github.com/pkg/errors"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )

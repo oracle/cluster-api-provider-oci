@@ -23,9 +23,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/oracle/oci-go-sdk/v53/common"
-	"github.com/oracle/oci-go-sdk/v53/core"
-	"github.com/oracle/oci-go-sdk/v53/networkloadbalancer"
+	"github.com/oracle/oci-go-sdk/v63/common"
+	"github.com/oracle/oci-go-sdk/v63/core"
+	"github.com/oracle/oci-go-sdk/v63/networkloadbalancer"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 )

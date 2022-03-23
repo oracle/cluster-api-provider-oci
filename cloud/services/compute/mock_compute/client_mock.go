@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	core "github.com/oracle/oci-go-sdk/v53/core"
+	core "github.com/oracle/oci-go-sdk/v63/core"
 )
 
 // MockComputeClient is a mock of ComputeClient interface.
