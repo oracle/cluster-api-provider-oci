@@ -23,24 +23,47 @@
    ```
 
 ## Configure authentication
+Before installing Cluster API Provider for OCI (CAPOCI), you must first set up your preferred 
+authentication mechanism using specific environment variables.
 
-Before installing Cluster API Provider for OCI (CAPOCI), you must first set up your preferred authentication mechanism using specific environment variables:
+### User Principal
+If the management cluster is hosted outside OCI, for example a Kind cluster, please configure
+user principal using the following parameters. Please refer to the [doc][api-signing-key] to generate the required
+credentials.
 
    ```bash
-      export OCI_TENANCY_ID=<tenancy-id>
-      export OCI_USER_ID=<user-id>
-      export OCI_CREDENTIALS_FINGERPRINT=<fingerprint>
-      export OCI_REGION=<region>
+      export OCI_TENANCY_ID=<insert-tenancy-id-here>
+      export OCI_USER_ID=<insert-user-ocid-here>
+      export OCI_CREDENTIALS_FINGERPRINT=<insert-fingerprint-here>
+      export OCI_REGION=<insert-region-here>
       # if Passphrase is present
-      export OCI_CREDENTIALS_PASSPHRASE=<passphrase>
       export OCI_TENANCY_ID_B64="$(echo -n "$OCI_TENANCY_ID" | base64 | tr -d '\n')"
       export OCI_CREDENTIALS_FINGERPRINT_B64="$(echo -n "$OCI_CREDENTIALS_FINGERPRINT" | base64 | tr -d '\n')"
       export OCI_USER_ID_B64="$(echo -n "$OCI_USER_ID" | base64 | tr -d '\n')"
       export OCI_REGION_B64="$(echo -n "$OCI_REGION" | base64 | tr -d '\n')"
-      export OCI_CREDENTIALS_KEY_B64=$(base64 < <path-to-api-private-key-file> | tr -d '\n')
+      export OCI_CREDENTIALS_KEY_B64=$(base64 < <insert-path-to-api-private-key-file-here> | tr -d '\n')
       # if Passphrase is present
+      export OCI_CREDENTIALS_PASSPHRASE=<insert-passphrase-here>
       export OCI_CREDENTIALS_PASSPHRASE_B64="$(echo -n "$OCI_CREDENTIALS_PASSPHRASE" | base64 | tr -d '\n')"
    ```
+
+### Instance Principal
+
+If the management cluster is hosted in Oracle Cloud Infrastructure, [Instance principals][instance-principals] authentication 
+is recommended. Export the following parameters to use Instance Principals. If Instance Principals are used, the user principal
+parameters explained in above section will not be used.
+
+   ```bash
+      export USE_INSTANCE_PRINCIPAL="true"
+      export USE_INSTANCE_PRINCIPAL_B64="$(echo -n "$USE_INSTANCE_PRINCIPAL" | base64 | tr -d '\n')"
+   ```
+Please ensure the following policies in the dynamic group for CAPOCI to be able to talk to various OCI Services.
+
+```
+allow dynamic-group [your dynamic group name] to read instance-family in compartment [your compartment name]
+allow dynamic-group [your dynamic group name] to use virtual-network-family in compartment [your compartment name]
+allow dynamic-group [your dynamic group name] to manage load-balancers in compartment [your compartment name]
+```
 
 ## Initialize management cluster
 
@@ -63,3 +86,5 @@ When installing CAPOCI, the following components will be installed in the manage
 Please inspect the `infrastructure-components.yaml` present in the release artifacts to know more.
 
 [kind]: https://kind.sigs.k8s.io/
+[api-signing-key]: https://docs.oracle.com/en-us/iaas/Content/API/Concepts/apisigningkey.htm
+[instance-principals]: https://docs.oracle.com/en-us/iaas/Content/Identity/Tasks/callingservicesfrominstances.htm

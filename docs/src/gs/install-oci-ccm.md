@@ -69,3 +69,4 @@ allow dynamic-group [your dynamic group name] to manage load-balancers in compar
 [ccm]: https://kubernetes.io/docs/concepts/architecture/cloud-controller/
 [oci-ccm]: https://github.com/oracle/oci-cloud-controller-manager
 [oci-ccm-release-page]: https://github.com/oracle/oci-cloud-controller-manager/releases
+[instance-principals]: https://docs.oracle.com/en-us/iaas/Content/Identity/Tasks/callingservicesfrominstances.htm
