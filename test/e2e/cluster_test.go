@@ -107,7 +107,7 @@ var _ = Describe("Workload cluster creation", func() {
 		dumpSpecResourcesAndCleanup(ctx, cleanInput)
 	})
 
-	It("With 1 control-plane nodes and 1 worker nodes", func() {
+	It("Default CNI - with 1 control-plane nodes and 1 worker nodes", func() {
 		clusterName = getClusterName(clusterNamePrefix, "simple")
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
@@ -130,7 +130,7 @@ var _ = Describe("Workload cluster creation", func() {
 		}, result)
 	})
 
-	It("With 3 control plane nodes spread across failure domains", func() {
+	It("Default CNI - With 3 control plane nodes spread across failure domains", func() {
 		clusterName = getClusterName(clusterNamePrefix, "3nodecontrolplane")
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
@@ -392,6 +392,31 @@ var _ = Describe("Workload cluster creation", func() {
 				WaitForClusterIntervals:      e2eConfig.GetIntervals(specName, "wait-cluster-bare-metal"),
 				WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane-bare-metal"),
 				WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes-bare-metal"),
+			}, result)
+		})
+	})
+
+	When("Multi-Region workload cluster creation", func() {
+
+		It("Alternative region - With 1 control-plane nodes and 1 worker nodes", func() {
+			clusterName = getClusterName(clusterNamePrefix, "alternative-region")
+			clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
+				ClusterProxy: bootstrapClusterProxy,
+				ConfigCluster: clusterctl.ConfigClusterInput{
+					LogFolder:                filepath.Join(artifactFolder, "clusters", bootstrapClusterProxy.GetName()),
+					ClusterctlConfigPath:     clusterctlConfigPath,
+					KubeconfigPath:           bootstrapClusterProxy.GetKubeconfigPath(),
+					InfrastructureProvider:   clusterctl.DefaultInfrastructureProvider,
+					Flavor:                   "alternative-region",
+					Namespace:                namespace.Name,
+					ClusterName:              clusterName,
+					KubernetesVersion:        e2eConfig.GetVariable(capi_e2e.KubernetesVersion),
+					ControlPlaneMachineCount: pointer.Int64Ptr(1),
+					WorkerMachineCount:       pointer.Int64Ptr(1),
+				},
+				WaitForClusterIntervals:      e2eConfig.GetIntervals(specName, "wait-cluster"),
+				WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),
+				WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
 			}, result)
 		})
 	})

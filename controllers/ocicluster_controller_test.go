@@ -21,6 +21,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+var (
+	MockTestRegion = "us-austin-1"
+)
+
 func TestOCIClusterReconciler_Reconcile(t *testing.T) {
 	var (
 		r        OCIClusterReconciler
@@ -63,6 +67,7 @@ func TestOCIClusterReconciler_Reconcile(t *testing.T) {
 				Client:   client,
 				Scheme:   runtime.NewScheme(),
 				Recorder: recorder,
+				Region:   MockTestRegion,
 			}
 			req = reconcile.Request{
 				NamespacedName: types.NamespacedName{
@@ -105,6 +110,7 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 			Client:   client,
 			Scheme:   runtime.NewScheme(),
 			Recorder: recorder,
+			Region:   MockTestRegion,
 		}
 		cs.EXPECT().GetOCICluster().Return(ociCluster)
 	}

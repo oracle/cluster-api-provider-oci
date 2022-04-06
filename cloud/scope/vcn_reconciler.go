@@ -29,6 +29,7 @@ import (
 
 func (s *ClusterScope) ReconcileVCN(ctx context.Context) error {
 	desiredVCN := s.VCNSpec()
+
 	var err error
 	vcn, err := s.GetVCN(ctx)
 	if err != nil {

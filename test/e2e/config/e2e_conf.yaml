@@ -53,6 +53,7 @@ providers:
         contract: v1beta1
         files:
           - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template.yaml"
+          - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-alternative-region.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-bare-metal.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-kcp-remediation.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-md-remediation.yaml"

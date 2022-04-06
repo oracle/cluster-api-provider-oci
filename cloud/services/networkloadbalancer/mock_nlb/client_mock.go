@@ -12,7 +12,7 @@ import (
 	networkloadbalancer "github.com/oracle/oci-go-sdk/v63/networkloadbalancer"
 )
 
-// MockNetworkLoadBalancerClient is a mock of NetworkLoadBalancerClient interface.
+// MockNetworkLoadBalancerClient is a mock of LoadBalancerClient interface.
 type MockNetworkLoadBalancerClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockNetworkLoadBalancerClientMockRecorder
