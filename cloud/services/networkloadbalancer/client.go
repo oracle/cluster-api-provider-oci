@@ -21,7 +21,7 @@ import (
 	"github.com/oracle/oci-go-sdk/v63/networkloadbalancer"
 )
 
-type NetworkLoadBalancerClient interface {
+type Client interface {
 	ListNetworkLoadBalancers(ctx context.Context, request networkloadbalancer.ListNetworkLoadBalancersRequest) (response networkloadbalancer.ListNetworkLoadBalancersResponse, err error)
 	GetNetworkLoadBalancer(ctx context.Context, request networkloadbalancer.GetNetworkLoadBalancerRequest) (response networkloadbalancer.GetNetworkLoadBalancerResponse, err error)
 	CreateBackend(ctx context.Context, request networkloadbalancer.CreateBackendRequest) (response networkloadbalancer.CreateBackendResponse, err error)

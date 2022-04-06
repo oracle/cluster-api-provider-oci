@@ -34,9 +34,9 @@ import (
 
 // OCIClients is the struct of all the needed OCI clients
 type OCIClients struct {
-	ComputeClient      compute.ComputeClient
+	ComputeClient      compute.Client
 	VCNClient          vcn.Client
-	LoadBalancerClient nlb.NetworkLoadBalancerClient
+	LoadBalancerClient nlb.Client
 	IdentityClient     identityClient.Client
 }
 

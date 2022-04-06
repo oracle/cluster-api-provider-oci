@@ -54,11 +54,11 @@ type MachineScopeParams struct {
 	Cluster                   *clusterv1.Cluster
 	Machine                   *clusterv1.Machine
 	Client                    client.Client
-	ComputeClient             compute.ComputeClient
+	ComputeClient             compute.Client
 	OCICluster                *infrastructurev1beta1.OCICluster
 	OCIMachine                *infrastructurev1beta1.OCIMachine
 	VCNClient                 vcn.Client
-	NetworkLoadBalancerClient nlb.NetworkLoadBalancerClient
+	NetworkLoadBalancerClient nlb.Client
 }
 
 type MachineScope struct {
@@ -67,11 +67,11 @@ type MachineScope struct {
 	patchHelper               *patch.Helper
 	Cluster                   *clusterv1.Cluster
 	Machine                   *clusterv1.Machine
-	ComputeClient             compute.ComputeClient
+	ComputeClient             compute.Client
 	OCICluster                *infrastructurev1beta1.OCICluster
 	OCIMachine                *infrastructurev1beta1.OCIMachine
 	VCNClient                 vcn.Client
-	NetworkLoadBalancerClient nlb.NetworkLoadBalancerClient
+	NetworkLoadBalancerClient nlb.Client
 }
 
 // NewMachineScope creates a MachineScope given the MachineScopeParams

@@ -22,7 +22,7 @@ import (
 	"github.com/oracle/oci-go-sdk/v63/core"
 )
 
-type ComputeClient interface {
+type Client interface {
 	LaunchInstance(ctx context.Context, request core.LaunchInstanceRequest) (response core.LaunchInstanceResponse, err error)
 	TerminateInstance(ctx context.Context, request core.TerminateInstanceRequest) (response core.TerminateInstanceResponse, err error)
 	GetInstance(ctx context.Context, request core.GetInstanceRequest) (response core.GetInstanceResponse, err error)
