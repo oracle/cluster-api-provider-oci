@@ -51,6 +51,12 @@ case ${os} in
         ;;
 esac
 
+# handle M1 mac
+# at this time mdbook doesn't support M1 so we will need to use the x86 architecture
+if [[ ${target} == "apple-darwin" ]] && [[ ${arch} == "arm64" ]]; then
+    arch="x86_64"
+fi
+
 # grab mdbook
 # we hardcode linux/amd64 since rust uses a different naming scheme and it's a pain to tran
 echo "downloading mdBook-v${MDBOOK_VERSION}-${arch}-${target}.${ext}"

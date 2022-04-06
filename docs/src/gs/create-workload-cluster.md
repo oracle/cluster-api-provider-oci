@@ -23,10 +23,10 @@ when creating a workload cluster on OCI using one of our predefined templates:
 | `OCI_CONTROL_PLANE_PV_TRANSIT_ENCRYPTION` | true                | Enables [in-flight Transport Layer Security (TLS) 1.2 encryption](https://docs.oracle.com/en-us/iaas/Content/File/Tasks/intransitencryption.htm) of data between control plane nodes and their associated block storage devices.                                |
 | `OCI_NODE_PV_TRANSIT_ENCRYPTION`          | true                | Enables [in-flight Transport Layer Security (TLS) 1.2 encryption](https://docs.oracle.com/en-us/iaas/Content/File/Tasks/intransitencryption.htm) of data between worker nodes and their associated block storage devices.                                       |
 
-*NOTE* Only specific [bare metal shapes](https://docs.oracle.com/en-us/iaas/releasenotes/changes/60d602f5-abb3-4639-aa19-292a5744a808/)
+> Note: Only specific [bare metal shapes](https://docs.oracle.com/en-us/iaas/releasenotes/changes/60d602f5-abb3-4639-aa19-292a5744a808/)
 support in-transit encryption. If an unsupported shape is specified, the deployment will fail completely.
 
-*NOTE:* Using the predefined templates the machine's memory size is automatically allocated based on the chosen shape 
+> Note: Using the predefined templates the machine's memory size is automatically allocated based on the chosen shape 
 and OCPU count.
 
 The following Cluster API parameters are also available:
@@ -98,6 +98,57 @@ clusterctl generate cluster <cluster-name>\
 --from cluster-template-oraclelinux.yaml | kubectl apply -f -
 ```
 
+## Create a workload cluster in an alternative region
+
+CAPOCI provides a way to launch and manage your workload cluster in multiple
+regions. Choose the `cluster-template-alternative-region.yaml` template when
+creating your workload clusters from the [latest released artifacts][latest-release].
+Currently, the other templates do not support the ability to change the workload
+cluster region. 
+
+Each cluster can be further configured with the parameters
+defined in [Workload Cluster Parameters](#workload-cluster-parameters) and
+additionally with the parameter below.
+
+| Parameter             | Default Value                                        | Description                                                                                                                        |
+|-----------------------|------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------|
+| `OCI_WORKLOAD_REGION` | Configured as [`OCI_REGION`][configure-authentication] | The [OCI region](https://docs.oracle.com/en-us/iaas/Content/General/Concepts/regions.htm) in which to launch the workload cluster. |
+
+The following example configures the CAPOCI provider to authenticate in
+`us-phoenix-1` and launch a workload cluster in `us-sanjose-1`.
+
+> Note: Ensure the specified image is available in your chosen region or the launch will fail.
+
+To configure authentication for management cluster, follow the steps in 
+[Configure authentication][configure-authentication].
+
+Extend the preceding configuration with the following additional configuration
+parameter and initialize the CAPOCI provider.
+
+```bash
+...
+export OCI_REGION=us-phoenix-1
+...
+   
+clusterctl init --infrastructure oci
+```
+
+Create a new workload cluster in San Jose (`us-sanjose-1`) by explicitly setting the
+`OCI_WORKLOAD_REGION` environment variable when invoking `clusterctl`:
+
+```bash
+OCI_WORKLOAD_REGION=us-sanjose-1 \
+OCI_COMPARTMENT_ID=<compartment-id> \
+OCI_IMAGE_ID=<in-region-custom-image-id> \
+OCI_SSH_KEY=<ssh-key>  \
+CONTROL_PLANE_MACHINE_COUNT=1 \
+KUBERNETES_VERSION=v1.20.10 \
+NAMESPACE=default \
+NODE_MACHINE_COUNT=1 \
+clusterctl generate cluster <cluster-name>\
+--from cluster-template-alternative-region.yaml | kubectl apply -f -
+```
+
 ### Access workload cluster Kubeconfig
 
 Execute the following command to list all the workload clusters present:
@@ -145,3 +196,4 @@ By default, the [OCI Cloud Controller Manager (CCM)][oci-ccm] is not installed i
 [oci-ccm]: https://github.com/oracle/oci-cloud-controller-manager
 [latest-release]: https://github.com/oracle/cluster-api-provider-oci/releases/tag/v0.1.0
 [install-oci-ccm]: ./install-oci-ccm.md
+[configure-authentication]: ./install-cluster-api.html#configure-authentication
