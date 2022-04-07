@@ -18,7 +18,7 @@
    ```yaml
    providers:
      - name: oci
-       url: https://github.com/oracle/cluster-api-provider-oci/releases/v0.1.0/infrastructure-components.yaml
+       url: https://github.com/oracle/cluster-api-provider-oci/releases/v0.3.0/infrastructure-components.yaml
        type: InfrastructureProvider
    ```
 
