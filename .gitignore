@@ -45,3 +45,6 @@ test/e2e/data/infrastructure-oci/v1beta1/cluster-template-bare-metal.yaml
 test/e2e/data/infrastructure-oci/v1beta1/cluster-template-custom-networking-seclist.yaml
 test/e2e/data/infrastructure-oci/v1beta1/cluster-template-custom-networking-nsg.yaml
 test/e2e/data/infrastructure-oci/v1beta1/cluster-template-multiple-node-nsg.yaml
+test/e2e/data/infrastructure-oci/v1beta1/cluster-template-local-vcn-peering.yaml
+test/e2e/data/infrastructure-oci/v1beta1/cluster-template-cluster-class.yaml
+test/e2e/data/infrastructure-oci/v1beta1/cluster-template-remote-vcn-peering.yaml

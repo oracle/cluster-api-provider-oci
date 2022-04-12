@@ -39,8 +39,10 @@ import (
 )
 
 var (
-	scheme   = runtime.NewScheme()
-	setupLog = ctrl.Log.WithName("setup")
+	scheme         = runtime.NewScheme()
+	setupLog       = ctrl.Log.WithName("setup")
+	webhookPort    int
+	webhookCertDir string
 )
 
 const (
@@ -70,6 +72,8 @@ func main() {
 		9443,
 		"Webhook Server port.",
 	)
+	flag.StringVar(&webhookCertDir, "webhook-cert-dir", "/tmp/k8s-webhook-server/serving-certs/",
+		"Webhook cert dir, only used when webhook-port is specified.")
 
 	opts := zap.Options{
 		Development: true,
@@ -86,6 +90,7 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "controller-leader-elect-capoci",
+		CertDir:                webhookCertDir,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -151,6 +156,17 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", scope.OCIMachineKind)
 		os.Exit(1)
 	}
+
+	if err = (&infrastructurev1beta1.OCICluster{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "OCICluster")
+		os.Exit(1)
+	}
+
+	if err = (&infrastructurev1beta1.OCIMachineTemplate{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "OCIMachineTemplate")
+		os.Exit(1)
+	}
+
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
