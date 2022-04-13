@@ -253,6 +253,8 @@ generate-e2e-templates: kustomize
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-custom-networking-seclist --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-custom-networking-seclist.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-custom-networking-nsg --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-custom-networking-nsg.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-multiple-node-nsg --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-multiple-node-nsg.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-cluster-class --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-cluster-class.yaml
+
 
 
 .PHONY: test-e2e-run

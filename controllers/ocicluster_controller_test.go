@@ -499,7 +499,18 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 }
 
 func getOciClusterWithNoOwner() *infrastructurev1beta1.OCICluster {
-	ociCluster := getOCICluster()
+	ociCluster := &infrastructurev1beta1.OCICluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-cluster",
+			Namespace: "test",
+		},
+		Spec: infrastructurev1beta1.OCIClusterSpec{
+			CompartmentId: "test",
+			ControlPlaneEndpoint: clusterv1.APIEndpoint{
+				Port: 6443,
+			},
+		},
+	}
 	ociCluster.OwnerReferences = []metav1.OwnerReference{}
 	return ociCluster
 }

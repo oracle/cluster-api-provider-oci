@@ -1,0 +1,28 @@
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Cluster
+metadata:
+  labels:
+    cni: ${CLUSTER_NAME}-0
+  name: "${CLUSTER_NAME}"
+spec:
+  clusterNetwork:
+    pods:
+      cidrBlocks: ["192.168.0.0/16"]
+  topology:
+    class: "cluster-class-example"
+    version: "${KUBERNETES_VERSION}"
+    controlPlane:
+      replicas: ${CONTROL_PLANE_MACHINE_COUNT}
+    workers:
+      machineDeployments:
+        - class: "worker"
+          name: "md-0"
+          replicas: ${WORKER_MACHINE_COUNT}
+    variables:
+      - name: ssh_authorized_keys
+        value: ${OCI_SSH_KEY}
+      - name: compartmentId
+        value: ${OCI_COMPARTMENT_ID}
+      - name: imageId
+        value: ${OCI_IMAGE_ID}

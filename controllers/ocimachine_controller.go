@@ -107,7 +107,7 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	ociCluster := &infrastructurev1beta1.OCICluster{}
 	ociClusterName := client.ObjectKey{
 		Namespace: cluster.Namespace,
-		Name:      cluster.Name,
+		Name:      cluster.Spec.InfrastructureRef.Name,
 	}
 
 	if err := r.Client.Get(ctx, ociClusterName, ociCluster); err != nil {
