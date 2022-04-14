@@ -138,6 +138,17 @@ func (s *ClusterScope) CreateRouteTable(ctx context.Context, routeTableType stri
 				Description:     common.String("traffic to OCI services"),
 			},
 		}
+		if s.OCICluster.Spec.NetworkSpec.VCNPeering != nil {
+			for _, routeRule := range s.OCICluster.Spec.NetworkSpec.VCNPeering.PeerRouteRules {
+				routeRules = append(routeRules, core.RouteRule{
+					DestinationType: core.RouteRuleDestinationTypeCidrBlock,
+					Destination:     common.String(routeRule.VCNCIDRRange),
+					NetworkEntityId: s.getDrgID(),
+					Description:     common.String("traffic to peer DRG"),
+				})
+			}
+		}
+
 		routeTableName = PrivateRouteTableName
 	} else {
 		routeRules = []core.RouteRule{

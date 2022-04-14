@@ -142,21 +142,21 @@ type IngressSecurityRule struct {
 
 // IngressSecurityRuleForNSG is IngressSecurityRule for NSG
 type IngressSecurityRuleForNSG struct {
-	//IngressSecurityRule ID for NSG
+	//IngressSecurityRule ID for NSG.
 	// +optional
 	ID                  *string `json:"id,omitempty"`
 	IngressSecurityRule `json:"ingressRule,omitempty"`
 }
 
-// EgressSecurityRuleForNSG is EgressSecurityRule for NSG
+// EgressSecurityRuleForNSG is EgressSecurityRule for NSG.
 type EgressSecurityRuleForNSG struct {
-	//EgressSecurityRule ID for NSG
+	//EgressSecurityRule ID for NSG.
 	// +optional
 	ID                 *string `json:"id,omitempty"`
 	EgressSecurityRule `json:"egressRule,omitempty"`
 }
 
-// IngressSecurityRuleSourceTypeEnum Enum with underlying type: string
+// IngressSecurityRuleSourceTypeEnum Enum with underlying type: string.
 type IngressSecurityRuleSourceTypeEnum string
 
 // Set of constants representing the allowable values for IngressSecurityRuleSourceTypeEnum
@@ -199,7 +199,7 @@ type TcpOptions struct {
 	SourcePortRange *PortRange `json:"sourcePortRange,omitempty"`
 }
 
-// PortRange The representation of PortRange
+// PortRange The representation of PortRange.
 type PortRange struct {
 
 	// The maximum port number, which must not be less than the minimum port number. To specify
@@ -220,15 +220,16 @@ type EgressSecurityRuleDestinationTypeEnum string
 // SecurityList defines the configureation for the security list for network virtual firewall
 // https://docs.oracle.com/en-us/iaas/Content/Network/Concepts/securitylists.htm
 type SecurityList struct {
-	//SecurityList Name
+	// ID of the SecurityList.
 	// +optional
 	ID *string `json:"id,omitempty"`
+	// SecurityList Name.
 	// +optional
 	Name string `json:"name"`
-	//EgressRules on the SecurityList
+	// EgressRules on the SecurityList.
 	// +optional
 	EgressRules []EgressSecurityRule `json:"egressRules,omitempty"`
-	//IngressRules on the SecurityList
+	//IngressRules on the SecurityList.
 	// +optional
 	IngressRules []IngressSecurityRule `json:"ingressRules,omitempty"`
 }
@@ -238,107 +239,184 @@ type Role string
 
 type SubnetType string
 
-//Subnet defines the configuration for a newwork's subnet
+//Subnet defines the configuration for a network's subnet
 // https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/managingVCNs_topic-Overview_of_VCNs_and_Subnets.htm#Overview
 type Subnet struct {
-	// Role defines the subnet role (eg. control-plane, control-plane-endpoint, service-lb, worker)
+	// Role defines the subnet role (eg. control-plane, control-plane-endpoint, service-lb, worker).
 	Role Role `json:"role"`
-	//Subnet OCID
+	// Subnet OCID.
 	// +optional
 	ID *string `json:"id,omitempty"`
-	//Subnet Name
+	// Subnet Name.
 	// +optional
 	Name string `json:"name"`
-	//Subnet CIDR
+	// Subnet CIDR.
 	// +optional
 	CIDR string `json:"cidr,omitempty"`
-	//Type defines the subnet type (e.g. public, private)
+	// Type defines the subnet type (e.g. public, private).
 	// +optional
 	Type SubnetType `json:"type,omitempty"`
-	//The security list associated with Subnet
+	// The security list associated with Subnet.
 	// +optional
 	SecurityList *SecurityList `json:"securityList,omitempty"`
 }
 
-//NSG defines configuration for a Network Security Group
+// NSG defines configuration for a Network Security Group.
 // https://docs.oracle.com/en-us/iaas/Content/Network/Concepts/networksecuritygroups.htm
 type NSG struct {
-	//NSG OCID
+	// NSG OCID.
 	// +optional
 	ID *string `json:"id,omitempty"`
-	//NSG Name
+	// NSG Name.
 	// +optional
 	Name string `json:"name"`
-	// Role defines the NSG role (eg. control-plane, control-plane-endpoint, service-lb, worker)
+	// Role defines the NSG role (eg. control-plane, control-plane-endpoint, service-lb, worker).
 	Role Role `json:"role,omitempty"`
-	//EgressRules on the NSG
+	// EgressRules on the NSG.
 	// +optional
 	EgressRules []EgressSecurityRuleForNSG `json:"egressRules,omitempty"`
-	//IngressRules on the NSG
+	// IngressRules on the NSG.
 	// +optional
 	IngressRules []IngressSecurityRuleForNSG `json:"ingressRules,omitempty"`
 }
 
-// VCN dfines the configuration for a Virtual Cloud Network
+// VCN dfines the configuration for a Virtual Cloud Network.
 // https://docs.oracle.com/en-us/iaas/Content/Network/Concepts/overview.htm
 type VCN struct {
-	//VCN OCID
+	// VCN OCID.
 	// +optional
 	ID *string `json:"id,omitempty"`
-	//VCN Name
+	// VCN Name.
 	// +optional
 	Name string `json:"name"`
-	//VCN CIDR
+	// VCN CIDR.
 	// +optional
 	CIDR string `json:"cidr,omitempty"`
 
-	// ID of Nat Gateway
+	// ID of Nat Gateway.
 	// +optional
 	NatGatewayId *string `json:"natGatewayId,omitempty"`
 
-	// ID of Internet Gateway
+	// ID of Internet Gateway.
 	// +optional
 	InternetGatewayId *string `json:"internetGatewayId,omitempty"`
 
-	// ID of Service Gateway
+	// ID of Service Gateway.
 	// +optional
 	ServiceGatewayId *string `json:"serviceGatewayId,omitempty"`
 
-	// ID of Private Route Table
+	// ID of Private Route Table.
 	// +optional
 	PrivateRouteTableId *string `json:"privateRouteTableId,omitempty"`
 
-	// ID of Public Route Table
+	// ID of Public Route Table.
 	// +optional
 	PublicRouteTableId *string `json:"publicRouteTableId,omitempty"`
 
-	// Subnets is the configuration for subnets required in the VCN
+	// Subnets is the configuration for subnets required in the VCN.
 	// +optional
 	Subnets []*Subnet `json:"subnets,omitempty"`
 
-	// NetworkSecurityGroups is the configuration for the Network Security Groups required in the VCN
+	// NetworkSecurityGroups is the configuration for the Network Security Groups required in the VCN.
 	// +optional
 	NetworkSecurityGroups []*NSG `json:"networkSecurityGroups,omitempty"`
 }
 
 //LoadBalancer Configuration
 type LoadBalancer struct {
-	//LoadBalancer Name
+	//LoadBalancer Name.
 	// +optional
 	Name string `json:"name"`
 
-	// ID of Load Balancer
+	// ID of Load Balancer.
 	// +optional
 	LoadBalancerId *string `json:"loadBalancerId,omitempty"`
 }
 
 // NetworkSpec specifies what the OCI networking resources should look like.
 type NetworkSpec struct {
-	// VCN configuration
+	// VCN configuration.
 	// +optional
 	Vcn VCN `json:"vcn,omitempty"`
 
-	//API Server LB configuration
+	//API Server LB configuration.
 	// +optional
 	APIServerLB LoadBalancer `json:"apiServerLoadBalancer,omitempty"`
+
+	// VCNPeering configuration.
+	// +optional
+	VCNPeering *VCNPeering `json:"vcnPeering,omitempty"`
+}
+
+// VCNPeering defines the VCN peering details of the workload cluster VCN.
+type VCNPeering struct {
+
+	// DRG configuration refers to the DRG which has to be created if required. If management cluster
+	// and workload cluster shares the same DRG, this fields is not required to be specified.
+	// +optional
+	DRG *DRG `json:"drg,omitempty"`
+
+	// PeerRouteRules defines the routing rules which will be added to the private route tables
+	// of the workload cluster VCN. The routes defined here will be directed to DRG.
+	PeerRouteRules []PeerRouteRule `json:"peerRouteRules,omitempty"`
+
+	// RemotePeeringConnections defines the RPC connections which be established with the
+	// workload cluster DRG.
+	RemotePeeringConnections []RemotePeeringConnection `json:"remotePeeringConnections,omitempty"`
+}
+
+// DRG defines the configuration for a Dynamic Resource Group.
+type DRG struct {
+
+	// Manage defines whether the DRG has to be managed(including create). If set to false(the default) the ID
+	// has to be specified by the user to a valid DRG ID to which the VCN has to be attached.
+	// +optional
+	Manage bool `json:"manage,omitempty"`
+
+	// Name is the name of the created DRG.
+	// +optional
+	Name string `json:"name,omitempty"`
+
+	// ID is the OCID for the created DRG.
+	// +optional
+	ID *string `json:"id,omitempty"`
+
+	// VcnAttachmentId is the ID of the VCN attachment of the DRG.
+	// The workload cluster VCN can be attached to either the management cluster VCN if they are sharing the same DRG
+	// or to the workload cluster DRG.
+	// +optional
+	VcnAttachmentId *string `json:"vcnAttachmentId,omitempty"`
+}
+
+// PeerRouteRule defines a Route Rule to be routed via a DRG.
+type PeerRouteRule struct {
+	// VCNCIDRRange is the CIDR Range of peer VCN to which the
+	// workload cluster VCN will be peered. The CIDR range is required to add the route rule
+	// in the workload cluster VCN, the route rule will forward any traffic to the CIDR to the DRG.
+	// +optional
+	VCNCIDRRange string `json:"vcnCIDRRange,omitempty"`
+}
+
+// RemotePeeringConnection is used to peer VCNs residing in different regions(typically).
+// Remote VCN Peering is explained here - https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/remoteVCNpeering.htm
+type RemotePeeringConnection struct {
+
+	// ManagePeerRPC will define if the Peer VCN needs to be managed. If set to true
+	// a Remote Peering Connection will be created in the Peer DRG and the connection
+	// will be created between local and peer RPC.
+	ManagePeerRPC bool `json:"managePeerRPC,omitempty"`
+
+	// PeerRegionName defined the region name of Peer VCN.
+	PeerRegionName string `json:"peerRegionName,omitempty"`
+
+	// PeerDRGId defines the DRG ID of the peer.
+	PeerDRGId *string `json:"peerDRGId,omitempty"`
+
+	// PeerRPCConnectionId defines the RPC ID of peer. If ManagePeerRPC is set to true
+	// this will be created by Cluster API Provider for OCI, otherwise this has be defined by the
+	// user.
+	PeerRPCConnectionId *string `json:"peerRPCConnectionId,omitempty"`
+
+	// RPCConnectionId is the connection ID of the connection between peer and local RPC.
+	RPCConnectionId *string `json:"rpcConnectionId,omitempty"`
 }

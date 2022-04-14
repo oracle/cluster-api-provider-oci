@@ -43,8 +43,8 @@ type OCIClusterTemplate struct {
 type OCIClusterTemplateList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	
-	Items           []OCIClusterTemplate `json:"items"`
+
+	Items []OCIClusterTemplate `json:"items"`
 }
 
 func init() {

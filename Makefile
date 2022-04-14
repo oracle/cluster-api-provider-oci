@@ -48,7 +48,7 @@ ARTIFACTS ?= $(ROOT_DIR)/_artifacts
 KUBETEST_CONF_PATH ?= $(abspath $(E2E_DATA_DIR)/kubetest/conformance.yaml)
 KUBETEST_FAST_CONF_PATH ?= $(abspath $(E2E_DATA_DIR)/kubetest/conformance-fast.yaml)
 GINKGO_FOCUS ?= Workload cluster creation
-GINKGO_SKIP ?= "Bare Metal|Multi-Region"
+GINKGO_SKIP ?= "Bare Metal|Multi-Region|VCNPeering"
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
@@ -249,13 +249,12 @@ generate-e2e-templates: kustomize
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-node-drain --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-node-drain.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-antrea --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-antrea.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-oracle-linux --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-oracle-linux.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-ccm-testing --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-ccm-testing.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-custom-networking-seclist --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-custom-networking-seclist.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-custom-networking-nsg --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-custom-networking-nsg.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-multiple-node-nsg --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-multiple-node-nsg.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-cluster-class --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-cluster-class.yaml
-
-
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-local-vcn-peering --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-local-vcn-peering.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-remote-vcn-peering --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-remote-vcn-peering.yaml
 
 .PHONY: test-e2e-run
 test-e2e-run: generate-e2e-templates ginkgo $(ENVSUBST) ## Run e2e tests

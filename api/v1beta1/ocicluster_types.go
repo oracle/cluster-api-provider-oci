@@ -35,7 +35,7 @@ type OCIClusterSpec struct {
 	// NetworkSpec encapsulates all things related to OCI network.
 	// +optional
 	NetworkSpec NetworkSpec `json:"networkSpec,omitempty"`
-	// Free-form tags for this resource
+	// Free-form tags for this resource.
 	// +optional
 	FreeformTags map[string]string `json:"freeformTags,omitempty"`
 
@@ -72,7 +72,7 @@ type OCIClusterStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// OCICluster is the Schema for the ociclusters API
+// OCICluster is the Schema for the ociclusters API.
 type OCICluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -83,7 +83,7 @@ type OCICluster struct {
 
 //+kubebuilder:object:root=true
 
-// OCIClusterList contains a list of OciCluster
+// OCIClusterList contains a list of OCICluster.
 type OCIClusterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

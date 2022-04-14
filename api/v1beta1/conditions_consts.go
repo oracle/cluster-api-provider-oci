@@ -43,6 +43,12 @@ const (
 	ClusterReadyCondition clusterv1.ConditionType = "ClusterReady"
 	// VcnReconciliationFailedReason used when the vcn reconciliation is failed.
 	VcnReconciliationFailedReason = "VcnReconciliationFailed"
+	// DrgReconciliationFailedReason used when the DRG reconciliation fails.
+	DrgReconciliationFailedReason = "DRGReconciliationFailed"
+	// DRGVCNAttachmentReconciliationFailedReason used when the DRG VCN Attachment reconciliation fails.
+	DRGVCNAttachmentReconciliationFailedReason = "DRGVCNAttachmentReconciliationFailed"
+	// DRGRPCAttachmentReconciliationFailedReason used when the DRG RPC Attachment reconciliation fails.
+	DRGRPCAttachmentReconciliationFailedReason = "DRGRPCAttachmentReconciliationFailed"
 	// InternetGatewayReconciliationFailedReason used when the InternetGateway reconciliation is failed.
 	InternetGatewayReconciliationFailedReason = "InternetGatewayReconciliationFailed"
 	// NatGatewayReconciliationFailedReason used when the NatGateway reconciliation is failed.
@@ -67,6 +73,12 @@ const (
 	InstanceIPAddressNotFound = "InstanceIPAddressNotFound"
 	// VcnEventReady used after reconciliation has completed successfully
 	VcnEventReady = "VCNReady"
+	// DrgEventReady used after reconciliation has completed successfully
+	DrgEventReady = "DRGReady"
+	// DRGVCNAttachmentEventReady used after reconciliation has completed successfully
+	DRGVCNAttachmentEventReady = "DRGVCNAttachmentEventReady"
+	// DRGRPCAttachmentEventReady used after reconciliation has completed successfully
+	DRGRPCAttachmentEventReady = "DRGRPCAttachmentEventReady"
 	// InternetGatewayEventReady used after reconciliation has completed successfully
 	InternetGatewayEventReady = "InternetGatewayReady"
 	// NatEventReady used after reconciliation has completed successfully

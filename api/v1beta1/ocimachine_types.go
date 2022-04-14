@@ -35,23 +35,23 @@ const (
 // Please read the API https://docs.oracle.com/en-us/iaas/api/#/en/iaas/20160918/Instance/LaunchInstance
 // for more information about the parameters below
 type OCIMachineSpec struct {
-	// OCID of launched compute instance
+	// OCID of launched compute instance.
 	// +optional
 	InstanceId *string `json:"instanceId,omitempty"`
 
-	// OCID of the image to be used to launch the instance
+	// OCID of the image to be used to launch the instance.
 	ImageId string `json:"imageId,omitempty"`
 
 	// Compartment to launch the instance in.
 	CompartmentId string `json:"compartmentId,omitempty"`
 
-	// Shape of the instance
+	// Shape of the instance.
 	Shape string `json:"shape,omitempty"`
 
-	// The shape configuration of rhe instance, applicable for flex instances
+	// The shape configuration of rhe instance, applicable for flex instances.
 	ShapeConfig ShapeConfig `json:"shapeConfig,omitempty"`
 
-	// PrimaryNetworkInterface is required to specify subnet
+	// PrimaryNetworkInterface is required to specify subnet.
 	NetworkDetails NetworkDetails `json:"networkDetails,omitempty"`
 
 	// Provider ID of the instance, this will be set by Cluster API provider itself,
@@ -72,7 +72,7 @@ type OCIMachineSpec struct {
 	// required to connect to the instance.
 	Metadata map[string]string `json:"metadata,omitempty"`
 
-	// Free-form tags for this resource
+	// Free-form tags for this resource.
 	// +optional
 	FreeformTags map[string]string `json:"freeformTags,omitempty"`
 
@@ -95,34 +95,34 @@ type OCIMachineSpec struct {
 	NSGName string `json:"nsgName,omitempty"`
 }
 
-// OCIMachineStatus defines the observed state of OciMachine
+// OCIMachineStatus defines the observed state of OCIMachine.
 type OCIMachineStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of machine
 
-	// Flag set to true when machine is ready
+	// Flag set to true when machine is ready.
 	// +optional
 	Ready bool `json:"ready,omitempty"`
 
 	// Addresses contains the addresses of the associated OCI instance.
 	Addresses []clusterv1.MachineAddress `json:"addresses,omitempty"`
 
-	// Error status on the machine
+	// Error status on the machine.
 	// +optional
 	FailureReason *errors.MachineStatusError `json:"failureReason,omitempty"`
 
-	// The error message corresponding tot he error on the machine
+	// The error message corresponding to the error on the machine.
 	// +optional
 	FailureMessage *string `json:"failureMessage,omitempty"`
 
-	// Launch instance work request Id
+	// Launch instance work request ID.
 	// +optional
 	LaunchInstanceWorkRequestId string `json:"launchInstanceWorkRequestId,omitempty"`
 
-	// Create Backend OPC work request ID for the machine backend
+	// Create Backend OPC work request ID for the machine backend.
 	// +optional
 	CreateBackendWorkRequestId string `json:"createBackendWorkRequestId,omitempty"`
 
-	// Delete Backend OPC work request ID for the machine backend
+	// Delete Backend OPC work request ID for the machine backend.
 	// +optional
 	DeleteBackendWorkRequestId string `json:"deleteBackendWorkRequestId,omitempty"`
 
@@ -134,7 +134,7 @@ type OCIMachineStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// OCIMachine is the Schema for the ocimachines API
+// OCIMachine is the Schema for the ocimachines API.
 type OCIMachine struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -145,7 +145,7 @@ type OCIMachine struct {
 
 //+kubebuilder:object:root=true
 
-// OCIMachineList contains a list of OCIMachine
+// OCIMachineList contains a list of OCIMachine.
 type OCIMachineList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

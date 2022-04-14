@@ -60,19 +60,19 @@ providers:
           - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-node-drain.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-antrea.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-oracle-linux.yaml"
-          - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-ccm-testing.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-custom-networking-seclist.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-custom-networking-nsg.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-multiple-node-nsg.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-cluster-class.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-cluster-class/clusterclass-test-cluster-class.yaml"
+          - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-local-vcn-peering.yaml"
+          - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-remote-vcn-peering.yaml"
           - sourcePath: "../data/shared/v1beta1/metadata.yaml"
 
 
 variables:
   KUBERNETES_VERSION: "v1.22.5"
-  CCM_TEST_KUBERNETES_VERSION: "v1.21.9"
   EXP_MACHINE_POOL: "true"
   EXP_CLUSTER_RESOURCE_SET: "true"
   NODE_DRAIN_TIMEOUT: "60s"
@@ -89,6 +89,9 @@ variables:
   CLUSTER_TOPOLOGY: "true"
   NSG_CLUSTER_PATH: "${PWD}/test/e2e/data/infrastructure-oci/v1beta1/cluster-template-custom-networking-nsg/cluster.yaml"
   SECLIST_CLUSTER_PATH: "${PWD}/test/e2e/data/infrastructure-oci/v1beta1/cluster-template-custom-networking-seclist/cluster.yaml"
+  LOCAL_DRG_ID: "${LOCAL_DRG_ID}"
+  PEER_DRG_ID: "${PEER_DRG_ID}"
+  PEER_REGION_NAME: "${PEER_REGION_NAME}"
 
 intervals:
   default/wait-controllers: ["3m", "10s"]

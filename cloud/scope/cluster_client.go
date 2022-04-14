@@ -15,6 +15,10 @@ type ClusterScopeClient interface {
 	ReconcileSubnet(ctx context.Context) error
 	ReconcileApiServerLB(ctx context.Context) error
 	ReconcileFailureDomains(ctx context.Context) error
+	ReconcileDRG(ctx context.Context) error
+	DeleteDRG(ctx context.Context) error
+	ReconcileDRGVCNAttachment(ctx context.Context) error
+	ReconcileDRGRPCAttachment(ctx context.Context) error
 	DeleteApiServerLB(ctx context.Context) error
 	DeleteNSGs(ctx context.Context) error
 	DeleteSubnets(ctx context.Context) error
@@ -24,6 +28,8 @@ type ClusterScopeClient interface {
 	DeleteNatGateway(ctx context.Context) error
 	DeleteInternetGateway(ctx context.Context) error
 	DeleteVCN(ctx context.Context) error
+	DeleteDRGVCNAttachment(ctx context.Context) error
+	DeleteDRGRPCAttachment(ctx context.Context) error
 	Close(ctx context.Context) error
 	GetOCICluster() *v1beta1.OCICluster
 }

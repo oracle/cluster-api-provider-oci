@@ -5,4 +5,5 @@ metadata:
 spec:
   template:
     spec:
-      imageId: "${OCI_CCM_TEST_IMAGE_ID}"
+      imageId: "${OCI_ALTERNATIVE_REGION_IMAGE_ID}"
+
