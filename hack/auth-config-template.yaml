@@ -1,0 +1,12 @@
+# see region identifier in https://docs.oracle.com/en-us/iaas/Content/General/Concepts/regions.htm
+# for a list of regions
+region: <region>
+tenancy: ocid1.tenancy.oc1..<unique_ID>
+user: ocid1.user.oc1..<unique_ID>
+key: |
+  -----BEGIN RSA PRIVATE KEY-----
+  <your_private_key>
+  -----END RSA PRIVATE KEY-----
+fingerprint: <your_private_key_fingerprint>
+
+useInstancePrincipals: false
