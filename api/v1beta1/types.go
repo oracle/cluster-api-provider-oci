@@ -239,7 +239,7 @@ type Role string
 
 type SubnetType string
 
-//Subnet defines the configuration for a network's subnet
+// Subnet defines the configuration for a network's subnet
 // https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/managingVCNs_topic-Overview_of_VCNs_and_Subnets.htm#Overview
 type Subnet struct {
 	// Role defines the subnet role (eg. control-plane, control-plane-endpoint, service-lb, worker).
@@ -335,6 +335,11 @@ type LoadBalancer struct {
 
 // NetworkSpec specifies what the OCI networking resources should look like.
 type NetworkSpec struct {
+	// SkipNetworkManagement defines if the networking spec(VCN related) specified by the user needs to be reconciled(actioned-upon)
+	// or used as it is. APIServerLB will still be reconciled.
+	// +optional
+	SkipNetworkManagement bool `json:"skipNetworkManagement,omitempty"`
+
 	// VCN configuration.
 	// +optional
 	Vcn VCN `json:"vcn,omitempty"`

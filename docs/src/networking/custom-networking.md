@@ -19,6 +19,7 @@ kind: OCICluster
 metadata:
   name: "${CLUSTER_NAME}"
 spec:
+  compartmentId: "${OCI_COMPARTMENT_ID}"
   networkSpec:
     vcn:
       name: ${CLUSTER_NAME}
@@ -53,6 +54,7 @@ kind: OCICluster
 metadata:
   name: "${CLUSTER_NAME}"
 spec:
+  compartmentId: "${OCI_COMPARTMENT_ID}"
   networkSpec:
     vcn:
       name: ${CLUSTER_NAME}
@@ -179,6 +181,7 @@ kind: OCICluster
 metadata:
   name: "${CLUSTER_NAME}"
 spec:
+  compartmentId: "${OCI_COMPARTMENT_ID}"
   networkSpec:
     vcn:
       name: ${CLUSTER_NAME}
@@ -269,5 +272,39 @@ spec:
 ```
 
 Related documentation: [comparison of Security Lists and Network Security Groups][sl-vs-nsg]
+
+## Example spec for externally managed VCN infrastructure
+
+CAPOCI can be used to create a cluster using existing VCN infrastructure. In this case, only the
+API Server Load Balancer will be managed by CAPOCI.
+
+Example spec is given below
+
+```yaml
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: OCICluster
+metadata:
+  name: "${CLUSTER_NAME}"
+spec:
+  compartmentId: "${OCI_COMPARTMENT_ID}"
+  networkSpec:
+    skipNetworkManagement: true
+    vcn:
+      id: <Insert VCN OCID Here>
+      networkSecurityGroups:
+        - id: <Insert Control Plane Endpoint NSG OCID Here>
+          role: control-plane-endpoint
+        - id: <Insert Worker NSG OCID Here>
+          role: worker
+        - id: <Insert Control Plane NSG OCID Here>
+          role: control-plane
+      subnets:
+        - id: <Insert Control Plane Endpoint Subnet OCID Here>
+          role: control-plane-endpoint
+        - id: <Insert Worker Subnet OCID Here>
+          role: worker
+        - id: <Insert control Plane Subnet OCID Here>
+          role: control-plane
+```
 
 [sl-vs-nsg]: https://docs.oracle.com/en-us/iaas/Content/Network/Concepts/securityrules.htm#comparison

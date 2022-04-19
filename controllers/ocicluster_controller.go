@@ -126,13 +126,13 @@ func (r *OCIClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	// Handle deleted clusters
 	if !ociCluster.DeletionTimestamp.IsZero() {
-		return r.reconcileDelete(ctx, clusterScope)
+		return r.reconcileDelete(ctx, logger, clusterScope)
 	}
 
 	if err != nil {
 		return reconcile.Result{}, errors.Errorf("failed to create scope: %+v", err)
 	} else {
-		return r.reconcile(ctx, clusterScope)
+		return r.reconcile(ctx, logger, clusterScope)
 	}
 
 }
@@ -157,55 +157,66 @@ func (r *OCIClusterReconciler) reconcileComponent(ctx context.Context, cluster *
 	return nil
 }
 
-func (r *OCIClusterReconciler) reconcile(ctx context.Context, clusterScope scope.ClusterScopeClient) (ctrl.Result, error) {
+func (r *OCIClusterReconciler) reconcile(ctx context.Context, logger logr.Logger, clusterScope scope.ClusterScopeClient) (ctrl.Result, error) {
 
 	cluster := clusterScope.GetOCICluster()
 	// If the OCICluster doesn't have our finalizer, add it.
 	controllerutil.AddFinalizer(cluster, infrastructurev1beta1.ClusterFinalizer)
 
-	if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileDRG, "DRG",
-		infrastructurev1beta1.DrgReconciliationFailedReason, infrastructurev1beta1.DrgEventReady); err != nil {
-		return ctrl.Result{}, err
-	}
+	// This below if condition specifies if the network related infrastructure needs to be reconciled. Any new
+	// network related reconcilication should happen in this if condition
+	if !cluster.Spec.NetworkSpec.SkipNetworkManagement {
+		if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileDRG, "DRG",
+			infrastructurev1beta1.DrgReconciliationFailedReason, infrastructurev1beta1.DrgEventReady); err != nil {
+			return ctrl.Result{}, err
+		}
 
-	if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileVCN, "VCN",
-		infrastructurev1beta1.VcnReconciliationFailedReason, infrastructurev1beta1.VcnEventReady); err != nil {
-		return ctrl.Result{}, err
-	}
+		if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileVCN, "VCN",
+			infrastructurev1beta1.VcnReconciliationFailedReason, infrastructurev1beta1.VcnEventReady); err != nil {
+			return ctrl.Result{}, err
+		}
 
-	if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileInternetGateway, "Internet Gateway",
-		infrastructurev1beta1.InternetGatewayReconciliationFailedReason, infrastructurev1beta1.InternetGatewayEventReady); err != nil {
-		return ctrl.Result{}, err
-	}
+		if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileInternetGateway, "Internet Gateway",
+			infrastructurev1beta1.InternetGatewayReconciliationFailedReason, infrastructurev1beta1.InternetGatewayEventReady); err != nil {
+			return ctrl.Result{}, err
+		}
 
-	if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileNatGateway, "NAT Gateway",
-		infrastructurev1beta1.NatGatewayReconciliationFailedReason, infrastructurev1beta1.NatEventReady); err != nil {
-		return ctrl.Result{}, err
-	}
+		if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileNatGateway, "NAT Gateway",
+			infrastructurev1beta1.NatGatewayReconciliationFailedReason, infrastructurev1beta1.NatEventReady); err != nil {
+			return ctrl.Result{}, err
+		}
 
-	if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileServiceGateway, "Service Gateway",
-		infrastructurev1beta1.ServiceGatewayReconciliationFailedReason, infrastructurev1beta1.ServiceGatewayEventReady); err != nil {
-		return ctrl.Result{}, err
-	}
+		if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileServiceGateway, "Service Gateway",
+			infrastructurev1beta1.ServiceGatewayReconciliationFailedReason, infrastructurev1beta1.ServiceGatewayEventReady); err != nil {
+			return ctrl.Result{}, err
+		}
 
-	if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileNSG, "Network Security Group",
-		infrastructurev1beta1.NSGReconciliationFailedReason, infrastructurev1beta1.NetworkSecurityEventReady); err != nil {
-		return ctrl.Result{}, err
-	}
+		if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileNSG, "Network Security Group",
+			infrastructurev1beta1.NSGReconciliationFailedReason, infrastructurev1beta1.NetworkSecurityEventReady); err != nil {
+			return ctrl.Result{}, err
+		}
 
-	if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileRouteTable, "Route Table",
-		infrastructurev1beta1.RouteTableReconciliationFailedReason, infrastructurev1beta1.RouteTableEventReady); err != nil {
-		return ctrl.Result{}, err
-	}
+		if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileRouteTable, "Route Table",
+			infrastructurev1beta1.RouteTableReconciliationFailedReason, infrastructurev1beta1.RouteTableEventReady); err != nil {
+			return ctrl.Result{}, err
+		}
 
-	if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileSubnet, "Subnet",
-		infrastructurev1beta1.SubnetReconciliationFailedReason, infrastructurev1beta1.SubnetEventReady); err != nil {
-		return ctrl.Result{}, err
-	}
+		if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileSubnet, "Subnet",
+			infrastructurev1beta1.SubnetReconciliationFailedReason, infrastructurev1beta1.SubnetEventReady); err != nil {
+			return ctrl.Result{}, err
+		}
 
-	if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileApiServerLB, "Api Server Loadbalancer",
-		infrastructurev1beta1.APIServerLoadBalancerFailedReason, infrastructurev1beta1.ApiServerLoadBalancerEventReady); err != nil {
-		return ctrl.Result{}, err
+		if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileDRGVCNAttachment, "DRGVCNAttachment",
+			infrastructurev1beta1.DRGVCNAttachmentReconciliationFailedReason, infrastructurev1beta1.DRGVCNAttachmentEventReady); err != nil {
+			return ctrl.Result{}, err
+		}
+
+		if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileDRGRPCAttachment, "DRGRPCAttachment",
+			infrastructurev1beta1.DRGRPCAttachmentReconciliationFailedReason, infrastructurev1beta1.DRGRPCAttachmentEventReady); err != nil {
+			return ctrl.Result{}, err
+		}
+	} else {
+		logger.Info("VCN Reconciliation is skipped")
 	}
 
 	if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileFailureDomains, "Failure Domain",
@@ -213,13 +224,8 @@ func (r *OCIClusterReconciler) reconcile(ctx context.Context, clusterScope scope
 		return ctrl.Result{}, err
 	}
 
-	if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileDRGVCNAttachment, "DRGVCNAttachment",
-		infrastructurev1beta1.DRGVCNAttachmentReconciliationFailedReason, infrastructurev1beta1.DRGVCNAttachmentEventReady); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileDRGRPCAttachment, "DRGRPCAttachment",
-		infrastructurev1beta1.DRGRPCAttachmentReconciliationFailedReason, infrastructurev1beta1.DRGRPCAttachmentEventReady); err != nil {
+	if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileApiServerLB, "Api Server Loadbalancer",
+		infrastructurev1beta1.APIServerLoadBalancerFailedReason, infrastructurev1beta1.ApiServerLoadBalancerEventReady); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -299,93 +305,99 @@ func (r *OCIClusterReconciler) clusterToInfrastructureMapFunc(ctx context.Contex
 	}
 }
 
-func (r *OCIClusterReconciler) reconcileDelete(ctx context.Context, clusterScope scope.ClusterScopeClient) (ctrl.Result, error) {
+func (r *OCIClusterReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, clusterScope scope.ClusterScopeClient) (ctrl.Result, error) {
 	cluster := clusterScope.GetOCICluster()
 
-	err := clusterScope.DeleteDRGRPCAttachment(ctx)
-	if err != nil {
-		r.Recorder.Event(cluster, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to delete DRG RPC attachment").Error())
-		conditions.MarkFalse(cluster, infrastructurev1beta1.ClusterReadyCondition, infrastructurev1beta1.DRGRPCAttachmentReconciliationFailedReason, clusterv1.ConditionSeverityError, "")
-		return ctrl.Result{}, errors.Wrapf(err, "failed to delete DRG RPC Attachment  for OCICluster %s/%s", cluster.Namespace, cluster.Name)
-	}
-
-	err = clusterScope.DeleteDRGVCNAttachment(ctx)
-	if err != nil {
-		r.Recorder.Event(cluster, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to delete DRG VCN attachment").Error())
-		conditions.MarkFalse(cluster, infrastructurev1beta1.ClusterReadyCondition, infrastructurev1beta1.DRGVCNAttachmentReconciliationFailedReason, clusterv1.ConditionSeverityError, "")
-		return ctrl.Result{}, errors.Wrapf(err, "failed to delete DRG VCN Attachment  for OCICluster %s/%s", cluster.Namespace, cluster.Name)
-	}
-
-	err = clusterScope.DeleteApiServerLB(ctx)
+	err := clusterScope.DeleteApiServerLB(ctx)
 	if err != nil {
 		r.Recorder.Event(cluster, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to delete Api Server Loadbalancer").Error())
 		conditions.MarkFalse(cluster, infrastructurev1beta1.ClusterReadyCondition, infrastructurev1beta1.APIServerLoadBalancerFailedReason, clusterv1.ConditionSeverityError, "")
 		return ctrl.Result{}, errors.Wrapf(err, "failed to delete apiserver LB for OCICluster %s/%s", cluster.Namespace, cluster.Name)
 	}
 
-	err = clusterScope.DeleteNSGs(ctx)
-	if err != nil {
-		r.Recorder.Event(cluster, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to delete Network Security Group").Error())
-		conditions.MarkFalse(cluster, infrastructurev1beta1.ClusterReadyCondition, infrastructurev1beta1.NSGReconciliationFailedReason, clusterv1.ConditionSeverityError, "")
-		return ctrl.Result{}, errors.Wrapf(err, "failed to delete Network Security Groups for OCICluster %s/%s", cluster.Namespace, cluster.Name)
-	}
+	// This below if condition specifies if the network related infrastructure needs to be reconciled. Any new
+	// network related reconcilication should happen in this if condition
+	if !cluster.Spec.NetworkSpec.SkipNetworkManagement {
+		err = clusterScope.DeleteDRGRPCAttachment(ctx)
+		if err != nil {
+			r.Recorder.Event(cluster, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to delete DRG RPC attachment").Error())
+			conditions.MarkFalse(cluster, infrastructurev1beta1.ClusterReadyCondition, infrastructurev1beta1.DRGRPCAttachmentReconciliationFailedReason, clusterv1.ConditionSeverityError, "")
+			return ctrl.Result{}, errors.Wrapf(err, "failed to delete DRG RPC Attachment  for OCICluster %s/%s", cluster.Namespace, cluster.Name)
+		}
 
-	err = clusterScope.DeleteSubnets(ctx)
-	if err != nil {
-		r.Recorder.Event(cluster, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to delete Subnet").Error())
-		conditions.MarkFalse(cluster, infrastructurev1beta1.ClusterReadyCondition, infrastructurev1beta1.SubnetReconciliationFailedReason, clusterv1.ConditionSeverityError, "")
-		return ctrl.Result{}, errors.Wrapf(err, "failed to delete subnet for OCICluster %s/%s", cluster.Namespace, cluster.Name)
-	}
+		err = clusterScope.DeleteDRGVCNAttachment(ctx)
+		if err != nil {
+			r.Recorder.Event(cluster, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to delete DRG VCN attachment").Error())
+			conditions.MarkFalse(cluster, infrastructurev1beta1.ClusterReadyCondition, infrastructurev1beta1.DRGVCNAttachmentReconciliationFailedReason, clusterv1.ConditionSeverityError, "")
+			return ctrl.Result{}, errors.Wrapf(err, "failed to delete DRG VCN Attachment  for OCICluster %s/%s", cluster.Namespace, cluster.Name)
+		}
 
-	err = clusterScope.DeleteRouteTables(ctx)
-	if err != nil {
-		r.Recorder.Event(cluster, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to delete Route Table").Error())
-		conditions.MarkFalse(cluster, infrastructurev1beta1.ClusterReadyCondition, infrastructurev1beta1.RouteTableReconciliationFailedReason, clusterv1.ConditionSeverityError, "")
-		return ctrl.Result{}, errors.Wrapf(err, "failed to delete RouteTables for OCICluster %s/%s", cluster.Namespace, cluster.Name)
-	}
+		err = clusterScope.DeleteNSGs(ctx)
+		if err != nil {
+			r.Recorder.Event(cluster, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to delete Network Security Group").Error())
+			conditions.MarkFalse(cluster, infrastructurev1beta1.ClusterReadyCondition, infrastructurev1beta1.NSGReconciliationFailedReason, clusterv1.ConditionSeverityError, "")
+			return ctrl.Result{}, errors.Wrapf(err, "failed to delete Network Security Groups for OCICluster %s/%s", cluster.Namespace, cluster.Name)
+		}
 
-	err = clusterScope.DeleteSecurityLists(ctx)
-	if err != nil {
-		r.Recorder.Event(cluster, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to delete Security Lists").Error())
-		conditions.MarkFalse(cluster, infrastructurev1beta1.ClusterReadyCondition, infrastructurev1beta1.SecurityListReconciliationFailedReason, clusterv1.ConditionSeverityError, "")
-		return ctrl.Result{}, errors.Wrapf(err, "failed to delete SecurityLists for OCICluster %s/%s", cluster.Namespace, cluster.Name)
-	}
+		err = clusterScope.DeleteSubnets(ctx)
+		if err != nil {
+			r.Recorder.Event(cluster, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to delete Subnet").Error())
+			conditions.MarkFalse(cluster, infrastructurev1beta1.ClusterReadyCondition, infrastructurev1beta1.SubnetReconciliationFailedReason, clusterv1.ConditionSeverityError, "")
+			return ctrl.Result{}, errors.Wrapf(err, "failed to delete subnet for OCICluster %s/%s", cluster.Namespace, cluster.Name)
+		}
 
-	err = clusterScope.DeleteServiceGateway(ctx)
-	if err != nil {
-		r.Recorder.Event(cluster, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to delete Service Gateway").Error())
-		conditions.MarkFalse(cluster, infrastructurev1beta1.ClusterReadyCondition, infrastructurev1beta1.ServiceGatewayReconciliationFailedReason, clusterv1.ConditionSeverityError, "")
-		return ctrl.Result{}, errors.Wrapf(err, "failed to delete ServiceGateway for OCICluster %s/%s", cluster.Namespace, cluster.Name)
-	}
+		err = clusterScope.DeleteRouteTables(ctx)
+		if err != nil {
+			r.Recorder.Event(cluster, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to delete Route Table").Error())
+			conditions.MarkFalse(cluster, infrastructurev1beta1.ClusterReadyCondition, infrastructurev1beta1.RouteTableReconciliationFailedReason, clusterv1.ConditionSeverityError, "")
+			return ctrl.Result{}, errors.Wrapf(err, "failed to delete RouteTables for OCICluster %s/%s", cluster.Namespace, cluster.Name)
+		}
 
-	err = clusterScope.DeleteNatGateway(ctx)
-	if err != nil {
-		r.Recorder.Event(cluster, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to delete NAT Gateway").Error())
-		conditions.MarkFalse(cluster, infrastructurev1beta1.ClusterReadyCondition, infrastructurev1beta1.NatGatewayReconciliationFailedReason, clusterv1.ConditionSeverityError, "")
-		return ctrl.Result{}, errors.Wrapf(err, "failed to delete NatGateway for OCICluster %s/%s", cluster.Namespace, cluster.Name)
-	}
+		err = clusterScope.DeleteSecurityLists(ctx)
+		if err != nil {
+			r.Recorder.Event(cluster, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to delete Security Lists").Error())
+			conditions.MarkFalse(cluster, infrastructurev1beta1.ClusterReadyCondition, infrastructurev1beta1.SecurityListReconciliationFailedReason, clusterv1.ConditionSeverityError, "")
+			return ctrl.Result{}, errors.Wrapf(err, "failed to delete SecurityLists for OCICluster %s/%s", cluster.Namespace, cluster.Name)
+		}
 
-	err = clusterScope.DeleteInternetGateway(ctx)
-	if err != nil {
-		r.Recorder.Event(cluster, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to delete Internet Gateway").Error())
-		conditions.MarkFalse(cluster, infrastructurev1beta1.ClusterReadyCondition, infrastructurev1beta1.InternetGatewayReconciliationFailedReason, clusterv1.ConditionSeverityError, "")
-		return ctrl.Result{}, errors.Wrapf(err, "failed to delete InternetGateway for OCICluster %s/%s", cluster.Namespace, cluster.Name)
-	}
+		err = clusterScope.DeleteServiceGateway(ctx)
+		if err != nil {
+			r.Recorder.Event(cluster, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to delete Service Gateway").Error())
+			conditions.MarkFalse(cluster, infrastructurev1beta1.ClusterReadyCondition, infrastructurev1beta1.ServiceGatewayReconciliationFailedReason, clusterv1.ConditionSeverityError, "")
+			return ctrl.Result{}, errors.Wrapf(err, "failed to delete ServiceGateway for OCICluster %s/%s", cluster.Namespace, cluster.Name)
+		}
 
-	err = clusterScope.DeleteVCN(ctx)
-	if err != nil {
-		r.Recorder.Event(cluster, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to delete VCN").Error())
-		conditions.MarkFalse(cluster, infrastructurev1beta1.ClusterReadyCondition, infrastructurev1beta1.VcnReconciliationFailedReason, clusterv1.ConditionSeverityError, "")
-		return ctrl.Result{}, errors.Wrapf(err, "failed to delete VCN for OCICluster %s/%s", cluster.Namespace, cluster.Name)
-	}
+		err = clusterScope.DeleteNatGateway(ctx)
+		if err != nil {
+			r.Recorder.Event(cluster, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to delete NAT Gateway").Error())
+			conditions.MarkFalse(cluster, infrastructurev1beta1.ClusterReadyCondition, infrastructurev1beta1.NatGatewayReconciliationFailedReason, clusterv1.ConditionSeverityError, "")
+			return ctrl.Result{}, errors.Wrapf(err, "failed to delete NatGateway for OCICluster %s/%s", cluster.Namespace, cluster.Name)
+		}
 
-	err = clusterScope.DeleteDRG(ctx)
-	if err != nil {
-		r.Recorder.Event(cluster, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to delete DRG").Error())
-		conditions.MarkFalse(cluster, infrastructurev1beta1.ClusterReadyCondition, infrastructurev1beta1.DrgReconciliationFailedReason, clusterv1.ConditionSeverityError, "")
-		return ctrl.Result{}, errors.Wrapf(err, "failed to delete DRG for OCICluster %s/%s", cluster.Namespace, cluster.Name)
-	}
+		err = clusterScope.DeleteInternetGateway(ctx)
+		if err != nil {
+			r.Recorder.Event(cluster, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to delete Internet Gateway").Error())
+			conditions.MarkFalse(cluster, infrastructurev1beta1.ClusterReadyCondition, infrastructurev1beta1.InternetGatewayReconciliationFailedReason, clusterv1.ConditionSeverityError, "")
+			return ctrl.Result{}, errors.Wrapf(err, "failed to delete InternetGateway for OCICluster %s/%s", cluster.Namespace, cluster.Name)
+		}
 
+		err = clusterScope.DeleteVCN(ctx)
+		if err != nil {
+			r.Recorder.Event(cluster, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to delete VCN").Error())
+			conditions.MarkFalse(cluster, infrastructurev1beta1.ClusterReadyCondition, infrastructurev1beta1.VcnReconciliationFailedReason, clusterv1.ConditionSeverityError, "")
+			return ctrl.Result{}, errors.Wrapf(err, "failed to delete VCN for OCICluster %s/%s", cluster.Namespace, cluster.Name)
+		}
+
+		err = clusterScope.DeleteDRG(ctx)
+		if err != nil {
+			r.Recorder.Event(cluster, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to delete DRG").Error())
+			conditions.MarkFalse(cluster, infrastructurev1beta1.ClusterReadyCondition, infrastructurev1beta1.DrgReconciliationFailedReason, clusterv1.ConditionSeverityError, "")
+			return ctrl.Result{}, errors.Wrapf(err, "failed to delete DRG for OCICluster %s/%s", cluster.Namespace, cluster.Name)
+		}
+
+	} else {
+		logger.Info("VCN Reconciliation is skipped, none of the VCN related resources will be deleted")
+	}
 	controllerutil.RemoveFinalizer(cluster, v1beta1.ClusterFinalizer)
 
 	return reconcile.Result{}, nil

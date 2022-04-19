@@ -68,6 +68,7 @@ providers:
           - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-cluster-class/clusterclass-test-cluster-class.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-local-vcn-peering.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-remote-vcn-peering.yaml"
+          - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-externally-managed-vcn.yaml"
           - sourcePath: "../data/shared/v1beta1/metadata.yaml"
 
 
@@ -92,6 +93,13 @@ variables:
   LOCAL_DRG_ID: "${LOCAL_DRG_ID}"
   PEER_DRG_ID: "${PEER_DRG_ID}"
   PEER_REGION_NAME: "${PEER_REGION_NAME}"
+  EXTERNAL_VCN_ID: "${EXTERNAL_VCN_ID}"
+  EXTERNAL_VCN_CPE_NSG: "${EXTERNAL_VCN_CPE_NSG}"
+  EXTERNAL_VCN_WORKER_NSG: "${EXTERNAL_VCN_WORKER_NSG}"
+  EXTERNAL_VCN_CP_NSG: "${EXTERNAL_VCN_CP_NSG}"
+  EXTERNAL_VCN_CPE_SUBNET: "${EXTERNAL_VCN_CPE_SUBNET}"
+  EXTERNAL_VCN_WORKER_SUBNET: "${EXTERNAL_VCN_WORKER_SUBNET}"
+  EXTERNAL_VCN_CP_SUBNET: "${EXTERNAL_VCN_CP_SUBNET}"
 
 intervals:
   default/wait-controllers: ["3m", "10s"]

@@ -93,6 +93,12 @@ spec:
                                 description: LoadBalancer Name.
                                 type: string
                             type: object
+                          skipNetworkManagement:
+                            description: SkipNetworkManagement defines if the networking
+                              spec(VCN related) specified by the user needs to be
+                              reconciled(actioned-upon) or used as it is. APIServerLB
+                              will still be reconciled.
+                            type: boolean
                           vcn:
                             description: VCN configuration.
                             properties:
