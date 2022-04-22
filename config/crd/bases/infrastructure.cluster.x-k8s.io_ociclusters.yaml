@@ -936,8 +936,6 @@ spec:
                 description: Region the cluster operates in. It must be one of available
                   regions in Region Identifier format. See https://docs.oracle.com/en-us/iaas/Content/General/Concepts/regions.htm
                 type: string
-            required:
-            - compartmentId
             type: object
           status:
             description: OCIClusterStatus defines the observed state of OCICluster
