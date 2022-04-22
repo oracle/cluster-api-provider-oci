@@ -47,7 +47,7 @@ SKIP_CREATE_MGMT_CLUSTER ?= false
 ARTIFACTS ?= $(ROOT_DIR)/_artifacts
 KUBETEST_CONF_PATH ?= $(abspath $(E2E_DATA_DIR)/kubetest/conformance.yaml)
 KUBETEST_FAST_CONF_PATH ?= $(abspath $(E2E_DATA_DIR)/kubetest/conformance-fast.yaml)
-GINKGO_FOCUS ?= Workload cluster creation
+GINKGO_FOCUS ?= "PRBlocking"
 GINKGO_SKIP ?= "Bare Metal|Multi-Region|VCNPeering"
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
@@ -255,6 +255,7 @@ generate-e2e-templates: kustomize
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-cluster-class --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-cluster-class.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-local-vcn-peering --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-local-vcn-peering.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-remote-vcn-peering --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-remote-vcn-peering.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-externally-managed-vcn --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-externally-managed-vcn.yaml
 
 .PHONY: test-e2e-run
 test-e2e-run: generate-e2e-templates ginkgo $(ENVSUBST) ## Run e2e tests

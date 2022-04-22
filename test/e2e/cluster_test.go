@@ -107,7 +107,7 @@ var _ = Describe("Workload cluster creation", func() {
 		dumpSpecResourcesAndCleanup(ctx, cleanInput)
 	})
 
-	It("Default CNI - with 1 control-plane nodes and 1 worker nodes", func() {
+	It("Default CNI - with 1 control-plane nodes and 1 worker nodes [PRBlocking]", func() {
 		clusterName = getClusterName(clusterNamePrefix, "simple")
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
@@ -130,7 +130,7 @@ var _ = Describe("Workload cluster creation", func() {
 		}, result)
 	})
 
-	It("Default CNI - With 3 control plane nodes spread across failure domains", func() {
+	It("Default CNI - With 3 control plane nodes spread across failure domains [PRBlocking]", func() {
 		clusterName = getClusterName(clusterNamePrefix, "3nodecontrolplane")
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
@@ -198,7 +198,7 @@ var _ = Describe("Workload cluster creation", func() {
 		validateOLImage(namespace.Name, clusterName)
 	})
 
-	It("Cloud Provider OCI testing", func() {
+	It("Cloud Provider OCI testing [PRBlocking]", func() {
 		clusterName = getClusterName(clusterNamePrefix, "ccm-testing")
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
@@ -283,7 +283,7 @@ var _ = Describe("Workload cluster creation", func() {
 		deletePVC(nginxStatefulsetInfo, clusterClient)
 	})
 
-	It("Custom networking NSG", func() {
+	It("Custom networking NSG [PRBlocking]", func() {
 		clusterName = getClusterName(clusterNamePrefix, "custom-nsg")
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
@@ -467,7 +467,7 @@ var _ = Describe("Workload cluster creation", func() {
 		}, result)
 	})
 
-	It("ClusterClass - with 1 control-plane nodes and 1 worker nodes", func() {
+	It("ClusterClass - with 1 control-plane nodes and 1 worker nodes [PRBlocking]", func() {
 		clusterName = getClusterName(clusterNamePrefix, "clusterclass")
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
@@ -477,6 +477,29 @@ var _ = Describe("Workload cluster creation", func() {
 				KubeconfigPath:           bootstrapClusterProxy.GetKubeconfigPath(),
 				InfrastructureProvider:   clusterctl.DefaultInfrastructureProvider,
 				Flavor:                   "cluster-class",
+				Namespace:                namespace.Name,
+				ClusterName:              clusterName,
+				KubernetesVersion:        e2eConfig.GetVariable(capi_e2e.KubernetesVersion),
+				ControlPlaneMachineCount: pointer.Int64Ptr(1),
+				WorkerMachineCount:       pointer.Int64Ptr(1),
+			},
+			CNIManifestPath:              e2eConfig.GetVariable(capi_e2e.CNIPath),
+			WaitForClusterIntervals:      e2eConfig.GetIntervals(specName, "wait-cluster"),
+			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),
+			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
+		}, result)
+	})
+
+	It("Externally managed VCN", func() {
+		clusterName = getClusterName(clusterNamePrefix, "externally-managed-vcn")
+		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
+			ClusterProxy: bootstrapClusterProxy,
+			ConfigCluster: clusterctl.ConfigClusterInput{
+				LogFolder:                filepath.Join(artifactFolder, "clusters", bootstrapClusterProxy.GetName()),
+				ClusterctlConfigPath:     clusterctlConfigPath,
+				KubeconfigPath:           bootstrapClusterProxy.GetKubeconfigPath(),
+				InfrastructureProvider:   clusterctl.DefaultInfrastructureProvider,
+				Flavor:                   "externally-managed-vcn",
 				Namespace:                namespace.Name,
 				ClusterName:              clusterName,
 				KubernetesVersion:        e2eConfig.GetVariable(capi_e2e.KubernetesVersion),
