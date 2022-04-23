@@ -93,8 +93,15 @@ func (c *OCICluster) ValidateUpdate(old runtime.Object) error {
 func (c *OCICluster) validate() field.ErrorList {
 	var allErrs field.ErrorList
 
-	// simple validity test for compartment
-	if !validOcid(c.Spec.CompartmentId) {
+	if len(c.Spec.CompartmentId) <= 0 {
+		allErrs = append(
+			allErrs,
+			field.Invalid(field.NewPath("spec", "compartmentId"), c.Spec.CompartmentId, "field is required"))
+	}
+
+	// Handle case where CompartmentId exists, but isn't valid
+	// the separate "blank" check above is a more clear error for the user
+	if len(c.Spec.CompartmentId) > 0 && !validOcid(c.Spec.CompartmentId) {
 		allErrs = append(
 			allErrs,
 			field.Invalid(field.NewPath("spec", "compartmentId"), c.Spec.CompartmentId, "field is invalid"))

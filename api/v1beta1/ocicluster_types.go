@@ -46,7 +46,8 @@ type OCIClusterSpec struct {
 	DefinedTags map[string]map[string]string `json:"definedTags,omitempty"`
 
 	// Compartment to create the cluster network.
-	CompartmentId string `mandatory:"true" json:"compartmentId"`
+	// +optional
+	CompartmentId string `json:"compartmentId"`
 
 	// Region the cluster operates in. It must be one of available regions in Region Identifier format.
 	// See https://docs.oracle.com/en-us/iaas/Content/General/Concepts/regions.htm

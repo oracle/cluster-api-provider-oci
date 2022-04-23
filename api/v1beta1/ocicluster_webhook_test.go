@@ -34,12 +34,20 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 		expectErr bool
 	}{
 		{
-			name: "shouldn't allow bad ImageId",
+			name: "shouldn't allow bad CompartmentId",
 			c: &OCICluster{
 				ObjectMeta: metav1.ObjectMeta{},
 				Spec: OCIClusterSpec{
 					CompartmentId: "badocid",
 				},
+			},
+			expectErr: true,
+		},
+		{
+			name: "shouldn't allow blank CompartmentId",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{},
+				Spec:       OCIClusterSpec{},
 			},
 			expectErr: true,
 		},
