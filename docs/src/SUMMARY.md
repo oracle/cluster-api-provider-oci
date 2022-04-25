@@ -29,5 +29,6 @@
     - [Using Calico](./networking/calico.md)
     - [Using Antrea](./networking/antrea.md)
   - [Custom Networking](./networking/custom-networking.md)
+  - [Private Cluster](./networking/private-cluster.md)
 - [Reference](./reference/reference.md)
   - [Glossary](./reference/glossary.md)
