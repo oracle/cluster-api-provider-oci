@@ -20,6 +20,8 @@
 package v1beta1
 
 import (
+	"fmt"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -83,7 +85,7 @@ func (m *OCIMachineTemplate) validate() field.ErrorList {
 		allErrs = append(
 			allErrs,
 			field.Invalid(
-				field.NewPath("Spec", "Template", "Spec", "imageId"),
+				field.NewPath("spec", "template", "spec", "imageId"),
 				m.Spec.Template.Spec.ImageId,
 				"field is invalid"),
 		)
@@ -94,9 +96,19 @@ func (m *OCIMachineTemplate) validate() field.ErrorList {
 		allErrs = append(
 			allErrs,
 			field.Invalid(
-				field.NewPath("Spec", "Template", "Spec", "compartmentId"),
+				field.NewPath("spec", "template", "spec", "compartmentId"),
 				m.Spec.Template.Spec.CompartmentId,
 				"field is invalid"),
+		)
+	}
+
+	if !validShape(m.Spec.Template.Spec.Shape) {
+		allErrs = append(
+			allErrs,
+			field.Invalid(
+				field.NewPath("spec", "template", "spec", "shape"),
+				m.Spec.Template.Spec.Shape,
+				fmt.Sprintf("shape is invalid - %s", m.Spec.Template.Spec.Shape)),
 		)
 	}
 

@@ -106,7 +106,7 @@ spec:
             names:
             - worker
       jsonPatches:
-        - op: add
+        - op: replace
           path: "/spec/template/spec/shape"
           valueFrom:
             variable: shape
@@ -200,6 +200,8 @@ metadata:
 spec:
   template:
     spec:
+      # will be replaced by shape variable defined above
+      shape: VM.Standard.E4.Flex
       metadata: {}
       shapeConfig: {}
 
@@ -211,6 +213,8 @@ metadata:
 spec:
   template:
     spec:
+      # will be replaced by shape variable defined above
+      shape: VM.Standard.E4.Flex
       metadata: {}
       shapeConfig: {}
 ---

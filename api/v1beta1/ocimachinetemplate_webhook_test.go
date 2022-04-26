@@ -20,6 +20,7 @@
 package v1beta1
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/onsi/gomega"
@@ -29,6 +30,7 @@ import (
 var tests = []struct {
 	name          string
 	inputTemplate *OCIMachineTemplate
+	errorField    string
 	expectErr     bool
 }{
 	{
@@ -43,7 +45,8 @@ var tests = []struct {
 				},
 			},
 		},
-		expectErr: true,
+		errorField: "imageId",
+		expectErr:  true,
 	},
 	{
 		name: "shouldn't allow bad CompartmentId",
@@ -57,7 +60,23 @@ var tests = []struct {
 				},
 			},
 		},
-		expectErr: true,
+		errorField: "compartmentId",
+		expectErr:  true,
+	},
+	{
+		name: "shouldn't allow empty shape",
+		inputTemplate: &OCIMachineTemplate{
+			ObjectMeta: metav1.ObjectMeta{},
+			Spec: OCIMachineTemplateSpec{
+				Template: OCIMachineTemplateResource{
+					Spec: OCIMachineSpec{
+						Shape: "",
+					},
+				},
+			},
+		},
+		errorField: "shape",
+		expectErr:  true,
 	},
 	{
 		name: "should succeed",
@@ -68,6 +87,7 @@ var tests = []struct {
 					Spec: OCIMachineSpec{
 						ImageId:       "ocid",
 						CompartmentId: "ocid",
+						Shape:         "DVH.DenseIO2.52",
 					},
 				},
 			},
@@ -82,7 +102,9 @@ func TestOCIMachineTemplate_ValidateCreate(t *testing.T) {
 			g := gomega.NewWithT(t)
 
 			if test.expectErr {
-				g.Expect(test.inputTemplate.ValidateCreate()).NotTo(gomega.Succeed())
+				err := test.inputTemplate.ValidateCreate()
+				g.Expect(err).NotTo(gomega.Succeed())
+				g.Expect(strings.Contains(err.Error(), test.errorField)).To(gomega.BeTrue())
 			} else {
 				g.Expect(test.inputTemplate.ValidateCreate()).To(gomega.Succeed())
 			}
@@ -96,7 +118,9 @@ func TestOCIMachineTemplate_ValidateUpdate(t *testing.T) {
 			g := gomega.NewWithT(t)
 
 			if test.expectErr {
-				g.Expect(test.inputTemplate.ValidateUpdate(nil)).NotTo(gomega.Succeed())
+				err := test.inputTemplate.ValidateUpdate(nil)
+				g.Expect(err).NotTo(gomega.Succeed())
+				g.Expect(strings.Contains(err.Error(), test.errorField)).To(gomega.BeTrue())
 			} else {
 				g.Expect(test.inputTemplate.ValidateUpdate(nil)).To(gomega.Succeed())
 			}
