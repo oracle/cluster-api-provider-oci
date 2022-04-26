@@ -1059,6 +1059,12 @@ spec:
                                 type: array
                             type: object
                         type: object
+                      ociResourceIdentifier:
+                        description: The unique ID which will be used to tag all the
+                          resources created by this Cluster. The tag will be used
+                          to identify resources belonging to this cluster. this will
+                          be auto-generated and should not be set by the user.
+                        type: string
                       region:
                         description: Region the cluster operates in. It must be one
                           of available regions in Region Identifier format. See https://docs.oracle.com/en-us/iaas/Content/General/Concepts/regions.htm

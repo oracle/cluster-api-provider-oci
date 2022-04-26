@@ -138,7 +138,7 @@ func (s *ClusterScope) CreateVCN(ctx context.Context, spec infrastructurev1beta1
 	}
 	vcnResponse, err := s.VCNClient.CreateVcn(ctx, core.CreateVcnRequest{
 		CreateVcnDetails: vcnDetails,
-		OpcRetryToken:    ociutil.GetOPCRetryToken("%s-%s", "create-vcn", string(s.OCICluster.UID)),
+		OpcRetryToken:    ociutil.GetOPCRetryToken("%s-%s", "create-vcn", string(s.OCICluster.GetOCIResourceIdentifier())),
 	})
 	if err != nil {
 		s.Logger.Error(err, "failed create vcn")

@@ -10,7 +10,7 @@ namePrefix: capoci-
 
 # Labels to add to all resources and selectors.
 commonLabels:
-  cluster.x-k8s.io/v1beta1: v1beta1
+  cluster.x-k8s.io/provider: "infrastructure-oci"
 
 resources:
   - credentials.yaml

@@ -262,7 +262,7 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 }
 
 func (m *MachineScope) getFreeFormTags(ociCluster infrastructurev1beta1.OCICluster) map[string]string {
-	tags := ociutil.BuildClusterTags(string(ociCluster.UID))
+	tags := ociutil.BuildClusterTags(ociCluster.GetOCIResourceIdentifier())
 	// first use cluster level tags, then override with machine level tags
 	if ociCluster.Spec.FreeformTags != nil {
 		for k, v := range ociCluster.Spec.FreeformTags {
@@ -288,7 +288,7 @@ func (m *MachineScope) DeleteMachine(ctx context.Context) error {
 // IsResourceCreatedByClusterAPI determines if the instance was created by the cluster using the
 // tags created at instance launch.
 func (s *MachineScope) IsResourceCreatedByClusterAPI(resourceFreeFormTags map[string]string) bool {
-	tagsAddedByClusterAPI := ociutil.BuildClusterTags(string(s.OCICluster.UID))
+	tagsAddedByClusterAPI := ociutil.BuildClusterTags(string(s.OCICluster.GetOCIResourceIdentifier()))
 	for k, v := range tagsAddedByClusterAPI {
 		if resourceFreeFormTags[k] != v {
 			return false

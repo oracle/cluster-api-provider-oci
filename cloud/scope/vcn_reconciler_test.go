@@ -24,6 +24,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn/mock_vcn"
 	"github.com/oracle/oci-go-sdk/v63/common"
 	"github.com/oracle/oci-go-sdk/v63/core"
@@ -88,12 +89,13 @@ func TestClusterScope_CreateVCN(t *testing.T) {
 			ociCluster := infrastructurev1beta1.OCICluster{
 				Spec: tt.spec,
 			}
+			tt.spec.OCIResourceIdentifier = "resource_uid"
 			s := &ClusterScope{
 				VCNClient:  vcnClient,
 				OCICluster: &ociCluster,
 				Cluster: &clusterv1.Cluster{
 					ObjectMeta: metav1.ObjectMeta{
-						UID: "a",
+						UID: "cluster_uid",
 					},
 				},
 				Logger: &l,
@@ -117,8 +119,8 @@ func TestClusterScope_DeleteVCN(t *testing.T) {
 	vcnClient := mock_vcn.NewMockClient(mockCtrl)
 
 	tags := make(map[string]string)
-	tags["CreatedBy"] = "OCIClusterAPIProvider"
-	tags["ClusterUUID"] = "a"
+	tags[ociutil.CreatedBy] = ociutil.OCIClusterAPIProvider
+	tags[ociutil.ClusterResourceIdentifier] = "resource_uid"
 	vcnClient.EXPECT().GetVcn(gomock.Any(), gomock.Eq(core.GetVcnRequest{
 		VcnId: common.String("normal_id"),
 	})).
@@ -209,16 +211,17 @@ func TestClusterScope_DeleteVCN(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ociCluster := infrastructurev1beta1.OCICluster{
 				ObjectMeta: metav1.ObjectMeta{
-					UID: "a",
+					UID: "cluster_uid",
 				},
 				Spec: tt.spec,
 			}
+			ociCluster.Spec.OCIResourceIdentifier = "resource_uid"
 			s := &ClusterScope{
 				VCNClient:  vcnClient,
 				OCICluster: &ociCluster,
 				Cluster: &clusterv1.Cluster{
 					ObjectMeta: metav1.ObjectMeta{
-						UID: "a",
+						UID: "cluster_uid",
 					},
 				},
 				Logger: &l,
@@ -243,8 +246,8 @@ func TestClusterScope_GetVCN(t *testing.T) {
 	vcnClient := mock_vcn.NewMockClient(mockCtrl)
 
 	tags := make(map[string]string)
-	tags["CreatedBy"] = "OCIClusterAPIProvider"
-	tags["ClusterUUID"] = "a"
+	tags[ociutil.CreatedBy] = ociutil.OCIClusterAPIProvider
+	tags[ociutil.ClusterResourceIdentifier] = "resource_uid"
 	vcnClient.EXPECT().ListVcns(gomock.Any(), gomock.Eq(core.ListVcnsRequest{
 		CompartmentId: common.String("bar"),
 		DisplayName:   common.String("foo"),
@@ -346,15 +349,16 @@ func TestClusterScope_GetVCN(t *testing.T) {
 			ociCluster := infrastructurev1beta1.OCICluster{
 				Spec: tt.spec,
 				ObjectMeta: metav1.ObjectMeta{
-					UID: "a",
+					UID: "cluster_uid",
 				},
 			}
+			ociCluster.Spec.OCIResourceIdentifier = "resource_uid"
 			s := &ClusterScope{
 				VCNClient:  vcnClient,
 				OCICluster: &ociCluster,
 				Cluster: &clusterv1.Cluster{
 					ObjectMeta: metav1.ObjectMeta{
-						UID: "a",
+						UID: "resource_uid",
 					},
 				},
 				Logger: &l,
@@ -405,9 +409,10 @@ func TestClusterScope_GetVcnCidr(t *testing.T) {
 			ociCluster := infrastructurev1beta1.OCICluster{
 				Spec: tt.spec,
 				ObjectMeta: metav1.ObjectMeta{
-					UID: "a",
+					UID: "cluster_uid",
 				},
 			}
+			ociCluster.Spec.OCIResourceIdentifier = "resource_uid"
 			s := &ClusterScope{
 				OCICluster: &ociCluster,
 				Logger:     &l,
@@ -447,10 +452,11 @@ func TestClusterScope_GetVcnName(t *testing.T) {
 			ociCluster := infrastructurev1beta1.OCICluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "bar",
-					UID:  "a",
+					UID:  "cluster_uid",
 				},
 				Spec: tt.spec,
 			}
+			ociCluster.Spec.OCIResourceIdentifier = "resource_uid"
 			s := &ClusterScope{
 				OCICluster: &ociCluster,
 				Logger:     &l,
@@ -517,14 +523,15 @@ func TestClusterScope_IsVcnEquals(t *testing.T) {
 			ociCluster := infrastructurev1beta1.OCICluster{
 				Spec: tt.spec,
 				ObjectMeta: metav1.ObjectMeta{
-					UID: "a",
+					UID: "cluster_uid",
 				},
 			}
+			ociCluster.Spec.OCIResourceIdentifier = "resource_uid"
 			s := &ClusterScope{
 				OCICluster: &ociCluster,
 				Cluster: &clusterv1.Cluster{
 					ObjectMeta: metav1.ObjectMeta{
-						UID: "a",
+						UID: "resource_uid",
 					},
 				},
 				Logger: &l,
@@ -542,8 +549,8 @@ func TestClusterScope_ReconcileVCN(t *testing.T) {
 	vcnClient := mock_vcn.NewMockClient(mockCtrl)
 
 	tags := make(map[string]string)
-	tags["CreatedBy"] = "OCIClusterAPIProvider"
-	tags["ClusterUUID"] = "a"
+	tags[ociutil.CreatedBy] = ociutil.OCIClusterAPIProvider
+	tags[ociutil.ClusterResourceIdentifier] = "resource_uid"
 
 	definedTags := map[string]map[string]string{
 		"ns1": {
@@ -693,15 +700,16 @@ func TestClusterScope_ReconcileVCN(t *testing.T) {
 			ociCluster := infrastructurev1beta1.OCICluster{
 				Spec: tt.spec,
 				ObjectMeta: metav1.ObjectMeta{
-					UID: "a",
+					UID: "cluster_uid",
 				},
 			}
+			ociCluster.Spec.OCIResourceIdentifier = "resource_uid"
 			s := &ClusterScope{
 				VCNClient:  vcnClient,
 				OCICluster: &ociCluster,
 				Cluster: &clusterv1.Cluster{
 					ObjectMeta: metav1.ObjectMeta{
-						UID: "a",
+						UID: "resource_uid",
 					},
 				},
 				Logger: &l,

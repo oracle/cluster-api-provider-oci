@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn/mock_vcn"
 	"github.com/oracle/oci-go-sdk/v63/common"
 	"github.com/oracle/oci-go-sdk/v63/core"
@@ -37,8 +38,8 @@ func TestClusterScope_DeleteSecurityLists(t *testing.T) {
 	vcnClient := mock_vcn.NewMockClient(mockCtrl)
 
 	tags := make(map[string]string)
-	tags["CreatedBy"] = "OCIClusterAPIProvider"
-	tags["ClusterUUID"] = "a"
+	tags[ociutil.CreatedBy] = ociutil.OCIClusterAPIProvider
+	tags[ociutil.ClusterResourceIdentifier] = "resource_uid"
 	vcnClient.EXPECT().GetSecurityList(gomock.Any(), gomock.Eq(core.GetSecurityListRequest{
 		SecurityListId: common.String("cp_endpoint_id"),
 	})).
@@ -181,9 +182,10 @@ func TestClusterScope_DeleteSecurityLists(t *testing.T) {
 			ociCluster := infrastructurev1beta1.OCICluster{
 				Spec: tt.spec,
 				ObjectMeta: metav1.ObjectMeta{
-					UID: "a",
+					UID: "cluster_uid",
 				},
 			}
+			ociCluster.Spec.OCIResourceIdentifier = "resource_uid"
 			s := &ClusterScope{
 				VCNClient:  vcnClient,
 				OCICluster: &ociCluster,

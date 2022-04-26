@@ -20,6 +20,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"testing"
+
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
@@ -31,7 +33,6 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"testing"
 )
 
 func TestLBReconciliation(t *testing.T) {
@@ -54,7 +55,8 @@ func TestLBReconciliation(t *testing.T) {
 				Name: "cluster",
 			},
 			Spec: infrastructurev1beta1.OCIClusterSpec{
-				CompartmentId: "compartment-id",
+				CompartmentId:         "compartment-id",
+				OCIResourceIdentifier: "resource_uid",
 			},
 		}
 		ociCluster.Spec.ControlPlaneEndpoint.Port = 6443
@@ -65,8 +67,8 @@ func TestLBReconciliation(t *testing.T) {
 			Client:             client,
 		})
 		tags = make(map[string]string)
-		tags["CreatedBy"] = "OCIClusterAPIProvider"
-		tags["ClusterUUID"] = "a"
+		tags[ociutil.CreatedBy] = ociutil.OCIClusterAPIProvider
+		tags[ociutil.ClusterResourceIdentifier] = "resource_uid"
 		g.Expect(err).To(BeNil())
 	}
 	teardown := func(t *testing.T, g *WithT) {
@@ -283,7 +285,7 @@ func TestLBReconciliation(t *testing.T) {
 						FreeformTags: tags,
 						DefinedTags:  definedTagsInterface,
 					},
-					OpcRetryToken: ociutil.GetOPCRetryToken("%s-%s", "create-lb", string("a")),
+					OpcRetryToken: ociutil.GetOPCRetryToken("%s-%s", "create-lb", string("resource_uid")),
 				})).
 					Return(networkloadbalancer.CreateNetworkLoadBalancerResponse{
 						NetworkLoadBalancer: networkloadbalancer.NetworkLoadBalancer{
@@ -366,7 +368,7 @@ func TestLBReconciliation(t *testing.T) {
 						FreeformTags: tags,
 						DefinedTags:  map[string]map[string]interface{}{},
 					},
-					OpcRetryToken: ociutil.GetOPCRetryToken("%s-%s", "create-lb", string("a")),
+					OpcRetryToken: ociutil.GetOPCRetryToken("%s-%s", "create-lb", string("resource_uid")),
 				})).
 					Return(networkloadbalancer.CreateNetworkLoadBalancerResponse{}, errors.New("request failed"))
 			},
@@ -418,7 +420,7 @@ func TestLBReconciliation(t *testing.T) {
 						FreeformTags: tags,
 						DefinedTags:  make(map[string]map[string]interface{}),
 					},
-					OpcRetryToken: ociutil.GetOPCRetryToken("%s-%s", "create-lb", string("a")),
+					OpcRetryToken: ociutil.GetOPCRetryToken("%s-%s", "create-lb", string("resource_uid")),
 				})).
 					Return(networkloadbalancer.CreateNetworkLoadBalancerResponse{
 						NetworkLoadBalancer: networkloadbalancer.NetworkLoadBalancer{
@@ -441,8 +443,8 @@ func TestLBReconciliation(t *testing.T) {
 			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
 				clusterScope.OCICluster.Spec.NetworkSpec.APIServerLB.LoadBalancerId = common.String("nlb-id")
 				newtags := make(map[string]string)
-				newtags["CreatedBy"] = "OCIClusterAPIProvider"
-				newtags["ClusterUUID"] = "a"
+				newtags[ociutil.CreatedBy] = ociutil.OCIClusterAPIProvider
+				newtags[ociutil.ClusterResourceIdentifier] = "resource_uid"
 				newtags["newtag"] = "tagvalue"
 				clusterScope.OCICluster.Spec.FreeformTags = newtags
 				nlbClient.EXPECT().GetNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.GetNetworkLoadBalancerRequest{
@@ -655,7 +657,8 @@ func TestLBDeletion(t *testing.T) {
 				Name: "cluster",
 			},
 			Spec: infrastructurev1beta1.OCIClusterSpec{
-				CompartmentId: "compartment-id",
+				CompartmentId:         "compartment-id",
+				OCIResourceIdentifier: "resource_uid",
 			},
 		}
 		ociCluster.Spec.ControlPlaneEndpoint.Port = 6443
@@ -666,8 +669,8 @@ func TestLBDeletion(t *testing.T) {
 			Client:             client,
 		})
 		tags = make(map[string]string)
-		tags["CreatedBy"] = "OCIClusterAPIProvider"
-		tags["ClusterUUID"] = "a"
+		tags[ociutil.CreatedBy] = ociutil.OCIClusterAPIProvider
+		tags[ociutil.ClusterResourceIdentifier] = "resource_uid"
 		g.Expect(err).To(BeNil())
 	}
 	teardown := func(t *testing.T, g *WithT) {
