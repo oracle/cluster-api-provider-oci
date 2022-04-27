@@ -24,6 +24,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn/mock_vcn"
 	"github.com/oracle/oci-go-sdk/v63/common"
 	"github.com/oracle/oci-go-sdk/v63/core"
@@ -52,11 +53,12 @@ func TestDRGRPCAttachmentReconciliation(t *testing.T) {
 		client := fake.NewClientBuilder().Build()
 		ociCluster = infrastructurev1beta1.OCICluster{
 			ObjectMeta: metav1.ObjectMeta{
-				UID:  "a",
+				UID:  "cluster_uid",
 				Name: "cluster",
 			},
 			Spec: infrastructurev1beta1.OCIClusterSpec{
-				CompartmentId: "compartment-id",
+				CompartmentId:         "compartment-id",
+				OCIResourceIdentifier: "resource_uid",
 			},
 		}
 
@@ -74,8 +76,8 @@ func TestDRGRPCAttachmentReconciliation(t *testing.T) {
 			ClientProvider: mockProvider,
 		})
 		tags = make(map[string]string)
-		tags["CreatedBy"] = "OCIClusterAPIProvider"
-		tags["ClusterUUID"] = "a"
+		tags[ociutil.CreatedBy] = ociutil.OCIClusterAPIProvider
+		tags[ociutil.ClusterResourceIdentifier] = "resource_uid"
 		vcnPeering = infrastructurev1beta1.VCNPeering{}
 		g.Expect(err).To(BeNil())
 	}
@@ -843,11 +845,12 @@ func TestDRGRPCAttachmentDeletion(t *testing.T) {
 		client := fake.NewClientBuilder().Build()
 		ociCluster = infrastructurev1beta1.OCICluster{
 			ObjectMeta: metav1.ObjectMeta{
-				UID:  "a",
+				UID:  "cluster_uid",
 				Name: "cluster",
 			},
 			Spec: infrastructurev1beta1.OCIClusterSpec{
-				CompartmentId: "compartment-id",
+				CompartmentId:         "compartment-id",
+				OCIResourceIdentifier: "resource_uid",
 			},
 		}
 
@@ -867,8 +870,8 @@ func TestDRGRPCAttachmentDeletion(t *testing.T) {
 			ClientProvider: mockProvider,
 		})
 		tags = make(map[string]string)
-		tags["CreatedBy"] = "OCIClusterAPIProvider"
-		tags["ClusterUUID"] = "a"
+		tags[ociutil.CreatedBy] = ociutil.OCIClusterAPIProvider
+		tags[ociutil.ClusterResourceIdentifier] = "resource_uid"
 		vcnPeering = infrastructurev1beta1.VCNPeering{}
 		g.Expect(err).To(BeNil())
 	}

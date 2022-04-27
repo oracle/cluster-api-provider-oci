@@ -55,6 +55,11 @@ func TestOCIClusterReconciler_Reconcile(t *testing.T) {
 			objects:       []client.Object{getSecret(), getOciClusterWithNoOwner()},
 			expectedEvent: "OwnerRefNotSet",
 		},
+		{
+			name:          "cluster is paused",
+			objects:       []client.Object{getSecret(), getOCIClusterWithOwner(), getPausedInfraCluster()},
+			expectedEvent: "ClusterPaused",
+		},
 	}
 
 	for _, tc := range tests {
@@ -663,4 +668,32 @@ func getOciClusterWithNoOwner() *infrastructurev1beta1.OCICluster {
 	}
 	ociCluster.OwnerReferences = []metav1.OwnerReference{}
 	return ociCluster
+}
+
+func getOCIClusterWithOwner() *infrastructurev1beta1.OCICluster {
+	ociCluster := getOciClusterWithNoOwner()
+	ociCluster.OwnerReferences = []metav1.OwnerReference{
+		{
+			Name:       "test-cluster",
+			Kind:       "Cluster",
+			APIVersion: clusterv1.GroupVersion.String(),
+		},
+	}
+	return ociCluster
+}
+
+func getPausedInfraCluster() *clusterv1.Cluster {
+	infraRef := corev1.ObjectReference{
+		Name: "oci-cluster",
+	}
+	return &clusterv1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-cluster",
+			Namespace: "test",
+		},
+		Spec: clusterv1.ClusterSpec{
+			InfrastructureRef: &infraRef,
+			Paused:            true,
+		},
+	}
 }

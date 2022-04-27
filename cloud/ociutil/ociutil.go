@@ -19,9 +19,10 @@ package ociutil
 import (
 	"context"
 	"fmt"
-	nlb "github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer"
 	"net/http"
 	"time"
+
+	nlb "github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer"
 
 	"github.com/oracle/oci-go-sdk/v63/common"
 	"github.com/oracle/oci-go-sdk/v63/core"
@@ -31,9 +32,12 @@ import (
 )
 
 const (
-	WorkRequestPollInterval = 5 * time.Second
-	WorkRequestTimeout      = 2 * time.Minute
-	MaxOPCRetryTokenBytes   = 64
+	WorkRequestPollInterval   = 5 * time.Second
+	WorkRequestTimeout        = 2 * time.Minute
+	MaxOPCRetryTokenBytes     = 64
+	CreatedBy                 = "CreatedBy"
+	OCIClusterAPIProvider     = "OCIClusterAPIProvider"
+	ClusterResourceIdentifier = "ClusterResourceIdentifier"
 )
 
 // ErrNotFound is for simulation during testing, OCI SDK does not have a way
@@ -102,13 +106,13 @@ func GetBaseLineOcpuOptimizationEnum(baseLineOcpuOptmimizationString string) (co
 // GetDefaultClusterTags creates and returns a map of the default tags for all clusters
 func GetDefaultClusterTags() map[string]string {
 	tags := make(map[string]string)
-	tags["CreatedBy"] = "OCIClusterAPIProvider"
+	tags[CreatedBy] = OCIClusterAPIProvider
 	return tags
 }
 
-// BuildClusterTags uses the default tags and adds the ClusterUUID tag
-func BuildClusterTags(clusterUUID string) map[string]string {
+// BuildClusterTags uses the default tags and adds the ClusterResourceUID tag
+func BuildClusterTags(ClusterResourceUID string) map[string]string {
 	tags := GetDefaultClusterTags()
-	tags["ClusterUUID"] = clusterUUID
+	tags[ClusterResourceIdentifier] = ClusterResourceUID
 	return tags
 }

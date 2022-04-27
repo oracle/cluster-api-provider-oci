@@ -124,7 +124,7 @@ func (s *ClusterScope) ReconcileFailureDomains(ctx context.Context) error {
 }
 
 func (s *ClusterScope) IsResourceCreatedByClusterAPI(resourceFreeFormTags map[string]string) bool {
-	tagsAddedByClusterAPI := ociutil.BuildClusterTags(string(s.OCICluster.UID))
+	tagsAddedByClusterAPI := ociutil.BuildClusterTags(s.OCICluster.GetOCIResourceIdentifier())
 	for k, v := range tagsAddedByClusterAPI {
 		if resourceFreeFormTags[k] != v {
 			return false
@@ -251,7 +251,7 @@ func (s *ClusterScope) GetFreeFormTags() map[string]string {
 	if tags == nil {
 		tags = make(map[string]string)
 	}
-	tagsAddedByClusterAPI := ociutil.BuildClusterTags(string(s.OCICluster.UID))
+	tagsAddedByClusterAPI := ociutil.BuildClusterTags(string(s.OCICluster.GetOCIResourceIdentifier()))
 	for k, v := range tagsAddedByClusterAPI {
 		tags[k] = v
 	}

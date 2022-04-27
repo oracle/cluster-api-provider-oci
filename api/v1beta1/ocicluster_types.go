@@ -32,9 +32,17 @@ const (
 
 // OCIClusterSpec defines the desired state of OciCluster
 type OCIClusterSpec struct {
+
+	// The unique ID which will be used to tag all the resources created by this Cluster.
+	// The tag will be used to identify resources belonging to this cluster.
+	// this will be auto-generated and should not be set by the user.
+	// +optional
+	OCIResourceIdentifier string `json:"ociResourceIdentifier,omitempty"`
+
 	// NetworkSpec encapsulates all things related to OCI network.
 	// +optional
 	NetworkSpec NetworkSpec `json:"networkSpec,omitempty"`
+
 	// Free-form tags for this resource.
 	// +optional
 	FreeformTags map[string]string `json:"freeformTags,omitempty"`
@@ -99,6 +107,11 @@ func (c *OCICluster) GetConditions() clusterv1.Conditions {
 // SetConditions will set the given conditions on an OCICluster object.
 func (c *OCICluster) SetConditions(conditions clusterv1.Conditions) {
 	c.Status.Conditions = conditions
+}
+
+// GetOCIResourceIdentifier will return the OCI resource identifier.
+func (c *OCICluster) GetOCIResourceIdentifier() string {
+	return c.Spec.OCIResourceIdentifier
 }
 
 func init() {

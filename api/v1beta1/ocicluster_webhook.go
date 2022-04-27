@@ -24,8 +24,8 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
@@ -33,10 +33,18 @@ import (
 var clusterlogger = ctrl.Log.WithName("ocicluster-resource")
 
 var (
+	_ webhook.Defaulter = &OCICluster{}
 	_ webhook.Validator = &OCICluster{}
 )
 
 // +kubebuilder:webhook:verbs=create;update,path=/validate-infrastructure-cluster-x-k8s-io-v1beta1-ocicluster,mutating=false,failurePolicy=fail,matchPolicy=Equivalent,groups=infrastructure.cluster.x-k8s.io,resources=ociclusters,versions=v1beta1,name=validation.ocicluster.infrastructure.cluster.x-k8s.io,sideEffects=None,admissionReviewVersions=v1beta1
+// +kubebuilder:webhook:verbs=create;update,path=/mutate-infrastructure-cluster-x-k8s-io-v1beta1-ocicluster,mutating=true,failurePolicy=fail,matchPolicy=Equivalent,groups=infrastructure.cluster.x-k8s.io,resources=ociclusters,versions=v1beta1,name=default.ocicluster.infrastructure.cluster.x-k8s.io,sideEffects=None,admissionReviewVersions=v1;v1beta1
+
+func (c *OCICluster) Default() {
+	if c.Spec.OCIResourceIdentifier == "" {
+		c.Spec.OCIResourceIdentifier = string(uuid.NewUUID())
+	}
+}
 
 func (c *OCICluster) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
@@ -81,6 +89,10 @@ func (c *OCICluster) ValidateUpdate(old runtime.Object) error {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "region"), c.Spec.Region, "field is immutable"))
 	}
 
+	if c.Spec.OCIResourceIdentifier != oldCluster.Spec.OCIResourceIdentifier {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "ociResourceIdentifier"), c.Spec.OCIResourceIdentifier, "field is immutable"))
+	}
+
 	allErrs = append(allErrs, c.validate()...)
 
 	if len(allErrs) == 0 {
@@ -105,6 +117,12 @@ func (c *OCICluster) validate() field.ErrorList {
 		allErrs = append(
 			allErrs,
 			field.Invalid(field.NewPath("spec", "compartmentId"), c.Spec.CompartmentId, "field is invalid"))
+	}
+
+	if len(c.Spec.OCIResourceIdentifier) <= 0 {
+		allErrs = append(
+			allErrs,
+			field.Invalid(field.NewPath("spec", "ociResourceIdentifier"), c.Spec.OCIResourceIdentifier, "field is required"))
 	}
 
 	if len(allErrs) == 0 {

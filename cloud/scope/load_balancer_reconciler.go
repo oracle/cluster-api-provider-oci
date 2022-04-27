@@ -195,7 +195,7 @@ func (s *ClusterScope) CreateLB(ctx context.Context, lb infrastructurev1beta1.Lo
 	s.Logger.Info("Creating network load balancer")
 	lbResponse, err := s.LoadBalancerClient.CreateNetworkLoadBalancer(ctx, networkloadbalancer.CreateNetworkLoadBalancerRequest{
 		CreateNetworkLoadBalancerDetails: lbDetails,
-		OpcRetryToken:                    ociutil.GetOPCRetryToken("%s-%s", "create-lb", string(s.OCICluster.UID)),
+		OpcRetryToken:                    ociutil.GetOPCRetryToken("%s-%s", "create-lb", s.OCICluster.GetOCIResourceIdentifier()),
 	})
 	if err != nil {
 		s.Logger.Error(err, "failed to create apiserver lb, failed to create work request")

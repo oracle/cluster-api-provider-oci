@@ -71,8 +71,8 @@ func TestGetCloudProviderConfig(t *testing.T) {
 func TestAddToDefaultClusterTags(t *testing.T) {
 	testUUID := "UUIDTEST"
 	tags := BuildClusterTags(testUUID)
-	if tags["ClusterUUID"] != testUUID {
-		t.Errorf("Tags don't match Expected: %s, Actual: %s", testUUID, tags["ClusterUUID"])
+	if tags[ClusterResourceIdentifier] != testUUID {
+		t.Errorf("Tags don't match Expected: %s, Actual: %s", testUUID, tags[ClusterResourceIdentifier])
 	}
 
 	// should also contain default tags

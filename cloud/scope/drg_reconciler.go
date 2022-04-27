@@ -123,7 +123,7 @@ func (s *ClusterScope) createDRG(ctx context.Context) (*core.Drg, error) {
 			DefinedTags:   s.GetDefinedTags(),
 			DisplayName:   common.String(s.GetDRGName()),
 		},
-		OpcRetryToken: ociutil.GetOPCRetryToken("%s-%s", "create-drg", string(s.OCICluster.UID)),
+		OpcRetryToken: ociutil.GetOPCRetryToken("%s-%s", "create-drg", string(s.OCICluster.GetOCIResourceIdentifier())),
 	})
 	if err != nil {
 		return nil, err

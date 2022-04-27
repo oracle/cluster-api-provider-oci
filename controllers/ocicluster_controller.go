@@ -97,6 +97,14 @@ func (r *OCIClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		logger.Info("Cluster Controller has not yet set OwnerRef")
 		return ctrl.Result{}, nil
 	}
+
+	// Return early if the object or Cluster is paused.
+	if annotations.IsPaused(cluster, ociCluster) {
+		r.Recorder.Eventf(ociCluster, corev1.EventTypeNormal, "ClusterPaused", "Cluster is paused")
+		logger.Info("OCICluster or linked Cluster is marked as paused. Won't reconcile")
+		return ctrl.Result{}, nil
+	}
+
 	var clusterScope scope.ClusterScopeClient
 
 	clients, err := r.ClientProvider.GetOrBuildClient(regionOverride)

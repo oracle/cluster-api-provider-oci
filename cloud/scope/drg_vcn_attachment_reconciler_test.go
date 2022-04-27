@@ -51,11 +51,12 @@ func TestDRGVCNAttachmentReconciliation(t *testing.T) {
 		client := fake.NewClientBuilder().Build()
 		ociCluster = infrastructurev1beta1.OCICluster{
 			ObjectMeta: metav1.ObjectMeta{
-				UID:  "a",
+				UID:  "cluster_uid",
 				Name: "cluster",
 			},
 			Spec: infrastructurev1beta1.OCIClusterSpec{
-				CompartmentId: "compartment-id",
+				CompartmentId:         "compartment-id",
+				OCIResourceIdentifier: "resource_uid",
 			},
 		}
 		ociCluster.Spec.ControlPlaneEndpoint.Port = 6443
@@ -66,8 +67,8 @@ func TestDRGVCNAttachmentReconciliation(t *testing.T) {
 			Client:     client,
 		})
 		tags = make(map[string]string)
-		tags["CreatedBy"] = "OCIClusterAPIProvider"
-		tags["ClusterUUID"] = "a"
+		tags[ociutil.CreatedBy] = ociutil.OCIClusterAPIProvider
+		tags[ociutil.ClusterResourceIdentifier] = "resource_uid"
 		vcnPeering = infrastructurev1beta1.VCNPeering{}
 		g.Expect(err).To(BeNil())
 	}
@@ -139,8 +140,8 @@ func TestDRGVCNAttachmentReconciliation(t *testing.T) {
 				vcnPeering.DRG.VcnAttachmentId = common.String("attachment-id")
 				clusterScope.OCICluster.Spec.NetworkSpec.VCNPeering = &vcnPeering
 				existingTags := make(map[string]string)
-				existingTags["CreatedBy"] = "OCIClusterAPIProvider"
-				existingTags["ClusterUUID"] = "a"
+				existingTags[ociutil.CreatedBy] = ociutil.OCIClusterAPIProvider
+				existingTags[ociutil.ClusterResourceIdentifier] = "resource_uid"
 				existingTags["test"] = "test"
 				vcnClient.EXPECT().GetDrgAttachment(gomock.Any(), gomock.Eq(core.GetDrgAttachmentRequest{
 					DrgAttachmentId: common.String("attachment-id"),
@@ -235,11 +236,12 @@ func TestDRGVcnAttachmentDeletion(t *testing.T) {
 		client := fake.NewClientBuilder().Build()
 		ociCluster = infrastructurev1beta1.OCICluster{
 			ObjectMeta: metav1.ObjectMeta{
-				UID:  "a",
+				UID:  "cluster_uid",
 				Name: "cluster",
 			},
 			Spec: infrastructurev1beta1.OCIClusterSpec{
-				CompartmentId: "compartment-id",
+				CompartmentId:         "compartment-id",
+				OCIResourceIdentifier: "resource_uid",
 			},
 		}
 		ociCluster.Spec.ControlPlaneEndpoint.Port = 6443
@@ -250,8 +252,8 @@ func TestDRGVcnAttachmentDeletion(t *testing.T) {
 			Client:     client,
 		})
 		tags = make(map[string]string)
-		tags["CreatedBy"] = "OCIClusterAPIProvider"
-		tags["ClusterUUID"] = "a"
+		tags[ociutil.CreatedBy] = ociutil.OCIClusterAPIProvider
+		tags[ociutil.ClusterResourceIdentifier] = "resource_uid"
 		vcnPeering = infrastructurev1beta1.VCNPeering{}
 		g.Expect(err).To(BeNil())
 	}

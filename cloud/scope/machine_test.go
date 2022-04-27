@@ -20,10 +20,11 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"testing"
+
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer/mock_nlb"
 	"github.com/oracle/oci-go-sdk/v63/networkloadbalancer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"testing"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
@@ -65,6 +66,9 @@ func TestInstanceReconciliation(t *testing.T) {
 		ociCluster = infrastructurev1beta1.OCICluster{
 			ObjectMeta: metav1.ObjectMeta{
 				UID: "uid",
+			},
+			Spec: infrastructurev1beta1.OCIClusterSpec{
+				OCIResourceIdentifier: "resource_uid",
 			},
 		}
 		ociCluster.Spec.ControlPlaneEndpoint.Port = 6443
@@ -147,8 +151,8 @@ func TestInstanceReconciliation(t *testing.T) {
 						{
 							Id: common.String("test"),
 							FreeformTags: map[string]string{
-								"CreatedBy":   "OCIClusterAPIProvider",
-								"ClusterUUID": "uid",
+								ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,
+								ociutil.ClusterResourceIdentifier: "resource_uid",
 							},
 						},
 					},
@@ -341,8 +345,8 @@ func TestInstanceReconciliation(t *testing.T) {
 					IsPvEncryptionInTransitEnabled: common.Bool(true),
 					DefinedTags:                    map[string]map[string]interface{}{},
 					FreeformTags: map[string]string{
-						"CreatedBy":   "OCIClusterAPIProvider",
-						"ClusterUUID": "uid",
+						ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,
+						ociutil.ClusterResourceIdentifier: "resource_uid",
 					},
 				}
 				computeClient.EXPECT().LaunchInstance(gomock.Any(), gomock.Eq(core.LaunchInstanceRequest{
@@ -379,8 +383,8 @@ func TestInstanceReconciliation(t *testing.T) {
 					IsPvEncryptionInTransitEnabled: common.Bool(true),
 					DefinedTags:                    map[string]map[string]interface{}{},
 					FreeformTags: map[string]string{
-						"CreatedBy":   "OCIClusterAPIProvider",
-						"ClusterUUID": "uid",
+						ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,
+						ociutil.ClusterResourceIdentifier: "resource_uid",
 					},
 				}
 				computeClient.EXPECT().LaunchInstance(gomock.Any(), gomock.Eq(core.LaunchInstanceRequest{
@@ -425,8 +429,8 @@ func TestInstanceReconciliation(t *testing.T) {
 					IsPvEncryptionInTransitEnabled: common.Bool(true),
 					DefinedTags:                    map[string]map[string]interface{}{},
 					FreeformTags: map[string]string{
-						"CreatedBy":   "OCIClusterAPIProvider",
-						"ClusterUUID": "uid",
+						ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,
+						ociutil.ClusterResourceIdentifier: "resource_uid",
 					},
 				}
 				computeClient.EXPECT().LaunchInstance(gomock.Any(), gomock.Eq(core.LaunchInstanceRequest{
@@ -473,8 +477,8 @@ func TestInstanceReconciliation(t *testing.T) {
 					IsPvEncryptionInTransitEnabled: common.Bool(true),
 					DefinedTags:                    map[string]map[string]interface{}{},
 					FreeformTags: map[string]string{
-						"CreatedBy":   "OCIClusterAPIProvider",
-						"ClusterUUID": "uid",
+						ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,
+						ociutil.ClusterResourceIdentifier: "resource_uid",
 					},
 				}
 				computeClient.EXPECT().LaunchInstance(gomock.Any(), gomock.Eq(core.LaunchInstanceRequest{
@@ -525,8 +529,8 @@ func TestInstanceReconciliation(t *testing.T) {
 					IsPvEncryptionInTransitEnabled: common.Bool(true),
 					DefinedTags:                    map[string]map[string]interface{}{},
 					FreeformTags: map[string]string{
-						"CreatedBy":   "OCIClusterAPIProvider",
-						"ClusterUUID": "uid",
+						ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,
+						ociutil.ClusterResourceIdentifier: "resource_uid",
 					},
 				}
 				computeClient.EXPECT().LaunchInstance(gomock.Any(), gomock.Eq(core.LaunchInstanceRequest{
@@ -578,8 +582,8 @@ func TestInstanceReconciliation(t *testing.T) {
 					IsPvEncryptionInTransitEnabled: common.Bool(true),
 					DefinedTags:                    map[string]map[string]interface{}{},
 					FreeformTags: map[string]string{
-						"CreatedBy":   "OCIClusterAPIProvider",
-						"ClusterUUID": "uid",
+						ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,
+						ociutil.ClusterResourceIdentifier: "resource_uid",
 					},
 				}
 				computeClient.EXPECT().LaunchInstance(gomock.Any(), gomock.Eq(core.LaunchInstanceRequest{
@@ -1316,5 +1320,6 @@ func setupAllParams(ms *MachineScope) {
 		},
 	}
 	ms.OCICluster.UID = "uid"
+	ms.OCICluster.Spec.OCIResourceIdentifier = "resource_uid"
 	ms.OCIMachine.UID = "machineuid"
 }
