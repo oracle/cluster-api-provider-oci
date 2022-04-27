@@ -37,7 +37,11 @@ spec:
     vcnPeering:
       drg:
         id: "${DRG_ID}"
+      # The CIDR ranges specified below will be added to the workload cluster VCN
+      # with the target as DRG. This route rule will make sure that traffic to management
+      # cluster VCN will be directed to the DRG.
       peerRouteRules:
+        # This is typically the CIDR range of management cluster VCN or a sub range of the same
         - vcnCIDRRange: "10.0.0.0/16"
     vcn:
       cidr: "10.1.0.0/16"
