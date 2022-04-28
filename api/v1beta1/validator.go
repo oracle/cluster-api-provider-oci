@@ -19,11 +19,18 @@
 
 package v1beta1
 
+// validOcid is a simple pre-flight
+// we will let the serverside handle the more complex and compete validation
 func validOcid(ocid string) bool {
-
 	if len(ocid) >= 4 && ocid[:4] == "ocid" {
 		return true
 	}
 
 	return false
+}
+
+// validShape is a simple pre-flight
+// we will let the serverside handle the more complex and compete validation
+func validShape(shape string) bool {
+	return len(shape) > 0
 }
