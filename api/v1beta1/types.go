@@ -25,6 +25,9 @@ const (
 	Public                   = "public"
 )
 
+// SubnetRoles a slice of all the subnet roles
+var SubnetRoles = [...]Role{ControlPlaneRole, ControlPlaneEndpointRole, WorkerRole, ServiceLoadBalancerRole}
+
 // NetworkDetails defines the configuration options for the network
 type NetworkDetails struct {
 	SubnetId       *string `json:"subnetId,omitempty"`

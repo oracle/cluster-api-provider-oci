@@ -19,6 +19,18 @@
 
 package v1beta1
 
+import (
+	"fmt"
+	"net"
+	"regexp"
+
+	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
+	"k8s.io/apimachinery/pkg/util/validation/field"
+)
+
+// invalidNameRegex is a broad regex used to validate allows names in OCI
+var invalidNameRegex = regexp.MustCompile("\\s")
+
 // validOcid is a simple pre-flight
 // we will let the serverside handle the more complex and compete validation
 func validOcid(ocid string) bool {
@@ -30,7 +42,175 @@ func validOcid(ocid string) bool {
 }
 
 // validShape is a simple pre-flight
-// we will let the serverside handle the more complex and compete validation
+// we will let the serverside handle the more complex and compete validation.
 func validShape(shape string) bool {
 	return len(shape) > 0
+}
+
+// validRegion test if the string can be a region.
+func validRegion(stringRegion string) bool {
+
+	// region can be blank since the regional information
+	// can be derived from other sources
+	if stringRegion == "" {
+		return true
+	}
+
+	if invalidNameRegex.MatchString(stringRegion) {
+		return false
+	}
+	return true
+}
+
+// validateNetworkSpec validates the NetworkSpec
+func validateNetworkSpec(networkSpec NetworkSpec, old NetworkSpec, fldPath *field.Path) field.ErrorList {
+	var allErrs field.ErrorList
+
+	if len(networkSpec.Vcn.CIDR) > 0 {
+		allErrs = append(allErrs, validateVCNCIDR(networkSpec.Vcn.CIDR, fldPath.Child("cidr"))...)
+	}
+
+	if networkSpec.Vcn.Subnets != nil {
+		allErrs = append(allErrs, validateSubnets(networkSpec.Vcn.Subnets, networkSpec.Vcn, fldPath.Child("subnets"))...)
+	}
+
+	if networkSpec.Vcn.NetworkSecurityGroups != nil {
+		allErrs = append(allErrs, validateNSGs(networkSpec.Vcn.NetworkSecurityGroups, networkSpec.Vcn, fldPath.Child("networkSecurityGroups"))...)
+	}
+
+	if len(allErrs) == 0 {
+		return nil
+	}
+	return allErrs
+}
+
+// validateVCNCIDR validates the CIDR of a VNC.
+func validateVCNCIDR(vncCIDR string, fldPath *field.Path) field.ErrorList {
+	var allErrs field.ErrorList
+	if _, _, err := net.ParseCIDR(vncCIDR); err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, vncCIDR, "invalid CIDR format"))
+	}
+	return allErrs
+}
+
+// validateSubnetCIDR validates the CIDR blocks of a Subnet.
+func validateSubnetCIDR(subnetCidr string, vcnCidr string, fldPath *field.Path) field.ErrorList {
+	var allErrs field.ErrorList
+
+	subnetCidrIP, _, err := net.ParseCIDR(subnetCidr)
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, subnetCidr, "invalid CIDR format"))
+	}
+
+	// Check subnet is in vcnCidr if vcnCidr is set
+	if len(vcnCidr) > 0 {
+		var vcnNetwork *net.IPNet
+		if _, parseNetwork, err := net.ParseCIDR(vcnCidr); err == nil {
+			vcnNetwork = parseNetwork
+		}
+
+		var found bool
+		if vcnNetwork != nil && vcnNetwork.Contains(subnetCidrIP) {
+			found = true
+		}
+
+		if !found {
+			allErrs = append(allErrs, field.Invalid(fldPath, subnetCidr, fmt.Sprintf("subnet CIDR not in VCN address space: %s", vcnCidr)))
+		}
+	}
+
+	return allErrs
+}
+
+// validateNSGs validates a list of Subnets.
+func validateNSGs(networkSecurityGroups []*NSG, vcn VCN, fldPath *field.Path) field.ErrorList {
+	var allErrs field.ErrorList
+
+	for i, nsg := range networkSecurityGroups {
+		if err := validateRole(nsg.Role, fldPath.Index(i).Child("role"), "networkSecurityGroup role invalid"); err != nil {
+			allErrs = append(allErrs, err)
+		}
+		allErrs = append(allErrs, validateEgressSecurityRuleForNSG(nsg.EgressRules, fldPath.Index(i).Child("egressRules"))...)
+		allErrs = append(allErrs, validateIngressSecurityRuleForNSG(nsg.IngressRules, fldPath.Index(i).Child("ingressRules"))...)
+	}
+
+	return allErrs
+}
+
+// validateEgressSecurityRuleForNSG validates the Egress Security Rule of a Subnet.
+func validateEgressSecurityRuleForNSG(egressRules []EgressSecurityRuleForNSG, fldPath *field.Path) field.ErrorList {
+	var allErrs field.ErrorList
+
+	for _, r := range egressRules {
+		rule := r.EgressSecurityRule
+
+		if rule.DestinationType == EgressSecurityRuleDestinationTypeCidrBlock && rule.Destination != nil {
+			if _, _, err := net.ParseCIDR(ociutil.DerefString(rule.Destination)); err != nil {
+				allErrs = append(allErrs, field.Invalid(fldPath, rule.Destination, "invalid egressRules CIDR format"))
+			}
+		}
+	}
+
+	return allErrs
+}
+
+// validateEgressSecurityRuleForNSG validates the Egress Security Rule of a Subnet.
+func validateIngressSecurityRuleForNSG(egressRules []IngressSecurityRuleForNSG, fldPath *field.Path) field.ErrorList {
+	var allErrs field.ErrorList
+
+	for _, r := range egressRules {
+		rule := r.IngressSecurityRule
+
+		if rule.SourceType == IngressSecurityRuleSourceTypeCidrBlock && rule.Source != nil {
+			if _, _, err := net.ParseCIDR(ociutil.DerefString(rule.Source)); err != nil {
+				allErrs = append(allErrs, field.Invalid(fldPath, rule.Source, "invalid ingressRule CIDR format"))
+			}
+		}
+	}
+
+	return allErrs
+}
+
+// validateSubnets validates a list of Subnets.
+func validateSubnets(subnets []*Subnet, vcn VCN, fldPath *field.Path) field.ErrorList {
+	var allErrs field.ErrorList
+	subnetNames := make(map[string]bool, len(subnets))
+
+	for i, subnet := range subnets {
+		if err := validateSubnetName(subnet.Name, fldPath.Index(i).Child("name")); err != nil {
+			allErrs = append(allErrs, err)
+		}
+		if _, ok := subnetNames[subnet.Name]; ok {
+			allErrs = append(allErrs, field.Duplicate(fldPath, subnet.Name))
+		}
+		subnetNames[subnet.Name] = true
+
+		if err := validateRole(subnet.Role, fldPath.Index(i).Child("role"), "subnet role invalid"); err != nil {
+			allErrs = append(allErrs, err)
+		}
+
+		allErrs = append(allErrs, validateSubnetCIDR(subnet.CIDR, vcn.CIDR, fldPath.Index(i).Child("cidr"))...)
+	}
+
+	return allErrs
+}
+
+// validateSubnetName validates the Name of a Subnet.
+func validateSubnetName(name string, fldPath *field.Path) *field.Error {
+	if invalidNameRegex.Match([]byte(name)) || name == "" {
+		return field.Invalid(fldPath, name,
+			fmt.Sprintf("subnet name invalid"))
+	}
+	return nil
+}
+
+// validateRole validates that the subnet role is one of the allowed types
+func validateRole(subnetRole Role, fldPath *field.Path, errorMsg string) *field.Error {
+	for _, role := range SubnetRoles {
+		if subnetRole == role {
+			return nil
+		}
+	}
+	return field.Invalid(fldPath, subnetRole,
+		fmt.Sprintf(errorMsg))
 }
