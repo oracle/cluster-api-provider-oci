@@ -25,6 +25,24 @@ The Cluster API itself is shared across multiple cloud providers allowing for tr
 
 You can find detailed documentation as well as a getting started guide in the [Cluster API Provider for OCI Book][capoci_book].
 
+## 🤗 Community
+
+The CAPOCI provider is developed in the open, and is constantly being improved
+by our users, contributors, and maintainers.
+
+To ask questions or get the latest project news, please join us in the
+[#cluster-api-oci][#cluster-api-oci] channel on [Slack](http://slack.k8s.io/).
+
+### Office Hours
+
+The maintainers host office hours on the first Tuesday of every month
+at 06:00 PT / 09:00 ET / 14:00 CET / 18:00 IST via [Zooom][zoomMeeting].
+
+All interested community members are invited to join us. A recording of each
+session will be made available afterwards for folks who are unable to attend.
+
+Previous meetings: [ [notes][notes] | [recordings][notes] (coming soon) ]
+
 ### Support Policy
 
 **NOTE:** As the versioning for this project is tied to the versioning of Cluster API, future modifications to this
@@ -45,3 +63,6 @@ policy may be made to more closely align with other providers in the Cluster API
 [cluster_api]: https://github.com/oracle/cluster-api-provider-oci
 [image_builder_book]: https://image-builder.sigs.k8s.io/capi/providers/oci.html
 [capoci_book]: https://oracle.github.io/cluster-api-provider-oci/
+[#cluster-api-oci slack]: https://kubernetes.slack.com/archives/C039CDHABFF
+[zoomMeeting]: https://oracle.zoom.us/j/99910180651
+[notes]: https://docs.google.com/document/d/1mgZxjDbnSv74Vut1aHtWplG6vsR9zu5sqXvQN8SPgCc
