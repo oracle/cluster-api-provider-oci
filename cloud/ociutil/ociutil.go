@@ -59,7 +59,7 @@ func IsNotFound(err error) bool {
 }
 
 // AwaitLBWorkRequest waits for the LB work request to either succeed, fail. See k8s.io/apimachinery/pkg/util/wait
-func AwaitLBWorkRequest(ctx context.Context, networkLoadBalancerClient nlb.NetworkLoadBalancerClient, workRequestId *string) (*networkloadbalancer.WorkRequest, error) {
+func AwaitLBWorkRequest(ctx context.Context, networkLoadBalancerClient nlb.Client, workRequestId *string) (*networkloadbalancer.WorkRequest, error) {
 	var wr *networkloadbalancer.WorkRequest
 	err := wait.PollWithContext(ctx, WorkRequestPollInterval, WorkRequestTimeout, func(ctx context.Context) (done bool, err error) {
 		twr, err := networkLoadBalancerClient.GetWorkRequest(ctx, networkloadbalancer.GetWorkRequestRequest{

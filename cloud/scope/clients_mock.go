@@ -35,7 +35,7 @@ import (
 
 type MockOCIClients struct {
 	VCNClient          vcn.Client
-	ComputeClient      compute.ComputeClient
+	ComputeClient      compute.Client
 	LoadBalancerClient *networkloadbalancer.NetworkLoadBalancerClient
 	IdentityClient     *identity.IdentityClient
 }

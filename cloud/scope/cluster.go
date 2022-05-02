@@ -51,7 +51,7 @@ type ClusterScopeParams struct {
 	Cluster               *clusterv1.Cluster
 	OCICluster            *infrastructurev1beta1.OCICluster
 	VCNClient             vcn.Client
-	LoadBalancerClient    nlb.NetworkLoadBalancerClient
+	LoadBalancerClient    nlb.Client
 	IdentityClient        identityClent.Client
 	Region                string
 	OCIAuthConfigProvider common.ConfigurationProvider
@@ -66,7 +66,7 @@ type ClusterScope struct {
 	Cluster            *clusterv1.Cluster
 	OCICluster         *infrastructurev1beta1.OCICluster
 	VCNClient          vcn.Client
-	LoadBalancerClient nlb.NetworkLoadBalancerClient
+	LoadBalancerClient nlb.Client
 	IdentityClient     identityClent.Client
 	Region             string
 	ClientProvider     *ClientProvider

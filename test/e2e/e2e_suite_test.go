@@ -97,11 +97,11 @@ var (
 	// usePRArtifacts specifies whether or not to use the build from a PR of the Kubernetes repository
 	usePRArtifacts bool
 
-	computeClient compute.ComputeClient
+	computeClient compute.Client
 
 	vcnClient vcn.Client
 
-	lbClient nlb.NetworkLoadBalancerClient
+	lbClient nlb.Client
 
 	adCount int
 )
