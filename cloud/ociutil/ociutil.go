@@ -116,3 +116,12 @@ func BuildClusterTags(ClusterResourceUID string) map[string]string {
 	tags[ClusterResourceIdentifier] = ClusterResourceUID
 	return tags
 }
+
+// DerefString returns the string value if the pointer isn't nil, otherwise returns empty string
+func DerefString(s *string) string {
+	if s != nil {
+		return *s
+	}
+
+	return ""
+}

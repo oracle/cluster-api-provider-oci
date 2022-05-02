@@ -20,20 +20,74 @@
 package v1beta1
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/onsi/gomega"
 	. "github.com/onsi/gomega"
+	"github.com/oracle/oci-go-sdk/v63/common"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestOCICluster_ValidateCreate(t *testing.T) {
+	goodSubnets := []*Subnet{
+		&Subnet{
+			Role: ControlPlaneRole,
+			Name: "test-subnet",
+			CIDR: "10.0.0.0/16",
+		},
+	}
+	badSubnetCidr := []*Subnet{
+		&Subnet{
+			Name: "test-subnet",
+			CIDR: "10.1.0.0/16",
+		},
+	}
+	badSubnetCidrFormat := []*Subnet{
+		&Subnet{
+			Name: "test-subnet",
+			CIDR: "no-a-cidr",
+		},
+	}
+	dupSubnetNames := []*Subnet{
+		&Subnet{
+			Name: "dup-name",
+			CIDR: "10.0.0.0/16",
+		},
+		&Subnet{
+			Name: "dup-name",
+			CIDR: "10.0.0.0/16",
+		},
+	}
+	badSubnetName := []*Subnet{
+		&Subnet{
+			Name: "",
+			CIDR: "10.0.0.0/16",
+		},
+	}
+	badSubnetRole := []*Subnet{
+		&Subnet{
+			Role: "not-control-plane",
+		},
+	}
 
 	tests := []struct {
-		name      string
-		c         *OCICluster
-		expectErr bool
+		name                  string
+		c                     *OCICluster
+		errorMgsShouldContain string
+		expectErr             bool
 	}{
+		{
+			name: "shouldn't allow spaces in region",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{},
+				Spec: OCIClusterSpec{
+					Region: "us city 1",
+				},
+			},
+			errorMgsShouldContain: "region",
+			expectErr:             true,
+		},
 		{
 			name: "shouldn't allow bad CompartmentId",
 			c: &OCICluster{
@@ -42,7 +96,8 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 					CompartmentId: "badocid",
 				},
 			},
-			expectErr: true,
+			errorMgsShouldContain: "compartmentId",
+			expectErr:             true,
 		},
 		{
 			name: "shouldn't allow blank CompartmentId",
@@ -50,7 +105,23 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{},
 				Spec:       OCIClusterSpec{},
 			},
-			expectErr: true,
+			errorMgsShouldContain: "compartmentId",
+			expectErr:             true,
+		},
+		{
+			name: "shouldn't allow bad vcn cider",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{},
+				Spec: OCIClusterSpec{
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							CIDR: "not-a-cidr",
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "invalid CIDR format",
+			expectErr:             true,
 		},
 		{
 			name: "shouldn't allow blank OCIResourceIdentifier",
@@ -60,15 +131,186 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 					CompartmentId: "ocid",
 				},
 			},
-			expectErr: true,
+			errorMgsShouldContain: "ociResourceIdentifier",
+			expectErr:             true,
+		},
+		{
+			name: "shouldn't allow subnet cidr outside of vcn cidr",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{},
+				Spec: OCIClusterSpec{
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							CIDR:    "10.0.0.0/16",
+							Subnets: badSubnetCidr,
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "cidr",
+			expectErr:             true,
+		},
+		{
+			name: "shouldn't allow subnet bad cidr format",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{},
+				Spec: OCIClusterSpec{
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							CIDR:    "10.0.0.0/16",
+							Subnets: badSubnetCidrFormat,
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "invalid CIDR format",
+			expectErr:             true,
+		},
+		{
+			name: "shouldn't allow subnet cidr outside of vcn cidr",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{},
+				Spec: OCIClusterSpec{
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							CIDR:    "10.0.0.0/16",
+							Subnets: dupSubnetNames,
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "networkSpec.subnets: Duplicate value",
+			expectErr:             true,
+		},
+		{
+			name: "shouldn't allow subnet role outside of pre-defined roles",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{},
+				Spec: OCIClusterSpec{
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							CIDR:    "10.0.0.0/16",
+							Subnets: badSubnetRole,
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "subnet role invalid",
+			expectErr:             true,
+		},
+		{
+			name: "shouldn't allow invalid subnet name",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{},
+				Spec: OCIClusterSpec{
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							CIDR:    "10.0.0.0/16",
+							Subnets: badSubnetName,
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "subnet name invalid",
+			expectErr:             true,
+		},
+		{
+			name: "shouldn't allow bad NSG egress cidr",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{},
+				Spec: OCIClusterSpec{
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							NetworkSecurityGroups: []*NSG{{
+								EgressRules: []EgressSecurityRuleForNSG{{
+									EgressSecurityRule: EgressSecurityRule{
+										Destination:     common.String("bad/15"),
+										DestinationType: EgressSecurityRuleDestinationTypeCidrBlock,
+									},
+								}},
+							}},
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "invalid egressRules CIDR format",
+			expectErr:             true,
+		},
+		{
+			name: "shouldn't allow bad NSG ingress cidr",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{},
+				Spec: OCIClusterSpec{
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							NetworkSecurityGroups: []*NSG{{
+								IngressRules: []IngressSecurityRuleForNSG{{
+									IngressSecurityRule: IngressSecurityRule{
+										Source:     common.String("bad/15"),
+										SourceType: IngressSecurityRuleSourceTypeCidrBlock,
+									},
+								}},
+							}},
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "invalid ingressRule CIDR format",
+			expectErr:             true,
+		},
+		{
+			name: "shouldn't allow bad NSG role",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{},
+				Spec: OCIClusterSpec{
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							NetworkSecurityGroups: []*NSG{{
+								Role: "bad-role",
+							}},
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "networkSecurityGroup role invalid",
+			expectErr:             true,
+		},
+		{
+			name: "should allow blank region",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster-name",
+				},
+				Spec: OCIClusterSpec{
+					Region:                "",
+					CompartmentId:         "ocid",
+					OCIResourceIdentifier: "uuid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							CIDR:    "10.0.0.0/16",
+							Subnets: goodSubnets,
+						},
+					},
+				},
+			},
+			expectErr: false,
 		},
 		{
 			name: "should succeed",
 			c: &OCICluster{
-				ObjectMeta: metav1.ObjectMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster-name",
+				},
 				Spec: OCIClusterSpec{
+					Region:                "us-lexington-1",
 					CompartmentId:         "ocid",
 					OCIResourceIdentifier: "uuid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							CIDR:    "10.0.0.0/16",
+							Subnets: goodSubnets,
+						},
+					},
 				},
 			},
 			expectErr: false,
@@ -79,7 +321,9 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 			g := gomega.NewWithT(t)
 
 			if test.expectErr {
-				g.Expect(test.c.ValidateCreate()).NotTo(gomega.Succeed())
+				err := test.c.ValidateCreate()
+				g.Expect(err).NotTo(gomega.Succeed())
+				g.Expect(strings.Contains(err.Error(), test.errorMgsShouldContain)).To(gomega.BeTrue())
 			} else {
 				g.Expect(test.c.ValidateCreate()).To(gomega.Succeed())
 			}
@@ -88,14 +332,23 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 }
 
 func TestOCICluster_ValidateUpdate(t *testing.T) {
+	goodSubnets := []*Subnet{
+		&Subnet{
+			Role: ControlPlaneRole,
+			Name: "test-subnet",
+			CIDR: "10.0.0.0/16",
+		},
+	}
+
 	tests := []struct {
-		name      string
-		c         *OCICluster
-		old       *OCICluster
-		expectErr bool
+		name                  string
+		c                     *OCICluster
+		old                   *OCICluster
+		errorMgsShouldContain string
+		expectErr             bool
 	}{
 		{
-			name: "shouldn't region change",
+			name: "shouldn't allow region change",
 			c: &OCICluster{
 				ObjectMeta: metav1.ObjectMeta{},
 				Spec: OCIClusterSpec{
@@ -108,7 +361,25 @@ func TestOCICluster_ValidateUpdate(t *testing.T) {
 					Region: "old-region",
 				},
 			},
-			expectErr: true,
+			errorMgsShouldContain: "region",
+			expectErr:             true,
+		},
+		{
+			name: "shouldn't allow compartmentId change",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{},
+				Spec: OCIClusterSpec{
+					CompartmentId: "ocid.old",
+				},
+			},
+			old: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{},
+				Spec: OCIClusterSpec{
+					CompartmentId: "ocid.new",
+				},
+			},
+			errorMgsShouldContain: "compartmentId",
+			expectErr:             true,
 		},
 		{
 			name: "shouldn't change OCIResourceIdentifier",
@@ -127,23 +398,41 @@ func TestOCICluster_ValidateUpdate(t *testing.T) {
 					OCIResourceIdentifier: "uuid-2",
 				},
 			},
-			expectErr: true,
+			errorMgsShouldContain: "ociResourceIdentifier",
+			expectErr:             true,
 		},
 		{
 			name: "should succeed",
 			c: &OCICluster{
-				ObjectMeta: metav1.ObjectMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster-test",
+				},
 				Spec: OCIClusterSpec{
 					CompartmentId:         "ocid",
 					Region:                "old-region",
 					OCIResourceIdentifier: "uuid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							CIDR:    "10.0.0.0/16",
+							Subnets: goodSubnets,
+						},
+					},
 				},
 			},
 			old: &OCICluster{
-				ObjectMeta: metav1.ObjectMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster-test",
+				},
 				Spec: OCIClusterSpec{
 					Region:                "old-region",
+					CompartmentId:         "ocid",
 					OCIResourceIdentifier: "uuid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							CIDR:    "10.0.0.0/16",
+							Subnets: goodSubnets,
+						},
+					},
 				},
 			},
 			expectErr: false,
@@ -155,7 +444,9 @@ func TestOCICluster_ValidateUpdate(t *testing.T) {
 			g := gomega.NewWithT(t)
 
 			if test.expectErr {
-				g.Expect(test.c.ValidateUpdate(test.old)).NotTo(gomega.Succeed())
+				err := test.c.ValidateUpdate(test.old)
+				g.Expect(err).NotTo(gomega.Succeed())
+				g.Expect(strings.Contains(err.Error(), test.errorMgsShouldContain)).To(gomega.BeTrue())
 			} else {
 				g.Expect(test.c.ValidateUpdate(test.old)).To(gomega.Succeed())
 			}

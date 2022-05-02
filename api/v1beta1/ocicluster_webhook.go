@@ -58,7 +58,7 @@ func (c *OCICluster) ValidateCreate() error {
 
 	var allErrs field.ErrorList
 
-	allErrs = append(allErrs, c.validate()...)
+	allErrs = append(allErrs, c.validate(nil)...)
 
 	if len(allErrs) == 0 {
 		return nil
@@ -93,7 +93,11 @@ func (c *OCICluster) ValidateUpdate(old runtime.Object) error {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "ociResourceIdentifier"), c.Spec.OCIResourceIdentifier, "field is immutable"))
 	}
 
-	allErrs = append(allErrs, c.validate()...)
+	if c.Spec.CompartmentId != oldCluster.Spec.CompartmentId {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "compartmentId"), c.Spec.CompartmentId, "field is immutable"))
+	}
+
+	allErrs = append(allErrs, c.validate(oldCluster)...)
 
 	if len(allErrs) == 0 {
 		return nil
@@ -102,8 +106,15 @@ func (c *OCICluster) ValidateUpdate(old runtime.Object) error {
 	return apierrors.NewInvalid(c.GroupVersionKind().GroupKind(), c.Name, allErrs)
 }
 
-func (c *OCICluster) validate() field.ErrorList {
+func (c *OCICluster) validate(old *OCICluster) field.ErrorList {
 	var allErrs field.ErrorList
+
+	var oldNetworkSpec NetworkSpec
+	if old != nil {
+		oldNetworkSpec = old.Spec.NetworkSpec
+	}
+
+	allErrs = append(allErrs, validateNetworkSpec(c.Spec.NetworkSpec, oldNetworkSpec, field.NewPath("spec").Child("networkSpec"))...)
 
 	if len(c.Spec.CompartmentId) <= 0 {
 		allErrs = append(
@@ -123,6 +134,12 @@ func (c *OCICluster) validate() field.ErrorList {
 		allErrs = append(
 			allErrs,
 			field.Invalid(field.NewPath("spec", "ociResourceIdentifier"), c.Spec.OCIResourceIdentifier, "field is required"))
+	}
+
+	if !validRegion(c.Spec.Region) {
+		allErrs = append(
+			allErrs,
+			field.Invalid(field.NewPath("spec", "region"), c.Spec.Region, "field is invalid. See https://docs.oracle.com/en-us/iaas/Content/General/Concepts/regions.htm"))
 	}
 
 	if len(allErrs) == 0 {
