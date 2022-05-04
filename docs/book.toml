@@ -7,9 +7,10 @@ title = "Kubernetes Cluster API Provider for Oracle Cloud Infrastructure"
 
 [preprocessor.admonish]
 command = "mdbook-admonish"
+assets_version = "1.0.0" # do not edit: managed by `mdbook-admonish install`
 
 [output.html]
 curly-quotes = false
 git-repository-url = "https://github.com/oracle/cluster-api-provider-oci"
-additional-css = ["./src/css/mdbook-admonish.css"]
+additional-css = ["./src/css/mdbook-admonish.css", "././mdbook-admonish.css"]
 # no-section-label = true
