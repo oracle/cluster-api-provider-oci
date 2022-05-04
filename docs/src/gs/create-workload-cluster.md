@@ -194,6 +194,6 @@ By default, the [OCI Cloud Controller Manager (CCM)][oci-ccm] is not installed i
 [calico]: ../networking/calico.md
 [cni]: https://www.cni.dev/
 [oci-ccm]: https://github.com/oracle/oci-cloud-controller-manager
-[latest-release]: https://github.com/oracle/cluster-api-provider-oci/releases/tag/v0.3.0
+[latest-release]: https://github.com/oracle/cluster-api-provider-oci/releases/tag/v0.4.0
 [install-oci-ccm]: ./install-oci-ccm.md
 [configure-authentication]: ./install-cluster-api.html#configure-authentication
