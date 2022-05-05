@@ -71,6 +71,11 @@ type OCIClusterStatus struct {
 	// +optional
 	FailureDomains clusterv1.FailureDomains `json:"failureDomains,omitempty"`
 
+	// AvailabilityDomains encapsulates the clusters Availability Domain (AD) information in a map
+	// where the map key is the AD name and the struct is details about the AD.
+	// +optional
+	AvailabilityDomains map[string]OCIAvailabilityDomain `json:"availabilityDomains,omitempty"`
+
 	// +optional
 	Ready bool `json:"ready"`
 	// NetworkSpec encapsulates all things related to OCI network.
@@ -97,6 +102,16 @@ type OCIClusterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []OCICluster `json:"items"`
+}
+
+// OCIAvailabilityDomain contains information about an Availability Domain (AD).
+type OCIAvailabilityDomain struct {
+
+	// Name is the AD's full name. Example: Uocm:PHX-AD-1
+	Name string `json:"name,omitempty"`
+
+	// FaultDomains a list of fault domain (FD) names. Example: ["FAULT-DOMAIN-1"]
+	FaultDomains []string `json:"faultDomains,omitempty"`
 }
 
 // GetConditions returns the list of conditions for an OCICluster API object.

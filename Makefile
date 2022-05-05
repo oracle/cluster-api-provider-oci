@@ -54,6 +54,9 @@ IMG ?= controller:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd"
 
+# enable machine pool feature
+EXP_MACHINE_POOL ?= false
+
 # Set build time variables including version details
 LDFLAGS := $(shell source ./hack/version.sh; version::ldflags)
 
@@ -91,10 +94,14 @@ help: ## Display this help.
 ##@ Development
 
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./api/..." output:crd:artifacts:config=config/crd/bases
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) \
+		rbac:roleName=manager-role webhook \
+		paths="./api/..." \
+		paths="./exp/api/..." \
+		output:crd:artifacts:config=config/crd/bases
 
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./api/..."
+	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./api/..." paths="./exp/api/..."
 
 fmt: ## Run go fmt against code.
 	go fmt ./...
@@ -115,7 +122,7 @@ build: generate fmt vet ## Build manager binary.
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "${LDFLAGS} -extldflags '-static'" -o bin/manager .
 
 run: manifests generate fmt vet ## Run a controller from your host.
-	go run ./main.go
+	go run ./main.go --feature-gates=MachinePool=${EXP_MACHINE_POOL}
 
 ## --------------------------------------
 ## Linting
