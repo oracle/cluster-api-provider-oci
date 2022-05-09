@@ -26,7 +26,7 @@ import (
 // Important: Run "make" to regenerate code after modifying this file
 
 const (
-	// MachineFinalizer allows ReconcileAzureMachine to clean up Azure resources associated with AzureMachine before
+	// MachineFinalizer allows ReconcileMachine to clean up OCI resources associated with OCIMachine before
 	// removing it from the apiserver.
 	MachineFinalizer = "ocimachine.infrastructure.cluster.x-k8s.io"
 )
