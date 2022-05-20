@@ -21,15 +21,21 @@ import (
 	"os"
 
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	"github.com/oracle/cluster-api-provider-oci/controllers"
+	"github.com/oracle/cluster-api-provider-oci/feature"
+	"github.com/spf13/pflag"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 
+	expV1Beta1 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
+	expcontrollers "github.com/oracle/cluster-api-provider-oci/exp/controllers"
+	expclusterv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
+
 	"github.com/oracle/cluster-api-provider-oci/cloud/config"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
-	"github.com/oracle/cluster-api-provider-oci/controllers"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2/klogr"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -53,6 +59,8 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(infrastructurev1beta1.AddToScheme(scheme))
 	utilruntime.Must(clusterv1.AddToScheme(scheme))
+	utilruntime.Must(expV1Beta1.AddToScheme(scheme))
+	utilruntime.Must(expclusterv1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -79,7 +87,11 @@ func main() {
 		Development: true,
 	}
 	opts.BindFlags(flag.CommandLine)
-	flag.Parse()
+
+	// Need to use pflags for kubernetes feature flags
+	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
+	feature.MutableGates.AddFlag(pflag.CommandLine)
+	pflag.Parse()
 
 	ctrl.SetLogger(klogr.New())
 
@@ -155,6 +167,21 @@ func main() {
 	}).SetupWithManager(ctx, mgr, controller.Options{}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", scope.OCIMachineKind)
 		os.Exit(1)
+	}
+
+	if feature.Gates.Enabled(feature.MachinePool) {
+		setupLog.Info("MACHINE POOL experimental feature enabled")
+		setupLog.V(1).Info("enabling machine pool controller")
+		if err := (&expcontrollers.OCIMachinePoolReconciler{
+			Client:         mgr.GetClient(),
+			Scheme:         mgr.GetScheme(),
+			ClientProvider: clientProvider,
+			Recorder:       mgr.GetEventRecorderFor("ocimachinepool-controller"),
+			Region:         region,
+		}).SetupWithManager(ctx, mgr, controller.Options{}); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", scope.OCIMachinePoolKind)
+			os.Exit(1)
+		}
 	}
 
 	if err = (&infrastructurev1beta1.OCICluster{}).SetupWebhookWithManager(mgr); err != nil {

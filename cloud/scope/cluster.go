@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	"strconv"
 
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
@@ -108,6 +109,7 @@ func NewClusterScope(params ClusterScopeParams) (*ClusterScope, error) {
 
 // PatchObject persists the cluster configuration and status.
 func (s *ClusterScope) PatchObject(ctx context.Context) error {
+	conditions.SetSummary(s.OCICluster)
 	return s.patchHelper.Patch(ctx, s.OCICluster)
 }
 
@@ -137,15 +139,21 @@ func (s *ClusterScope) IsResourceCreatedByClusterAPI(resourceFreeFormTags map[st
 // in case of single AD regions, the failure domain will be fault domain, in case of multi Ad regions, it will
 // be AD
 func (s *ClusterScope) setFailureDomains(ctx context.Context) error {
-	req := identity.ListAvailabilityDomainsRequest{CompartmentId: common.String(s.GetCompartmentId())}
+	reqAd := identity.ListAvailabilityDomainsRequest{CompartmentId: common.String(s.GetCompartmentId())}
 
-	resp, err := s.IdentityClient.ListAvailabilityDomains(ctx, req)
+	respAd, err := s.IdentityClient.ListAvailabilityDomains(ctx, reqAd)
 	if err != nil {
 		s.Logger.Error(err, "failed to list identity domains")
 		return err
 	}
 
-	numOfAds := len(resp.Items)
+	// build the AD list for cluster
+	err = s.setAvailabiltyDomainStatus(ctx, respAd.Items)
+	if err != nil {
+		return err
+	}
+
+	numOfAds := len(respAd.Items)
 	if numOfAds != 1 && numOfAds != 3 {
 		err := errors.New(fmt.Sprintf("invalid number of Availability Domains, should be either 1 or 3, but got %d", numOfAds))
 		s.Logger.Error(err, "invalid number of Availability Domains")
@@ -153,7 +161,7 @@ func (s *ClusterScope) setFailureDomains(ctx context.Context) error {
 	}
 
 	if numOfAds == 3 {
-		for i, ad := range resp.Items {
+		for i, ad := range respAd.Items {
 			s.SetFailureDomain(strconv.Itoa(i+1), clusterv1.FailureDomainSpec{
 				ControlPlane: true,
 				Attributes:   map[string]string{AvailabilityDomain: *ad.Name},
@@ -162,7 +170,7 @@ func (s *ClusterScope) setFailureDomains(ctx context.Context) error {
 	} else {
 		req := identity.ListFaultDomainsRequest{
 			CompartmentId:      common.String(s.GetCompartmentId()),
-			AvailabilityDomain: resp.Items[0].Name,
+			AvailabilityDomain: respAd.Items[0].Name,
 		}
 		resp, err := s.IdentityClient.ListFaultDomains(ctx, req)
 		if err != nil {
@@ -189,6 +197,38 @@ func (s *ClusterScope) SetFailureDomain(id string, spec clusterv1.FailureDomainS
 		s.OCICluster.Status.FailureDomains = make(clusterv1.FailureDomains)
 	}
 	s.OCICluster.Status.FailureDomains[id] = spec
+}
+
+// setAvailabiltyDomainStatus builds the OCIAvailabilityDomain list and sets the OCICluster's status with this list
+// so that other parts of the provider have access to ADs and FDs without having to make multiple calls to identity.
+func (s *ClusterScope) setAvailabiltyDomainStatus(ctx context.Context, ads []identity.AvailabilityDomain) error {
+	clusterAds := make(map[string]infrastructurev1beta1.OCIAvailabilityDomain)
+	for _, ad := range ads {
+		reqFd := identity.ListFaultDomainsRequest{
+			CompartmentId:      common.String(s.GetCompartmentId()),
+			AvailabilityDomain: ad.Name,
+		}
+		respFd, err := s.IdentityClient.ListFaultDomains(ctx, reqFd)
+		if err != nil {
+			s.Logger.Error(err, "failed to list fault domains")
+			return err
+		}
+
+		var faultDomains []string
+		for _, fd := range respFd.Items {
+			faultDomains = append(faultDomains, *fd.Name)
+		}
+
+		adName := *ad.Name
+		clusterAds[adName] = infrastructurev1beta1.OCIAvailabilityDomain{
+			Name:         adName,
+			FaultDomains: faultDomains,
+		}
+	}
+
+	s.OCICluster.Status.AvailabilityDomains = clusterAds
+
+	return nil
 }
 
 func (s *ClusterScope) IsTagsEqual(freeFromTags map[string]string, definedTags map[string]map[string]interface{}) bool {

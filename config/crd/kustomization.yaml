@@ -8,6 +8,7 @@ commonLabels:
 resources:
 - bases/infrastructure.cluster.x-k8s.io_ociclusters.yaml
 - bases/infrastructure.cluster.x-k8s.io_ocimachines.yaml
+- bases/infrastructure.cluster.x-k8s.io_ocimachinepools.yaml
 - bases/infrastructure.cluster.x-k8s.io_ocimachinetemplates.yaml
 - bases/infrastructure.cluster.x-k8s.io_ociclustertemplates.yaml
 #+kubebuilder:scaffold:crdkustomizeresource

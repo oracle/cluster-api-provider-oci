@@ -21,6 +21,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"math/rand"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	"strconv"
 	"time"
 
@@ -330,6 +331,7 @@ func (m *MachineScope) GetMachineByDisplayName(ctx context.Context, name string)
 
 // PatchObject persists the cluster configuration and status.
 func (m *MachineScope) PatchObject(ctx context.Context) error {
+	conditions.SetSummary(m.OCIMachine)
 	return m.patchHelper.Patch(ctx, m.OCIMachine)
 }
 

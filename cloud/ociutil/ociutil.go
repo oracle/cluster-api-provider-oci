@@ -103,6 +103,16 @@ func GetBaseLineOcpuOptimizationEnum(baseLineOcpuOptmimizationString string) (co
 	return "", errors.New("invalid baseline cpu optimization parameter")
 }
 
+// GetInstanceConfigBaseLineOcpuOptimizationEnum iterates over the valid baseline OCPUs to validate the passed in value
+func GetInstanceConfigBaseLineOcpuOptimizationEnum(baseLineOcpuOptmimizationString string) (core.InstanceConfigurationLaunchInstanceShapeConfigDetailsBaselineOcpuUtilizationEnum, error) {
+	for _, e := range core.GetInstanceConfigurationLaunchInstanceShapeConfigDetailsBaselineOcpuUtilizationEnumValues() {
+		if string(e) == baseLineOcpuOptmimizationString {
+			return e, nil
+		}
+	}
+	return "", errors.New("invalid baseline cpu optimization parameter")
+}
+
 // GetDefaultClusterTags creates and returns a map of the default tags for all clusters
 func GetDefaultClusterTags() map[string]string {
 	tags := make(map[string]string)

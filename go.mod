@@ -9,10 +9,12 @@ require (
 	github.com/onsi/gomega v1.17.0
 	github.com/oracle/oci-go-sdk/v63 v63.0.0
 	github.com/pkg/errors v0.9.1
+	github.com/spf13/pflag v1.0.5
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.23.0
 	k8s.io/apimachinery v0.23.0
 	k8s.io/client-go v0.23.0
+	k8s.io/component-base v0.23.0
 	k8s.io/klog/v2 v2.30.0
 	k8s.io/utils v0.0.0-20210930125809-cb0fa318a74b
 	sigs.k8s.io/cluster-api v1.0.1-0.20211111175208-4cc2fce2111a
