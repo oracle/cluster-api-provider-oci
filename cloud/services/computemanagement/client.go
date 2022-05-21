@@ -13,6 +13,7 @@ type Client interface {
 	TerminateInstancePool(ctx context.Context, request core.TerminateInstancePoolRequest) (response core.TerminateInstancePoolResponse, err error)
 	UpdateInstancePool(ctx context.Context, request core.UpdateInstancePoolRequest) (response core.UpdateInstancePoolResponse, err error)
 	ListInstancePools(ctx context.Context, request core.ListInstancePoolsRequest) (response core.ListInstancePoolsResponse, err error)
+	ListInstancePoolInstances(ctx context.Context, request core.ListInstancePoolInstancesRequest) (response core.ListInstancePoolInstancesResponse, err error)
 
 	// Instance Configuration
 	CreateInstanceConfiguration(ctx context.Context, request core.CreateInstanceConfigurationRequest) (response core.CreateInstanceConfigurationResponse, err error)

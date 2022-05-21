@@ -140,6 +140,10 @@ func (m *MachinePoolScope) SetReady() {
 	m.OCIMachinePool.Status.Ready = true
 }
 
+func (m *MachinePoolScope) SetReplicaCount(count int32) {
+	m.OCIMachinePool.Status.Replicas = count
+}
+
 // GetWorkerMachineSubnet returns the WorkerRole core.Subnet id for the cluster
 func (m *MachinePoolScope) GetWorkerMachineSubnet() *string {
 	for _, subnet := range m.OCICluster.Spec.NetworkSpec.Vcn.Subnets {
@@ -148,6 +152,42 @@ func (m *MachinePoolScope) GetWorkerMachineSubnet() *string {
 		}
 	}
 	return nil
+}
+
+// ListMachinePoolInstances returns the WorkerRole core.Subnet id for the cluster
+func (m *MachinePoolScope) ListMachinePoolInstances(ctx context.Context) ([]core.InstanceSummary, error) {
+	poolOid := m.OCIMachinePool.Spec.OCID
+	if len(poolOid) <= 0 {
+		return nil, errors.New("OCIMachinePool OCID can't be empty")
+	}
+
+	req := core.ListInstancePoolInstancesRequest{
+		CompartmentId:  common.String(m.OCICluster.Spec.CompartmentId),
+		InstancePoolId: common.String(poolOid),
+	}
+	resp, err := m.ComputeManagementClient.ListInstancePoolInstances(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Items, nil
+}
+
+// SetListandSetMachinePoolInstances retrieves a machine pools instances and sets them in the ProviderIDList
+func (m *MachinePoolScope) SetListandSetMachinePoolInstances(ctx context.Context) (int32, error) {
+	poolInstanceSummaries, err := m.ListMachinePoolInstances(ctx)
+	if err != nil {
+		return 0, errors.New("Unable to list machine pool's instances")
+	}
+	providerIDList := make([]string, len(poolInstanceSummaries))
+
+	for i, instance := range poolInstanceSummaries {
+		providerIDList[i] = fmt.Sprintf("oci://%s", *instance.Id)
+	}
+
+	m.OCIMachinePool.Spec.ProviderIDList = providerIDList
+
+	return int32(len(providerIDList)), nil
 }
 
 // GetBootstrapData returns the bootstrap data from the secret in the Machine's bootstrap.dataSecretName.
@@ -330,9 +370,8 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context) e
 				},
 				Metadata: metadata,
 				CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
-					SubnetId: subnetId,
-					// TODO variablize AssignPublicIp in the future
-					AssignPublicIp: common.Bool(false),
+					SubnetId:       subnetId,
+					AssignPublicIp: common.Bool(m.OCIMachinePool.Spec.VNICAssignPublicIp),
 					NsgIds:         []string{*nsgId},
 				},
 			},
@@ -472,7 +511,9 @@ func (m *MachinePoolScope) UpdatePool(ctx context.Context, instancePool *core.In
 		}
 
 		req := core.UpdateInstancePoolRequest{InstancePoolId: instancePool.Id,
-			UpdateInstancePoolDetails: core.UpdateInstancePoolDetails{Size: common.Int(replicas)}}
+			UpdateInstancePoolDetails: core.UpdateInstancePoolDetails{
+				Size: common.Int(replicas),
+			}}
 
 		if _, err := m.ComputeManagementClient.UpdateInstancePool(ctx, req); err != nil {
 			return errors.Wrap(err, "unable to update instance pool")
@@ -492,7 +533,7 @@ func (m *MachinePoolScope) TerminateInstancePool(ctx context.Context, instancePo
 	return nil
 }
 
-// instancePoolNeedsUpdates compares incoming OCIMachinePool and compares against existing ASG.
+// instancePoolNeedsUpdates compares incoming OCIMachinePool and compares against existing instance pool.
 func instancePoolNeedsUpdates(machinePoolScope *MachinePoolScope, instancePool *core.InstancePool) bool {
 
 	// Allow pool resize

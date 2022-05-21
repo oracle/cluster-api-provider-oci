@@ -54,6 +54,9 @@ spec:
                 description: Custom metadata key/value pairs that you provide, such
                   as the SSH public key required to connect to the instance.
                 type: object
+              ocid:
+                description: OCID is the OCID of the associated InstancePool
+                type: string
               placementDetails:
                 items:
                   properties:
@@ -65,8 +68,17 @@ spec:
                   type: object
                 type: array
               providerID:
-                description: ProviderID is the ARN of the associated InstancePool
+                description: ProviderID is the OCID of the associated InstancePool
+                  in a provider format
                 type: string
+              providerIDList:
+                description: ProviderIDList are the identification IDs of machine
+                  instances provided by the provider. This field must match the provider
+                  IDs as seen on the node objects corresponding to a machine pool's
+                  machine instances.
+                items:
+                  type: string
+                type: array
               shapeConfig:
                 description: The shape configuration of the instance, applicable for
                   flex instances.
@@ -88,6 +100,10 @@ spec:
                     description: The total number of OCPUs available to the instance.
                     type: string
                 type: object
+              vnicAssignPublicIp:
+                default: false
+                description: Whether the VNIC should be assigned a public IP address.
+                type: boolean
             type: object
           status:
             description: OCIMachinePoolStatus defines the observed state of OCIMachinePool
