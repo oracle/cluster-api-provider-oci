@@ -3,7 +3,7 @@
 - Install `kustomize`
 - If you have a running `kind` cluster, please delete the `kind` cluster
 
-# Export the following auth settings
+# Export the following auth settings if user principal is used as credential
    ```bash
    export OCI_TENANCY_ID=<tenancy-id>
    export OCI_USER_ID=<use-id>
@@ -17,9 +17,15 @@
    export OCI_REGION_B64="$(echo -n "$OCI_REGION" | base64 | tr -d '\n')"
    export OCI_CREDENTIALS_KEY_B64=$( cat <path-to-api-private-key-file> | base64 | tr -d '\n' )
    # if Passphrase is present
-   export OCI_CREDENTIALS_PASSPHRASE_B64="$(echo -n "OCI_CREDENTIALS_PASSPHRASE" | base64 | tr -d '\n')"
-
+   export OCI_CREDENTIALS_PASSPHRASE_B64="$(echo -n "$OCI_CREDENTIALS_PASSPHRASE" | base64 | tr -d '\n')"
    ```
+
+# Export the following auth settings if instance principal has to be used
+   ```bash
+   export USE_INSTANCE_PRINCIPAL_B64="$(echo -n "true" | base64 | tr -d '\n')"
+   ```
+
+
 
 # Export the following test settings
    ```bash

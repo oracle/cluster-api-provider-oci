@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -183,34 +184,55 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	e2eConfig = loadE2EConfig(configPath)
 	bootstrapClusterProxy = NewOCIClusterProxy("bootstrap", kubeconfigPath, initScheme())
 
-	tenancyId, err := base64.StdEncoding.DecodeString(os.Getenv("OCI_TENANCY_ID_B64"))
-	Expect(err).NotTo(HaveOccurred())
-	userId, err := base64.StdEncoding.DecodeString(os.Getenv("OCI_USER_ID_B64"))
-	Expect(err).NotTo(HaveOccurred())
-	passphrase, err := base64.StdEncoding.DecodeString(os.Getenv("OCI_CREDENTIALS_PASSPHRASE_B64"))
-	Expect(err).NotTo(HaveOccurred())
-	key, err := base64.StdEncoding.DecodeString(os.Getenv("OCI_CREDENTIALS_KEY_B64"))
-	Expect(err).NotTo(HaveOccurred())
-	fingerprint, err := base64.StdEncoding.DecodeString(os.Getenv("OCI_CREDENTIALS_FINGERPRINT_B64"))
-	Expect(err).NotTo(HaveOccurred())
-	region, err := base64.StdEncoding.DecodeString(os.Getenv("OCI_REGION_B64"))
-	Expect(err).NotTo(HaveOccurred())
+	s, useInstancePrincipalFlagSet := os.LookupEnv("USE_INSTANCE_PRINCIPAL_B64")
+	useInstanePrincipal := false
+	if useInstancePrincipalFlagSet {
+		useInstanePrincipalStr, err := base64.StdEncoding.DecodeString(s)
+		Expect(err).NotTo(HaveOccurred())
+		useInstanePrincipal, err = strconv.ParseBool(string(useInstanePrincipalStr))
+		Expect(err).NotTo(HaveOccurred())
+	}
+	var ociAuthConfigProvider common.ConfigurationProvider
+	var err error
+	if useInstanePrincipal {
+		ociAuthConfigProvider, err = oci_config.NewConfigurationProvider(&oci_config.AuthConfig{
+			UseInstancePrincipals: true,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		By("Using instance principal as auth provider")
+	} else {
+		tenancyId, err := base64.StdEncoding.DecodeString(os.Getenv("OCI_TENANCY_ID_B64"))
+		Expect(err).NotTo(HaveOccurred())
+		userId, err := base64.StdEncoding.DecodeString(os.Getenv("OCI_USER_ID_B64"))
+		Expect(err).NotTo(HaveOccurred())
+		passphrase, err := base64.StdEncoding.DecodeString(os.Getenv("OCI_CREDENTIALS_PASSPHRASE_B64"))
+		Expect(err).NotTo(HaveOccurred())
+		key, err := base64.StdEncoding.DecodeString(os.Getenv("OCI_CREDENTIALS_KEY_B64"))
+		Expect(err).NotTo(HaveOccurred())
+		fingerprint, err := base64.StdEncoding.DecodeString(os.Getenv("OCI_CREDENTIALS_FINGERPRINT_B64"))
+		Expect(err).NotTo(HaveOccurred())
+		region, err := base64.StdEncoding.DecodeString(os.Getenv("OCI_REGION_B64"))
+		Expect(err).NotTo(HaveOccurred())
 
-	ociAuthConfigProvider, err := oci_config.NewConfigurationProvider(&oci_config.AuthConfig{
-		Region:                string(region),
-		TenancyID:             string(tenancyId),
-		UserID:                string(userId),
-		PrivateKey:            string(key),
-		Fingerprint:           string(fingerprint),
-		Passphrase:            string(passphrase),
-		UseInstancePrincipals: false,
-	})
-	Expect(err).NotTo(HaveOccurred())
+		ociAuthConfigProvider, err = oci_config.NewConfigurationProvider(&oci_config.AuthConfig{
+			Region:                string(region),
+			TenancyID:             string(tenancyId),
+			UserID:                string(userId),
+			PrivateKey:            string(key),
+			Fingerprint:           string(fingerprint),
+			Passphrase:            string(passphrase),
+			UseInstancePrincipals: false,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		By("Using user principal as auth provider")
+	}
 
 	clientProvider, err := scope.NewClientProvider(ociAuthConfigProvider)
 	Expect(err).NotTo(HaveOccurred())
 
-	ociClients, err := clientProvider.GetOrBuildClient(string(region))
+	region, err := ociAuthConfigProvider.Region()
+	Expect(err).NotTo(HaveOccurred())
+	ociClients, err := clientProvider.GetOrBuildClient(region)
 	Expect(err).NotTo(HaveOccurred())
 
 	computeClient = ociClients.ComputeClient

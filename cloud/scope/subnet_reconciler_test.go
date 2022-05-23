@@ -300,6 +300,56 @@ func TestClusterScope_SubnetSpec(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:    "default names",
+			wantErr: false,
+			spec: infrastructurev1beta1.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta1.NetworkSpec{
+					Vcn: infrastructurev1beta1.VCN{
+						Subnets: []*infrastructurev1beta1.Subnet{
+							{
+								Role: infrastructurev1beta1.ControlPlaneRole,
+							},
+							{
+								Role: infrastructurev1beta1.WorkerRole,
+							},
+							{
+								Role: infrastructurev1beta1.ServiceLoadBalancerRole,
+							},
+							{
+								Role: infrastructurev1beta1.ControlPlaneEndpointRole,
+							},
+						},
+					},
+				},
+			},
+			want: []*infrastructurev1beta1.Subnet{
+				{
+					Role: infrastructurev1beta1.ControlPlaneEndpointRole,
+					Name: ControlPlaneEndpointDefaultName,
+					CIDR: ControlPlaneEndpointSubnetDefaultCIDR,
+					Type: infrastructurev1beta1.Public,
+				},
+				{
+					Role: infrastructurev1beta1.ControlPlaneRole,
+					Name: ControlPlaneDefaultName,
+					CIDR: ControlPlaneMachineSubnetDefaultCIDR,
+					Type: infrastructurev1beta1.Private,
+				},
+				{
+					Role: infrastructurev1beta1.WorkerRole,
+					Name: WorkerDefaultName,
+					CIDR: WorkerSubnetDefaultCIDR,
+					Type: infrastructurev1beta1.Private,
+				},
+				{
+					Role: infrastructurev1beta1.ServiceLoadBalancerRole,
+					Name: ServiceLBDefaultName,
+					CIDR: ServiceLoadBalancerDefaultCIDR,
+					Type: infrastructurev1beta1.Public,
+				},
+			},
+		},
 	}
 	l := log.FromContext(context.Background())
 	for _, tt := range tests {

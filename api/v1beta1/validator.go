@@ -97,28 +97,30 @@ func validateVCNCIDR(vncCIDR string, fldPath *field.Path) field.ErrorList {
 func validateSubnetCIDR(subnetCidr string, vcnCidr string, fldPath *field.Path) field.ErrorList {
 	var allErrs field.ErrorList
 
-	subnetCidrIP, _, err := net.ParseCIDR(subnetCidr)
-	if err != nil {
-		allErrs = append(allErrs, field.Invalid(fldPath, subnetCidr, "invalid CIDR format"))
+	if len(subnetCidr) > 0 {
+		subnetCidrIP, _, err := net.ParseCIDR(subnetCidr)
+		if err != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath, subnetCidr, "invalid CIDR format"))
+		}
+
+		// Check subnet is in vcnCidr if vcnCidr is set
+		if len(vcnCidr) > 0 {
+			var vcnNetwork *net.IPNet
+			if _, parseNetwork, err := net.ParseCIDR(vcnCidr); err == nil {
+				vcnNetwork = parseNetwork
+			}
+
+			var found bool
+			if vcnNetwork != nil && vcnNetwork.Contains(subnetCidrIP) {
+				found = true
+			}
+
+			if !found {
+				allErrs = append(allErrs, field.Invalid(fldPath, subnetCidr, fmt.Sprintf("subnet CIDR not in VCN address space: %s", vcnCidr)))
+			}
+		}
+
 	}
-
-	// Check subnet is in vcnCidr if vcnCidr is set
-	if len(vcnCidr) > 0 {
-		var vcnNetwork *net.IPNet
-		if _, parseNetwork, err := net.ParseCIDR(vcnCidr); err == nil {
-			vcnNetwork = parseNetwork
-		}
-
-		var found bool
-		if vcnNetwork != nil && vcnNetwork.Contains(subnetCidrIP) {
-			found = true
-		}
-
-		if !found {
-			allErrs = append(allErrs, field.Invalid(fldPath, subnetCidr, fmt.Sprintf("subnet CIDR not in VCN address space: %s", vcnCidr)))
-		}
-	}
-
 	return allErrs
 }
 
@@ -180,10 +182,12 @@ func validateSubnets(subnets []*Subnet, vcn VCN, fldPath *field.Path) field.Erro
 		if err := validateSubnetName(subnet.Name, fldPath.Index(i).Child("name")); err != nil {
 			allErrs = append(allErrs, err)
 		}
-		if _, ok := subnetNames[subnet.Name]; ok {
-			allErrs = append(allErrs, field.Duplicate(fldPath, subnet.Name))
+		if len(subnet.Name) > 0 {
+			if _, ok := subnetNames[subnet.Name]; ok {
+				allErrs = append(allErrs, field.Duplicate(fldPath, subnet.Name))
+			}
+			subnetNames[subnet.Name] = true
 		}
-		subnetNames[subnet.Name] = true
 
 		if err := validateRole(subnet.Role, fldPath.Index(i).Child("role"), "subnet role invalid"); err != nil {
 			allErrs = append(allErrs, err)
@@ -197,9 +201,12 @@ func validateSubnets(subnets []*Subnet, vcn VCN, fldPath *field.Path) field.Erro
 
 // validateSubnetName validates the Name of a Subnet.
 func validateSubnetName(name string, fldPath *field.Path) *field.Error {
-	if invalidNameRegex.Match([]byte(name)) || name == "" {
-		return field.Invalid(fldPath, name,
-			fmt.Sprintf("subnet name invalid"))
+	// subnet name can be empty
+	if len(name) > 0 {
+		if invalidNameRegex.Match([]byte(name)) || name == "" {
+			return field.Invalid(fldPath, name,
+				fmt.Sprintf("subnet name invalid"))
+		}
 	}
 	return nil
 }

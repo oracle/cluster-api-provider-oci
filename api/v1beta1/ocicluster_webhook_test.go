@@ -43,6 +43,12 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 			CIDR: "10.1.0.0/16",
 		},
 	}
+	emptySubnetCidr := []*Subnet{
+		&Subnet{
+			Role: ControlPlaneRole,
+			Name: "test-subnet",
+		},
+	}
 	badSubnetCidrFormat := []*Subnet{
 		&Subnet{
 			Name: "test-subnet",
@@ -59,10 +65,11 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 			CIDR: "10.0.0.0/16",
 		},
 	}
-	badSubnetName := []*Subnet{
+	emptySubnetName := []*Subnet{
 		&Subnet{
 			Name: "",
 			CIDR: "10.0.0.0/16",
+			Role: ControlPlaneEndpointRole,
 		},
 	}
 	badSubnetRole := []*Subnet{
@@ -151,6 +158,23 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 			expectErr:             true,
 		},
 		{
+			name: "should allow empty subnet cidr",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{},
+				Spec: OCIClusterSpec{
+					CompartmentId:         "ocid",
+					OCIResourceIdentifier: "uuid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							CIDR:    "10.0.0.0/16",
+							Subnets: emptySubnetCidr,
+						},
+					},
+				},
+			},
+			expectErr: false,
+		},
+		{
 			name: "shouldn't allow subnet bad cidr format",
 			c: &OCICluster{
 				ObjectMeta: metav1.ObjectMeta{},
@@ -199,20 +223,21 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 			expectErr:             true,
 		},
 		{
-			name: "shouldn't allow invalid subnet name",
+			name: "should allow empty subnet name",
 			c: &OCICluster{
 				ObjectMeta: metav1.ObjectMeta{},
 				Spec: OCIClusterSpec{
+					CompartmentId:         "ocid",
+					OCIResourceIdentifier: "uuid",
 					NetworkSpec: NetworkSpec{
 						Vcn: VCN{
 							CIDR:    "10.0.0.0/16",
-							Subnets: badSubnetName,
+							Subnets: emptySubnetName,
 						},
 					},
 				},
 			},
-			errorMgsShouldContain: "subnet name invalid",
-			expectErr:             true,
+			expectErr: false,
 		},
 		{
 			name: "shouldn't allow bad NSG egress cidr",
