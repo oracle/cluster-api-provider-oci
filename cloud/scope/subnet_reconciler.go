@@ -252,21 +252,26 @@ func (s *ClusterScope) GetSubnetsSpec() []*infrastructurev1beta1.Subnet {
 func (s *ClusterScope) SubnetSpec() ([]*infrastructurev1beta1.Subnet, error) {
 	var subnets []*infrastructurev1beta1.Subnet
 	var cidr string
+	var name string
 	var subnetType infrastructurev1beta1.SubnetType
 	for _, subnet := range s.GetSubnetsSpec() {
 		switch subnet.Role {
 		case infrastructurev1beta1.ControlPlaneEndpointRole:
 			subnetType = infrastructurev1beta1.Public
 			cidr = ControlPlaneEndpointSubnetDefaultCIDR
+			name = ControlPlaneEndpointDefaultName
 		case infrastructurev1beta1.ControlPlaneRole:
 			subnetType = infrastructurev1beta1.Private
 			cidr = ControlPlaneMachineSubnetDefaultCIDR
+			name = ControlPlaneDefaultName
 		case infrastructurev1beta1.ServiceLoadBalancerRole:
 			subnetType = infrastructurev1beta1.Public
 			cidr = ServiceLoadBalancerDefaultCIDR
+			name = ServiceLBDefaultName
 		case infrastructurev1beta1.WorkerRole:
 			subnetType = infrastructurev1beta1.Private
 			cidr = WorkerSubnetDefaultCIDR
+			name = WorkerDefaultName
 		default:
 			return nil, errors.New("invalid subnet role")
 		}
@@ -276,9 +281,12 @@ func (s *ClusterScope) SubnetSpec() ([]*infrastructurev1beta1.Subnet, error) {
 		if subnet.Type != "" {
 			subnetType = subnet.Type
 		}
+		if subnet.Name != "" {
+			name = subnet.Name
+		}
 		subnets = append(subnets, &infrastructurev1beta1.Subnet{
 			Role:         subnet.Role,
-			Name:         subnet.Name,
+			Name:         name,
 			CIDR:         cidr,
 			Type:         subnetType,
 			SecurityList: subnet.SecurityList,
