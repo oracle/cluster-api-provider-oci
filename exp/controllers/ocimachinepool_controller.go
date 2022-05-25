@@ -301,10 +301,15 @@ func (r *OCIMachinePoolReconciler) reconcileNormal(ctx context.Context, logger l
 
 	machinePoolScope.Info("OCI Compute Instance Pool found", "InstancePoolId", *instancePool.Id)
 	machinePoolScope.OCIMachinePool.Spec.ProviderID = common.String(fmt.Sprintf("oci://%s", *instancePool.Id))
+	machinePoolScope.OCIMachinePool.Spec.OCID = *instancePool.Id
 
 	switch instancePool.LifecycleState {
 	case core.InstancePoolLifecycleStateProvisioning, core.InstancePoolLifecycleStateStarting:
 		machinePoolScope.Info("Instance Pool is pending")
+		conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav1exp.InstancePoolReadyCondition, infrav1exp.InstancePoolNotReadyReason, clusterv1.ConditionSeverityInfo, "")
+		return reconcile.Result{RequeueAfter: 10 * time.Second}, nil
+	case core.InstancePoolLifecycleStateScaling:
+		machinePoolScope.Info("Instance Pool is scaling")
 		conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav1exp.InstancePoolReadyCondition, infrav1exp.InstancePoolNotReadyReason, clusterv1.ConditionSeverityInfo, "")
 		return reconcile.Result{RequeueAfter: 10 * time.Second}, nil
 	case core.InstancePoolLifecycleStateRunning:
@@ -314,6 +319,13 @@ func (r *OCIMachinePoolReconciler) reconcileNormal(ctx context.Context, logger l
 		r.Recorder.Eventf(machinePoolScope.OCIMachinePool, corev1.EventTypeNormal, "InstancePoolReady",
 			"Instance pool is in ready state")
 		conditions.MarkTrue(machinePoolScope.OCIMachinePool, infrav1exp.InstancePoolReadyCondition)
+
+		instanceCount, err := machinePoolScope.SetListandSetMachinePoolInstances(ctx)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
+		machinePoolScope.SetReplicaCount(instanceCount)
 		machinePoolScope.SetReady()
 	default:
 		conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav1exp.InstancePoolReadyCondition, infrav1exp.InstancePoolProvisionFailedReason, clusterv1.ConditionSeverityError, "")

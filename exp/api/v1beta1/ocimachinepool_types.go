@@ -33,9 +33,13 @@ const (
 
 // OCIMachinePoolSpec defines the desired state of OCIMachinePool
 type OCIMachinePoolSpec struct {
-	// ProviderID is the ARN of the associated InstancePool
+	// ProviderID is the OCID of the associated InstancePool in a provider format
 	// +optional
 	ProviderID *string `json:"providerID,omitempty"`
+
+	// OCID is the OCID of the associated InstancePool
+	// +optional
+	OCID string `json:"ocid,omitempty"`
 
 	// OCID of the image to be used to launch the instance.
 	ImageId string `json:"imageId,omitempty"`
@@ -47,9 +51,19 @@ type OCIMachinePoolSpec struct {
 	// The shape configuration of the instance, applicable for flex instances.
 	ShapeConfig ShapeConfig `json:"shapeConfig,omitempty"`
 
+	// Whether the VNIC should be assigned a public IP address.
+	// +kubebuilder:default=false
+	// +optional
+	VNICAssignPublicIp bool `json:"vnicAssignPublicIp,omitempty"`
+
 	PlacementDetails []PlacementDetails `json:"placementDetails,omitempty"`
 
 	InstanceConfiguration InstanceConfiguration `json:"instanceConfiguration,omitempty"`
+
+	// ProviderIDList are the identification IDs of machine instances provided by the provider.
+	// This field must match the provider IDs as seen on the node objects corresponding to a machine pool's machine instances.
+	// +optional
+	ProviderIDList []string `json:"providerIDList,omitempty"`
 }
 
 type InstanceConfiguration struct {

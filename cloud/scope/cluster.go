@@ -168,21 +168,13 @@ func (s *ClusterScope) setFailureDomains(ctx context.Context) error {
 			})
 		}
 	} else {
-		req := identity.ListFaultDomainsRequest{
-			CompartmentId:      common.String(s.GetCompartmentId()),
-			AvailabilityDomain: respAd.Items[0].Name,
-		}
-		resp, err := s.IdentityClient.ListFaultDomains(ctx, req)
-		if err != nil {
-			s.Logger.Error(err, "failed to list fault domains")
-			return err
-		}
-		for i, fd := range resp.Items {
+		adName := *respAd.Items[0].Name
+		for i, fd := range s.OCICluster.Status.AvailabilityDomains[adName].FaultDomains {
 			s.SetFailureDomain(strconv.Itoa(i+1), clusterv1.FailureDomainSpec{
 				ControlPlane: true,
 				Attributes: map[string]string{
-					AvailabilityDomain: *fd.AvailabilityDomain,
-					FaultDomain:        *fd.Name,
+					AvailabilityDomain: adName,
+					FaultDomain:        fd,
 				},
 			})
 		}

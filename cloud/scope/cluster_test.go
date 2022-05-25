@@ -152,24 +152,6 @@ func TestClusterScope_ReconcileFailureDomains(t *testing.T) {
 	}}, nil)
 
 	identityClient.EXPECT().ListFaultDomains(gomock.Any(), gomock.Eq(identity.ListFaultDomainsRequest{
-		CompartmentId:      common.String("1ad"),
-		AvailabilityDomain: common.String("ad1"),
-	})).Return(identity.ListFaultDomainsResponse{Items: []identity.FaultDomain{
-		{
-			Name:               common.String("fd1"),
-			AvailabilityDomain: common.String("ad1"),
-		},
-		{
-			Name:               common.String("fd2"),
-			AvailabilityDomain: common.String("ad1"),
-		},
-		{
-			Name:               common.String("fd3"),
-			AvailabilityDomain: common.String("ad1"),
-		},
-	}}, nil)
-
-	identityClient.EXPECT().ListFaultDomains(gomock.Any(), gomock.Eq(identity.ListFaultDomainsRequest{
 		CompartmentId:      common.String("2ad"),
 		AvailabilityDomain: common.String("ad1"),
 	})).Return(identity.ListFaultDomainsResponse{Items: []identity.FaultDomain{
