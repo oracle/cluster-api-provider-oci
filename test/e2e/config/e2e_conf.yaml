@@ -69,6 +69,7 @@ providers:
           - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-local-vcn-peering.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-remote-vcn-peering.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-externally-managed-vcn.yaml"
+          - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-machine-pool.yaml"
           - sourcePath: "../data/shared/v1beta1/metadata.yaml"
 
 

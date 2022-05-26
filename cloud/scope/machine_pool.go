@@ -182,7 +182,9 @@ func (m *MachinePoolScope) SetListandSetMachinePoolInstances(ctx context.Context
 	providerIDList := make([]string, len(poolInstanceSummaries))
 
 	for i, instance := range poolInstanceSummaries {
-		providerIDList[i] = fmt.Sprintf("oci://%s", *instance.Id)
+		if *instance.State == "Running" {
+			providerIDList[i] = fmt.Sprintf("oci://%s", *instance.Id)
+		}
 	}
 
 	m.OCIMachinePool.Spec.ProviderIDList = providerIDList
