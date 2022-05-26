@@ -165,12 +165,26 @@ func (m *MachinePoolScope) ListMachinePoolInstances(ctx context.Context) ([]core
 		CompartmentId:  common.String(m.OCICluster.Spec.CompartmentId),
 		InstancePoolId: common.String(poolOid),
 	}
-	resp, err := m.ComputeManagementClient.ListInstancePoolInstances(ctx, req)
-	if err != nil {
-		return nil, err
+
+	var instanceSummaries []core.InstanceSummary
+	listPoolInstances := func(ctx context.Context, request core.ListInstancePoolInstancesRequest) (core.ListInstancePoolInstancesResponse, error) {
+		return m.ComputeManagementClient.ListInstancePoolInstances(ctx, request)
+	}
+	for resp, err := listPoolInstances(ctx, req); ; resp, err = listPoolInstances(ctx, req) {
+		if err != nil {
+			return nil, err
+		}
+
+		instanceSummaries = append(instanceSummaries, resp.Items...)
+
+		if resp.OpcNextPage == nil {
+			break
+		} else {
+			req.Page = resp.OpcNextPage
+		}
 	}
 
-	return resp.Items, nil
+	return instanceSummaries, nil
 }
 
 // SetListandSetMachinePoolInstances retrieves a machine pools instances and sets them in the ProviderIDList
@@ -410,6 +424,31 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context) e
 	return nil
 }
 
+// ListInstancePoolSummaries list the core.InstancePoolSummary for the given core.ListInstancePoolsRequest
+func (m *MachinePoolScope) ListInstancePoolSummaries(ctx context.Context, req core.ListInstancePoolsRequest) ([]core.InstancePoolSummary, error) {
+	listInstancePools := func(ctx context.Context, request core.ListInstancePoolsRequest) (core.ListInstancePoolsResponse, error) {
+		return m.ComputeManagementClient.ListInstancePools(ctx, request)
+	}
+
+	var instancePoolSummaries []core.InstancePoolSummary
+	for resp, err := listInstancePools(ctx, req); ; resp, err = listInstancePools(ctx, req) {
+		if err != nil {
+			return instancePoolSummaries, errors.Wrapf(err, "failed to query OCIMachinePool by name")
+		}
+
+		instancePoolSummaries = append(instancePoolSummaries, resp.Items...)
+
+		if resp.OpcNextPage == nil {
+			// no more pages
+			break
+		} else {
+			req.Page = resp.OpcNextPage
+		}
+	}
+
+	return instancePoolSummaries, nil
+}
+
 // FindInstancePool attempts to find the instance pool by name and checks to make sure
 // the instance pool was created by the cluster before returning the correct pool
 func (m *MachinePoolScope) FindInstancePool(ctx context.Context) (*core.InstancePool, error) {
@@ -420,18 +459,14 @@ func (m *MachinePoolScope) FindInstancePool(ctx context.Context) (*core.Instance
 		CompartmentId: common.String(m.OCICluster.Spec.CompartmentId),
 		DisplayName:   common.String(m.OCIMachinePool.GetName()),
 	}
-	respList, err := m.ComputeManagementClient.ListInstancePools(ctx, reqList)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to query OCIMachinePool by name")
-	}
 
-	if len(respList.Items) <= 0 {
-		m.Info("No machine pool found", "machinepool-name", m.OCIMachinePool.GetName())
-		return nil, nil
+	instancePoolSummaries, err := m.ListInstancePoolSummaries(ctx, reqList)
+	if err != nil {
+		return nil, err
 	}
 
 	var instancePoolSummary *core.InstancePoolSummary
-	for _, i := range respList.Items {
+	for _, i := range instancePoolSummaries {
 		if m.IsResourceCreatedByClusterAPI(i.FreeformTags) {
 			instancePoolSummary = &i
 			break
