@@ -25,7 +25,7 @@ CONTROLLER_IMG ?= $(REGISTRY)/$(IMAGE_NAME)
 TAG ?= dev
 ARCH ?= amd64
 ALL_ARCH = amd64 arm64 
-
+TOOLS_DIR := hack/tools
 TOOLS_BIN_DIR := $(abspath $(TOOLS_DIR)/bin)
 
 GINKGO_VER := v1.16.5
@@ -59,6 +59,21 @@ EXP_MACHINE_POOL ?= false
 
 # Set build time variables including version details
 LDFLAGS := $(shell source ./hack/version.sh; version::ldflags)
+
+# curl retries
+CURL_RETRIES=3
+
+ENVSUBST_VER := v2.0.0-20210730161058-179042472c46
+ENVSUBST_BIN := envsubst
+ENVSUBST := $(TOOLS_BIN_DIR)/$(ENVSUBST_BIN)-$(ENVSUBST_VER)
+
+KUSTOMIZE_VER := v4.5.2
+KUSTOMIZE_BIN := kustomize
+KUSTOMIZE := $(TOOLS_BIN_DIR)/$(KUSTOMIZE_BIN)-$(KUSTOMIZE_VER)
+
+KUBECTL_VER := v1.22.9
+KUBECTL_BIN := kubectl
+KUBECTL := $(TOOLS_BIN_DIR)/$(KUBECTL_BIN)-$(KUBECTL_VER)
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -326,3 +341,45 @@ release-metadata: $(RELEASE_DIR)
 .PHONY: clean-release
 clean-release:
 	rm -rf $(RELEASE_DIR)
+
+GO_INSTALL = ./scripts/go_install.sh
+GOOS    := $(shell go env GOOS)
+GOARCH  := $(shell go env GOARCH)
+
+.PHONY: install-tools # populate hack/tools/bin
+install-tools: $(ENVSUBST) $(KUSTOMIZE) $(KUBECTL)
+
+envsubst: $(ENVSUBST) ## Build a local copy of envsubst.
+kustomize: $(KUSTOMIZE) ## Build a local copy of kustomize.
+kubectl: $(KUBECTL) ## Build a local copy of kubectl.
+
+$(ENVSUBST): ## Build envsubst from tools folder.
+	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) github.com/drone/envsubst/v2/cmd/envsubst $(ENVSUBST_BIN) $(ENVSUBST_VER)
+
+$(KUSTOMIZE): ## Build kustomize from tools folder.
+	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) sigs.k8s.io/kustomize/kustomize/v4 $(KUSTOMIZE_BIN) $(KUSTOMIZE_VER)
+
+$(KUBECTL): ## Build kubectl from tools folder.
+	mkdir -p $(TOOLS_BIN_DIR)
+	rm -f "$(TOOLS_BIN_DIR)/$(KUBECTL_BIN)*"
+	curl --retry $(CURL_RETRIES) -fsL https://storage.googleapis.com/kubernetes-release/release/$(KUBECTL_VER)/bin/$(GOOS)/$(GOARCH)/kubectl -o $(KUBECTL)
+	ln -sf $(KUBECTL) $(TOOLS_BIN_DIR)/$(KUBECTL_BIN)
+	chmod +x $(KUBECTL) $(TOOLS_BIN_DIR)/$(KUBECTL_BIN)
+
+.PHONY: $(ENVSUBST_BIN)
+$(ENVSUBST_BIN): $(ENVSUBST)
+
+.PHONY: $(KUBECTL_BIN)
+$(KUBECTL_BIN): $(KUBECTL)
+
+## --------------------------------------
+## Tilt / Kind
+## --------------------------------------
+
+.PHONY: kind-create
+kind-create: $(KUBECTL) ## Create kind cluster if needed.
+	./scripts/kind-with-registry.sh
+
+.PHONY: tilt-up
+tilt-up: install-tools kind-create ## Start tilt and build kind cluster if needed.
+	EXP_CLUSTER_RESOURCE_SET=true EXP_MACHINE_POOL=true tilt up

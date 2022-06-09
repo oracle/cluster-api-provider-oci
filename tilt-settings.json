@@ -1,0 +1,8 @@
+{
+
+  "extra_args": {
+    "default_registry": "localhost:5000/cluster-api-oci-controller-amd64:dev",
+    "provider_repos": ["../cluster-api-provider-oci"],
+    "enable_providers": ["aws", "docker", "kubeadm-bootstrap", "kubeadm-control-plane"]
+  }
+}
