@@ -28,16 +28,10 @@ ALL_ARCH = amd64 arm64
 TOOLS_DIR := hack/tools
 TOOLS_BIN_DIR := $(abspath $(TOOLS_DIR)/bin)
 
-GINKGO_VER := v1.16.5
-GINKGO_BIN := ginkgo
-
 GINKGO_NODES ?= 3
 GINKGO_NOCOLOR ?= false
 GINKGO_ARGS ?=
-KUSTOMIZE_VER := v4.4.0
-KUSTOMIZE_BIN := kustomize
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
-KUSTOMIZE := $(TOOLS_BIN_DIR)/$(KUSTOMIZE_BIN)-$(KUSTOMIZE_VER)
 E2E_DATA_DIR ?= $(ROOT_DIR)/test/e2e/data
 OCI_TEMPLATES := $(E2E_DATA_DIR)/infrastructure-oci
 E2E_CONF_FILE ?= $(ROOT_DIR)/test/e2e/config/e2e_conf.yaml
@@ -67,13 +61,23 @@ ENVSUBST_VER := v2.0.0-20210730161058-179042472c46
 ENVSUBST_BIN := envsubst
 ENVSUBST := $(TOOLS_BIN_DIR)/$(ENVSUBST_BIN)-$(ENVSUBST_VER)
 
-KUSTOMIZE_VER := v4.5.2
-KUSTOMIZE_BIN := kustomize
-KUSTOMIZE := $(TOOLS_BIN_DIR)/$(KUSTOMIZE_BIN)-$(KUSTOMIZE_VER)
-
 KUBECTL_VER := v1.22.9
 KUBECTL_BIN := kubectl
 KUBECTL := $(TOOLS_BIN_DIR)/$(KUBECTL_BIN)-$(KUBECTL_VER)
+
+BIN_DIR=$(shell pwd)/bin
+
+KUSTOMIZE_BIN := kustomize
+KUSTOMIZE := $(BIN_DIR)/$(KUSTOMIZE_BIN)
+
+GOLANGCI_LINT_BIN := golangci-lint
+GOLANGCI_LINT := $(BIN_DIR)/$(GOLANGCI_LINT_BIN)
+
+GINKGO_BIN := ginkgo
+GINKGO := $(BIN_DIR)/$(GINKGO_BIN)
+
+CONTROLLER_GEN_BIN = controller-gen
+CONTROLLER_GEN := $(BIN_DIR)/$(CONTROLLER_GEN_BIN)
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -108,14 +112,14 @@ help: ## Display this help.
 
 ##@ Development
 
-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+manifests: $(CONTROLLER_GEN) ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) \
 		rbac:roleName=manager-role webhook \
 		paths="./api/..." \
 		paths="./exp/api/..." \
 		output:crd:artifacts:config=config/crd/bases
 
-generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+generate: $(CONTROLLER_GEN) ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./api/..." paths="./exp/api/..."
 
 fmt: ## Run go fmt against code.
@@ -143,7 +147,7 @@ run: manifests generate fmt vet ## Run a controller from your host.
 ## Linting
 ## --------------------------------------
 
-lint: golangci-lint
+lint: $(GOLANGCI_LINT)
 	$(GOLANGCI_LINT) run -v --timeout 300s --fast=false
 
 ## --------------------------------------
@@ -204,49 +208,18 @@ docker-push-manifest: ## Push the fat manifest docker image.
 
 ##@ Deployment
 
-install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
+install: manifests $(KUSTOMIZE) ## Install CRDs into the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
 
-uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
+uninstall: manifests $(KUSTOMIZE) ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/crd | kubectl delete -f -
 
-deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
+deploy: manifests $(KUSTOMIZE) ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
-
-
-CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
-controller-gen: ## Download controller-gen locally if necessary.
-	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.7.0)
-
-KUSTOMIZE = $(shell pwd)/bin/kustomize
-kustomize: ## Download kustomize locally if necessary.
-	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v3@v3.8.7)
-
-GINKGO := $(shell pwd)/bin/ginkgo
-ginkgo: ## Build ginkgo.
-	$(call go-get-tool,$(GINKGO),github.com/onsi/ginkgo/ginkgo@v1.16.5)
-
-GOLANGCI_LINT := $(shell pwd)/bin/golangci-lint
-golangci-lint: ## Build golanci-lint.
-	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint@v1.44.0)
-
-# go-get-tool will 'go get' any package $2 and install it to $1.
-PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
-define go-get-tool
-@[ -f $(1) ] || { \
-set -e ;\
-TMP_DIR=$$(mktemp -d) ;\
-cd $$TMP_DIR ;\
-go mod init tmp ;\
-echo "Downloading $(2)" ;\
-GOBIN=$(PROJECT_DIR)/bin go get $(2) ;\
-rm -rf $$TMP_DIR ;\
-}
-endef
 
 MDBOOK = /tmp/mdbook
 .PHONY: build-book
@@ -262,27 +235,27 @@ serve-book: build-book ## Build and serve the book with live-reloading enabled
 ## --------------------------------------
 
 .PHONY: generate-e2e-templates ## Generate OCI infrastructure templates for e2e test suite.
-generate-e2e-templates: kustomize
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-alternative-region --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-alternative-region.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-bare-metal --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-bare-metal.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-md-remediation --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-md-remediation.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-kcp-remediation --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-kcp-remediation.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-node-drain --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-node-drain.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-antrea --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-antrea.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-oracle-linux --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-oracle-linux.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-custom-networking-seclist --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-custom-networking-seclist.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-custom-networking-nsg --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-custom-networking-nsg.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-multiple-node-nsg --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-multiple-node-nsg.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-cluster-class --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-cluster-class.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-local-vcn-peering --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-local-vcn-peering.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-remote-vcn-peering --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-remote-vcn-peering.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-externally-managed-vcn --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-externally-managed-vcn.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-machine-pool --load_restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-machine-pool.yaml
+generate-e2e-templates: $(KUSTOMIZE)
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-alternative-region --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-alternative-region.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-bare-metal --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-bare-metal.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-md-remediation --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-md-remediation.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-kcp-remediation --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-kcp-remediation.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-node-drain --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-node-drain.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-antrea --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-antrea.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-oracle-linux --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-oracle-linux.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-custom-networking-seclist --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-custom-networking-seclist.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-custom-networking-nsg --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-custom-networking-nsg.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-multiple-node-nsg --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-multiple-node-nsg.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-cluster-class --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-cluster-class.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-local-vcn-peering --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-local-vcn-peering.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-remote-vcn-peering --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-remote-vcn-peering.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-externally-managed-vcn --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-externally-managed-vcn.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-machine-pool --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-machine-pool.yaml
 
 .PHONY: test-e2e-run
-test-e2e-run: generate-e2e-templates ginkgo $(ENVSUBST) ## Run e2e tests
-	envsubst < $(E2E_CONF_FILE) > $(E2E_CONF_FILE_ENVSUBST) && \
+test-e2e-run: generate-e2e-templates $(GINKGO) $(ENVSUBST) ## Run e2e tests
+	$(ENVSUBST) < $(E2E_CONF_FILE) > $(E2E_CONF_FILE_ENVSUBST) && \
     $(GINKGO) -v -trace -tags=e2e -focus="$(GINKGO_FOCUS)" -skip=$(GINKGO_SKIP) -nodes=$(GINKGO_NODES) --noColor=$(GINKGO_NOCOLOR) $(GINKGO_ARGS) ./test/e2e -- \
     	-e2e.artifacts-folder="$(ARTIFACTS)" \
     	-e2e.config="$(E2E_CONF_FILE_ENVSUBST)" \
@@ -327,7 +300,7 @@ release: clean-release  ## Builds and push container images using the latest git
 	$(MAKE) release-metadata
 
 .PHONY: release-manifests
-release-manifests: kustomize $(RELEASE_DIR) ## Builds the manifests to publish with a release
+release-manifests: $(KUSTOMIZE) $(RELEASE_DIR) ## Builds the manifests to publish with a release
 	$(KUSTOMIZE) build config/default > $(RELEASE_DIR)/infrastructure-components.yaml
 
 .PHONY: release-templates
@@ -350,14 +323,22 @@ GOARCH  := $(shell go env GOARCH)
 install-tools: $(ENVSUBST) $(KUSTOMIZE) $(KUBECTL)
 
 envsubst: $(ENVSUBST) ## Build a local copy of envsubst.
-kustomize: $(KUSTOMIZE) ## Build a local copy of kustomize.
 kubectl: $(KUBECTL) ## Build a local copy of kubectl.
+
+$(CONTROLLER_GEN): ## Download controller-gen locally if necessary.
+	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) sigs.k8s.io/controller-tools/cmd/controller-gen $(CONTROLLER_GEN_BIN) v0.7.0
+
+$(KUSTOMIZE): ## Download kustomize locally if necessary.
+	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) sigs.k8s.io/kustomize/kustomize/v4 $(KUSTOMIZE_BIN) v4.5.2
+
+$(GINKGO): ## Build ginkgo.
+	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) github.com/onsi/ginkgo/ginkgo $(GINKGO_BIN) v1.16.5
+
+$(GOLANGCI_LINT): ## Build golanci-lint.
+	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) github.com/golangci/golangci-lint/cmd/golangci-lint $(GOLANGCI_LINT_BIN) v1.44.0
 
 $(ENVSUBST): ## Build envsubst from tools folder.
 	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) github.com/drone/envsubst/v2/cmd/envsubst $(ENVSUBST_BIN) $(ENVSUBST_VER)
-
-$(KUSTOMIZE): ## Build kustomize from tools folder.
-	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) sigs.k8s.io/kustomize/kustomize/v4 $(KUSTOMIZE_BIN) $(KUSTOMIZE_VER)
 
 $(KUBECTL): ## Build kubectl from tools folder.
 	mkdir -p $(TOOLS_BIN_DIR)

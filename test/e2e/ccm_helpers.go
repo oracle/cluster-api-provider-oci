@@ -88,6 +88,9 @@ func createService(svcName string, svcNamespace string, labels map[string]string
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: svcNamespace,
 			Name:      svcName,
+			Annotations: map[string]string{
+				"service.beta.kubernetes.io/oci-load-balancer-internal": "true",
+			},
 		},
 		Spec: serviceSpec,
 	}
