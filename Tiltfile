@@ -19,9 +19,9 @@ settings = {
     "deploy_cert_manager": True,
     "preload_images_for_kind": True,
     "kind_cluster_name": "capoci",
-    "capi_version": "v1.1.3",
+    "capi_version": "v1.1.4",
     "cert_manager_version": "v1.1.0",
-    "kubernetes_version": "v1.22.9",
+    "kubernetes_version": "v1.23.8",
 }
 
 # global settings
