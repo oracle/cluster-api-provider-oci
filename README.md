@@ -48,17 +48,18 @@ Previous meetings: [ [notes][notes] | [recordings][notes] (coming soon) ]
 **NOTE:** As the versioning for this project is tied to the versioning of Cluster API, future modifications to this
 policy may be made to more closely align with other providers in the Cluster API ecosystem.
 
-#### Cluster API Versions
+### Cluster API Versions
 
-|                                | v1beta1 (v1.0)   |
-| ------------------------------ | :--------------: |
-| OCI Provider v1beta1 (v0.1.0)  |       ✓          |
+CAPOCI supports the following Cluster API versions.
 
-#### Supported Kubernetes versions
+|                              | v1beta1 (v1.0) |
+| ---------------------------- | -------------- |
+| OCI Provider v1beta1 (v0.1)  |        ✓       |
 
-|                                | v1.20   | v1.21   |
-| ------------------------------ | :-----: | :-----: |
-| OCI Provider v1beta1 (v0.1.0)  |   ✓     |   ✓     |
+### Kubernetes versions
+
+CAPOCI provider is able to install and manage the [versions of Kubernetes supported by
+Cluster API (CAPI)](https://cluster-api.sigs.k8s.io/reference/versions.html#supported-kubernetes-versions).
 
 [cluster_api]: https://github.com/oracle/cluster-api-provider-oci
 [image_builder_book]: https://image-builder.sigs.k8s.io/capi/providers/oci.html

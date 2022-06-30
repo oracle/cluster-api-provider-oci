@@ -8,8 +8,8 @@ providers:
   - name: cluster-api
     type: CoreProvider
     versions:
-      - name: v1.1.0
-        value: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.1.0/core-components.yaml
+      - name: v1.1.4
+        value: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.1.4/core-components.yaml
         type: url
         files:
           - sourcePath: "../data/shared/v1beta1/metadata.yaml"
@@ -21,8 +21,8 @@ providers:
   - name: kubeadm
     type: BootstrapProvider
     versions:
-      - name: v1.1.0
-        value: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.1.0/bootstrap-components.yaml
+      - name: v1.1.4
+        value: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.1.4/bootstrap-components.yaml
         type: url
         files:
           - sourcePath: "../data/shared/v1beta1/metadata.yaml"
@@ -34,8 +34,8 @@ providers:
   - name: kubeadm
     type: ControlPlaneProvider
     versions:
-      - name: v1.1.0
-        value: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.1.0/control-plane-components.yaml
+      - name: v1.1.4
+        value: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.1.4/control-plane-components.yaml
         type: url
         files:
           - sourcePath: "../data/shared/v1beta1/metadata.yaml"
@@ -73,7 +73,7 @@ providers:
           - sourcePath: "../data/infrastructure-oci/v1beta1/metadata.yaml"
 
 variables:
-  KUBERNETES_VERSION: "v1.22.5"
+  KUBERNETES_VERSION: "v1.23.8"
   EXP_MACHINE_POOL: "true"
   EXP_CLUSTER_RESOURCE_SET: "true"
   NODE_DRAIN_TIMEOUT: "60s"
@@ -83,8 +83,8 @@ variables:
   CCM_PATH: "${PWD}/test/e2e/data/ccm/ccm.yaml"
   CONFORMANCE_WORKER_MACHINE_COUNT: "2"
   CONFORMANCE_CONTROL_PLANE_MACHINE_COUNT: "1"
-  KUBERNETES_VERSION_UPGRADE_TO: "v1.23.1"
-  KUBERNETES_VERSION_UPGRADE_FROM: "v1.22.5"
+  KUBERNETES_VERSION_UPGRADE_TO: "v1.24.2"
+  KUBERNETES_VERSION_UPGRADE_FROM: "v1.23.8"
   KUBERNETES_UPGRADE_OCI_IMAGE_ID: "${KUBERNETES_UPGRADE_OCI_IMAGE_ID}"
   IP_FAMILY: "IPv4"
   CLUSTER_TOPOLOGY: "true"
@@ -110,7 +110,7 @@ intervals:
   default/wait-control-plane-bare-metal: [ "60m", "10s" ]
   default/wait-worker-nodes-bare-metal: [ "60m", "10s" ]
   default/wait-delete-cluster: ["30m", "10s"]
-  default/wait-machine-upgrade: ["60m", "10s"]
+  default/wait-machine-upgrade: ["30m", "10s"]
   default/wait-machine-remediation: ["30m", "10s"]
   default/wait-deployment: ["15m", "10s"]
   default/wait-deployment-available: ["15m", "10s"]

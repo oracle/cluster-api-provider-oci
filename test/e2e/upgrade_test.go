@@ -150,18 +150,20 @@ var _ = Describe("Cluster Upgrade Tests", func() {
 			KubernetesUpgradeVersion: upgradeVersion,
 		}, e2eConfig.GetIntervals(specName, "wait-machine-upgrade")...)
 
-		newWorkerMachineTemplateName := fmt.Sprintf("%s-md-0-upgraded", clusterName)
-		updatedWorkerPlaneTemplate := makeOCIMachineTemplate(namespace.Name, newWorkerMachineTemplateName)
-		err = bootstrapClusterProxy.GetClient().Create(ctx, updatedWorkerPlaneTemplate)
-
 		Expect(err).NotTo(HaveOccurred())
 		for _, deployment := range result.MachineDeployments {
 			Log(fmt.Sprintf("Patching the new kubernetes version to Machine Deployment %s/%s", deployment.Namespace, deployment.Name))
 			patchHelper, err := patch.NewHelper(deployment, bootstrapClusterProxy.GetClient())
 			Expect(err).ToNot(HaveOccurred())
 
+			newWorkerMachineTemplateName := fmt.Sprintf("%s-upgraded", deployment.Name)
+			updatedWorkerTemplate := makeOCIMachineTemplate(namespace.Name, newWorkerMachineTemplateName)
+			err = bootstrapClusterProxy.GetClient().Create(ctx, updatedWorkerTemplate)
+			Expect(err).NotTo(HaveOccurred())
+
 			oldVersion := deployment.Spec.Template.Spec.Version
 			deployment.Spec.Template.Spec.Version = common.String(upgradeVersion)
+			deployment.Spec.Template.Spec.InfrastructureRef.Name = newWorkerMachineTemplateName
 
 			Expect(patchHelper.Patch(ctx, deployment)).To(Succeed())
 
