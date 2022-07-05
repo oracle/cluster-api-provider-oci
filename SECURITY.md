@@ -1,40 +1,22 @@
-# Reporting security vulnerabilities
+# Security Policy
 
-Oracle values the independent security research community and believes that
-responsible disclosure of security vulnerabilities helps us ensure the security
-and privacy of all our users.
+## Security Announcements
 
-Please do NOT raise a GitHub Issue to report a security vulnerability. If you
-believe you have found a security vulnerability, please submit a report to
-[secalert_us@oracle.com][1] preferably with a proof of concept. Please review
-some additional information on [how to report security vulnerabilities to Oracle][2].
-We encourage people who contact Oracle Security to use email encryption using
-[our encryption key][3].
+Join the [kubernetes-security-announce] group for security and vulnerability announcements.
 
-We ask that you do not use other channels or contact the project maintainers
-directly.
+You can also subscribe to an RSS feed of the above using [this link][kubernetes-security-announce-rss].
 
-Non-vulnerability related security issues including ideas for new or improved
-security features are welcome on GitHub Issues.
+## Reporting a Vulnerability
 
-## Security updates, alerts and bulletins
+Instructions for reporting a vulnerability can be found on the
+[Kubernetes Security and Disclosure Information] page.
 
-Security updates will be released on a regular cadence. Many of our projects
-will typically release security fixes in conjunction with the
-[Oracle Critical Patch Update][3] program. Security updates are released on the
-Tuesday closest to the 17th day of January, April, July and October. A pre-release
-announcement will be published on the Thursday preceding each release. Additional
-information, including past advisories, is available on our [security alerts][4]
-page.
+## Supported Versions
 
-## Security-related information
+Information about supported Kubernetes versions can be found on the
+[Kubernetes version and version skew support policy] page on the Kubernetes website.
 
-We will provide security related information such as a threat model, considerations
-for secure use, or any known security issues in our documentation. Please note
-that labs and sample code are intended to demonstrate a concept and may not be
-sufficiently hardened for production use.
-
-[1]: mailto:secalert_us@oracle.com
-[2]: https://www.oracle.com/corporate/security-practices/assurance/vulnerability/reporting.html
-[3]: https://www.oracle.com/security-alerts/encryptionkey.html
-[4]: https://www.oracle.com/security-alerts/
+[kubernetes-security-announce]: https://groups.google.com/forum/#!forum/kubernetes-security-announce
+[kubernetes-security-announce-rss]: https://groups.google.com/forum/feed/kubernetes-security-announce/msgs/rss_v2_0.xml?num=50
+[Kubernetes version and version skew support policy]: https://kubernetes.io/docs/setup/release/version-skew-policy/#supported-versions
+[Kubernetes Security and Disclosure Information]: https://kubernetes.io/docs/reference/issues-security/security/#report-a-vulnerability
