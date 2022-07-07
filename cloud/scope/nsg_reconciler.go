@@ -49,12 +49,10 @@ func (s *ClusterScope) ReconcileNSG(ctx context.Context) error {
 				}
 				s.Logger.Info("Successfully updated network security list", "nsg", nsgOCID)
 			}
-			ingressRules, egressRules, isNSGUpdated, err := s.UpdateNSGSecurityRulesIfNeeded(ctx, *desiredNSG, nsg)
+			isNSGUpdated, err := s.UpdateNSGSecurityRulesIfNeeded(ctx, *desiredNSG, nsg)
 			if err != nil {
 				return err
 			}
-			desiredNSG.IngressRules = ingressRules
-			desiredNSG.EgressRules = egressRules
 			if !isNSGUpdated {
 				s.Logger.Info("No Reconciliation Required for Network Security Group", "nsg", *desiredNSG.ID)
 			}
@@ -67,19 +65,17 @@ func (s *ClusterScope) ReconcileNSG(ctx context.Context) error {
 		}
 		s.Logger.Info("Created the nsg", "nsg", nsgID)
 		desiredNSG.ID = nsgID
-		ingressRules, egressRules, err := s.AddNSGSecurityRules(ctx, desiredNSG.ID, desiredNSG.IngressRules, desiredNSG.EgressRules)
+		err = s.AddNSGSecurityRules(ctx, desiredNSG.ID, desiredNSG.IngressRules, desiredNSG.EgressRules)
 		if err != nil {
 			return err
 		}
-		desiredNSG.IngressRules = ingressRules
-		desiredNSG.EgressRules = egressRules
 	}
 	return nil
 }
 
 func (s *ClusterScope) GetNSG(ctx context.Context, spec infrastructurev1beta1.NSG) (*core.NetworkSecurityGroup, error) {
 	nsgOCID := spec.ID
-	if nsgOCID != nil {
+	if nsgOCID != nil && *nsgOCID != "" {
 		resp, err := s.VCNClient.GetNetworkSecurityGroup(ctx, core.GetNetworkSecurityGroupRequest{
 			NetworkSecurityGroupId: nsgOCID,
 		})
@@ -184,6 +180,7 @@ func (s *ClusterScope) IsNSGExitsByRole(role infrastructurev1beta1.Role) bool {
 	return false
 }
 
+// IsNSGEqual compares the actual and desired NSG using name/freeform tags and defined tags.
 func (s *ClusterScope) IsNSGEqual(actual *core.NetworkSecurityGroup, desired infrastructurev1beta1.NSG) bool {
 	if *actual.DisplayName != desired.Name {
 		return false
@@ -191,10 +188,11 @@ func (s *ClusterScope) IsNSGEqual(actual *core.NetworkSecurityGroup, desired inf
 	return s.IsTagsEqual(actual.FreeformTags, actual.DefinedTags)
 }
 
+// UpdateNSGSecurityRulesIfNeeded updates NSG rules if required by comparing actual and desired.
 func (s *ClusterScope) UpdateNSGSecurityRulesIfNeeded(ctx context.Context, desired infrastructurev1beta1.NSG,
-	actual *core.NetworkSecurityGroup) ([]infrastructurev1beta1.IngressSecurityRuleForNSG, []infrastructurev1beta1.EgressSecurityRuleForNSG, bool, error) {
-	var ingressRulesToAdd, ingressRulesToUpdate, finalIngressRules []infrastructurev1beta1.IngressSecurityRuleForNSG
-	var egressRulesToAdd, egressRulesToUpdate, finalEgressRules []infrastructurev1beta1.EgressSecurityRuleForNSG
+	actual *core.NetworkSecurityGroup) (bool, error) {
+	var ingressRulesToAdd []infrastructurev1beta1.IngressSecurityRuleForNSG
+	var egressRulesToAdd []infrastructurev1beta1.EgressSecurityRuleForNSG
 	var securityRulesToRemove []string
 	var isNSGUpdated bool
 	listSecurityRulesResponse, err := s.VCNClient.ListNetworkSecurityGroupSecurityRules(ctx, core.ListNetworkSecurityGroupSecurityRulesRequest{
@@ -202,84 +200,81 @@ func (s *ClusterScope) UpdateNSGSecurityRulesIfNeeded(ctx context.Context, desir
 	})
 	if err != nil {
 		s.Logger.Error(err, "failed to reconcile the network security group, failed to list security rules")
-		return nil, nil, isNSGUpdated, errors.Wrap(err, "failed to reconcile the network security group, failed to list security rules")
+		return isNSGUpdated, errors.Wrap(err, "failed to reconcile the network security group, failed to list security rules")
 	}
 	ingressRules, egressRules := generateSpecFromSecurityRules(listSecurityRulesResponse.Items)
 
 	for i, ingressRule := range desired.IngressRules {
-		if ingressRule.ID == nil {
-			ingressRulesToAdd = append(ingressRulesToAdd, ingressRule)
-		}
 		if ingressRule.IsStateless == nil {
 			desired.IngressRules[i].IsStateless = common.Bool(false)
 		}
 	}
 	for i, egressRule := range desired.EgressRules {
-		if egressRule.ID == nil {
-			egressRulesToAdd = append(egressRulesToAdd, egressRule)
-		}
 		if egressRule.IsStateless == nil {
 			desired.EgressRules[i].IsStateless = common.Bool(false)
 		}
 	}
 
-	for _, actualRule := range ingressRules {
+	for _, desiredRule := range desired.IngressRules {
+		found := false
+		for _, actualRule := range ingressRules {
+			if reflect.DeepEqual(desiredRule, actualRule) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			ingressRulesToAdd = append(ingressRulesToAdd, desiredRule)
+		}
+	}
+
+	for id, actualRule := range ingressRules {
 		found := false
 		for _, desiredRule := range desired.IngressRules {
-			if (desiredRule.ID != nil) && (*actualRule.ID == *desiredRule.ID) {
+			if reflect.DeepEqual(desiredRule, actualRule) {
 				found = true
-				if !reflect.DeepEqual(desiredRule, actualRule) {
-					ingressRulesToUpdate = append(ingressRulesToUpdate, desiredRule)
-				}
-				finalIngressRules = append(finalIngressRules, desiredRule)
 				break
 			}
 		}
 		if !found {
-			securityRulesToRemove = append(securityRulesToRemove, *actualRule.ID)
+			securityRulesToRemove = append(securityRulesToRemove, id)
 		}
 	}
-	for _, actualRule := range egressRules {
+
+	for _, desiredRule := range desired.EgressRules {
+		found := false
+		for _, actualRule := range egressRules {
+			if reflect.DeepEqual(desiredRule, actualRule) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			egressRulesToAdd = append(egressRulesToAdd, desiredRule)
+		}
+	}
+
+	for id, actualRule := range egressRules {
 		found := false
 		for _, desiredRule := range desired.EgressRules {
-			if (desiredRule.ID != nil) && (*actualRule.ID == *desiredRule.ID) {
+			if reflect.DeepEqual(desiredRule, actualRule) {
 				found = true
-				if !reflect.DeepEqual(desiredRule, actualRule) {
-					egressRulesToUpdate = append(egressRulesToUpdate, desiredRule)
-				}
-				finalEgressRules = append(finalEgressRules, desiredRule)
 				break
 			}
 		}
 		if !found {
-			securityRulesToRemove = append(securityRulesToRemove, *actualRule.ID)
+			securityRulesToRemove = append(securityRulesToRemove, id)
 		}
 	}
+
 	if len(ingressRulesToAdd) > 0 || len(egressRulesToAdd) > 0 {
 		isNSGUpdated = true
-		ingress, egress, err := s.AddNSGSecurityRules(ctx, desired.ID, ingressRulesToAdd, egressRulesToAdd)
+		err := s.AddNSGSecurityRules(ctx, desired.ID, ingressRulesToAdd, egressRulesToAdd)
 		if err != nil {
 			s.Logger.Error(err, "failed to reconcile the network security group, failed to add security rules")
-			return nil, nil, isNSGUpdated, err
+			return isNSGUpdated, err
 		}
 		s.Logger.Info("Successfully added missing rules in NSG", "nsg", *actual.Id)
-		finalEgressRules = append(finalEgressRules, egress...)
-		finalIngressRules = append(finalIngressRules, ingress...)
-	}
-	if len(ingressRulesToUpdate) > 0 || len(egressRulesToUpdate) > 0 {
-		isNSGUpdated = true
-		securityRules := generateUpdateSecurityRuleFromSpec(ingressRulesToUpdate, egressRulesToUpdate)
-		_, err := s.VCNClient.UpdateNetworkSecurityGroupSecurityRules(ctx, core.UpdateNetworkSecurityGroupSecurityRulesRequest{
-			NetworkSecurityGroupId: desired.ID,
-			UpdateNetworkSecurityGroupSecurityRulesDetails: core.UpdateNetworkSecurityGroupSecurityRulesDetails{
-				SecurityRules: securityRules,
-			},
-		})
-		if err != nil {
-			s.Logger.Error(err, "failed to reconcile the network security group, failed to update security rules")
-			return nil, nil, isNSGUpdated, err
-		}
-		s.Logger.Info("Successfully updated rules in NSG", "nsg", *actual.Id)
 	}
 	if len(securityRulesToRemove) > 0 {
 		isNSGUpdated = true
@@ -291,12 +286,11 @@ func (s *ClusterScope) UpdateNSGSecurityRulesIfNeeded(ctx context.Context, desir
 		})
 		if err != nil {
 			s.Logger.Error(err, "failed to reconcile the network security group, failed to remove security rules")
-			return nil, nil, isNSGUpdated, err
+			return isNSGUpdated, err
 		}
 		s.Logger.Info("Successfully deleted rules in NSG", "nsg", *actual.Id)
 	}
-	s.Logger.Info("No Reconciliation Required for Network Security List rules", "nsg", desired.ID)
-	return finalIngressRules, finalEgressRules, isNSGUpdated, nil
+	return isNSGUpdated, nil
 }
 
 func (s *ClusterScope) UpdateNSG(ctx context.Context, nsgSpec infrastructurev1beta1.NSG) error {
@@ -365,58 +359,9 @@ func generateAddSecurityRuleFromSpec(ingressRules []infrastructurev1beta1.Ingres
 	return securityRules
 }
 
-func generateUpdateSecurityRuleFromSpec(ingressRules []infrastructurev1beta1.IngressSecurityRuleForNSG,
-	egressRules []infrastructurev1beta1.EgressSecurityRuleForNSG) []core.UpdateSecurityRuleDetails {
-	var securityRules []core.UpdateSecurityRuleDetails
-	var icmpOptions *core.IcmpOptions
-	var tcpOptions *core.TcpOptions
-	var udpOptions *core.UdpOptions
-	var stateless *bool
-	for _, ingressRule := range ingressRules {
-		icmpOptions, tcpOptions, udpOptions = getProtocolOptions(ingressRule.IcmpOptions, ingressRule.TcpOptions, ingressRule.UdpOptions)
-		// while comparing values, the boolean value has to be always set
-		stateless = ingressRule.IsStateless
-		if stateless == nil {
-			stateless = common.Bool(false)
-		}
-		securityRules = append(securityRules, core.UpdateSecurityRuleDetails{
-			Direction:   core.UpdateSecurityRuleDetailsDirectionIngress,
-			Id:          ingressRule.ID,
-			Protocol:    ingressRule.Protocol,
-			Description: ingressRule.Description,
-			IcmpOptions: icmpOptions,
-			IsStateless: stateless,
-			Source:      ingressRule.Source,
-			SourceType:  core.UpdateSecurityRuleDetailsSourceTypeEnum(ingressRule.SourceType),
-			TcpOptions:  tcpOptions,
-			UdpOptions:  udpOptions,
-		})
-	}
-	for _, egressRule := range egressRules {
-		icmpOptions, tcpOptions, udpOptions = getProtocolOptions(egressRule.IcmpOptions, egressRule.TcpOptions, egressRule.UdpOptions)
-		stateless = egressRule.IsStateless
-		if stateless == nil {
-			stateless = common.Bool(false)
-		}
-		securityRules = append(securityRules, core.UpdateSecurityRuleDetails{
-			Direction:       core.UpdateSecurityRuleDetailsDirectionEgress,
-			Protocol:        egressRule.Protocol,
-			Description:     egressRule.Description,
-			IcmpOptions:     icmpOptions,
-			IsStateless:     stateless,
-			Destination:     egressRule.Destination,
-			DestinationType: core.UpdateSecurityRuleDetailsDestinationTypeEnum(egressRule.DestinationType),
-			TcpOptions:      tcpOptions,
-			UdpOptions:      udpOptions,
-			Id:              egressRule.ID,
-		})
-	}
-	return securityRules
-}
-
-func generateSpecFromSecurityRules(rules []core.SecurityRule) ([]infrastructurev1beta1.IngressSecurityRuleForNSG, []infrastructurev1beta1.EgressSecurityRuleForNSG) {
-	var ingressRules []infrastructurev1beta1.IngressSecurityRuleForNSG
-	var egressRules []infrastructurev1beta1.EgressSecurityRuleForNSG
+func generateSpecFromSecurityRules(rules []core.SecurityRule) (map[string]infrastructurev1beta1.IngressSecurityRuleForNSG, map[string]infrastructurev1beta1.EgressSecurityRuleForNSG) {
+	var ingressRules = make(map[string]infrastructurev1beta1.IngressSecurityRuleForNSG)
+	var egressRules = make(map[string]infrastructurev1beta1.EgressSecurityRuleForNSG)
 	var stateless *bool
 	for _, rule := range rules {
 
@@ -428,7 +373,6 @@ func generateSpecFromSecurityRules(rules []core.SecurityRule) ([]infrastructurev
 		switch rule.Direction {
 		case core.SecurityRuleDirectionIngress:
 			ingressRule := infrastructurev1beta1.IngressSecurityRuleForNSG{
-				ID: rule.Id,
 				IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
 					Protocol:    rule.Protocol,
 					Source:      rule.Source,
@@ -440,10 +384,9 @@ func generateSpecFromSecurityRules(rules []core.SecurityRule) ([]infrastructurev
 					Description: rule.Description,
 				},
 			}
-			ingressRules = append(ingressRules, ingressRule)
+			ingressRules[*rule.Id] = ingressRule
 		case core.SecurityRuleDirectionEgress:
 			egressRule := infrastructurev1beta1.EgressSecurityRuleForNSG{
-				ID: rule.Id,
 				EgressSecurityRule: infrastructurev1beta1.EgressSecurityRule{
 					Destination:     rule.Destination,
 					Protocol:        rule.Protocol,
@@ -455,7 +398,7 @@ func generateSpecFromSecurityRules(rules []core.SecurityRule) ([]infrastructurev
 					Description:     rule.Description,
 				},
 			}
-			egressRules = append(egressRules, egressRule)
+			egressRules[*rule.Id] = egressRule
 		}
 	}
 	return ingressRules, egressRules
@@ -463,10 +406,10 @@ func generateSpecFromSecurityRules(rules []core.SecurityRule) ([]infrastructurev
 }
 
 func (s *ClusterScope) AddNSGSecurityRules(ctx context.Context, nsgID *string, ingress []infrastructurev1beta1.IngressSecurityRuleForNSG,
-	egress []infrastructurev1beta1.EgressSecurityRuleForNSG) ([]infrastructurev1beta1.IngressSecurityRuleForNSG, []infrastructurev1beta1.EgressSecurityRuleForNSG, error) {
+	egress []infrastructurev1beta1.EgressSecurityRuleForNSG) error {
 	securityRules := generateAddSecurityRuleFromSpec(ingress, egress)
 
-	addNetworkSecurityGroupSecurityRulesResponse, err := s.VCNClient.AddNetworkSecurityGroupSecurityRules(ctx, core.AddNetworkSecurityGroupSecurityRulesRequest{
+	_, err := s.VCNClient.AddNetworkSecurityGroupSecurityRules(ctx, core.AddNetworkSecurityGroupSecurityRulesRequest{
 		NetworkSecurityGroupId: nsgID,
 		AddNetworkSecurityGroupSecurityRulesDetails: core.AddNetworkSecurityGroupSecurityRulesDetails{
 			SecurityRules: securityRules,
@@ -474,11 +417,9 @@ func (s *ClusterScope) AddNSGSecurityRules(ctx context.Context, nsgID *string, i
 	})
 	if err != nil {
 		s.Logger.Error(err, "failed add nsg security rules")
-		return nil, nil, errors.Wrap(err, "failed add nsg security rules")
+		return errors.Wrap(err, "failed add nsg security rules")
 	}
-	ingressRules, egressRules := generateSpecFromSecurityRules(addNetworkSecurityGroupSecurityRulesResponse.SecurityRules)
-	s.Logger.Info("successfully added nsg rules", "nsg", *nsgID)
-	return ingressRules, egressRules, nil
+	return nil
 }
 
 func (s *ClusterScope) CreateNSG(ctx context.Context, nsg infrastructurev1beta1.NSG) (*string, error) {
@@ -925,7 +866,7 @@ func getProtocolOptionsForSpec(icmp *core.IcmpOptions, tcp *core.TcpOptions, udp
 	if icmp != nil {
 		icmpOptions = &infrastructurev1beta1.IcmpOptions{
 			Type: icmp.Type,
-			Code: icmp.Type,
+			Code: icmp.Code,
 		}
 	}
 	if tcp != nil {

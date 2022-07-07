@@ -177,7 +177,7 @@ func (s *ClusterScope) DeleteSubnets(ctx context.Context) error {
 
 func (s *ClusterScope) GetSubnet(ctx context.Context, spec infrastructurev1beta1.Subnet) (*core.Subnet, error) {
 	subnetOcid := spec.ID
-	if subnetOcid != nil {
+	if subnetOcid != nil && *subnetOcid != "" {
 		resp, err := s.VCNClient.GetSubnet(ctx, core.GetSubnetRequest{
 			SubnetId: subnetOcid,
 		})

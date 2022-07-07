@@ -26,3 +26,11 @@ spec:
         value: ${OCI_COMPARTMENT_ID}
       - name: imageId
         value: ${OCI_IMAGE_ID}
+      - name: subnets
+        value:
+        - id: ocid1.subnet.oc1.phx.aaaaaaaa7gyvlsu2vxtpiydb5iu5vg3v3cdb63ayavalabcidbh3sjilm5qq
+          role: control-plane-endpoint
+        - id: ocid1.subnet.oc1.phx.aaaaaaaayou22cspyzamn227zqh3i4wqkv3lk57gaaa2zvd7ahiq2hrabm7q
+          role: worker
+        - id: ocid1.subnet.oc1.phx.aaaaaaaab2uqa5425ljx6sqdecmdbxkf2lgcvfevcsbsfrkwh5wwgxd6ccta
+          role: control-plane

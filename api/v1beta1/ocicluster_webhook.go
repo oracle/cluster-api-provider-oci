@@ -44,6 +44,11 @@ func (c *OCICluster) Default() {
 	if c.Spec.OCIResourceIdentifier == "" {
 		c.Spec.OCIResourceIdentifier = string(uuid.NewUUID())
 	}
+	for _, subnet := range c.Spec.NetworkSpec.Vcn.Subnets {
+		if subnet.UID == "" {
+			subnet.UID = string(uuid.NewUUID())
+		}
+	}
 }
 
 func (c *OCICluster) SetupWebhookWithManager(mgr ctrl.Manager) error {

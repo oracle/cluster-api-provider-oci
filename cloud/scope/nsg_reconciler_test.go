@@ -1327,6 +1327,20 @@ func TestClusterScope_ReconcileNSG(t *testing.T) {
 		NetworkSecurityGroupId: common.String("update-rules-id"),
 		AddNetworkSecurityGroupSecurityRulesDetails: core.AddNetworkSecurityGroupSecurityRulesDetails{SecurityRules: []core.AddSecurityRuleDetails{
 			{
+				Direction:   core.AddSecurityRuleDetailsDirectionIngress,
+				Protocol:    common.String("6"),
+				Description: common.String("External access to Kubernetes API endpoint"),
+				Source:      common.String("0.0.0.0/0"),
+				SourceType:  core.AddSecurityRuleDetailsSourceTypeCidrBlock,
+				IsStateless: common.Bool(false),
+				TcpOptions: &core.TcpOptions{
+					DestinationPortRange: &core.PortRange{
+						Max: common.Int(6443),
+						Min: common.Int(6443),
+					},
+				},
+			},
+			{
 				Direction:       core.AddSecurityRuleDetailsDirectionEgress,
 				Protocol:        common.String("6"),
 				Description:     common.String("All traffic to control plane nodes"),
@@ -1352,51 +1366,19 @@ func TestClusterScope_ReconcileNSG(t *testing.T) {
 			},
 		},
 	}, nil)
-	vcnClient.EXPECT().UpdateNetworkSecurityGroupSecurityRules(gomock.Any(), gomock.Eq(core.UpdateNetworkSecurityGroupSecurityRulesRequest{
-		NetworkSecurityGroupId: common.String("update-rules-id"),
-		UpdateNetworkSecurityGroupSecurityRulesDetails: core.UpdateNetworkSecurityGroupSecurityRulesDetails{
-			SecurityRules: []core.UpdateSecurityRuleDetails{
-				{
-					Direction:   core.UpdateSecurityRuleDetailsDirectionIngress,
-					Protocol:    common.String("6"),
-					Description: common.String("External access to Kubernetes API endpoint"),
-					Id:          common.String("ingress-id"),
-					Source:      common.String("0.0.0.0/0"),
-					SourceType:  core.UpdateSecurityRuleDetailsSourceTypeCidrBlock,
-					IsStateless: common.Bool(false),
-					TcpOptions: &core.TcpOptions{
-						DestinationPortRange: &core.PortRange{
-							Max: common.Int(6443),
-							Min: common.Int(6443),
-						},
-					},
-				},
-			},
-		},
-	})).Return(core.UpdateNetworkSecurityGroupSecurityRulesResponse{
-		UpdatedNetworkSecurityGroupSecurityRules: core.UpdatedNetworkSecurityGroupSecurityRules{
-			SecurityRules: []core.SecurityRule{
-				{
 
-					Id: common.String("ingress-id"),
-				},
-			},
-		},
-	}, nil)
 	vcnClient.EXPECT().RemoveNetworkSecurityGroupSecurityRules(gomock.Any(), gomock.Eq(core.RemoveNetworkSecurityGroupSecurityRulesRequest{
 		NetworkSecurityGroupId: common.String("update-rules-id"),
 		RemoveNetworkSecurityGroupSecurityRulesDetails: core.RemoveNetworkSecurityGroupSecurityRulesDetails{
-			SecurityRuleIds: []string{"egress-id-changed"},
+			SecurityRuleIds: []string{"ingress-id", "egress-id-changed"},
 		},
 	})).Return(core.RemoveNetworkSecurityGroupSecurityRulesResponse{}, nil)
 
 	customNSGEgressWithId := make([]infrastructurev1beta1.EgressSecurityRuleForNSG, len(customNSGEgress))
 	copy(customNSGEgressWithId, customNSGEgress)
-	customNSGEgressWithId[0].ID = common.String("egress-id")
 
 	customNSGIngressWithId := make([]infrastructurev1beta1.IngressSecurityRuleForNSG, len(customNSGIngress))
 	copy(customNSGIngressWithId, customNSGIngress)
-	customNSGIngressWithId[0].ID = common.String("ingress-id")
 
 	tests := []struct {
 		name          string

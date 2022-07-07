@@ -147,14 +147,16 @@ type IngressSecurityRule struct {
 type IngressSecurityRuleForNSG struct {
 	//IngressSecurityRule ID for NSG.
 	// +optional
+	// Deprecated: this field is not populated and used during reconciliation
 	ID                  *string `json:"id,omitempty"`
 	IngressSecurityRule `json:"ingressRule,omitempty"`
 }
 
 // EgressSecurityRuleForNSG is EgressSecurityRule for NSG.
 type EgressSecurityRuleForNSG struct {
-	//EgressSecurityRule ID for NSG.
+	// EgressSecurityRule ID for NSG.
 	// +optional
+	// Deprecated: this field is not populated and used during reconciliation
 	ID                 *string `json:"id,omitempty"`
 	EgressSecurityRule `json:"egressRule,omitempty"`
 }
@@ -249,9 +251,11 @@ type Subnet struct {
 	Role Role `json:"role"`
 	// Subnet OCID.
 	// +optional
+	// +kubebuilder:default=""
 	ID *string `json:"id,omitempty"`
 	// Subnet Name.
 	// +optional
+	// +kubebuilder:default=""
 	Name string `json:"name"`
 	// Subnet CIDR.
 	// +optional
@@ -262,6 +266,10 @@ type Subnet struct {
 	// The security list associated with Subnet.
 	// +optional
 	SecurityList *SecurityList `json:"securityList,omitempty"`
+	// Subnet UID.
+	// +optional
+	// +kubebuilder:default="empty"
+	UID string `json:"uid,omitempty"`
 }
 
 // NSG defines configuration for a Network Security Group.
@@ -269,9 +277,11 @@ type Subnet struct {
 type NSG struct {
 	// NSG OCID.
 	// +optional
+	// +kubebuilder:default=""
 	ID *string `json:"id,omitempty"`
 	// NSG Name.
 	// +optional
+	// +kubebuilder:default=""
 	Name string `json:"name"`
 	// Role defines the NSG role (eg. control-plane, control-plane-endpoint, service-lb, worker).
 	Role Role `json:"role,omitempty"`
@@ -318,10 +328,15 @@ type VCN struct {
 
 	// Subnets is the configuration for subnets required in the VCN.
 	// +optional
+	// +listType=map
+	// +listMapKey=uid
 	Subnets []*Subnet `json:"subnets,omitempty"`
 
 	// NetworkSecurityGroups is the configuration for the Network Security Groups required in the VCN.
 	// +optional
+	// +listType=map
+	// +listMapKey=name
+	// +listMapKey=id
 	NetworkSecurityGroups []*NSG `json:"networkSecurityGroups,omitempty"`
 }
 

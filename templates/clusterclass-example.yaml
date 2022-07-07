@@ -33,6 +33,18 @@ spec:
             kind: OCIMachineTemplate
             name: worker-machine-template
   variables:
+  - name: subnets
+    required: true
+    schema:
+      openAPIV3Schema:
+        type: array
+        items:
+          type: object
+          properties:
+            id:
+              type: string
+            role:
+              type: string
   - name: ssh_authorized_keys
     required: false
     schema:
@@ -68,6 +80,18 @@ spec:
         type: boolean
         default: true
   patches:
+  - name: subnets
+    definitions:
+      - selector:
+          apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+          kind: OCIClusterTemplate
+          matchResources:
+            infrastructureCluster: true
+        jsonPatches:
+          - op: add
+            path: "/spec/template/spec/networkSpec/vcn/subnets"
+            valueFrom:
+              variable: subnets
   - name: compartmentId
     definitions:
       - selector:
@@ -162,7 +186,17 @@ metadata:
   name: ocicluster
 spec:
   template:
-    spec: {}
+    spec:
+      compartmentId: ocid1.compartment.oc1..aaaaaaaaq6ucotbu72r32xznh5fnh2f77vfk2i35lwazp7gazk6lkzluvwqa
+      networkSpec:
+        apiServerLoadBalancer:
+        skipNetworkManagement: true
+        vcn:
+          id: ocid1.vcn.oc1.phx.amaaaaaah4gjgpyatwtoroz5puimmtqtdy4ggrqbmvldfebxwi5otax24f7a
+          subnets:
+            - name: control-plane-endpoint
+              role: control-plane-endpoint
+              type: private
 ---
 kind: KubeadmControlPlaneTemplate
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1

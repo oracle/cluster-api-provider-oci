@@ -282,11 +282,14 @@ spec:
                                         type: object
                                     type: object
                                   id:
-                                    description: EgressSecurityRule ID for NSG.
+                                    description: 'EgressSecurityRule ID for NSG. Deprecated:
+                                      this field is not populated and used during
+                                      reconciliation'
                                     type: string
                                 type: object
                               type: array
                             id:
+                              default: ""
                               description: NSG OCID.
                               type: string
                             ingressRules:
@@ -296,7 +299,9 @@ spec:
                                   for NSG
                                 properties:
                                   id:
-                                    description: IngressSecurityRule ID for NSG.
+                                    description: 'IngressSecurityRule ID for NSG.
+                                      Deprecated: this field is not populated and
+                                      used during reconciliation'
                                     type: string
                                   ingressRule:
                                     description: IngressSecurityRule A rule for allowing
@@ -463,6 +468,7 @@ spec:
                                 type: object
                               type: array
                             name:
+                              default: ""
                               description: NSG Name.
                               type: string
                             role:
@@ -471,6 +477,10 @@ spec:
                               type: string
                           type: object
                         type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        - id
+                        x-kubernetes-list-type: map
                       privateRouteTableId:
                         description: ID of Private Route Table.
                         type: string
@@ -491,9 +501,11 @@ spec:
                               description: Subnet CIDR.
                               type: string
                             id:
+                              default: ""
                               description: Subnet OCID.
                               type: string
                             name:
+                              default: ""
                               description: Subnet Name.
                               type: string
                             role:
@@ -845,10 +857,17 @@ spec:
                               description: Type defines the subnet type (e.g. public,
                                 private).
                               type: string
+                            uid:
+                              default: empty
+                              description: Subnet UID.
+                              type: string
                           required:
                           - role
                           type: object
                         type: array
+                        x-kubernetes-list-map-keys:
+                        - uid
+                        x-kubernetes-list-type: map
                     type: object
                   vcnPeering:
                     description: VCNPeering configuration.
