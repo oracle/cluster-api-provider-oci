@@ -282,7 +282,9 @@ spec:
                                         type: object
                                     type: object
                                   id:
-                                    description: EgressSecurityRule ID for NSG.
+                                    description: 'EgressSecurityRule ID for NSG. Deprecated:
+                                      this field is not populated and used during
+                                      reconciliation'
                                     type: string
                                 type: object
                               type: array
@@ -296,7 +298,9 @@ spec:
                                   for NSG
                                 properties:
                                   id:
-                                    description: IngressSecurityRule ID for NSG.
+                                    description: 'IngressSecurityRule ID for NSG.
+                                      Deprecated: this field is not populated and
+                                      used during reconciliation'
                                     type: string
                                   ingressRule:
                                     description: IngressSecurityRule A rule for allowing
@@ -469,8 +473,13 @@ spec:
                               description: Role defines the NSG role (eg. control-plane,
                                 control-plane-endpoint, service-lb, worker).
                               type: string
+                          required:
+                          - name
                           type: object
                         type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
                       privateRouteTableId:
                         description: ID of Private Route Table.
                         type: string
@@ -846,9 +855,13 @@ spec:
                                 private).
                               type: string
                           required:
+                          - name
                           - role
                           type: object
                         type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
                     type: object
                   vcnPeering:
                     description: VCNPeering configuration.
