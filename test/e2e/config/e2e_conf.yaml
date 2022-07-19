@@ -8,8 +8,8 @@ providers:
   - name: cluster-api
     type: CoreProvider
     versions:
-      - name: v1.1.0
-        value: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.1.0/core-components.yaml
+      - name: v1.1.5
+        value: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.1.5/core-components.yaml
         type: url
         files:
           - sourcePath: "../data/shared/v1beta1/metadata.yaml"
