@@ -22,8 +22,9 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/cluster"
 )
 
 // ObjectResumer will issue a resume on the specified cluster-api resource.
@@ -35,13 +36,13 @@ func (r *rollout) ObjectResumer(proxy cluster.Proxy, ref corev1.ObjectReference)
 			return errors.Wrapf(err, "failed to fetch %v/%v", ref.Kind, ref.Name)
 		}
 		if !deployment.Spec.Paused {
-			return errors.Errorf("MachineDeployment is not currently paused: %v/%v\n", ref.Kind, ref.Name)
+			return errors.Errorf("MachineDeployment is not currently paused: %v/%v\n", ref.Kind, ref.Name) //nolint:revive // MachineDeployment is intentionally capitalized.
 		}
 		if err := resumeMachineDeployment(proxy, ref.Name, ref.Namespace); err != nil {
 			return err
 		}
 	default:
-		return errors.Errorf("Invalid resource type %q, valid values are %v", ref.Kind, validResourceTypes)
+		return errors.Errorf("invalid resource type %q, valid values are %v", ref.Kind, validResourceTypes)
 	}
 	return nil
 }

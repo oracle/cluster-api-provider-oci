@@ -21,6 +21,7 @@ import (
 
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/validation"
+
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
 )
@@ -86,16 +87,14 @@ func parseProviderName(provider string) (name string, version string, err error)
 }
 
 func validateDNS1123Label(label string) error {
-	errs := validation.IsDNS1123Label(label)
-	if len(errs) != 0 {
+	if errs := validation.IsDNS1123Label(label); len(errs) != 0 {
 		return errors.New(strings.Join(errs, "; "))
 	}
 	return nil
 }
 
 func validateDNS1123Domanin(subdomain string) error {
-	errs := validation.IsDNS1123Subdomain(subdomain)
-	if len(errs) != 0 {
+	if errs := validation.IsDNS1123Subdomain(subdomain); len(errs) != 0 {
 		return errors.New(strings.Join(errs, "; "))
 	}
 	return nil

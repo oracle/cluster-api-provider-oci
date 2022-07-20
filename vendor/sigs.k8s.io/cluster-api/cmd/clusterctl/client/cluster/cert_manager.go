@@ -21,19 +21,21 @@ import (
 	_ "embed"
 	"time"
 
+	"github.com/blang/semver"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/util/version"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/internal/util"
 	logf "sigs.k8s.io/cluster-api/cmd/clusterctl/log"
 	utilresource "sigs.k8s.io/cluster-api/util/resource"
+	"sigs.k8s.io/cluster-api/util/version"
 	utilyaml "sigs.k8s.io/cluster-api/util/yaml"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -251,6 +253,12 @@ func (cm *certManagerClient) EnsureLatestVersion() error {
 		return nil
 	}
 
+	// Migrate CRs to latest CRD storage version, if necessary.
+	// Note: We have to do this before cert-manager is deleted so conversion webhooks still work.
+	if err := cm.migrateCRDs(); err != nil {
+		return err
+	}
+
 	// delete the cert-manager version currently installed (because it should be upgraded);
 	// NOTE: CRDs, and namespace are preserved in order to avoid deletion of user objects;
 	// web-hooks are preserved to avoid a user attempting to CREATE a cert-manager resource while the upgrade is in progress.
@@ -261,6 +269,30 @@ func (cm *certManagerClient) EnsureLatestVersion() error {
 
 	// Install cert-manager.
 	return cm.install()
+}
+
+func (cm *certManagerClient) migrateCRDs() error {
+	config, err := cm.configClient.CertManager().Get()
+	if err != nil {
+		return err
+	}
+
+	// Gets the new cert-manager components from the repository.
+	objs, err := cm.getManifestObjs(config)
+	if err != nil {
+		return err
+	}
+
+	c, err := cm.proxy.NewClient()
+	if err != nil {
+		return err
+	}
+
+	if err := newCRDMigrator(c).Run(ctx, objs); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (cm *certManagerClient) deleteObjs(objs []unstructured.Unstructured) error {
@@ -299,6 +331,12 @@ func (cm *certManagerClient) shouldUpgrade(objs []unstructured.Unstructured) (st
 		return "", "", false, err
 	}
 
+	desiredVersion := config.Version()
+	desiredSemVersion, err := semver.ParseTolerant(desiredVersion)
+	if err != nil {
+		return "", "", false, errors.Wrapf(err, "failed to parse config version [%s] for cert-manager component", desiredVersion)
+	}
+
 	needUpgrade := false
 	currentVersion := ""
 	for i := range objs {
@@ -321,23 +359,19 @@ func (cm *certManagerClient) shouldUpgrade(objs []unstructured.Unstructured) (st
 			}
 		}
 
-		objSemVersion, err := version.ParseSemantic(objVersion)
+		objSemVersion, err := semver.ParseTolerant(objVersion)
 		if err != nil {
 			return "", "", false, errors.Wrapf(err, "failed to parse version for cert-manager component %s/%s", obj.GetKind(), obj.GetName())
 		}
 
-		c, err := objSemVersion.Compare(config.Version())
-		if err != nil {
-			return "", "", false, errors.Wrapf(err, "failed to compare target version for cert-manager component %s/%s", obj.GetKind(), obj.GetName())
-		}
-
+		c := version.Compare(objSemVersion, desiredSemVersion, version.WithBuildTags())
 		switch {
-		case c < 0:
-			// if version < current, then upgrade
+		case c < 0 || c == 2:
+			// if version < current or same version and different non-numeric build metadata, then upgrade
 			currentVersion = objVersion
 			needUpgrade = true
 		case c >= 0:
-			// the installed version is greather or equal than the one required by clusterctl, so we are ok
+			// the installed version is greater than or equal to one required by clusterctl, so we are ok
 			currentVersion = objVersion
 		}
 
@@ -345,7 +379,7 @@ func (cm *certManagerClient) shouldUpgrade(objs []unstructured.Unstructured) (st
 			break
 		}
 	}
-	return currentVersion, config.Version(), needUpgrade, nil
+	return currentVersion, desiredVersion, needUpgrade, nil
 }
 
 func (cm *certManagerClient) getWaitTimeout() time.Duration {

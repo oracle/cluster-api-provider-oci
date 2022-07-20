@@ -50,23 +50,27 @@ func GetClusterClassByName(ctx context.Context, input GetClusterClassByNameInput
 		Namespace: input.Namespace,
 		Name:      input.Name,
 	}
-	Expect(input.Getter.Get(ctx, key, clusterClass)).To(Succeed(), "Failed to get ClusterClass object %s/%s", input.Namespace, input.Name)
+	Eventually(func() error {
+		return input.Getter.Get(ctx, key, clusterClass)
+	}, retryableOperationTimeout, retryableOperationInterval).Should(Succeed(), "Failed to get ClusterClass object %s/%s", input.Namespace, input.Name)
 	return clusterClass
 }
 
 // UpgradeClusterTopologyAndWaitForUpgradeInput is the input type for UpgradeClusterTopologyAndWaitForUpgrade.
 type UpgradeClusterTopologyAndWaitForUpgradeInput struct {
-	ClusterProxy                ClusterProxy
-	Cluster                     *clusterv1.Cluster
-	ControlPlane                *controlplanev1.KubeadmControlPlane
-	EtcdImageTag                string
-	DNSImageTag                 string
-	MachineDeployments          []*clusterv1.MachineDeployment
-	KubernetesUpgradeVersion    string
-	WaitForMachinesToBeUpgraded []interface{}
-	WaitForKubeProxyUpgrade     []interface{}
-	WaitForDNSUpgrade           []interface{}
-	WaitForEtcdUpgrade          []interface{}
+	ClusterProxy                            ClusterProxy
+	Cluster                                 *clusterv1.Cluster
+	ControlPlane                            *controlplanev1.KubeadmControlPlane
+	EtcdImageTag                            string
+	DNSImageTag                             string
+	MachineDeployments                      []*clusterv1.MachineDeployment
+	KubernetesUpgradeVersion                string
+	WaitForMachinesToBeUpgraded             []interface{}
+	WaitForKubeProxyUpgrade                 []interface{}
+	WaitForDNSUpgrade                       []interface{}
+	WaitForEtcdUpgrade                      []interface{}
+	PreWaitForControlPlaneToBeUpgraded      func()
+	PreWaitForMachineDeploymentToBeUpgraded func()
 }
 
 // UpgradeClusterTopologyAndWaitForUpgrade upgrades a Cluster topology and waits for it to be upgraded.
@@ -96,7 +100,17 @@ func UpgradeClusterTopologyAndWaitForUpgrade(ctx context.Context, input UpgradeC
 			input.Cluster.Spec.Topology.Variables[i].Value = apiextensionsv1.JSON{Raw: []byte(strconv.Quote(input.DNSImageTag))}
 		}
 	}
-	Expect(patchHelper.Patch(ctx, input.Cluster)).To(Succeed())
+	Eventually(func() error {
+		return patchHelper.Patch(ctx, input.Cluster)
+	}, retryableOperationTimeout, retryableOperationInterval).Should(Succeed())
+
+	// Once we have patched the Kubernetes Cluster we can run PreWaitForControlPlaneToBeUpgraded.
+	// Note: This can e.g. be used to verify the BeforeClusterUpgrade lifecycle hook is executed
+	// and blocking correctly.
+	if input.PreWaitForControlPlaneToBeUpgraded != nil {
+		log.Logf("Calling PreWaitForControlPlaneToBeUpgraded")
+		input.PreWaitForControlPlaneToBeUpgraded()
+	}
 
 	log.Logf("Waiting for control-plane machines to have the upgraded Kubernetes version")
 	WaitForControlPlaneMachinesToBeUpgraded(ctx, WaitForControlPlaneMachinesToBeUpgradedInput{
@@ -114,20 +128,34 @@ func UpgradeClusterTopologyAndWaitForUpgrade(ctx context.Context, input UpgradeC
 		KubernetesVersion: input.KubernetesUpgradeVersion,
 	}, input.WaitForKubeProxyUpgrade...)
 
-	log.Logf("Waiting for CoreDNS to have the upgraded image tag")
-	WaitForDNSUpgrade(ctx, WaitForDNSUpgradeInput{
-		Getter:     workloadClient,
-		DNSVersion: input.DNSImageTag,
-	}, input.WaitForDNSUpgrade...)
+	// Wait for the CoreDNS upgrade if the DNSImageTag is set.
+	if input.DNSImageTag != "" {
+		log.Logf("Waiting for CoreDNS to have the upgraded image tag")
+		WaitForDNSUpgrade(ctx, WaitForDNSUpgradeInput{
+			Getter:     workloadClient,
+			DNSVersion: input.DNSImageTag,
+		}, input.WaitForDNSUpgrade...)
+	}
 
-	log.Logf("Waiting for etcd to have the upgraded image tag")
-	lblSelector, err := labels.Parse("component=etcd")
-	Expect(err).ToNot(HaveOccurred())
-	WaitForPodListCondition(ctx, WaitForPodListConditionInput{
-		Lister:      workloadClient,
-		ListOptions: &client.ListOptions{LabelSelector: lblSelector},
-		Condition:   EtcdImageTagCondition(input.EtcdImageTag, int(*input.ControlPlane.Spec.Replicas)),
-	}, input.WaitForEtcdUpgrade...)
+	// Wait for the etcd upgrade if the EtcdImageTag is set.
+	if input.EtcdImageTag != "" {
+		log.Logf("Waiting for etcd to have the upgraded image tag")
+		lblSelector, err := labels.Parse("component=etcd")
+		Expect(err).ToNot(HaveOccurred())
+		WaitForPodListCondition(ctx, WaitForPodListConditionInput{
+			Lister:      workloadClient,
+			ListOptions: &client.ListOptions{LabelSelector: lblSelector},
+			Condition:   EtcdImageTagCondition(input.EtcdImageTag, int(*input.ControlPlane.Spec.Replicas)),
+		}, input.WaitForEtcdUpgrade...)
+	}
+
+	// Once the ControlPlane is upgraded we can run PreWaitForMachineDeploymentToBeUpgraded.
+	// Note: This can e.g. be used to verify the AfterControlPlaneUpgrade lifecycle hook is executed
+	// and blocking correctly.
+	if input.PreWaitForMachineDeploymentToBeUpgraded != nil {
+		log.Logf("Calling PreWaitForMachineDeploymentToBeUpgraded")
+		input.PreWaitForMachineDeploymentToBeUpgraded()
+	}
 
 	for _, deployment := range input.MachineDeployments {
 		if *deployment.Spec.Replicas > 0 {

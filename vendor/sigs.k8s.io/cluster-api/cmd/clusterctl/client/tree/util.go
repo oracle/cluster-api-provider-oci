@@ -20,10 +20,12 @@ import (
 	"fmt"
 	"sort"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/conditions"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // GetReadyCondition returns the ReadyCondition for an object, if defined.
@@ -88,7 +90,7 @@ func objToSetter(obj client.Object) conditions.Setter {
 	return setter
 }
 
-// VirtualObject return a new virtual object.
+// VirtualObject returns a new virtual object.
 func VirtualObject(namespace, kind, name string) *unstructured.Unstructured {
 	gk := "virtual.cluster.x-k8s.io/v1beta1"
 	return &unstructured.Unstructured{
@@ -101,7 +103,22 @@ func VirtualObject(namespace, kind, name string) *unstructured.Unstructured {
 				"annotations": map[string]interface{}{
 					VirtualObjectAnnotation: "True",
 				},
-				"uid": fmt.Sprintf("%s, %s/%s", gk, namespace, name),
+				"uid": fmt.Sprintf("%s, Kind=%s, %s/%s", gk, kind, namespace, name),
+			},
+		},
+	}
+}
+
+// ObjectReferenceObject returns a new object referenced by the objectRef.
+func ObjectReferenceObject(objectRef *corev1.ObjectReference) *unstructured.Unstructured {
+	return &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": objectRef.APIVersion,
+			"kind":       objectRef.Kind,
+			"metadata": map[string]interface{}{
+				"namespace": objectRef.Namespace,
+				"name":      objectRef.Name,
+				"uid":       fmt.Sprintf("%s, Kind=%s, %s/%s", objectRef.APIVersion, objectRef.Kind, objectRef.Namespace, objectRef.Name),
 			},
 		},
 	}

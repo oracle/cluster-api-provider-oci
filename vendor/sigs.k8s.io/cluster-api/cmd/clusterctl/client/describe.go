@@ -41,13 +41,22 @@ type DescribeClusterOptions struct {
 	// ShowMachineSets instructs the discovery process to include machine sets in the ObjectTree.
 	ShowMachineSets bool
 
-	// DisableNoEcho disable hiding MachineInfrastructure or BootstrapConfig objects if the object's ready condition is true
-	// or it has the same Status, Severity and Reason of the parent's object ready condition (it is an echo)
-	DisableNoEcho bool
+	// ShowClusterResourceSets instructs the discovery process to include cluster resource sets in the ObjectTree.
+	ShowClusterResourceSets bool
 
-	// DisableGrouping disable grouping machines objects in case the ready condition
-	// has the same Status, Severity and Reason
-	DisableGrouping bool
+	// ShowTemplates instructs the discovery process to include infrastructure and bootstrap config templates in the ObjectTree.
+	ShowTemplates bool
+
+	// AddTemplateVirtualNode instructs the discovery process to group template under a virtual node.
+	AddTemplateVirtualNode bool
+
+	// Echo displays MachineInfrastructure or BootstrapConfig objects if the object's ready condition is true
+	// or it has the same Status, Severity and Reason of the parent's object ready condition (it is an echo)
+	Echo bool
+
+	// Grouping groups machines objects in case the ready conditions
+	// have the same Status, Severity and Reason.
+	Grouping bool
 }
 
 // DescribeCluster returns the object tree representing the status of a Cluster API cluster.
@@ -80,9 +89,12 @@ func (c *clusterctlClient) DescribeCluster(options DescribeClusterOptions) (*tre
 
 	// Gets the object tree representing the status of a Cluster API cluster.
 	return tree.Discovery(context.TODO(), client, options.Namespace, options.ClusterName, tree.DiscoverOptions{
-		ShowOtherConditions: options.ShowOtherConditions,
-		ShowMachineSets:     options.ShowMachineSets,
-		DisableNoEcho:       options.DisableNoEcho,
-		DisableGrouping:     options.DisableGrouping,
+		ShowOtherConditions:     options.ShowOtherConditions,
+		ShowMachineSets:         options.ShowMachineSets,
+		ShowClusterResourceSets: options.ShowClusterResourceSets,
+		ShowTemplates:           options.ShowTemplates,
+		AddTemplateVirtualNode:  options.AddTemplateVirtualNode,
+		Echo:                    options.Echo,
+		Grouping:                options.Grouping,
 	})
 }

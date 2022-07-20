@@ -26,6 +26,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
+
 	capierrors "sigs.k8s.io/cluster-api/errors"
 )
 
@@ -114,6 +115,12 @@ type ControlPlaneTopology struct {
 	// When specified against a control plane provider that lacks support for this field, this value will be ignored.
 	// +optional
 	Replicas *int32 `json:"replicas,omitempty"`
+
+	// NodeDrainTimeout is the total amount of time that the controller will spend on draining a node.
+	// The default value is 0, meaning that the node can be drained without any time limitations.
+	// NOTE: NodeDrainTimeout is different from `kubectl drain --timeout`
+	// +optional
+	NodeDrainTimeout *metav1.Duration `json:"nodeDrainTimeout,omitempty"`
 }
 
 // WorkersTopology represents the different sets of worker nodes in the cluster.
@@ -142,12 +149,27 @@ type MachineDeploymentTopology struct {
 	// the values are hashed together.
 	Name string `json:"name"`
 
+	// FailureDomain is the failure domain the machines will be created in.
+	// Must match a key in the FailureDomains map stored on the cluster object.
+	// +optional
+	FailureDomain *string `json:"failureDomain,omitempty"`
+
 	// Replicas is the number of worker nodes belonging to this set.
 	// If the value is nil, the MachineDeployment is created without the number of Replicas (defaulting to zero)
 	// and it's assumed that an external entity (like cluster autoscaler) is responsible for the management
 	// of this value.
 	// +optional
 	Replicas *int32 `json:"replicas,omitempty"`
+
+	// NodeDrainTimeout is the total amount of time that the controller will spend on draining a node.
+	// The default value is 0, meaning that the node can be drained without any time limitations.
+	// NOTE: NodeDrainTimeout is different from `kubectl drain --timeout`
+	// +optional
+	NodeDrainTimeout *metav1.Duration `json:"nodeDrainTimeout,omitempty"`
+
+	// Variables can be used to customize the MachineDeployment through patches.
+	// +optional
+	Variables *MachineDeploymentVariables `json:"variables,omitempty"`
 }
 
 // ClusterVariable can be used to customize the Cluster through
@@ -162,9 +184,16 @@ type ClusterVariable struct {
 	// from the ClusterClass.
 	// Note: We have to use apiextensionsv1.JSON instead of a custom JSON type, because controller-tools has a
 	// hard-coded schema for apiextensionsv1.JSON which cannot be produced by another type via controller-tools,
-	// i.e. it's not possible to have no type field.
+	// i.e. it is not possible to have no type field.
 	// Ref: https://github.com/kubernetes-sigs/controller-tools/blob/d0e03a142d0ecdd5491593e941ee1d6b5d91dba6/pkg/crd/known_types.go#L106-L111
 	Value apiextensionsv1.JSON `json:"value"`
+}
+
+// MachineDeploymentVariables can be used to provide variables for a specific MachineDeployment.
+type MachineDeploymentVariables struct {
+	// Overrides can be used to override Cluster level variables.
+	// +optional
+	Overrides []ClusterVariable `json:"overrides,omitempty"`
 }
 
 // ANCHOR_END: ClusterSpec
@@ -201,8 +230,8 @@ type NetworkRanges struct {
 	CIDRBlocks []string `json:"cidrBlocks"`
 }
 
-func (n *NetworkRanges) String() string {
-	if n == nil {
+func (n NetworkRanges) String() string {
+	if len(n.CIDRBlocks) == 0 {
 		return ""
 	}
 	return strings.Join(n.CIDRBlocks, ",")

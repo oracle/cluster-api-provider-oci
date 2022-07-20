@@ -19,6 +19,7 @@ package framework
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -32,9 +33,11 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/api/policy/v1beta1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilversion "k8s.io/apimachinery/pkg/util/version"
+	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -98,6 +101,18 @@ type WatchDeploymentLogsInput struct {
 	LogPath    string
 }
 
+// logMetadata contains metadata about the logs.
+// The format is very similar to the one used by promtail.
+type logMetadata struct {
+	Job       string `json:"job"`
+	Namespace string `json:"namespace"`
+	App       string `json:"app"`
+	Pod       string `json:"pod"`
+	Container string `json:"container"`
+	NodeName  string `json:"node_name"`
+	Stream    string `json:"stream"`
+}
+
 // WatchDeploymentLogs streams logs for all containers for all pods belonging to a deployment. Each container's logs are streamed
 // in a separate goroutine so they can all be streamed concurrently. This only causes a test failure if there are errors
 // retrieving the deployment, its pods, or setting up a log file. If there is an error with the log streaming itself,
@@ -109,7 +124,9 @@ func WatchDeploymentLogs(ctx context.Context, input WatchDeploymentLogsInput) {
 
 	deployment := &appsv1.Deployment{}
 	key := client.ObjectKeyFromObject(input.Deployment)
-	Expect(input.GetLister.Get(ctx, key, deployment)).To(Succeed(), "Failed to get deployment %s/%s", input.Deployment.Namespace, input.Deployment.Name)
+	Eventually(func() error {
+		return input.GetLister.Get(ctx, key, deployment)
+	}, retryableOperationTimeout, retryableOperationInterval).Should(Succeed(), "Failed to get deployment %s/%s", input.Deployment.Namespace, input.Deployment.Name)
 
 	selector, err := metav1.LabelSelectorAsMap(deployment.Spec.Selector)
 	Expect(err).NotTo(HaveOccurred(), "Failed to Pods selector for deployment %s/%s", input.Deployment.Namespace, input.Deployment.Name)
@@ -120,6 +137,23 @@ func WatchDeploymentLogs(ctx context.Context, input WatchDeploymentLogsInput) {
 	for _, pod := range pods.Items {
 		for _, container := range deployment.Spec.Template.Spec.Containers {
 			log.Logf("Creating log watcher for controller %s/%s, pod %s, container %s", input.Deployment.Namespace, input.Deployment.Name, pod.Name, container.Name)
+
+			// Create log metadata file.
+			logMetadataFile := filepath.Clean(path.Join(input.LogPath, input.Deployment.Name, pod.Name, container.Name+"-log-metadata.json"))
+			Expect(os.MkdirAll(filepath.Dir(logMetadataFile), 0750)).To(Succeed())
+
+			metadata := logMetadata{
+				Job:       input.Deployment.Namespace + "/" + input.Deployment.Name,
+				Namespace: input.Deployment.Namespace,
+				App:       input.Deployment.Name,
+				Pod:       pod.Name,
+				Container: container.Name,
+				NodeName:  pod.Spec.NodeName,
+				Stream:    "stderr",
+			}
+			metadataBytes, err := json.Marshal(&metadata)
+			Expect(err).To(BeNil())
+			Expect(os.WriteFile(logMetadataFile, metadataBytes, 0600)).To(Succeed())
 
 			// Watch each container's logs in a goroutine so we can stream them all concurrently.
 			go func(pod corev1.Pod, container corev1.Container) {
@@ -174,13 +208,17 @@ func WatchPodMetrics(ctx context.Context, input WatchPodMetricsInput) {
 
 	deployment := &appsv1.Deployment{}
 	key := client.ObjectKeyFromObject(input.Deployment)
-	Expect(input.GetLister.Get(ctx, key, deployment)).To(Succeed(), "Failed to get deployment %s/%s", input.Deployment.Namespace, input.Deployment.Name)
+	Eventually(func() error {
+		return input.GetLister.Get(ctx, key, deployment)
+	}, retryableOperationTimeout, retryableOperationInterval).Should(Succeed(), "Failed to get deployment %s/%s", input.Deployment.Namespace, input.Deployment.Name)
 
 	selector, err := metav1.LabelSelectorAsMap(deployment.Spec.Selector)
 	Expect(err).NotTo(HaveOccurred(), "Failed to Pods selector for deployment %s/%s", input.Deployment.Namespace, input.Deployment.Name)
 
 	pods := &corev1.PodList{}
-	Expect(input.GetLister.List(ctx, pods, client.InNamespace(input.Deployment.Namespace), client.MatchingLabels(selector))).To(Succeed(), "Failed to list Pods for deployment %s/%s", input.Deployment.Namespace, input.Deployment.Name)
+	Eventually(func() error {
+		return input.GetLister.List(ctx, pods, client.InNamespace(input.Deployment.Namespace), client.MatchingLabels(selector))
+	}, retryableOperationTimeout, retryableOperationInterval).Should(Succeed(), "Failed to list Pods for deployment %s/%s", input.Deployment.Namespace, input.Deployment.Name)
 
 	go func() {
 		defer GinkgoRecover()
@@ -230,7 +268,8 @@ type WaitForDNSUpgradeInput struct {
 	DNSVersion string
 }
 
-// WaitForDNSUpgrade waits until CoreDNS version matches with the CoreDNS upgrade version. This is called during KCP upgrade.
+// WaitForDNSUpgrade waits until CoreDNS version matches with the CoreDNS upgrade version and all its replicas
+// are ready for use with the upgraded version. This is called during KCP upgrade.
 func WaitForDNSUpgrade(ctx context.Context, input WaitForDNSUpgradeInput, intervals ...interface{}) {
 	By("Ensuring CoreDNS has the correct image")
 
@@ -242,10 +281,18 @@ func WaitForDNSUpgrade(ctx context.Context, input WaitForDNSUpgradeInput, interv
 		}
 
 		// NOTE: coredns image name has changed over time (k8s.gcr.io/coredns,
-		// k8s.gcr.io/coredns/coredns), so we are checking only if the version actually changed.
+		// k8s.gcr.io/coredns/coredns), so we are checking if the version actually changed.
 		if strings.HasSuffix(d.Spec.Template.Spec.Containers[0].Image, fmt.Sprintf(":%s", input.DNSVersion)) {
 			return true, nil
 		}
+
+		// check whether the upgraded CoreDNS replicas are available and ready for use.
+		if d.Status.ObservedGeneration >= d.Generation {
+			if d.Spec.Replicas != nil && d.Status.UpdatedReplicas == *d.Spec.Replicas && d.Status.AvailableReplicas == *d.Spec.Replicas {
+				return true, nil
+			}
+		}
+
 		return false, nil
 	}, intervals...).Should(BeTrue())
 }
@@ -266,14 +313,21 @@ func DeployUnevictablePod(ctx context.Context, input DeployUnevictablePodInput) 
 	workloadClient := input.WorkloadClusterProxy.GetClientSet()
 
 	log.Logf("Check if namespace %s exists", input.Namespace)
-	if _, err := workloadClient.CoreV1().Namespaces().Get(ctx, input.Namespace, metav1.GetOptions{}); err != nil {
-		_, errCreateNamespace := workloadClient.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: input.Namespace,
-			},
-		}, metav1.CreateOptions{})
-		Expect(errCreateNamespace).To(BeNil())
-	}
+	Eventually(func() error {
+		_, err := workloadClient.CoreV1().Namespaces().Get(ctx, input.Namespace, metav1.GetOptions{})
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				_, errCreateNamespace := workloadClient.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: input.Namespace,
+					},
+				}, metav1.CreateOptions{})
+				return errCreateNamespace
+			}
+			return err
+		}
+		return nil
+	}, retryableOperationTimeout, retryableOperationInterval).Should(Succeed())
 
 	workloadDeployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -312,8 +366,12 @@ func DeployUnevictablePod(ctx context.Context, input DeployUnevictablePodInput) 
 		},
 	}
 	if input.ControlPlane != nil {
-		serverVersion, err := workloadClient.ServerVersion()
-		Expect(err).ToNot(HaveOccurred())
+		var serverVersion *version.Info
+		Eventually(func() error {
+			var err error
+			serverVersion, err = workloadClient.ServerVersion()
+			return err
+		}, retryableOperationTimeout, retryableOperationInterval).Should(Succeed())
 
 		// Use the control-plane label for Kubernetes version >= v1.20.0.
 		if utilversion.MustParseGeneric(serverVersion.String()).AtLeast(utilversion.MustParseGeneric("v1.20.0")) {
@@ -380,9 +438,13 @@ type AddDeploymentToWorkloadClusterInput struct {
 }
 
 func AddDeploymentToWorkloadCluster(ctx context.Context, input AddDeploymentToWorkloadClusterInput) {
-	result, err := input.ClientSet.AppsV1().Deployments(input.Namespace).Create(ctx, input.Deployment, metav1.CreateOptions{})
-	Expect(result).NotTo(BeNil())
-	Expect(err).To(BeNil(), "nonstop pods need to be successfully deployed")
+	Eventually(func() error {
+		result, err := input.ClientSet.AppsV1().Deployments(input.Namespace).Create(ctx, input.Deployment, metav1.CreateOptions{})
+		if result != nil && err == nil {
+			return nil
+		}
+		return fmt.Errorf("deployment %s in namespace %s not successfully created in workload cluster: %v", input.Deployment.Name, input.Namespace, err)
+	}, retryableOperationTimeout, retryableOperationInterval).Should(Succeed())
 }
 
 type AddPodDisruptionBudgetInput struct {
@@ -392,7 +454,11 @@ type AddPodDisruptionBudgetInput struct {
 }
 
 func AddPodDisruptionBudget(ctx context.Context, input AddPodDisruptionBudgetInput) {
-	budget, err := input.ClientSet.PolicyV1beta1().PodDisruptionBudgets(input.Namespace).Create(ctx, input.Budget, metav1.CreateOptions{})
-	Expect(budget).NotTo(BeNil())
-	Expect(err).To(BeNil(), "podDisruptionBudget needs to be successfully deployed")
+	Eventually(func() error {
+		budget, err := input.ClientSet.PolicyV1beta1().PodDisruptionBudgets(input.Namespace).Create(ctx, input.Budget, metav1.CreateOptions{})
+		if budget != nil && err == nil {
+			return nil
+		}
+		return fmt.Errorf("podDisruptionBudget needs to be successfully deployed: %v", err)
+	}, retryableOperationTimeout, retryableOperationInterval).Should(Succeed(), "podDisruptionBudget needs to be successfully deployed")
 }
