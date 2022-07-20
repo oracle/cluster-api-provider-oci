@@ -294,17 +294,26 @@ spec:
       networkSecurityGroups:
         - id: <Insert Control Plane Endpoint NSG OCID Here>
           role: control-plane-endpoint
+          name: control-plane-endpoint
         - id: <Insert Worker NSG OCID Here>
           role: worker
+          name: worker
         - id: <Insert Control Plane NSG OCID Here>
           role: control-plane
+          name: control-plane
       subnets:
         - id: <Insert Control Plane Endpoint Subnet OCID Here>
           role: control-plane-endpoint
+          name: control-plane-endpoint
         - id: <Insert Worker Subnet OCID Here>
           role: worker
+          name: worker
         - id: <Insert control Plane Subnet OCID Here>
           role: control-plane
+          name: control-plane
 ```
+
+In the above spec, note that name has to be mentioned for Subnet/NSG. This is so that Kubernetes
+can merge the list properly when there is an update.
 
 [sl-vs-nsg]: https://docs.oracle.com/en-us/iaas/Content/Network/Concepts/securityrules.htm#comparison

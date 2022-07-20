@@ -11,14 +11,20 @@ spec:
       networkSecurityGroups:
         - id: "${EXTERNAL_VCN_CPE_NSG}"
           role: control-plane-endpoint
+          name: control-plane-endpoint
         - id:  "${EXTERNAL_VCN_WORKER_NSG}"
           role: worker
+          name: worker
         - id: "${EXTERNAL_VCN_CP_NSG}"
           role: control-plane
+          name: control-plane
       subnets:
         - id: "${EXTERNAL_VCN_CPE_SUBNET}"
           role: control-plane-endpoint
+          name: control-plane-endpoint
         - id: "${EXTERNAL_VCN_WORKER_SUBNET}"
           role: worker
+          name: worker
         - id: "${EXTERNAL_VCN_CP_SUBNET}"
           role: control-plane
+          name: control-plane
