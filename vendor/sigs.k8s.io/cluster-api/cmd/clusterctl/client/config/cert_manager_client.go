@@ -27,12 +27,12 @@ const (
 	CertManagerConfigKey = "cert-manager"
 
 	// CertManagerDefaultVersion defines the default cert-manager version to be used by clusterctl.
-	CertManagerDefaultVersion = "v1.5.3"
+	CertManagerDefaultVersion = "v1.8.2"
 
 	// CertManagerDefaultURL defines the default cert-manager repository url to be used by clusterctl.
 	// NOTE: At runtime /latest will be replaced with the CertManagerDefaultVersion or with the
 	// version defined by the user in the clusterctl configuration file.
-	CertManagerDefaultURL = "https://github.com/jetstack/cert-manager/releases/latest/cert-manager.yaml"
+	CertManagerDefaultURL = "https://github.com/cert-manager/cert-manager/releases/latest/cert-manager.yaml"
 
 	// CertManagerDefaultTimeout defines the default cert-manager timeout to be used by clusterctl.
 	CertManagerDefaultTimeout = 10 * time.Minute

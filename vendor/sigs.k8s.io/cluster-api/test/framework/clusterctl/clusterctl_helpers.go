@@ -20,6 +20,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"time"
 
 	. "github.com/onsi/gomega"
 
@@ -184,10 +185,12 @@ type ApplyClusterTemplateAndWaitInput struct {
 	WaitForMachineDeployments    []interface{}
 	WaitForMachinePools          []interface{}
 	Args                         []string // extra args to be used during `kubectl apply`
+	PreWaitForCluster            func()
+	PostMachinesProvisioned      func()
 	ControlPlaneWaiters
 }
 
-// Waiter is a function that runs and waits for a long running operation to finish and updates the result.
+// Waiter is a function that runs and waits for a long-running operation to finish and updates the result.
 type Waiter func(ctx context.Context, input ApplyClusterTemplateAndWaitInput, result *ApplyClusterTemplateAndWaitResult)
 
 // ControlPlaneWaiters are Waiter functions for the control plane.
@@ -270,7 +273,17 @@ func ApplyClusterTemplateAndWait(ctx context.Context, input ApplyClusterTemplate
 	Expect(workloadClusterTemplate).ToNot(BeNil(), "Failed to get the cluster template")
 
 	log.Logf("Applying the cluster template yaml to the cluster")
-	Expect(input.ClusterProxy.Apply(ctx, workloadClusterTemplate, input.Args...)).To(Succeed())
+	Eventually(func() error {
+		return input.ClusterProxy.Apply(ctx, workloadClusterTemplate, input.Args...)
+	}, 10*time.Second).Should(Succeed(), "Failed to apply the cluster template")
+
+	// Once we applied the cluster template we can run PreWaitForCluster.
+	// Note: This can e.g. be used to verify the BeforeClusterCreate lifecycle hook is executed
+	// and blocking correctly.
+	if input.PreWaitForCluster != nil {
+		log.Logf("Calling PreWaitForCluster")
+		input.PreWaitForCluster()
+	}
 
 	log.Logf("Waiting for the cluster infrastructure to be provisioned")
 	result.Cluster = framework.DiscoveryAndWaitForCluster(ctx, framework.DiscoveryAndWaitForClusterInput{
@@ -314,7 +327,12 @@ func ApplyClusterTemplateAndWait(ctx context.Context, input ApplyClusterTemplate
 		Getter:  input.ClusterProxy.GetClient(),
 		Lister:  input.ClusterProxy.GetClient(),
 		Cluster: result.Cluster,
-	}, input.WaitForMachineDeployments...)
+	}, input.WaitForMachinePools...)
+
+	if input.PostMachinesProvisioned != nil {
+		log.Logf("Calling PostMachinesProvisioned")
+		input.PostMachinesProvisioned()
+	}
 }
 
 // setDefaults sets the default values for ApplyClusterTemplateAndWaitInput if not set.

@@ -150,18 +150,8 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1beta1.ControlPlaneClass)(nil), (*ControlPlaneClass)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_ControlPlaneClass_To_v1alpha4_ControlPlaneClass(a.(*v1beta1.ControlPlaneClass), b.(*ControlPlaneClass), scope)
-	}); err != nil {
-		return err
-	}
 	if err := s.AddGeneratedConversionFunc((*ControlPlaneTopology)(nil), (*v1beta1.ControlPlaneTopology)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha4_ControlPlaneTopology_To_v1beta1_ControlPlaneTopology(a.(*ControlPlaneTopology), b.(*v1beta1.ControlPlaneTopology), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*v1beta1.ControlPlaneTopology)(nil), (*ControlPlaneTopology)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_ControlPlaneTopology_To_v1alpha4_ControlPlaneTopology(a.(*v1beta1.ControlPlaneTopology), b.(*ControlPlaneTopology), scope)
 	}); err != nil {
 		return err
 	}
@@ -220,11 +210,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1beta1.MachineDeploymentClass)(nil), (*MachineDeploymentClass)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_MachineDeploymentClass_To_v1alpha4_MachineDeploymentClass(a.(*v1beta1.MachineDeploymentClass), b.(*MachineDeploymentClass), scope)
-	}); err != nil {
-		return err
-	}
 	if err := s.AddGeneratedConversionFunc((*MachineDeploymentClassTemplate)(nil), (*v1beta1.MachineDeploymentClassTemplate)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha4_MachineDeploymentClassTemplate_To_v1beta1_MachineDeploymentClassTemplate(a.(*MachineDeploymentClassTemplate), b.(*v1beta1.MachineDeploymentClassTemplate), scope)
 	}); err != nil {
@@ -277,11 +262,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*MachineDeploymentTopology)(nil), (*v1beta1.MachineDeploymentTopology)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha4_MachineDeploymentTopology_To_v1beta1_MachineDeploymentTopology(a.(*MachineDeploymentTopology), b.(*v1beta1.MachineDeploymentTopology), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*v1beta1.MachineDeploymentTopology)(nil), (*MachineDeploymentTopology)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_MachineDeploymentTopology_To_v1alpha4_MachineDeploymentTopology(a.(*v1beta1.MachineDeploymentTopology), b.(*MachineDeploymentTopology), scope)
 	}); err != nil {
 		return err
 	}
@@ -390,11 +370,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1beta1.MachineSpec)(nil), (*MachineSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_MachineSpec_To_v1alpha4_MachineSpec(a.(*v1beta1.MachineSpec), b.(*MachineSpec), scope)
-	}); err != nil {
-		return err
-	}
 	if err := s.AddGeneratedConversionFunc((*v1beta1.MachineStatus)(nil), (*MachineStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta1_MachineStatus_To_v1alpha4_MachineStatus(a.(*v1beta1.MachineStatus), b.(*MachineStatus), scope)
 	}); err != nil {
@@ -472,6 +447,31 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddConversionFunc((*v1beta1.ClusterClassSpec)(nil), (*ClusterClassSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta1_ClusterClassSpec_To_v1alpha4_ClusterClassSpec(a.(*v1beta1.ClusterClassSpec), b.(*ClusterClassSpec), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*v1beta1.ControlPlaneClass)(nil), (*ControlPlaneClass)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_ControlPlaneClass_To_v1alpha4_ControlPlaneClass(a.(*v1beta1.ControlPlaneClass), b.(*ControlPlaneClass), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*v1beta1.ControlPlaneTopology)(nil), (*ControlPlaneTopology)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_ControlPlaneTopology_To_v1alpha4_ControlPlaneTopology(a.(*v1beta1.ControlPlaneTopology), b.(*ControlPlaneTopology), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*v1beta1.MachineDeploymentClass)(nil), (*MachineDeploymentClass)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_MachineDeploymentClass_To_v1alpha4_MachineDeploymentClass(a.(*v1beta1.MachineDeploymentClass), b.(*MachineDeploymentClass), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*v1beta1.MachineDeploymentTopology)(nil), (*MachineDeploymentTopology)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_MachineDeploymentTopology_To_v1alpha4_MachineDeploymentTopology(a.(*v1beta1.MachineDeploymentTopology), b.(*MachineDeploymentTopology), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*v1beta1.MachineSpec)(nil), (*MachineSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_MachineSpec_To_v1alpha4_MachineSpec(a.(*v1beta1.MachineSpec), b.(*MachineSpec), scope)
 	}); err != nil {
 		return err
 	}
@@ -866,12 +866,8 @@ func autoConvert_v1beta1_ControlPlaneClass_To_v1alpha4_ControlPlaneClass(in *v1b
 		return err
 	}
 	out.MachineInfrastructure = (*LocalObjectTemplate)(unsafe.Pointer(in.MachineInfrastructure))
+	// WARNING: in.MachineHealthCheck requires manual conversion: does not exist in peer-type
 	return nil
-}
-
-// Convert_v1beta1_ControlPlaneClass_To_v1alpha4_ControlPlaneClass is an autogenerated conversion function.
-func Convert_v1beta1_ControlPlaneClass_To_v1alpha4_ControlPlaneClass(in *v1beta1.ControlPlaneClass, out *ControlPlaneClass, s conversion.Scope) error {
-	return autoConvert_v1beta1_ControlPlaneClass_To_v1alpha4_ControlPlaneClass(in, out, s)
 }
 
 func autoConvert_v1alpha4_ControlPlaneTopology_To_v1beta1_ControlPlaneTopology(in *ControlPlaneTopology, out *v1beta1.ControlPlaneTopology, s conversion.Scope) error {
@@ -892,12 +888,8 @@ func autoConvert_v1beta1_ControlPlaneTopology_To_v1alpha4_ControlPlaneTopology(i
 		return err
 	}
 	out.Replicas = (*int32)(unsafe.Pointer(in.Replicas))
+	// WARNING: in.NodeDrainTimeout requires manual conversion: does not exist in peer-type
 	return nil
-}
-
-// Convert_v1beta1_ControlPlaneTopology_To_v1alpha4_ControlPlaneTopology is an autogenerated conversion function.
-func Convert_v1beta1_ControlPlaneTopology_To_v1alpha4_ControlPlaneTopology(in *v1beta1.ControlPlaneTopology, out *ControlPlaneTopology, s conversion.Scope) error {
-	return autoConvert_v1beta1_ControlPlaneTopology_To_v1alpha4_ControlPlaneTopology(in, out, s)
 }
 
 func autoConvert_v1alpha4_FailureDomainSpec_To_v1beta1_FailureDomainSpec(in *FailureDomainSpec, out *v1beta1.FailureDomainSpec, s conversion.Scope) error {
@@ -1046,12 +1038,8 @@ func autoConvert_v1beta1_MachineDeploymentClass_To_v1alpha4_MachineDeploymentCla
 	if err := Convert_v1beta1_MachineDeploymentClassTemplate_To_v1alpha4_MachineDeploymentClassTemplate(&in.Template, &out.Template, s); err != nil {
 		return err
 	}
+	// WARNING: in.MachineHealthCheck requires manual conversion: does not exist in peer-type
 	return nil
-}
-
-// Convert_v1beta1_MachineDeploymentClass_To_v1alpha4_MachineDeploymentClass is an autogenerated conversion function.
-func Convert_v1beta1_MachineDeploymentClass_To_v1alpha4_MachineDeploymentClass(in *v1beta1.MachineDeploymentClass, out *MachineDeploymentClass, s conversion.Scope) error {
-	return autoConvert_v1beta1_MachineDeploymentClass_To_v1alpha4_MachineDeploymentClass(in, out, s)
 }
 
 func autoConvert_v1alpha4_MachineDeploymentClassTemplate_To_v1beta1_MachineDeploymentClassTemplate(in *MachineDeploymentClassTemplate, out *v1beta1.MachineDeploymentClassTemplate, s conversion.Scope) error {
@@ -1092,7 +1080,17 @@ func Convert_v1beta1_MachineDeploymentClassTemplate_To_v1alpha4_MachineDeploymen
 
 func autoConvert_v1alpha4_MachineDeploymentList_To_v1beta1_MachineDeploymentList(in *MachineDeploymentList, out *v1beta1.MachineDeploymentList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]v1beta1.MachineDeployment)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]v1beta1.MachineDeployment, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha4_MachineDeployment_To_v1beta1_MachineDeployment(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -1103,7 +1101,17 @@ func Convert_v1alpha4_MachineDeploymentList_To_v1beta1_MachineDeploymentList(in 
 
 func autoConvert_v1beta1_MachineDeploymentList_To_v1alpha4_MachineDeploymentList(in *v1beta1.MachineDeploymentList, out *MachineDeploymentList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]MachineDeployment)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]MachineDeployment, len(*in))
+		for i := range *in {
+			if err := Convert_v1beta1_MachineDeployment_To_v1alpha4_MachineDeployment(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -1231,13 +1239,11 @@ func autoConvert_v1beta1_MachineDeploymentTopology_To_v1alpha4_MachineDeployment
 	}
 	out.Class = in.Class
 	out.Name = in.Name
+	// WARNING: in.FailureDomain requires manual conversion: does not exist in peer-type
 	out.Replicas = (*int32)(unsafe.Pointer(in.Replicas))
+	// WARNING: in.NodeDrainTimeout requires manual conversion: does not exist in peer-type
+	// WARNING: in.Variables requires manual conversion: does not exist in peer-type
 	return nil
-}
-
-// Convert_v1beta1_MachineDeploymentTopology_To_v1alpha4_MachineDeploymentTopology is an autogenerated conversion function.
-func Convert_v1beta1_MachineDeploymentTopology_To_v1alpha4_MachineDeploymentTopology(in *v1beta1.MachineDeploymentTopology, out *MachineDeploymentTopology, s conversion.Scope) error {
-	return autoConvert_v1beta1_MachineDeploymentTopology_To_v1alpha4_MachineDeploymentTopology(in, out, s)
 }
 
 func autoConvert_v1alpha4_MachineHealthCheck_To_v1beta1_MachineHealthCheck(in *MachineHealthCheck, out *v1beta1.MachineHealthCheck, s conversion.Scope) error {
@@ -1456,7 +1462,17 @@ func Convert_v1beta1_MachineSet_To_v1alpha4_MachineSet(in *v1beta1.MachineSet, o
 
 func autoConvert_v1alpha4_MachineSetList_To_v1beta1_MachineSetList(in *MachineSetList, out *v1beta1.MachineSetList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]v1beta1.MachineSet)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]v1beta1.MachineSet, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha4_MachineSet_To_v1beta1_MachineSet(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -1467,7 +1483,17 @@ func Convert_v1alpha4_MachineSetList_To_v1beta1_MachineSetList(in *MachineSetLis
 
 func autoConvert_v1beta1_MachineSetList_To_v1alpha4_MachineSetList(in *v1beta1.MachineSetList, out *MachineSetList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]MachineSet)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]MachineSet, len(*in))
+		for i := range *in {
+			if err := Convert_v1beta1_MachineSet_To_v1alpha4_MachineSet(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -1574,12 +1600,8 @@ func autoConvert_v1beta1_MachineSpec_To_v1alpha4_MachineSpec(in *v1beta1.Machine
 	out.ProviderID = (*string)(unsafe.Pointer(in.ProviderID))
 	out.FailureDomain = (*string)(unsafe.Pointer(in.FailureDomain))
 	out.NodeDrainTimeout = (*metav1.Duration)(unsafe.Pointer(in.NodeDrainTimeout))
+	// WARNING: in.NodeDeletionTimeout requires manual conversion: does not exist in peer-type
 	return nil
-}
-
-// Convert_v1beta1_MachineSpec_To_v1alpha4_MachineSpec is an autogenerated conversion function.
-func Convert_v1beta1_MachineSpec_To_v1alpha4_MachineSpec(in *v1beta1.MachineSpec, out *MachineSpec, s conversion.Scope) error {
-	return autoConvert_v1beta1_MachineSpec_To_v1alpha4_MachineSpec(in, out, s)
 }
 
 func autoConvert_v1alpha4_MachineStatus_To_v1beta1_MachineStatus(in *MachineStatus, out *v1beta1.MachineStatus, s conversion.Scope) error {
@@ -1697,7 +1719,15 @@ func autoConvert_v1alpha4_Topology_To_v1beta1_Topology(in *Topology, out *v1beta
 	if err := Convert_v1alpha4_ControlPlaneTopology_To_v1beta1_ControlPlaneTopology(&in.ControlPlane, &out.ControlPlane, s); err != nil {
 		return err
 	}
-	out.Workers = (*v1beta1.WorkersTopology)(unsafe.Pointer(in.Workers))
+	if in.Workers != nil {
+		in, out := &in.Workers, &out.Workers
+		*out = new(v1beta1.WorkersTopology)
+		if err := Convert_v1alpha4_WorkersTopology_To_v1beta1_WorkersTopology(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.Workers = nil
+	}
 	return nil
 }
 
@@ -1713,7 +1743,15 @@ func autoConvert_v1beta1_Topology_To_v1alpha4_Topology(in *v1beta1.Topology, out
 	if err := Convert_v1beta1_ControlPlaneTopology_To_v1alpha4_ControlPlaneTopology(&in.ControlPlane, &out.ControlPlane, s); err != nil {
 		return err
 	}
-	out.Workers = (*WorkersTopology)(unsafe.Pointer(in.Workers))
+	if in.Workers != nil {
+		in, out := &in.Workers, &out.Workers
+		*out = new(WorkersTopology)
+		if err := Convert_v1beta1_WorkersTopology_To_v1alpha4_WorkersTopology(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.Workers = nil
+	}
 	// WARNING: in.Variables requires manual conversion: does not exist in peer-type
 	return nil
 }
@@ -1743,7 +1781,17 @@ func Convert_v1beta1_UnhealthyCondition_To_v1alpha4_UnhealthyCondition(in *v1bet
 }
 
 func autoConvert_v1alpha4_WorkersClass_To_v1beta1_WorkersClass(in *WorkersClass, out *v1beta1.WorkersClass, s conversion.Scope) error {
-	out.MachineDeployments = *(*[]v1beta1.MachineDeploymentClass)(unsafe.Pointer(&in.MachineDeployments))
+	if in.MachineDeployments != nil {
+		in, out := &in.MachineDeployments, &out.MachineDeployments
+		*out = make([]v1beta1.MachineDeploymentClass, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha4_MachineDeploymentClass_To_v1beta1_MachineDeploymentClass(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.MachineDeployments = nil
+	}
 	return nil
 }
 
@@ -1753,7 +1801,17 @@ func Convert_v1alpha4_WorkersClass_To_v1beta1_WorkersClass(in *WorkersClass, out
 }
 
 func autoConvert_v1beta1_WorkersClass_To_v1alpha4_WorkersClass(in *v1beta1.WorkersClass, out *WorkersClass, s conversion.Scope) error {
-	out.MachineDeployments = *(*[]MachineDeploymentClass)(unsafe.Pointer(&in.MachineDeployments))
+	if in.MachineDeployments != nil {
+		in, out := &in.MachineDeployments, &out.MachineDeployments
+		*out = make([]MachineDeploymentClass, len(*in))
+		for i := range *in {
+			if err := Convert_v1beta1_MachineDeploymentClass_To_v1alpha4_MachineDeploymentClass(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.MachineDeployments = nil
+	}
 	return nil
 }
 
@@ -1763,7 +1821,17 @@ func Convert_v1beta1_WorkersClass_To_v1alpha4_WorkersClass(in *v1beta1.WorkersCl
 }
 
 func autoConvert_v1alpha4_WorkersTopology_To_v1beta1_WorkersTopology(in *WorkersTopology, out *v1beta1.WorkersTopology, s conversion.Scope) error {
-	out.MachineDeployments = *(*[]v1beta1.MachineDeploymentTopology)(unsafe.Pointer(&in.MachineDeployments))
+	if in.MachineDeployments != nil {
+		in, out := &in.MachineDeployments, &out.MachineDeployments
+		*out = make([]v1beta1.MachineDeploymentTopology, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha4_MachineDeploymentTopology_To_v1beta1_MachineDeploymentTopology(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.MachineDeployments = nil
+	}
 	return nil
 }
 
@@ -1773,7 +1841,17 @@ func Convert_v1alpha4_WorkersTopology_To_v1beta1_WorkersTopology(in *WorkersTopo
 }
 
 func autoConvert_v1beta1_WorkersTopology_To_v1alpha4_WorkersTopology(in *v1beta1.WorkersTopology, out *WorkersTopology, s conversion.Scope) error {
-	out.MachineDeployments = *(*[]MachineDeploymentTopology)(unsafe.Pointer(&in.MachineDeployments))
+	if in.MachineDeployments != nil {
+		in, out := &in.MachineDeployments, &out.MachineDeployments
+		*out = make([]MachineDeploymentTopology, len(*in))
+		for i := range *in {
+			if err := Convert_v1beta1_MachineDeploymentTopology_To_v1alpha4_MachineDeploymentTopology(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.MachineDeployments = nil
+	}
 	return nil
 }
 

@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"reflect"
 	"strings"
 	"time"
 
@@ -37,13 +38,16 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	k8sversion "k8s.io/apimachinery/pkg/version"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	"sigs.k8s.io/cluster-api/util/annotations"
 )
 
 const (
@@ -192,29 +196,42 @@ func ObjectKey(object metav1.Object) client.ObjectKey {
 
 // ClusterToInfrastructureMapFunc returns a handler.ToRequestsFunc that watches for
 // Cluster events and returns reconciliation requests for an infrastructure provider object.
-func ClusterToInfrastructureMapFunc(gvk schema.GroupVersionKind) handler.MapFunc {
+func ClusterToInfrastructureMapFunc(ctx context.Context, gvk schema.GroupVersionKind, c client.Client, providerCluster client.Object) handler.MapFunc {
+	log := ctrl.LoggerFrom(ctx)
 	return func(o client.Object) []reconcile.Request {
-		c, ok := o.(*clusterv1.Cluster)
+		cluster, ok := o.(*clusterv1.Cluster)
 		if !ok {
 			return nil
 		}
 
 		// Return early if the InfrastructureRef is nil.
-		if c.Spec.InfrastructureRef == nil {
+		if cluster.Spec.InfrastructureRef == nil {
 			return nil
 		}
 		gk := gvk.GroupKind()
 		// Return early if the GroupKind doesn't match what we expect.
-		infraGK := c.Spec.InfrastructureRef.GroupVersionKind().GroupKind()
+		infraGK := cluster.Spec.InfrastructureRef.GroupVersionKind().GroupKind()
 		if gk != infraGK {
+			return nil
+		}
+		providerCluster := providerCluster.DeepCopyObject().(client.Object)
+		key := types.NamespacedName{Namespace: cluster.Namespace, Name: cluster.Spec.InfrastructureRef.Name}
+
+		if err := c.Get(ctx, key, providerCluster); err != nil {
+			log.V(4).Error(err, fmt.Sprintf("Failed to get %T", providerCluster))
+			return nil
+		}
+
+		if annotations.IsExternallyManaged(providerCluster) {
+			log.V(4).Info(fmt.Sprintf("%T is externally managed, skipping mapping", providerCluster))
 			return nil
 		}
 
 		return []reconcile.Request{
 			{
 				NamespacedName: client.ObjectKey{
-					Namespace: c.Namespace,
-					Name:      c.Spec.InfrastructureRef.Name,
+					Namespace: cluster.Namespace,
+					Name:      cluster.Spec.InfrastructureRef.Name,
 				},
 			},
 		}
@@ -373,6 +390,10 @@ func refersTo(ref *metav1.OwnerReference, obj client.Object) bool {
 // UnstructuredUnmarshalField is a wrapper around json and unstructured objects to decode and copy a specific field
 // value into an object.
 func UnstructuredUnmarshalField(obj *unstructured.Unstructured, v interface{}, fields ...string) error {
+	if obj == nil || obj.Object == nil {
+		return errors.Errorf("failed to unmarshal unstructured object: object is nil")
+	}
+
 	value, found, err := unstructured.NestedFieldNoCopy(obj.Object, fields...)
 	if err != nil {
 		return errors.Wrapf(err, "failed to retrieve field %q from %q", strings.Join(fields, "."), obj.GroupVersionKind())
@@ -432,7 +453,7 @@ func GetGVKMetadata(ctx context.Context, c client.Client, gvk schema.GroupVersio
 // GetCRDWithContract retrieves a list of CustomResourceDefinitions from using controller-runtime Client,
 // filtering with the `contract` label passed in.
 // Returns the first CRD in the list that matches the GroupVersionKind, otherwise returns an error.
-func GetCRDWithContract(ctx context.Context, c client.Client, gvk schema.GroupVersionKind, contract string) (*apiextensionsv1.CustomResourceDefinition, error) {
+func GetCRDWithContract(ctx context.Context, c client.Reader, gvk schema.GroupVersionKind, contract string) (*apiextensionsv1.CustomResourceDefinition, error) {
 	crdList := &apiextensionsv1.CustomResourceDefinitionList{}
 	for {
 		if err := c.List(ctx, crdList, client.Continue(crdList.Continue), client.HasLabels{contract}); err != nil {
@@ -470,6 +491,7 @@ func (k KubeAwareAPIVersions) Less(i, j int) bool {
 }
 
 // MachinesByCreationTimestamp sorts a list of Machine by creation timestamp, using their names as a tie breaker.
+// Deprecated: This struct will be removed in a future release.
 type MachinesByCreationTimestamp []*clusterv1.Machine
 
 func (o MachinesByCreationTimestamp) Len() int      { return len(o) }
@@ -582,4 +604,16 @@ func LowestNonZeroResult(i, j ctrl.Result) ctrl.Result {
 	default:
 		return j
 	}
+}
+
+// IsNil returns an error if the passed interface is equal to nil or if it has an interface value of nil.
+func IsNil(i interface{}) bool {
+	if i == nil {
+		return true
+	}
+	switch reflect.TypeOf(i).Kind() {
+	case reflect.Ptr, reflect.Map, reflect.Chan, reflect.Slice, reflect.Interface, reflect.UnsafePointer, reflect.Func:
+		return reflect.ValueOf(i).IsValid() && reflect.ValueOf(i).IsNil()
+	}
+	return false
 }

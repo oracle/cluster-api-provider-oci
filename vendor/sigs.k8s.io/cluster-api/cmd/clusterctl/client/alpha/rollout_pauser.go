@@ -22,8 +22,9 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/cluster"
 )
 
 // ObjectPauser will issue a pause on the specified cluster-api resource.
@@ -35,7 +36,7 @@ func (r *rollout) ObjectPauser(proxy cluster.Proxy, ref corev1.ObjectReference) 
 			return errors.Wrapf(err, "failed to fetch %v/%v", ref.Kind, ref.Name)
 		}
 		if deployment.Spec.Paused {
-			return errors.Errorf("MachineDeploymet is already paused: %v/%v\n", ref.Kind, ref.Name)
+			return errors.Errorf("MachineDeploymet is already paused: %v/%v\n", ref.Kind, ref.Name) //nolint:revive // MachineDeployment is intentionally capitalized.
 		}
 		if err := pauseMachineDeployment(proxy, ref.Name, ref.Namespace); err != nil {
 			return err

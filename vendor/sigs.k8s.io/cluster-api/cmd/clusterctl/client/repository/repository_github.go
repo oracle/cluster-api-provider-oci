@@ -24,11 +24,14 @@ import (
 	"net/url"
 	"path/filepath"
 	"strings"
+	"time"
 
-	"github.com/google/go-github/v33/github"
+	"github.com/google/go-github/v45/github"
 	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
 	"k8s.io/apimachinery/pkg/util/version"
+	"k8s.io/apimachinery/pkg/util/wait"
+
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
 )
@@ -43,9 +46,11 @@ const (
 var (
 	// Caches used to limit the number of GitHub API calls.
 
-	cacheVersions = map[string][]string{}
-	cacheReleases = map[string]*github.RepositoryRelease{}
-	cacheFiles    = map[string][]byte{}
+	cacheVersions              = map[string][]string{}
+	cacheReleases              = map[string]*github.RepositoryRelease{}
+	cacheFiles                 = map[string][]byte{}
+	retryableOperationInterval = 10 * time.Second
+	retryableOperationTimeout  = 1 * time.Minute
 )
 
 // gitHubRepository provides support for providers hosted on GitHub.
@@ -80,7 +85,7 @@ func (g *gitHubRepository) DefaultVersion() string {
 	return g.defaultVersion
 }
 
-// GetVersion returns the list of versions that are available in a provider repository.
+// GetVersions returns the list of versions that are available in a provider repository.
 func (g *gitHubRepository) GetVersions() ([]string, error) {
 	versions, err := g.getVersions()
 	if err != nil {
@@ -183,9 +188,7 @@ func NewGitHubRepository(providerConfig config.Provider, configVariablesClient c
 
 // getComponentsPath returns the file name.
 func getComponentsPath(path string, rootPath string) string {
-	// filePath = "/filename"
 	filePath := strings.TrimPrefix(path, rootPath)
-	// componentsPath = "filename"
 	componentsPath := strings.TrimPrefix(filePath, "/")
 	return componentsPath
 }
@@ -217,9 +220,24 @@ func (g *gitHubRepository) getVersions() ([]string, error) {
 
 	// get all the releases
 	// NB. currently Github API does not support result ordering, so it not possible to limit results
-	releases, _, err := client.Repositories.ListReleases(context.TODO(), g.owner, g.repository, nil)
-	if err != nil {
-		return nil, g.handleGithubErr(err, "failed to get the list of releases")
+	var releases []*github.RepositoryRelease
+	var retryError error
+	_ = wait.PollImmediate(retryableOperationInterval, retryableOperationTimeout, func() (bool, error) {
+		var listReleasesErr error
+		releases, _, listReleasesErr = client.Repositories.ListReleases(context.TODO(), g.owner, g.repository, nil)
+		if listReleasesErr != nil {
+			retryError = g.handleGithubErr(listReleasesErr, "failed to get the list of releases")
+			// return immediately if we are rate limited
+			if _, ok := listReleasesErr.(*github.RateLimitError); ok {
+				return false, retryError
+			}
+			return false, nil
+		}
+		retryError = nil
+		return true, nil
+	})
+	if retryError != nil {
+		return nil, retryError
 	}
 	versions := []string{}
 	for _, r := range releases {
@@ -248,13 +266,24 @@ func (g *gitHubRepository) getReleaseByTag(tag string) (*github.RepositoryReleas
 
 	client := g.getClient()
 
-	release, _, err := client.Repositories.GetReleaseByTag(context.TODO(), g.owner, g.repository, tag)
-	if err != nil {
-		return nil, g.handleGithubErr(err, "failed to read release %q", tag)
-	}
-
-	if release == nil {
-		return nil, errors.Errorf("failed to get release %q", tag)
+	var release *github.RepositoryRelease
+	var retryError error
+	_ = wait.PollImmediate(retryableOperationInterval, retryableOperationTimeout, func() (bool, error) {
+		var getReleasesErr error
+		release, _, getReleasesErr = client.Repositories.GetReleaseByTag(context.TODO(), g.owner, g.repository, tag)
+		if getReleasesErr != nil {
+			retryError = g.handleGithubErr(getReleasesErr, "failed to read release %q", tag)
+			// return immediately if we are rate limited
+			if _, ok := getReleasesErr.(*github.RateLimitError); ok {
+				return false, retryError
+			}
+			return false, nil
+		}
+		retryError = nil
+		return true, nil
+	})
+	if retryError != nil {
+		return nil, retryError
 	}
 
 	cacheReleases[cacheID] = release
@@ -263,6 +292,8 @@ func (g *gitHubRepository) getReleaseByTag(tag string) (*github.RepositoryReleas
 
 // downloadFilesFromRelease download a file from release.
 func (g *gitHubRepository) downloadFilesFromRelease(release *github.RepositoryRelease, fileName string) ([]byte, error) {
+	ctx := context.TODO()
+
 	cacheID := fmt.Sprintf("%s/%s:%s:%s", g.owner, g.repository, *release.TagName, fileName)
 	if content, ok := cacheFiles[cacheID]; ok {
 		return content, nil
@@ -283,18 +314,43 @@ func (g *gitHubRepository) downloadFilesFromRelease(release *github.RepositoryRe
 		return nil, errors.Errorf("failed to get file %q from %q release", fileName, *release.TagName)
 	}
 
-	reader, redirect, err := client.Repositories.DownloadReleaseAsset(context.TODO(), g.owner, g.repository, *assetID, http.DefaultClient)
-	if err != nil {
-		return nil, g.handleGithubErr(err, "failed to download file %q from %q release", *release.TagName, fileName)
-	}
-	if redirect != "" {
-		response, err := http.Get(redirect) //nolint:bodyclose,gosec // (NB: The reader is actually closed in a defer)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to download file %q from %q release via redirect location %q", *release.TagName, fileName, redirect)
+	var reader io.ReadCloser
+	var retryError error
+	_ = wait.PollImmediate(retryableOperationInterval, retryableOperationTimeout, func() (bool, error) {
+		var redirect string
+		var downloadReleaseError error
+		reader, redirect, downloadReleaseError = client.Repositories.DownloadReleaseAsset(context.TODO(), g.owner, g.repository, *assetID, http.DefaultClient)
+		if downloadReleaseError != nil {
+			retryError = g.handleGithubErr(downloadReleaseError, "failed to download file %q from %q release", *release.TagName, fileName)
+			// return immediately if we are rate limited
+			if _, ok := downloadReleaseError.(*github.RateLimitError); ok {
+				return false, retryError
+			}
+			return false, nil
 		}
-		reader = response.Body
+		if redirect != "" {
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, redirect, http.NoBody)
+			if err != nil {
+				retryError = errors.Wrapf(err, "failed to download file %q from %q release via redirect location %q: failed to create request", *release.TagName, fileName, redirect)
+				return false, nil
+			}
+
+			response, err := http.DefaultClient.Do(req) //nolint:bodyclose // (NB: The reader is actually closed in a defer)
+			if err != nil {
+				retryError = errors.Wrapf(err, "failed to download file %q from %q release via redirect location %q", *release.TagName, fileName, redirect)
+				return false, nil
+			}
+			reader = response.Body
+		}
+		retryError = nil
+		return true, nil
+	})
+	if reader != nil {
+		defer reader.Close()
 	}
-	defer reader.Close()
+	if retryError != nil {
+		return nil, retryError
+	}
 
 	// Read contents from the reader (redirect or not), and return.
 	content, err := io.ReadAll(reader)
@@ -309,7 +365,7 @@ func (g *gitHubRepository) downloadFilesFromRelease(release *github.RepositoryRe
 // handleGithubErr wraps error messages.
 func (g *gitHubRepository) handleGithubErr(err error, message string, args ...interface{}) error {
 	if _, ok := err.(*github.RateLimitError); ok {
-		return errors.New("rate limit for github api has been reached. Please wait one hour or get a personal API tokens a assign it to the GITHUB_TOKEN environment variable")
+		return errors.New("rate limit for github api has been reached. Please wait one hour or get a personal API token and assign it to the GITHUB_TOKEN environment variable")
 	}
 	return errors.Wrapf(err, message, args...)
 }

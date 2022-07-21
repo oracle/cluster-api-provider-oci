@@ -19,15 +19,17 @@ package tree
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ObjectTreeOptions defines the options for an ObjectTree.
@@ -39,13 +41,22 @@ type ObjectTreeOptions struct {
 	// ShowMachineSets instructs the discovery process to include machine sets in the ObjectTree.
 	ShowMachineSets bool
 
-	// DisableNoEcho disables hiding objects if the object's ready condition has the
-	// same Status, Severity and Reason of the parent's object ready condition (it is an echo)
-	DisableNoEcho bool
+	// ShowClusterResourceSets instructs the discovery process to include cluster resource sets in the ObjectTree.
+	ShowClusterResourceSets bool
 
-	// DisableGrouping disables grouping sibling objects in case the ready condition
-	// has the same Status, Severity and Reason
-	DisableGrouping bool
+	// ShowTemplates instructs the discovery process to include infrastructure and bootstrap config templates in the ObjectTree.
+	ShowTemplates bool
+
+	// AddTemplateVirtualNode instructs the discovery process to group template under a virtual node.
+	AddTemplateVirtualNode bool
+
+	// Echo displays objects if the object's ready condition has the
+	// same Status, Severity and Reason of the parent's object ready condition (it is an echo)
+	Echo bool
+
+	// Grouping groups sibling object in case the ready conditions
+	// have the same Status, Severity and Reason
+	Grouping bool
 }
 
 // ObjectTree defines an object tree representing the status of a Cluster API cluster.
@@ -92,7 +103,7 @@ func (od ObjectTree) Add(parent, obj client.Object, opts ...AddObjectOption) (ad
 	// If the object should be hidden if the object's ready condition is true ot it has the
 	// same Status, Severity and Reason of the parent's object ready condition (it is an echo),
 	// return early.
-	if addOpts.NoEcho && !od.options.DisableNoEcho {
+	if addOpts.NoEcho && !od.options.Echo {
 		if (objReady != nil && objReady.Status == corev1.ConditionTrue) || hasSameReadyStatusSeverityAndReason(parentReady, objReady) {
 			return false, false
 		}
@@ -104,10 +115,19 @@ func (od ObjectTree) Add(parent, obj client.Object, opts ...AddObjectOption) (ad
 		addAnnotation(obj, ObjectMetaNameAnnotation, addOpts.MetaName)
 	}
 
+	// Add the ObjectZOrderAnnotation to signal this to the presentation layer.
+	addAnnotation(obj, ObjectZOrderAnnotation, strconv.Itoa(addOpts.ZOrder))
+
 	// If it is requested that this object and its sibling should be grouped in case the ready condition
 	// has the same Status, Severity and Reason, process all the sibling nodes.
 	if IsGroupingObject(parent) {
 		siblings := od.GetObjectsByParent(parent.GetUID())
+
+		// The loop below will process the next node and decide if it belongs in a group. Since objects in the same group
+		// must have the same Kind, we sort by Kind so objects of the same Kind will be together in the list.
+		sort.Slice(siblings, func(i, j int) bool {
+			return siblings[i].GetObjectKind().GroupVersionKind().Kind < siblings[j].GetObjectKind().GroupVersionKind().Kind
+		})
 
 		for i := range siblings {
 			s := siblings[i]
@@ -119,16 +139,26 @@ func (od ObjectTree) Add(parent, obj client.Object, opts ...AddObjectOption) (ad
 				continue
 			}
 
-			// If the sibling node is already a group object, upgrade it with the current object.
+			// If the sibling node is already a group object
 			if IsGroupObject(s) {
-				updateGroupNode(s, sReady, obj, objReady)
-				return true, false
+				// Check to see if the group object kind matches the object, i.e. group is MachineGroup and object is Machine.
+				// If so, upgrade it with the current object.
+				if s.GetObjectKind().GroupVersionKind().Kind == obj.GetObjectKind().GroupVersionKind().Kind+"Group" {
+					updateGroupNode(s, sReady, obj, objReady)
+					return true, false
+				}
+			} else if s.GetObjectKind().GroupVersionKind().Kind != obj.GetObjectKind().GroupVersionKind().Kind {
+				// If the sibling is not a group object, check if the sibling and the object are of the same kind. If not, move on.
+				continue
 			}
 
 			// Otherwise the object and the current sibling should be merged in a group.
 
 			// Create virtual object for the group and add it to the object tree.
 			groupNode := createGroupNode(s, sReady, obj, objReady)
+			// By default, grouping objects should be sorted last.
+			addAnnotation(groupNode, ObjectZOrderAnnotation, strconv.Itoa(GetZOrder(obj)))
+
 			od.addInner(parent, groupNode)
 
 			// Remove the current sibling (now merged in the group).
@@ -140,7 +170,7 @@ func (od ObjectTree) Add(parent, obj client.Object, opts ...AddObjectOption) (ad
 	// If it is requested that the child of this node should be grouped in case the ready condition
 	// has the same Status, Severity and Reason, add the GroupingObjectAnnotation to signal
 	// this to the presentation layer.
-	if addOpts.GroupingObject && !od.options.DisableGrouping {
+	if addOpts.GroupingObject && od.options.Grouping {
 		addAnnotation(obj, GroupingObjectAnnotation, "True")
 	}
 
@@ -270,7 +300,7 @@ func isObjDebug(obj client.Object, debugFilter string) bool {
 		if filter == "" {
 			continue
 		}
-		if strings.ToLower(filter) == "all" {
+		if strings.EqualFold(filter, "all") {
 			return true
 		}
 		kn := strings.Split(filter, "/")

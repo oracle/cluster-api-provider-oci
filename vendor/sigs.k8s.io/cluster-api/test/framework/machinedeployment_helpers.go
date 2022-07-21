@@ -45,13 +45,19 @@ type CreateMachineDeploymentInput struct {
 // CreateMachineDeployment creates the machine deployment and dependencies.
 func CreateMachineDeployment(ctx context.Context, input CreateMachineDeploymentInput) {
 	By("creating a core MachineDeployment resource")
-	Expect(input.Creator.Create(ctx, input.MachineDeployment)).To(Succeed())
+	Eventually(func() error {
+		return input.Creator.Create(ctx, input.MachineDeployment)
+	}, retryableOperationTimeout, retryableOperationInterval).Should(Succeed())
 
 	By("creating a BootstrapConfigTemplate resource")
-	Expect(input.Creator.Create(ctx, input.BootstrapConfigTemplate)).To(Succeed())
+	Eventually(func() error {
+		return input.Creator.Create(ctx, input.BootstrapConfigTemplate)
+	}, retryableOperationTimeout, retryableOperationInterval).Should(Succeed())
 
 	By("creating an InfrastructureMachineTemplate resource")
-	Expect(input.Creator.Create(ctx, input.InfraMachineTemplate)).To(Succeed())
+	Eventually(func() error {
+		return input.Creator.Create(ctx, input.InfraMachineTemplate)
+	}, retryableOperationTimeout, retryableOperationInterval).Should(Succeed())
 }
 
 // GetMachineDeploymentsByClusterInput is the input for GetMachineDeploymentsByCluster.
@@ -66,7 +72,9 @@ type GetMachineDeploymentsByClusterInput struct {
 // it is necessary to ensure this is already happened before calling it.
 func GetMachineDeploymentsByCluster(ctx context.Context, input GetMachineDeploymentsByClusterInput) []*clusterv1.MachineDeployment {
 	deploymentList := &clusterv1.MachineDeploymentList{}
-	Expect(input.Lister.List(ctx, deploymentList, byClusterOptions(input.ClusterName, input.Namespace)...)).To(Succeed(), "Failed to list MachineDeployments object for Cluster %s/%s", input.Namespace, input.ClusterName)
+	Eventually(func() error {
+		return input.Lister.List(ctx, deploymentList, byClusterOptions(input.ClusterName, input.Namespace)...)
+	}, retryableOperationTimeout, retryableOperationInterval).Should(Succeed(), "Failed to list MachineDeployments object for Cluster %s/%s", input.Namespace, input.ClusterName)
 
 	deployments := make([]*clusterv1.MachineDeployment, len(deploymentList.Items))
 	for i := range deploymentList.Items {
@@ -121,6 +129,50 @@ func WaitForMachineDeploymentNodesToExist(ctx context.Context, input WaitForMach
 	}, intervals...).Should(Equal(int(*input.MachineDeployment.Spec.Replicas)))
 }
 
+// AssertMachineDeploymentFailureDomainsInput is the input for AssertMachineDeploymentFailureDomains.
+type AssertMachineDeploymentFailureDomainsInput struct {
+	Lister            Lister
+	Cluster           *clusterv1.Cluster
+	MachineDeployment *clusterv1.MachineDeployment
+}
+
+// AssertMachineDeploymentFailureDomains will look at all MachineDeployment machines and see what failure domains they were
+// placed in. If machines were placed in unexpected or wrong failure domains the expectation will fail.
+func AssertMachineDeploymentFailureDomains(ctx context.Context, input AssertMachineDeploymentFailureDomainsInput) {
+	Expect(ctx).NotTo(BeNil(), "ctx is required for AssertMachineDeploymentFailureDomains")
+	Expect(input.Lister).ToNot(BeNil(), "Invalid argument. input.Lister can't be nil when calling AssertMachineDeploymentFailureDomains")
+	Expect(input.MachineDeployment).ToNot(BeNil(), "Invalid argument. input.MachineDeployment can't be nil when calling AssertMachineDeploymentFailureDomains")
+
+	machineDeploymentFD := pointer.StringDeref(input.MachineDeployment.Spec.Template.Spec.FailureDomain, "<None>")
+
+	By(fmt.Sprintf("Checking all the machines controlled by %s are in the %q failure domain", input.MachineDeployment.Name, machineDeploymentFD))
+	selectorMap, err := metav1.LabelSelectorAsMap(&input.MachineDeployment.Spec.Selector)
+	Expect(err).NotTo(HaveOccurred())
+
+	ms := &clusterv1.MachineSetList{}
+	Eventually(func() error {
+		return input.Lister.List(ctx, ms, client.InNamespace(input.Cluster.Namespace), client.MatchingLabels(selectorMap))
+	}, retryableOperationTimeout, retryableOperationInterval).Should(Succeed())
+
+	for _, machineSet := range ms.Items {
+		machineSetFD := pointer.StringDeref(machineSet.Spec.Template.Spec.FailureDomain, "<None>")
+		Expect(machineSetFD).To(Equal(machineDeploymentFD), "MachineSet %s is in the %q failure domain, expecting %q", machineSet.Name, machineSetFD, machineDeploymentFD)
+
+		selectorMap, err = metav1.LabelSelectorAsMap(&machineSet.Spec.Selector)
+		Expect(err).NotTo(HaveOccurred())
+
+		machines := &clusterv1.MachineList{}
+		Eventually(func() error {
+			return input.Lister.List(ctx, machines, client.InNamespace(machineSet.Namespace), client.MatchingLabels(selectorMap))
+		}, retryableOperationTimeout, retryableOperationInterval).Should(Succeed())
+
+		for _, machine := range machines.Items {
+			machineFD := pointer.StringDeref(machine.Spec.FailureDomain, "<None>")
+			Expect(machineFD).To(Equal(machineDeploymentFD), "Machine %s is in the %q failure domain, expecting %q", machine.Name, machineFD, machineDeploymentFD)
+		}
+	}
+}
+
 // DiscoveryAndWaitForMachineDeploymentsInput is the input type for DiscoveryAndWaitForMachineDeployments.
 type DiscoveryAndWaitForMachineDeploymentsInput struct {
 	Lister  Lister
@@ -144,6 +196,12 @@ func DiscoveryAndWaitForMachineDeployments(ctx context.Context, input DiscoveryA
 			Cluster:           input.Cluster,
 			MachineDeployment: deployment,
 		}, intervals...)
+
+		AssertMachineDeploymentFailureDomains(ctx, AssertMachineDeploymentFailureDomainsInput{
+			Lister:            input.Lister,
+			Cluster:           input.Cluster,
+			MachineDeployment: deployment,
+		})
 	}
 	return machineDeployments
 }
@@ -178,7 +236,9 @@ func UpgradeMachineDeploymentsAndWait(ctx context.Context, input UpgradeMachineD
 		if input.UpgradeMachineTemplate != nil {
 			deployment.Spec.Template.Spec.InfrastructureRef.Name = *input.UpgradeMachineTemplate
 		}
-		Expect(patchHelper.Patch(ctx, deployment)).To(Succeed())
+		Eventually(func() error {
+			return patchHelper.Patch(ctx, deployment)
+		}, retryableOperationTimeout, retryableOperationInterval).Should(Succeed())
 
 		log.Logf("Waiting for Kubernetes versions of machines in MachineDeployment %s/%s to be upgraded from %s to %s",
 			deployment.Namespace, deployment.Name, *oldVersion, input.UpgradeVersion)
@@ -205,9 +265,9 @@ func WaitForMachineDeploymentRollingUpgradeToStart(ctx context.Context, input Wa
 	Expect(input.MachineDeployment).ToNot(BeNil(), "Invalid argument. input.MachineDeployment can't be nil when calling WaitForMachineDeploymentRollingUpgradeToStarts")
 
 	log.Logf("Waiting for MachineDeployment rolling upgrade to start")
-	Eventually(func() bool {
+	Eventually(func(g Gomega) bool {
 		md := &clusterv1.MachineDeployment{}
-		Expect(input.Getter.Get(ctx, client.ObjectKey{Namespace: input.MachineDeployment.Namespace, Name: input.MachineDeployment.Name}, md)).To(Succeed())
+		g.Expect(input.Getter.Get(ctx, client.ObjectKey{Namespace: input.MachineDeployment.Namespace, Name: input.MachineDeployment.Name}, md)).To(Succeed())
 		return md.Status.Replicas != md.Status.AvailableReplicas
 	}, intervals...).Should(BeTrue())
 }
@@ -225,9 +285,9 @@ func WaitForMachineDeploymentRollingUpgradeToComplete(ctx context.Context, input
 	Expect(input.MachineDeployment).ToNot(BeNil(), "Invalid argument. input.MachineDeployment can't be nil when calling WaitForMachineDeploymentRollingUpgradeToComplete")
 
 	log.Logf("Waiting for MachineDeployment rolling upgrade to complete")
-	Eventually(func() bool {
+	Eventually(func(g Gomega) bool {
 		md := &clusterv1.MachineDeployment{}
-		Expect(input.Getter.Get(ctx, client.ObjectKey{Namespace: input.MachineDeployment.Namespace, Name: input.MachineDeployment.Name}, md)).To(Succeed())
+		g.Expect(input.Getter.Get(ctx, client.ObjectKey{Namespace: input.MachineDeployment.Namespace, Name: input.MachineDeployment.Name}, md)).To(Succeed())
 		return md.Status.Replicas == md.Status.AvailableReplicas
 	}, intervals...).Should(BeTrue())
 }
@@ -259,21 +319,27 @@ func UpgradeMachineDeploymentInfrastructureRefAndWait(ctx context.Context, input
 			Namespace: input.Cluster.Namespace,
 			Name:      infraRef.Name,
 		}
-		Expect(mgmtClient.Get(ctx, key, infraObj)).NotTo(HaveOccurred())
+		Eventually(func() error {
+			return mgmtClient.Get(ctx, key, infraObj)
+		}, retryableOperationTimeout, retryableOperationInterval).Should(Succeed())
 
 		// Creates a new infra object
 		newInfraObj := infraObj
 		newInfraObjName := fmt.Sprintf("%s-%s", infraRef.Name, util.RandomString(6))
 		newInfraObj.SetName(newInfraObjName)
 		newInfraObj.SetResourceVersion("")
-		Expect(mgmtClient.Create(ctx, newInfraObj)).NotTo(HaveOccurred())
+		Eventually(func() error {
+			return mgmtClient.Create(ctx, newInfraObj)
+		}, retryableOperationTimeout, retryableOperationInterval).Should(Succeed())
 
 		// Patch the new infra object's ref to the machine deployment
 		patchHelper, err := patch.NewHelper(deployment, mgmtClient)
 		Expect(err).ToNot(HaveOccurred())
 		infraRef.Name = newInfraObjName
 		deployment.Spec.Template.Spec.InfrastructureRef = infraRef
-		Expect(patchHelper.Patch(ctx, deployment)).To(Succeed())
+		Eventually(func() error {
+			return patchHelper.Patch(ctx, deployment)
+		}, retryableOperationTimeout, retryableOperationInterval).Should(Succeed())
 
 		log.Logf("Waiting for rolling upgrade to start.")
 		WaitForMachineDeploymentRollingUpgradeToStart(ctx, WaitForMachineDeploymentRollingUpgradeToStartInput{
@@ -315,7 +381,9 @@ func ScaleAndWaitMachineDeployment(ctx context.Context, input ScaleAndWaitMachin
 	patchHelper, err := patch.NewHelper(input.MachineDeployment, input.ClusterProxy.GetClient())
 	Expect(err).ToNot(HaveOccurred())
 	input.MachineDeployment.Spec.Replicas = pointer.Int32Ptr(input.Replicas)
-	Expect(patchHelper.Patch(ctx, input.MachineDeployment)).To(Succeed())
+	Eventually(func() error {
+		return patchHelper.Patch(ctx, input.MachineDeployment)
+	}, retryableOperationTimeout, retryableOperationInterval).Should(Succeed())
 
 	log.Logf("Waiting for correct number of replicas to exist")
 	Eventually(func() (int, error) {

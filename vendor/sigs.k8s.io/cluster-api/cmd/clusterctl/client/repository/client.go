@@ -18,8 +18,10 @@ package repository
 
 import (
 	"net/url"
+	"strings"
 
 	"github.com/pkg/errors"
+
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/config"
 	yaml "sigs.k8s.io/cluster-api/cmd/clusterctl/client/yamlprocessor"
 )
@@ -31,7 +33,7 @@ import (
 type Client interface {
 	config.Provider
 
-	// GetVersion return the list of versions that are available in a provider repository
+	// GetVersions return the list of versions that are available in a provider repository
 	GetVersions() ([]string, error)
 
 	// Components provide access to YAML file for creating provider components.
@@ -151,7 +153,7 @@ type Repository interface {
 	// GetFile return a file for a given provider version.
 	GetFile(version string, path string) ([]byte, error)
 
-	// GetVersion return the list of versions that are available in a provider repository
+	// GetVersions return the list of versions that are available in a provider repository
 	GetVersions() ([]string, error)
 }
 
@@ -163,13 +165,26 @@ func repositoryFactory(providerConfig config.Provider, configVariablesClient con
 		return nil, errors.Errorf("failed to parse repository url %q", providerConfig.URL())
 	}
 
-	// if the url is a github repository
-	if rURL.Scheme == httpsScheme && rURL.Host == githubDomain {
-		repo, err := NewGitHubRepository(providerConfig, configVariablesClient)
-		if err != nil {
-			return nil, errors.Wrap(err, "error creating the GitHub repository client")
+	if rURL.Scheme == httpsScheme {
+		// if the url is a GitHub repository
+		if rURL.Host == githubDomain {
+			repo, err := NewGitHubRepository(providerConfig, configVariablesClient)
+			if err != nil {
+				return nil, errors.Wrap(err, "error creating the GitHub repository client")
+			}
+			return repo, err
 		}
-		return repo, err
+
+		// if the url is a GitLab repository
+		if strings.HasPrefix(rURL.Host, gitlabHostPrefix) && strings.HasPrefix(rURL.RawPath, gitlabPackagesAPIPrefix) {
+			repo, err := NewGitLabRepository(providerConfig, configVariablesClient)
+			if err != nil {
+				return nil, errors.Wrap(err, "error creating the GitLab repository client")
+			}
+			return repo, err
+		}
+
+		return nil, errors.Errorf("invalid provider url. Only GitHub and GitLab are supported for %q schema", rURL.Scheme)
 	}
 
 	// if the url is a local filesystem repository

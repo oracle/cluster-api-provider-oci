@@ -18,6 +18,7 @@ package framework
 
 import (
 	"context"
+	"fmt"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -25,6 +26,7 @@ import (
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -45,7 +47,9 @@ type CreateKubeadmControlPlaneInput struct {
 // CreateKubeadmControlPlane creates the control plane object and necessary dependencies.
 func CreateKubeadmControlPlane(ctx context.Context, input CreateKubeadmControlPlaneInput, intervals ...interface{}) {
 	By("creating the machine template")
-	Expect(input.Creator.Create(ctx, input.MachineTemplate)).To(Succeed())
+	Eventually(func() error {
+		return input.Creator.Create(ctx, input.MachineTemplate)
+	}, retryableOperationTimeout, retryableOperationInterval).Should(Succeed())
 
 	By("creating a KubeadmControlPlane")
 	Eventually(func() error {
@@ -69,7 +73,9 @@ type GetKubeadmControlPlaneByClusterInput struct {
 // it is necessary to ensure this is already happened before calling it.
 func GetKubeadmControlPlaneByCluster(ctx context.Context, input GetKubeadmControlPlaneByClusterInput) *controlplanev1.KubeadmControlPlane {
 	controlPlaneList := &controlplanev1.KubeadmControlPlaneList{}
-	Expect(input.Lister.List(ctx, controlPlaneList, byClusterOptions(input.ClusterName, input.Namespace)...)).To(Succeed(), "Failed to list KubeadmControlPlane object for Cluster %s/%s", input.Namespace, input.ClusterName)
+	Eventually(func() error {
+		return input.Lister.List(ctx, controlPlaneList, byClusterOptions(input.ClusterName, input.Namespace)...)
+	}, retryableOperationTimeout, retryableOperationInterval).Should(Succeed(), "Failed to list KubeadmControlPlane object for Cluster %s/%s", input.Namespace, input.ClusterName)
 	Expect(len(controlPlaneList.Items)).ToNot(BeNumerically(">", 1), "Cluster %s/%s should not have more than 1 KubeadmControlPlane object", input.Namespace, input.ClusterName)
 	if len(controlPlaneList.Items) == 1 {
 		return &controlPlaneList.Items[0]
@@ -144,7 +150,7 @@ func WaitForOneKubeadmControlPlaneMachineToExist(ctx context.Context, input Wait
 			}
 		}
 		return count > 0, nil
-	}, intervals...).Should(BeTrue())
+	}, intervals...).Should(BeTrue(), "No Control Plane machines came into existence. ")
 }
 
 // WaitForControlPlaneToBeReadyInput is the input for WaitForControlPlaneToBeReady.
@@ -175,45 +181,45 @@ func WaitForControlPlaneToBeReady(ctx context.Context, input WaitForControlPlane
 
 // AssertControlPlaneFailureDomainsInput is the input for AssertControlPlaneFailureDomains.
 type AssertControlPlaneFailureDomainsInput struct {
-	GetLister  GetLister
-	ClusterKey client.ObjectKey
-	// ExpectedFailureDomains is required because this function cannot (easily) infer what success looks like.
-	// In theory this field is not strictly necessary and could be replaced with enough clever logic/math.
-	ExpectedFailureDomains map[string]int
+	Lister  Lister
+	Cluster *clusterv1.Cluster
 }
 
 // AssertControlPlaneFailureDomains will look at all control plane machines and see what failure domains they were
 // placed in. If machines were placed in unexpected or wrong failure domains the expectation will fail.
 func AssertControlPlaneFailureDomains(ctx context.Context, input AssertControlPlaneFailureDomainsInput) {
-	failureDomainCounts := map[string]int{}
+	Expect(ctx).NotTo(BeNil(), "ctx is required for AssertControlPlaneFailureDomains")
+	Expect(input.Lister).ToNot(BeNil(), "Invalid argument. input.Lister can't be nil when calling AssertControlPlaneFailureDomains")
+	Expect(input.Cluster).ToNot(BeNil(), "Invalid argument. input.Cluster can't be nil when calling AssertControlPlaneFailureDomains")
 
-	// Look up the cluster object to find all known failure domains.
-	cluster := &clusterv1.Cluster{}
-	Expect(input.GetLister.Get(ctx, input.ClusterKey, cluster)).To(Succeed())
-
-	for fd := range cluster.Status.FailureDomains {
-		failureDomainCounts[fd] = 0
+	By("Checking all the the control plane machines are in the expected failure domains")
+	controlPlaneFailureDomains := sets.NewString()
+	for fd, fdSettings := range input.Cluster.Status.FailureDomains {
+		if fdSettings.ControlPlane {
+			controlPlaneFailureDomains.Insert(fd)
+		}
 	}
 
 	// Look up all the control plane machines.
-	inClustersNamespaceListOption := client.InNamespace(input.ClusterKey.Namespace)
+	inClustersNamespaceListOption := client.InNamespace(input.Cluster.Namespace)
 	matchClusterListOption := client.MatchingLabels{
-		clusterv1.ClusterLabelName:             input.ClusterKey.Name,
+		clusterv1.ClusterLabelName:             input.Cluster.Name,
 		clusterv1.MachineControlPlaneLabelName: "",
 	}
 
 	machineList := &clusterv1.MachineList{}
-	Expect(input.GetLister.List(ctx, machineList, inClustersNamespaceListOption, matchClusterListOption)).
-		To(Succeed(), "Couldn't list machines for the cluster %q", input.ClusterKey.Name)
+	Eventually(func() error {
+		return input.Lister.List(ctx, machineList, inClustersNamespaceListOption, matchClusterListOption)
+	}, retryableOperationTimeout, retryableOperationInterval).Should(Succeed(), "Couldn't list control-plane machines for the cluster %q", input.Cluster.Name)
 
-	// Count all control plane machine failure domains.
 	for _, machine := range machineList.Items {
-		if machine.Spec.FailureDomain == nil {
-			continue
+		if machine.Spec.FailureDomain != nil {
+			machineFD := *machine.Spec.FailureDomain
+			if !controlPlaneFailureDomains.Has(machineFD) {
+				Fail(fmt.Sprintf("Machine %s is in the %q failure domain, expecting one of the failure domain defined at cluster level", machine.Name, machineFD))
+			}
 		}
-		failureDomainCounts[*machine.Spec.FailureDomain]++
 	}
-	Expect(failureDomainCounts).To(Equal(input.ExpectedFailureDomains))
 }
 
 // DiscoveryAndWaitForControlPlaneInitializedInput is the input type for DiscoveryAndWaitForControlPlaneInitialized.
@@ -277,6 +283,11 @@ func WaitForControlPlaneAndMachinesReady(ctx context.Context, input WaitForContr
 		ControlPlane: input.ControlPlane,
 	}
 	WaitForControlPlaneToBeReady(ctx, waitForControlPlaneToBeReadyInput, intervals...)
+
+	AssertControlPlaneFailureDomains(ctx, AssertControlPlaneFailureDomainsInput{
+		Lister:  input.GetLister,
+		Cluster: input.Cluster,
+	})
 }
 
 // UpgradeControlPlaneAndWaitForUpgradeInput is the input type for UpgradeControlPlaneAndWaitForUpgrade.
@@ -326,7 +337,9 @@ func UpgradeControlPlaneAndWaitForUpgrade(ctx context.Context, input UpgradeCont
 	input.ControlPlane.Spec.KubeadmConfigSpec.ClusterConfiguration.Etcd.Local.ImageMeta.ImageTag = input.EtcdImageTag
 	input.ControlPlane.Spec.KubeadmConfigSpec.ClusterConfiguration.DNS.ImageMeta.ImageTag = input.DNSImageTag
 
-	Expect(patchHelper.Patch(ctx, input.ControlPlane)).To(Succeed())
+	Eventually(func() error {
+		return patchHelper.Patch(ctx, input.ControlPlane)
+	}, retryableOperationTimeout, retryableOperationInterval).Should(Succeed())
 
 	log.Logf("Waiting for control-plane machines to have the upgraded kubernetes version")
 	WaitForControlPlaneMachinesToBeUpgraded(ctx, WaitForControlPlaneMachinesToBeUpgradedInput{
@@ -386,7 +399,9 @@ func ScaleAndWaitControlPlane(ctx context.Context, input ScaleAndWaitControlPlan
 	scaleBefore := pointer.Int32Deref(input.ControlPlane.Spec.Replicas, 0)
 	input.ControlPlane.Spec.Replicas = pointer.Int32Ptr(input.Replicas)
 	log.Logf("Scaling controlplane %s/%s from %v to %v replicas", input.ControlPlane.Namespace, input.ControlPlane.Name, scaleBefore, input.Replicas)
-	Expect(patchHelper.Patch(ctx, input.ControlPlane)).To(Succeed())
+	Eventually(func() error {
+		return patchHelper.Patch(ctx, input.ControlPlane)
+	}, retryableOperationTimeout, retryableOperationInterval).Should(Succeed())
 
 	log.Logf("Waiting for correct number of replicas to exist")
 	Eventually(func() (int, error) {
@@ -395,12 +410,12 @@ func ScaleAndWaitControlPlane(ctx context.Context, input ScaleAndWaitControlPlan
 			return -1, err
 		}
 
-		selectorMap, err := metav1.LabelSelectorAsMap(kcpLabelSelector)
+		selector, err := metav1.LabelSelectorAsSelector(kcpLabelSelector)
 		if err != nil {
 			return -1, err
 		}
 		machines := &clusterv1.MachineList{}
-		if err := input.ClusterProxy.GetClient().List(ctx, machines, client.InNamespace(input.ControlPlane.Namespace), client.MatchingLabels(selectorMap)); err != nil {
+		if err := input.ClusterProxy.GetClient().List(ctx, machines, &client.ListOptions{LabelSelector: selector, Namespace: input.ControlPlane.Namespace}); err != nil {
 			return -1, err
 		}
 		nodeRefCount := 0

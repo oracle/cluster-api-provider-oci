@@ -23,6 +23,7 @@ import (
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/version"
 	"k8s.io/utils/pointer"
+
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/cluster"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/client/repository"
@@ -412,7 +413,7 @@ func (c *clusterctlClient) templateOptionsToVariables(options GetClusterTemplate
 		}
 	}
 	if *options.ControlPlaneMachineCount < 1 {
-		return errors.Errorf("invalid ControlPlaneMachineCount. Please use a number greater or equal than 1")
+		return errors.Errorf("invalid ControlPlaneMachineCount. Please use a number greater than or equal to 1")
 	}
 	c.configClient.Variables().Set("CONTROL_PLANE_MACHINE_COUNT", strconv.FormatInt(*options.ControlPlaneMachineCount, 10))
 
@@ -430,7 +431,7 @@ func (c *clusterctlClient) templateOptionsToVariables(options GetClusterTemplate
 		}
 	}
 	if *options.WorkerMachineCount < 0 {
-		return errors.Errorf("invalid WorkerMachineCount. Please use a number greater or equal than 0")
+		return errors.Errorf("invalid WorkerMachineCount. Please use a number greater than or equal to 0")
 	}
 	c.configClient.Variables().Set("WORKER_MACHINE_COUNT", strconv.FormatInt(*options.WorkerMachineCount, 10))
 

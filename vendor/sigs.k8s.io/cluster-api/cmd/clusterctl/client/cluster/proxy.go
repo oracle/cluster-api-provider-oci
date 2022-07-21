@@ -18,25 +18,27 @@ package cluster
 
 import (
 	"fmt"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/pkg/errors"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
-	utilversion "k8s.io/apimachinery/pkg/util/version"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/internal/scheme"
 	"sigs.k8s.io/cluster-api/version"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
@@ -51,7 +53,7 @@ type Proxy interface {
 	// CurrentNamespace returns the namespace from the current context in the kubeconfig file.
 	CurrentNamespace() (string, error)
 
-	// ValidateKubernetesVersion returns an error if management cluster version less than minimumKubernetesVersion.
+	// ValidateKubernetesVersion returns an error if management cluster version less than MinimumKubernetesVersion.
 	ValidateKubernetesVersion() error
 
 	// NewClient returns a new controller runtime Client object for working on the management cluster.
@@ -60,10 +62,12 @@ type Proxy interface {
 	// CheckClusterAvailable checks if a a cluster is available and reachable.
 	CheckClusterAvailable() error
 
-	// ListResources lists namespaced and cluster-wide resources matching the labels. Namespaced resources are only listed
+	// ListResources lists namespaced and cluster-wide resources for a component matching the labels. Namespaced resources are only listed
 	// in the given namespaces.
-	// If labels contains the ProviderLabelName label, CRDs of other providers are excluded.
-	// This is done to avoid errors when listing resources of providers which have already been deleted.
+	// Please note that we are not returning resources for the component's CRD (e.g. we are not returning
+	// Certificates for cert-manager, Clusters for CAPI, AWSCluster for CAPA and so on).
+	// This is done to avoid errors when listing resources of providers which have already been deleted/scaled down to 0 replicas/with
+	// malfunctioning webhooks.
 	ListResources(labels map[string]string, namespaces ...string) ([]unstructured.Unstructured, error)
 
 	// GetContexts returns the list of contexts in kubeconfig which begin with prefix.
@@ -107,7 +111,7 @@ func (k *proxy) CurrentNamespace() (string, error) {
 		return v.Namespace, nil
 	}
 
-	return "default", nil
+	return metav1.NamespaceDefault, nil
 }
 
 func (k *proxy) ValidateKubernetesVersion() error {
@@ -116,22 +120,12 @@ func (k *proxy) ValidateKubernetesVersion() error {
 		return err
 	}
 
-	client := discovery.NewDiscoveryClientForConfigOrDie(config)
-	serverVersion, err := client.ServerVersion()
-	if err != nil {
-		return errors.Wrap(err, "failed to retrieve server version")
+	minVer := version.MinimumKubernetesVersion
+	if clusterTopologyFeatureGate, _ := strconv.ParseBool(os.Getenv("CLUSTER_TOPOLOGY")); clusterTopologyFeatureGate {
+		minVer = version.MinimumKubernetesVersionClusterTopology
 	}
 
-	compver, err := utilversion.MustParseGeneric(serverVersion.String()).Compare(minimumKubernetesVersion)
-	if err != nil {
-		return errors.Wrap(err, "failed to parse and compare server version")
-	}
-
-	if compver == -1 {
-		return errors.Errorf("unsupported management cluster server version: %s - minimum required version is %s", serverVersion.String(), minimumKubernetesVersion)
-	}
-
-	return nil
+	return version.CheckKubernetesVersion(config, minVer)
 }
 
 // GetConfig returns the config for a kubernetes client.
@@ -205,10 +199,12 @@ func (k *proxy) CheckClusterAvailable() error {
 	return nil
 }
 
-// ListResources lists namespaced and cluster-wide resources matching the labels. Namespaced resources are only listed
+// ListResources lists namespaced and cluster-wide resources for a component matching the labels. Namespaced resources are only listed
 // in the given namespaces.
-// If labels contains the ProviderLabelName label, CRDs of other providers are excluded.
-// This is done to avoid errors when listing resources of providers which have already been deleted.
+// Please note that we are not returning resources for the component's CRD (e.g. we are not returning
+// Certificates for cert-manager, Clusters for CAPI, AWSCluster for CAPA and so on).
+// This is done to avoid errors when listing resources of providers which have already been deleted/scaled down to 0 replicas/with
+// malfunctioning webhooks.
 // For example:
 // * The AWS provider has already been deleted, but there are still cluster-wide resources of AWSClusterControllerIdentity.
 // * The AWSClusterControllerIdentity resources are still stored in an older version (e.g. v1alpha4, when the preferred
@@ -237,27 +233,26 @@ func (k *proxy) ListResources(labels map[string]string, namespaces ...string) ([
 		return nil, errors.Wrap(err, "failed to list api resources")
 	}
 
-	// If labels indicates that resources of a specific provider should be listed, exclude CRDs of other providers.
+	// Exclude from discovery the objects from the cert-manager/provider's CRDs.
+	// Those objects are not part of the components, and they will eventually be removed when removing the CRD definition.
 	crdsToExclude := sets.String{}
-	if providerName, ok := labels[clusterv1.ProviderLabelName]; ok {
-		// List all CRDs in the cluster.
-		crdList := &apiextensionsv1.CustomResourceDefinitionList{}
-		if err := retryWithExponentialBackoff(newReadBackoff(), func() error {
-			return c.List(ctx, crdList)
-		}); err != nil {
-			return nil, errors.Wrap(err, "failed to list CRDs")
-		}
 
-		// Exclude CRDs of other providers.
-		for _, crd := range crdList.Items {
-			if v, ok := crd.Labels[clusterv1.ProviderLabelName]; ok && v != providerName {
-				for _, version := range crd.Spec.Versions {
-					crdsToExclude.Insert(metav1.GroupVersionKind{
-						Group:   crd.Spec.Group,
-						Version: version.Name,
-						Kind:    crd.Spec.Names.Kind,
-					}.String())
-				}
+	crdList := &apiextensionsv1.CustomResourceDefinitionList{}
+	if err := retryWithExponentialBackoff(newReadBackoff(), func() error {
+		return c.List(ctx, crdList)
+	}); err != nil {
+		return nil, errors.Wrap(err, "failed to list CRDs")
+	}
+	for _, crd := range crdList.Items {
+		component, isCoreComponent := labels[clusterctlv1.ClusterctlCoreLabelName]
+		_, isProviderResource := crd.Labels[clusterv1.ProviderLabelName]
+		if (isCoreComponent && component == clusterctlv1.ClusterctlCoreLabelCertManagerValue) || isProviderResource {
+			for _, version := range crd.Spec.Versions {
+				crdsToExclude.Insert(metav1.GroupVersionKind{
+					Group:   crd.Spec.Group,
+					Version: version.Name,
+					Kind:    crd.Spec.Names.Kind,
+				}.String())
 			}
 		}
 	}
@@ -354,11 +349,13 @@ func listObjByGVK(c client.Client, groupVersion, kind string, options []client.L
 	objList.SetAPIVersion(groupVersion)
 	objList.SetKind(kind)
 
-	if err := c.List(ctx, objList, options...); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return nil, errors.Wrapf(err, "failed to list objects for the %q GroupVersionKind", objList.GroupVersionKind())
-		}
+	resourceListBackoff := newReadBackoff()
+	if err := retryWithExponentialBackoff(resourceListBackoff, func() error {
+		return c.List(ctx, objList, options...)
+	}); err != nil {
+		return nil, errors.Wrapf(err, "failed to list objects for the %q GroupVersionKind", objList.GroupVersionKind())
 	}
+
 	return objList, nil
 }
 
