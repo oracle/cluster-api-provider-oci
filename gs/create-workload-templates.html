@@ -1,0 +1,216 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Create Workload Templates - Kubernetes Cluster API Provider for Oracle Cloud Infrastructure</title>
+        <!-- Custom HTML head -->
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href=".././src/css/mdbook-admonish.css">
+        <link rel="stylesheet" href="../././mdbook-admonish.css">
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../introduction.html">Introduction</a></li><li class="chapter-item expanded affix "><a href="../prerequisites.html">Prerequisites</a></li><li class="chapter-item expanded "><a href="../gs/gs.html"><strong aria-hidden="true">1.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../gs/overview.html"><strong aria-hidden="true">1.1.</strong> Overview</a></li><li class="chapter-item expanded "><a href="../gs/custom-machine-images.html"><strong aria-hidden="true">1.2.</strong> Prepare custom OCI images</a></li><li class="chapter-item expanded "><a href="../gs/iam.html"><strong aria-hidden="true">1.3.</strong> Configure users and policies</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../gs/iam/iam-oke.html"><strong aria-hidden="true">1.3.1.</strong> Configure policies for an OKE cluster</a></li><li class="chapter-item expanded "><a href="../gs/iam/iam-self-provisioned.html"><strong aria-hidden="true">1.3.2.</strong> Configure policies for a self-provisioned cluster</a></li><li class="chapter-item expanded "><a href="../gs/iam/iam-ocid.html"><strong aria-hidden="true">1.3.3.</strong> User configuration and OCIDs</a></li></ol></li><li class="chapter-item expanded "><a href="../gs/provision-mgmt-cluster.html"><strong aria-hidden="true">1.4.</strong> Provision a management cluster</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../gs/mgmt/mgmt-kind.html"><strong aria-hidden="true">1.4.1.</strong> Provision a management cluster with kind</a></li><li class="chapter-item expanded "><a href="../gs/mgmt/mgmt-oke.html"><strong aria-hidden="true">1.4.2.</strong> Provision a management cluster with OKE</a></li></ol></li><li class="chapter-item expanded "><a href="../gs/install-cluster-api.html"><strong aria-hidden="true">1.5.</strong> Install Cluster API for Oracle Cloud Infrastructure</a></li><li class="chapter-item expanded "><a href="../gs/create-workload-cluster.html"><strong aria-hidden="true">1.6.</strong> Create Workload Cluster</a></li><li class="chapter-item expanded "><a href="../gs/create-workload-templates.html" class="active"><strong aria-hidden="true">1.7.</strong> Create Workload Templates</a></li><li class="chapter-item expanded "><a href="../gs/externally-managed-infrastructure.html"><strong aria-hidden="true">1.8.</strong> Using externally managed infrastructure</a></li><li class="chapter-item expanded "><a href="../gs/install-oci-ccm.html"><strong aria-hidden="true">1.9.</strong> Install Oracle Cloud Infrastructure Cloud Controller Manager</a></li><li class="chapter-item expanded "><a href="../gs/install-csi.html"><strong aria-hidden="true">1.10.</strong> Install Container Storage Interface (CSI)</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../gs/pvc-bv.html"><strong aria-hidden="true">1.10.1.</strong> Provision a PVC on the Block Volume Service</a></li><li class="chapter-item expanded "><a href="../gs/pvc-fss.html"><strong aria-hidden="true">1.10.2.</strong> Provision a PVC on the File Storage Service</a></li></ol></li></ol></li><li class="chapter-item expanded "><a href="../networking/networking.html"><strong aria-hidden="true">2.</strong> Networking Guide</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../networking/infrastructure.html"><strong aria-hidden="true">2.1.</strong> Default Network Infrastructure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../networking/calico.html"><strong aria-hidden="true">2.1.1.</strong> Using Calico</a></li><li class="chapter-item expanded "><a href="../networking/antrea.html"><strong aria-hidden="true">2.1.2.</strong> Using Antrea</a></li></ol></li><li class="chapter-item expanded "><a href="../networking/custom-networking.html"><strong aria-hidden="true">2.2.</strong> Custom Networking</a></li><li class="chapter-item expanded "><a href="../networking/private-cluster.html"><strong aria-hidden="true">2.3.</strong> Private Cluster</a></li></ol></li><li class="chapter-item expanded "><a href="../reference/reference.html"><strong aria-hidden="true">3.</strong> Reference</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../reference/glossary.html"><strong aria-hidden="true">3.1.</strong> Glossary</a></li></ol></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Kubernetes Cluster API Provider for Oracle Cloud Infrastructure</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/oracle/cluster-api-provider-oci" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="create-workload-templates-for-oracle-cloud-infrastructure"><a class="header" href="#create-workload-templates-for-oracle-cloud-infrastructure">Create Workload Templates for Oracle Cloud Infrastructure</a></h1>
+<p>You can create workload clusters based on template files or you can also save the templates in <code>ConfigMaps</code> that you can then reuse.</p>
+<h2 id="creating-cluster-templates-configmaps"><a class="header" href="#creating-cluster-templates-configmaps">Creating cluster templates ConfigMaps</a></h2>
+<ol>
+<li>Create a cluster template for Oracle Linux:</li>
+</ol>
+<pre><code class="language-shell">kubectl create cm oracletemplate --from-file=template=templates/cluster-template-oraclelinux.yaml
+</code></pre>
+<ol>
+<li>Create a cluster template for Ubuntu:</li>
+</ol>
+<pre><code class="language-shell">kubectl create cm ubuntutemplate --from-file=template=templates/cluster-template.yaml
+</code></pre>
+<p>You can then reuse the <code>ConfigMap</code> to create your clusters. For example, to create a workload cluster using Oracle Linux, you can create it as follows:</p>
+<pre><code class="language-shell">OCI_COMPARTMENT_ID=&lt;compartment-id&gt; \
+OCI_IMAGE_ID=&lt;oracle-linux-custom-image-id&gt; \
+OCI_SSH_KEY=&lt;ssh-key&gt;  \
+CONTROL_PLANE_MACHINE_COUNT=1 \
+KUBERNETES_VERSION=v1.20.10 \
+NAMESPACE=default \
+WORKER_MACHINE_COUNT=1 \
+clusterctl generate cluster &lt;cluster-name&gt;\
+--from-config-map oracletemplate | kubectl apply -f -
+</code></pre>
+<p>Likewise, to create a workload cluster using Ubuntu:</p>
+<pre><code class="language-shell">OCI_COMPARTMENT_ID=&lt;compartment-id&gt; \
+OCI_IMAGE_ID=&lt;ubuntu-custom-image-id&gt; \
+OCI_SSH_KEY=&lt;ssh-key&gt;  \
+CONTROL_PLANE_MACHINE_COUNT=1 \
+KUBERNETES_VERSION=v1.20.10 \
+NAMESPACE=default \
+WORKER_MACHINE_COUNT=1 \
+clusterctl generate cluster &lt;cluster-name&gt;\
+--from-config-map ubuntutemplate | kubectl apply -f -
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../gs/create-workload-cluster.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                            <a rel="next" href="../gs/externally-managed-infrastructure.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../gs/create-workload-cluster.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                    <a rel="next" href="../gs/externally-managed-infrastructure.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        <script src="../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../searcher.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+    </body>
+</html>
