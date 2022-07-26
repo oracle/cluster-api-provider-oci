@@ -21,7 +21,7 @@ set -o pipefail
 os=$(go env GOOS)
 arch=$(go env GOARCH)
 
-MDBOOK_VERSION="0.4.18"
+MDBOOK_VERSION="0.4.21"
 
 # translate arch to rust's conventions (if we can)
 if [[ ${arch} == "amd64" ]]; then
