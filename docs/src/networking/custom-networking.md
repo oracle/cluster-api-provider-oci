@@ -275,45 +275,10 @@ Related documentation: [comparison of Security Lists and Network Security Groups
 
 ## Example spec for externally managed VCN infrastructure
 
-CAPOCI can be used to create a cluster using existing VCN infrastructure. In this case, only the
-API Server Load Balancer will be managed by CAPOCI.
-
-Example spec is given below
-
-```yaml
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-kind: OCICluster
-metadata:
-  name: "${CLUSTER_NAME}"
-spec:
-  compartmentId: "${OCI_COMPARTMENT_ID}"
-  networkSpec:
-    skipNetworkManagement: true
-    vcn:
-      id: <Insert VCN OCID Here>
-      networkSecurityGroups:
-        - id: <Insert Control Plane Endpoint NSG OCID Here>
-          role: control-plane-endpoint
-          name: control-plane-endpoint
-        - id: <Insert Worker NSG OCID Here>
-          role: worker
-          name: worker
-        - id: <Insert Control Plane NSG OCID Here>
-          role: control-plane
-          name: control-plane
-      subnets:
-        - id: <Insert Control Plane Endpoint Subnet OCID Here>
-          role: control-plane-endpoint
-          name: control-plane-endpoint
-        - id: <Insert Worker Subnet OCID Here>
-          role: worker
-          name: worker
-        - id: <Insert control Plane Subnet OCID Here>
-          role: control-plane
-          name: control-plane
+```admonish info
+See [externally managed infrastructure][externally-managed-cluster-infrastructure] for how to create a cluster
+using existing VCN infrastructure.
 ```
 
-In the above spec, note that name has to be mentioned for Subnet/NSG. This is so that Kubernetes
-can merge the list properly when there is an update.
-
 [sl-vs-nsg]: https://docs.oracle.com/en-us/iaas/Content/Network/Concepts/securityrules.htm#comparison
+[externally-managed-cluster-infrastructure]: ../gs/externally-managed-cluster-infrastructure.md#example-spec-for-externally-managed-vcn-infrastructure
