@@ -19,7 +19,7 @@
   - [Install Cluster API for Oracle Cloud Infrastructure](./gs/install-cluster-api.md)
   - [Create Workload Cluster](./gs/create-workload-cluster.md)
   - [Create Workload Templates](./gs/create-workload-templates.md)
-  - [Using externally managed infrastructure](./gs/externally-managed-infrastructure.md)
+  - [Using externally managed infrastructure](./gs/externally-managed-cluster-infrastructure.md)
   - [Install Oracle Cloud Infrastructure Cloud Controller Manager](./gs/install-oci-ccm.md)
   - [Install Container Storage Interface (CSI)](./gs/install-csi.md)
     - [Provision a PVC on the Block Volume Service](./gs/pvc-bv.md)
