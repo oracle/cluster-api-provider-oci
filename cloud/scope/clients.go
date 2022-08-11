@@ -17,6 +17,7 @@ limitations under the License.
 package scope
 
 import (
+	"net/http"
 	"sync"
 
 	"github.com/go-logr/logr"
@@ -25,6 +26,7 @@ import (
 	identityClient "github.com/oracle/cluster-api-provider-oci/cloud/services/identity"
 	nlb "github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
+	"github.com/oracle/cluster-api-provider-oci/version"
 	"github.com/oracle/oci-go-sdk/v63/common"
 	"github.com/oracle/oci-go-sdk/v63/core"
 	"github.com/oracle/oci-go-sdk/v63/identity"
@@ -120,6 +122,7 @@ func createVncClient(region string, ociAuthConfigProvider common.ConfigurationPr
 		return nil, err
 	}
 	vcnClient.SetRegion(region)
+	vcnClient.Interceptor = setVersionHeader()
 
 	return &vcnClient, nil
 }
@@ -131,6 +134,7 @@ func createLbClient(region string, ociAuthConfigProvider common.ConfigurationPro
 		return nil, err
 	}
 	lbClient.SetRegion(region)
+	lbClient.Interceptor = setVersionHeader()
 
 	return &lbClient, nil
 }
@@ -142,6 +146,7 @@ func createIdentityClient(region string, ociAuthConfigProvider common.Configurat
 		return nil, err
 	}
 	identityClient.SetRegion(region)
+	identityClient.Interceptor = setVersionHeader()
 
 	return &identityClient, nil
 }
@@ -153,6 +158,7 @@ func createComputeClient(region string, ociAuthConfigProvider common.Configurati
 		return nil, err
 	}
 	computeClient.SetRegion(region)
+	computeClient.Interceptor = setVersionHeader()
 
 	return &computeClient, nil
 }
@@ -164,6 +170,14 @@ func createComputeManagementClient(region string, ociAuthConfigProvider common.C
 		return nil, err
 	}
 	computeManagementClient.SetRegion(region)
+	computeManagementClient.Interceptor = setVersionHeader()
 
 	return &computeManagementClient, nil
+}
+
+func setVersionHeader() func(request *http.Request) error {
+	return func(request *http.Request) error {
+		request.Header.Set("X-CAPOCI-VERSION", version.GitVersion)
+		return nil
+	}
 }

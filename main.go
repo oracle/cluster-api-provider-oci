@@ -27,6 +27,7 @@ import (
 	expV1Beta1 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
 	expcontrollers "github.com/oracle/cluster-api-provider-oci/exp/controllers"
 	"github.com/oracle/cluster-api-provider-oci/feature"
+	"github.com/oracle/cluster-api-provider-oci/version"
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -131,6 +132,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	setupLog.Info("CAPOCI Version", "version", version.GitVersion)
 	ociAuthConfigProvider, err := config.NewConfigurationProvider(authConfig)
 	if err != nil {
 		setupLog.Error(err, "authentication provider could not be initialised")
