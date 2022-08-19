@@ -29,7 +29,7 @@ allow dynamic-group [your dynamic group name] to manage volume-family in compart
    ```shell
    kubectl  create secret generic oci-volume-provisioner \
      -n kube-system                                           \
-     --from-file=cloud-provider.yaml=cloud-provider-example.yaml
+     --from-file=config.yaml=cloud-provider-example.yaml
    ```
 
 ### Install CSI Drivers
@@ -51,7 +51,7 @@ allow dynamic-group [your dynamic group name] to manage volume-family in compart
    curl -L h"ttps://github.com/oracle/oci-cloud-controller-manager/releases/download/${CCM_RELEASE_VERSION}/oci-csi-node-driver.yaml" -o
    oci-csi-node-driver.yaml
 
-   curl -L curl -L https://raw.githubusercontent.com/oracle/oci-cloud-controller-manager/master/manifests/container-storage-interface/storage-class.yaml -o storage-class.yaml
+   curl -L https://raw.githubusercontent.com/oracle/oci-cloud-controller-manager/master/manifests/container-storage-interface/storage-class.yaml -o storage-class.yaml
    ```
 
 5. Create the RBAC rules:
