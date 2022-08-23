@@ -132,10 +132,8 @@ func (s *ClusterScope) CreateSubnet(ctx context.Context, spec infrastructurev1be
 
 func (s *ClusterScope) UpdateSubnet(ctx context.Context, spec infrastructurev1beta1.Subnet) error {
 	updateSubnetDetails := core.UpdateSubnetDetails{
-		DisplayName:  common.String(spec.Name),
-		CidrBlock:    common.String(spec.CIDR),
-		FreeformTags: s.GetFreeFormTags(),
-		DefinedTags:  s.GetDefinedTags(),
+		DisplayName: common.String(spec.Name),
+		CidrBlock:   common.String(spec.CIDR),
 	}
 	if spec.SecurityList != nil {
 		updateSubnetDetails.SecurityListIds = []string{*spec.SecurityList.ID}
@@ -344,7 +342,7 @@ func (s *ClusterScope) IsSubnetsEqual(actual *core.Subnet, desired infrastructur
 			return false
 		}
 	}
-	return s.IsTagsEqual(actual.FreeformTags, actual.DefinedTags)
+	return true
 }
 
 func (s *ClusterScope) isControlPlaneEndpointSubnetPrivate() bool {

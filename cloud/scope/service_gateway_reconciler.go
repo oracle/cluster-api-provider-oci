@@ -38,32 +38,12 @@ func (s *ClusterScope) ReconcileServiceGateway(ctx context.Context) error {
 	}
 	if sgw != nil {
 		s.OCICluster.Spec.NetworkSpec.Vcn.ServiceGatewayId = sgw.Id
-		if !s.IsTagsEqual(sgw.FreeformTags, sgw.DefinedTags) {
-			return s.UpdateServiceGateway(ctx)
-		}
 		s.Logger.Info("No Reconciliation Required for Service Gateway", "service_gateway", sgw.Id)
 		return nil
 	}
 	serviceGateway, err := s.CreateServiceGateway(ctx)
 	s.OCICluster.Spec.NetworkSpec.Vcn.ServiceGatewayId = serviceGateway
 	return err
-}
-
-func (s *ClusterScope) UpdateServiceGateway(ctx context.Context) error {
-	updateSGWDetails := core.UpdateServiceGatewayDetails{
-		FreeformTags: s.GetFreeFormTags(),
-		DefinedTags:  s.GetDefinedTags(),
-	}
-	sgwResponse, err := s.VCNClient.UpdateServiceGateway(ctx, core.UpdateServiceGatewayRequest{
-		ServiceGatewayId:            s.OCICluster.Spec.NetworkSpec.Vcn.ServiceGatewayId,
-		UpdateServiceGatewayDetails: updateSGWDetails,
-	})
-	if err != nil {
-		s.Logger.Error(err, "failed to reconcile the service gateway, failed to update")
-		return errors.Wrap(err, "failed to reconcile the service gateway, failed to update")
-	}
-	s.Logger.Info("successfully updated the service gateway", "service_gateway", *sgwResponse.Id)
-	return nil
 }
 
 func (s *ClusterScope) CreateServiceGateway(ctx context.Context) (*string, error) {

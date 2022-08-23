@@ -38,15 +38,7 @@ func (s *ClusterScope) ReconcileRouteTable(ctx context.Context) error {
 		if routeTable != nil {
 			routeTableOCID := routeTable.Id
 			s.setRTStatus(routeTableOCID, rt)
-			if s.IsTagsEqual(routeTable.FreeformTags, routeTable.DefinedTags) {
-				s.Logger.Info("route table found. No reconciliation needed", "routeTable", routeTableOCID)
-			} else {
-				err = s.UpdateRouteTable(ctx, routeTable.Id)
-				if err != nil {
-					return err
-				}
-				s.Logger.Info("Successfully updated subnet", "routeTable", routeTableOCID)
-			}
+			s.Logger.Info("No Reconciliation Required for Route Table", "route-table", routeTableOCID)
 			continue
 		}
 
@@ -55,7 +47,7 @@ func (s *ClusterScope) ReconcileRouteTable(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		s.Logger.Info("Created the route table", "ocid", rtId)
+		s.Logger.Info("Created the route table", "route-table", rtId)
 		s.setRTStatus(rtId, rt)
 	}
 	return nil
@@ -207,7 +199,7 @@ func (s *ClusterScope) DeleteRouteTables(ctx context.Context) error {
 			s.Logger.Error(err, "failed to delete route table")
 			return errors.Wrap(err, "failed to delete route table")
 		}
-		s.Logger.Info("successfully deleted route table", "route table", *rt.Id)
+		s.Logger.Info("successfully deleted route table", "route-table", *rt.Id)
 	}
 	return nil
 }
@@ -217,21 +209,4 @@ func (s *ClusterScope) getRouteTableId(routeTableType string) *string {
 		return s.OCICluster.Spec.NetworkSpec.Vcn.PrivateRouteTableId
 	}
 	return s.OCICluster.Spec.NetworkSpec.Vcn.PublicRouteTableId
-}
-
-func (s *ClusterScope) UpdateRouteTable(ctx context.Context, id *string) error {
-	updateRouteTableDetails := core.UpdateRouteTableDetails{
-		FreeformTags: s.GetFreeFormTags(),
-		DefinedTags:  s.GetDefinedTags(),
-	}
-	routeTableResponse, err := s.VCNClient.UpdateRouteTable(ctx, core.UpdateRouteTableRequest{
-		RtId:                    id,
-		UpdateRouteTableDetails: updateRouteTableDetails,
-	})
-	if err != nil {
-		s.Logger.Error(err, "failed to reconcile the route table, failed to update")
-		return errors.Wrap(err, "failed to reconcile the route table, failed to update")
-	}
-	s.Logger.Info("successfully updated the route table", "routeTable", *routeTableResponse.Id)
-	return nil
 }

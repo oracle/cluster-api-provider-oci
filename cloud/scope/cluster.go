@@ -19,22 +19,20 @@ package scope
 import (
 	"context"
 	"fmt"
-	"reflect"
-	"sigs.k8s.io/cluster-api/util/conditions"
 	"strconv"
-
-	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
 
 	"github.com/go-logr/logr"
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	identityClent "github.com/oracle/cluster-api-provider-oci/cloud/services/identity"
 	nlb "github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer"
+	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
 	"github.com/oracle/oci-go-sdk/v63/common"
 	"github.com/oracle/oci-go-sdk/v63/identity"
 	"github.com/pkg/errors"
 	"k8s.io/klog/v2/klogr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -223,13 +221,6 @@ func (s *ClusterScope) setAvailabiltyDomainStatus(ctx context.Context, ads []ide
 	return nil
 }
 
-func (s *ClusterScope) IsTagsEqual(freeFromTags map[string]string, definedTags map[string]map[string]interface{}) bool {
-	if reflect.DeepEqual(freeFromTags, s.GetFreeFormTags()) && reflect.DeepEqual(definedTags, s.GetDefinedTags()) {
-		return true
-	}
-	return false
-}
-
 // GetRegionCodeFromRegion pulls all OCI regions available and returns the passed in region's code if contained in
 // the list.
 //
@@ -280,14 +271,15 @@ func (s *ClusterScope) APIServerPort() int32 {
 // GetFreeFormTags returns a map of FreeformTags defined in the OCICluster's spec
 func (s *ClusterScope) GetFreeFormTags() map[string]string {
 	tags := s.OCICluster.Spec.FreeformTags
-	if tags == nil {
-		tags = make(map[string]string)
+	completeTags := make(map[string]string)
+	for k, v := range tags {
+		completeTags[k] = v
 	}
-	tagsAddedByClusterAPI := ociutil.BuildClusterTags(string(s.OCICluster.GetOCIResourceIdentifier()))
+	tagsAddedByClusterAPI := ociutil.BuildClusterTags(s.OCICluster.GetOCIResourceIdentifier())
 	for k, v := range tagsAddedByClusterAPI {
-		tags[k] = v
+		completeTags[k] = v
 	}
-	return tags
+	return completeTags
 }
 
 func (s *ClusterScope) GetOCICluster() *infrastructurev1beta1.OCICluster {

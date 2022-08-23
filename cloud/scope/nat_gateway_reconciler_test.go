@@ -77,27 +77,6 @@ func TestClusterScope_ReconcileNatGateway(t *testing.T) {
 		updatedTags[k] = v
 	}
 	updatedTags["foo"] = "bar"
-	vcnClient.EXPECT().UpdateNatGateway(gomock.Any(), gomock.Eq(core.UpdateNatGatewayRequest{
-		NatGatewayId: common.String("foo"),
-		UpdateNatGatewayDetails: core.UpdateNatGatewayDetails{
-			FreeformTags: updatedTags,
-			DefinedTags:  definedTagsInterface,
-		},
-	})).
-		Return(core.UpdateNatGatewayResponse{
-			NatGateway: core.NatGateway{
-				Id:           common.String("foo"),
-				FreeformTags: tags,
-			},
-		}, nil)
-	vcnClient.EXPECT().UpdateNatGateway(gomock.Any(), gomock.Eq(core.UpdateNatGatewayRequest{
-		NatGatewayId: common.String("ngw_id"),
-		UpdateNatGatewayDetails: core.UpdateNatGatewayDetails{
-			FreeformTags: updatedTags,
-			DefinedTags:  definedTagsInterface,
-		},
-	})).
-		Return(core.UpdateNatGatewayResponse{}, errors.New("some error"))
 	vcnClient.EXPECT().ListNatGateways(gomock.Any(), gomock.Eq(core.ListNatGatewaysRequest{
 		CompartmentId: common.String("foo"),
 		DisplayName:   common.String("nat-gateway"),
@@ -188,7 +167,7 @@ func TestClusterScope_ReconcileNatGateway(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "update needed",
+			name: "no update needed",
 			spec: infrastructurev1beta1.OCIClusterSpec{
 				DefinedTags: definedTags,
 				FreeformTags: map[string]string{
@@ -203,7 +182,7 @@ func TestClusterScope_ReconcileNatGateway(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "id not present in spec but found by name and update needed but error out",
+			name: "id not present in spec but found by name and no update needed",
 			spec: infrastructurev1beta1.OCIClusterSpec{
 				CompartmentId: "foo",
 				FreeformTags: map[string]string{
@@ -216,8 +195,7 @@ func TestClusterScope_ReconcileNatGateway(t *testing.T) {
 					},
 				},
 			},
-			wantErr:       true,
-			expectedError: "failed to reconcile the nat gateway, failed to update: some error",
+			wantErr: false,
 		},
 		{
 			name: "creation needed",

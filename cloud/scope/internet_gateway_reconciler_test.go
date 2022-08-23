@@ -70,34 +70,13 @@ func TestClusterScope_ReconcileInternetGateway(t *testing.T) {
 				FreeformTags: tags,
 				DefinedTags:  definedTagsInterface,
 			},
-		}, nil).Times(2)
+		}, nil)
 
 	updatedTags := make(map[string]string)
 	for k, v := range tags {
 		updatedTags[k] = v
 	}
 	updatedTags["foo"] = "bar"
-	vcnClient.EXPECT().UpdateInternetGateway(gomock.Any(), gomock.Eq(core.UpdateInternetGatewayRequest{
-		IgId: common.String("foo"),
-		UpdateInternetGatewayDetails: core.UpdateInternetGatewayDetails{
-			FreeformTags: updatedTags,
-			DefinedTags:  definedTagsInterface,
-		},
-	})).
-		Return(core.UpdateInternetGatewayResponse{
-			InternetGateway: core.InternetGateway{
-				Id:           common.String("foo"),
-				FreeformTags: tags,
-			},
-		}, nil)
-	vcnClient.EXPECT().UpdateInternetGateway(gomock.Any(), gomock.Eq(core.UpdateInternetGatewayRequest{
-		IgId: common.String("igw_id"),
-		UpdateInternetGatewayDetails: core.UpdateInternetGatewayDetails{
-			FreeformTags: updatedTags,
-			DefinedTags:  definedTagsInterface,
-		},
-	})).
-		Return(core.UpdateInternetGatewayResponse{}, errors.New("some error"))
 	vcnClient.EXPECT().ListInternetGateways(gomock.Any(), gomock.Eq(core.ListInternetGatewaysRequest{
 		CompartmentId: common.String("foo"),
 		DisplayName:   common.String("internet-gateway"),
@@ -190,22 +169,7 @@ func TestClusterScope_ReconcileInternetGateway(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "update needed",
-			spec: infrastructurev1beta1.OCIClusterSpec{
-				FreeformTags: map[string]string{
-					"foo": "bar",
-				},
-				DefinedTags: definedTags,
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
-						InternetGatewayId: common.String("foo"),
-					},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "id not present in spec but found by name and update needed but error out",
+			name: "id not present in spec but found by name and no update needed",
 			spec: infrastructurev1beta1.OCIClusterSpec{
 				CompartmentId: "foo",
 				FreeformTags: map[string]string{
@@ -218,8 +182,7 @@ func TestClusterScope_ReconcileInternetGateway(t *testing.T) {
 					},
 				},
 			},
-			wantErr:       true,
-			expectedError: "failed to reconcile the internet gateway, failed to update: some error",
+			wantErr: false,
 		},
 		{
 			name: "creation needed",

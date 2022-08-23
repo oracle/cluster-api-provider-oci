@@ -38,9 +38,6 @@ func (s *ClusterScope) ReconcileInternetGateway(ctx context.Context) error {
 	}
 	if igw != nil {
 		s.OCICluster.Spec.NetworkSpec.Vcn.InternetGatewayId = igw.Id
-		if !s.IsTagsEqual(igw.FreeformTags, igw.DefinedTags) {
-			return s.UpdateInternetGateway(ctx)
-		}
 		s.Logger.Info("No Reconciliation Required for Internet Gateway", "internet_gateway", igw.Id)
 		return nil
 	}
@@ -88,24 +85,6 @@ func (s *ClusterScope) GetInternetGateway(ctx context.Context) (*core.InternetGa
 		}
 	}
 	return nil, nil
-}
-
-// UpdateInternetGateway updates the FreeFormTags and DefinedTags
-func (s *ClusterScope) UpdateInternetGateway(ctx context.Context) error {
-	updateIGWDetails := core.UpdateInternetGatewayDetails{
-		FreeformTags: s.GetFreeFormTags(),
-		DefinedTags:  s.GetDefinedTags(),
-	}
-	igwResponse, err := s.VCNClient.UpdateInternetGateway(ctx, core.UpdateInternetGatewayRequest{
-		IgId:                         s.OCICluster.Spec.NetworkSpec.Vcn.InternetGatewayId,
-		UpdateInternetGatewayDetails: updateIGWDetails,
-	})
-	if err != nil {
-		s.Logger.Error(err, "failed to reconcile the internet gateway, failed to update")
-		return errors.Wrap(err, "failed to reconcile the internet gateway, failed to update")
-	}
-	s.Logger.Info("successfully updated the internet gateway", "internet_gateway", *igwResponse.Id)
-	return nil
 }
 
 // CreateInternetGateway creates the Internet Gateway for the cluster based on the ClusterScope

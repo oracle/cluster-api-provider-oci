@@ -438,107 +438,12 @@ func TestLBReconciliation(t *testing.T) {
 			},
 		},
 		{
-			name:          "nlb update tags",
-			errorExpected: false,
-			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
-				clusterScope.OCICluster.Spec.NetworkSpec.APIServerLB.LoadBalancerId = common.String("nlb-id")
-				newtags := make(map[string]string)
-				newtags[ociutil.CreatedBy] = ociutil.OCIClusterAPIProvider
-				newtags[ociutil.ClusterResourceIdentifier] = "resource_uid"
-				newtags["newtag"] = "tagvalue"
-				clusterScope.OCICluster.Spec.FreeformTags = newtags
-				nlbClient.EXPECT().GetNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.GetNetworkLoadBalancerRequest{
-					NetworkLoadBalancerId: common.String("nlb-id"),
-				})).
-					Return(networkloadbalancer.GetNetworkLoadBalancerResponse{
-						NetworkLoadBalancer: networkloadbalancer.NetworkLoadBalancer{
-							Id:           common.String("nlb-id"),
-							FreeformTags: tags,
-							DefinedTags:  make(map[string]map[string]interface{}),
-							IsPrivate:    common.Bool(false),
-							DisplayName:  common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
-							IpAddresses: []networkloadbalancer.IpAddress{
-								{
-									IpAddress: common.String("2.2.2.2"),
-									IsPublic:  common.Bool(true),
-								},
-							},
-						},
-					}, nil)
-				nlbClient.EXPECT().UpdateNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.UpdateNetworkLoadBalancerRequest{
-					NetworkLoadBalancerId: common.String("nlb-id"),
-					UpdateNetworkLoadBalancerDetails: networkloadbalancer.UpdateNetworkLoadBalancerDetails{
-						DisplayName:  common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
-						FreeformTags: newtags,
-						DefinedTags:  make(map[string]map[string]interface{}),
-					},
-				})).
-					Return(networkloadbalancer.UpdateNetworkLoadBalancerResponse{
-						OpcWorkRequestId: common.String("opc-wr-id"),
-					}, nil)
-				nlbClient.EXPECT().GetWorkRequest(gomock.Any(), gomock.Eq(networkloadbalancer.GetWorkRequestRequest{
-					WorkRequestId: common.String("opc-wr-id"),
-				})).Return(networkloadbalancer.GetWorkRequestResponse{
-					WorkRequest: networkloadbalancer.WorkRequest{
-						Status: networkloadbalancer.OperationStatusSucceeded,
-					},
-				}, nil)
-			},
-		},
-		{
-			name:          "nlb update defined tags",
-			errorExpected: false,
-			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
-				clusterScope.OCICluster.Spec.NetworkSpec.APIServerLB.LoadBalancerId = common.String("nlb-id")
-				definedTags, definedTagsInterface := getDefinedTags()
-				clusterScope.OCICluster.Spec.DefinedTags = definedTags
-				nlbClient.EXPECT().GetNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.GetNetworkLoadBalancerRequest{
-					NetworkLoadBalancerId: common.String("nlb-id"),
-				})).
-					Return(networkloadbalancer.GetNetworkLoadBalancerResponse{
-						NetworkLoadBalancer: networkloadbalancer.NetworkLoadBalancer{
-							Id:           common.String("nlb-id"),
-							FreeformTags: tags,
-							DefinedTags:  make(map[string]map[string]interface{}),
-							IsPrivate:    common.Bool(false),
-							DisplayName:  common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
-							IpAddresses: []networkloadbalancer.IpAddress{
-								{
-									IpAddress: common.String("2.2.2.2"),
-									IsPublic:  common.Bool(true),
-								},
-							},
-						},
-					}, nil)
-				nlbClient.EXPECT().UpdateNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.UpdateNetworkLoadBalancerRequest{
-					NetworkLoadBalancerId: common.String("nlb-id"),
-					UpdateNetworkLoadBalancerDetails: networkloadbalancer.UpdateNetworkLoadBalancerDetails{
-						DisplayName:  common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
-						FreeformTags: tags,
-						DefinedTags:  definedTagsInterface,
-					},
-				})).
-					Return(networkloadbalancer.UpdateNetworkLoadBalancerResponse{
-						OpcWorkRequestId: common.String("opc-wr-id"),
-					}, nil)
-				nlbClient.EXPECT().GetWorkRequest(gomock.Any(), gomock.Eq(networkloadbalancer.GetWorkRequestRequest{
-					WorkRequestId: common.String("opc-wr-id"),
-				})).Return(networkloadbalancer.GetWorkRequestResponse{
-					WorkRequest: networkloadbalancer.WorkRequest{
-						Status: networkloadbalancer.OperationStatusSucceeded,
-					},
-				}, nil)
-			},
-		},
-		{
 			name:                "nlb update failed",
 			errorExpected:       true,
 			errorSubStringMatch: true,
 			matchError:          errors.New("failed to reconcile the apiserver LB, failed to update lb"),
 			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
 				clusterScope.OCICluster.Spec.NetworkSpec.APIServerLB.LoadBalancerId = common.String("nlb-id")
-				definedTags, definedTagsInterface := getDefinedTags()
-				clusterScope.OCICluster.Spec.DefinedTags = definedTags
 				nlbClient.EXPECT().GetNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.GetNetworkLoadBalancerRequest{
 					NetworkLoadBalancerId: common.String("nlb-id"),
 				})).
@@ -548,7 +453,7 @@ func TestLBReconciliation(t *testing.T) {
 							FreeformTags: tags,
 							DefinedTags:  make(map[string]map[string]interface{}),
 							IsPrivate:    common.Bool(false),
-							DisplayName:  common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
+							DisplayName:  common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver-test")),
 							IpAddresses: []networkloadbalancer.IpAddress{
 								{
 									IpAddress: common.String("2.2.2.2"),
@@ -560,9 +465,7 @@ func TestLBReconciliation(t *testing.T) {
 				nlbClient.EXPECT().UpdateNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.UpdateNetworkLoadBalancerRequest{
 					NetworkLoadBalancerId: common.String("nlb-id"),
 					UpdateNetworkLoadBalancerDetails: networkloadbalancer.UpdateNetworkLoadBalancerDetails{
-						DisplayName:  common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
-						FreeformTags: tags,
-						DefinedTags:  definedTagsInterface,
+						DisplayName: common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
 					},
 				})).
 					Return(networkloadbalancer.UpdateNetworkLoadBalancerResponse{
@@ -584,8 +487,6 @@ func TestLBReconciliation(t *testing.T) {
 			matchError:          errors.New("request failed"),
 			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
 				clusterScope.OCICluster.Spec.NetworkSpec.APIServerLB.LoadBalancerId = common.String("nlb-id")
-				definedTags, definedTagsInterface := getDefinedTags()
-				clusterScope.OCICluster.Spec.DefinedTags = definedTags
 				nlbClient.EXPECT().GetNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.GetNetworkLoadBalancerRequest{
 					NetworkLoadBalancerId: common.String("nlb-id"),
 				})).
@@ -595,7 +496,7 @@ func TestLBReconciliation(t *testing.T) {
 							FreeformTags: tags,
 							DefinedTags:  make(map[string]map[string]interface{}),
 							IsPrivate:    common.Bool(false),
-							DisplayName:  common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
+							DisplayName:  common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver-test")),
 							IpAddresses: []networkloadbalancer.IpAddress{
 								{
 									IpAddress: common.String("2.2.2.2"),
@@ -607,9 +508,7 @@ func TestLBReconciliation(t *testing.T) {
 				nlbClient.EXPECT().UpdateNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.UpdateNetworkLoadBalancerRequest{
 					NetworkLoadBalancerId: common.String("nlb-id"),
 					UpdateNetworkLoadBalancerDetails: networkloadbalancer.UpdateNetworkLoadBalancerDetails{
-						DisplayName:  common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
-						FreeformTags: tags,
-						DefinedTags:  definedTagsInterface,
+						DisplayName: common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
 					},
 				})).
 					Return(networkloadbalancer.UpdateNetworkLoadBalancerResponse{}, errors.New("request failed"))

@@ -49,10 +49,10 @@ func (s *ClusterScope) ReconcileVCN(ctx context.Context) error {
 }
 
 func (s *ClusterScope) IsVcnEquals(actual *core.Vcn, desired infrastructurev1beta1.VCN) bool {
-	if *actual.DisplayName == desired.Name && s.IsTagsEqual(actual.FreeformTags, actual.DefinedTags) {
-		return true
+	if *actual.DisplayName != desired.Name {
+		return false
 	}
-	return false
+	return true
 }
 
 func (s *ClusterScope) GetVcnName() string {
@@ -112,9 +112,7 @@ func (s *ClusterScope) GetVCN(ctx context.Context) (*core.Vcn, error) {
 
 func (s *ClusterScope) UpdateVCN(ctx context.Context, vcn infrastructurev1beta1.VCN) error {
 	updateVCNDetails := core.UpdateVcnDetails{
-		DisplayName:  common.String(vcn.Name),
-		DefinedTags:  s.GetDefinedTags(),
-		FreeformTags: s.GetFreeFormTags(),
+		DisplayName: common.String(vcn.Name),
 	}
 	vcnResponse, err := s.VCNClient.UpdateVcn(ctx, core.UpdateVcnRequest{
 		UpdateVcnDetails: updateVCNDetails,

@@ -122,27 +122,6 @@ func TestClusterScope_ReconcileRouteTable(t *testing.T) {
 		updatedTags[k] = v
 	}
 	updatedTags["foo"] = "bar"
-	vcnClient.EXPECT().UpdateRouteTable(gomock.Any(), gomock.Eq(core.UpdateRouteTableRequest{
-		RtId: common.String("private"),
-		UpdateRouteTableDetails: core.UpdateRouteTableDetails{
-			FreeformTags: updatedTags,
-			DefinedTags:  definedTagsInterface,
-		},
-	})).
-		Return(core.UpdateRouteTableResponse{
-			RouteTable: core.RouteTable{
-				Id:           common.String("private"),
-				FreeformTags: updatedTags,
-			},
-		}, nil)
-	vcnClient.EXPECT().UpdateRouteTable(gomock.Any(), gomock.Eq(core.UpdateRouteTableRequest{
-		RtId: common.String("rt_id"),
-		UpdateRouteTableDetails: core.UpdateRouteTableDetails{
-			FreeformTags: updatedTags,
-			DefinedTags:  definedTagsInterface,
-		},
-	})).
-		Return(core.UpdateRouteTableResponse{}, errors.New("some error"))
 	vcnClient.EXPECT().ListRouteTables(gomock.Any(), gomock.Eq(core.ListRouteTablesRequest{
 		CompartmentId: common.String("foo"),
 		DisplayName:   common.String("private-route-table"),
@@ -334,7 +313,7 @@ func TestClusterScope_ReconcileRouteTable(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "id not present in spec but found by name and update needed but error out",
+			name: "id not present in spec but found by name and no update",
 			spec: infrastructurev1beta1.OCIClusterSpec{
 				CompartmentId: "foo",
 				FreeformTags: map[string]string{
@@ -357,8 +336,7 @@ func TestClusterScope_ReconcileRouteTable(t *testing.T) {
 					},
 				},
 			},
-			wantErr:       true,
-			expectedError: "failed to reconcile the route table, failed to update: some error",
+			wantErr: false,
 		},
 		{
 			name: "creation failed",
