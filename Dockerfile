@@ -18,6 +18,7 @@ COPY cloud/ cloud/
 COPY exp/ exp/
 COPY feature/ feature/
 COPY vendor/ vendor/
+COPY version/ version/
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=${ARCH} go build -ldflags "${LDFLAGS} -extldflags '-static'"  -o manager ${package}
