@@ -46,12 +46,6 @@ func (s *ClusterScope) ReconcileDRG(ctx context.Context) error {
 	}
 	if drg != nil {
 		s.getDRG().ID = drg.Id
-		if !s.IsTagsEqual(drg.FreeformTags, drg.DefinedTags) {
-			_, err := s.updateDRG(ctx)
-			if err != nil {
-				return err
-			}
-		}
 		s.Logger.Info("No Reconciliation Required for DRG", "drg", drg.Id)
 		return nil
 	}
@@ -124,20 +118,6 @@ func (s *ClusterScope) createDRG(ctx context.Context) (*core.Drg, error) {
 			DisplayName:   common.String(s.GetDRGName()),
 		},
 		OpcRetryToken: ociutil.GetOPCRetryToken("%s-%s", "create-drg", string(s.OCICluster.GetOCIResourceIdentifier())),
-	})
-	if err != nil {
-		return nil, err
-	}
-	return &response.Drg, nil
-}
-
-func (s *ClusterScope) updateDRG(ctx context.Context) (*core.Drg, error) {
-	response, err := s.VCNClient.UpdateDrg(ctx, core.UpdateDrgRequest{
-		DrgId: s.getDRG().ID,
-		UpdateDrgDetails: core.UpdateDrgDetails{
-			FreeformTags: s.GetFreeFormTags(),
-			DefinedTags:  s.GetDefinedTags(),
-		},
 	})
 	if err != nil {
 		return nil, err

@@ -1172,9 +1172,7 @@ func TestClusterScope_ReconcileNSG(t *testing.T) {
 	vcnClient.EXPECT().UpdateNetworkSecurityGroup(gomock.Any(), gomock.Eq(core.UpdateNetworkSecurityGroupRequest{
 		NetworkSecurityGroupId: common.String("update-id"),
 		UpdateNetworkSecurityGroupDetails: core.UpdateNetworkSecurityGroupDetails{
-			FreeformTags: tags,
-			DefinedTags:  definedTagsInterface,
-			DisplayName:  common.String("update-nsg"),
+			DisplayName: common.String("update-nsg"),
 		},
 	})).
 		Return(core.UpdateNetworkSecurityGroupResponse{
@@ -1187,9 +1185,7 @@ func TestClusterScope_ReconcileNSG(t *testing.T) {
 	vcnClient.EXPECT().UpdateNetworkSecurityGroup(gomock.Any(), gomock.Eq(core.UpdateNetworkSecurityGroupRequest{
 		NetworkSecurityGroupId: common.String("update-id"),
 		UpdateNetworkSecurityGroupDetails: core.UpdateNetworkSecurityGroupDetails{
-			FreeformTags: tags,
-			DefinedTags:  definedTagsInterface,
-			DisplayName:  common.String("update-nsg-error"),
+			DisplayName: common.String("update-nsg-error"),
 		},
 	})).
 		Return(core.UpdateNetworkSecurityGroupResponse{}, errors.New("some error"))

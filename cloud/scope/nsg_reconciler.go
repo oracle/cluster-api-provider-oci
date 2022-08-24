@@ -180,12 +180,12 @@ func (s *ClusterScope) IsNSGExitsByRole(role infrastructurev1beta1.Role) bool {
 	return false
 }
 
-// IsNSGEqual compares the actual and desired NSG using name/freeform tags and defined tags.
+// IsNSGEqual compares the actual and desired NSG using name.
 func (s *ClusterScope) IsNSGEqual(actual *core.NetworkSecurityGroup, desired infrastructurev1beta1.NSG) bool {
 	if *actual.DisplayName != desired.Name {
 		return false
 	}
-	return s.IsTagsEqual(actual.FreeformTags, actual.DefinedTags)
+	return true
 }
 
 // UpdateNSGSecurityRulesIfNeeded updates NSG rules if required by comparing actual and desired.
@@ -295,9 +295,7 @@ func (s *ClusterScope) UpdateNSGSecurityRulesIfNeeded(ctx context.Context, desir
 
 func (s *ClusterScope) UpdateNSG(ctx context.Context, nsgSpec infrastructurev1beta1.NSG) error {
 	updateNSGDetails := core.UpdateNetworkSecurityGroupDetails{
-		DisplayName:  common.String(nsgSpec.Name),
-		FreeformTags: s.GetFreeFormTags(),
-		DefinedTags:  s.GetDefinedTags(),
+		DisplayName: common.String(nsgSpec.Name),
 	}
 	nsgResponse, err := s.VCNClient.UpdateNetworkSecurityGroup(ctx, core.UpdateNetworkSecurityGroupRequest{
 		NetworkSecurityGroupId:            nsgSpec.ID,

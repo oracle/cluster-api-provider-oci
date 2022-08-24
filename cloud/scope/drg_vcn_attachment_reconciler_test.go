@@ -131,39 +131,6 @@ func TestDRGVCNAttachmentReconciliation(t *testing.T) {
 			},
 		},
 		{
-			name:          "drg attachment update",
-			errorExpected: false,
-			testSpecificSetup: func(clusterScope *ClusterScope, vcnClient *mock_vcn.MockClient) {
-				vcnPeering.DRG = &infrastructurev1beta1.DRG{}
-				vcnPeering.DRG.Manage = true
-				vcnPeering.DRG.ID = common.String("drg-id")
-				vcnPeering.DRG.VcnAttachmentId = common.String("attachment-id")
-				clusterScope.OCICluster.Spec.NetworkSpec.VCNPeering = &vcnPeering
-				existingTags := make(map[string]string)
-				existingTags[ociutil.CreatedBy] = ociutil.OCIClusterAPIProvider
-				existingTags[ociutil.ClusterResourceIdentifier] = "resource_uid"
-				existingTags["test"] = "test"
-				vcnClient.EXPECT().GetDrgAttachment(gomock.Any(), gomock.Eq(core.GetDrgAttachmentRequest{
-					DrgAttachmentId: common.String("attachment-id"),
-				})).
-					Return(core.GetDrgAttachmentResponse{
-						DrgAttachment: core.DrgAttachment{
-							Id:           common.String("attachment-id"),
-							FreeformTags: existingTags,
-							DefinedTags:  make(map[string]map[string]interface{}),
-						},
-					}, nil)
-				vcnClient.EXPECT().UpdateDrgAttachment(gomock.Any(), gomock.Eq(core.UpdateDrgAttachmentRequest{
-					DrgAttachmentId: common.String("attachment-id"),
-					UpdateDrgAttachmentDetails: core.UpdateDrgAttachmentDetails{
-						FreeformTags: tags,
-						DefinedTags:  make(map[string]map[string]interface{}),
-					},
-				})).
-					Return(core.UpdateDrgAttachmentResponse{}, nil)
-			},
-		},
-		{
 			name:          "drg attachment create",
 			errorExpected: false,
 			testSpecificSetup: func(clusterScope *ClusterScope, vcnClient *mock_vcn.MockClient) {

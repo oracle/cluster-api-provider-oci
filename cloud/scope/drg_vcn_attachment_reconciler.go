@@ -43,12 +43,6 @@ func (s *ClusterScope) ReconcileDRGVCNAttachment(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		if !s.IsTagsEqual(attachment.FreeformTags, attachment.DefinedTags) {
-			_, err := s.UpdateDRGAttachment(ctx)
-			if err != nil {
-				return err
-			}
-		}
 		return nil
 	}
 

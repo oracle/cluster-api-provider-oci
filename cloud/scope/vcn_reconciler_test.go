@@ -469,21 +469,6 @@ func TestClusterScope_GetVcnName(t *testing.T) {
 }
 
 func TestClusterScope_IsVcnEquals(t *testing.T) {
-
-	freeFormTags := map[string]string{
-		"tag1": "foo",
-		"tag2": "bar",
-	}
-	definedTags := map[string]map[string]string{
-		"ns1": {
-			"tag1": "foo",
-			"tag2": "bar",
-		},
-		"ns2": {
-			"tag1": "foo1",
-			"tag2": "bar1",
-		},
-	}
 	tests := []struct {
 		name    string
 		spec    infrastructurev1beta1.OCIClusterSpec
@@ -498,21 +483,6 @@ func TestClusterScope_IsVcnEquals(t *testing.T) {
 			},
 			desired: infrastructurev1beta1.VCN{
 				Name: "bar",
-			},
-			want: false,
-		},
-		{
-			name: "name same tag different",
-			actual: &core.Vcn{
-				DisplayName:  common.String("foo"),
-				FreeformTags: freeFormTags,
-			},
-			desired: infrastructurev1beta1.VCN{
-				Name: "foo",
-			},
-			spec: infrastructurev1beta1.OCIClusterSpec{
-				FreeformTags: freeFormTags,
-				DefinedTags:  definedTags,
 			},
 			want: false,
 		},
@@ -587,9 +557,7 @@ func TestClusterScope_ReconcileVCN(t *testing.T) {
 	vcnClient.EXPECT().UpdateVcn(gomock.Any(), gomock.Eq(core.UpdateVcnRequest{
 		VcnId: common.String("normal_id"),
 		UpdateVcnDetails: core.UpdateVcnDetails{
-			DisplayName:  common.String("foo1"),
-			FreeformTags: tags,
-			DefinedTags:  definedTagsInterface,
+			DisplayName: common.String("foo1"),
 		},
 	})).
 		Return(core.UpdateVcnResponse{
@@ -603,9 +571,7 @@ func TestClusterScope_ReconcileVCN(t *testing.T) {
 	vcnClient.EXPECT().UpdateVcn(gomock.Any(), gomock.Eq(core.UpdateVcnRequest{
 		VcnId: common.String("normal_id"),
 		UpdateVcnDetails: core.UpdateVcnDetails{
-			DisplayName:  common.String("foo2"),
-			FreeformTags: tags,
-			DefinedTags:  definedTagsInterface,
+			DisplayName: common.String("foo2"),
 		},
 	})).
 		Return(core.UpdateVcnResponse{
@@ -655,7 +621,6 @@ func TestClusterScope_ReconcileVCN(t *testing.T) {
 		{
 			name: "vcn update needed",
 			spec: infrastructurev1beta1.OCIClusterSpec{
-				DefinedTags: definedTags,
 				NetworkSpec: infrastructurev1beta1.NetworkSpec{
 					Vcn: infrastructurev1beta1.VCN{
 						ID:   common.String("normal_id"),
@@ -669,7 +634,6 @@ func TestClusterScope_ReconcileVCN(t *testing.T) {
 		{
 			name: "vcn update needed but error out",
 			spec: infrastructurev1beta1.OCIClusterSpec{
-				DefinedTags: definedTags,
 				NetworkSpec: infrastructurev1beta1.NetworkSpec{
 					Vcn: infrastructurev1beta1.VCN{
 						ID:   common.String("normal_id"),

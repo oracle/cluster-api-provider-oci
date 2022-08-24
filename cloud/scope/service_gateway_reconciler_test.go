@@ -70,35 +70,14 @@ func TestClusterScope_ReconcileServiceGateway(t *testing.T) {
 				FreeformTags: tags,
 				DefinedTags:  definedTagsInterface,
 			},
-		}, nil).Times(2)
+		}, nil)
 
 	updatedTags := make(map[string]string)
 	for k, v := range tags {
 		updatedTags[k] = v
 	}
 	updatedTags["foo"] = "bar"
-	vcnClient.EXPECT().UpdateServiceGateway(gomock.Any(), gomock.Eq(core.UpdateServiceGatewayRequest{
-		ServiceGatewayId: common.String("foo"),
-		UpdateServiceGatewayDetails: core.UpdateServiceGatewayDetails{
-			FreeformTags: updatedTags,
-			DefinedTags:  definedTagsInterface,
-		},
-	})).
-		Return(core.UpdateServiceGatewayResponse{
-			ServiceGateway: core.ServiceGateway{
-				Id:           common.String("foo"),
-				FreeformTags: tags,
-				DefinedTags:  definedTagsInterface,
-			},
-		}, nil)
-	vcnClient.EXPECT().UpdateServiceGateway(gomock.Any(), gomock.Eq(core.UpdateServiceGatewayRequest{
-		ServiceGatewayId: common.String("sgw_id"),
-		UpdateServiceGatewayDetails: core.UpdateServiceGatewayDetails{
-			FreeformTags: updatedTags,
-			DefinedTags:  definedTagsInterface,
-		},
-	})).
-		Return(core.UpdateServiceGatewayResponse{}, errors.New("some error"))
+
 	vcnClient.EXPECT().ListServiceGateways(gomock.Any(), gomock.Eq(core.ListServiceGatewaysRequest{
 		CompartmentId: common.String("foo"),
 		VcnId:         common.String("vcn"),
@@ -209,22 +188,7 @@ func TestClusterScope_ReconcileServiceGateway(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "update needed",
-			spec: infrastructurev1beta1.OCIClusterSpec{
-				FreeformTags: map[string]string{
-					"foo": "bar",
-				},
-				DefinedTags: definedTags,
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
-						ServiceGatewayId: common.String("foo"),
-					},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "id not present in spec but found by name and update needed but error out",
+			name: "id not present in spec but found by name and no update",
 			spec: infrastructurev1beta1.OCIClusterSpec{
 				CompartmentId: "foo",
 				FreeformTags: map[string]string{
@@ -237,8 +201,7 @@ func TestClusterScope_ReconcileServiceGateway(t *testing.T) {
 					},
 				},
 			},
-			wantErr:       true,
-			expectedError: "failed to reconcile the service gateway, failed to update: some error",
+			wantErr: false,
 		},
 		{
 			name: "creation needed",

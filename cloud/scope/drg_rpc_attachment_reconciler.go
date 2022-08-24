@@ -55,13 +55,6 @@ func (s *ClusterScope) ReconcileDRGRPCAttachment(ctx context.Context) error {
 		if localRpc != nil {
 			rpcSpec.RPCConnectionId = localRpc.Id
 			s.Logger.Info("Local RPC exists", "rpcId", localRpc.Id)
-			if !s.IsTagsEqual(localRpc.FreeformTags, localRpc.DefinedTags) {
-				_, err := s.updateDRGRpc(ctx, localRpc.Id, s.VCNClient)
-				if err != nil {
-					return err
-				}
-				s.Logger.Info("Local RPC has been updated", "rpcId", localRpc.Id)
-			}
 		} else {
 			localRpc, err = s.createRPC(ctx, s.getDrgID(), s.OCICluster.Name, s.VCNClient)
 			if err != nil {
@@ -91,13 +84,6 @@ func (s *ClusterScope) ReconcileDRGRPCAttachment(ctx context.Context) error {
 				s.Logger.Info("Remote RPC exists", "rpcId", localRpc.Id)
 				s.Logger.Info("Connection status of 2 peered RPCs", "status", localRpc.PeeringStatus)
 				rpcSpec.PeerRPCConnectionId = remoteRpc.Id
-				if !s.IsTagsEqual(remoteRpc.FreeformTags, remoteRpc.DefinedTags) {
-					_, err := s.updateDRGRpc(ctx, remoteRpc.Id, clientProvider.VCNClient)
-					if err != nil {
-						return err
-					}
-					s.Logger.Info("Remote RPC has been updated", "rpcId", remoteRpc.Id)
-				}
 			} else {
 				remoteRpc, err = s.createRPC(ctx, rpcSpec.PeerDRGId, s.OCICluster.Name, clientProvider.VCNClient)
 				if err != nil {

@@ -123,7 +123,7 @@ func (s *ClusterScope) IsSecurityListEqual(actual core.SecurityList, desired inf
 			return false
 		}
 	}
-	return s.IsTagsEqual(actual.FreeformTags, actual.DefinedTags)
+	return true
 }
 
 func (s *ClusterScope) UpdateSecurityList(ctx context.Context, securityListSpec infrastructurev1beta1.SecurityList) error {
@@ -145,8 +145,6 @@ func (s *ClusterScope) UpdateSecurityList(ctx context.Context, securityListSpec 
 		DisplayName:          common.String(securityListSpec.Name),
 		EgressSecurityRules:  egressRules,
 		IngressSecurityRules: ingressRules,
-		FreeformTags:         s.GetFreeFormTags(),
-		DefinedTags:          s.GetDefinedTags(),
 	}
 	securityListResponse, err := s.VCNClient.UpdateSecurityList(ctx, core.UpdateSecurityListRequest{
 		UpdateSecurityListDetails: updateSecurityListDetails,

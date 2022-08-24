@@ -38,9 +38,6 @@ func (s *ClusterScope) ReconcileNatGateway(ctx context.Context) error {
 	}
 	if ngw != nil {
 		s.OCICluster.Spec.NetworkSpec.Vcn.NatGatewayId = ngw.Id
-		if !s.IsTagsEqual(ngw.FreeformTags, ngw.DefinedTags) {
-			return s.UpdateNatGateway(ctx)
-		}
 		s.Logger.Info("No Reconciliation Required for Nat Gateway", "nat_gateway", ngw.Id)
 		return nil
 	}

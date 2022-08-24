@@ -515,10 +515,8 @@ func TestClusterScope_ReconcileSubnet(t *testing.T) {
 	vcnClient.EXPECT().UpdateSubnet(gomock.Any(), gomock.Eq(core.UpdateSubnetRequest{
 		SubnetId: common.String("update_needed_id"),
 		UpdateSubnetDetails: core.UpdateSubnetDetails{
-			DefinedTags:  definedTagsInterface,
-			DisplayName:  common.String("update_needed"),
-			FreeformTags: tags,
-			CidrBlock:    common.String(ServiceLoadBalancerDefaultCIDR),
+			DisplayName: common.String("update_needed"),
+			CidrBlock:   common.String(ServiceLoadBalancerDefaultCIDR),
 		},
 	})).
 		Return(core.UpdateSubnetResponse{
@@ -530,9 +528,7 @@ func TestClusterScope_ReconcileSubnet(t *testing.T) {
 	vcnClient.EXPECT().UpdateSubnet(gomock.Any(), gomock.Eq(core.UpdateSubnetRequest{
 		SubnetId: common.String("sec_list_added_id"),
 		UpdateSubnetDetails: core.UpdateSubnetDetails{
-			DefinedTags:     definedTagsInterface,
 			DisplayName:     common.String("sec_list_added"),
-			FreeformTags:    tags,
 			CidrBlock:       common.String(WorkerSubnetDefaultCIDR),
 			SecurityListIds: []string{"sec_list_id"},
 		},
@@ -545,10 +541,8 @@ func TestClusterScope_ReconcileSubnet(t *testing.T) {
 	vcnClient.EXPECT().UpdateSubnet(gomock.Any(), gomock.Eq(core.UpdateSubnetRequest{
 		SubnetId: common.String("update_subnet_error"),
 		UpdateSubnetDetails: core.UpdateSubnetDetails{
-			DefinedTags:  definedTagsInterface,
-			DisplayName:  common.String("update"),
-			FreeformTags: tags,
-			CidrBlock:    common.String("2.2.2.2/1"),
+			DisplayName: common.String("update"),
+			CidrBlock:   common.String("2.2.2.2/1"),
 		},
 	})).
 		Return(core.UpdateSubnetResponse{}, errors.New("some error"))
@@ -603,9 +597,7 @@ func TestClusterScope_ReconcileSubnet(t *testing.T) {
 	vcnClient.EXPECT().UpdateSecurityList(gomock.Any(), gomock.Eq(core.UpdateSecurityListRequest{
 		SecurityListId: common.String("seclist_id"),
 		UpdateSecurityListDetails: core.UpdateSecurityListDetails{
-			DefinedTags:  definedTagsInterface,
-			DisplayName:  common.String("update_seclist"),
-			FreeformTags: tags,
+			DisplayName: common.String("update_seclist"),
 			EgressSecurityRules: []core.EgressSecurityRule{
 				{
 					Description: common.String("test-egress"),
@@ -646,9 +638,7 @@ func TestClusterScope_ReconcileSubnet(t *testing.T) {
 	vcnClient.EXPECT().UpdateSecurityList(gomock.Any(), gomock.Eq(core.UpdateSecurityListRequest{
 		SecurityListId: common.String("seclist_id"),
 		UpdateSecurityListDetails: core.UpdateSecurityListDetails{
-			DefinedTags:  definedTagsInterface,
-			DisplayName:  common.String("bar"),
-			FreeformTags: tags,
+			DisplayName: common.String("bar"),
 			EgressSecurityRules: []core.EgressSecurityRule{
 				{
 					Description: common.String("test-egress"),

@@ -161,38 +161,6 @@ func TestDRGReconciliation(t *testing.T) {
 			},
 		},
 		{
-			name:          "drg update",
-			errorExpected: false,
-			testSpecificSetup: func(clusterScope *ClusterScope, vcnClient *mock_vcn.MockClient) {
-				vcnPeering.DRG = &infrastructurev1beta1.DRG{}
-				vcnPeering.DRG.Manage = true
-				vcnPeering.DRG.ID = common.String("drg-id")
-				existingTags := make(map[string]string)
-				existingTags[ociutil.CreatedBy] = ociutil.OCIClusterAPIProvider
-				existingTags[ociutil.ClusterResourceIdentifier] = "resource_uid"
-				existingTags["test"] = "test"
-				clusterScope.OCICluster.Spec.NetworkSpec.VCNPeering = &vcnPeering
-				vcnClient.EXPECT().GetDrg(gomock.Any(), gomock.Eq(core.GetDrgRequest{
-					DrgId: common.String("drg-id"),
-				})).
-					Return(core.GetDrgResponse{
-						Drg: core.Drg{
-							Id:           common.String("drg-id"),
-							FreeformTags: existingTags,
-							DefinedTags:  make(map[string]map[string]interface{}),
-						},
-					}, nil)
-				vcnClient.EXPECT().UpdateDrg(gomock.Any(), gomock.Eq(core.UpdateDrgRequest{
-					DrgId: common.String("drg-id"),
-					UpdateDrgDetails: core.UpdateDrgDetails{
-						FreeformTags: tags,
-						DefinedTags:  make(map[string]map[string]interface{}),
-					},
-				})).
-					Return(core.UpdateDrgResponse{}, nil)
-			},
-		},
-		{
 			name:          "drg create",
 			errorExpected: false,
 			testSpecificSetup: func(clusterScope *ClusterScope, vcnClient *mock_vcn.MockClient) {

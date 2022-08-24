@@ -112,9 +112,7 @@ func (s *ClusterScope) GetControlPlaneLoadBalancerName() string {
 func (s *ClusterScope) UpdateLB(ctx context.Context, lb infrastructurev1beta1.LoadBalancer) error {
 	lbId := s.OCICluster.Spec.NetworkSpec.APIServerLB.LoadBalancerId
 	updateLBDetails := networkloadbalancer.UpdateNetworkLoadBalancerDetails{
-		DisplayName:  common.String(lb.Name),
-		FreeformTags: s.GetFreeFormTags(),
-		DefinedTags:  s.GetDefinedTags(),
+		DisplayName: common.String(lb.Name),
 	}
 	lbResponse, err := s.LoadBalancerClient.UpdateNetworkLoadBalancer(ctx, networkloadbalancer.UpdateNetworkLoadBalancerRequest{
 		UpdateNetworkLoadBalancerDetails: updateLBDetails,
@@ -244,12 +242,12 @@ func (s *ClusterScope) getLoadbalancerIp(nlb networkloadbalancer.NetworkLoadBala
 }
 
 // IsLBEqual determines if the actual networkloadbalancer.NetworkLoadBalancer is equal to the desired.
-// Equality is determined by DisplayName, FreeformTags and DefinedTags matching.
+// Equality is determined by DisplayName
 func (s *ClusterScope) IsLBEqual(actual *networkloadbalancer.NetworkLoadBalancer, desired infrastructurev1beta1.LoadBalancer) bool {
 	if desired.Name != *actual.DisplayName {
 		return false
 	}
-	return s.IsTagsEqual(actual.FreeformTags, actual.DefinedTags)
+	return true
 }
 
 // GetLoadBalancer retrieves the Cluster's networkloadbalancer.NetworkLoadBalancer using the one of the following methods
