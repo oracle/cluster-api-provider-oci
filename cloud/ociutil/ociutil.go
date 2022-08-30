@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	nlb "github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer"
@@ -38,6 +39,7 @@ const (
 	CreatedBy                 = "CreatedBy"
 	OCIClusterAPIProvider     = "OCIClusterAPIProvider"
 	ClusterResourceIdentifier = "ClusterResourceIdentifier"
+	OutOfHostCapacityErr      = "Out of host capacity"
 )
 
 // ErrNotFound is for simulation during testing, OCI SDK does not have a way
@@ -56,6 +58,10 @@ func IsNotFound(err error) bool {
 	err = errors.Cause(err)
 	serviceErr, ok := common.IsServiceError(err)
 	return ok && serviceErr.GetHTTPStatusCode() == http.StatusNotFound
+}
+
+func IsOutOfHostCapacity(err error) bool {
+	return strings.Contains(err.Error(), OutOfHostCapacityErr)
 }
 
 // AwaitLBWorkRequest waits for the LB work request to either succeed, fail. See k8s.io/apimachinery/pkg/util/wait
