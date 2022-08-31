@@ -1,25 +1,10 @@
 
 # Install Cluster API Provider for Oracle Cloud Infrastructure
 
-1. If you are not using [kind][kind] for your management cluster, export the `KUBECONFIG` environment variable to point to the correct Kubeconfig file.
+If you are not using [kind][kind] for your management cluster, export the `KUBECONFIG` environment variable to point to the correct Kubeconfig file.
 
    ```shell
-   export KUBECONFIG=/path/to/kubeconfig
-   ```
-
-2. Create a file `clusterctl.yaml` in `$HOME/.cluster-api/`
-
-   ```shell
-     touch "$HOME"/.cluster-api/clusterctl.yaml
-   ```
-
-3. Add the Oracle Cloud Infrastructure (OCI) Provider in `clusterctl.yaml`:
-
-   ```yaml
-   providers:
-     - name: oci
-       url: https://github.com/oracle/cluster-api-provider-oci/releases/v0.4.0/infrastructure-components.yaml
-       type: InfrastructureProvider
+      export KUBECONFIG=/path/to/kubeconfig
    ```
 
 ## Configure authentication
@@ -70,7 +55,7 @@ allow dynamic-group [your dynamic group name] to manage load-balancers in compar
 Initialize management cluster and install CAPOCI
 
    ```bash
-      clusterctl init --infrastructure oci
+      clusterctl init --infrastructure oci:v0.5.0
    ```
 
 ## CAPOCI Components
