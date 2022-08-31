@@ -1,29 +1,14 @@
 
 # Install Cluster API Provider for Oracle Cloud Infrastructure
 
-1. If you are not using [kind][kind] for your management cluster, export the `KUBECONFIG` environment variable to point to the correct Kubeconfig file.
+If you are not using [kind][kind] for your management cluster, export the `KUBECONFIG` environment variable to point to the correct Kubeconfig file.
 
    ```shell
-   export KUBECONFIG=/path/to/kubeconfig
-   ```
-
-2. Create a file `clusterctl.yaml` in `$HOME/.cluster-api/`
-
-   ```shell
-     touch "$HOME"/.cluster-api/clusterctl.yaml
-   ```
-
-3. Add the Oracle Cloud Infrastructure (OCI) Provider in `clusterctl.yaml`:
-
-   ```yaml
-   providers:
-     - name: oci
-       url: https://github.com/oracle/cluster-api-provider-oci/releases/v0.4.0/infrastructure-components.yaml
-       type: InfrastructureProvider
+      export KUBECONFIG=/path/to/kubeconfig
    ```
 
 ## Configure authentication
-Before installing Cluster API Provider for OCI (CAPOCI), you must first set up your preferred 
+Before installing Cluster API Provider for OCI (CAPOCI), you must first set up your preferred
 authentication mechanism using specific environment variables.
 
 ### User Principal
@@ -49,7 +34,7 @@ credentials.
 
 ### Instance Principal
 
-If the management cluster is hosted in Oracle Cloud Infrastructure, [Instance principals][instance-principals] authentication 
+If the management cluster is hosted in Oracle Cloud Infrastructure, [Instance principals][instance-principals] authentication
 is recommended. Export the following parameters to use Instance Principals. If Instance Principals are used, the user principal
 parameters explained in above section will not be used.
 
@@ -70,18 +55,18 @@ allow dynamic-group [your dynamic group name] to manage load-balancers in compar
 Initialize management cluster and install CAPOCI
 
    ```bash
-      clusterctl init --infrastructure oci
+      clusterctl init --infrastructure oci:v0.6.0
    ```
 
 ## CAPOCI Components
 
 When installing CAPOCI, the following components will be installed in the management cluster:
 
- 1. A custom resource definition (`CRD`) for `OCICluster`, which is a Kubernetes custom resource that represents a workload cluster created in OCI by CAPOCI.
- 2. A custom resource definition (`CRD`) for `OCIMachine`, which is a Kubernetes custom resource that represents one node in the workload cluster created in OCI by CAPOCI.
- 3. Role-based access control resources for a Kubernetes `Deployment`, `ServiceAccount`, `Role`, `ClusterRole` and `ClusterRoleBinding`
- 4. A Kubernetes `Secret` which will hold OCI credentials
- 5. A Kubernetes `Deployment` with the CAPOCI image - ghcr.io/oracle/cluster-api-oci-controller: `<version>`
+1. A custom resource definition (`CRD`) for `OCICluster`, which is a Kubernetes custom resource that represents a workload cluster created in OCI by CAPOCI.
+2. A custom resource definition (`CRD`) for `OCIMachine`, which is a Kubernetes custom resource that represents one node in the workload cluster created in OCI by CAPOCI.
+3. Role-based access control resources for a Kubernetes `Deployment`, `ServiceAccount`, `Role`, `ClusterRole` and `ClusterRoleBinding`
+4. A Kubernetes `Secret` which will hold OCI credentials
+5. A Kubernetes `Deployment` with the CAPOCI image - ghcr.io/oracle/cluster-api-oci-controller: `<version>`
 
 Please inspect the `infrastructure-components.yaml` present in the release artifacts to know more.
 
