@@ -77,6 +77,8 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 			Role: "not-control-plane",
 		},
 	}
+	goodClusterName := "test-cluster"
+	badClusterName := "bad.cluster"
 
 	tests := []struct {
 		name                  string
@@ -87,7 +89,9 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 		{
 			name: "shouldn't allow spaces in region",
 			c: &OCICluster{
-				ObjectMeta: metav1.ObjectMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
 				Spec: OCIClusterSpec{
 					Region: "us city 1",
 				},
@@ -98,7 +102,9 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 		{
 			name: "shouldn't allow bad CompartmentId",
 			c: &OCICluster{
-				ObjectMeta: metav1.ObjectMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
 				Spec: OCIClusterSpec{
 					CompartmentId: "badocid",
 				},
@@ -109,8 +115,10 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 		{
 			name: "shouldn't allow blank CompartmentId",
 			c: &OCICluster{
-				ObjectMeta: metav1.ObjectMeta{},
-				Spec:       OCIClusterSpec{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
+				Spec: OCIClusterSpec{},
 			},
 			errorMgsShouldContain: "compartmentId",
 			expectErr:             true,
@@ -118,7 +126,9 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 		{
 			name: "shouldn't allow bad vcn cider",
 			c: &OCICluster{
-				ObjectMeta: metav1.ObjectMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
 				Spec: OCIClusterSpec{
 					NetworkSpec: NetworkSpec{
 						Vcn: VCN{
@@ -133,7 +143,9 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 		{
 			name: "shouldn't allow blank OCIResourceIdentifier",
 			c: &OCICluster{
-				ObjectMeta: metav1.ObjectMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
 				Spec: OCIClusterSpec{
 					CompartmentId: "ocid",
 				},
@@ -144,7 +156,9 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 		{
 			name: "shouldn't allow subnet cidr outside of vcn cidr",
 			c: &OCICluster{
-				ObjectMeta: metav1.ObjectMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
 				Spec: OCIClusterSpec{
 					NetworkSpec: NetworkSpec{
 						Vcn: VCN{
@@ -160,7 +174,9 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 		{
 			name: "should allow empty subnet cidr",
 			c: &OCICluster{
-				ObjectMeta: metav1.ObjectMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
 				Spec: OCIClusterSpec{
 					CompartmentId:         "ocid",
 					OCIResourceIdentifier: "uuid",
@@ -177,7 +193,9 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 		{
 			name: "shouldn't allow subnet bad cidr format",
 			c: &OCICluster{
-				ObjectMeta: metav1.ObjectMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
 				Spec: OCIClusterSpec{
 					NetworkSpec: NetworkSpec{
 						Vcn: VCN{
@@ -193,7 +211,9 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 		{
 			name: "shouldn't allow subnet cidr outside of vcn cidr",
 			c: &OCICluster{
-				ObjectMeta: metav1.ObjectMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
 				Spec: OCIClusterSpec{
 					NetworkSpec: NetworkSpec{
 						Vcn: VCN{
@@ -209,7 +229,9 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 		{
 			name: "shouldn't allow subnet role outside of pre-defined roles",
 			c: &OCICluster{
-				ObjectMeta: metav1.ObjectMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
 				Spec: OCIClusterSpec{
 					NetworkSpec: NetworkSpec{
 						Vcn: VCN{
@@ -223,9 +245,31 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 			expectErr:             true,
 		},
 		{
+			name: "shouldn't allow bad cluster names",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: badClusterName,
+				},
+				Spec: OCIClusterSpec{
+					CompartmentId:         "ocid",
+					OCIResourceIdentifier: "uuid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							CIDR:    "10.0.0.0/16",
+							Subnets: emptySubnetName,
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "Cluster Name doesn't match regex",
+			expectErr:             true,
+		},
+		{
 			name: "should allow empty subnet name",
 			c: &OCICluster{
-				ObjectMeta: metav1.ObjectMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
 				Spec: OCIClusterSpec{
 					CompartmentId:         "ocid",
 					OCIResourceIdentifier: "uuid",
@@ -242,7 +286,9 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 		{
 			name: "shouldn't allow bad NSG egress cidr",
 			c: &OCICluster{
-				ObjectMeta: metav1.ObjectMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
 				Spec: OCIClusterSpec{
 					NetworkSpec: NetworkSpec{
 						Vcn: VCN{
@@ -264,7 +310,9 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 		{
 			name: "shouldn't allow bad NSG ingress cidr",
 			c: &OCICluster{
-				ObjectMeta: metav1.ObjectMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
 				Spec: OCIClusterSpec{
 					NetworkSpec: NetworkSpec{
 						Vcn: VCN{
@@ -286,7 +334,9 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 		{
 			name: "shouldn't allow bad NSG role",
 			c: &OCICluster{
-				ObjectMeta: metav1.ObjectMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
 				Spec: OCIClusterSpec{
 					NetworkSpec: NetworkSpec{
 						Vcn: VCN{
@@ -304,7 +354,7 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 			name: "should allow blank region",
 			c: &OCICluster{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "cluster-name",
+					Name: goodClusterName,
 				},
 				Spec: OCIClusterSpec{
 					Region:                "",
@@ -324,7 +374,7 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 			name: "should succeed",
 			c: &OCICluster{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "cluster-name",
+					Name: goodClusterName,
 				},
 				Spec: OCIClusterSpec{
 					Region:                "us-lexington-1",
