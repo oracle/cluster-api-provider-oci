@@ -21,6 +21,7 @@ package v1beta1
 
 import (
 	"fmt"
+	"regexp"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -35,6 +36,12 @@ var clusterlogger = ctrl.Log.WithName("ocicluster-resource")
 var (
 	_ webhook.Defaulter = &OCICluster{}
 	_ webhook.Validator = &OCICluster{}
+)
+
+const (
+	// can't use: \/"'[]:|<>+=;,.?*@&, Can't start with underscore. Can't end with period or hyphen.
+	// not using . in the name to avoid issues when the name is part of DNS name.
+	clusterNameRegex = `^[a-z0-9][a-z0-9-]{0,42}[a-z0-9]$`
 )
 
 // +kubebuilder:webhook:verbs=create;update,path=/validate-infrastructure-cluster-x-k8s-io-v1beta1-ocicluster,mutating=false,failurePolicy=fail,matchPolicy=Equivalent,groups=infrastructure.cluster.x-k8s.io,resources=ociclusters,versions=v1beta1,name=validation.ocicluster.infrastructure.cluster.x-k8s.io,sideEffects=None,admissionReviewVersions=v1beta1
@@ -115,6 +122,7 @@ func (c *OCICluster) validate(old *OCICluster) field.ErrorList {
 	}
 
 	allErrs = append(allErrs, validateNetworkSpec(c.Spec.NetworkSpec, oldNetworkSpec, field.NewPath("spec").Child("networkSpec"))...)
+	allErrs = append(allErrs, c.validateClusterName()...)
 
 	if len(c.Spec.CompartmentId) <= 0 {
 		allErrs = append(
@@ -146,5 +154,20 @@ func (c *OCICluster) validate(old *OCICluster) field.ErrorList {
 		return nil
 	}
 
+	return allErrs
+}
+
+// validateClusterName validates the cluster name
+func (c *OCICluster) validateClusterName() field.ErrorList {
+	var allErrs field.ErrorList
+
+	if success, _ := regexp.MatchString(clusterNameRegex, c.Name); !success {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("metadata").Child("Name"), c.Name,
+			fmt.Sprintf("Cluster Name doesn't match regex %s, can contain only lowercase alphanumeric characters and '-', must start/end with an alphanumeric character",
+				clusterNameRegex)))
+	}
+	if len(allErrs) == 0 {
+		return nil
+	}
 	return allErrs
 }
