@@ -40,6 +40,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
+var fdList = []string{"FAULT-DOMAIN-1", "FAULT-DOMAIN-2", "FAULT-DOMAIN-3"}
+
 func TestInstanceReconciliation(t *testing.T) {
 	var (
 		ms            *MachineScope
@@ -278,6 +280,47 @@ func TestInstanceReconciliation(t *testing.T) {
 			},
 		},
 		{
+			name:          "try all fds",
+			errorExpected: true,
+			matchError:    TestError{errorString: ociutil.OutOfHostCapacityErr},
+			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				setupAllParams(ms)
+				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
+					DisplayName:   common.String("name"),
+					CompartmentId: common.String("test"),
+				})).Return(core.ListInstancesResponse{}, nil)
+
+				computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
+					return instanceFDMatcher(request, "FAULT-DOMAIN-1")
+				})).Return(core.LaunchInstanceResponse{}, TestError{errorString: ociutil.OutOfHostCapacityErr})
+				computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
+					return instanceFDMatcher(request, "FAULT-DOMAIN-2")
+				})).Return(core.LaunchInstanceResponse{}, TestError{errorString: ociutil.OutOfHostCapacityErr})
+				computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
+					return instanceFDMatcher(request, "FAULT-DOMAIN-3")
+				})).Return(core.LaunchInstanceResponse{}, TestError{errorString: ociutil.OutOfHostCapacityErr})
+			},
+		},
+		{
+			name:          "second fd works",
+			errorExpected: false,
+			matchError:    TestError{errorString: ociutil.OutOfHostCapacityErr},
+			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				setupAllParams(ms)
+				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
+					DisplayName:   common.String("name"),
+					CompartmentId: common.String("test"),
+				})).Return(core.ListInstancesResponse{}, nil)
+
+				computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
+					return anyFdMatcher(request)
+				})).Return(core.LaunchInstanceResponse{}, TestError{errorString: ociutil.OutOfHostCapacityErr})
+				computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
+					return anyFdMatcher(request)
+				})).Return(core.LaunchInstanceResponse{}, nil)
+			},
+		},
+		{
 			name:          "check compartment at cluster",
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
@@ -341,6 +384,7 @@ func TestInstanceReconciliation(t *testing.T) {
 						BaselineOcpuUtilization: core.LaunchInstanceShapeConfigDetailsBaselineOcpuUtilization8,
 					},
 					AvailabilityDomain:             common.String("ad2"),
+					FaultDomain:                    common.String("FAULT-DOMAIN-2"),
 					CompartmentId:                  common.String("test"),
 					IsPvEncryptionInTransitEnabled: common.Bool(true),
 					DefinedTags:                    map[string]map[string]interface{}{},
@@ -379,6 +423,7 @@ func TestInstanceReconciliation(t *testing.T) {
 					},
 					Shape:                          common.String("shape"),
 					AvailabilityDomain:             common.String("ad2"),
+					FaultDomain:                    common.String("FAULT-DOMAIN-2"),
 					CompartmentId:                  common.String("test"),
 					IsPvEncryptionInTransitEnabled: common.Bool(true),
 					DefinedTags:                    map[string]map[string]interface{}{},
@@ -425,6 +470,7 @@ func TestInstanceReconciliation(t *testing.T) {
 						BaselineOcpuUtilization: core.LaunchInstanceShapeConfigDetailsBaselineOcpuUtilization8,
 					},
 					AvailabilityDomain:             common.String("ad2"),
+					FaultDomain:                    common.String("FAULT-DOMAIN-2"),
 					CompartmentId:                  common.String("test"),
 					IsPvEncryptionInTransitEnabled: common.Bool(true),
 					DefinedTags:                    map[string]map[string]interface{}{},
@@ -473,6 +519,7 @@ func TestInstanceReconciliation(t *testing.T) {
 						BaselineOcpuUtilization: core.LaunchInstanceShapeConfigDetailsBaselineOcpuUtilization8,
 					},
 					AvailabilityDomain:             common.String("ad2"),
+					FaultDomain:                    common.String("FAULT-DOMAIN-2"),
 					CompartmentId:                  common.String("test"),
 					IsPvEncryptionInTransitEnabled: common.Bool(true),
 					DefinedTags:                    map[string]map[string]interface{}{},
@@ -525,6 +572,7 @@ func TestInstanceReconciliation(t *testing.T) {
 						BaselineOcpuUtilization: core.LaunchInstanceShapeConfigDetailsBaselineOcpuUtilization8,
 					},
 					AvailabilityDomain:             common.String("ad2"),
+					FaultDomain:                    common.String("FAULT-DOMAIN-2"),
 					CompartmentId:                  common.String("test"),
 					IsPvEncryptionInTransitEnabled: common.Bool(true),
 					DefinedTags:                    map[string]map[string]interface{}{},
@@ -578,6 +626,7 @@ func TestInstanceReconciliation(t *testing.T) {
 						BaselineOcpuUtilization: core.LaunchInstanceShapeConfigDetailsBaselineOcpuUtilization8,
 					},
 					AvailabilityDomain:             common.String("ad2"),
+					FaultDomain:                    common.String("FAULT-DOMAIN-2"),
 					CompartmentId:                  common.String("test"),
 					IsPvEncryptionInTransitEnabled: common.Bool(true),
 					DefinedTags:                    map[string]map[string]interface{}{},
@@ -634,6 +683,30 @@ func instanceCompartmentIDMatcher(request interface{}, matchStr string) error {
 		return errors.New(fmt.Sprintf("expecting DisplayName as %s", matchStr))
 	}
 	return nil
+}
+
+func instanceFDMatcher(request interface{}, matchStr string) error {
+	r, ok := request.(core.LaunchInstanceRequest)
+	if !ok {
+		return errors.New("expecting LaunchInstanceRequest type")
+	}
+	if *r.LaunchInstanceDetails.FaultDomain != matchStr {
+		return errors.New(fmt.Sprintf("expecting fd as %s", matchStr))
+	}
+	return nil
+}
+
+func anyFdMatcher(request interface{}) error {
+	r, ok := request.(core.LaunchInstanceRequest)
+	if !ok {
+		return errors.New("expecting LaunchInstanceRequest type")
+	}
+	for _, f := range fdList {
+		if f == *r.FaultDomain {
+			return nil
+		}
+	}
+	return errors.New(fmt.Sprintf("invalid fd"))
 }
 
 func TestLBReconciliationCreation(t *testing.T) {
@@ -1304,12 +1377,24 @@ func setupAllParams(ms *MachineScope) {
 		"2": {
 			Attributes: map[string]string{
 				"AvailabilityDomain": "ad2",
+				"FaultDomain":        "FAULT-DOMAIN-2",
 			},
 		},
 		"3": {
 			Attributes: map[string]string{
 				"AvailabilityDomain": "ad3",
 			},
+		},
+	}
+	ms.OCICluster.Status.AvailabilityDomains = map[string]infrastructurev1beta1.OCIAvailabilityDomain{
+		"ad1": {
+			FaultDomains: fdList,
+		},
+		"ad2": {
+			FaultDomains: fdList,
+		},
+		"ad3": {
+			FaultDomains: fdList,
 		},
 	}
 	ms.Machine.Spec.FailureDomain = common.String("2")
@@ -1322,4 +1407,14 @@ func setupAllParams(ms *MachineScope) {
 	ms.OCICluster.UID = "uid"
 	ms.OCICluster.Spec.OCIResourceIdentifier = "resource_uid"
 	ms.OCIMachine.UID = "machineuid"
+}
+
+// The error built-in interface type is the conventional interface for
+// representing an error condition, with the nil value representing no error.
+type TestError struct {
+	errorString string
+}
+
+func (t TestError) Error() string {
+	return t.errorString
 }

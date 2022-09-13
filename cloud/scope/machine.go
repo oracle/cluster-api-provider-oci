@@ -21,9 +21,10 @@ import (
 	"encoding/base64"
 	"fmt"
 	"math/rand"
-	"sigs.k8s.io/cluster-api/util/conditions"
 	"strconv"
 	"time"
+
+	"sigs.k8s.io/cluster-api/util/conditions"
 
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
 
@@ -246,9 +247,20 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 	if (shapeConfig != core.LaunchInstanceShapeConfigDetails{}) {
 		launchDetails.ShapeConfig = &shapeConfig
 	}
-	if faultDomain != "" {
-		launchDetails.FaultDomain = common.String(faultDomain)
+	initialFaultDomain := faultDomain
+	adMap := m.OCICluster.Status.AvailabilityDomains[availabilityDomain]
+	if initialFaultDomain == "" {
+		// pick a random fault domain
+		rand.Seed(time.Now().UnixNano())
+		// rand.Intn(3) will produce a random number from 0(inclusive) to 3(exclusive)
+		faultDomainIndex := rand.Intn(3)
+		initialFaultDomain = adMap.FaultDomains[faultDomainIndex]
 	}
+
+	m.Logger.Info("Fault Domain being used", "fault-domain", initialFaultDomain)
+	m.Logger.Info("AD being used", "ad", availabilityDomain)
+
+	launchDetails.FaultDomain = common.String(initialFaultDomain)
 	if nsgId != nil {
 		launchDetails.CreateVnicDetails.NsgIds = []string{*nsgId}
 	}
@@ -256,6 +268,29 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 		OpcRetryToken: ociutil.GetOPCRetryToken(string(m.OCIMachine.UID))}
 	resp, err := m.ComputeClient.LaunchInstance(ctx, req)
 	if err != nil {
+		// try other fault domains unless user specified a specific one
+		if ociutil.IsOutOfHostCapacity(err) && faultDomain != "" {
+			m.Logger.Info("The chosen fault domain did not have capacity, trying other fault domains")
+			for fdIndex, fd := range adMap.FaultDomains {
+				if fd != faultDomain {
+					m.Logger.Info("Fault Domain being used for retry", "fault-domain", fd)
+					launchDetails.FaultDomain = common.String(fd)
+					req := core.LaunchInstanceRequest{LaunchInstanceDetails: launchDetails,
+						OpcRetryToken: ociutil.GetOPCRetryToken(string(m.OCIMachine.UID))}
+					resp, err = m.ComputeClient.LaunchInstance(ctx, req)
+					if err != nil {
+						// if another out of host error comes, try other fault domains
+						// till we are out of fault domains, in which case return the last error
+						if ociutil.IsOutOfHostCapacity(err) && fdIndex != (len(adMap.FaultDomains)-1) {
+							continue
+						} else {
+							return nil, err
+						}
+					}
+					return &resp.Instance, nil
+				}
+			}
+		}
 		return nil, err
 	} else {
 		return &resp.Instance, nil
