@@ -11,6 +11,9 @@ resources:
 - bases/infrastructure.cluster.x-k8s.io_ocimachinepools.yaml
 - bases/infrastructure.cluster.x-k8s.io_ocimachinetemplates.yaml
 - bases/infrastructure.cluster.x-k8s.io_ociclustertemplates.yaml
+- bases/infrastructure.cluster.x-k8s.io_ocimanagedmachinepools.yaml
+- bases/infrastructure.cluster.x-k8s.io_ocimanagedcontrolplanes.yaml
+- bases/infrastructure.cluster.x-k8s.io_ocimanagedclusters.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:

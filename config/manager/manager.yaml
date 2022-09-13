@@ -27,7 +27,7 @@ spec:
         - /manager
         args:
         - "--leader-elect"
-        - "--feature-gates=MachinePool=${EXP_MACHINE_POOL:=false}"
+        - "--feature-gates=MachinePool=${EXP_MACHINE_POOL:=false},OKE=${EXP_OKE:=false}"
         - "--metrics-bind-address=127.0.0.1:8080"
         - "--logging-format=${LOG_FORMAT:=text}"
         image: controller:latest

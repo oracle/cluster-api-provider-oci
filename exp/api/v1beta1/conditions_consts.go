@@ -30,10 +30,36 @@ const (
 	// InstancePoolNotReadyReason used when the instance pool is in a pending state.
 	InstancePoolNotReadyReason = "InstancePoolNotReady"
 
+	// NodePoolReadyCondition reports on current status of the Node Pool. Ready indicates the group is provisioned.
+	NodePoolReadyCondition clusterv1.ConditionType = "NodePoolReady"
+	// NodePoolNotFoundReason used when the Node Pool couldn't be retrieved.
+	NodePoolNotFoundReason = "NodePoolNotFound"
+	// NodePoolProvisionFailedReason used for failures during Instance Pool provisioning.
+	NodePoolProvisionFailedReason = "NodePoolProvisionFailed"
+	// NodePoolDeletionInProgress Node Pool is in a deletion in progress state.
+	NodePoolDeletionInProgress = "NodePoolDeletionInProgress"
+	// NodePoolNotReadyReason used when the node pool is in a pending state.
+	NodePoolNotReadyReason = "NodePoolNotReady"
+	// NodePoolDeletedReason Node Pool is deleted.
+	NodePoolDeletedReason = "NodePoolDeleted"
+
 	// LaunchTemplateReadyCondition represents the status of an OCIachinePool's associated Instance Template.
 	LaunchTemplateReadyCondition clusterv1.ConditionType = "LaunchTemplateReady"
 	// LaunchTemplateNotFoundReason is used when an associated Launch Template can't be found.
 	LaunchTemplateNotFoundReason = "LaunchTemplateNotFound"
 	// LaunchTemplateCreateFailedReason used for failures during Launch Template creation.
 	LaunchTemplateCreateFailedReason = "LaunchTemplateCreateFailed"
+
+	// ControlPlaneReadyCondition Ready indicates the control plane is in a Running state.
+	ControlPlaneReadyCondition clusterv1.ConditionType = "ControlPlaneReady"
+	// ControlPlaneProvisionFailedReason used for failures during control plane provisioning.
+	ControlPlaneProvisionFailedReason = "ControlPlaneProvisionFailed"
+	// ControlPlaneNotReadyReason used when the control plane is in a pending state.
+	ControlPlaneNotReadyReason = "ControlPlaneNotReady"
+	// ControlPlaneDeletionInProgress Control Plane deletion is in progress state.
+	ControlPlaneDeletionInProgress = "ControlPlaneDeletionInProgress"
+	// ControlPlaneNotFoundReason used when the control plane couldn't be retrieved.
+	ControlPlaneNotFoundReason = "ControlPlaneNotFound"
+	// ControlPlaneDeletedReason used when the control plane has been deleted.
+	ControlPlaneDeletedReason = "ControlPlaneDeleted"
 )

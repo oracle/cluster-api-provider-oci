@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	networkloadbalancer "github.com/oracle/oci-go-sdk/v63/networkloadbalancer"
+	networkloadbalancer "github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
 )
 
 // MockNetworkLoadBalancerClient is a mock of LoadBalancerClient interface.

@@ -253,13 +253,14 @@ github.com/opencontainers/go-digest
 # github.com/opencontainers/image-spec v1.0.2
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
-# github.com/oracle/oci-go-sdk/v63 v63.0.0
+# github.com/oracle/oci-go-sdk/v65 v65.18.0
 ## explicit
-github.com/oracle/oci-go-sdk/v63/common
-github.com/oracle/oci-go-sdk/v63/common/auth
-github.com/oracle/oci-go-sdk/v63/core
-github.com/oracle/oci-go-sdk/v63/identity
-github.com/oracle/oci-go-sdk/v63/networkloadbalancer
+github.com/oracle/oci-go-sdk/v65/common
+github.com/oracle/oci-go-sdk/v65/common/auth
+github.com/oracle/oci-go-sdk/v65/containerengine
+github.com/oracle/oci-go-sdk/v65/core
+github.com/oracle/oci-go-sdk/v65/identity
+github.com/oracle/oci-go-sdk/v65/networkloadbalancer
 # github.com/pelletier/go-toml v1.9.5
 github.com/pelletier/go-toml
 # github.com/pelletier/go-toml/v2 v2.0.1

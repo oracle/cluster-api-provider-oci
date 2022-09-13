@@ -20,8 +20,8 @@ import (
 	"context"
 
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
-	"github.com/oracle/oci-go-sdk/v63/common"
-	"github.com/oracle/oci-go-sdk/v63/core"
+	"github.com/oracle/oci-go-sdk/v65/common"
+	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/pkg/errors"
 )
 
@@ -37,12 +37,12 @@ func (s *ClusterScope) ReconcileNatGateway(ctx context.Context) error {
 		return err
 	}
 	if ngw != nil {
-		s.OCICluster.Spec.NetworkSpec.Vcn.NatGatewayId = ngw.Id
+		s.OCIClusterAccessor.GetNetworkSpec().Vcn.NatGatewayId = ngw.Id
 		s.Logger.Info("No Reconciliation Required for Nat Gateway", "nat_gateway", ngw.Id)
 		return nil
 	}
 	natGateway, err := s.CreateNatGateway(ctx)
-	s.OCICluster.Spec.NetworkSpec.Vcn.NatGatewayId = natGateway
+	s.OCIClusterAccessor.GetNetworkSpec().Vcn.NatGatewayId = natGateway
 	return err
 }
 
@@ -52,7 +52,7 @@ func (s *ClusterScope) ReconcileNatGateway(ctx context.Context) error {
 //
 // 2. Listing the NAT Gateways for the Compartment (by ID), VCN and DisplayName and filtering by tag
 func (s *ClusterScope) GetNatGateway(ctx context.Context) (*core.NatGateway, error) {
-	ngwId := s.OCICluster.Spec.NetworkSpec.Vcn.NatGatewayId
+	ngwId := s.OCIClusterAccessor.GetNetworkSpec().Vcn.NatGatewayId
 	if ngwId != nil {
 		resp, err := s.VCNClient.GetNatGateway(ctx, core.GetNatGatewayRequest{
 			NatGatewayId: ngwId,
@@ -91,7 +91,7 @@ func (s *ClusterScope) UpdateNatGateway(ctx context.Context) error {
 		DefinedTags:  s.GetDefinedTags(),
 	}
 	igwResponse, err := s.VCNClient.UpdateNatGateway(ctx, core.UpdateNatGatewayRequest{
-		NatGatewayId:            s.OCICluster.Spec.NetworkSpec.Vcn.NatGatewayId,
+		NatGatewayId:            s.OCIClusterAccessor.GetNetworkSpec().Vcn.NatGatewayId,
 		UpdateNatGatewayDetails: updateNGWDetails,
 	})
 	if err != nil {

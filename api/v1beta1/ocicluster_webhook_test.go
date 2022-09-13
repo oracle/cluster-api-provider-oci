@@ -25,7 +25,7 @@ import (
 
 	"github.com/onsi/gomega"
 	. "github.com/onsi/gomega"
-	"github.com/oracle/oci-go-sdk/v63/common"
+	"github.com/oracle/oci-go-sdk/v65/common"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -245,6 +245,26 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 			expectErr:             true,
 		},
 		{
+			name: "shouldn't allow invalid role",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{},
+				Spec: OCIClusterSpec{
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							CIDR: "10.0.0.0/16",
+							Subnets: []*Subnet{
+								&Subnet{
+									Role: PodRole,
+								},
+							},
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "subnet role invalid",
+			expectErr:             true,
+		},
+		{
 			name: "shouldn't allow bad cluster names",
 			c: &OCICluster{
 				ObjectMeta: metav1.ObjectMeta{
@@ -342,6 +362,23 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 						Vcn: VCN{
 							NetworkSecurityGroups: []*NSG{{
 								Role: "bad-role",
+							}},
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "networkSecurityGroup role invalid",
+			expectErr:             true,
+		},
+		{
+			name: "shouldn't allow invalid NSG role",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{},
+				Spec: OCIClusterSpec{
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							NetworkSecurityGroups: []*NSG{{
+								Role: PodRole,
 							}},
 						},
 					},
@@ -546,6 +583,128 @@ func TestOCICluster_CreateDefault(t *testing.T) {
 			},
 			expect: func(g *gomega.WithT, c *OCICluster) {
 				g.Expect(c.Spec.OCIResourceIdentifier).To(Not(BeNil()))
+			},
+		},
+		{
+			name: "should set default subnets",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{},
+				Spec: OCIClusterSpec{
+					CompartmentId: "ocid",
+				},
+			},
+			expect: func(g *gomega.WithT, c *OCICluster) {
+				g.Expect(c.Spec.NetworkSpec.Vcn.Subnets).To(Equal(c.SubnetSpec()))
+			},
+		},
+		{
+			name: "should set default nsg",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{},
+				Spec: OCIClusterSpec{
+					CompartmentId: "ocid",
+				},
+			},
+			expect: func(g *gomega.WithT, c *OCICluster) {
+				g.Expect(c.Spec.NetworkSpec.Vcn.NetworkSecurityGroups).To(Equal(c.NSGSpec()))
+			},
+		},
+		{
+			name: "should add missing subnets",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{},
+				Spec: OCIClusterSpec{
+					CompartmentId: "ocid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							Subnets: []*Subnet{
+								{
+									Role: WorkerRole,
+									Name: WorkerDefaultName,
+								},
+								{
+									Role: ControlPlaneEndpointRole,
+									Name: ControlPlaneEndpointDefaultName,
+								},
+							},
+						},
+					},
+				},
+			},
+			expect: func(g *gomega.WithT, c *OCICluster) {
+				subnets := []*Subnet{
+					{
+						Role: WorkerRole,
+						Name: WorkerDefaultName,
+						CIDR: "10.0.64.0/20",
+					},
+					{
+						Role: ControlPlaneEndpointRole,
+						Name: ControlPlaneEndpointDefaultName,
+						CIDR: "10.0.0.8/29",
+					},
+					{
+						Role: ControlPlaneRole,
+						Name: ControlPlaneDefaultName,
+						CIDR: ControlPlaneMachineSubnetDefaultCIDR,
+						Type: Private,
+					},
+					{
+						Role: ServiceLoadBalancerRole,
+						Name: ServiceLBDefaultName,
+						CIDR: ServiceLoadBalancerDefaultCIDR,
+						Type: Public,
+					},
+				}
+				g.Expect(c.Spec.NetworkSpec.Vcn.Subnets).To(Equal(subnets))
+			},
+		},
+		{
+			name: "should add missing nsg",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{},
+				Spec: OCIClusterSpec{
+					CompartmentId: "ocid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							NetworkSecurityGroups: []*NSG{
+								{
+									Role: ServiceLoadBalancerRole,
+									Name: ServiceLBDefaultName,
+								},
+								{
+									Role: ControlPlaneEndpointRole,
+									Name: ControlPlaneEndpointDefaultName,
+								},
+							},
+						},
+					},
+				},
+			},
+			expect: func(g *gomega.WithT, c *OCICluster) {
+				nsgs := []*NSG{
+					{
+						Role: ServiceLoadBalancerRole,
+						Name: ServiceLBDefaultName,
+					},
+					{
+						Role: ControlPlaneEndpointRole,
+						Name: ControlPlaneEndpointDefaultName,
+					},
+					{
+						Role:         ControlPlaneRole,
+						Name:         ControlPlaneDefaultName,
+						IngressRules: c.GetControlPlaneMachineDefaultIngressRules(),
+						EgressRules:  c.GetControlPlaneMachineDefaultEgressRules(),
+					},
+					{
+						Role:         WorkerRole,
+						Name:         WorkerDefaultName,
+						IngressRules: c.GetNodeDefaultIngressRules(),
+						EgressRules:  c.GetNodeDefaultEgressRules(),
+					},
+				}
+				g.Expect(c.Spec.NetworkSpec.Vcn.NetworkSecurityGroups).To(Equal(nsgs))
 			},
 		},
 	}

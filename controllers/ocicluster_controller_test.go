@@ -1,3 +1,19 @@
+/*
+Copyright (c) 2021, 2022 Oracle and/or its affiliates.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package controllers
 
 import (
@@ -118,7 +134,6 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 			Recorder: recorder,
 			Region:   MockTestRegion,
 		}
-		cs.EXPECT().GetOCICluster().Return(ociCluster)
 	}
 	teardown := func(t *testing.T, g *WithT) {
 		mockCtrl.Finish()
@@ -136,6 +151,7 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 			expectedEvent:      infrastructurev1beta1.DRGRPCAttachmentEventReady,
 			conditionAssertion: conditionAssertion{infrastructurev1beta1.ClusterReadyCondition, corev1.ConditionTrue, "", ""},
 			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta1.OCICluster) {
+				cs.EXPECT().SetRegionCode(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileDRG(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileVCN(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileInternetGateway(context.Background()).Return(nil)
@@ -157,6 +173,7 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 			errorExpected:      true,
 			conditionAssertion: conditionAssertion{infrastructurev1beta1.ClusterReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta1.DrgReconciliationFailedReason},
 			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta1.OCICluster) {
+				cs.EXPECT().SetRegionCode(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileDRG(context.Background()).Return(errors.New("some error"))
 			},
 		},
@@ -167,6 +184,7 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 			errorExpected:      true,
 			conditionAssertion: conditionAssertion{infrastructurev1beta1.ClusterReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta1.VcnReconciliationFailedReason},
 			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta1.OCICluster) {
+				cs.EXPECT().SetRegionCode(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileDRG(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileVCN(context.Background()).Return(errors.New("some error"))
 			},
@@ -178,6 +196,7 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 			errorExpected:      true,
 			conditionAssertion: conditionAssertion{infrastructurev1beta1.ClusterReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta1.InternetGatewayReconciliationFailedReason},
 			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta1.OCICluster) {
+				cs.EXPECT().SetRegionCode(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileDRG(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileVCN(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileInternetGateway(context.Background()).Return(errors.New("some error"))
@@ -190,6 +209,7 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 			errorExpected:      true,
 			conditionAssertion: conditionAssertion{infrastructurev1beta1.ClusterReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta1.NatGatewayReconciliationFailedReason},
 			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta1.OCICluster) {
+				cs.EXPECT().SetRegionCode(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileDRG(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileVCN(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileInternetGateway(context.Background()).Return(nil)
@@ -203,6 +223,7 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 			errorExpected:      true,
 			conditionAssertion: conditionAssertion{infrastructurev1beta1.ClusterReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta1.ServiceGatewayReconciliationFailedReason},
 			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta1.OCICluster) {
+				cs.EXPECT().SetRegionCode(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileDRG(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileVCN(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileInternetGateway(context.Background()).Return(nil)
@@ -217,6 +238,7 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 			errorExpected:      true,
 			conditionAssertion: conditionAssertion{infrastructurev1beta1.ClusterReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta1.NSGReconciliationFailedReason},
 			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta1.OCICluster) {
+				cs.EXPECT().SetRegionCode(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileDRG(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileVCN(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileInternetGateway(context.Background()).Return(nil)
@@ -232,6 +254,7 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 			errorExpected:      true,
 			conditionAssertion: conditionAssertion{infrastructurev1beta1.ClusterReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta1.RouteTableReconciliationFailedReason},
 			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta1.OCICluster) {
+				cs.EXPECT().SetRegionCode(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileDRG(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileVCN(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileInternetGateway(context.Background()).Return(nil)
@@ -248,6 +271,7 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 			errorExpected:      true,
 			conditionAssertion: conditionAssertion{infrastructurev1beta1.ClusterReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta1.SubnetReconciliationFailedReason},
 			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta1.OCICluster) {
+				cs.EXPECT().SetRegionCode(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileDRG(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileVCN(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileInternetGateway(context.Background()).Return(nil)
@@ -265,6 +289,7 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 			errorExpected:      true,
 			conditionAssertion: conditionAssertion{infrastructurev1beta1.ClusterReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta1.APIServerLoadBalancerFailedReason},
 			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta1.OCICluster) {
+				cs.EXPECT().SetRegionCode(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileDRG(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileVCN(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileInternetGateway(context.Background()).Return(nil)
@@ -286,6 +311,7 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 			errorExpected:      true,
 			conditionAssertion: conditionAssertion{infrastructurev1beta1.ClusterReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta1.FailureDomainFailedReason},
 			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta1.OCICluster) {
+				cs.EXPECT().SetRegionCode(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileDRG(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileVCN(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileInternetGateway(context.Background()).Return(nil)
@@ -306,6 +332,7 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 			errorExpected:      true,
 			conditionAssertion: conditionAssertion{infrastructurev1beta1.ClusterReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta1.DRGVCNAttachmentReconciliationFailedReason},
 			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta1.OCICluster) {
+				cs.EXPECT().SetRegionCode(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileDRG(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileVCN(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileInternetGateway(context.Background()).Return(nil)
@@ -324,6 +351,7 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 			errorExpected:      true,
 			conditionAssertion: conditionAssertion{infrastructurev1beta1.ClusterReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta1.DRGRPCAttachmentReconciliationFailedReason},
 			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta1.OCICluster) {
+				cs.EXPECT().SetRegionCode(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileDRG(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileVCN(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileInternetGateway(context.Background()).Return(nil)
@@ -355,7 +383,7 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 			setup(t, g)
 			tc.testSpecificSetup(cs, ociCluster)
 			ctx := context.Background()
-			_, err := r.reconcile(ctx, log.FromContext(ctx), cs)
+			_, err := r.reconcile(ctx, log.FromContext(ctx), cs, ociCluster)
 			actual := conditions.Get(ociCluster, tc.conditionAssertion.conditionType)
 			g.Expect(actual).To(Not(BeNil()))
 			g.Expect(actual.Type).To(Equal(tc.conditionAssertion.conditionType))
@@ -403,7 +431,7 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 			Scheme:   runtime.NewScheme(),
 			Recorder: recorder,
 		}
-		cs.EXPECT().GetOCICluster().Return(ociCluster)
+		//cs.EXPECT().GetOCIClusterAccessor().Return(ociClusterAccessor)
 	}
 	teardown := func(t *testing.T, g *WithT) {
 		mockCtrl.Finish()
@@ -631,7 +659,7 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 			setup(t, g)
 			tc.testSpecificSetup(cs, ociCluster)
 			ctx := context.Background()
-			_, err := r.reconcileDelete(ctx, log.FromContext(ctx), cs)
+			_, err := r.reconcileDelete(ctx, log.FromContext(ctx), cs, ociCluster)
 			actual := conditions.Get(ociCluster, tc.conditionAssertion.conditionType)
 			if tc.conditionAssertion != (conditionAssertion{}) {
 				g.Expect(actual).To(Not(BeNil()))

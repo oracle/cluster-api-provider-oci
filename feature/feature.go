@@ -24,6 +24,9 @@ import (
 const (
 	// MachinePool is used to enable instance pool support
 	MachinePool featuregate.Feature = "MachinePool"
+
+	// OKE is used to enable manged cluster(OKE)
+	OKE featuregate.Feature = "OKE"
 )
 
 func init() {
@@ -35,4 +38,6 @@ func init() {
 var defaultCAPOCIFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	// Every feature should be initiated here:
 	MachinePool: {Default: false, PreRelease: featuregate.Alpha},
+	// Every feature should be initiated here:
+	OKE: {Default: false, PreRelease: featuregate.Alpha},
 }

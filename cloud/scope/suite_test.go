@@ -17,12 +17,14 @@ limitations under the License.
 package scope
 
 import (
+	"os"
+	"testing"
+
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrav1exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
-	"os"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	"testing"
 )
 
 func TestMain(m *testing.M) {
@@ -35,4 +37,5 @@ func TestMain(m *testing.M) {
 func setup() {
 	utilruntime.Must(infrastructurev1beta1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(clusterv1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(infrav1exp.AddToScheme(scheme.Scheme))
 }

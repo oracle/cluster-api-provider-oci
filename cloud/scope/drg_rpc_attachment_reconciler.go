@@ -22,8 +22,8 @@ import (
 
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	vcn "github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
-	"github.com/oracle/oci-go-sdk/v63/common"
-	"github.com/oracle/oci-go-sdk/v63/core"
+	"github.com/oracle/oci-go-sdk/v65/common"
+	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
@@ -47,7 +47,7 @@ func (s *ClusterScope) ReconcileDRGRPCAttachment(ctx context.Context) error {
 		return errors.New("DRG ID has not been set")
 	}
 
-	for _, rpcSpec := range s.OCICluster.Spec.NetworkSpec.VCNPeering.RemotePeeringConnections {
+	for _, rpcSpec := range s.OCIClusterAccessor.GetNetworkSpec().VCNPeering.RemotePeeringConnections {
 		localRpc, err := s.lookupRPC(ctx, s.getDrgID(), rpcSpec.RPCConnectionId, s.VCNClient)
 		if err != nil {
 			return err
@@ -56,7 +56,7 @@ func (s *ClusterScope) ReconcileDRGRPCAttachment(ctx context.Context) error {
 			rpcSpec.RPCConnectionId = localRpc.Id
 			s.Logger.Info("Local RPC exists", "rpcId", localRpc.Id)
 		} else {
-			localRpc, err = s.createRPC(ctx, s.getDrgID(), s.OCICluster.Name, s.VCNClient)
+			localRpc, err = s.createRPC(ctx, s.getDrgID(), s.OCIClusterAccessor.GetName(), s.VCNClient)
 			if err != nil {
 				return err
 			}
@@ -85,7 +85,7 @@ func (s *ClusterScope) ReconcileDRGRPCAttachment(ctx context.Context) error {
 				s.Logger.Info("Connection status of 2 peered RPCs", "status", localRpc.PeeringStatus)
 				rpcSpec.PeerRPCConnectionId = remoteRpc.Id
 			} else {
-				remoteRpc, err = s.createRPC(ctx, rpcSpec.PeerDRGId, s.OCICluster.Name, clientProvider.VCNClient)
+				remoteRpc, err = s.createRPC(ctx, rpcSpec.PeerDRGId, s.OCIClusterAccessor.GetName(), clientProvider.VCNClient)
 				if err != nil {
 					return err
 				}
@@ -182,7 +182,7 @@ func (s *ClusterScope) lookupRPC(ctx context.Context, drgId *string, rpcId *stri
 				return nil, err
 			}
 			for _, rpc := range response.Items {
-				if *rpc.DisplayName == s.OCICluster.Name {
+				if *rpc.DisplayName == s.OCIClusterAccessor.GetName() {
 					if s.IsResourceCreatedByClusterAPI(rpc.FreeformTags) {
 						rpcs = append(rpcs, rpc)
 					} else {
@@ -304,7 +304,7 @@ func (s *ClusterScope) DeleteDRGRPCAttachment(ctx context.Context) error {
 		return nil
 	}
 
-	for _, rpcSpec := range s.OCICluster.Spec.NetworkSpec.VCNPeering.RemotePeeringConnections {
+	for _, rpcSpec := range s.OCIClusterAccessor.GetNetworkSpec().VCNPeering.RemotePeeringConnections {
 		localRpc, err := s.lookupRPC(ctx, s.getDrgID(), rpcSpec.RPCConnectionId, s.VCNClient)
 		if err != nil && !ociutil.IsNotFound(err) {
 			return err
