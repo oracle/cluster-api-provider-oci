@@ -35,6 +35,7 @@ import (
 	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
+	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -84,7 +85,7 @@ func (r *OCIClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		regionOverride = ociCluster.Spec.Region
 	}
 	if len(regionOverride) <= 0 {
-		return ctrl.Result{}, errors.New("OCIClusterReconciler Region can't be nil")
+		return ctrl.Result{}, errors.New("OCIClusterReconciler RegionIdentifier can't be nil")
 	}
 
 	// Fetch the Cluster.
@@ -112,35 +113,49 @@ func (r *OCIClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		logger.Error(err, "Couldn't get the clients for region")
 	}
 
+	helper, err := patch.NewHelper(ociCluster, r.Client)
+	if err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "failed to init patch helper")
+	}
+
+	clusterAccessor := scope.OCISelfManagedCluster{
+		OCICluster: ociCluster,
+	}
 	clusterScope, err = scope.NewClusterScope(scope.ClusterScopeParams{
 		Client:             r.Client,
 		Logger:             &logger,
 		Cluster:            cluster,
-		OCICluster:         ociCluster,
+		OCIClusterAccessor: clusterAccessor,
 		ClientProvider:     r.ClientProvider,
 		VCNClient:          clients.VCNClient,
 		LoadBalancerClient: clients.LoadBalancerClient,
 		IdentityClient:     clients.IdentityClient,
-		Region:             regionOverride,
+		RegionIdentifier:   regionOverride,
 	})
+	if err != nil {
+		logger.Error(err, "Couldn't create cluster scope")
+		return ctrl.Result{}, err
+	}
 
 	// Always close the scope when exiting this function so we can persist any OCICluster changes.
 	defer func() {
 		logger.Info("Closing cluster scope")
-		if err := clusterScope.Close(ctx); err != nil && reterr == nil {
+		conditions.SetSummary(ociCluster)
+
+		if err := helper.Patch(ctx, ociCluster); err != nil && reterr == nil {
 			reterr = err
 		}
 	}()
 
 	// Handle deleted clusters
 	if !ociCluster.DeletionTimestamp.IsZero() {
-		return r.reconcileDelete(ctx, logger, clusterScope)
+		return r.reconcileDelete(ctx, logger, clusterScope, ociCluster)
 	}
 
 	if err != nil {
 		return reconcile.Result{}, errors.Errorf("failed to create scope: %+v", err)
 	} else {
-		return r.reconcile(ctx, logger, clusterScope)
+		return r.reconcile(ctx, logger, clusterScope, ociCluster)
 	}
 
 }
@@ -165,15 +180,19 @@ func (r *OCIClusterReconciler) reconcileComponent(ctx context.Context, cluster *
 	return nil
 }
 
-func (r *OCIClusterReconciler) reconcile(ctx context.Context, logger logr.Logger, clusterScope scope.ClusterScopeClient) (ctrl.Result, error) {
-
-	cluster := clusterScope.GetOCICluster()
+func (r *OCIClusterReconciler) reconcile(ctx context.Context, logger logr.Logger, clusterScope scope.ClusterScopeClient, cluster *infrastructurev1beta1.OCICluster) (ctrl.Result, error) {
 	// If the OCICluster doesn't have our finalizer, add it.
 	controllerutil.AddFinalizer(cluster, infrastructurev1beta1.ClusterFinalizer)
 
 	// This below if condition specifies if the network related infrastructure needs to be reconciled. Any new
 	// network related reconcilication should happen in this if condition
 	if !cluster.Spec.NetworkSpec.SkipNetworkManagement {
+		err := clusterScope.SetRegionKey(ctx)
+		if err != nil {
+			logger.Error(err, "Couldn't get region code")
+			return ctrl.Result{}, err
+		}
+
 		if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileDRG, "DRG",
 			infrastructurev1beta1.DrgReconciliationFailedReason, infrastructurev1beta1.DrgEventReady); err != nil {
 			return ctrl.Result{}, err
@@ -313,9 +332,7 @@ func (r *OCIClusterReconciler) clusterToInfrastructureMapFunc(ctx context.Contex
 	}
 }
 
-func (r *OCIClusterReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, clusterScope scope.ClusterScopeClient) (ctrl.Result, error) {
-	cluster := clusterScope.GetOCICluster()
-
+func (r *OCIClusterReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, clusterScope scope.ClusterScopeClient, cluster *infrastructurev1beta1.OCICluster) (ctrl.Result, error) {
 	err := clusterScope.DeleteApiServerLB(ctx)
 	if err != nil {
 		r.Recorder.Event(cluster, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to delete Api Server Loadbalancer").Error())

@@ -27,9 +27,9 @@ import (
 
 	"github.com/oracle/cluster-api-provider-oci/cloud/config"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/compute"
+	"github.com/oracle/cluster-api-provider-oci/cloud/services/identity"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
-	"github.com/oracle/oci-go-sdk/v63/identity"
-	"github.com/oracle/oci-go-sdk/v63/networkloadbalancer"
+	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
 	"k8s.io/klog/v2/klogr"
 )
 
@@ -37,7 +37,7 @@ type MockOCIClients struct {
 	VCNClient          vcn.Client
 	ComputeClient      compute.ComputeClient
 	LoadBalancerClient *networkloadbalancer.NetworkLoadBalancerClient
-	IdentityClient     *identity.IdentityClient
+	IdentityClient     identity.Client
 }
 
 var (

@@ -21,16 +21,19 @@ import (
 	"sync"
 
 	"github.com/go-logr/logr"
+	"github.com/oracle/cluster-api-provider-oci/cloud/services/base"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/compute"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/computemanagement"
+	containerEngineClient "github.com/oracle/cluster-api-provider-oci/cloud/services/containerengine"
 	identityClient "github.com/oracle/cluster-api-provider-oci/cloud/services/identity"
 	nlb "github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
 	"github.com/oracle/cluster-api-provider-oci/version"
-	"github.com/oracle/oci-go-sdk/v63/common"
-	"github.com/oracle/oci-go-sdk/v63/core"
-	"github.com/oracle/oci-go-sdk/v63/identity"
-	"github.com/oracle/oci-go-sdk/v63/networkloadbalancer"
+	"github.com/oracle/oci-go-sdk/v65/common"
+	"github.com/oracle/oci-go-sdk/v65/containerengine"
+	"github.com/oracle/oci-go-sdk/v65/core"
+	"github.com/oracle/oci-go-sdk/v65/identity"
+	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
 	"github.com/pkg/errors"
 	"k8s.io/klog/v2/klogr"
 )
@@ -42,6 +45,8 @@ type OCIClients struct {
 	VCNClient               vcn.Client
 	LoadBalancerClient      nlb.NetworkLoadBalancerClient
 	IdentityClient          identityClient.Client
+	ContainerEngineClient   containerEngineClient.Client
+	BaseClient              base.BaseClient
 }
 
 // ClientProvider defines the regional clients
@@ -97,10 +102,33 @@ func (c *ClientProvider) GetOrBuildClient(region string) (OCIClients, error) {
 
 func createClients(region string, oCIAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (OCIClients, error) {
 	vcnClient, err := createVncClient(region, oCIAuthConfigProvider, logger)
+	if err != nil {
+		return OCIClients{}, err
+	}
 	lbClient, err := createLbClient(region, oCIAuthConfigProvider, logger)
+	if err != nil {
+		return OCIClients{}, err
+	}
 	identityClient, err := createIdentityClient(region, oCIAuthConfigProvider, logger)
+	if err != nil {
+		return OCIClients{}, err
+	}
 	computeClient, err := createComputeClient(region, oCIAuthConfigProvider, logger)
+	if err != nil {
+		return OCIClients{}, err
+	}
 	computeManagementClient, err := createComputeManagementClient(region, oCIAuthConfigProvider, logger)
+	if err != nil {
+		return OCIClients{}, err
+	}
+	containerEngineClient, err := createContainerEngineClient(region, oCIAuthConfigProvider, logger)
+	if err != nil {
+		return OCIClients{}, err
+	}
+	baseClient, err := createBaseClient(region, oCIAuthConfigProvider, logger)
+	if err != nil {
+		return OCIClients{}, err
+	}
 
 	if err != nil {
 		return OCIClients{}, err
@@ -112,6 +140,8 @@ func createClients(region string, oCIAuthConfigProvider common.ConfigurationProv
 		IdentityClient:          identityClient,
 		ComputeClient:           computeClient,
 		ComputeManagementClient: computeManagementClient,
+		ContainerEngineClient:   containerEngineClient,
+		BaseClient:              baseClient,
 	}, err
 }
 
@@ -173,6 +203,27 @@ func createComputeManagementClient(region string, ociAuthConfigProvider common.C
 	computeManagementClient.Interceptor = setVersionHeader()
 
 	return &computeManagementClient, nil
+}
+
+func createContainerEngineClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (*containerengine.ContainerEngineClient, error) {
+	containerEngineClient, err := containerengine.NewContainerEngineClientWithConfigurationProvider(ociAuthConfigProvider)
+	if err != nil {
+		logger.Error(err, "unable to create OCI Container Engine Client")
+		return nil, err
+	}
+	containerEngineClient.SetRegion(region)
+	containerEngineClient.Interceptor = setVersionHeader()
+
+	return &containerEngineClient, nil
+}
+
+func createBaseClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (base.BaseClient, error) {
+	baseClient, err := base.NewBaseClient(ociAuthConfigProvider, logger)
+	if err != nil {
+		logger.Error(err, "unable to create OCI Base Client")
+		return nil, err
+	}
+	return baseClient, nil
 }
 
 func setVersionHeader() func(request *http.Request) error {

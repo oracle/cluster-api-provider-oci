@@ -138,6 +138,88 @@ rules:
   resources:
     - secrets
   verbs:
+    - create
+    - delete
     - get
     - list
+    - patch
+    - update
     - watch
+- apiGroups:
+    - infrastructure.cluster.x-k8s.io
+  resources:
+    - ocimanagedclusters
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+- apiGroups:
+    - infrastructure.cluster.x-k8s.io
+  resources:
+    - ocimanagedclusters/finalizers
+  verbs:
+    - update
+- apiGroups:
+    - infrastructure.cluster.x-k8s.io
+  resources:
+    - ocimanagedclusters/status
+  verbs:
+    - get
+    - patch
+    - update
+- apiGroups:
+    - infrastructure.cluster.x-k8s.io
+  resources:
+    - ocimanagedcontrolplanes
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+- apiGroups:
+    - infrastructure.cluster.x-k8s.io
+  resources:
+    - ocimanagedcontrolplanes/finalizers
+  verbs:
+    - update
+- apiGroups:
+    - infrastructure.cluster.x-k8s.io
+  resources:
+    - ocimanagedcontrolplanes/status
+  verbs:
+    - get
+    - patch
+    - update
+- apiGroups:
+    - infrastructure.cluster.x-k8s.io
+  resources:
+    - ocimanagedmachinepools
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+- apiGroups:
+    - infrastructure.cluster.x-k8s.io
+  resources:
+    - ocimanagedmachinepools/finalizers
+  verbs:
+    - update
+- apiGroups:
+    - infrastructure.cluster.x-k8s.io
+  resources:
+    - ocimanagedmachinepools/status
+  verbs:
+    - get
+    - patch
+    - update

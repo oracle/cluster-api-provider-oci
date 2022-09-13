@@ -21,8 +21,8 @@ import (
 	"fmt"
 
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
-	"github.com/oracle/oci-go-sdk/v63/common"
-	"github.com/oracle/oci-go-sdk/v63/core"
+	"github.com/oracle/oci-go-sdk/v65/common"
+	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/pkg/errors"
 )
 
@@ -117,7 +117,7 @@ func (s *ClusterScope) createDRG(ctx context.Context) (*core.Drg, error) {
 			DefinedTags:   s.GetDefinedTags(),
 			DisplayName:   common.String(s.GetDRGName()),
 		},
-		OpcRetryToken: ociutil.GetOPCRetryToken("%s-%s", "create-drg", string(s.OCICluster.GetOCIResourceIdentifier())),
+		OpcRetryToken: ociutil.GetOPCRetryToken("%s-%s", "create-drg", string(s.OCIClusterAccessor.GetOCIResourceIdentifier())),
 	})
 	if err != nil {
 		return nil, err
@@ -129,7 +129,7 @@ func (s *ClusterScope) GetDRGName() string {
 	if s.getDRG().Name != "" {
 		return s.getDRG().Name
 	}
-	return fmt.Sprintf("%s", s.OCICluster.Name)
+	return fmt.Sprintf("%s", s.OCIClusterAccessor.GetName())
 }
 
 // DeleteDRG tries to delete the DRG

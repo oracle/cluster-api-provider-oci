@@ -29,8 +29,8 @@ import (
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/computemanagement"
 	expinfra1 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
 	infrav1exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
-	"github.com/oracle/oci-go-sdk/v63/common"
-	"github.com/oracle/oci-go-sdk/v63/core"
+	"github.com/oracle/oci-go-sdk/v65/common"
+	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -329,7 +329,6 @@ func (s *MachinePoolScope) IsResourceCreatedByClusterAPI(resourceFreeFormTags ma
 
 // GetFreeFormTags gets the free form tags for the MachinePoolScope cluster and returns them
 func (m *MachinePoolScope) GetFreeFormTags() map[string]string {
-
 	tags := ociutil.BuildClusterTags(m.OCICluster.GetOCIResourceIdentifier())
 	if m.OCICluster.Spec.FreeformTags != nil {
 		for k, v := range m.OCICluster.Spec.FreeformTags {

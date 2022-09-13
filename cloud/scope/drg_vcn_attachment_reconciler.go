@@ -20,8 +20,8 @@ import (
 	"context"
 
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
-	"github.com/oracle/oci-go-sdk/v63/common"
-	"github.com/oracle/oci-go-sdk/v63/core"
+	"github.com/oracle/oci-go-sdk/v65/common"
+	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/pkg/errors"
 )
 
@@ -48,9 +48,9 @@ func (s *ClusterScope) ReconcileDRGVCNAttachment(ctx context.Context) error {
 
 	response, err := s.VCNClient.CreateDrgAttachment(ctx, core.CreateDrgAttachmentRequest{
 		CreateDrgAttachmentDetails: core.CreateDrgAttachmentDetails{
-			DisplayName:  common.String(s.OCICluster.Name),
+			DisplayName:  common.String(s.OCIClusterAccessor.GetName()),
 			DrgId:        s.getDrgID(),
-			VcnId:        s.OCICluster.Spec.NetworkSpec.Vcn.ID,
+			VcnId:        s.OCIClusterAccessor.GetNetworkSpec().Vcn.ID,
 			FreeformTags: s.GetFreeFormTags(),
 			DefinedTags:  s.GetDefinedTags(),
 		},
@@ -80,9 +80,9 @@ func (s *ClusterScope) GetDRGAttachment(ctx context.Context) (*core.DrgAttachmen
 
 	attachments, err := s.VCNClient.ListDrgAttachments(ctx, core.ListDrgAttachmentsRequest{
 		AttachmentType: core.ListDrgAttachmentsAttachmentTypeVcn,
-		DisplayName:    common.String(s.OCICluster.Name),
+		DisplayName:    common.String(s.OCIClusterAccessor.GetName()),
 		DrgId:          s.getDrgID(),
-		NetworkId:      s.OCICluster.Spec.NetworkSpec.Vcn.ID,
+		NetworkId:      s.OCIClusterAccessor.GetNetworkSpec().Vcn.ID,
 		CompartmentId:  common.String(s.GetCompartmentId()),
 	})
 

@@ -18,7 +18,8 @@ package identity
 
 import (
 	"context"
-	"github.com/oracle/oci-go-sdk/v63/identity"
+
+	"github.com/oracle/oci-go-sdk/v65/identity"
 )
 
 type Client interface {

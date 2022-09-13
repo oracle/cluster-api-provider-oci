@@ -31,9 +31,9 @@ import (
 	. "github.com/onsi/gomega"
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
-	"github.com/oracle/oci-go-sdk/v63/common"
-	"github.com/oracle/oci-go-sdk/v63/core"
-	"github.com/oracle/oci-go-sdk/v63/networkloadbalancer"
+	"github.com/oracle/oci-go-sdk/v65/common"
+	"github.com/oracle/oci-go-sdk/v65/core"
+	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -397,7 +397,7 @@ var _ = Describe("Workload cluster creation", func() {
 		})
 	})
 
-	When("Multi-Region workload cluster creation", func() {
+	When("Multi-RegionIdentifier workload cluster creation", func() {
 
 		It("Alternative region - With 1 control-plane nodes and 1 worker nodes", func() {
 			clusterName = getClusterName(clusterNamePrefix, "alternative-region")

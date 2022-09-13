@@ -25,777 +25,13 @@ import (
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn/mock_vcn"
-	"github.com/oracle/oci-go-sdk/v63/common"
-	"github.com/oracle/oci-go-sdk/v63/core"
+	"github.com/oracle/oci-go-sdk/v65/common"
+	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
-
-func TestClusterScope_NSGSpec(t *testing.T) {
-	customNSGIngress := []infrastructurev1beta1.IngressSecurityRuleForNSG{
-		{
-			IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-				Description: common.String("External access to Kubernetes API endpoint"),
-				Protocol:    common.String("6"),
-				TcpOptions: &infrastructurev1beta1.TcpOptions{
-					DestinationPortRange: &infrastructurev1beta1.PortRange{
-						Max: common.Int(6443),
-						Min: common.Int(6443),
-					},
-				},
-				SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-				Source:     common.String("0.0.0.0/0"),
-			},
-		},
-	}
-	customNSGEgress := []infrastructurev1beta1.EgressSecurityRuleForNSG{
-		{
-			EgressSecurityRule: infrastructurev1beta1.EgressSecurityRule{
-				Description: common.String("All traffic to control plane nodes"),
-				Protocol:    common.String("6"),
-				TcpOptions: &infrastructurev1beta1.TcpOptions{
-					DestinationPortRange: &infrastructurev1beta1.PortRange{
-						Max: common.Int(6443),
-						Min: common.Int(6443),
-					},
-				},
-				DestinationType: infrastructurev1beta1.EgressSecurityRuleDestinationTypeCidrBlock,
-				Destination:     common.String(ControlPlaneMachineSubnetDefaultCIDR),
-			},
-		},
-	}
-
-	customIngress := []infrastructurev1beta1.IngressSecurityRule{
-		{
-			Description: common.String("test-ingress"),
-			Protocol:    common.String("8"),
-			TcpOptions: &infrastructurev1beta1.TcpOptions{
-				DestinationPortRange: &infrastructurev1beta1.PortRange{
-					Max: common.Int(123),
-					Min: common.Int(234),
-				},
-			},
-			SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-			Source:     common.String("1.1.1.1/1"),
-		},
-	}
-	customEgress := []infrastructurev1beta1.EgressSecurityRule{
-		{
-			Description: common.String("test-egress"),
-			Protocol:    common.String("1"),
-			TcpOptions: &infrastructurev1beta1.TcpOptions{
-				DestinationPortRange: &infrastructurev1beta1.PortRange{
-					Max: common.Int(345),
-					Min: common.Int(567),
-				},
-			},
-			DestinationType: infrastructurev1beta1.EgressSecurityRuleDestinationTypeCidrBlock,
-			Destination:     common.String("2.2.2.2/2"),
-		},
-	}
-
-	tests := []struct {
-		name          string
-		spec          infrastructurev1beta1.OCIClusterSpec
-		want          []*infrastructurev1beta1.NSG
-		wantErr       bool
-		expectedError string
-	}{
-		{
-			name:    "all default",
-			wantErr: false,
-			want: []*infrastructurev1beta1.NSG{
-				{
-					Name: "control-plane-endpoint",
-					Role: "control-plane-endpoint",
-					EgressRules: []infrastructurev1beta1.EgressSecurityRuleForNSG{
-						{
-							EgressSecurityRule: infrastructurev1beta1.EgressSecurityRule{
-								Description: common.String("Kubernetes API traffic to Control Plane"),
-								Protocol:    common.String("6"),
-								TcpOptions: &infrastructurev1beta1.TcpOptions{
-									DestinationPortRange: &infrastructurev1beta1.PortRange{
-										Max: common.Int(6443),
-										Min: common.Int(6443),
-									},
-								},
-								DestinationType: infrastructurev1beta1.EgressSecurityRuleDestinationTypeCidrBlock,
-								Destination:     common.String(ControlPlaneMachineSubnetDefaultCIDR),
-							},
-						},
-					},
-					IngressRules: []infrastructurev1beta1.IngressSecurityRuleForNSG{
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("External access to Kubernetes API endpoint"),
-								Protocol:    common.String("6"),
-								TcpOptions: &infrastructurev1beta1.TcpOptions{
-									DestinationPortRange: &infrastructurev1beta1.PortRange{
-										Max: common.Int(6443),
-										Min: common.Int(6443),
-									},
-								},
-								SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:     common.String("0.0.0.0/0"),
-							},
-						},
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("Path discovery"),
-								Protocol:    common.String("1"),
-								IcmpOptions: &infrastructurev1beta1.IcmpOptions{
-									Type: common.Int(3),
-									Code: common.Int(4),
-								},
-								SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:     common.String(VcnDefaultCidr),
-							},
-						},
-					},
-				},
-				{
-					Name: "control-plane",
-					Role: "control-plane",
-					EgressRules: []infrastructurev1beta1.EgressSecurityRuleForNSG{
-						{
-							EgressSecurityRule: infrastructurev1beta1.EgressSecurityRule{
-								Description:     common.String("Control Plane access to Internet"),
-								Protocol:        common.String("all"),
-								DestinationType: infrastructurev1beta1.EgressSecurityRuleDestinationTypeCidrBlock,
-								Destination:     common.String("0.0.0.0/0"),
-							},
-						},
-					},
-					IngressRules: []infrastructurev1beta1.IngressSecurityRuleForNSG{
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("Kubernetes API endpoint to Control Plane(apiserver port) communication"),
-								Protocol:    common.String("6"),
-								TcpOptions: &infrastructurev1beta1.TcpOptions{
-									DestinationPortRange: &infrastructurev1beta1.PortRange{
-										Max: common.Int(6443),
-										Min: common.Int(6443),
-									},
-								},
-								SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:     common.String(ControlPlaneEndpointSubnetDefaultCIDR),
-							},
-						},
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("Control plane node to Control Plane(apiserver port) communication"),
-								Protocol:    common.String("6"),
-								TcpOptions: &infrastructurev1beta1.TcpOptions{
-									DestinationPortRange: &infrastructurev1beta1.PortRange{
-										Max: common.Int(6443),
-										Min: common.Int(6443),
-									},
-								},
-								SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:     common.String(ControlPlaneMachineSubnetDefaultCIDR),
-							},
-						},
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("Worker Node to Control Plane(apiserver port) communication"),
-								Protocol:    common.String("6"),
-								TcpOptions: &infrastructurev1beta1.TcpOptions{
-									DestinationPortRange: &infrastructurev1beta1.PortRange{
-										Max: common.Int(6443),
-										Min: common.Int(6443),
-									},
-								},
-								SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:     common.String(WorkerSubnetDefaultCIDR),
-							},
-						},
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("etcd client communication"),
-								Protocol:    common.String("6"),
-								TcpOptions: &infrastructurev1beta1.TcpOptions{
-									DestinationPortRange: &infrastructurev1beta1.PortRange{
-										Max: common.Int(2379),
-										Min: common.Int(2379),
-									},
-								},
-								SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:     common.String(ControlPlaneMachineSubnetDefaultCIDR),
-							},
-						},
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("etcd peer"),
-								Protocol:    common.String("6"),
-								TcpOptions: &infrastructurev1beta1.TcpOptions{
-									DestinationPortRange: &infrastructurev1beta1.PortRange{
-										Max: common.Int(2380),
-										Min: common.Int(2380),
-									},
-								},
-								SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:     common.String(ControlPlaneMachineSubnetDefaultCIDR),
-							},
-						},
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("Calico networking (BGP)"),
-								Protocol:    common.String("6"),
-								TcpOptions: &infrastructurev1beta1.TcpOptions{
-									DestinationPortRange: &infrastructurev1beta1.PortRange{
-										Max: common.Int(179),
-										Min: common.Int(179),
-									},
-								},
-								SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:     common.String(ControlPlaneMachineSubnetDefaultCIDR),
-							},
-						},
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("Calico networking (BGP)"),
-								Protocol:    common.String("6"),
-								TcpOptions: &infrastructurev1beta1.TcpOptions{
-									DestinationPortRange: &infrastructurev1beta1.PortRange{
-										Max: common.Int(179),
-										Min: common.Int(179),
-									},
-								},
-								SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:     common.String(WorkerSubnetDefaultCIDR),
-							},
-						},
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("Calico networking with IP-in-IP enabled"),
-								Protocol:    common.String("4"),
-								SourceType:  infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:      common.String(ControlPlaneMachineSubnetDefaultCIDR),
-							},
-						},
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("Calico networking with IP-in-IP enabled"),
-								Protocol:    common.String("4"),
-								SourceType:  infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:      common.String(WorkerSubnetDefaultCIDR),
-							},
-						},
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("Path discovery"),
-								Protocol:    common.String("1"),
-								IcmpOptions: &infrastructurev1beta1.IcmpOptions{
-									Type: common.Int(3),
-									Code: common.Int(4),
-								},
-								SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:     common.String(VcnDefaultCidr),
-							},
-						},
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("Inbound SSH traffic to Control Plane"),
-								Protocol:    common.String("6"),
-								SourceType:  infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:      common.String("0.0.0.0/0"),
-								TcpOptions: &infrastructurev1beta1.TcpOptions{
-									DestinationPortRange: &infrastructurev1beta1.PortRange{
-										Max: common.Int(22),
-										Min: common.Int(22),
-									},
-								},
-							},
-						},
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("Control Plane to Control Plane Kubelet Communication"),
-								Protocol:    common.String("6"),
-								TcpOptions: &infrastructurev1beta1.TcpOptions{
-									DestinationPortRange: &infrastructurev1beta1.PortRange{
-										Max: common.Int(10250),
-										Min: common.Int(10250),
-									},
-								},
-								SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:     common.String(ControlPlaneMachineSubnetDefaultCIDR),
-							},
-						},
-					},
-				},
-				{
-					Name: "service-lb",
-					Role: "service-lb",
-					EgressRules: []infrastructurev1beta1.EgressSecurityRuleForNSG{
-						{
-							EgressSecurityRule: infrastructurev1beta1.EgressSecurityRule{
-								Destination:     common.String(WorkerSubnetDefaultCIDR),
-								Protocol:        common.String("6"),
-								DestinationType: infrastructurev1beta1.EgressSecurityRuleDestinationTypeCidrBlock,
-								TcpOptions: &infrastructurev1beta1.TcpOptions{
-									DestinationPortRange: &infrastructurev1beta1.PortRange{
-										Max: common.Int(32767),
-										Min: common.Int(30000),
-									},
-								},
-								Description: common.String("Service LoadBalancer to default NodePort egress communication"),
-							},
-						},
-					},
-					IngressRules: []infrastructurev1beta1.IngressSecurityRuleForNSG{
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("Path discovery"),
-								Protocol:    common.String("1"),
-								IcmpOptions: &infrastructurev1beta1.IcmpOptions{
-									Type: common.Int(3),
-									Code: common.Int(4),
-								},
-								SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:     common.String(VcnDefaultCidr),
-							},
-						},
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("Accept http traffic on port 80"),
-								Protocol:    common.String("6"),
-								TcpOptions: &infrastructurev1beta1.TcpOptions{
-									DestinationPortRange: &infrastructurev1beta1.PortRange{
-										Max: common.Int(80),
-										Min: common.Int(80),
-									},
-								},
-								SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:     common.String("0.0.0.0/0"),
-							},
-						},
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("Accept https traffic on port 443"),
-								Protocol:    common.String("6"),
-								TcpOptions: &infrastructurev1beta1.TcpOptions{
-									DestinationPortRange: &infrastructurev1beta1.PortRange{
-										Max: common.Int(443),
-										Min: common.Int(443),
-									},
-								},
-								SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:     common.String("0.0.0.0/0"),
-							},
-						},
-					},
-				},
-				{
-					Name: "worker",
-					Role: "worker",
-					EgressRules: []infrastructurev1beta1.EgressSecurityRuleForNSG{
-						{
-							EgressSecurityRule: infrastructurev1beta1.EgressSecurityRule{
-								Description:     common.String("Worker node access to Internet"),
-								Protocol:        common.String("all"),
-								DestinationType: infrastructurev1beta1.EgressSecurityRuleDestinationTypeCidrBlock,
-								Destination:     common.String("0.0.0.0/0"),
-							},
-						},
-					},
-					IngressRules: []infrastructurev1beta1.IngressSecurityRuleForNSG{
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("Inbound SSH traffic to worker node"),
-								Protocol:    common.String("6"),
-								SourceType:  infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:      common.String("0.0.0.0/0"),
-								TcpOptions: &infrastructurev1beta1.TcpOptions{
-									DestinationPortRange: &infrastructurev1beta1.PortRange{
-										Max: common.Int(22),
-										Min: common.Int(22),
-									},
-								},
-							},
-						},
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("Path discovery"),
-								Protocol:    common.String("1"),
-								IcmpOptions: &infrastructurev1beta1.IcmpOptions{
-									Type: common.Int(3),
-									Code: common.Int(4),
-								},
-								SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:     common.String(VcnDefaultCidr),
-							},
-						},
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("Control Plane to worker node Kubelet Communication"),
-								Protocol:    common.String("6"),
-								TcpOptions: &infrastructurev1beta1.TcpOptions{
-									DestinationPortRange: &infrastructurev1beta1.PortRange{
-										Max: common.Int(10250),
-										Min: common.Int(10250),
-									},
-								},
-								SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:     common.String(ControlPlaneMachineSubnetDefaultCIDR),
-							},
-						},
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("Worker node to worker node Kubelet Communication"),
-								Protocol:    common.String("6"),
-								TcpOptions: &infrastructurev1beta1.TcpOptions{
-									DestinationPortRange: &infrastructurev1beta1.PortRange{
-										Max: common.Int(10250),
-										Min: common.Int(10250),
-									},
-								},
-								SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:     common.String(WorkerSubnetDefaultCIDR),
-							},
-						},
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("Calico networking (BGP)"),
-								Protocol:    common.String("6"),
-								TcpOptions: &infrastructurev1beta1.TcpOptions{
-									DestinationPortRange: &infrastructurev1beta1.PortRange{
-										Max: common.Int(179),
-										Min: common.Int(179),
-									},
-								},
-								SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:     common.String(ControlPlaneMachineSubnetDefaultCIDR),
-							},
-						},
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("Calico networking (BGP)"),
-								Protocol:    common.String("6"),
-								TcpOptions: &infrastructurev1beta1.TcpOptions{
-									DestinationPortRange: &infrastructurev1beta1.PortRange{
-										Max: common.Int(179),
-										Min: common.Int(179),
-									},
-								},
-								SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:     common.String(WorkerSubnetDefaultCIDR),
-							},
-						},
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("Calico networking with IP-in-IP enabled"),
-								Protocol:    common.String("4"),
-								SourceType:  infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:      common.String(ControlPlaneMachineSubnetDefaultCIDR),
-							},
-						},
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("Calico networking with IP-in-IP enabled"),
-								Protocol:    common.String("4"),
-								SourceType:  infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:      common.String(WorkerSubnetDefaultCIDR),
-							},
-						},
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("Worker node to default NodePort ingress communication"),
-								Protocol:    common.String("6"),
-								TcpOptions: &infrastructurev1beta1.TcpOptions{
-									DestinationPortRange: &infrastructurev1beta1.PortRange{
-										Max: common.Int(32767),
-										Min: common.Int(30000),
-									},
-								},
-								SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:     common.String(WorkerSubnetDefaultCIDR),
-							},
-						},
-					},
-				},
-			},
-		},
-		{
-			name:    "some user provided nsg and some user provided security list",
-			wantErr: false,
-			spec: infrastructurev1beta1.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
-						Subnets: []*infrastructurev1beta1.Subnet{
-							{
-								Role: infrastructurev1beta1.ControlPlaneEndpointRole,
-								Name: "test-cp-endpoint",
-								CIDR: "2.2.2.2/10",
-								Type: infrastructurev1beta1.Private,
-								SecurityList: &infrastructurev1beta1.SecurityList{
-									Name:         "test-cp-endpoint-seclist",
-									EgressRules:  customEgress,
-									IngressRules: customIngress,
-								},
-							},
-							{
-								Role: infrastructurev1beta1.ControlPlaneRole,
-								Name: "test-mc",
-								CIDR: "1.1.1.1/1",
-								Type: infrastructurev1beta1.Public,
-							},
-							{
-								Role: infrastructurev1beta1.WorkerRole,
-								Name: "worker-test",
-								CIDR: "2.2.2.2/1",
-								Type: infrastructurev1beta1.Public,
-							},
-							{
-								Role: infrastructurev1beta1.ServiceLoadBalancerRole,
-								Name: "loadbalancer-test",
-								CIDR: "5.5.5.5/5",
-								Type: infrastructurev1beta1.Private,
-								SecurityList: &infrastructurev1beta1.SecurityList{
-									Name:         "test-cp-endpoint-seclist",
-									EgressRules:  customEgress,
-									IngressRules: customIngress,
-								},
-							},
-						},
-						NetworkSecurityGroups: []*infrastructurev1beta1.NSG{
-							{
-								Name:         "test-node",
-								Role:         "worker",
-								EgressRules:  customNSGEgress,
-								IngressRules: customNSGIngress,
-							},
-							{
-								Name:         "test-nsg",
-								Role:         "service-lb",
-								EgressRules:  customNSGEgress,
-								IngressRules: customNSGIngress,
-							},
-						},
-					},
-				},
-			},
-			want: []*infrastructurev1beta1.NSG{
-				{
-					Name:         "test-node",
-					Role:         "worker",
-					EgressRules:  customNSGEgress,
-					IngressRules: customNSGIngress,
-				},
-				{
-					Name:         "test-nsg",
-					Role:         "service-lb",
-					EgressRules:  customNSGEgress,
-					IngressRules: customNSGIngress,
-				},
-				{
-					Name: "control-plane",
-					Role: "control-plane",
-					EgressRules: []infrastructurev1beta1.EgressSecurityRuleForNSG{
-						{
-							EgressSecurityRule: infrastructurev1beta1.EgressSecurityRule{
-								Description:     common.String("Control Plane access to Internet"),
-								Protocol:        common.String("all"),
-								DestinationType: infrastructurev1beta1.EgressSecurityRuleDestinationTypeCidrBlock,
-								Destination:     common.String("0.0.0.0/0"),
-							},
-						},
-					},
-					IngressRules: []infrastructurev1beta1.IngressSecurityRuleForNSG{
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("Kubernetes API endpoint to Control Plane(apiserver port) communication"),
-								Protocol:    common.String("6"),
-								TcpOptions: &infrastructurev1beta1.TcpOptions{
-									DestinationPortRange: &infrastructurev1beta1.PortRange{
-										Max: common.Int(6443),
-										Min: common.Int(6443),
-									},
-								},
-								SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:     common.String(ControlPlaneEndpointSubnetDefaultCIDR),
-							},
-						},
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("Control plane node to Control Plane(apiserver port) communication"),
-								Protocol:    common.String("6"),
-								TcpOptions: &infrastructurev1beta1.TcpOptions{
-									DestinationPortRange: &infrastructurev1beta1.PortRange{
-										Max: common.Int(6443),
-										Min: common.Int(6443),
-									},
-								},
-								SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:     common.String(ControlPlaneMachineSubnetDefaultCIDR),
-							},
-						},
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("Worker Node to Control Plane(apiserver port) communication"),
-								Protocol:    common.String("6"),
-								TcpOptions: &infrastructurev1beta1.TcpOptions{
-									DestinationPortRange: &infrastructurev1beta1.PortRange{
-										Max: common.Int(6443),
-										Min: common.Int(6443),
-									},
-								},
-								SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:     common.String(WorkerSubnetDefaultCIDR),
-							},
-						},
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("etcd client communication"),
-								Protocol:    common.String("6"),
-								TcpOptions: &infrastructurev1beta1.TcpOptions{
-									DestinationPortRange: &infrastructurev1beta1.PortRange{
-										Max: common.Int(2379),
-										Min: common.Int(2379),
-									},
-								},
-								SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:     common.String(ControlPlaneMachineSubnetDefaultCIDR),
-							},
-						},
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("etcd peer"),
-								Protocol:    common.String("6"),
-								TcpOptions: &infrastructurev1beta1.TcpOptions{
-									DestinationPortRange: &infrastructurev1beta1.PortRange{
-										Max: common.Int(2380),
-										Min: common.Int(2380),
-									},
-								},
-								SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:     common.String(ControlPlaneMachineSubnetDefaultCIDR),
-							},
-						},
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("Calico networking (BGP)"),
-								Protocol:    common.String("6"),
-								TcpOptions: &infrastructurev1beta1.TcpOptions{
-									DestinationPortRange: &infrastructurev1beta1.PortRange{
-										Max: common.Int(179),
-										Min: common.Int(179),
-									},
-								},
-								SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:     common.String(ControlPlaneMachineSubnetDefaultCIDR),
-							},
-						},
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("Calico networking (BGP)"),
-								Protocol:    common.String("6"),
-								TcpOptions: &infrastructurev1beta1.TcpOptions{
-									DestinationPortRange: &infrastructurev1beta1.PortRange{
-										Max: common.Int(179),
-										Min: common.Int(179),
-									},
-								},
-								SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:     common.String(WorkerSubnetDefaultCIDR),
-							},
-						},
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("Calico networking with IP-in-IP enabled"),
-								Protocol:    common.String("4"),
-								SourceType:  infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:      common.String(ControlPlaneMachineSubnetDefaultCIDR),
-							},
-						},
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("Calico networking with IP-in-IP enabled"),
-								Protocol:    common.String("4"),
-								SourceType:  infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:      common.String(WorkerSubnetDefaultCIDR),
-							},
-						},
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("Path discovery"),
-								Protocol:    common.String("1"),
-								IcmpOptions: &infrastructurev1beta1.IcmpOptions{
-									Type: common.Int(3),
-									Code: common.Int(4),
-								},
-								SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:     common.String(VcnDefaultCidr),
-							},
-						},
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("Inbound SSH traffic to Control Plane"),
-								Protocol:    common.String("6"),
-								SourceType:  infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:      common.String("0.0.0.0/0"),
-								TcpOptions: &infrastructurev1beta1.TcpOptions{
-									DestinationPortRange: &infrastructurev1beta1.PortRange{
-										Max: common.Int(22),
-										Min: common.Int(22),
-									},
-								},
-							},
-						},
-						{
-							IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
-								Description: common.String("Control Plane to Control Plane Kubelet Communication"),
-								Protocol:    common.String("6"),
-								TcpOptions: &infrastructurev1beta1.TcpOptions{
-									DestinationPortRange: &infrastructurev1beta1.PortRange{
-										Max: common.Int(10250),
-										Min: common.Int(10250),
-									},
-								},
-								SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
-								Source:     common.String(ControlPlaneMachineSubnetDefaultCIDR),
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	l := log.FromContext(context.Background())
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ociCluster := infrastructurev1beta1.OCICluster{
-				ObjectMeta: metav1.ObjectMeta{
-					UID: "cluster_uid",
-				},
-				Spec: tt.spec,
-			}
-			ociCluster.Spec.OCIResourceIdentifier = "resource_uid"
-			s := &ClusterScope{
-				OCICluster: &ociCluster,
-				Cluster: &clusterv1.Cluster{
-					ObjectMeta: metav1.ObjectMeta{
-						UID: "cluster_uid",
-					},
-				},
-				Logger: &l,
-			}
-			nsgs, err := s.NSGSpec()
-			if !isNSGEqual(tt.want, nsgs) {
-				t.Errorf("NSGSpec() want = %v, got %v", tt.want, nsgs)
-			}
-			if (err != nil) != tt.wantErr {
-				t.Errorf("NSGSpec() error = %v, wantErr %v", err, tt.wantErr)
-			}
-			if err != nil {
-				if err.Error() != tt.expectedError {
-					t.Errorf("NSGSpec() expected error = %s, actual error %s", tt.expectedError, err.Error())
-				}
-			}
-		})
-	}
-}
 
 func TestClusterScope_DeleteNSGs(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
@@ -928,17 +164,19 @@ func TestClusterScope_DeleteNSGs(t *testing.T) {
 	l := log.FromContext(context.Background())
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ociCluster := infrastructurev1beta1.OCICluster{
-				Spec: tt.spec,
-				ObjectMeta: metav1.ObjectMeta{
-					UID: "cluster_uid",
+			ociClusterAccessor := OCISelfManagedCluster{
+				&infrastructurev1beta1.OCICluster{
+					Spec: tt.spec,
+					ObjectMeta: metav1.ObjectMeta{
+						UID: "cluster_uid",
+					},
 				},
 			}
-			ociCluster.Spec.OCIResourceIdentifier = "resource_uid"
+			ociClusterAccessor.OCICluster.Spec.OCIResourceIdentifier = "resource_uid"
 			s := &ClusterScope{
-				VCNClient:  vcnClient,
-				OCICluster: &ociCluster,
-				Logger:     &l,
+				VCNClient:          vcnClient,
+				OCIClusterAccessor: ociClusterAccessor,
+				Logger:             &l,
 			}
 			err := s.DeleteNSGs(context.Background())
 			if (err != nil) != tt.wantErr {
@@ -1022,354 +260,6 @@ func TestClusterScope_ReconcileNSG(t *testing.T) {
 		definedTagsInterface[ns] = mapValues
 	}
 
-	vcnClient.EXPECT().GetNetworkSecurityGroup(gomock.Any(), gomock.Eq(core.GetNetworkSecurityGroupRequest{
-		NetworkSecurityGroupId: common.String("no-update-id"),
-	})).
-		Return(core.GetNetworkSecurityGroupResponse{
-			NetworkSecurityGroup: core.NetworkSecurityGroup{
-				Id:           common.String("no-update-id"),
-				DisplayName:  common.String("no-update"),
-				FreeformTags: tags,
-				DefinedTags:  definedTagsInterface,
-			},
-		}, nil)
-
-	vcnClient.EXPECT().GetNetworkSecurityGroup(gomock.Any(), gomock.Eq(core.GetNetworkSecurityGroupRequest{
-		NetworkSecurityGroupId: common.String("update-id"),
-	})).
-		Return(core.GetNetworkSecurityGroupResponse{
-			NetworkSecurityGroup: core.NetworkSecurityGroup{
-				Id:           common.String("update-id"),
-				DisplayName:  common.String("change-me"),
-				FreeformTags: tags,
-				DefinedTags:  definedTagsInterface,
-			},
-		}, nil).Times(2)
-
-	vcnClient.EXPECT().GetNetworkSecurityGroup(gomock.Any(), gomock.Eq(core.GetNetworkSecurityGroupRequest{
-		NetworkSecurityGroupId: common.String("update-rules-id"),
-	})).
-		Return(core.GetNetworkSecurityGroupResponse{
-			NetworkSecurityGroup: core.NetworkSecurityGroup{
-				Id:           common.String("update-rules-id"),
-				DisplayName:  common.String("update-rules"),
-				FreeformTags: tags,
-				DefinedTags:  definedTagsInterface,
-			},
-		}, nil)
-
-	vcnClient.EXPECT().ListNetworkSecurityGroupSecurityRules(gomock.Any(), gomock.Eq(core.ListNetworkSecurityGroupSecurityRulesRequest{
-		NetworkSecurityGroupId: common.String("no-update-id"),
-	})).Return(core.ListNetworkSecurityGroupSecurityRulesResponse{
-		Items: []core.SecurityRule{
-			{
-				Direction:       core.SecurityRuleDirectionEgress,
-				Protocol:        common.String("6"),
-				Description:     common.String("All traffic to control plane nodes"),
-				Destination:     common.String(ControlPlaneMachineSubnetDefaultCIDR),
-				DestinationType: core.SecurityRuleDestinationTypeCidrBlock,
-				Id:              common.String("egress-id"),
-				IsStateless:     common.Bool(false),
-				TcpOptions: &core.TcpOptions{
-					DestinationPortRange: &core.PortRange{
-						Max: common.Int(6443),
-						Min: common.Int(6443),
-					},
-				},
-			},
-			{
-				Direction:   core.SecurityRuleDirectionIngress,
-				Protocol:    common.String("6"),
-				Description: common.String("External access to Kubernetes API endpoint"),
-				Id:          common.String("ingress-id"),
-				Source:      common.String("0.0.0.0/0"),
-				SourceType:  core.SecurityRuleSourceTypeCidrBlock,
-				IsStateless: common.Bool(false),
-				TcpOptions: &core.TcpOptions{
-					DestinationPortRange: &core.PortRange{
-						Max: common.Int(6443),
-						Min: common.Int(6443),
-					},
-				},
-			},
-		},
-	}, nil)
-
-	vcnClient.EXPECT().ListNetworkSecurityGroupSecurityRules(gomock.Any(), gomock.Eq(core.ListNetworkSecurityGroupSecurityRulesRequest{
-		NetworkSecurityGroupId: common.String("update-id"),
-	})).Return(core.ListNetworkSecurityGroupSecurityRulesResponse{
-		Items: []core.SecurityRule{
-			{
-				Direction:       core.SecurityRuleDirectionEgress,
-				Protocol:        common.String("6"),
-				Description:     common.String("All traffic to control plane nodes"),
-				Destination:     common.String(ControlPlaneMachineSubnetDefaultCIDR),
-				DestinationType: core.SecurityRuleDestinationTypeCidrBlock,
-				Id:              common.String("egress-id"),
-				IsStateless:     common.Bool(false),
-				TcpOptions: &core.TcpOptions{
-					DestinationPortRange: &core.PortRange{
-						Max: common.Int(6443),
-						Min: common.Int(6443),
-					},
-				},
-			},
-			{
-				Direction:   core.SecurityRuleDirectionIngress,
-				Protocol:    common.String("6"),
-				Description: common.String("External access to Kubernetes API endpoint"),
-				Id:          common.String("ingress-id"),
-				Source:      common.String("0.0.0.0/0"),
-				SourceType:  core.SecurityRuleSourceTypeCidrBlock,
-				IsStateless: common.Bool(false),
-				TcpOptions: &core.TcpOptions{
-					DestinationPortRange: &core.PortRange{
-						Max: common.Int(6443),
-						Min: common.Int(6443),
-					},
-				},
-			},
-		},
-	}, nil)
-
-	vcnClient.EXPECT().ListNetworkSecurityGroupSecurityRules(gomock.Any(), gomock.Eq(core.ListNetworkSecurityGroupSecurityRulesRequest{
-		NetworkSecurityGroupId: common.String("update-rules-id"),
-	})).Return(core.ListNetworkSecurityGroupSecurityRulesResponse{
-		Items: []core.SecurityRule{
-			{
-				Direction:       core.SecurityRuleDirectionEgress,
-				Protocol:        common.String("10"),
-				Description:     common.String("All traffic to control plane nodes"),
-				Destination:     common.String(ControlPlaneMachineSubnetDefaultCIDR),
-				DestinationType: core.SecurityRuleDestinationTypeCidrBlock,
-				Id:              common.String("egress-id-changed"),
-				IsStateless:     common.Bool(false),
-				TcpOptions: &core.TcpOptions{
-					DestinationPortRange: &core.PortRange{
-						Max: common.Int(6443),
-						Min: common.Int(6443),
-					},
-				},
-			},
-			{
-				Direction:   core.SecurityRuleDirectionIngress,
-				Protocol:    common.String("7"),
-				Description: common.String("External access to Kubernetes API endpoint"),
-				Id:          common.String("ingress-id"),
-				Source:      common.String("0.0.0.0/1"),
-				SourceType:  core.SecurityRuleSourceTypeCidrBlock,
-				IsStateless: common.Bool(false),
-				TcpOptions: &core.TcpOptions{
-					DestinationPortRange: &core.PortRange{
-						Max: common.Int(6443),
-						Min: common.Int(6443),
-					},
-				},
-			},
-		},
-	}, nil)
-
-	vcnClient.EXPECT().UpdateNetworkSecurityGroup(gomock.Any(), gomock.Eq(core.UpdateNetworkSecurityGroupRequest{
-		NetworkSecurityGroupId: common.String("update-id"),
-		UpdateNetworkSecurityGroupDetails: core.UpdateNetworkSecurityGroupDetails{
-			DisplayName: common.String("update-nsg"),
-		},
-	})).
-		Return(core.UpdateNetworkSecurityGroupResponse{
-			NetworkSecurityGroup: core.NetworkSecurityGroup{
-				Id:           common.String("update-id"),
-				FreeformTags: tags,
-			},
-		}, nil)
-
-	vcnClient.EXPECT().UpdateNetworkSecurityGroup(gomock.Any(), gomock.Eq(core.UpdateNetworkSecurityGroupRequest{
-		NetworkSecurityGroupId: common.String("update-id"),
-		UpdateNetworkSecurityGroupDetails: core.UpdateNetworkSecurityGroupDetails{
-			DisplayName: common.String("update-nsg-error"),
-		},
-	})).
-		Return(core.UpdateNetworkSecurityGroupResponse{}, errors.New("some error"))
-
-	vcnClient.EXPECT().ListNetworkSecurityGroups(gomock.Any(), gomock.Eq(core.ListNetworkSecurityGroupsRequest{
-		CompartmentId: common.String("foo"),
-		DisplayName:   common.String("service-lb"),
-		VcnId:         common.String("vcn"),
-	})).Return(
-		core.ListNetworkSecurityGroupsResponse{
-			Items: []core.NetworkSecurityGroup{}}, nil).Times(3)
-
-	vcnClient.EXPECT().CreateNetworkSecurityGroup(gomock.Any(), gomock.Eq(core.CreateNetworkSecurityGroupRequest{
-		CreateNetworkSecurityGroupDetails: core.CreateNetworkSecurityGroupDetails{
-			CompartmentId: common.String("foo"),
-			DisplayName:   common.String("service-lb"),
-			VcnId:         common.String("vcn"),
-			FreeformTags:  tags,
-			DefinedTags:   definedTagsInterface,
-		},
-	})).Return(
-		core.CreateNetworkSecurityGroupResponse{
-			NetworkSecurityGroup: core.NetworkSecurityGroup{
-				Id: common.String("loadbalancer-nsg-id"),
-			},
-		}, nil).Times(2)
-
-	vcnClient.EXPECT().CreateNetworkSecurityGroup(gomock.Any(), gomock.Eq(core.CreateNetworkSecurityGroupRequest{
-		CreateNetworkSecurityGroupDetails: core.CreateNetworkSecurityGroupDetails{
-			CompartmentId: common.String("foo"),
-			DisplayName:   common.String("service-lb"),
-			VcnId:         common.String("vcn"),
-			FreeformTags:  updatedTags,
-			DefinedTags:   definedTagsInterface,
-		},
-	})).Return(
-		core.CreateNetworkSecurityGroupResponse{}, errors.New("some error"))
-
-	vcnClient.EXPECT().AddNetworkSecurityGroupSecurityRules(gomock.Any(), gomock.Eq(core.AddNetworkSecurityGroupSecurityRulesRequest{
-		NetworkSecurityGroupId: common.String("loadbalancer-nsg-id"),
-		AddNetworkSecurityGroupSecurityRulesDetails: core.AddNetworkSecurityGroupSecurityRulesDetails{SecurityRules: []core.AddSecurityRuleDetails{
-			{
-				Direction:   core.AddSecurityRuleDetailsDirectionIngress,
-				Protocol:    common.String("1"),
-				Description: common.String("Path discovery"),
-				IcmpOptions: &core.IcmpOptions{
-					Type: common.Int(3),
-					Code: common.Int(4),
-				},
-				IsStateless: common.Bool(false),
-				Source:      common.String(VcnDefaultCidr),
-				SourceType:  core.AddSecurityRuleDetailsSourceTypeCidrBlock,
-			},
-			{
-				Direction:   core.AddSecurityRuleDetailsDirectionIngress,
-				Protocol:    common.String("6"),
-				Description: common.String("Accept http traffic on port 80"),
-				Source:      common.String("0.0.0.0/0"),
-				SourceType:  core.AddSecurityRuleDetailsSourceTypeCidrBlock,
-				IsStateless: common.Bool(false),
-				TcpOptions: &core.TcpOptions{
-					DestinationPortRange: &core.PortRange{
-						Max: common.Int(80),
-						Min: common.Int(80),
-					},
-				},
-			},
-			{
-				Direction:   core.AddSecurityRuleDetailsDirectionIngress,
-				Protocol:    common.String("6"),
-				Description: common.String("Accept https traffic on port 443"),
-				Source:      common.String("0.0.0.0/0"),
-				SourceType:  core.AddSecurityRuleDetailsSourceTypeCidrBlock,
-				IsStateless: common.Bool(false),
-				TcpOptions: &core.TcpOptions{
-					DestinationPortRange: &core.PortRange{
-						Max: common.Int(443),
-						Min: common.Int(443),
-					},
-				},
-			},
-			{
-				Direction:       core.AddSecurityRuleDetailsDirectionEgress,
-				Protocol:        common.String("6"),
-				Description:     common.String("Service LoadBalancer to default NodePort egress communication"),
-				Destination:     common.String(WorkerSubnetDefaultCIDR),
-				DestinationType: core.AddSecurityRuleDetailsDestinationTypeCidrBlock,
-				IsStateless:     common.Bool(false),
-				TcpOptions: &core.TcpOptions{
-					DestinationPortRange: &core.PortRange{
-						Max: common.Int(32767),
-						Min: common.Int(30000),
-					},
-				},
-			},
-		},
-		},
-	})).Return(core.AddNetworkSecurityGroupSecurityRulesResponse{
-		AddedNetworkSecurityGroupSecurityRules: core.AddedNetworkSecurityGroupSecurityRules{
-			SecurityRules: []core.SecurityRule{
-				{
-
-					Id: common.String("foo"),
-				},
-				{
-
-					Id: common.String("bar"),
-				},
-			},
-		},
-	}, nil)
-
-	vcnClient.EXPECT().AddNetworkSecurityGroupSecurityRules(gomock.Any(), gomock.Eq(core.AddNetworkSecurityGroupSecurityRulesRequest{
-		NetworkSecurityGroupId: common.String("loadbalancer-nsg-id"),
-		AddNetworkSecurityGroupSecurityRulesDetails: core.AddNetworkSecurityGroupSecurityRulesDetails{SecurityRules: []core.AddSecurityRuleDetails{
-			{
-				Direction:       core.AddSecurityRuleDetailsDirectionEgress,
-				Protocol:        common.String("6"),
-				Description:     common.String("All traffic to control plane nodes"),
-				Destination:     common.String(ControlPlaneMachineSubnetDefaultCIDR),
-				DestinationType: core.AddSecurityRuleDetailsDestinationTypeCidrBlock,
-				IsStateless:     common.Bool(false),
-				TcpOptions: &core.TcpOptions{
-					DestinationPortRange: &core.PortRange{
-						Max: common.Int(6443),
-						Min: common.Int(6443),
-					},
-				},
-			},
-		},
-		},
-	})).Return(core.AddNetworkSecurityGroupSecurityRulesResponse{}, errors.New("some error"))
-
-	vcnClient.EXPECT().AddNetworkSecurityGroupSecurityRules(gomock.Any(), gomock.Eq(core.AddNetworkSecurityGroupSecurityRulesRequest{
-		NetworkSecurityGroupId: common.String("update-rules-id"),
-		AddNetworkSecurityGroupSecurityRulesDetails: core.AddNetworkSecurityGroupSecurityRulesDetails{SecurityRules: []core.AddSecurityRuleDetails{
-			{
-				Direction:   core.AddSecurityRuleDetailsDirectionIngress,
-				Protocol:    common.String("6"),
-				Description: common.String("External access to Kubernetes API endpoint"),
-				Source:      common.String("0.0.0.0/0"),
-				SourceType:  core.AddSecurityRuleDetailsSourceTypeCidrBlock,
-				IsStateless: common.Bool(false),
-				TcpOptions: &core.TcpOptions{
-					DestinationPortRange: &core.PortRange{
-						Max: common.Int(6443),
-						Min: common.Int(6443),
-					},
-				},
-			},
-			{
-				Direction:       core.AddSecurityRuleDetailsDirectionEgress,
-				Protocol:        common.String("6"),
-				Description:     common.String("All traffic to control plane nodes"),
-				Destination:     common.String(ControlPlaneMachineSubnetDefaultCIDR),
-				DestinationType: core.AddSecurityRuleDetailsDestinationTypeCidrBlock,
-				IsStateless:     common.Bool(false),
-				TcpOptions: &core.TcpOptions{
-					DestinationPortRange: &core.PortRange{
-						Max: common.Int(6443),
-						Min: common.Int(6443),
-					},
-				},
-			},
-		},
-		},
-	})).Return(core.AddNetworkSecurityGroupSecurityRulesResponse{
-		AddedNetworkSecurityGroupSecurityRules: core.AddedNetworkSecurityGroupSecurityRules{
-			SecurityRules: []core.SecurityRule{
-				{
-
-					Id: common.String("foo"),
-				},
-			},
-		},
-	}, nil)
-
-	vcnClient.EXPECT().RemoveNetworkSecurityGroupSecurityRules(gomock.Any(), gomock.Eq(core.RemoveNetworkSecurityGroupSecurityRulesRequest{
-		NetworkSecurityGroupId: common.String("update-rules-id"),
-		RemoveNetworkSecurityGroupSecurityRulesDetails: core.RemoveNetworkSecurityGroupSecurityRulesDetails{
-			SecurityRuleIds: []string{"ingress-id", "egress-id-changed"},
-		},
-	})).Return(core.RemoveNetworkSecurityGroupSecurityRulesResponse{}, nil)
-
 	customNSGEgressWithId := make([]infrastructurev1beta1.EgressSecurityRuleForNSG, len(customNSGEgress))
 	copy(customNSGEgressWithId, customNSGEgress)
 
@@ -1377,10 +267,11 @@ func TestClusterScope_ReconcileNSG(t *testing.T) {
 	copy(customNSGIngressWithId, customNSGIngress)
 
 	tests := []struct {
-		name          string
-		spec          infrastructurev1beta1.OCIClusterSpec
-		wantErr       bool
-		expectedError string
+		name              string
+		spec              infrastructurev1beta1.OCIClusterSpec
+		wantErr           bool
+		expectedError     string
+		testSpecificSetup func(clusterScope *ClusterScope, nlbClient *mock_vcn.MockClient)
 	}{
 		{
 			name: "one creation - one update - one update security rule - one no update",
@@ -1415,6 +306,218 @@ func TestClusterScope_ReconcileNSG(t *testing.T) {
 				},
 				DefinedTags:   definedTags,
 				CompartmentId: "foo",
+			},
+			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_vcn.MockClient) {
+				vcnClient.EXPECT().GetNetworkSecurityGroup(gomock.Any(), gomock.Eq(core.GetNetworkSecurityGroupRequest{
+					NetworkSecurityGroupId: common.String("no-update-id"),
+				})).
+					Return(core.GetNetworkSecurityGroupResponse{
+						NetworkSecurityGroup: core.NetworkSecurityGroup{
+							Id:           common.String("no-update-id"),
+							DisplayName:  common.String("no-update"),
+							FreeformTags: tags,
+							DefinedTags:  definedTagsInterface,
+						},
+					}, nil)
+
+				vcnClient.EXPECT().GetNetworkSecurityGroup(gomock.Any(), gomock.Eq(core.GetNetworkSecurityGroupRequest{
+					NetworkSecurityGroupId: common.String("update-id"),
+				})).
+					Return(core.GetNetworkSecurityGroupResponse{
+						NetworkSecurityGroup: core.NetworkSecurityGroup{
+							Id:           common.String("update-id"),
+							DisplayName:  common.String("change-me"),
+							FreeformTags: tags,
+							DefinedTags:  definedTagsInterface,
+						},
+					}, nil).Times(2)
+
+				vcnClient.EXPECT().GetNetworkSecurityGroup(gomock.Any(), gomock.Eq(core.GetNetworkSecurityGroupRequest{
+					NetworkSecurityGroupId: common.String("update-rules-id"),
+				})).
+					Return(core.GetNetworkSecurityGroupResponse{
+						NetworkSecurityGroup: core.NetworkSecurityGroup{
+							Id:           common.String("update-rules-id"),
+							DisplayName:  common.String("update-rules"),
+							FreeformTags: tags,
+							DefinedTags:  definedTagsInterface,
+						},
+					}, nil)
+
+				vcnClient.EXPECT().ListNetworkSecurityGroupSecurityRules(gomock.Any(), gomock.Eq(core.ListNetworkSecurityGroupSecurityRulesRequest{
+					NetworkSecurityGroupId: common.String("no-update-id"),
+				})).Return(core.ListNetworkSecurityGroupSecurityRulesResponse{
+					Items: []core.SecurityRule{
+						{
+							Direction:       core.SecurityRuleDirectionEgress,
+							Protocol:        common.String("6"),
+							Description:     common.String("All traffic to control plane nodes"),
+							Destination:     common.String(ControlPlaneMachineSubnetDefaultCIDR),
+							DestinationType: core.SecurityRuleDestinationTypeCidrBlock,
+							Id:              common.String("egress-id"),
+							IsStateless:     common.Bool(false),
+							TcpOptions: &core.TcpOptions{
+								DestinationPortRange: &core.PortRange{
+									Max: common.Int(6443),
+									Min: common.Int(6443),
+								},
+							},
+						},
+						{
+							Direction:   core.SecurityRuleDirectionIngress,
+							Protocol:    common.String("6"),
+							Description: common.String("External access to Kubernetes API endpoint"),
+							Id:          common.String("ingress-id"),
+							Source:      common.String("0.0.0.0/0"),
+							SourceType:  core.SecurityRuleSourceTypeCidrBlock,
+							IsStateless: common.Bool(false),
+							TcpOptions: &core.TcpOptions{
+								DestinationPortRange: &core.PortRange{
+									Max: common.Int(6443),
+									Min: common.Int(6443),
+								},
+							},
+						},
+					},
+				}, nil)
+
+				vcnClient.EXPECT().ListNetworkSecurityGroupSecurityRules(gomock.Any(), gomock.Eq(core.ListNetworkSecurityGroupSecurityRulesRequest{
+					NetworkSecurityGroupId: common.String("update-id"),
+				})).Return(core.ListNetworkSecurityGroupSecurityRulesResponse{
+					Items: []core.SecurityRule{
+						{
+							Direction:       core.SecurityRuleDirectionEgress,
+							Protocol:        common.String("6"),
+							Description:     common.String("All traffic to control plane nodes"),
+							Destination:     common.String(ControlPlaneMachineSubnetDefaultCIDR),
+							DestinationType: core.SecurityRuleDestinationTypeCidrBlock,
+							Id:              common.String("egress-id"),
+							IsStateless:     common.Bool(false),
+							TcpOptions: &core.TcpOptions{
+								DestinationPortRange: &core.PortRange{
+									Max: common.Int(6443),
+									Min: common.Int(6443),
+								},
+							},
+						},
+						{
+							Direction:   core.SecurityRuleDirectionIngress,
+							Protocol:    common.String("6"),
+							Description: common.String("External access to Kubernetes API endpoint"),
+							Id:          common.String("ingress-id"),
+							Source:      common.String("0.0.0.0/0"),
+							SourceType:  core.SecurityRuleSourceTypeCidrBlock,
+							IsStateless: common.Bool(false),
+							TcpOptions: &core.TcpOptions{
+								DestinationPortRange: &core.PortRange{
+									Max: common.Int(6443),
+									Min: common.Int(6443),
+								},
+							},
+						},
+					},
+				}, nil)
+
+				vcnClient.EXPECT().ListNetworkSecurityGroupSecurityRules(gomock.Any(), gomock.Eq(core.ListNetworkSecurityGroupSecurityRulesRequest{
+					NetworkSecurityGroupId: common.String("update-rules-id"),
+				})).Return(core.ListNetworkSecurityGroupSecurityRulesResponse{
+					Items: []core.SecurityRule{
+						{
+							Direction:       core.SecurityRuleDirectionEgress,
+							Protocol:        common.String("10"),
+							Description:     common.String("All traffic to control plane nodes"),
+							Destination:     common.String(ControlPlaneMachineSubnetDefaultCIDR),
+							DestinationType: core.SecurityRuleDestinationTypeCidrBlock,
+							Id:              common.String("egress-id-changed"),
+							IsStateless:     common.Bool(false),
+							TcpOptions: &core.TcpOptions{
+								DestinationPortRange: &core.PortRange{
+									Max: common.Int(6443),
+									Min: common.Int(6443),
+								},
+							},
+						},
+						{
+							Direction:   core.SecurityRuleDirectionIngress,
+							Protocol:    common.String("7"),
+							Description: common.String("External access to Kubernetes API endpoint"),
+							Id:          common.String("ingress-id"),
+							Source:      common.String("0.0.0.0/1"),
+							SourceType:  core.SecurityRuleSourceTypeCidrBlock,
+							IsStateless: common.Bool(false),
+							TcpOptions: &core.TcpOptions{
+								DestinationPortRange: &core.PortRange{
+									Max: common.Int(6443),
+									Min: common.Int(6443),
+								},
+							},
+						},
+					},
+				}, nil)
+
+				vcnClient.EXPECT().AddNetworkSecurityGroupSecurityRules(gomock.Any(), gomock.Eq(core.AddNetworkSecurityGroupSecurityRulesRequest{
+					NetworkSecurityGroupId: common.String("update-rules-id"),
+					AddNetworkSecurityGroupSecurityRulesDetails: core.AddNetworkSecurityGroupSecurityRulesDetails{SecurityRules: []core.AddSecurityRuleDetails{
+						{
+							Direction:   core.AddSecurityRuleDetailsDirectionIngress,
+							Protocol:    common.String("6"),
+							Description: common.String("External access to Kubernetes API endpoint"),
+							Source:      common.String("0.0.0.0/0"),
+							SourceType:  core.AddSecurityRuleDetailsSourceTypeCidrBlock,
+							IsStateless: common.Bool(false),
+							TcpOptions: &core.TcpOptions{
+								DestinationPortRange: &core.PortRange{
+									Max: common.Int(6443),
+									Min: common.Int(6443),
+								},
+							},
+						},
+						{
+							Direction:       core.AddSecurityRuleDetailsDirectionEgress,
+							Protocol:        common.String("6"),
+							Description:     common.String("All traffic to control plane nodes"),
+							Destination:     common.String(ControlPlaneMachineSubnetDefaultCIDR),
+							DestinationType: core.AddSecurityRuleDetailsDestinationTypeCidrBlock,
+							IsStateless:     common.Bool(false),
+							TcpOptions: &core.TcpOptions{
+								DestinationPortRange: &core.PortRange{
+									Max: common.Int(6443),
+									Min: common.Int(6443),
+								},
+							},
+						},
+					},
+					},
+				})).Return(core.AddNetworkSecurityGroupSecurityRulesResponse{
+					AddedNetworkSecurityGroupSecurityRules: core.AddedNetworkSecurityGroupSecurityRules{
+						SecurityRules: []core.SecurityRule{
+							{
+
+								Id: common.String("foo"),
+							},
+						},
+					},
+				}, nil)
+
+				vcnClient.EXPECT().RemoveNetworkSecurityGroupSecurityRules(gomock.Any(), gomock.Eq(core.RemoveNetworkSecurityGroupSecurityRulesRequest{
+					NetworkSecurityGroupId: common.String("update-rules-id"),
+					RemoveNetworkSecurityGroupSecurityRulesDetails: core.RemoveNetworkSecurityGroupSecurityRulesDetails{
+						SecurityRuleIds: []string{"ingress-id", "egress-id-changed"},
+					},
+				})).Return(core.RemoveNetworkSecurityGroupSecurityRulesResponse{}, nil)
+
+				vcnClient.EXPECT().UpdateNetworkSecurityGroup(gomock.Any(), gomock.Eq(core.UpdateNetworkSecurityGroupRequest{
+					NetworkSecurityGroupId: common.String("update-id"),
+					UpdateNetworkSecurityGroupDetails: core.UpdateNetworkSecurityGroupDetails{
+						DisplayName: common.String("update-nsg"),
+					},
+				})).
+					Return(core.UpdateNetworkSecurityGroupResponse{
+						NetworkSecurityGroup: core.NetworkSecurityGroup{
+							Id:           common.String("update-id"),
+							FreeformTags: tags,
+						},
+					}, nil)
 			},
 		},
 		{
@@ -1457,6 +560,15 @@ func TestClusterScope_ReconcileNSG(t *testing.T) {
 					},
 				},
 			},
+			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_vcn.MockClient) {
+				vcnClient.EXPECT().UpdateNetworkSecurityGroup(gomock.Any(), gomock.Eq(core.UpdateNetworkSecurityGroupRequest{
+					NetworkSecurityGroupId: common.String("update-id"),
+					UpdateNetworkSecurityGroupDetails: core.UpdateNetworkSecurityGroupDetails{
+						DisplayName: common.String("update-nsg-error"),
+					},
+				})).
+					Return(core.UpdateNetworkSecurityGroupResponse{}, errors.New("some error"))
+			},
 			wantErr:       true,
 			expectedError: "failed to reconcile the network security group, failed to update: some error",
 		},
@@ -1491,8 +603,33 @@ func TestClusterScope_ReconcileNSG(t *testing.T) {
 								},
 							},
 						},
+						NetworkSecurityGroups: []*infrastructurev1beta1.NSG{
+							{
+								Name: "service-lb",
+								Role: "service-lb",
+							},
+						},
 					},
 				},
+			},
+			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_vcn.MockClient) {
+				vcnClient.EXPECT().ListNetworkSecurityGroups(gomock.Any(), gomock.Eq(core.ListNetworkSecurityGroupsRequest{
+					CompartmentId: common.String("foo"),
+					DisplayName:   common.String("service-lb"),
+					VcnId:         common.String("vcn"),
+				})).Return(
+					core.ListNetworkSecurityGroupsResponse{
+						Items: []core.NetworkSecurityGroup{}}, nil)
+				vcnClient.EXPECT().CreateNetworkSecurityGroup(gomock.Any(), gomock.Eq(core.CreateNetworkSecurityGroupRequest{
+					CreateNetworkSecurityGroupDetails: core.CreateNetworkSecurityGroupDetails{
+						CompartmentId: common.String("foo"),
+						DisplayName:   common.String("service-lb"),
+						VcnId:         common.String("vcn"),
+						FreeformTags:  updatedTags,
+						DefinedTags:   definedTagsInterface,
+					},
+				})).Return(
+					core.CreateNetworkSecurityGroupResponse{}, errors.New("some error"))
 			},
 			wantErr:       true,
 			expectedError: "failed create nsg: some error",
@@ -1527,6 +664,7 @@ func TestClusterScope_ReconcileNSG(t *testing.T) {
 						},
 						NetworkSecurityGroups: []*infrastructurev1beta1.NSG{
 							{
+								ID:          common.String("loadbalancer-nsg-id"),
 								Name:        "service-lb",
 								Role:        "service-lb",
 								EgressRules: customNSGEgress,
@@ -1535,6 +673,44 @@ func TestClusterScope_ReconcileNSG(t *testing.T) {
 					},
 				},
 			},
+			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_vcn.MockClient) {
+				vcnClient.EXPECT().GetNetworkSecurityGroup(gomock.Any(), gomock.Eq(core.GetNetworkSecurityGroupRequest{
+					NetworkSecurityGroupId: common.String("loadbalancer-nsg-id"),
+				})).
+					Return(core.GetNetworkSecurityGroupResponse{
+						NetworkSecurityGroup: core.NetworkSecurityGroup{
+							Id:           common.String("loadbalancer-nsg-id"),
+							DisplayName:  common.String("service-lb"),
+							FreeformTags: tags,
+							DefinedTags:  definedTagsInterface,
+						},
+					}, nil)
+				vcnClient.EXPECT().ListNetworkSecurityGroupSecurityRules(gomock.Any(), gomock.Eq(core.ListNetworkSecurityGroupSecurityRulesRequest{
+					NetworkSecurityGroupId: common.String("loadbalancer-nsg-id"),
+				})).Return(core.ListNetworkSecurityGroupSecurityRulesResponse{
+					Items: []core.SecurityRule{},
+				}, nil)
+				vcnClient.EXPECT().AddNetworkSecurityGroupSecurityRules(gomock.Any(), gomock.Eq(core.AddNetworkSecurityGroupSecurityRulesRequest{
+					NetworkSecurityGroupId: common.String("loadbalancer-nsg-id"),
+					AddNetworkSecurityGroupSecurityRulesDetails: core.AddNetworkSecurityGroupSecurityRulesDetails{SecurityRules: []core.AddSecurityRuleDetails{
+						{
+							Direction:       core.AddSecurityRuleDetailsDirectionEgress,
+							Protocol:        common.String("6"),
+							Description:     common.String("All traffic to control plane nodes"),
+							Destination:     common.String(ControlPlaneMachineSubnetDefaultCIDR),
+							DestinationType: core.AddSecurityRuleDetailsDestinationTypeCidrBlock,
+							IsStateless:     common.Bool(false),
+							TcpOptions: &core.TcpOptions{
+								DestinationPortRange: &core.PortRange{
+									Max: common.Int(6443),
+									Min: common.Int(6443),
+								},
+							},
+						},
+					},
+					},
+				})).Return(core.AddNetworkSecurityGroupSecurityRulesResponse{}, errors.New("some error"))
+			},
 			wantErr:       true,
 			expectedError: "failed add nsg security rules: some error",
 		},
@@ -1542,16 +718,18 @@ func TestClusterScope_ReconcileNSG(t *testing.T) {
 	l := log.FromContext(context.Background())
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ociCluster := infrastructurev1beta1.OCICluster{
-				ObjectMeta: metav1.ObjectMeta{
-					UID: "cluster_uid",
+			ociClusterAccessor := OCISelfManagedCluster{
+				&infrastructurev1beta1.OCICluster{
+					ObjectMeta: metav1.ObjectMeta{
+						UID: "cluster_uid",
+					},
+					Spec: tt.spec,
 				},
-				Spec: tt.spec,
 			}
-			ociCluster.Spec.OCIResourceIdentifier = "resource_uid"
+			ociClusterAccessor.OCICluster.Spec.OCIResourceIdentifier = "resource_uid"
 			s := &ClusterScope{
-				VCNClient:  vcnClient,
-				OCICluster: &ociCluster,
+				VCNClient:          vcnClient,
+				OCIClusterAccessor: ociClusterAccessor,
 				Cluster: &clusterv1.Cluster{
 					ObjectMeta: metav1.ObjectMeta{
 						UID: "resource_uid",
@@ -1559,6 +737,7 @@ func TestClusterScope_ReconcileNSG(t *testing.T) {
 				},
 				Logger: &l,
 			}
+			tt.testSpecificSetup(s, vcnClient)
 			err := s.ReconcileNSG(context.Background())
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ReconcileNSG() error = %v, wantErr %v", err, tt.wantErr)

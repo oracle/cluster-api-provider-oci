@@ -21,8 +21,8 @@ import (
 	"strings"
 
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
-	"github.com/oracle/oci-go-sdk/v63/common"
-	"github.com/oracle/oci-go-sdk/v63/core"
+	"github.com/oracle/oci-go-sdk/v65/common"
+	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/pkg/errors"
 )
 
@@ -37,12 +37,12 @@ func (s *ClusterScope) ReconcileServiceGateway(ctx context.Context) error {
 		return err
 	}
 	if sgw != nil {
-		s.OCICluster.Spec.NetworkSpec.Vcn.ServiceGatewayId = sgw.Id
+		s.OCIClusterAccessor.GetNetworkSpec().Vcn.ServiceGatewayId = sgw.Id
 		s.Logger.Info("No Reconciliation Required for Service Gateway", "service_gateway", sgw.Id)
 		return nil
 	}
 	serviceGateway, err := s.CreateServiceGateway(ctx)
-	s.OCICluster.Spec.NetworkSpec.Vcn.ServiceGatewayId = serviceGateway
+	s.OCIClusterAccessor.GetNetworkSpec().Vcn.ServiceGatewayId = serviceGateway
 	return err
 }
 
@@ -106,7 +106,7 @@ func (s *ClusterScope) DeleteServiceGateway(ctx context.Context) error {
 }
 
 func (s *ClusterScope) GetServiceGateway(ctx context.Context) (*core.ServiceGateway, error) {
-	sgwId := s.OCICluster.Spec.NetworkSpec.Vcn.ServiceGatewayId
+	sgwId := s.OCIClusterAccessor.GetNetworkSpec().Vcn.ServiceGatewayId
 	if sgwId != nil {
 		resp, err := s.VCNClient.GetServiceGateway(ctx, core.GetServiceGatewayRequest{
 			ServiceGatewayId: sgwId,

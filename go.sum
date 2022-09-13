@@ -576,6 +576,8 @@ github.com/opencontainers/image-spec v1.0.2/go.mod h1:BtxoFyWECRxE4U/7sNtV5W15zM
 github.com/opentracing/opentracing-go v1.1.0/go.mod h1:UkNAQd3GIcIGf0SeVgPpRdFStlNbqXla1AfSYxPUl2o=
 github.com/oracle/oci-go-sdk/v63 v63.0.0 h1:OOGCUmaDzrd5zTG8pljcnkR1ZHxg/991uEiQJi95/4E=
 github.com/oracle/oci-go-sdk/v63 v63.0.0/go.mod h1:n6V9PcyRW5wtHaNd2TltbV3sWvbNy3PNqLmLrcT23Fg=
+github.com/oracle/oci-go-sdk/v65 v65.18.0 h1:8I8d9lh/Jk+guoVSWRIv5CmHUfNJbR1GozR+8YqREgU=
+github.com/oracle/oci-go-sdk/v65 v65.18.0/go.mod h1:oyMrMa1vOzzKTmPN+kqrTR9y9kPA2tU1igN3NUSNTIE=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pascaldekloe/goe v0.1.0/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pborman/uuid v0.0.0-20170612153648-e790cca94e6c/go.mod h1:VyrYX9gd7irzKovcSS6BIIEwPRkP2Wm2m9ufcdFSJ34=

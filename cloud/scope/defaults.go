@@ -16,7 +16,7 @@
 
 package scope
 
-import "github.com/oracle/oci-go-sdk/v63/networkloadbalancer"
+import "github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
 
 const (
 	VcnDefaultCidr                        = "10.0.0.0/16"

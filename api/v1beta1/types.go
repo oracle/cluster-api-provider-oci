@@ -21,12 +21,16 @@ const (
 	ControlPlaneEndpointRole = "control-plane-endpoint"
 	WorkerRole               = "worker"
 	ServiceLoadBalancerRole  = "service-lb"
+	PodRole                  = "pod"
 	Private                  = "private"
 	Public                   = "public"
 )
 
-// SubnetRoles a slice of all the subnet roles
-var SubnetRoles = [...]Role{ControlPlaneRole, ControlPlaneEndpointRole, WorkerRole, ServiceLoadBalancerRole}
+// OCIClusterSubnetRoles a slice of all the subnet roles for self managed cluster
+var OCIClusterSubnetRoles = []Role{ControlPlaneRole, ControlPlaneEndpointRole, WorkerRole, ServiceLoadBalancerRole}
+
+// OCIManagedClusterSubnetRoles a slice of all the subnet roles for managed cluster
+var OCIManagedClusterSubnetRoles = []Role{PodRole, ControlPlaneEndpointRole, WorkerRole, ServiceLoadBalancerRole}
 
 // NetworkDetails defines the configuration options for the network
 type NetworkDetails struct {
@@ -217,7 +221,8 @@ type PortRange struct {
 
 const (
 	// EgressSecurityRuleDestinationTypeCidrBlock is the contant for CIDR block security rule destination type
-	EgressSecurityRuleDestinationTypeCidrBlock EgressSecurityRuleDestinationTypeEnum = "CIDR_BLOCK"
+	EgressSecurityRuleDestinationTypeCidrBlock   EgressSecurityRuleDestinationTypeEnum = "CIDR_BLOCK"
+	EgressSecurityRuleSourceTypeServiceCidrBlock EgressSecurityRuleDestinationTypeEnum = "SERVICE_CIDR_BLOCK"
 )
 
 type EgressSecurityRuleDestinationTypeEnum string

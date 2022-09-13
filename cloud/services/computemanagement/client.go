@@ -3,7 +3,7 @@ package computemanagement
 import (
 	"context"
 
-	"github.com/oracle/oci-go-sdk/v63/core"
+	"github.com/oracle/oci-go-sdk/v65/core"
 )
 
 type Client interface {

@@ -24,51 +24,57 @@ import (
 	"github.com/go-logr/logr"
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
-	identityClent "github.com/oracle/cluster-api-provider-oci/cloud/services/identity"
+	identityClient "github.com/oracle/cluster-api-provider-oci/cloud/services/identity"
 	nlb "github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
-	"github.com/oracle/oci-go-sdk/v63/common"
-	"github.com/oracle/oci-go-sdk/v63/identity"
+	"github.com/oracle/oci-go-sdk/v65/common"
+	"github.com/oracle/oci-go-sdk/v65/identity"
 	"github.com/pkg/errors"
 	"k8s.io/klog/v2/klogr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
-	AvailabilityDomain = "AvailabilityDomain"
-	FaultDomain        = "FaultDomain"
-	OCIClusterKind     = "OCICluster"
+	AvailabilityDomain                = "AvailabilityDomain"
+	FaultDomain                       = "FaultDomain"
+	OCIClusterKind                    = "OCICluster"
+	OCIManagedClusterKind             = "OCIManagedCluster"
+	OCIManagedClusterControlPlaneKind = "OCIManagedClusterControlPlane"
 )
 
 // ClusterScopeParams defines the params need to create a new ClusterScope
 type ClusterScopeParams struct {
-	Client                client.Client
-	Logger                *logr.Logger
-	Cluster               *clusterv1.Cluster
-	OCICluster            *infrastructurev1beta1.OCICluster
-	VCNClient             vcn.Client
-	LoadBalancerClient    nlb.NetworkLoadBalancerClient
-	IdentityClient        identityClent.Client
-	Region                string
+	Client             client.Client
+	Logger             *logr.Logger
+	Cluster            *clusterv1.Cluster
+	VCNClient          vcn.Client
+	LoadBalancerClient nlb.NetworkLoadBalancerClient
+	IdentityClient     identityClient.Client
+	// RegionIdentifier Identifier as specified here https://docs.oracle.com/en-us/iaas/Content/General/Concepts/regions.htm
+	RegionIdentifier      string
 	OCIAuthConfigProvider common.ConfigurationProvider
 	ClientProvider        *ClientProvider
+	OCIClusterAccessor    OCIClusterAccessor
+	// RegionIdentifier Key as specified here https://docs.oracle.com/en-us/iaas/Content/General/Concepts/regions.htm
+	RegionKey string
 }
 
 type ClusterScope struct {
 	*logr.Logger
-	client      client.Client
-	patchHelper *patch.Helper
-
+	client             client.Client
+	patchHelper        *patch.Helper
 	Cluster            *clusterv1.Cluster
-	OCICluster         *infrastructurev1beta1.OCICluster
 	VCNClient          vcn.Client
 	LoadBalancerClient nlb.NetworkLoadBalancerClient
-	IdentityClient     identityClent.Client
-	Region             string
+	IdentityClient     identityClient.Client
+	// RegionIdentifier Identifier as specified here https://docs.oracle.com/en-us/iaas/Content/General/Concepts/regions.htm
+	RegionIdentifier   string
 	ClientProvider     *ClientProvider
+	OCIClusterAccessor OCIClusterAccessor
+	// RegionIdentifier Key as specified here https://docs.oracle.com/en-us/iaas/Content/General/Concepts/regions.htm
+	RegionKey string
 }
 
 // NewClusterScope creates a ClusterScope given the ClusterScopeParams
@@ -77,8 +83,8 @@ func NewClusterScope(params ClusterScopeParams) (*ClusterScope, error) {
 	if params.Cluster == nil {
 		return nil, errors.New("failed to generate new scope from nil Cluster")
 	}
-	if params.OCICluster == nil {
-		return nil, errors.New("failed to generate new scope from nil OCICluster")
+	if params.OCIClusterAccessor == nil {
+		return nil, errors.New("failed to generate new scope from nil OCIClusterAccessor")
 	}
 
 	if params.Logger == nil {
@@ -86,51 +92,35 @@ func NewClusterScope(params ClusterScopeParams) (*ClusterScope, error) {
 		params.Logger = &log
 	}
 
-	helper, err := patch.NewHelper(params.OCICluster, params.Client)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to init patch helper")
-	}
-
 	return &ClusterScope{
 		Logger:             params.Logger,
 		client:             params.Client,
 		Cluster:            params.Cluster,
-		OCICluster:         params.OCICluster,
-		patchHelper:        helper,
 		VCNClient:          params.VCNClient,
 		LoadBalancerClient: params.LoadBalancerClient,
 		IdentityClient:     params.IdentityClient,
-		Region:             params.Region,
+		RegionIdentifier:   params.RegionIdentifier,
 		ClientProvider:     params.ClientProvider,
+		OCIClusterAccessor: params.OCIClusterAccessor,
+		RegionKey:          params.RegionKey,
 	}, nil
 }
 
-// PatchObject persists the cluster configuration and status.
-func (s *ClusterScope) PatchObject(ctx context.Context) error {
-	conditions.SetSummary(s.OCICluster)
-	return s.patchHelper.Patch(ctx, s.OCICluster)
-}
-
-// Close closes the current scope persisting the cluster configuration and status.
-func (s *ClusterScope) Close(ctx context.Context) error {
-	return s.PatchObject(ctx)
-}
-
-func (s *ClusterScope) ReconcileFailureDomains(ctx context.Context) error {
-	if s.OCICluster.Status.FailureDomains == nil {
-		return s.setFailureDomains(ctx)
-	}
-	return nil
-}
-
 func (s *ClusterScope) IsResourceCreatedByClusterAPI(resourceFreeFormTags map[string]string) bool {
-	tagsAddedByClusterAPI := ociutil.BuildClusterTags(s.OCICluster.GetOCIResourceIdentifier())
+	tagsAddedByClusterAPI := ociutil.BuildClusterTags(s.OCIClusterAccessor.GetOCIResourceIdentifier())
 	for k, v := range tagsAddedByClusterAPI {
 		if resourceFreeFormTags[k] != v {
 			return false
 		}
 	}
 	return true
+}
+
+func (s *ClusterScope) ReconcileFailureDomains(ctx context.Context) error {
+	if s.OCIClusterAccessor.GetFailureDomains() == nil {
+		return s.setFailureDomains(ctx)
+	}
+	return nil
 }
 
 // setFailureDomains sets the failure domains of the environment based on whether it is single AD or multi AD regions
@@ -146,7 +136,7 @@ func (s *ClusterScope) setFailureDomains(ctx context.Context) error {
 	}
 
 	// build the AD list for cluster
-	err = s.setAvailabiltyDomainStatus(ctx, respAd.Items)
+	ads, err := s.setAvailabiltyDomainStatus(ctx, respAd.Items)
 	if err != nil {
 		return err
 	}
@@ -167,7 +157,7 @@ func (s *ClusterScope) setFailureDomains(ctx context.Context) error {
 		}
 	} else {
 		adName := *respAd.Items[0].Name
-		for i, fd := range s.OCICluster.Status.AvailabilityDomains[adName].FaultDomains {
+		for i, fd := range ads[adName].FaultDomains {
 			s.SetFailureDomain(strconv.Itoa(i+1), clusterv1.FailureDomainSpec{
 				ControlPlane: true,
 				Attributes: map[string]string{
@@ -183,15 +173,12 @@ func (s *ClusterScope) setFailureDomains(ctx context.Context) error {
 
 // SetFailureDomain sets the cluster's failure domain in the status
 func (s *ClusterScope) SetFailureDomain(id string, spec clusterv1.FailureDomainSpec) {
-	if s.OCICluster.Status.FailureDomains == nil {
-		s.OCICluster.Status.FailureDomains = make(clusterv1.FailureDomains)
-	}
-	s.OCICluster.Status.FailureDomains[id] = spec
+	s.OCIClusterAccessor.SetFailureDomain(id, spec)
 }
 
 // setAvailabiltyDomainStatus builds the OCIAvailabilityDomain list and sets the OCICluster's status with this list
 // so that other parts of the provider have access to ADs and FDs without having to make multiple calls to identity.
-func (s *ClusterScope) setAvailabiltyDomainStatus(ctx context.Context, ads []identity.AvailabilityDomain) error {
+func (s *ClusterScope) setAvailabiltyDomainStatus(ctx context.Context, ads []identity.AvailabilityDomain) (map[string]infrastructurev1beta1.OCIAvailabilityDomain, error) {
 	clusterAds := make(map[string]infrastructurev1beta1.OCIAvailabilityDomain)
 	for _, ad := range ads {
 		reqFd := identity.ListFaultDomainsRequest{
@@ -201,7 +188,7 @@ func (s *ClusterScope) setAvailabiltyDomainStatus(ctx context.Context, ads []ide
 		respFd, err := s.IdentityClient.ListFaultDomains(ctx, reqFd)
 		if err != nil {
 			s.Logger.Error(err, "failed to list fault domains")
-			return err
+			return nil, err
 		}
 
 		var faultDomains []string
@@ -215,37 +202,19 @@ func (s *ClusterScope) setAvailabiltyDomainStatus(ctx context.Context, ads []ide
 			FaultDomains: faultDomains,
 		}
 	}
+	s.OCIClusterAccessor.SetAvailabilityDomains(clusterAds)
 
-	s.OCICluster.Status.AvailabilityDomains = clusterAds
-
-	return nil
-}
-
-// GetRegionCodeFromRegion pulls all OCI regions available and returns the passed in region's code if contained in
-// the list.
-//
-// example: "ca-toronto-1" -> "YYZ"
-func (s *ClusterScope) GetRegionCodeFromRegion(ctx context.Context, region string) (string, error) {
-	regionCodes, err := s.IdentityClient.ListRegions(ctx)
-	if err != nil {
-		s.Logger.Error(err, "failed to list oci regions")
-		return "", errors.Wrap(err, "failed to list oci regions")
-	}
-	for _, regionCode := range regionCodes.Items {
-		if *regionCode.Name == region {
-			return *regionCode.Key, nil
-		}
-	}
-	return "", errors.Errorf("unable to get region code from region name")
+	return clusterAds, nil
 }
 
 // GetDefinedTags returns a map of DefinedTags defined in the OCICluster's spec
 func (s *ClusterScope) GetDefinedTags() map[string]map[string]interface{} {
-	if s.OCICluster.Spec.DefinedTags == nil {
+	tags := s.OCIClusterAccessor.GetDefinedTags()
+	if tags == nil {
 		return make(map[string]map[string]interface{})
 	}
 	definedTags := make(map[string]map[string]interface{})
-	for ns, mapNs := range s.OCICluster.Spec.DefinedTags {
+	for ns, mapNs := range tags {
 		mapValues := make(map[string]interface{})
 		for k, v := range mapNs {
 			mapValues[k] = v
@@ -257,7 +226,7 @@ func (s *ClusterScope) GetDefinedTags() map[string]map[string]interface{} {
 
 // GetCompartmentId returns the CompartmentId defined in OCICluster's spec
 func (s *ClusterScope) GetCompartmentId() string {
-	return s.OCICluster.Spec.CompartmentId
+	return s.OCIClusterAccessor.GetCompartmentId()
 }
 
 // APIServerPort returns the APIServerPort to use when creating the load balancer.
@@ -270,24 +239,24 @@ func (s *ClusterScope) APIServerPort() int32 {
 
 // GetFreeFormTags returns a map of FreeformTags defined in the OCICluster's spec
 func (s *ClusterScope) GetFreeFormTags() map[string]string {
-	tags := s.OCICluster.Spec.FreeformTags
+	tags := s.OCIClusterAccessor.GetFreeformTags()
 	completeTags := make(map[string]string)
 	for k, v := range tags {
 		completeTags[k] = v
 	}
-	tagsAddedByClusterAPI := ociutil.BuildClusterTags(s.OCICluster.GetOCIResourceIdentifier())
+	tagsAddedByClusterAPI := ociutil.BuildClusterTags(s.OCIClusterAccessor.GetOCIResourceIdentifier())
 	for k, v := range tagsAddedByClusterAPI {
 		completeTags[k] = v
 	}
 	return completeTags
 }
 
-func (s *ClusterScope) GetOCICluster() *infrastructurev1beta1.OCICluster {
-	return s.OCICluster
+func (s *ClusterScope) GetOCIClusterAccessor() OCIClusterAccessor {
+	return s.OCIClusterAccessor
 }
 
 func (s *ClusterScope) getDRG() *infrastructurev1beta1.DRG {
-	return s.OCICluster.Spec.NetworkSpec.VCNPeering.DRG
+	return s.OCIClusterAccessor.GetNetworkSpec().VCNPeering.DRG
 }
 
 func (s *ClusterScope) getDrgID() *string {
@@ -295,5 +264,33 @@ func (s *ClusterScope) getDrgID() *string {
 }
 
 func (s *ClusterScope) isPeeringEnabled() bool {
-	return s.OCICluster.Spec.NetworkSpec.VCNPeering != nil
+	return s.OCIClusterAccessor.GetNetworkSpec().VCNPeering != nil
+}
+
+// SetRegionKey sets the region key in the scope
+func (s *ClusterScope) SetRegionKey(ctx context.Context) error {
+	regionCode, err := GetRegionCodeFromRegion(ctx, s.IdentityClient, s.RegionIdentifier)
+	if err != nil {
+		s.Logger.Error(err, "failed to get shortId for the region")
+		return err
+	}
+	s.RegionKey = regionCode
+	return nil
+}
+
+// GetRegionCodeFromRegion pulls all OCI regions available and returns the passed in region's code if contained in
+// the list.
+//
+// example: "ca-toronto-1" -> "YYZ"
+func GetRegionCodeFromRegion(ctx context.Context, identityClient identityClient.Client, region string) (string, error) {
+	regionCodes, err := identityClient.ListRegions(ctx)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to list oci regions")
+	}
+	for _, regionCode := range regionCodes.Items {
+		if *regionCode.Name == region {
+			return *regionCode.Key, nil
+		}
+	}
+	return "", errors.Errorf("unable to get region code from region name")
 }

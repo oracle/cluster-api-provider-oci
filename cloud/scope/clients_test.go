@@ -17,11 +17,11 @@ limitations under the License.
 package scope
 
 import (
-	"github.com/oracle/cluster-api-provider-oci/cloud/config"
 	"reflect"
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	"github.com/oracle/cluster-api-provider-oci/cloud/config"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn/mock_vcn"
 )
 

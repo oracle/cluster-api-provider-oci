@@ -23,8 +23,8 @@ import (
 	"github.com/golang/mock/gomock"
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/identity/mock_identity"
-	"github.com/oracle/oci-go-sdk/v63/common"
-	"github.com/oracle/oci-go-sdk/v63/identity"
+	"github.com/oracle/oci-go-sdk/v65/common"
+	"github.com/oracle/oci-go-sdk/v65/identity"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -228,16 +228,18 @@ func TestClusterScope_ReconcileFailureDomains(t *testing.T) {
 	l := log.FromContext(context.Background())
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ociCluster := infrastructurev1beta1.OCICluster{
-				Spec: tt.spec,
-				ObjectMeta: metav1.ObjectMeta{
-					UID: "a",
+			ociClusterAccessor := OCISelfManagedCluster{
+				OCICluster: &infrastructurev1beta1.OCICluster{
+					Spec: tt.spec,
+					ObjectMeta: metav1.ObjectMeta{
+						UID: "a",
+					},
 				},
 			}
 			s := &ClusterScope{
-				IdentityClient: identityClient,
-				OCICluster:     &ociCluster,
-				Logger:         &l,
+				IdentityClient:     identityClient,
+				OCIClusterAccessor: &ociClusterAccessor,
+				Logger:             &l,
 			}
 			err := s.ReconcileFailureDomains(context.Background())
 			if (err != nil) != tt.wantErr {

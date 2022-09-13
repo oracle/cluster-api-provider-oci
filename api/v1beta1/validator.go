@@ -28,12 +28,18 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
+const (
+	// can't use: \/"'[]:|<>+=;,.?*@&, Can't start with underscore. Can't end with period or hyphen.
+	// not using . in the name to avoid issues when the name is part of DNS name.
+	clusterNameRegex = `^[a-z0-9][a-z0-9-]{0,42}[a-z0-9]$`
+)
+
 // invalidNameRegex is a broad regex used to validate allows names in OCI
 var invalidNameRegex = regexp.MustCompile("\\s")
 
-// validOcid is a simple pre-flight
+// ValidOcid is a simple pre-flight
 // we will let the serverside handle the more complex and compete validation
-func validOcid(ocid string) bool {
+func ValidOcid(ocid string) bool {
 	if len(ocid) >= 4 && ocid[:4] == "ocid" {
 		return true
 	}
@@ -47,8 +53,8 @@ func validShape(shape string) bool {
 	return len(shape) > 0
 }
 
-// validRegion test if the string can be a region.
-func validRegion(stringRegion string) bool {
+// ValidRegion test if the string can be a region.
+func ValidRegion(stringRegion string) bool {
 
 	// region can be blank since the regional information
 	// can be derived from other sources
@@ -62,8 +68,8 @@ func validRegion(stringRegion string) bool {
 	return true
 }
 
-// validateNetworkSpec validates the NetworkSpec
-func validateNetworkSpec(networkSpec NetworkSpec, old NetworkSpec, fldPath *field.Path) field.ErrorList {
+// ValidateNetworkSpec validates the NetworkSpec
+func ValidateNetworkSpec(validRoles []Role, networkSpec NetworkSpec, old NetworkSpec, fldPath *field.Path) field.ErrorList {
 	var allErrs field.ErrorList
 
 	if len(networkSpec.Vcn.CIDR) > 0 {
@@ -71,11 +77,11 @@ func validateNetworkSpec(networkSpec NetworkSpec, old NetworkSpec, fldPath *fiel
 	}
 
 	if networkSpec.Vcn.Subnets != nil {
-		allErrs = append(allErrs, validateSubnets(networkSpec.Vcn.Subnets, networkSpec.Vcn, fldPath.Child("subnets"))...)
+		allErrs = append(allErrs, validateSubnets(validRoles, networkSpec.Vcn.Subnets, networkSpec.Vcn, fldPath.Child("subnets"))...)
 	}
 
 	if networkSpec.Vcn.NetworkSecurityGroups != nil {
-		allErrs = append(allErrs, validateNSGs(networkSpec.Vcn.NetworkSecurityGroups, networkSpec.Vcn, fldPath.Child("networkSecurityGroups"))...)
+		allErrs = append(allErrs, validateNSGs(validRoles, networkSpec.Vcn.NetworkSecurityGroups, fldPath.Child("networkSecurityGroups"))...)
 	}
 
 	if len(allErrs) == 0 {
@@ -89,6 +95,21 @@ func validateVCNCIDR(vncCIDR string, fldPath *field.Path) field.ErrorList {
 	var allErrs field.ErrorList
 	if _, _, err := net.ParseCIDR(vncCIDR); err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath, vncCIDR, "invalid CIDR format"))
+	}
+	return allErrs
+}
+
+// ValidateClusterName validates the name of the cluster.
+func ValidateClusterName(name string) field.ErrorList {
+	var allErrs field.ErrorList
+
+	if success, _ := regexp.MatchString(clusterNameRegex, name); !success {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("metadata").Child("Name"), name,
+			fmt.Sprintf("Cluster Name doesn't match regex %s, can contain only lowercase alphanumeric characters and '-', must start/end with an alphanumeric character",
+				clusterNameRegex)))
+	}
+	if len(allErrs) == 0 {
+		return nil
 	}
 	return allErrs
 }
@@ -125,11 +146,11 @@ func validateSubnetCIDR(subnetCidr string, vcnCidr string, fldPath *field.Path) 
 }
 
 // validateNSGs validates a list of Subnets.
-func validateNSGs(networkSecurityGroups []*NSG, vcn VCN, fldPath *field.Path) field.ErrorList {
+func validateNSGs(validRoles []Role, networkSecurityGroups []*NSG, fldPath *field.Path) field.ErrorList {
 	var allErrs field.ErrorList
 
 	for i, nsg := range networkSecurityGroups {
-		if err := validateRole(nsg.Role, fldPath.Index(i).Child("role"), "networkSecurityGroup role invalid"); err != nil {
+		if err := validateRole(validRoles, nsg.Role, fldPath.Index(i).Child("role"), "networkSecurityGroup role invalid"); err != nil {
 			allErrs = append(allErrs, err)
 		}
 		allErrs = append(allErrs, validateEgressSecurityRuleForNSG(nsg.EgressRules, fldPath.Index(i).Child("egressRules"))...)
@@ -174,7 +195,7 @@ func validateIngressSecurityRuleForNSG(egressRules []IngressSecurityRuleForNSG, 
 }
 
 // validateSubnets validates a list of Subnets.
-func validateSubnets(subnets []*Subnet, vcn VCN, fldPath *field.Path) field.ErrorList {
+func validateSubnets(validRoles []Role, subnets []*Subnet, vcn VCN, fldPath *field.Path) field.ErrorList {
 	var allErrs field.ErrorList
 	subnetNames := make(map[string]bool, len(subnets))
 
@@ -189,7 +210,7 @@ func validateSubnets(subnets []*Subnet, vcn VCN, fldPath *field.Path) field.Erro
 			subnetNames[subnet.Name] = true
 		}
 
-		if err := validateRole(subnet.Role, fldPath.Index(i).Child("role"), "subnet role invalid"); err != nil {
+		if err := validateRole(validRoles, subnet.Role, fldPath.Index(i).Child("role"), "subnet role invalid"); err != nil {
 			allErrs = append(allErrs, err)
 		}
 
@@ -212,8 +233,8 @@ func validateSubnetName(name string, fldPath *field.Path) *field.Error {
 }
 
 // validateRole validates that the subnet role is one of the allowed types
-func validateRole(subnetRole Role, fldPath *field.Path, errorMsg string) *field.Error {
-	for _, role := range SubnetRoles {
+func validateRole(validRoles []Role, subnetRole Role, fldPath *field.Path, errorMsg string) *field.Error {
+	for _, role := range validRoles {
 		if subnetRole == role {
 			return nil
 		}

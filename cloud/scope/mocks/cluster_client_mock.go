@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	v1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	scope "github.com/oracle/cluster-api-provider-oci/cloud/scope"
 )
 
 // MockClusterScopeClient is a mock of ClusterScopeClient interface.
@@ -33,20 +33,6 @@ func NewMockClusterScopeClient(ctrl *gomock.Controller) *MockClusterScopeClient 
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockClusterScopeClient) EXPECT() *MockClusterScopeClientMockRecorder {
 	return m.recorder
-}
-
-// Close mocks base method.
-func (m *MockClusterScopeClient) Close(ctx context.Context) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Close", ctx)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Close indicates an expected call of Close.
-func (mr *MockClusterScopeClientMockRecorder) Close(ctx interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockClusterScopeClient)(nil).Close), ctx)
 }
 
 // DeleteApiServerLB mocks base method.
@@ -217,18 +203,18 @@ func (mr *MockClusterScopeClientMockRecorder) DeleteVCN(ctx interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteVCN", reflect.TypeOf((*MockClusterScopeClient)(nil).DeleteVCN), ctx)
 }
 
-// GetOCICluster mocks base method.
-func (m *MockClusterScopeClient) GetOCICluster() *v1beta1.OCICluster {
+// GetOCIClusterAccessor mocks base method.
+func (m *MockClusterScopeClient) GetOCIClusterAccessor() scope.OCIClusterAccessor {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetOCICluster")
-	ret0, _ := ret[0].(*v1beta1.OCICluster)
+	ret := m.ctrl.Call(m, "GetOCIClusterAccessor")
+	ret0, _ := ret[0].(scope.OCIClusterAccessor)
 	return ret0
 }
 
-// GetOCICluster indicates an expected call of GetOCICluster.
-func (mr *MockClusterScopeClientMockRecorder) GetOCICluster() *gomock.Call {
+// GetOCIClusterAccessor indicates an expected call of GetOCIClusterAccessor.
+func (mr *MockClusterScopeClientMockRecorder) GetOCIClusterAccessor() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOCICluster", reflect.TypeOf((*MockClusterScopeClient)(nil).GetOCICluster))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOCIClusterAccessor", reflect.TypeOf((*MockClusterScopeClient)(nil).GetOCIClusterAccessor))
 }
 
 // ReconcileApiServerLB mocks base method.
@@ -397,4 +383,18 @@ func (m *MockClusterScopeClient) ReconcileVCN(ctx context.Context) error {
 func (mr *MockClusterScopeClientMockRecorder) ReconcileVCN(ctx interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileVCN", reflect.TypeOf((*MockClusterScopeClient)(nil).ReconcileVCN), ctx)
+}
+
+// SetRegionCode mocks base method.
+func (m *MockClusterScopeClient) SetRegionKey(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetRegionKey", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetRegionCode indicates an expected call of SetRegionCode.
+func (mr *MockClusterScopeClientMockRecorder) SetRegionCode(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetRegionKey", reflect.TypeOf((*MockClusterScopeClient)(nil).SetRegionKey), ctx)
 }

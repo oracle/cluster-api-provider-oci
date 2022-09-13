@@ -25,8 +25,8 @@ import (
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
-	"github.com/oracle/oci-go-sdk/v63/common"
-	"github.com/oracle/oci-go-sdk/v63/core"
+	"github.com/oracle/oci-go-sdk/v65/common"
+	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -121,7 +121,7 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		regionOverride = ociCluster.Spec.Region
 	}
 	if len(regionOverride) <= 0 {
-		return ctrl.Result{}, errors.New("OCIMachineReconciler Region can't be nil")
+		return ctrl.Result{}, errors.New("OCIMachineReconciler RegionIdentifier can't be nil")
 	}
 
 	clients, err := r.ClientProvider.GetOrBuildClient(regionOverride)

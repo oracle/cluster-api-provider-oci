@@ -25,6 +25,7 @@ import (
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	"github.com/oracle/cluster-api-provider-oci/controllers"
 	expV1Beta1 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
+	infrav1exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
 	expcontrollers "github.com/oracle/cluster-api-provider-oci/exp/controllers"
 	"github.com/oracle/cluster-api-provider-oci/feature"
 	"github.com/oracle/cluster-api-provider-oci/version"
@@ -195,6 +196,42 @@ func main() {
 			os.Exit(1)
 		}
 	}
+	if feature.Gates.Enabled(feature.OKE) {
+		setupLog.Info("OKE experimental feature enabled")
+		setupLog.V(1).Info("enabling managed machine pool controller")
+		if err = (&expcontrollers.OCIManagedMachinePoolReconciler{
+			Client:         mgr.GetClient(),
+			Scheme:         mgr.GetScheme(),
+			Region:         region,
+			ClientProvider: clientProvider,
+			Recorder:       mgr.GetEventRecorderFor("ocimanagedmachinepool-controller"),
+		}).SetupWithManager(ctx, mgr, controller.Options{}); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", scope.OCIManagedMachinePoolKind)
+			os.Exit(1)
+		}
+
+		if err = (&expcontrollers.OCIManagedClusterReconciler{
+			Client:         mgr.GetClient(),
+			Scheme:         mgr.GetScheme(),
+			Region:         region,
+			ClientProvider: clientProvider,
+			Recorder:       mgr.GetEventRecorderFor("ocimanagedcluster-controller"),
+		}).SetupWithManager(ctx, mgr, controller.Options{}); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", scope.OCIManagedClusterKind)
+			os.Exit(1)
+		}
+
+		if err = (&expcontrollers.OCIManagedClusterControlPlaneReconciler{
+			Client:         mgr.GetClient(),
+			Scheme:         mgr.GetScheme(),
+			Region:         region,
+			ClientProvider: clientProvider,
+			Recorder:       mgr.GetEventRecorderFor("ocimanagedclustercontrolplane-controller"),
+		}).SetupWithManager(ctx, mgr, controller.Options{}); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", scope.OCIManagedClusterControlPlaneKind)
+			os.Exit(1)
+		}
+	}
 
 	if err = (&infrastructurev1beta1.OCICluster{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "OCICluster")
@@ -206,6 +243,20 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err = (&infrav1exp.OCIManagedCluster{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "OCIManagedCluster")
+		os.Exit(1)
+	}
+
+	if err = (&infrav1exp.OCIManagedControlPlane{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "OCIManagedControlPlane")
+		os.Exit(1)
+	}
+
+	if err = (&infrav1exp.OCIManagedMachinePool{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "OCIManagedMachinePool")
+		os.Exit(1)
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

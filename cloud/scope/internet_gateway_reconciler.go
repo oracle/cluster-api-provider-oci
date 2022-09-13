@@ -20,8 +20,8 @@ import (
 	"context"
 
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
-	"github.com/oracle/oci-go-sdk/v63/common"
-	"github.com/oracle/oci-go-sdk/v63/core"
+	"github.com/oracle/oci-go-sdk/v65/common"
+	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/pkg/errors"
 )
 
@@ -37,7 +37,7 @@ func (s *ClusterScope) ReconcileInternetGateway(ctx context.Context) error {
 		return err
 	}
 	if igw != nil {
-		s.OCICluster.Spec.NetworkSpec.Vcn.InternetGatewayId = igw.Id
+		s.OCIClusterAccessor.GetNetworkSpec().Vcn.InternetGatewayId = igw.Id
 		s.Logger.Info("No Reconciliation Required for Internet Gateway", "internet_gateway", igw.Id)
 		return nil
 	}
@@ -45,7 +45,7 @@ func (s *ClusterScope) ReconcileInternetGateway(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	s.OCICluster.Spec.NetworkSpec.Vcn.InternetGatewayId = internetGateway
+	s.OCIClusterAccessor.GetNetworkSpec().Vcn.InternetGatewayId = internetGateway
 	return err
 }
 
@@ -55,7 +55,7 @@ func (s *ClusterScope) ReconcileInternetGateway(ctx context.Context) error {
 //
 // 2. Listing the Internet Gateways for the Compartment (by ID) and filtering by tag
 func (s *ClusterScope) GetInternetGateway(ctx context.Context) (*core.InternetGateway, error) {
-	gwId := s.OCICluster.Spec.NetworkSpec.Vcn.InternetGatewayId
+	gwId := s.OCIClusterAccessor.GetNetworkSpec().Vcn.InternetGatewayId
 	if gwId != nil {
 		resp, err := s.VCNClient.GetInternetGateway(ctx, core.GetInternetGatewayRequest{
 			IgId: gwId,
