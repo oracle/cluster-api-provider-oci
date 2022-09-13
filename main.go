@@ -51,6 +51,11 @@ var (
 	logOptions     = logs.NewOptions()
 	webhookPort    int
 	webhookCertDir string
+
+	// Flags for reconciler concurrency
+	ociClusterConcurrency     int
+	ociMachineConcurrency     int
+	ociMachinePoolConcurrency int
 )
 
 const (
@@ -88,6 +93,24 @@ func main() {
 	)
 	flag.StringVar(&webhookCertDir, "webhook-cert-dir", "/tmp/k8s-webhook-server/serving-certs/",
 		"Webhook cert dir, only used when webhook-port is specified.")
+	flag.IntVar(
+		&ociClusterConcurrency,
+		"ocicluster-concurrency",
+		5,
+		"Number of OciClusters to process simultaneously",
+	)
+	flag.IntVar(
+		&ociMachineConcurrency,
+		"ocimachine-concurrency",
+		10,
+		"Number of OciMachines to process simultaneously",
+	)
+	flag.IntVar(
+		&ociMachinePoolConcurrency,
+		"ocimachinepool-concurrency",
+		5,
+		"Number of OciMachinePools to process simultaneously",
+	)
 
 	opts := zap.Options{
 		Development: true,
@@ -166,7 +189,7 @@ func main() {
 		Region:         region,
 		ClientProvider: clientProvider,
 		Recorder:       mgr.GetEventRecorderFor("ocicluster-controller"),
-	}).SetupWithManager(ctx, mgr, controller.Options{}); err != nil {
+	}).SetupWithManager(ctx, mgr, controller.Options{MaxConcurrentReconciles: ociClusterConcurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", scope.OCIClusterKind)
 		os.Exit(1)
 	}
@@ -177,7 +200,7 @@ func main() {
 		ClientProvider: clientProvider,
 		Region:         region,
 		Recorder:       mgr.GetEventRecorderFor("ocimachine-controller"),
-	}).SetupWithManager(ctx, mgr, controller.Options{}); err != nil {
+	}).SetupWithManager(ctx, mgr, controller.Options{MaxConcurrentReconciles: ociMachineConcurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", scope.OCIMachineKind)
 		os.Exit(1)
 	}
@@ -191,7 +214,7 @@ func main() {
 			ClientProvider: clientProvider,
 			Recorder:       mgr.GetEventRecorderFor("ocimachinepool-controller"),
 			Region:         region,
-		}).SetupWithManager(ctx, mgr, controller.Options{}); err != nil {
+		}).SetupWithManager(ctx, mgr, controller.Options{MaxConcurrentReconciles: ociMachinePoolConcurrency}); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", scope.OCIMachinePoolKind)
 			os.Exit(1)
 		}
@@ -205,7 +228,7 @@ func main() {
 			Region:         region,
 			ClientProvider: clientProvider,
 			Recorder:       mgr.GetEventRecorderFor("ocimanagedmachinepool-controller"),
-		}).SetupWithManager(ctx, mgr, controller.Options{}); err != nil {
+		}).SetupWithManager(ctx, mgr, controller.Options{MaxConcurrentReconciles: ociMachinePoolConcurrency}); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", scope.OCIManagedMachinePoolKind)
 			os.Exit(1)
 		}
@@ -216,7 +239,7 @@ func main() {
 			Region:         region,
 			ClientProvider: clientProvider,
 			Recorder:       mgr.GetEventRecorderFor("ocimanagedcluster-controller"),
-		}).SetupWithManager(ctx, mgr, controller.Options{}); err != nil {
+		}).SetupWithManager(ctx, mgr, controller.Options{MaxConcurrentReconciles: ociClusterConcurrency}); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", scope.OCIManagedClusterKind)
 			os.Exit(1)
 		}
@@ -227,7 +250,7 @@ func main() {
 			Region:         region,
 			ClientProvider: clientProvider,
 			Recorder:       mgr.GetEventRecorderFor("ocimanagedclustercontrolplane-controller"),
-		}).SetupWithManager(ctx, mgr, controller.Options{}); err != nil {
+		}).SetupWithManager(ctx, mgr, controller.Options{MaxConcurrentReconciles: ociClusterConcurrency}); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", scope.OCIManagedClusterControlPlaneKind)
 			os.Exit(1)
 		}

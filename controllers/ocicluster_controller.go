@@ -265,6 +265,7 @@ func (r *OCIClusterReconciler) reconcile(ctx context.Context, logger logr.Logger
 func (r *OCIClusterReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
 	log := ctrl.LoggerFrom(ctx)
 	c, err := ctrl.NewControllerManagedBy(mgr).
+		WithOptions(options).
 		For(&infrastructurev1beta1.OCICluster{}).
 		WithEventFilter(predicates.ResourceNotPaused(log)).              // don't queue reconcile if resource is paused
 		WithEventFilter(predicates.ResourceIsNotExternallyManaged(log)). //the externally managed cluster won't be reconciled

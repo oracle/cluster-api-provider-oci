@@ -286,6 +286,7 @@ func (r *OCIManagedClusterReconciler) SetupWithManager(ctx context.Context, mgr 
 	log := ctrl.LoggerFrom(ctx)
 	ociManagedControlPlaneMapper, err := OCIManagedControlPlaneToOCIManagedClusterMapper(ctx, r.Client, log)
 	c, err := ctrl.NewControllerManagedBy(mgr).
+		WithOptions(options).
 		For(&infrav1exp.OCIManagedCluster{}).
 		WithEventFilter(predicates.ResourceNotPaused(log)). // don't queue reconcile if resource is paused
 		// watch OCIManagedControlPlane resources
