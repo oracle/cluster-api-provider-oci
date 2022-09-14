@@ -163,6 +163,7 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 // SetupWithManager sets up the controller with the Manager.
 func (r *OCIMachineReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
 	c, err := ctrl.NewControllerManagedBy(mgr).
+		WithOptions(options).
 		For(&infrastructurev1beta1.OCIMachine{}).
 		Watches(
 			&source.Kind{Type: &clusterv1.Machine{}},

@@ -252,6 +252,7 @@ func (r *OCIManagedClusterControlPlaneReconciler) SetupWithManager(ctx context.C
 	log := ctrl.LoggerFrom(ctx)
 	ociManagedClusterMapper, err := OCIManagedClusterToOCIManagedControlPlaneMapper(ctx, r.Client, log)
 	c, err := ctrl.NewControllerManagedBy(mgr).
+		WithOptions(options).
 		For(&infrav1exp.OCIManagedControlPlane{}).
 		Watches(
 			&source.Kind{Type: &infrav1exp.OCIManagedCluster{}},
