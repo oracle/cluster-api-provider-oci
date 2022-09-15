@@ -231,12 +231,12 @@ data:
                 path: /etc/kubernetes
           containers:
             - name: oci-cloud-controller-manager
-              image: ghcr.io/oracle/cloud-provider-oci:v1.23.0
+              image: ghcr.io/oracle/cloud-provider-oci:v1.24.0
               command: ["/usr/local/bin/oci-cloud-controller-manager"]
               args:
                 - --cloud-config=/etc/oci/cloud-provider.yaml
                 - --cloud-provider=oci
-                - --leader-elect-resource-lock=configmaps
+                - --leader-elect-resource-lock=configmapsleases 
                 - -v=2
               volumeMounts:
                 - name: cfg
@@ -337,6 +337,18 @@ data:
       - configmaps
       verbs:
       - create
+
+    - apiGroups:
+      - "coordination.k8s.io"
+      resources:
+        - leases
+      verbs:
+        - get
+        - create
+        - update
+        - delete
+        - patch
+        - watch
 
     - apiGroups:
       - ""
@@ -448,7 +460,7 @@ data:
             node-role.kubernetes.io/master: ""
           containers:
             - name: csi-volume-provisioner
-              image: k8s.gcr.io/sig-storage/csi-provisioner:v2.2.2
+              image: k8s.gcr.io/sig-storage/csi-provisioner:v3.2.1
               args:
                 - --csi-address=/var/run/shared-tmpfs/csi.sock
                 - --volume-name-prefix=csi
@@ -463,7 +475,8 @@ data:
                 - mountPath: /var/run/shared-tmpfs
                   name: shared-tmpfs
             - name: csi-attacher
-              image: k8s.gcr.io/sig-storage/csi-attacher:v3.4.0
+              image: k8s.gcr.io/sig-storage/csi-attacher:v3.
+          5.0
               args:
                 - --csi-address=/var/run/shared-tmpfs/csi.sock
                 - --timeout=120s
@@ -476,7 +489,7 @@ data:
                 - mountPath: /var/run/shared-tmpfs
                   name: shared-tmpfs
             - name: csi-resizer
-              image: k8s.gcr.io/sig-storage/csi-resizer:v1.2.0
+              image: k8s.gcr.io/sig-storage/csi-resizer:v1.5.0
               args:
                 - --csi-address=/var/run/shared-tmpfs/csi.sock
                 - --leader-election
@@ -489,7 +502,7 @@ data:
                 - --endpoint=unix://var/run/shared-tmpfs/csi.sock
               command:
                 - /usr/local/bin/oci-csi-controller-driver
-              image: ghcr.io/oracle/cloud-provider-oci:v1.23.0
+              image: ghcr.io/oracle/cloud-provider-oci:v1.24.0
               imagePullPolicy: IfNotPresent
               volumeMounts:
                 - name: config
@@ -633,7 +646,7 @@ data:
                       fieldPath: spec.nodeName
                 - name: PATH
                   value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/host/usr/bin:/host/sbin
-              image: ghcr.io/oracle/cloud-provider-oci:v1.23.0
+              image: ghcr.io/oracle/cloud-provider-oci:v1.24.0
               securityContext:
                 privileged: true
               volumeMounts:
@@ -667,7 +680,7 @@ data:
               args:
                 - --csi-address=/csi/csi.sock
                 - --kubelet-registration-path=/var/lib/kubelet/plugins/blockvolume.csi.oraclecloud.com/csi.sock
-              image: k8s.gcr.io/sig-storage/csi-node-driver-registrar:v2.5.0
+              image: k8s.gcr.io/sig-storage/csi-node-driver-registrar:v2.5.1
               securityContext:
                 privileged: true
               lifecycle:
@@ -810,10 +823,18 @@ data:
       name: csi-oci
       apiGroup: rbac.authorization.k8s.io
     ---
+    kind: StorageClass
+    apiVersion: storage.k8s.io/v1
+    metadata:
+      name: oci
+    provisioner: oracle.com/oci
+    ---
     apiVersion: storage.k8s.io/v1
     kind: StorageClass
     metadata:
       name: oci-bv
+    parameters:
+      attachment-type: "paravirtualized"
     provisioner: blockvolume.csi.oraclecloud.com
     volumeBindingMode: WaitForFirstConsumer
     allowVolumeExpansion: true
