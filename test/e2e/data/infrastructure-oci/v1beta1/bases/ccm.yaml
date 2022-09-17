@@ -99,7 +99,7 @@ data:
               args:
                 - --cloud-config=/etc/oci/cloud-provider.yaml
                 - --cloud-provider=oci
-                - --leader-elect-resource-lock=configmaps
+                - --leader-elect-resource-lock=configmapsleases
                 - --v=2
               volumeMounts:
                 - name: cfg
@@ -194,6 +194,17 @@ data:
           - list
           - watch
           - update
+      - apiGroups:
+        - "coordination.k8s.io"
+        resources:
+          - leases
+        verbs:
+          - get
+          - create
+          - update
+          - delete
+          - patch
+          - watch
     
       - apiGroups:
           - ""
@@ -315,7 +326,7 @@ data:
             node-role.kubernetes.io/control-plane: ""
           containers:
             - name: csi-volume-provisioner
-              image: k8s.gcr.io/sig-storage/csi-provisioner:v3.1.0
+              image: k8s.gcr.io/sig-storage/csi-provisioner:v3.2.1
               args:
                 - --csi-address=/var/run/shared-tmpfs/csi.sock
                 - --volume-name-prefix=csi
@@ -330,7 +341,7 @@ data:
                 - mountPath: /var/run/shared-tmpfs
                   name: shared-tmpfs
             - name: csi-attacher
-              image: k8s.gcr.io/sig-storage/csi-attacher:v3.4.0
+              image: k8s.gcr.io/sig-storage/csi-attacher:v3.5.0
               args:
                 - --csi-address=/var/run/shared-tmpfs/csi.sock
                 - --timeout=120s
@@ -343,7 +354,7 @@ data:
                 - mountPath: /var/run/shared-tmpfs
                   name: shared-tmpfs
             - name: csi-resizer
-              image: k8s.gcr.io/sig-storage/csi-resizer:v1.4.0
+              image: k8s.gcr.io/sig-storage/csi-resizer:v1.5.0
               args:
                 - --csi-address=/var/run/shared-tmpfs/csi.sock
                 - --leader-election
@@ -534,7 +545,7 @@ data:
               args:
                 - --csi-address=/csi/csi.sock
                 - --kubelet-registration-path=/var/lib/kubelet/plugins/blockvolume.csi.oraclecloud.com/csi.sock
-              image: k8s.gcr.io/sig-storage/csi-node-driver-registrar:v2.5.0
+              image: k8s.gcr.io/sig-storage/csi-node-driver-registrar:v2.5.1
               securityContext:
                 privileged: true
               lifecycle:
@@ -677,6 +688,33 @@ data:
       kind: ClusterRole
       name: csi-oci
       apiGroup: rbac.authorization.k8s.io
+    ---
+    kind: StorageClass
+    apiVersion: storage.k8s.io/v1
+    metadata:
+      name: oci
+    provisioner: oracle.com/oci
+    ---
+    apiVersion: storage.k8s.io/v1
+    kind: StorageClass
+    metadata:
+      name: oci-bv
+    provisioner: blockvolume.csi.oraclecloud.com
+    volumeBindingMode: WaitForFirstConsumer
+    allowVolumeExpansion: true
+    reclaimPolicy: Delete
+    ---
+    apiVersion: storage.k8s.io/v1
+    kind: StorageClass
+    metadata:
+      name: oci-bv-encrypted
+    provisioner: blockvolume.csi.oraclecloud.com
+    parameters:
+      attachment-type: "paravirtualized"
+    reclaimPolicy: Delete
+    volumeBindingMode: WaitForFirstConsumer
+    allowVolumeExpansion: true
+    ---
 kind: ConfigMap
 metadata:
   annotations:

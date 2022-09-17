@@ -167,6 +167,10 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 			sourceDetails.BootVolumeSizeInGBs = common.Int64(int64(bootVolumeSizeInGBs))
 		}
 	}
+	if m.OCIMachine.Spec.InstanceSourceViaImageDetails != nil {
+		sourceDetails.KmsKeyId = m.OCIMachine.Spec.InstanceSourceViaImageDetails.KmsKeyId
+		sourceDetails.BootVolumeVpusPerGB = m.OCIMachine.Spec.InstanceSourceViaImageDetails.BootVolumeVpusPerGB
+	}
 
 	subnetId := m.OCIMachine.Spec.NetworkDetails.SubnetId
 	if subnetId == nil {
@@ -177,12 +181,15 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 		}
 	}
 
-	nsgId := m.OCIMachine.Spec.NetworkDetails.NSGId
-	if nsgId == nil {
+	var nsgIds []string
+	if m.OCIMachine.Spec.NetworkDetails.NSGId != nil {
+		nsgIds = []string{*m.OCIMachine.Spec.NetworkDetails.NSGId}
+	}
+	if len(nsgIds) == 0 {
 		if m.IsControlPlane() {
-			nsgId = m.getGetControlPlaneMachineNSG()
+			nsgIds = m.getGetControlPlaneMachineNSGs()
 		} else {
-			nsgId = m.getWorkerMachineNSG()
+			nsgIds = m.getWorkerMachineNSGs()
 		}
 	}
 
@@ -229,8 +236,14 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 	launchDetails := core.LaunchInstanceDetails{DisplayName: common.String(m.OCIMachine.Name),
 		SourceDetails: sourceDetails,
 		CreateVnicDetails: &core.CreateVnicDetails{
-			SubnetId:       subnetId,
-			AssignPublicIp: common.Bool(m.OCIMachine.Spec.NetworkDetails.AssignPublicIp),
+			SubnetId:               subnetId,
+			AssignPublicIp:         common.Bool(m.OCIMachine.Spec.NetworkDetails.AssignPublicIp),
+			FreeformTags:           tags,
+			DefinedTags:            definedTags,
+			HostnameLabel:          m.OCIMachine.Spec.NetworkDetails.HostnameLabel,
+			SkipSourceDestCheck:    m.OCIMachine.Spec.NetworkDetails.SkipSourceDestCheck,
+			AssignPrivateDnsRecord: m.OCIMachine.Spec.NetworkDetails.AssignPrivateDnsRecord,
+			DisplayName:            m.OCIMachine.Spec.NetworkDetails.DisplayName,
 		},
 		Metadata:                       metadata,
 		Shape:                          common.String(m.OCIMachine.Spec.Shape),
@@ -239,6 +252,8 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 		IsPvEncryptionInTransitEnabled: common.Bool(m.OCIMachine.Spec.IsPvEncryptionInTransitEnabled),
 		FreeformTags:                   tags,
 		DefinedTags:                    definedTags,
+		//		ExtendedMetadata:               m.OCIMachine.Spec.ExtendedMetadata,
+		DedicatedVmHostId: m.OCIMachine.Spec.DedicatedVmHostId,
 	}
 	// Compute API does not behave well if the shape config is empty for fixed shapes
 	// hence set it only if it non empty
@@ -248,9 +263,16 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 	if faultDomain != "" {
 		launchDetails.FaultDomain = common.String(faultDomain)
 	}
-	if nsgId != nil {
-		launchDetails.CreateVnicDetails.NsgIds = []string{*nsgId}
+	launchDetails.CreateVnicDetails.NsgIds = nsgIds
+	if m.OCIMachine.Spec.CapacityReservationId != nil {
+		launchDetails.CapacityReservationId = m.OCIMachine.Spec.CapacityReservationId
 	}
+	launchDetails.AgentConfig = m.getAgentConfig()
+	launchDetails.LaunchOptions = m.getLaunchOptions()
+	launchDetails.InstanceOptions = m.getInstanceOptions()
+	launchDetails.AvailabilityConfig = m.getAvailabilityConfig()
+	launchDetails.PreemptibleInstanceConfig = m.getPreemptibleInstanceConfig()
+	launchDetails.PlatformConfig = m.getPlatformConfig()
 	req := core.LaunchInstanceRequest{LaunchInstanceDetails: launchDetails,
 		OpcRetryToken: ociutil.GetOPCRetryToken(string(m.OCIMachine.UID))}
 	resp, err := m.ComputeClient.LaunchInstance(ctx, req)
@@ -588,13 +610,14 @@ func (m *MachineScope) getGetControlPlaneMachineSubnet() *string {
 	return nil
 }
 
-func (m *MachineScope) getGetControlPlaneMachineNSG() *string {
+func (m *MachineScope) getGetControlPlaneMachineNSGs() []string {
+	nsgs := make([]string, 0)
 	for _, nsg := range m.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups {
 		if nsg.Role == infrastructurev1beta1.ControlPlaneRole {
-			return nsg.ID
+			nsgs = append(nsgs, *nsg.ID)
 		}
 	}
-	return nil
+	return nsgs
 }
 
 func (m *MachineScope) getWorkerMachineSubnet() *string {
@@ -613,17 +636,195 @@ func (m *MachineScope) getWorkerMachineSubnet() *string {
 	return nil
 }
 
-func (m *MachineScope) getWorkerMachineNSG() *string {
-	for _, nsg := range m.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups {
-		if nsg.Role == infrastructurev1beta1.WorkerRole {
-			// if an NSG name is defined, use the correct NSG
-			if m.OCIMachine.Spec.NSGName != "" {
-				if m.OCIMachine.Spec.NSGName == nsg.Name {
-					return nsg.ID
+func (m *MachineScope) getWorkerMachineNSGs() []string {
+	if len(m.OCIMachine.Spec.NetworkDetails.NsgNames) > 0 {
+		nsgs := make([]string, 0)
+		for _, nsgName := range m.OCIMachine.Spec.NetworkDetails.NsgNames {
+			for _, nsg := range m.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups {
+				if nsg.Name == nsgName {
+					nsgs = append(nsgs, *nsg.ID)
 				}
-			} else {
-				return nsg.ID
 			}
+		}
+		return nsgs
+	} else {
+		nsgs := make([]string, 0)
+		for _, nsg := range m.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups {
+			if nsg.Role == infrastructurev1beta1.WorkerRole {
+				// if an NSG name is defined, use the correct NSG
+				if m.OCIMachine.Spec.NSGName != "" {
+					if m.OCIMachine.Spec.NSGName == nsg.Name {
+						nsgs = append(nsgs, *nsg.ID)
+					}
+				} else {
+					nsgs = append(nsgs, *nsg.ID)
+				}
+			}
+		}
+		return nsgs
+	}
+}
+
+func (m *MachineScope) getAgentConfig() *core.LaunchInstanceAgentConfigDetails {
+	agentConfigSpec := m.OCIMachine.Spec.AgentConfig
+	if agentConfigSpec != nil {
+		agentConfig := &core.LaunchInstanceAgentConfigDetails{
+			IsMonitoringDisabled:  agentConfigSpec.IsMonitoringDisabled,
+			IsManagementDisabled:  agentConfigSpec.IsManagementDisabled,
+			AreAllPluginsDisabled: agentConfigSpec.AreAllPluginsDisabled,
+		}
+		if len(agentConfigSpec.PluginsConfig) > 0 {
+			pluginConfigList := make([]core.InstanceAgentPluginConfigDetails, len(agentConfigSpec.PluginsConfig))
+			for i, pluginConfigSpec := range agentConfigSpec.PluginsConfig {
+				pluginConfigRequest := core.InstanceAgentPluginConfigDetails{
+					Name: pluginConfigSpec.Name,
+				}
+				desiredState, _ := core.GetMappingInstanceAgentPluginConfigDetailsDesiredStateEnum(string(pluginConfigSpec.DesiredState))
+				pluginConfigRequest.DesiredState = desiredState
+				pluginConfigList[i] = pluginConfigRequest
+			}
+			agentConfig.PluginsConfig = pluginConfigList
+		}
+		return agentConfig
+	}
+	return nil
+}
+
+func (m *MachineScope) getLaunchOptions() *core.LaunchOptions {
+	launcOptionsSpec := m.OCIMachine.Spec.LaunchOptions
+	if launcOptionsSpec != nil {
+		launchOptions := &core.LaunchOptions{
+			IsConsistentVolumeNamingEnabled: launcOptionsSpec.IsConsistentVolumeNamingEnabled,
+		}
+		if launcOptionsSpec.BootVolumeType != "" {
+			bootVolume, _ := core.GetMappingLaunchOptionsBootVolumeTypeEnum(string(launcOptionsSpec.BootVolumeType))
+			launchOptions.BootVolumeType = bootVolume
+		}
+		if launcOptionsSpec.Firmware != "" {
+			firmware, _ := core.GetMappingLaunchOptionsFirmwareEnum(string(launcOptionsSpec.Firmware))
+			launchOptions.Firmware = firmware
+		}
+		if launcOptionsSpec.NetworkType != "" {
+			networkType, _ := core.GetMappingLaunchOptionsNetworkTypeEnum(string(launcOptionsSpec.NetworkType))
+			launchOptions.NetworkType = networkType
+		}
+		if launcOptionsSpec.RemoteDataVolumeType != "" {
+			remoteVolumeType, _ := core.GetMappingLaunchOptionsRemoteDataVolumeTypeEnum(string(launcOptionsSpec.RemoteDataVolumeType))
+			launchOptions.RemoteDataVolumeType = remoteVolumeType
+		}
+		return launchOptions
+	}
+	return nil
+}
+
+func (m *MachineScope) getInstanceOptions() *core.InstanceOptions {
+	instanceOptionsSpec := m.OCIMachine.Spec.InstanceOptions
+	if instanceOptionsSpec != nil {
+		return &core.InstanceOptions{
+			AreLegacyImdsEndpointsDisabled: instanceOptionsSpec.AreLegacyImdsEndpointsDisabled,
+		}
+	}
+	return nil
+}
+
+func (m *MachineScope) getAvailabilityConfig() *core.LaunchInstanceAvailabilityConfigDetails {
+	avalabilityConfigSpec := m.OCIMachine.Spec.AvailabilityConfig
+	if avalabilityConfigSpec != nil {
+		recoveryAction, _ := core.GetMappingLaunchInstanceAvailabilityConfigDetailsRecoveryActionEnum(string(avalabilityConfigSpec.RecoveryAction))
+		return &core.LaunchInstanceAvailabilityConfigDetails{
+			IsLiveMigrationPreferred: avalabilityConfigSpec.IsLiveMigrationPreferred,
+			RecoveryAction:           recoveryAction,
+		}
+	}
+	return nil
+}
+
+func (m *MachineScope) getPreemptibleInstanceConfig() *core.PreemptibleInstanceConfigDetails {
+	preEmptibleInstanceConfigSpec := m.OCIMachine.Spec.PreemptibleInstanceConfig
+	if preEmptibleInstanceConfigSpec != nil {
+		preemptibleInstanceConfig := &core.PreemptibleInstanceConfigDetails{}
+		if preEmptibleInstanceConfigSpec.TerminatePreemptionAction != nil {
+			preemptibleInstanceConfig.PreemptionAction = core.TerminatePreemptionAction{
+				PreserveBootVolume: preEmptibleInstanceConfigSpec.TerminatePreemptionAction.PreserveBootVolume,
+			}
+		}
+		return preemptibleInstanceConfig
+	}
+	return nil
+}
+
+func (m *MachineScope) getPlatformConfig() core.PlatformConfig {
+	platformConfig := m.OCIMachine.Spec.PlatformConfig
+	if platformConfig != nil {
+		switch platformConfig.PlatformConfigType {
+		case infrastructurev1beta1.PlatformConfigTypeAmdRomeBmGpu:
+			numaNodesPerSocket, _ := core.GetMappingAmdRomeBmGpuPlatformConfigNumaNodesPerSocketEnum(string(platformConfig.AmdRomeBmGpuPlatformConfig.NumaNodesPerSocket))
+			return core.AmdRomeBmGpuPlatformConfig{
+				IsSecureBootEnabled:                      platformConfig.AmdRomeBmGpuPlatformConfig.IsSecureBootEnabled,
+				IsTrustedPlatformModuleEnabled:           platformConfig.AmdRomeBmGpuPlatformConfig.IsTrustedPlatformModuleEnabled,
+				IsMeasuredBootEnabled:                    platformConfig.AmdRomeBmGpuPlatformConfig.IsMeasuredBootEnabled,
+				IsSymmetricMultiThreadingEnabled:         platformConfig.AmdRomeBmGpuPlatformConfig.IsSymmetricMultiThreadingEnabled,
+				IsAccessControlServiceEnabled:            platformConfig.AmdRomeBmGpuPlatformConfig.IsAccessControlServiceEnabled,
+				AreVirtualInstructionsEnabled:            platformConfig.AmdRomeBmGpuPlatformConfig.AreVirtualInstructionsEnabled,
+				IsInputOutputMemoryManagementUnitEnabled: platformConfig.AmdRomeBmGpuPlatformConfig.IsInputOutputMemoryManagementUnitEnabled,
+				NumaNodesPerSocket:                       numaNodesPerSocket,
+			}
+		case infrastructurev1beta1.PlatformConfigTypeAmdRomeBm:
+			numaNodesPerSocket, _ := core.GetMappingAmdRomeBmPlatformConfigNumaNodesPerSocketEnum(string(platformConfig.AmdRomeBmPlatformConfig.NumaNodesPerSocket))
+			return core.AmdRomeBmPlatformConfig{
+				IsSecureBootEnabled:                      platformConfig.AmdRomeBmPlatformConfig.IsSecureBootEnabled,
+				IsTrustedPlatformModuleEnabled:           platformConfig.AmdRomeBmPlatformConfig.IsTrustedPlatformModuleEnabled,
+				IsMeasuredBootEnabled:                    platformConfig.AmdRomeBmPlatformConfig.IsMeasuredBootEnabled,
+				IsSymmetricMultiThreadingEnabled:         platformConfig.AmdRomeBmPlatformConfig.IsSymmetricMultiThreadingEnabled,
+				IsAccessControlServiceEnabled:            platformConfig.AmdRomeBmPlatformConfig.IsAccessControlServiceEnabled,
+				AreVirtualInstructionsEnabled:            platformConfig.AmdRomeBmPlatformConfig.AreVirtualInstructionsEnabled,
+				IsInputOutputMemoryManagementUnitEnabled: platformConfig.AmdRomeBmPlatformConfig.IsInputOutputMemoryManagementUnitEnabled,
+				PercentageOfCoresEnabled:                 platformConfig.AmdRomeBmPlatformConfig.PercentageOfCoresEnabled,
+				NumaNodesPerSocket:                       numaNodesPerSocket,
+			}
+		case infrastructurev1beta1.PlatformConfigTypeIntelIcelakeBm:
+			numaNodesPerSocket, _ := core.GetMappingIntelIcelakeBmPlatformConfigNumaNodesPerSocketEnum(string(platformConfig.IntelIcelakeBmPlatformConfig.NumaNodesPerSocket))
+			return core.IntelIcelakeBmPlatformConfig{
+				IsSecureBootEnabled:                      platformConfig.IntelIcelakeBmPlatformConfig.IsSecureBootEnabled,
+				IsTrustedPlatformModuleEnabled:           platformConfig.IntelIcelakeBmPlatformConfig.IsTrustedPlatformModuleEnabled,
+				IsMeasuredBootEnabled:                    platformConfig.IntelIcelakeBmPlatformConfig.IsMeasuredBootEnabled,
+				IsSymmetricMultiThreadingEnabled:         platformConfig.IntelIcelakeBmPlatformConfig.IsSymmetricMultiThreadingEnabled,
+				PercentageOfCoresEnabled:                 platformConfig.IntelIcelakeBmPlatformConfig.PercentageOfCoresEnabled,
+				IsInputOutputMemoryManagementUnitEnabled: platformConfig.IntelIcelakeBmPlatformConfig.IsInputOutputMemoryManagementUnitEnabled,
+				NumaNodesPerSocket:                       numaNodesPerSocket,
+			}
+		case infrastructurev1beta1.PlatformConfigTypeAmdvm:
+			return core.AmdVmPlatformConfig{
+				IsSecureBootEnabled:            platformConfig.AmdVmPlatformConfig.IsSecureBootEnabled,
+				IsTrustedPlatformModuleEnabled: platformConfig.AmdVmPlatformConfig.IsTrustedPlatformModuleEnabled,
+				IsMeasuredBootEnabled:          platformConfig.AmdVmPlatformConfig.IsMeasuredBootEnabled,
+			}
+		case infrastructurev1beta1.PlatformConfigTypeIntelVm:
+			return core.IntelVmPlatformConfig{
+				IsSecureBootEnabled:            platformConfig.IntelVmPlatformConfig.IsSecureBootEnabled,
+				IsTrustedPlatformModuleEnabled: platformConfig.IntelVmPlatformConfig.IsTrustedPlatformModuleEnabled,
+				IsMeasuredBootEnabled:          platformConfig.IntelVmPlatformConfig.IsMeasuredBootEnabled,
+			}
+		case infrastructurev1beta1.PlatformConfigTypeIntelSkylakeBm:
+			return core.IntelSkylakeBmPlatformConfig{
+				IsSecureBootEnabled:            platformConfig.IntelSkylakeBmPlatformConfig.IsSecureBootEnabled,
+				IsTrustedPlatformModuleEnabled: platformConfig.IntelSkylakeBmPlatformConfig.IsTrustedPlatformModuleEnabled,
+				IsMeasuredBootEnabled:          platformConfig.IntelSkylakeBmPlatformConfig.IsMeasuredBootEnabled,
+			}
+		case infrastructurev1beta1.PlatformConfigTypeAmdMilanBm:
+			numaNodesPerSocket, _ := core.GetMappingAmdMilanBmPlatformConfigNumaNodesPerSocketEnum(string(platformConfig.AmdMilanBmPlatformConfig.NumaNodesPerSocket))
+			return core.AmdMilanBmPlatformConfig{
+				IsSecureBootEnabled:                      platformConfig.AmdMilanBmPlatformConfig.IsSecureBootEnabled,
+				IsTrustedPlatformModuleEnabled:           platformConfig.AmdMilanBmPlatformConfig.IsTrustedPlatformModuleEnabled,
+				IsMeasuredBootEnabled:                    platformConfig.AmdMilanBmPlatformConfig.IsMeasuredBootEnabled,
+				IsSymmetricMultiThreadingEnabled:         platformConfig.AmdMilanBmPlatformConfig.IsSymmetricMultiThreadingEnabled,
+				IsAccessControlServiceEnabled:            platformConfig.AmdMilanBmPlatformConfig.IsAccessControlServiceEnabled,
+				AreVirtualInstructionsEnabled:            platformConfig.AmdMilanBmPlatformConfig.AreVirtualInstructionsEnabled,
+				IsInputOutputMemoryManagementUnitEnabled: platformConfig.AmdMilanBmPlatformConfig.IsInputOutputMemoryManagementUnitEnabled,
+				PercentageOfCoresEnabled:                 platformConfig.AmdMilanBmPlatformConfig.PercentageOfCoresEnabled,
+				NumaNodesPerSocket:                       numaNodesPerSocket,
+			}
+		default:
 		}
 	}
 	return nil

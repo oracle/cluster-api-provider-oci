@@ -48,11 +48,43 @@ type OCIMachineSpec struct {
 	// Shape of the instance.
 	Shape string `json:"shape,omitempty"`
 
+	IpxeScript *string `json:"ipxeScript,omitempty"`
+
+	// CapacityReservationId defines the OCID of the compute capacity reservation this instance is launched under.
+	// You can opt out of all default reservations by specifying an empty string as input for this field.
+	// For more information, see Capacity Reservations (https://docs.cloud.oracle.com/iaas/Content/Compute/Tasks/reserve-capacity.htm#default).
+	CapacityReservationId *string `json:"capacityReservationId,omitempty"`
+
 	// The shape configuration of rhe instance, applicable for flex instances.
 	ShapeConfig ShapeConfig `json:"shapeConfig,omitempty"`
 
-	// PrimaryNetworkInterface is required to specify subnet.
+	// NetworkDetails defines the configuration options for the network
 	NetworkDetails NetworkDetails `json:"networkDetails,omitempty"`
+
+	// LaunchOptions defines the options for tuning the compatibility and performance of VM shapes
+	LaunchOptions *LaunchOptions `json:"launchOptions,omitempty"`
+
+	// InstanceOptions defines the instance options
+	InstanceOptions *InstanceOptions `json:"instanceOptions,omitempty"`
+
+	// LaunchInstanceAvailabilityConfig defines the options for VM migration during infrastructure maintenance events and for defining
+	// the availability of a VM instance after a maintenance event that impacts the underlying hardware.
+	AvailabilityConfig *LaunchInstanceAvailabilityConfig `json:"availabilityConfig,omitempty"`
+
+	// PreemptibleInstanceConfig Configuration options for preemptible instances.
+	PreemptibleInstanceConfig *PreemptibleInstanceConfig `json:"preemptibleInstanceConfig,omitempty"`
+
+	// LaunchInstanceAgentConfig defines the options for the Oracle Cloud Agent software running on the instance.
+	AgentConfig *LaunchInstanceAgentConfig `json:"agentConfig,omitempty"`
+
+	// InstanceSourceViaImageConfig defines the options for booting up instances via images
+	InstanceSourceViaImageDetails *InstanceSourceViaImageConfig `json:"instanceSourceViaImageConfig,omitempty"`
+
+	// InstanceSourceViaImageConfig defines the platform config parameters
+	PlatformConfig *PlatformConfig `json:"platformConfig,omitempty"`
+
+	// DedicatedVmHostId defines the OCID of the dedicated VM host.
+	DedicatedVmHostId *string `json:"dedicatedVmHostId,omitempty"`
 
 	// Provider ID of the instance, this will be set by Cluster API provider itself,
 	// users should not set this parameter.
@@ -92,6 +124,7 @@ type OCIMachineSpec struct {
 	// defined in the OCICluster Spec. Optional, only if multiple NSGs of a type
 	// is defined, else the first element is used.
 	// +optional
+	// Deprecated, please use NetworkDetails.NSGNames
 	NSGName string `json:"nsgName,omitempty"`
 }
 
