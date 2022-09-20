@@ -24,6 +24,7 @@
   - [Install Container Storage Interface (CSI)](./gs/install-csi.md)
     - [Provision a PVC on the Block Volume Service](./gs/pvc-bv.md)
     - [Provision a PVC on the File Storage Service](./gs/pvc-fss.md)
+  - [Customize worker nodes](./gs/customize-worker-node.md)
 - [Networking Guide](./networking/networking.md)
   - [Default Network Infrastructure](./networking/infrastructure.md)
     - [Using Calico](./networking/calico.md)
