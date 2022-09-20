@@ -261,7 +261,7 @@ var _ = Describe("Workload cluster creation", func() {
 			namespace:                 metav1.NamespaceDefault,
 			replicas:                  int32(1),
 			selector:                  map[string]string{"app": "nginx"},
-			storageClassName:          "oci-bv",
+			storageClassName:          "oci-bv-encrypted",
 			volumeName:                "nginx-volumes",
 			svcName:                   "nginx-svc",
 			svcPort:                   int32(80),

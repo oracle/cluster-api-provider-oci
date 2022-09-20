@@ -34,10 +34,529 @@ var OCIManagedClusterSubnetRoles = []Role{PodRole, ControlPlaneEndpointRole, Wor
 
 // NetworkDetails defines the configuration options for the network
 type NetworkDetails struct {
-	SubnetId       *string `json:"subnetId,omitempty"`
-	AssignPublicIp bool    `json:"assignPublicIp,omitempty"`
-	SubnetName     string  `json:"subnetName,omitempty"`
-	NSGId          *string `json:"nsgId,omitempty"`
+	// SubnetId defines the ID of the subnet to use.
+	// Deprecated, use SubnetName parameter
+	SubnetId *string `json:"subnetId,omitempty"`
+
+	// AssignPublicIp defines whether the instance should have a public IP address
+	AssignPublicIp bool `json:"assignPublicIp,omitempty"`
+
+	// SubnetName defines the subnet name to use for the VNIC
+	SubnetName string `json:"subnetName,omitempty"`
+
+	// Deprecated, use 	NsgNames parameter to define the NSGs
+	NSGId *string `json:"nsgId,omitempty"`
+
+	// SkipSourceDestCheck defines whether the source/destination check is disabled on the VNIC.
+	SkipSourceDestCheck *bool `json:"skipSourceDestCheck,omitempty"`
+
+	// NsgNames defines a list of the nsg names of the network security groups (NSGs) to add the VNIC to.
+	NsgNames []string `json:"nsgNames,omitempty"`
+
+	// HostnameLabel defines the hostname for the VNIC's primary private IP. Used for DNS.
+	HostnameLabel *string `json:"hostnameLabel,omitempty"`
+
+	// DisplayName defines a user-friendly name. Does not have to be unique, and it's changeable.
+	// Avoid entering confidential information.
+	DisplayName *string `json:"displayName,omitempty"`
+
+	// AssignPrivateDnsRecord defines whether the VNIC should be assigned a DNS record.
+	AssignPrivateDnsRecord *bool `json:"assignPrivateDnsRecord,omitempty"`
+}
+
+// LaunchOptionsBootVolumeTypeEnum Enum with underlying type: string
+type LaunchOptionsBootVolumeTypeEnum string
+
+// Set of constants representing the allowable values for LaunchOptionsBootVolumeTypeEnum
+const (
+	LaunchOptionsBootVolumeTypeIscsi           LaunchOptionsBootVolumeTypeEnum = "ISCSI"
+	LaunchOptionsBootVolumeTypeScsi            LaunchOptionsBootVolumeTypeEnum = "SCSI"
+	LaunchOptionsBootVolumeTypeIde             LaunchOptionsBootVolumeTypeEnum = "IDE"
+	LaunchOptionsBootVolumeTypeVfio            LaunchOptionsBootVolumeTypeEnum = "VFIO"
+	LaunchOptionsBootVolumeTypeParavirtualized LaunchOptionsBootVolumeTypeEnum = "PARAVIRTUALIZED"
+)
+
+// LaunchOptionsFirmwareEnum Enum with underlying type: string
+type LaunchOptionsFirmwareEnum string
+
+// Set of constants representing the allowable values for LaunchOptionsFirmwareEnum
+const (
+	LaunchOptionsFirmwareBios   LaunchOptionsFirmwareEnum = "BIOS"
+	LaunchOptionsFirmwareUefi64 LaunchOptionsFirmwareEnum = "UEFI_64"
+)
+
+// LaunchOptionsNetworkTypeEnum Enum with underlying type: string
+type LaunchOptionsNetworkTypeEnum string
+
+// Set of constants representing the allowable values for LaunchOptionsNetworkTypeEnum
+const (
+	LaunchOptionsNetworkTypeE1000           LaunchOptionsNetworkTypeEnum = "E1000"
+	LaunchOptionsNetworkTypeVfio            LaunchOptionsNetworkTypeEnum = "VFIO"
+	LaunchOptionsNetworkTypeParavirtualized LaunchOptionsNetworkTypeEnum = "PARAVIRTUALIZED"
+)
+
+// LaunchOptionsRemoteDataVolumeTypeEnum Enum with underlying type: string
+type LaunchOptionsRemoteDataVolumeTypeEnum string
+
+// Set of constants representing the allowable values for LaunchOptionsRemoteDataVolumeTypeEnum
+const (
+	LaunchOptionsRemoteDataVolumeTypeIscsi           LaunchOptionsRemoteDataVolumeTypeEnum = "ISCSI"
+	LaunchOptionsRemoteDataVolumeTypeScsi            LaunchOptionsRemoteDataVolumeTypeEnum = "SCSI"
+	LaunchOptionsRemoteDataVolumeTypeIde             LaunchOptionsRemoteDataVolumeTypeEnum = "IDE"
+	LaunchOptionsRemoteDataVolumeTypeVfio            LaunchOptionsRemoteDataVolumeTypeEnum = "VFIO"
+	LaunchOptionsRemoteDataVolumeTypeParavirtualized LaunchOptionsRemoteDataVolumeTypeEnum = "PARAVIRTUALIZED"
+)
+
+// LaunchOptions Options for tuning the compatibility and performance of VM shapes. The values that you specify override any
+// default values.
+type LaunchOptions struct {
+
+	// BootVolumeType defines Emulation type for the boot volume.
+	// * `ISCSI` - ISCSI attached block storage device.
+	// * `SCSI` - Emulated SCSI disk.
+	// * `IDE` - Emulated IDE disk.
+	// * `VFIO` - Direct attached Virtual Function storage. This is the default option for local data
+	// volumes on platform images.
+	// * `PARAVIRTUALIZED` - Paravirtualized disk. This is the default for boot volumes and remote block
+	// storage volumes on platform images.
+	BootVolumeType LaunchOptionsBootVolumeTypeEnum `json:"bootVolumeType,omitempty"`
+
+	// Firmware defines the firmware used to boot VM. Select the option that matches your operating system.
+	// * `BIOS` - Boot VM using BIOS style firmware. This is compatible with both 32 bit and 64 bit operating
+	// systems that boot using MBR style bootloaders.
+	// * `UEFI_64` - Boot VM using UEFI style firmware compatible with 64 bit operating systems. This is the
+	// default for platform images.
+	Firmware LaunchOptionsFirmwareEnum `json:"firmware,omitempty"`
+
+	// NetworkType defines the emulation type for the physical network interface card (NIC).
+	// * `E1000` - Emulated Gigabit ethernet controller. Compatible with Linux e1000 network driver.
+	// * `VFIO` - Direct attached Virtual Function network controller. This is the networking type
+	// when you launch an instance using hardware-assisted (SR-IOV) networking.
+	// * `PARAVIRTUALIZED` - VM instances launch with paravirtualized devices using VirtIO drivers.
+	NetworkType LaunchOptionsNetworkTypeEnum `json:"networkType,omitempty"`
+
+	// RemoteDataVolumeType defines the emulation type for volume.
+	// * `ISCSI` - ISCSI attached block storage device.
+	// * `SCSI` - Emulated SCSI disk.
+	// * `IDE` - Emulated IDE disk.
+	// * `VFIO` - Direct attached Virtual Function storage. This is the default option for local data
+	// volumes on platform images.
+	// * `PARAVIRTUALIZED` - Paravirtualized disk. This is the default for boot volumes and remote block
+	// storage volumes on platform images.
+	RemoteDataVolumeType LaunchOptionsRemoteDataVolumeTypeEnum `json:"remoteDataVolumeType,omitempty"`
+
+	// IsConsistentVolumeNamingEnabled defines whether to enable consistent volume naming feature. Defaults to false.
+	IsConsistentVolumeNamingEnabled *bool `json:"isConsistentVolumeNamingEnabled,omitempty"`
+}
+
+// InstanceSourceViaImageConfig The configuration options for booting up instances via images
+type InstanceSourceViaImageConfig struct {
+	// KmsKeyId defines the OCID of the Key Management key to assign as the master encryption key for the boot volume.
+	KmsKeyId *string `json:"kmsKeyId,omitempty"`
+
+	// BootVolumeVpusPerGB defines the number of volume performance units (VPUs) that will be applied to this volume per GB,
+	// representing the Block Volume service's elastic performance options.
+	// See Block Volume Performance Levels (https://docs.cloud.oracle.com/iaas/Content/Block/Concepts/blockvolumeperformance.htm#perf_levels) for more information.
+	// Allowed values:
+	//   * `10`: Represents Balanced option.
+	//   * `20`: Represents Higher Performance option.
+	//   * `30`-`120`: Represents the Ultra High Performance option.
+	// For volumes with the auto-tuned performance feature enabled, this is set to the default (minimum) VPUs/GB.
+	BootVolumeVpusPerGB *int64 `json:"bootVolumeVpusPerGB,omitempty"`
+}
+
+// LaunchInstanceAvailabilityConfigDetailsRecoveryActionEnum Enum with underlying type: string
+type PlatformConfigTypeEnum string
+
+// Set of constants representing the allowable values for LaunchInstanceAvailabilityConfigDetailsRecoveryActionEnum
+const (
+	PlatformConfigTypeAmdRomeBmGpu   PlatformConfigTypeEnum = "AMD_ROME_BM_GPU"
+	PlatformConfigTypeAmdRomeBm      PlatformConfigTypeEnum = "AMD_ROME_BM"
+	PlatformConfigTypeIntelIcelakeBm PlatformConfigTypeEnum = "INTEL_ICELAKE_BM"
+	PlatformConfigTypeAmdvm          PlatformConfigTypeEnum = "AMD_VM"
+	PlatformConfigTypeIntelVm        PlatformConfigTypeEnum = "INTEL_VM"
+	PlatformConfigTypeIntelSkylakeBm PlatformConfigTypeEnum = "INTEL_SKYLAKE_BM"
+	PlatformConfigTypeAmdMilanBm     PlatformConfigTypeEnum = "AMD_MILAN_BM"
+)
+
+// PlatformConfig defines the platform config parameters
+type PlatformConfig struct {
+	// The type of platform configuration. Valid values are
+	// * `AMD_ROME_BM_GPU`
+	// * `AMD_ROME_BM`
+	// * `INTEL_ICELAKE_BM`
+	// * `AMD_VM`
+	// * `INTEL_VM`
+	// * `INTEL_SKYLAKE_BM`
+	// * `AMD_MILAN_BM`
+	// Based on the enum, exactly one of the specific configuration types must be set
+	PlatformConfigType PlatformConfigTypeEnum `json:"PlatformConfigType,omitempty"`
+
+	// AmdMilanBmPlatformConfig describe AMD Milan BM platform configuration
+	AmdMilanBmPlatformConfig AmdMilanBmPlatformConfig `json:"amdMilanBmPlatformConfig,omitempty"`
+
+	// AmdMilanBmPlatformConfig describe AMD Rome BM platform configuration
+	AmdRomeBmPlatformConfig AmdRomeBmPlatformConfig `json:"amdRomeBmPlatformConfig,omitempty"`
+
+	// AmdMilanBmPlatformConfig describe Intel Skylke BM platform configuration
+	IntelSkylakeBmPlatformConfig IntelSkylakeBmPlatformConfig `json:"intelSkylakeBmPlatformConfig,omitempty"`
+
+	// AmdMilanBmPlatformConfig describe Intel Skylke BM platform configuration
+	IntelIcelakeBmPlatformConfig IntelIcelakeBmPlatformConfig `json:"intelIcelakeBmPlatformConfig,omitempty"`
+
+	// AmdMilanBmPlatformConfig describe AMD Rome BM platform configuration
+	AmdRomeBmGpuPlatformConfig AmdRomeBmGpuPlatformConfig `json:"amdRomeBmGpuPlatformConfig,omitempty"`
+
+	// AmdMilanBmPlatformConfig describe Intel VM platform configuration
+	IntelVmPlatformConfig IntelVmPlatformConfig `json:"intelVmPlatformConfig,omitempty"`
+
+	// AmdMilanBmPlatformConfig describe AMD VM platform configuration
+	AmdVmPlatformConfig AmdVmPlatformConfig `json:"amdVmPlatformConfig,omitempty"`
+}
+
+// AmdMilanBmPlatformConfigNumaNodesPerSocketEnum Enum with underlying type: string
+type AmdMilanBmPlatformConfigNumaNodesPerSocketEnum string
+
+// Set of constants representing the allowable values for AmdMilanBmPlatformConfigNumaNodesPerSocketEnum
+const (
+	AmdMilanBmPlatformConfigNumaNodesPerSocketNps0 AmdMilanBmPlatformConfigNumaNodesPerSocketEnum = "NPS0"
+	AmdMilanBmPlatformConfigNumaNodesPerSocketNps1 AmdMilanBmPlatformConfigNumaNodesPerSocketEnum = "NPS1"
+	AmdMilanBmPlatformConfigNumaNodesPerSocketNps2 AmdMilanBmPlatformConfigNumaNodesPerSocketEnum = "NPS2"
+	AmdMilanBmPlatformConfigNumaNodesPerSocketNps4 AmdMilanBmPlatformConfigNumaNodesPerSocketEnum = "NPS4"
+)
+
+// AmdMilanBmPlatformConfig The platform configuration used when launching a bare metal instance with one of the following shapes: BM.Standard.E4.128
+// or BM.DenseIO.E4.128 (the AMD Milan platform).
+type AmdMilanBmPlatformConfig struct {
+	// Whether Secure Boot is enabled on the instance.
+	IsSecureBootEnabled *bool `json:"isSecureBootEnabled,omitempty"`
+
+	// Whether the Trusted Platform Module (TPM) is enabled on the instance.
+	IsTrustedPlatformModuleEnabled *bool `json:"isTrustedPlatformModuleEnabled,omitempty"`
+
+	// Whether the Measured Boot feature is enabled on the instance.
+	IsMeasuredBootEnabled *bool `json:"isMeasuredBootEnabled,omitempty"`
+
+	// Whether symmetric multithreading is enabled on the instance. Symmetric multithreading is also
+	// called simultaneous multithreading (SMT) or Intel Hyper-Threading.
+	// Intel and AMD processors have two hardware execution threads per core (OCPU). SMT permits multiple
+	// independent threads of execution, to better use the resources and increase the efficiency
+	// of the CPU. When multithreading is disabled, only one thread is permitted to run on each core, which
+	// can provide higher or more predictable performance for some workloads.
+	IsSymmetricMultiThreadingEnabled *bool `json:"isSymmetricMultiThreadingEnabled,omitempty"`
+
+	// Whether the Access Control Service is enabled on the instance. When enabled,
+	// the platform can enforce PCIe device isolation, required for VFIO device pass-through.
+	IsAccessControlServiceEnabled *bool `json:"isAccessControlServiceEnabled,omitempty"`
+
+	// Whether virtualization instructions are available. For example, Secure Virtual Machine for AMD shapes
+	// or VT-x for Intel shapes.
+	AreVirtualInstructionsEnabled *bool `json:"areVirtualInstructionsEnabled,omitempty"`
+
+	// Whether the input-output memory management unit is enabled.
+	IsInputOutputMemoryManagementUnitEnabled *bool `json:"isInputOutputMemoryManagementUnitEnabled,omitempty"`
+
+	// The percentage of cores enabled. Value must be a multiple of 25%. If the requested percentage
+	// results in a fractional number of cores, the system rounds up the number of cores across processors
+	// and provisions an instance with a whole number of cores.
+	// If the applications that you run on the instance use a core-based licensing model and need fewer cores
+	// than the full size of the shape, you can disable cores to reduce your licensing costs. The instance
+	// itself is billed for the full shape, regardless of whether all cores are enabled.
+	PercentageOfCoresEnabled *int `json:"percentageOfCoresEnabled,omitempty"`
+
+	// The number of NUMA nodes per socket (NPS).
+	NumaNodesPerSocket AmdMilanBmPlatformConfigNumaNodesPerSocketEnum `json:"numaNodesPerSocket,omitempty"`
+}
+
+// AmdRomeBmPlatformConfigNumaNodesPerSocketEnum Enum with underlying type: string
+type AmdRomeBmPlatformConfigNumaNodesPerSocketEnum string
+
+// Set of constants representing the allowable values for AmdRomeBmPlatformConfigNumaNodesPerSocketEnum
+const (
+	AmdRomeBmPlatformConfigNumaNodesPerSocketNps0 AmdRomeBmPlatformConfigNumaNodesPerSocketEnum = "NPS0"
+	AmdRomeBmPlatformConfigNumaNodesPerSocketNps1 AmdRomeBmPlatformConfigNumaNodesPerSocketEnum = "NPS1"
+	AmdRomeBmPlatformConfigNumaNodesPerSocketNps2 AmdRomeBmPlatformConfigNumaNodesPerSocketEnum = "NPS2"
+	AmdRomeBmPlatformConfigNumaNodesPerSocketNps4 AmdRomeBmPlatformConfigNumaNodesPerSocketEnum = "NPS4"
+)
+
+// AmdRomeBmPlatformConfig The platform configuration of a bare metal instance that uses the BM.Standard.E3.128 shape (the AMD Rome platform).
+type AmdRomeBmPlatformConfig struct {
+	// Whether Secure Boot is enabled on the instance.
+	IsSecureBootEnabled *bool `json:"isSecureBootEnabled,omitempty"`
+
+	// Whether the Trusted Platform Module (TPM) is enabled on the instance.
+	IsTrustedPlatformModuleEnabled *bool `json:"isTrustedPlatformModuleEnabled,omitempty"`
+
+	// Whether the Measured Boot feature is enabled on the instance.
+	IsMeasuredBootEnabled *bool `json:"isMeasuredBootEnabled,omitempty"`
+
+	// Whether symmetric multithreading is enabled on the instance. Symmetric multithreading is also
+	// called simultaneous multithreading (SMT) or Intel Hyper-Threading.
+	// Intel and AMD processors have two hardware execution threads per core (OCPU). SMT permits multiple
+	// independent threads of execution, to better use the resources and increase the efficiency
+	// of the CPU. When multithreading is disabled, only one thread is permitted to run on each core, which
+	// can provide higher or more predictable performance for some workloads.
+	IsSymmetricMultiThreadingEnabled *bool `json:"isSymmetricMultiThreadingEnabled,omitempty"`
+
+	// Whether the Access Control Service is enabled on the instance. When enabled,
+	// the platform can enforce PCIe device isolation, required for VFIO device pass-through.
+	IsAccessControlServiceEnabled *bool `json:"isAccessControlServiceEnabled,omitempty"`
+
+	// Whether virtualization instructions are available. For example, Secure Virtual Machine for AMD shapes
+	// or VT-x for Intel shapes.
+	AreVirtualInstructionsEnabled *bool `json:"areVirtualInstructionsEnabled,omitempty"`
+
+	// Whether the input-output memory management unit is enabled.
+	IsInputOutputMemoryManagementUnitEnabled *bool `json:"isInputOutputMemoryManagementUnitEnabled,omitempty"`
+
+	// The percentage of cores enabled. Value must be a multiple of 25%. If the requested percentage
+	// results in a fractional number of cores, the system rounds up the number of cores across processors
+	// and provisions an instance with a whole number of cores.
+	// If the applications that you run on the instance use a core-based licensing model and need fewer cores
+	// than the full size of the shape, you can disable cores to reduce your licensing costs. The instance
+	// itself is billed for the full shape, regardless of whether all cores are enabled.
+	PercentageOfCoresEnabled *int `json:"percentageOfCoresEnabled,omitempty"`
+
+	// The number of NUMA nodes per socket (NPS).
+	NumaNodesPerSocket AmdRomeBmPlatformConfigNumaNodesPerSocketEnum `json:"numaNodesPerSocket,omitempty"`
+}
+
+// IntelSkylakeBmPlatformConfig The platform configuration of a bare metal instance that uses one of the following shapes:
+// BM.Standard2.52, BM.GPU2.2, BM.GPU3.8, or BM.DenseIO2.52 (the Intel Skylake platform).
+type IntelSkylakeBmPlatformConfig struct {
+	// Whether Secure Boot is enabled on the instance.
+	IsSecureBootEnabled *bool `json:"isSecureBootEnabled,omitempty"`
+
+	// Whether the Trusted Platform Module (TPM) is enabled on the instance.
+	IsTrustedPlatformModuleEnabled *bool `json:"isTrustedPlatformModuleEnabled,omitempty"`
+
+	// Whether the Measured Boot feature is enabled on the instance.
+	IsMeasuredBootEnabled *bool `json:"isMeasuredBootEnabled,omitempty"`
+}
+
+// AmdRomeBmGpuPlatformConfigNumaNodesPerSocketEnum Enum with underlying type: string
+type AmdRomeBmGpuPlatformConfigNumaNodesPerSocketEnum string
+
+// Set of constants representing the allowable values for AmdRomeBmGpuPlatformConfigNumaNodesPerSocketEnum
+const (
+	AmdRomeBmGpuPlatformConfigNumaNodesPerSocketNps0 AmdRomeBmGpuPlatformConfigNumaNodesPerSocketEnum = "NPS0"
+	AmdRomeBmGpuPlatformConfigNumaNodesPerSocketNps1 AmdRomeBmGpuPlatformConfigNumaNodesPerSocketEnum = "NPS1"
+	AmdRomeBmGpuPlatformConfigNumaNodesPerSocketNps2 AmdRomeBmGpuPlatformConfigNumaNodesPerSocketEnum = "NPS2"
+	AmdRomeBmGpuPlatformConfigNumaNodesPerSocketNps4 AmdRomeBmGpuPlatformConfigNumaNodesPerSocketEnum = "NPS4"
+)
+
+// AmdRomeBmGpuPlatformConfig The platform configuration of a bare metal GPU instance that uses the BM.GPU4.8 shape
+// (the AMD Rome platform).
+type AmdRomeBmGpuPlatformConfig struct {
+	// Whether Secure Boot is enabled on the instance.
+	IsSecureBootEnabled *bool `json:"isSecureBootEnabled,omitempty"`
+
+	// Whether the Trusted Platform Module (TPM) is enabled on the instance.
+	IsTrustedPlatformModuleEnabled *bool `json:"isTrustedPlatformModuleEnabled,omitempty"`
+
+	// Whether the Measured Boot feature is enabled on the instance.
+	IsMeasuredBootEnabled *bool `json:"isMeasuredBootEnabled,omitempty"`
+
+	// Whether symmetric multithreading is enabled on the instance. Symmetric multithreading is also
+	// called simultaneous multithreading (SMT) or Intel Hyper-Threading.
+	// Intel and AMD processors have two hardware execution threads per core (OCPU). SMT permits multiple
+	// independent threads of execution, to better use the resources and increase the efficiency
+	// of the CPU. When multithreading is disabled, only one thread is permitted to run on each core, which
+	// can provide higher or more predictable performance for some workloads.
+	IsSymmetricMultiThreadingEnabled *bool `json:"isSymmetricMultiThreadingEnabled,omitempty"`
+
+	// Whether the Access Control Service is enabled on the instance. When enabled,
+	// the platform can enforce PCIe device isolation, required for VFIO device pass-through.
+	IsAccessControlServiceEnabled *bool `json:"isAccessControlServiceEnabled,omitempty"`
+
+	// Whether virtualization instructions are available. For example, Secure Virtual Machine for AMD shapes
+	// or VT-x for Intel shapes.
+	AreVirtualInstructionsEnabled *bool `json:"areVirtualInstructionsEnabled,omitempty"`
+
+	// Whether the input-output memory management unit is enabled.
+	IsInputOutputMemoryManagementUnitEnabled *bool `json:"isInputOutputMemoryManagementUnitEnabled,omitempty"`
+
+	// The number of NUMA nodes per socket (NPS).
+	NumaNodesPerSocket AmdRomeBmGpuPlatformConfigNumaNodesPerSocketEnum `json:"numaNodesPerSocket,omitempty"`
+}
+
+// IntelIcelakeBmPlatformConfigNumaNodesPerSocketEnum Enum with underlying type: string
+type IntelIcelakeBmPlatformConfigNumaNodesPerSocketEnum string
+
+// Set of constants representing the allowable values for IntelIcelakeBmPlatformConfigNumaNodesPerSocketEnum
+const (
+	IntelIcelakeBmPlatformConfigNumaNodesPerSocketNps1 IntelIcelakeBmPlatformConfigNumaNodesPerSocketEnum = "NPS1"
+	IntelIcelakeBmPlatformConfigNumaNodesPerSocketNps2 IntelIcelakeBmPlatformConfigNumaNodesPerSocketEnum = "NPS2"
+)
+
+// IntelIcelakeBmPlatformConfig The platform configuration of a bare metal instance that uses the BM.Standard3.64 shape or the
+// BM.Optimized3.36 shape (the Intel Ice Lake platform).
+type IntelIcelakeBmPlatformConfig struct {
+	// Whether Secure Boot is enabled on the instance.
+	IsSecureBootEnabled *bool `json:"isSecureBootEnabled,omitempty"`
+
+	// Whether the Trusted Platform Module (TPM) is enabled on the instance.
+	IsTrustedPlatformModuleEnabled *bool `json:"isTrustedPlatformModuleEnabled,omitempty"`
+
+	// Whether the Measured Boot feature is enabled on the instance.
+	IsMeasuredBootEnabled *bool `json:"isMeasuredBootEnabled,omitempty"`
+
+	// Whether symmetric multithreading is enabled on the instance. Symmetric multithreading is also
+	// called simultaneous multithreading (SMT) or Intel Hyper-Threading.
+	// Intel and AMD processors have two hardware execution threads per core (OCPU). SMT permits multiple
+	// independent threads of execution, to better use the resources and increase the efficiency
+	// of the CPU. When multithreading is disabled, only one thread is permitted to run on each core, which
+	// can provide higher or more predictable performance for some workloads.
+	IsSymmetricMultiThreadingEnabled *bool `json:"isSymmetricMultiThreadingEnabled,omitempty"`
+
+	// Whether the input-output memory management unit is enabled.
+	IsInputOutputMemoryManagementUnitEnabled *bool `json:"isInputOutputMemoryManagementUnitEnabled,omitempty"`
+
+	// The percentage of cores enabled. Value must be a multiple of 25%. If the requested percentage
+	// results in a fractional number of cores, the system rounds up the number of cores across processors
+	// and provisions an instance with a whole number of cores.
+	// If the applications that you run on the instance use a core-based licensing model and need fewer cores
+	// than the full size of the shape, you can disable cores to reduce your licensing costs. The instance
+	// itself is billed for the full shape, regardless of whether all cores are enabled.
+	PercentageOfCoresEnabled *int `json:"percentageOfCoresEnabled,omitempty"`
+
+	// The number of NUMA nodes per socket (NPS).
+	NumaNodesPerSocket IntelIcelakeBmPlatformConfigNumaNodesPerSocketEnum `json:"numaNodesPerSocket,omitempty"`
+}
+
+// IntelVmPlatformConfig The platform configuration of a virtual machine instance that uses the Intel platform.
+type IntelVmPlatformConfig struct {
+	// Whether Secure Boot is enabled on the instance.
+	IsSecureBootEnabled *bool `json:"isSecureBootEnabled,omitempty"`
+
+	// Whether the Trusted Platform Module (TPM) is enabled on the instance.
+	IsTrustedPlatformModuleEnabled *bool `json:"isTrustedPlatformModuleEnabled,omitempty"`
+
+	// Whether the Measured Boot feature is enabled on the instance.
+	IsMeasuredBootEnabled *bool `json:"isMeasuredBootEnabled,omitempty"`
+}
+
+// AmdVmPlatformConfig The platform configuration of a virtual machine instance that uses the AMD platform.
+type AmdVmPlatformConfig struct {
+	// Whether Secure Boot is enabled on the instance.
+	IsSecureBootEnabled *bool `json:"isSecureBootEnabled,omitempty"`
+
+	// Whether the Trusted Platform Module (TPM) is enabled on the instance.
+	IsTrustedPlatformModuleEnabled *bool `json:"isTrustedPlatformModuleEnabled,omitempty"`
+
+	// Whether the Measured Boot feature is enabled on the instance.
+	IsMeasuredBootEnabled *bool `json:"isMeasuredBootEnabled,omitempty"`
+}
+
+// InstanceOptions Optional mutable instance options
+type InstanceOptions struct {
+
+	// Whether to disable the legacy (/v1) instance metadata service endpoints.
+	// Customers who have migrated to /v2 should set this to true for added security.
+	// Default is false.
+	AreLegacyImdsEndpointsDisabled *bool `json:"areLegacyImdsEndpointsDisabled,omitempty"`
+}
+
+// LaunchInstanceAvailabilityConfigDetailsRecoveryActionEnum Enum with underlying type: string
+type LaunchInstanceAvailabilityConfigDetailsRecoveryActionEnum string
+
+// Set of constants representing the allowable values for LaunchInstanceAvailabilityConfigDetailsRecoveryActionEnum
+const (
+	LaunchInstanceAvailabilityConfigDetailsRecoveryActionRestoreInstance LaunchInstanceAvailabilityConfigDetailsRecoveryActionEnum = "RESTORE_INSTANCE"
+	LaunchInstanceAvailabilityConfigDetailsRecoveryActionStopInstance    LaunchInstanceAvailabilityConfigDetailsRecoveryActionEnum = "STOP_INSTANCE"
+)
+
+// LaunchInstanceAvailabilityConfig Options for VM migration during infrastructure maintenance events and for defining
+// the availability of a VM instance after a maintenance event that impacts the underlying hardware.
+type LaunchInstanceAvailabilityConfig struct {
+
+	// IsLiveMigrationPreferred defines whether to live migrate supported VM instances to a healthy physical VM host without
+	// disrupting running instances during infrastructure maintenance events. If null, Oracle
+	// chooses the best option for migrating the VM during infrastructure maintenance events.
+	IsLiveMigrationPreferred *bool `json:"isLiveMigrationPreferred,omitempty"`
+
+	//RecoveryAction defines the lifecycle state for an instance when it is recovered after infrastructure maintenance.
+	// * `RESTORE_INSTANCE` - The instance is restored to the lifecycle state it was in before the maintenance event.
+	// If the instance was running, it is automatically rebooted. This is the default action when a value is not set.
+	// * `STOP_INSTANCE` - The instance is recovered in the stopped state.
+	RecoveryAction LaunchInstanceAvailabilityConfigDetailsRecoveryActionEnum `json:"recoveryAction,omitempty"`
+}
+
+// PreemptibleInstanceConfig Configuration options for preemptible instances.
+type PreemptibleInstanceConfig struct {
+	TerminatePreemptionAction *TerminatePreemptionAction `json:"terminatePreemptionAction,omitempty"`
+}
+
+// TerminatePreemptionAction Terminates the preemptible instance when it is interrupted for eviction.
+type TerminatePreemptionAction struct {
+
+	// PreserveBootVolume defines whether to preserve the boot volume that was used to launch the preemptible instance when the instance is terminated. Defaults to false if not specified.
+	PreserveBootVolume *bool `json:"preserveBootVolume,omitempty"`
+}
+
+// LaunchInstanceAgentConfig Configuration options for the Oracle Cloud Agent software running on the instance.
+type LaunchInstanceAgentConfig struct {
+
+	// IsMonitoringDisabled defines whether Oracle Cloud Agent can gather performance metrics and monitor the instance using the
+	// monitoring plugins. Default value is false (monitoring plugins are enabled).
+	// These are the monitoring plugins: Compute Instance Monitoring
+	// and Custom Logs Monitoring.
+	// The monitoring plugins are controlled by this parameter and by the per-plugin
+	// configuration in the `pluginsConfig` object.
+	// - If `isMonitoringDisabled` is true, all of the monitoring plugins are disabled, regardless of
+	// the per-plugin configuration.
+	// - If `isMonitoringDisabled` is false, all of the monitoring plugins are enabled. You
+	// can optionally disable individual monitoring plugins by providing a value in the `pluginsConfig`
+	// object.
+	IsMonitoringDisabled *bool `json:"isMonitoringDisabled,omitempty"`
+
+	// IsManagementDisabled defines whether Oracle Cloud Agent can run all the available management plugins.
+	// Default value is false (management plugins are enabled).
+	// These are the management plugins: OS Management Service Agent and Compute Instance
+	// Run Command.
+	// The management plugins are controlled by this parameter and by the per-plugin
+	// configuration in the `pluginsConfig` object.
+	// - If `isManagementDisabled` is true, all of the management plugins are disabled, regardless of
+	// the per-plugin configuration.
+	// - If `isManagementDisabled` is false, all of the management plugins are enabled. You
+	// can optionally disable individual management plugins by providing a value in the `pluginsConfig`
+	// object.
+	IsManagementDisabled *bool `json:"isManagementDisabled,omitempty"`
+
+	// AreAllPluginsDisabled defines rhether Oracle Cloud Agent can run all the available plugins.
+	// This includes the management and monitoring plugins.
+	// To get a list of available plugins, use the
+	// ListInstanceagentAvailablePlugins
+	// operation in the Oracle Cloud Agent API. For more information about the available plugins, see
+	// Managing Plugins with Oracle Cloud Agent (https://docs.cloud.oracle.com/iaas/Content/Compute/Tasks/manage-plugins.htm).
+	AreAllPluginsDisabled *bool `json:"areAllPluginsDisabled,omitempty"`
+
+	// PluginsConfig defines the configuration of plugins associated with this instance.
+	PluginsConfig []InstanceAgentPluginConfig `json:"pluginsConfigs,omitempty"`
+}
+
+// InstanceAgentPluginConfigDetailsDesiredStateEnum Enum with underlying type: string
+type InstanceAgentPluginConfigDetailsDesiredStateEnum string
+
+// Set of constants representing the allowable values for InstanceAgentPluginConfigDetailsDesiredStateEnum
+const (
+	InstanceAgentPluginConfigDetailsDesiredStateEnabled  InstanceAgentPluginConfigDetailsDesiredStateEnum = "ENABLED"
+	InstanceAgentPluginConfigDetailsDesiredStateDisabled InstanceAgentPluginConfigDetailsDesiredStateEnum = "DISABLED"
+)
+
+// InstanceAgentPluginConfig defines the configuration of plugins associated with this instance.
+type InstanceAgentPluginConfig struct {
+
+	// Name defines the name of the plugin. To get a list of available plugins, use the
+	// ListInstanceagentAvailablePlugins
+	// operation in the Oracle Cloud Agent API. For more information about the available plugins, see
+	// Managing Plugins with Oracle Cloud Agent (https://docs.cloud.oracle.com/iaas/Content/Compute/Tasks/manage-plugins.htm).
+	Name *string `json:"name,omitempty"`
+
+	// DesiredState defines whether the plugin should be enabled or disabled.
+	// To enable the monitoring and management plugins, the `isMonitoringDisabled` and
+	// `isManagementDisabled` attributes must also be set to false.
+	DesiredState InstanceAgentPluginConfigDetailsDesiredStateEnum `json:"desiredState,omitempty"`
 }
 
 // ShapeConfig defines the configuration options for the compute instance shape
@@ -56,6 +575,9 @@ type ShapeConfig struct {
 	// - `BASELINE_1_2` - baseline usage is 1/2 of an OCPU.
 	// - `BASELINE_1_1` - baseline usage is an entire OCPU. This represents a non-burstable instance.
 	BaselineOcpuUtilization string `json:"baselineOcpuUtilization,omitempty"`
+
+	// Nvmes defines the number of NVMe drives to be used for storage. A single drive has 6.8 TB available.
+	Nvmes *int `json:"nvmes,omitempty"`
 }
 
 // EgressSecurityRule A rule for allowing outbound IP packets.

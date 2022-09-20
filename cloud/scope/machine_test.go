@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer/mock_nlb"
@@ -317,19 +318,43 @@ func TestInstanceReconciliation(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				setupAllParams(ms)
+				ms.OCIMachine.Spec.CapacityReservationId = common.String("cap-id")
+				ms.OCIMachine.Spec.DedicatedVmHostId = common.String("dedicated-host-id")
+				ms.OCIMachine.Spec.NetworkDetails.HostnameLabel = common.String("hostname-label")
+				ms.OCIMachine.Spec.NetworkDetails.SkipSourceDestCheck = common.Bool(true)
+				ms.OCIMachine.Spec.NetworkDetails.AssignPrivateDnsRecord = common.Bool(true)
+				ms.OCIMachine.Spec.NetworkDetails.DisplayName = common.String("display-name")
+				ms.OCIMachine.Spec.InstanceSourceViaImageDetails = &infrastructurev1beta1.InstanceSourceViaImageConfig{
+					KmsKeyId:            common.String("kms-key-id"),
+					BootVolumeVpusPerGB: common.Int64(32),
+				}
 				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
 					DisplayName:   common.String("name"),
 					CompartmentId: common.String("test"),
 				})).Return(core.ListInstancesResponse{}, nil)
 
 				launchDetails := core.LaunchInstanceDetails{DisplayName: common.String("name"),
+					CapacityReservationId: common.String("cap-id"),
+					DedicatedVmHostId:     common.String("dedicated-host-id"),
 					SourceDetails: core.InstanceSourceViaImageDetails{
 						ImageId:             common.String("image"),
 						BootVolumeSizeInGBs: common.Int64(120),
+						KmsKeyId:            common.String("kms-key-id"),
+						BootVolumeVpusPerGB: common.Int64(32),
 					},
 					CreateVnicDetails: &core.CreateVnicDetails{
 						SubnetId:       common.String("nodesubnet"),
 						AssignPublicIp: common.Bool(false),
+						DefinedTags:    map[string]map[string]interface{}{},
+						FreeformTags: map[string]string{
+							ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,
+							ociutil.ClusterResourceIdentifier: "resource_uid",
+						},
+						NsgIds:                 make([]string, 0),
+						HostnameLabel:          common.String("hostname-label"),
+						SkipSourceDestCheck:    common.Bool(true),
+						AssignPrivateDnsRecord: common.Bool(true),
+						DisplayName:            common.String("display-name"),
 					},
 					Metadata: map[string]string{
 						"user_data": base64.StdEncoding.EncodeToString([]byte("test")),
@@ -373,6 +398,12 @@ func TestInstanceReconciliation(t *testing.T) {
 					CreateVnicDetails: &core.CreateVnicDetails{
 						SubnetId:       common.String("nodesubnet"),
 						AssignPublicIp: common.Bool(false),
+						DefinedTags:    map[string]map[string]interface{}{},
+						FreeformTags: map[string]string{
+							ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,
+							ociutil.ClusterResourceIdentifier: "resource_uid",
+						},
+						NsgIds: make([]string, 0),
 					},
 					Metadata: map[string]string{
 						"user_data": base64.StdEncoding.EncodeToString([]byte("test")),
@@ -414,6 +445,12 @@ func TestInstanceReconciliation(t *testing.T) {
 					CreateVnicDetails: &core.CreateVnicDetails{
 						SubnetId:       common.String("nodesubnet"),
 						AssignPublicIp: common.Bool(false),
+						DefinedTags:    map[string]map[string]interface{}{},
+						FreeformTags: map[string]string{
+							ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,
+							ociutil.ClusterResourceIdentifier: "resource_uid",
+						},
+						NsgIds: make([]string, 0),
 					},
 					Metadata: map[string]string{
 						"user_data": base64.StdEncoding.EncodeToString([]byte("test")),
@@ -462,6 +499,12 @@ func TestInstanceReconciliation(t *testing.T) {
 					CreateVnicDetails: &core.CreateVnicDetails{
 						SubnetId:       common.String("test-subnet-1"),
 						AssignPublicIp: common.Bool(false),
+						DefinedTags:    map[string]map[string]interface{}{},
+						FreeformTags: map[string]string{
+							ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,
+							ociutil.ClusterResourceIdentifier: "resource_uid",
+						},
+						NsgIds: make([]string, 0),
 					},
 					Metadata: map[string]string{
 						"user_data": base64.StdEncoding.EncodeToString([]byte("test")),
@@ -513,7 +556,12 @@ func TestInstanceReconciliation(t *testing.T) {
 					CreateVnicDetails: &core.CreateVnicDetails{
 						SubnetId:       common.String("nodesubnet"),
 						AssignPublicIp: common.Bool(false),
-						NsgIds:         []string{"test-nsg-1"},
+						DefinedTags:    map[string]map[string]interface{}{},
+						FreeformTags: map[string]string{
+							ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,
+							ociutil.ClusterResourceIdentifier: "resource_uid",
+						},
+						NsgIds: []string{"test-nsg-1", "test-nsg-2"},
 					},
 					Metadata: map[string]string{
 						"user_data": base64.StdEncoding.EncodeToString([]byte("test")),
@@ -566,7 +614,12 @@ func TestInstanceReconciliation(t *testing.T) {
 					CreateVnicDetails: &core.CreateVnicDetails{
 						SubnetId:       common.String("nodesubnet"),
 						AssignPublicIp: common.Bool(false),
-						NsgIds:         []string{"test-nsg-2"},
+						DefinedTags:    map[string]map[string]interface{}{},
+						FreeformTags: map[string]string{
+							ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,
+							ociutil.ClusterResourceIdentifier: "resource_uid",
+						},
+						NsgIds: []string{"test-nsg-2"},
 					},
 					Metadata: map[string]string{
 						"user_data": base64.StdEncoding.EncodeToString([]byte("test")),
@@ -589,6 +642,355 @@ func TestInstanceReconciliation(t *testing.T) {
 				computeClient.EXPECT().LaunchInstance(gomock.Any(), gomock.Eq(core.LaunchInstanceRequest{
 					LaunchInstanceDetails: launchDetails,
 					OpcRetryToken:         ociutil.GetOPCRetryToken("machineuid")})).Return(core.LaunchInstanceResponse{}, nil)
+			},
+		},
+		{
+			name:          "check platform config amd vm",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				setupAllParams(ms)
+				ms.OCIMachine.Spec.PlatformConfig = &infrastructurev1beta1.PlatformConfig{
+					PlatformConfigType: infrastructurev1beta1.PlatformConfigTypeAmdvm,
+					AmdVmPlatformConfig: infrastructurev1beta1.AmdVmPlatformConfig{
+						IsMeasuredBootEnabled:          common.Bool(false),
+						IsTrustedPlatformModuleEnabled: common.Bool(true),
+						IsSecureBootEnabled:            common.Bool(true),
+					},
+				}
+				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
+					DisplayName:   common.String("name"),
+					CompartmentId: common.String("test"),
+				})).Return(core.ListInstancesResponse{}, nil)
+				computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
+					return platformConfigMatcher(request, core.AmdVmPlatformConfig{
+						IsMeasuredBootEnabled:          common.Bool(false),
+						IsTrustedPlatformModuleEnabled: common.Bool(true),
+						IsSecureBootEnabled:            common.Bool(true),
+					})
+				})).Return(core.LaunchInstanceResponse{}, nil)
+			},
+		},
+		{
+			name:          "check platform config intel vm",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				setupAllParams(ms)
+				ms.OCIMachine.Spec.PlatformConfig = &infrastructurev1beta1.PlatformConfig{
+					PlatformConfigType: infrastructurev1beta1.PlatformConfigTypeIntelVm,
+					IntelVmPlatformConfig: infrastructurev1beta1.IntelVmPlatformConfig{
+						IsMeasuredBootEnabled:          common.Bool(false),
+						IsTrustedPlatformModuleEnabled: common.Bool(true),
+						IsSecureBootEnabled:            common.Bool(true),
+					},
+				}
+				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
+					DisplayName:   common.String("name"),
+					CompartmentId: common.String("test"),
+				})).Return(core.ListInstancesResponse{}, nil)
+				computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
+					return platformConfigMatcher(request, core.IntelVmPlatformConfig{
+						IsMeasuredBootEnabled:          common.Bool(false),
+						IsTrustedPlatformModuleEnabled: common.Bool(true),
+						IsSecureBootEnabled:            common.Bool(true),
+					})
+				})).Return(core.LaunchInstanceResponse{}, nil)
+			},
+		},
+		{
+			name:          "check platform config amd rome bm",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				setupAllParams(ms)
+				ms.OCIMachine.Spec.PlatformConfig = &infrastructurev1beta1.PlatformConfig{
+					PlatformConfigType: infrastructurev1beta1.PlatformConfigTypeAmdRomeBm,
+					AmdRomeBmPlatformConfig: infrastructurev1beta1.AmdRomeBmPlatformConfig{
+						IsMeasuredBootEnabled:                    common.Bool(false),
+						IsTrustedPlatformModuleEnabled:           common.Bool(true),
+						IsSecureBootEnabled:                      common.Bool(true),
+						IsSymmetricMultiThreadingEnabled:         common.Bool(false),
+						IsAccessControlServiceEnabled:            common.Bool(true),
+						AreVirtualInstructionsEnabled:            common.Bool(false),
+						IsInputOutputMemoryManagementUnitEnabled: common.Bool(false),
+						PercentageOfCoresEnabled:                 common.Int(50),
+						NumaNodesPerSocket:                       infrastructurev1beta1.AmdRomeBmPlatformConfigNumaNodesPerSocketNps4,
+					},
+				}
+				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
+					DisplayName:   common.String("name"),
+					CompartmentId: common.String("test"),
+				})).Return(core.ListInstancesResponse{}, nil)
+				computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
+					return platformConfigMatcher(request, core.AmdRomeBmPlatformConfig{
+						IsMeasuredBootEnabled:                    common.Bool(false),
+						IsTrustedPlatformModuleEnabled:           common.Bool(true),
+						IsSecureBootEnabled:                      common.Bool(true),
+						IsSymmetricMultiThreadingEnabled:         common.Bool(false),
+						IsAccessControlServiceEnabled:            common.Bool(true),
+						AreVirtualInstructionsEnabled:            common.Bool(false),
+						IsInputOutputMemoryManagementUnitEnabled: common.Bool(false),
+						PercentageOfCoresEnabled:                 common.Int(50),
+						NumaNodesPerSocket:                       core.AmdRomeBmPlatformConfigNumaNodesPerSocketNps4,
+					})
+				})).Return(core.LaunchInstanceResponse{}, nil)
+			},
+		},
+		{
+			name:          "check platform config amd rome gpu bm",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				setupAllParams(ms)
+				ms.OCIMachine.Spec.PlatformConfig = &infrastructurev1beta1.PlatformConfig{
+					PlatformConfigType: infrastructurev1beta1.PlatformConfigTypeAmdRomeBmGpu,
+					AmdRomeBmGpuPlatformConfig: infrastructurev1beta1.AmdRomeBmGpuPlatformConfig{
+						IsMeasuredBootEnabled:                    common.Bool(false),
+						IsTrustedPlatformModuleEnabled:           common.Bool(true),
+						IsSecureBootEnabled:                      common.Bool(true),
+						IsSymmetricMultiThreadingEnabled:         common.Bool(false),
+						IsAccessControlServiceEnabled:            common.Bool(true),
+						AreVirtualInstructionsEnabled:            common.Bool(false),
+						IsInputOutputMemoryManagementUnitEnabled: common.Bool(false),
+						NumaNodesPerSocket:                       infrastructurev1beta1.AmdRomeBmGpuPlatformConfigNumaNodesPerSocketNps2,
+					},
+				}
+				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
+					DisplayName:   common.String("name"),
+					CompartmentId: common.String("test"),
+				})).Return(core.ListInstancesResponse{}, nil)
+				computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
+					return platformConfigMatcher(request, core.AmdRomeBmGpuPlatformConfig{
+						IsMeasuredBootEnabled:                    common.Bool(false),
+						IsTrustedPlatformModuleEnabled:           common.Bool(true),
+						IsSecureBootEnabled:                      common.Bool(true),
+						IsSymmetricMultiThreadingEnabled:         common.Bool(false),
+						IsAccessControlServiceEnabled:            common.Bool(true),
+						AreVirtualInstructionsEnabled:            common.Bool(false),
+						IsInputOutputMemoryManagementUnitEnabled: common.Bool(false),
+						NumaNodesPerSocket:                       core.AmdRomeBmGpuPlatformConfigNumaNodesPerSocketNps2,
+					})
+				})).Return(core.LaunchInstanceResponse{}, nil)
+			},
+		},
+		{
+			name:          "check platform config intel icelake bm",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				setupAllParams(ms)
+				ms.OCIMachine.Spec.PlatformConfig = &infrastructurev1beta1.PlatformConfig{
+					PlatformConfigType: infrastructurev1beta1.PlatformConfigTypeIntelIcelakeBm,
+					IntelIcelakeBmPlatformConfig: infrastructurev1beta1.IntelIcelakeBmPlatformConfig{
+						IsMeasuredBootEnabled:                    common.Bool(false),
+						IsTrustedPlatformModuleEnabled:           common.Bool(true),
+						IsSecureBootEnabled:                      common.Bool(true),
+						IsSymmetricMultiThreadingEnabled:         common.Bool(false),
+						IsInputOutputMemoryManagementUnitEnabled: common.Bool(false),
+						PercentageOfCoresEnabled:                 common.Int(56),
+						NumaNodesPerSocket:                       infrastructurev1beta1.IntelIcelakeBmPlatformConfigNumaNodesPerSocketNps1,
+					},
+				}
+				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
+					DisplayName:   common.String("name"),
+					CompartmentId: common.String("test"),
+				})).Return(core.ListInstancesResponse{}, nil)
+				computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
+					return platformConfigMatcher(request, core.IntelIcelakeBmPlatformConfig{
+						IsMeasuredBootEnabled:                    common.Bool(false),
+						IsTrustedPlatformModuleEnabled:           common.Bool(true),
+						IsSecureBootEnabled:                      common.Bool(true),
+						IsSymmetricMultiThreadingEnabled:         common.Bool(false),
+						IsInputOutputMemoryManagementUnitEnabled: common.Bool(false),
+						PercentageOfCoresEnabled:                 common.Int(56),
+						NumaNodesPerSocket:                       core.IntelIcelakeBmPlatformConfigNumaNodesPerSocketNps1,
+					})
+				})).Return(core.LaunchInstanceResponse{}, nil)
+			},
+		},
+		{
+			name:          "check platform config intel skylake bm",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				setupAllParams(ms)
+				ms.OCIMachine.Spec.PlatformConfig = &infrastructurev1beta1.PlatformConfig{
+					PlatformConfigType: infrastructurev1beta1.PlatformConfigTypeIntelSkylakeBm,
+					IntelSkylakeBmPlatformConfig: infrastructurev1beta1.IntelSkylakeBmPlatformConfig{
+						IsMeasuredBootEnabled:          common.Bool(false),
+						IsTrustedPlatformModuleEnabled: common.Bool(true),
+						IsSecureBootEnabled:            common.Bool(true),
+					},
+				}
+				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
+					DisplayName:   common.String("name"),
+					CompartmentId: common.String("test"),
+				})).Return(core.ListInstancesResponse{}, nil)
+				computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
+					return platformConfigMatcher(request, core.IntelSkylakeBmPlatformConfig{
+						IsMeasuredBootEnabled:          common.Bool(false),
+						IsTrustedPlatformModuleEnabled: common.Bool(true),
+						IsSecureBootEnabled:            common.Bool(true),
+					})
+				})).Return(core.LaunchInstanceResponse{}, nil)
+			},
+		},
+		{
+			name:          "check platform config amd milan bm",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				setupAllParams(ms)
+				ms.OCIMachine.Spec.PlatformConfig = &infrastructurev1beta1.PlatformConfig{
+					PlatformConfigType: infrastructurev1beta1.PlatformConfigTypeAmdMilanBm,
+					AmdMilanBmPlatformConfig: infrastructurev1beta1.AmdMilanBmPlatformConfig{
+						IsMeasuredBootEnabled:                    common.Bool(false),
+						IsTrustedPlatformModuleEnabled:           common.Bool(true),
+						IsSecureBootEnabled:                      common.Bool(true),
+						IsAccessControlServiceEnabled:            common.Bool(true),
+						IsSymmetricMultiThreadingEnabled:         common.Bool(false),
+						IsInputOutputMemoryManagementUnitEnabled: common.Bool(false),
+						AreVirtualInstructionsEnabled:            common.Bool(true),
+						PercentageOfCoresEnabled:                 common.Int(56),
+						NumaNodesPerSocket:                       infrastructurev1beta1.AmdMilanBmPlatformConfigNumaNodesPerSocketNps1,
+					},
+				}
+				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
+					DisplayName:   common.String("name"),
+					CompartmentId: common.String("test"),
+				})).Return(core.ListInstancesResponse{}, nil)
+				computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
+					return platformConfigMatcher(request, core.AmdMilanBmPlatformConfig{
+						IsMeasuredBootEnabled:                    common.Bool(false),
+						IsTrustedPlatformModuleEnabled:           common.Bool(true),
+						IsSecureBootEnabled:                      common.Bool(true),
+						IsAccessControlServiceEnabled:            common.Bool(true),
+						IsSymmetricMultiThreadingEnabled:         common.Bool(false),
+						IsInputOutputMemoryManagementUnitEnabled: common.Bool(false),
+						AreVirtualInstructionsEnabled:            common.Bool(true),
+						PercentageOfCoresEnabled:                 common.Int(56),
+						NumaNodesPerSocket:                       core.AmdMilanBmPlatformConfigNumaNodesPerSocketNps1,
+					})
+				})).Return(core.LaunchInstanceResponse{}, nil)
+			},
+		},
+		{
+			name:          "agent config",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				setupAllParams(ms)
+				ms.OCIMachine.Spec.AgentConfig = &infrastructurev1beta1.LaunchInstanceAgentConfig{
+					IsMonitoringDisabled:  common.Bool(false),
+					IsManagementDisabled:  common.Bool(true),
+					AreAllPluginsDisabled: common.Bool(true),
+					PluginsConfig: []infrastructurev1beta1.InstanceAgentPluginConfig{
+						{
+							Name:         common.String("test-plugin"),
+							DesiredState: infrastructurev1beta1.InstanceAgentPluginConfigDetailsDesiredStateEnabled,
+						},
+					},
+				}
+				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
+					DisplayName:   common.String("name"),
+					CompartmentId: common.String("test"),
+				})).Return(core.ListInstancesResponse{}, nil)
+				computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
+					return agentConfigMatcher(request, &core.LaunchInstanceAgentConfigDetails{
+						IsMonitoringDisabled:  common.Bool(false),
+						IsManagementDisabled:  common.Bool(true),
+						AreAllPluginsDisabled: common.Bool(true),
+						PluginsConfig: []core.InstanceAgentPluginConfigDetails{
+							{
+								Name:         common.String("test-plugin"),
+								DesiredState: core.InstanceAgentPluginConfigDetailsDesiredStateEnabled,
+							},
+						},
+					})
+				})).Return(core.LaunchInstanceResponse{}, nil)
+			},
+		},
+		{
+			name:          "launch options",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				setupAllParams(ms)
+				ms.OCIMachine.Spec.LaunchOptions = &infrastructurev1beta1.LaunchOptions{
+					BootVolumeType:                  infrastructurev1beta1.LaunchOptionsBootVolumeTypeIde,
+					Firmware:                        infrastructurev1beta1.LaunchOptionsFirmwareUefi64,
+					NetworkType:                     infrastructurev1beta1.LaunchOptionsNetworkTypeVfio,
+					RemoteDataVolumeType:            infrastructurev1beta1.LaunchOptionsRemoteDataVolumeTypeIde,
+					IsConsistentVolumeNamingEnabled: common.Bool(true),
+				}
+				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
+					DisplayName:   common.String("name"),
+					CompartmentId: common.String("test"),
+				})).Return(core.ListInstancesResponse{}, nil)
+				computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
+					return launchOptionsMatcher(request, &core.LaunchOptions{
+						BootVolumeType:                  core.LaunchOptionsBootVolumeTypeIde,
+						Firmware:                        core.LaunchOptionsFirmwareUefi64,
+						NetworkType:                     core.LaunchOptionsNetworkTypeVfio,
+						RemoteDataVolumeType:            core.LaunchOptionsRemoteDataVolumeTypeIde,
+						IsConsistentVolumeNamingEnabled: common.Bool(true),
+					})
+				})).Return(core.LaunchInstanceResponse{}, nil)
+			},
+		},
+		{
+			name:          "instance options",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				setupAllParams(ms)
+				ms.OCIMachine.Spec.InstanceOptions = &infrastructurev1beta1.InstanceOptions{
+					AreLegacyImdsEndpointsDisabled: common.Bool(true),
+				}
+				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
+					DisplayName:   common.String("name"),
+					CompartmentId: common.String("test"),
+				})).Return(core.ListInstancesResponse{}, nil)
+				computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
+					return instanceOptionsMatcher(request, &core.InstanceOptions{
+						AreLegacyImdsEndpointsDisabled: common.Bool(true),
+					})
+				})).Return(core.LaunchInstanceResponse{}, nil)
+			},
+		},
+		{
+			name:          "availability config",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				setupAllParams(ms)
+				ms.OCIMachine.Spec.AvailabilityConfig = &infrastructurev1beta1.LaunchInstanceAvailabilityConfig{
+					IsLiveMigrationPreferred: common.Bool(true),
+					RecoveryAction:           infrastructurev1beta1.LaunchInstanceAvailabilityConfigDetailsRecoveryActionRestoreInstance,
+				}
+				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
+					DisplayName:   common.String("name"),
+					CompartmentId: common.String("test"),
+				})).Return(core.ListInstancesResponse{}, nil)
+				computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
+					return avalabilityConfigMatcher(request, &core.LaunchInstanceAvailabilityConfigDetails{
+						IsLiveMigrationPreferred: common.Bool(true),
+						RecoveryAction:           core.LaunchInstanceAvailabilityConfigDetailsRecoveryActionRestoreInstance,
+					})
+				})).Return(core.LaunchInstanceResponse{}, nil)
+			},
+		},
+		{
+			name:          "preemtible config",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				setupAllParams(ms)
+				ms.OCIMachine.Spec.PreemptibleInstanceConfig = &infrastructurev1beta1.PreemptibleInstanceConfig{
+					TerminatePreemptionAction: &infrastructurev1beta1.TerminatePreemptionAction{
+						PreserveBootVolume: common.Bool(true),
+					},
+				}
+				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
+					DisplayName:   common.String("name"),
+					CompartmentId: common.String("test"),
+				})).Return(core.ListInstancesResponse{}, nil)
+				computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
+					return preemtibleConfigMatcher(request, &core.PreemptibleInstanceConfigDetails{
+						PreemptionAction: core.TerminatePreemptionAction{
+							PreserveBootVolume: common.Bool(true),
+						},
+					})
+				})).Return(core.LaunchInstanceResponse{}, nil)
 			},
 		},
 	}
@@ -632,6 +1034,71 @@ func instanceCompartmentIDMatcher(request interface{}, matchStr string) error {
 	}
 	if *r.LaunchInstanceDetails.CompartmentId != matchStr {
 		return errors.New(fmt.Sprintf("expecting DisplayName as %s", matchStr))
+	}
+	return nil
+}
+
+func platformConfigMatcher(actual interface{}, expected core.PlatformConfig) error {
+	r, ok := actual.(core.LaunchInstanceRequest)
+	if !ok {
+		return errors.New("expecting LaunchInstanceRequest type")
+	}
+	if !reflect.DeepEqual(r.PlatformConfig, expected) {
+		return errors.New(fmt.Sprintf("expecting %v, actual %v", expected, r.PlatformConfig))
+	}
+	return nil
+}
+func agentConfigMatcher(actual interface{}, expected *core.LaunchInstanceAgentConfigDetails) error {
+	r, ok := actual.(core.LaunchInstanceRequest)
+	if !ok {
+		return errors.New("expecting LaunchInstanceRequest type")
+	}
+	if !reflect.DeepEqual(r.AgentConfig, expected) {
+		return errors.New(fmt.Sprintf("expecting %v, actual %v", expected, r.AgentConfig))
+	}
+	return nil
+}
+
+func launchOptionsMatcher(actual interface{}, expected *core.LaunchOptions) error {
+	r, ok := actual.(core.LaunchInstanceRequest)
+	if !ok {
+		return errors.New("expecting LaunchInstanceRequest type")
+	}
+	if !reflect.DeepEqual(r.LaunchOptions, expected) {
+		return errors.New(fmt.Sprintf("expecting %v, actual %v", expected, r.LaunchOptions))
+	}
+	return nil
+}
+
+func instanceOptionsMatcher(actual interface{}, expected *core.InstanceOptions) error {
+	r, ok := actual.(core.LaunchInstanceRequest)
+	if !ok {
+		return errors.New("expecting LaunchInstanceRequest type")
+	}
+	if !reflect.DeepEqual(r.InstanceOptions, expected) {
+		return errors.New(fmt.Sprintf("expecting %v, actual %v", expected, r.InstanceOptions))
+	}
+	return nil
+}
+
+func avalabilityConfigMatcher(actual interface{}, expected *core.LaunchInstanceAvailabilityConfigDetails) error {
+	r, ok := actual.(core.LaunchInstanceRequest)
+	if !ok {
+		return errors.New("expecting LaunchInstanceRequest type")
+	}
+	if !reflect.DeepEqual(r.AvailabilityConfig, expected) {
+		return errors.New(fmt.Sprintf("expecting %v, actual %v", expected, r.AvailabilityConfig))
+	}
+	return nil
+}
+
+func preemtibleConfigMatcher(actual interface{}, expected *core.PreemptibleInstanceConfigDetails) error {
+	r, ok := actual.(core.LaunchInstanceRequest)
+	if !ok {
+		return errors.New("expecting LaunchInstanceRequest type")
+	}
+	if !reflect.DeepEqual(r.PreemptibleInstanceConfig, expected) {
+		return errors.New(fmt.Sprintf("expecting %v, actual %v", expected, r.PreemptibleInstanceConfig))
 	}
 	return nil
 }
