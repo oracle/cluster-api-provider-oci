@@ -78,8 +78,13 @@ metadata:
   name: ${CLUSTER_NAME}-mp-0
   namespace: default
 spec:
+  version: "${KUBERNETES_VERSION}"
   nodeShape: "${OCI_MANAGED_NODE_SHAPE}"
   sshPublicKey: "${OCI_SSH_KEY}"
   nodeSourceViaImage:
-    imageId: "${OCI_MANAGED_NODE_IMAGED_ID}"
+    imageId: "${OCI_MANAGED_NODE_IMAGE_ID}"
+    bootVolumeSizeInGBs: ${OCI_MANAGED_NODE_BOOT_VOLUME_SIZE=50}
+  nodeShapeConfig:
+    memoryInGBs: "${OCI_MANAGED_NODE_MACHINE_MEMORY=16}"
+    ocpus: "${OCI_MANAGED_NODE_MACHINE_TYPE_OCPUS=1}"
 ---

@@ -222,6 +222,10 @@ spec:
                         description: SshPublicKey defines the SSH public key on each
                           node in the node pool on launch.
                         type: string
+                      version:
+                        description: Version represents the version of the OKE node
+                          pool.
+                        type: string
                     type: object
                 required:
                 - spec

@@ -59,6 +59,7 @@ metadata:
   name: ${CLUSTER_NAME}-mp-0
   namespace: default
 spec:
+  version: "${KUBERNETES_VERSION}"
   nodeShape: "${OCI_MANAGED_NODE_SHAPE}"
   sshPublicKey: "${OCI_SSH_KEY}"
   nodeSourceViaImage:
