@@ -18,6 +18,7 @@ package scope
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"sort"
@@ -285,7 +286,7 @@ func (m *ManagedMachinePoolScope) CreateNodePool(ctx context.Context) (*oke.Node
 		CompartmentId:     common.String(m.OCIManagedCluster.Spec.CompartmentId),
 		ClusterId:         m.OCIManagedControlPlane.Spec.ID,
 		Name:              common.String(m.OCIManagedMachinePool.Name),
-		KubernetesVersion: m.MachinePool.Spec.Template.Spec.Version,
+		KubernetesVersion: m.OCIManagedMachinePool.Spec.Version,
 		NodeShape:         common.String(m.OCIManagedMachinePool.Spec.NodeShape),
 		NodeShapeConfig:   &nodeShapeConfig,
 		NodeSourceDetails: &sourceDetails,
@@ -500,10 +501,18 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 
 	actual := m.getSpecFromAPIObject(pool)
 	if !reflect.DeepEqual(spec, actual) ||
-		!reflect.DeepEqual(pool.KubernetesVersion, m.MachinePool.Spec.Template.Spec.Version) ||
 		m.OCIManagedMachinePool.Name != *pool.Name {
 		m.Logger.Info("Updating node pool")
-		m.Logger.Info("Node pool", "spec", common.PointerString(*spec), "actual", common.PointerString(*actual))
+		// printing json specs will help debug problems when there are spurious/unwanted updates
+		jsonSpec, err := json.Marshal(*spec)
+		if err != nil {
+			return false, err
+		}
+		jsonActual, err := json.Marshal(*actual)
+		if err != nil {
+			return false, err
+		}
+		m.Logger.Info("Node pool", "spec", jsonSpec, "actual", jsonActual)
 		placementConfig, err := m.buildPlacementConfig(spec.NodePoolNodeConfig.PlacementConfigs)
 		if err != nil {
 			return false, err
@@ -559,7 +568,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 		}
 		nodePoolDetails := oke.UpdateNodePoolDetails{
 			Name:              common.String(m.OCIManagedMachinePool.Name),
-			KubernetesVersion: m.MachinePool.Spec.Template.Spec.Version,
+			KubernetesVersion: m.OCIManagedMachinePool.Spec.Version,
 			NodeShape:         common.String(m.OCIManagedMachinePool.Spec.NodeShape),
 			NodeShapeConfig:   &nodeShapeConfig,
 			NodeSourceDetails: &sourceDetails,
@@ -602,6 +611,13 @@ func setMachinePoolSpecDefaults(spec *infrav1exp.OCIManagedMachinePoolSpec) {
 			return *configs[i].AvailabilityDomain < *configs[j].AvailabilityDomain
 		})
 	}
+	podNetworkOptions := spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails
+	if podNetworkOptions != nil {
+		if podNetworkOptions.CniType == expinfra1.VCNNativeCNI {
+			// 31 is the default max pods per node returned by OKE API
+			spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails.VcnIpNativePodNetworkOptions.MaxPodsPerNode = common.Int(31)
+		}
+	}
 }
 
 func (m *ManagedMachinePoolScope) getSpecFromAPIObject(pool *oke.NodePool) *expinfra1.OCIManagedMachinePoolSpec {
@@ -638,6 +654,7 @@ func (m *ManagedMachinePoolScope) getSpecFromAPIObject(pool *oke.NodePool) *expi
 		InitialNodeLabels:  getInitialNodeLabels(pool.InitialNodeLabels),
 		NodeShape:          *pool.NodeShape,
 		NodeMetadata:       pool.NodeMetadata,
+		Version:            pool.KubernetesVersion,
 	}
 	if pool.NodeEvictionNodePoolSettings != nil {
 		spec.NodeEvictionNodePoolSettings = &expinfra1.NodeEvictionNodePoolSettings{

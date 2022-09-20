@@ -18,6 +18,7 @@ package scope
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"reflect"
@@ -517,7 +518,16 @@ func (s *ManagedControlPlaneScope) UpdateControlPlane(ctx context.Context, okeCl
 
 	actual := s.getSpecFromActual(okeCluster)
 	if !reflect.DeepEqual(spec, actual) {
-		s.Logger.Info("Control plane", "spec", common.PointerString(*spec), "actual", common.PointerString(*actual))
+		// printing json specs will help debug problems when there are spurious/unwanted updates
+		jsonSpec, err := json.Marshal(*spec)
+		if err != nil {
+			return false, err
+		}
+		jsonActual, err := json.Marshal(*actual)
+		if err != nil {
+			return false, err
+		}
+		s.Logger.Info("Control plane", "spec", jsonSpec, "actual", jsonActual)
 		controlPlaneSpec := s.OCIManagedControlPlane.Spec
 		updateOptions := oke.UpdateClusterOptionsDetails{}
 		if controlPlaneSpec.ClusterOption.AdmissionControllerOptions != nil {
@@ -540,7 +550,7 @@ func (s *ManagedControlPlaneScope) UpdateControlPlane(ctx context.Context, okeCl
 			ClusterId:            okeCluster.Id,
 			UpdateClusterDetails: details,
 		}
-		_, err := s.ContainerEngineClient.UpdateCluster(ctx, updateClusterRequest)
+		_, err = s.ContainerEngineClient.UpdateCluster(ctx, updateClusterRequest)
 		if err != nil {
 			return false, errors.Wrapf(err, "failed to update cluster")
 		}

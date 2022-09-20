@@ -245,7 +245,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			},
 		},
 		{
-			name:               "node pool in created, no update",
+			name:               "node pool is created, no update",
 			errorExpected:      false,
 			conditionAssertion: []conditionAssertion{{infrav1exp.NodePoolReadyCondition, corev1.ConditionTrue, "", ""}},
 			testSpecificSetup: func(machinePoolScope *scope.ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
@@ -291,7 +291,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 								FreeformTags:                   tags,
 								NodePoolPodNetworkOptionDetails: oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
 									PodSubnetIds:   []string{"pod-subnet-id"},
-									MaxPodsPerNode: common.Int(15),
+									MaxPodsPerNode: common.Int(31),
 									PodNsgIds:      []string{"pod-nsg-id"},
 								},
 							},
@@ -350,7 +350,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 								FreeformTags:                   tags,
 								NodePoolPodNetworkOptionDetails: oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
 									PodSubnetIds:   []string{"pod-subnet-id"},
-									MaxPodsPerNode: common.Int(15),
+									MaxPodsPerNode: common.Int(31),
 									PodNsgIds:      []string{"pod-nsg-id"},
 								},
 							},
@@ -633,6 +633,7 @@ func getOCIManagedMachinePool() *infrav1exp.OCIManagedMachinePool {
 				Key:   common.String("key"),
 				Value: common.String("value"),
 			}},
+			Version:   common.String("v1.24.5"),
 			NodeShape: "test-shape",
 			NodeShapeConfig: &infrav1exp.NodeShapeConfig{
 				Ocpus:       common.String("2"),
@@ -658,7 +659,7 @@ func getOCIManagedMachinePool() *infrav1exp.OCIManagedMachinePool {
 					CniType: infrav1exp.VCNNativeCNI,
 					VcnIpNativePodNetworkOptions: infrav1exp.VcnIpNativePodNetworkOptions{
 						SubnetNames:    []string{"pod-subnet"},
-						MaxPodsPerNode: common.Int(15),
+						MaxPodsPerNode: common.Int(31),
 						NSGNames:       []string{"pod-nsg"},
 					},
 				},
@@ -680,11 +681,7 @@ func getMachinePool() *expclusterv1.MachinePool {
 		},
 		Spec: expclusterv1.MachinePoolSpec{
 			Replicas: &replicas,
-			Template: clusterv1.MachineTemplateSpec{
-				Spec: clusterv1.MachineSpec{
-					Version: common.String("v1.24.5"),
-				},
-			},
+			Template: clusterv1.MachineTemplateSpec{},
 		},
 	}
 	return machinePool

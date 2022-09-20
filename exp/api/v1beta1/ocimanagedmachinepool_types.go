@@ -21,6 +21,9 @@ type OCIManagedMachinePoolSpec struct {
 	// +optional
 	ProviderID *string `json:"providerID,omitempty"`
 
+	// Version represents the version of the OKE node pool.
+	Version *string `json:"version,omitempty"`
+
 	// ID is the OCID of the associated NodePool
 	// +optional
 	ID *string `json:"id,omitempty"`

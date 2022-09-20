@@ -19,7 +19,6 @@ package scope
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -138,6 +137,9 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
+				Spec: infrav1exp.OCIManagedMachinePoolSpec{
+					Version: common.String("v1.24.5"),
+				},
 			},
 			OCIManagedCluster: ociManagedCluster,
 			Cluster: &clusterv1.Cluster{
@@ -145,11 +147,6 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 			},
 			MachinePool: &expclusterv1.MachinePool{
 				Spec: expclusterv1.MachinePoolSpec{
-					Template: clusterv1.MachineTemplateSpec{
-						Spec: clusterv1.MachineSpec{
-							Version: common.String("v1.24.5"),
-						},
-					},
 					Replicas: &size,
 				},
 			},
@@ -177,6 +174,7 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
 				ms.OCIManagedMachinePool.Spec = infrav1exp.OCIManagedMachinePoolSpec{
+					Version:      common.String("v1.24.5"),
 					NodeMetadata: map[string]string{"key1": "value1"},
 					InitialNodeLabels: []infrav1exp.KeyValue{{
 						Key:   common.String("key"),
@@ -208,7 +206,7 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 							CniType: infrav1exp.VCNNativeCNI,
 							VcnIpNativePodNetworkOptions: infrav1exp.VcnIpNativePodNetworkOptions{
 								SubnetNames:    []string{"pod-subnet"},
-								MaxPodsPerNode: common.Int(15),
+								MaxPodsPerNode: common.Int(25),
 								NSGNames:       []string{"pod-nsg"},
 							},
 						},
@@ -258,7 +256,7 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 							DefinedTags:                    definedTagsInterface,
 							NodePoolPodNetworkOptionDetails: oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
 								PodSubnetIds:   []string{"pod-subnet-id"},
-								MaxPodsPerNode: common.Int(15),
+								MaxPodsPerNode: common.Int(25),
 								PodNsgIds:      []string{"pod-nsg-id"},
 							},
 						},
@@ -302,6 +300,7 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
 				ms.OCIManagedMachinePool.Spec = infrav1exp.OCIManagedMachinePoolSpec{
+					Version:      common.String("v1.24.5"),
 					NodeMetadata: map[string]string{"key1": "value1"},
 					InitialNodeLabels: []infrav1exp.KeyValue{{
 						Key:   common.String("key"),
@@ -565,6 +564,9 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
+				Spec: infrav1exp.OCIManagedMachinePoolSpec{
+					Version: common.String("v1.24.5"),
+				},
 			},
 			OCIManagedCluster: ociManagedCluster,
 			Cluster: &clusterv1.Cluster{
@@ -572,11 +574,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 			},
 			MachinePool: &expclusterv1.MachinePool{
 				Spec: expclusterv1.MachinePoolSpec{
-					Template: clusterv1.MachineTemplateSpec{
-						Spec: clusterv1.MachineSpec{
-							Version: common.String("v1.24.5"),
-						},
-					},
+					Template: clusterv1.MachineTemplateSpec{},
 					Replicas: &size,
 				},
 			},
@@ -605,6 +603,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
 				ms.OCIManagedMachinePool.Spec = infrav1exp.OCIManagedMachinePoolSpec{
+					Version:      common.String("v1.24.5"),
 					NodeMetadata: map[string]string{"key1": "value1"},
 					InitialNodeLabels: []infrav1exp.KeyValue{{
 						Key:   common.String("key"),
@@ -634,9 +633,8 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 						NodePoolPodNetworkOptionDetails: &infrav1exp.NodePoolPodNetworkOptionDetails{
 							CniType: infrav1exp.VCNNativeCNI,
 							VcnIpNativePodNetworkOptions: infrav1exp.VcnIpNativePodNetworkOptions{
-								SubnetNames:    []string{"pod-subnet"},
-								MaxPodsPerNode: common.Int(15),
-								NSGNames:       []string{"pod-nsg"},
+								SubnetNames: []string{"pod-subnet"},
+								NSGNames:    []string{"pod-nsg"},
 							},
 						},
 					},
@@ -684,7 +682,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 					DefinedTags:                    definedTagsInterface,
 					NodePoolPodNetworkOptionDetails: oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
 						PodSubnetIds:   []string{"pod-subnet-id"},
-						MaxPodsPerNode: common.Int(15),
+						MaxPodsPerNode: common.Int(31),
 						PodNsgIds:      []string{"pod-nsg-id"},
 					},
 				},
@@ -700,6 +698,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
 				ms.OCIManagedMachinePool.Spec = infrav1exp.OCIManagedMachinePoolSpec{
+					Version:      common.String("v1.24.5"),
 					ID:           common.String("node-pool-id"),
 					NodeMetadata: map[string]string{"key1": "value1"},
 					InitialNodeLabels: []infrav1exp.KeyValue{{
@@ -731,7 +730,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 							CniType: infrav1exp.VCNNativeCNI,
 							VcnIpNativePodNetworkOptions: infrav1exp.VcnIpNativePodNetworkOptions{
 								SubnetNames:    []string{"pod-subnet"},
-								MaxPodsPerNode: common.Int(15),
+								MaxPodsPerNode: common.Int(31),
 								NSGNames:       []string{"pod-nsg"},
 							},
 						},
@@ -775,7 +774,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 							IsPvEncryptionInTransitEnabled: common.Bool(true),
 							NodePoolPodNetworkOptionDetails: oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
 								PodSubnetIds:   []string{"pod-subnet-id"},
-								MaxPodsPerNode: common.Int(15),
+								MaxPodsPerNode: common.Int(31),
 								PodNsgIds:      []string{"pod-nsg-id"},
 							},
 						},
@@ -828,7 +827,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 					DefinedTags:                    definedTagsInterface,
 					NodePoolPodNetworkOptionDetails: oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
 						PodSubnetIds:   []string{"pod-subnet-id"},
-						MaxPodsPerNode: common.Int(15),
+						MaxPodsPerNode: common.Int(31),
 						PodNsgIds:      []string{"pod-nsg-id"},
 					},
 				},
@@ -844,6 +843,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
 				ms.OCIManagedMachinePool.Spec = infrav1exp.OCIManagedMachinePoolSpec{
+					Version:      common.String("v1.24.5"),
 					ID:           common.String("node-pool-id"),
 					NodeMetadata: map[string]string{"key1": "value1"},
 					InitialNodeLabels: []infrav1exp.KeyValue{{
@@ -875,7 +875,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 							CniType: infrav1exp.VCNNativeCNI,
 							VcnIpNativePodNetworkOptions: infrav1exp.VcnIpNativePodNetworkOptions{
 								SubnetNames:    []string{"pod-subnet"},
-								MaxPodsPerNode: common.Int(15),
+								MaxPodsPerNode: common.Int(31),
 								NSGNames:       []string{"pod-nsg"},
 							},
 						},
@@ -919,7 +919,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 							IsPvEncryptionInTransitEnabled: common.Bool(true),
 							NodePoolPodNetworkOptionDetails: oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
 								PodSubnetIds:   []string{"pod-subnet-id"},
-								MaxPodsPerNode: common.Int(15),
+								MaxPodsPerNode: common.Int(31),
 								PodNsgIds:      []string{"pod-nsg-id"},
 							},
 						},
@@ -989,6 +989,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
 				ms.OCIManagedMachinePool.Name = "changed"
 				ms.OCIManagedMachinePool.Spec = infrav1exp.OCIManagedMachinePoolSpec{
+					Version:      common.String("v1.24.5"),
 					ID:           common.String("node-pool-id"),
 					NodeMetadata: map[string]string{"key1": "value1"},
 					InitialNodeLabels: []infrav1exp.KeyValue{{
@@ -1020,7 +1021,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 							CniType: infrav1exp.VCNNativeCNI,
 							VcnIpNativePodNetworkOptions: infrav1exp.VcnIpNativePodNetworkOptions{
 								SubnetNames:    []string{"pod-subnet"},
-								MaxPodsPerNode: common.Int(15),
+								MaxPodsPerNode: common.Int(31),
 								NSGNames:       []string{"pod-nsg"},
 							},
 						},
@@ -1064,7 +1065,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 							IsPvEncryptionInTransitEnabled: common.Bool(true),
 							NodePoolPodNetworkOptionDetails: oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
 								PodSubnetIds:   []string{"pod-subnet-id"},
-								MaxPodsPerNode: common.Int(15),
+								MaxPodsPerNode: common.Int(31),
 								PodNsgIds:      []string{"pod-nsg-id"},
 							},
 						},
@@ -1148,36 +1149,4 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 			}
 		})
 	}
-}
-
-func allMatcher(request interface{}, request2 oke.CreateNodePoolRequest) error {
-	r, ok := request.(oke.CreateNodePoolRequest)
-	if !ok {
-		return errors.New("expecting LaunchInstanceRequest type")
-	}
-	if !reflect.DeepEqual(r.NodeEvictionNodePoolSettings, request2.NodeEvictionNodePoolSettings) {
-		return errors.New(fmt.Sprintf("node eviction mismatch"))
-	}
-	if !reflect.DeepEqual(r.NodeShapeConfig, request2.NodeShapeConfig) {
-		return errors.New(fmt.Sprintf("node shape mismatch"))
-	}
-	if !reflect.DeepEqual(r.NodeConfigDetails.DefinedTags, request2.NodeConfigDetails.DefinedTags) {
-		return errors.New(fmt.Sprintf("node shape mismatch"))
-	}
-	if !reflect.DeepEqual(r.NodeConfigDetails.Size, request2.NodeConfigDetails.Size) {
-		return errors.New(fmt.Sprintf("node shape mismatch"))
-	}
-	if !reflect.DeepEqual(r.NodeConfigDetails.PlacementConfigs, request2.NodeConfigDetails.PlacementConfigs) {
-		return errors.New(fmt.Sprintf("node shape mismatch"))
-	}
-	if !reflect.DeepEqual(r.NodeConfigDetails.FreeformTags, request2.NodeConfigDetails.FreeformTags) {
-		return errors.New(fmt.Sprintf("node shape mismatch"))
-	}
-	if !reflect.DeepEqual(r.NodeConfigDetails.NodePoolPodNetworkOptionDetails, request2.NodeConfigDetails.NodePoolPodNetworkOptionDetails) {
-		return errors.New(fmt.Sprintf("node shape mismatch"))
-	}
-	if !reflect.DeepEqual(r.NodeConfigDetails.NsgIds, request2.NodeConfigDetails.NsgIds) {
-		return errors.New(fmt.Sprintf("node shape mismatch"))
-	}
-	return nil
 }
