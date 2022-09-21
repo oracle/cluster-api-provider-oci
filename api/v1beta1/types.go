@@ -190,7 +190,7 @@ type PlatformConfig struct {
 	// * `INTEL_SKYLAKE_BM`
 	// * `AMD_MILAN_BM`
 	// Based on the enum, exactly one of the specific configuration types must be set
-	PlatformConfigType PlatformConfigTypeEnum `json:"PlatformConfigType,omitempty"`
+	PlatformConfigType PlatformConfigTypeEnum `json:"platformConfigType,omitempty"`
 
 	// AmdMilanBmPlatformConfig describe AMD Milan BM platform configuration
 	AmdMilanBmPlatformConfig AmdMilanBmPlatformConfig `json:"amdMilanBmPlatformConfig,omitempty"`
@@ -523,7 +523,7 @@ type LaunchInstanceAgentConfig struct {
 	// object.
 	IsManagementDisabled *bool `json:"isManagementDisabled,omitempty"`
 
-	// AreAllPluginsDisabled defines rhether Oracle Cloud Agent can run all the available plugins.
+	// AreAllPluginsDisabled defines whether Oracle Cloud Agent can run all the available plugins.
 	// This includes the management and monitoring plugins.
 	// To get a list of available plugins, use the
 	// ListInstanceagentAvailablePlugins

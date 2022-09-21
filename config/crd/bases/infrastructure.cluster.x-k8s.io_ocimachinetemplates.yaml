@@ -52,7 +52,7 @@ spec:
                           for the Oracle Cloud Agent software running on the instance.
                         properties:
                           areAllPluginsDisabled:
-                            description: AreAllPluginsDisabled defines rhether Oracle
+                            description: AreAllPluginsDisabled defines whether Oracle
                               Cloud Agent can run all the available plugins. This
                               includes the management and monitoring plugins. To get
                               a list of available plugins, use the ListInstanceagentAvailablePlugins
@@ -329,13 +329,6 @@ spec:
                         description: InstanceSourceViaImageConfig defines the platform
                           config parameters
                         properties:
-                          PlatformConfigType:
-                            description: The type of platform configuration. Valid
-                              values are * `AMD_ROME_BM_GPU` * `AMD_ROME_BM` * `INTEL_ICELAKE_BM`
-                              * `AMD_VM` * `INTEL_VM` * `INTEL_SKYLAKE_BM` * `AMD_MILAN_BM`
-                              Based on the enum, exactly one of the specific configuration
-                              types must be set
-                            type: string
                           amdMilanBmPlatformConfig:
                             description: AmdMilanBmPlatformConfig describe AMD Milan
                               BM platform configuration
@@ -607,6 +600,13 @@ spec:
                                   is enabled on the instance.
                                 type: boolean
                             type: object
+                          platformConfigType:
+                            description: The type of platform configuration. Valid
+                              values are * `AMD_ROME_BM_GPU` * `AMD_ROME_BM` * `INTEL_ICELAKE_BM`
+                              * `AMD_VM` * `INTEL_VM` * `INTEL_SKYLAKE_BM` * `AMD_MILAN_BM`
+                              Based on the enum, exactly one of the specific configuration
+                              types must be set
+                            type: string
                         type: object
                       preemptibleInstanceConfig:
                         description: PreemptibleInstanceConfig Configuration options
