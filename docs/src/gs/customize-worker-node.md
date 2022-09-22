@@ -73,9 +73,28 @@ spec:
             desiredState: "ENABLED"
 ```
 
+## Configure Burstable Instances
+Use the following configuration in `OCIMachineTemplate` to configure [Burstable Instance][burstable_instances].
+The following values are supported for `baselineOcpuUtilization`.
+* BASELINE_1_8 - baseline usage is 1/8 of an OCPU.
+* BASELINE_1_2 - baseline usage is 1/2 of an OCPU.
+* BASELINE_1_1 - baseline usage is an entire OCPU. This represents a non-burstable instance.
+
+```yaml
+kind: OCIMachineTemplate
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+spec:
+  template:
+    spec:
+      shapeConfig:
+        baselineOcpuUtilization: "BASELINE_1_8"
+        ocpus: "1"
+```
+
 [customer_managed_keys]: https://docs.oracle.com/en-us/iaas/Content/KeyManagement/Tasks/assigningkeys.htm
 [shielded_instances]: https://docs.oracle.com/en-us/iaas/Content/Compute/References/shielded-instances.htm
 [preemptible_instances]: https://docs.oracle.com/en-us/iaas/Content/Compute/Concepts/preemptible.htm#howitworks__using
 [cloud_agent_plugins]: https://docs.oracle.com/en-us/iaas/Content/Compute/Tasks/manage-plugins.htm
 [github_capoci_types]: https://github.com/oracle/cluster-api-provider-oci/blob/main/api/v1beta1/types.go
 [capacity_reservations]: https://docs.oracle.com/en-us/iaas/Content/Compute/Tasks/reserve-capacity.htm
+[burstable_instances]: https://docs.oracle.com/en-us/iaas/Content/Compute/References/burstable-instances.htm
