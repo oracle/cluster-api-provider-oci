@@ -265,6 +265,11 @@ type AmdMilanBmPlatformConfig struct {
 	PercentageOfCoresEnabled *int `json:"percentageOfCoresEnabled,omitempty"`
 
 	// The number of NUMA nodes per socket (NPS).
+	// The following values are supported:
+	// * `NPS0`
+	// * `NPS1`
+	// * `NPS2`
+	// * `NPS4`
 	NumaNodesPerSocket AmdMilanBmPlatformConfigNumaNodesPerSocketEnum `json:"numaNodesPerSocket,omitempty"`
 }
 
@@ -318,6 +323,11 @@ type AmdRomeBmPlatformConfig struct {
 	PercentageOfCoresEnabled *int `json:"percentageOfCoresEnabled,omitempty"`
 
 	// The number of NUMA nodes per socket (NPS).
+	// The following values are supported:
+	// * `NPS0`
+	// * `NPS1`
+	// * `NPS2`
+	// * `NPS4`
 	NumaNodesPerSocket AmdRomeBmPlatformConfigNumaNodesPerSocketEnum `json:"numaNodesPerSocket,omitempty"`
 }
 
@@ -377,6 +387,11 @@ type AmdRomeBmGpuPlatformConfig struct {
 	IsInputOutputMemoryManagementUnitEnabled *bool `json:"isInputOutputMemoryManagementUnitEnabled,omitempty"`
 
 	// The number of NUMA nodes per socket (NPS).
+	// The following values are supported:
+	// * `NPS0`
+	// * `NPS1`
+	// * `NPS2`
+	// * `NPS4`
 	NumaNodesPerSocket AmdRomeBmGpuPlatformConfigNumaNodesPerSocketEnum `json:"numaNodesPerSocket,omitempty"`
 }
 
@@ -421,6 +436,9 @@ type IntelIcelakeBmPlatformConfig struct {
 	PercentageOfCoresEnabled *int `json:"percentageOfCoresEnabled,omitempty"`
 
 	// The number of NUMA nodes per socket (NPS).
+	// The following values are supported:
+	// * `NPS1`
+	// * `NPS2`
 	NumaNodesPerSocket IntelIcelakeBmPlatformConfigNumaNodesPerSocketEnum `json:"numaNodesPerSocket,omitempty"`
 }
 
@@ -484,6 +502,7 @@ type LaunchInstanceAvailabilityConfig struct {
 
 // PreemptibleInstanceConfig Configuration options for preemptible instances.
 type PreemptibleInstanceConfig struct {
+	// TerminatePreemptionAction terminates the preemptible instance when it is interrupted for eviction.
 	TerminatePreemptionAction *TerminatePreemptionAction `json:"terminatePreemptionAction,omitempty"`
 }
 
@@ -556,6 +575,9 @@ type InstanceAgentPluginConfig struct {
 	// DesiredState defines whether the plugin should be enabled or disabled.
 	// To enable the monitoring and management plugins, the `isMonitoringDisabled` and
 	// `isManagementDisabled` attributes must also be set to false.
+	// The following values are supported:
+	// * `ENABLED`
+	// * `DISABLED`
 	DesiredState InstanceAgentPluginConfigDetailsDesiredStateEnum `json:"desiredState,omitempty"`
 }
 
