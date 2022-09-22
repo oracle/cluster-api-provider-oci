@@ -98,11 +98,12 @@ spec:
                                 of plugins associated with this instance.
                               properties:
                                 desiredState:
-                                  description: DesiredState defines whether the plugin
+                                  description: 'DesiredState defines whether the plugin
                                     should be enabled or disabled. To enable the monitoring
                                     and management plugins, the `isMonitoringDisabled`
                                     and `isManagementDisabled` attributes must also
-                                    be set to false.
+                                    be set to false. The following values are supported:
+                                    * `ENABLED` * `DISABLED`'
                                   type: string
                                 name:
                                   description: Name defines the name of the plugin.
@@ -374,7 +375,9 @@ spec:
                                   is enabled on the instance.
                                 type: boolean
                               numaNodesPerSocket:
-                                description: The number of NUMA nodes per socket (NPS).
+                                description: 'The number of NUMA nodes per socket
+                                  (NPS). The following values are supported: * `NPS0`
+                                  * `NPS1` * `NPS2` * `NPS4`'
                                 type: string
                               percentageOfCoresEnabled:
                                 description: The percentage of cores enabled. Value
@@ -435,7 +438,9 @@ spec:
                                   is enabled on the instance.
                                 type: boolean
                               numaNodesPerSocket:
-                                description: The number of NUMA nodes per socket (NPS).
+                                description: 'The number of NUMA nodes per socket
+                                  (NPS). The following values are supported: * `NPS0`
+                                  * `NPS1` * `NPS2` * `NPS4`'
                                 type: string
                             type: object
                           amdRomeBmPlatformConfig:
@@ -483,7 +488,9 @@ spec:
                                   is enabled on the instance.
                                 type: boolean
                               numaNodesPerSocket:
-                                description: The number of NUMA nodes per socket (NPS).
+                                description: 'The number of NUMA nodes per socket
+                                  (NPS). The following values are supported: * `NPS0`
+                                  * `NPS1` * `NPS2` * `NPS4`'
                                 type: string
                               percentageOfCoresEnabled:
                                 description: The percentage of cores enabled. Value
@@ -550,7 +557,9 @@ spec:
                                   is enabled on the instance.
                                 type: boolean
                               numaNodesPerSocket:
-                                description: The number of NUMA nodes per socket (NPS).
+                                description: 'The number of NUMA nodes per socket
+                                  (NPS). The following values are supported: * `NPS1`
+                                  * `NPS2`'
                                 type: string
                               percentageOfCoresEnabled:
                                 description: The percentage of cores enabled. Value
@@ -613,7 +622,7 @@ spec:
                           for preemptible instances.
                         properties:
                           terminatePreemptionAction:
-                            description: TerminatePreemptionAction Terminates the
+                            description: TerminatePreemptionAction terminates the
                               preemptible instance when it is interrupted for eviction.
                             properties:
                               preserveBootVolume:

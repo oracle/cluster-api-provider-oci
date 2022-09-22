@@ -32,4 +32,5 @@
   - [Custom Networking](./networking/custom-networking.md)
   - [Private Cluster](./networking/private-cluster.md)
 - [Reference](./reference/reference.md)
+  - [API Reference](./reference/api-reference.md)
   - [Glossary](./reference/glossary.md)
