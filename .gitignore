@@ -49,6 +49,8 @@ test/e2e/data/infrastructure-oci/v1beta1/cluster-template-local-vcn-peering.yaml
 test/e2e/data/infrastructure-oci/v1beta1/cluster-template-cluster-class.yaml
 test/e2e/data/infrastructure-oci/v1beta1/cluster-template-remote-vcn-peering.yaml
 test/e2e/data/infrastructure-oci/v1beta1/cluster-template-externally-managed-vcn.yaml
+test/e2e/data/infrastructure-oci/v1beta1/cluster-template-alternative-region.yaml
+test/e2e/data/infrastructure-oci/v1beta1/cluster-template-machine-pool.yaml
 
 # tilt
 tilt-settings.json
