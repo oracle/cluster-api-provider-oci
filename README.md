@@ -52,9 +52,10 @@ policy may be made to more closely align with other providers in the Cluster API
 
 CAPOCI supports the following Cluster API versions.
 
-|                              | v1beta1 (v1.0) |
-| ---------------------------- | -------------- |
-| OCI Provider v1beta1 (v0.1)  |        ✓       |
+|                          | Cluster API `v1beta1` (`v1.x.x`) |
+|--------------------------|----------------------------------|
+| OCI Provider `(v0.x.x)`  | ✓                                |
+
 
 ### Kubernetes versions
 
