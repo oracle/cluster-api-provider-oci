@@ -593,7 +593,7 @@ func (c *OCIManagedCluster) GetLBServiceDefaultEgressRules() []infrastructurev1b
 	return []infrastructurev1beta1.EgressSecurityRuleForNSG{
 		{
 			EgressSecurityRule: infrastructurev1beta1.EgressSecurityRule{
-				Description: common.String("Pod to Kubernetes API endpoint communication (when using VCN-native pod networking)."),
+				Description: common.String("Load Balancer to Worker nodes node ports."),
 				Protocol:    common.String("6"),
 				TcpOptions: &infrastructurev1beta1.TcpOptions{
 					DestinationPortRange: &infrastructurev1beta1.PortRange{

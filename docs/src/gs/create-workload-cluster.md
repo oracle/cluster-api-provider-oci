@@ -3,7 +3,9 @@
 ## Workload Cluster Templates
 
 Choose one of the available templates for to create your workload clusters from the
-[latest released artifacts][latest-release]. Each workload cluster template can be
+[latest released artifacts][latest-release]. Please note that the templates provided 
+are to be considered as references and can be customized further as 
+the [CAPOCI API Reference][api-reference]. Each workload cluster template can be
 further configured  with the parameters below.
 
 ## Workload Cluster Parameters
@@ -194,6 +196,6 @@ By default, the [OCI Cloud Controller Manager (CCM)][oci-ccm] is not installed i
 [calico]: ../networking/calico.md
 [cni]: https://www.cni.dev/
 [oci-ccm]: https://github.com/oracle/oci-cloud-controller-manager
-[latest-release]: https://github.com/oracle/cluster-api-provider-oci/releases
+[latest-release]: https://github.com/oracle/cluster-api-provider-oci/releases/latest
 [install-oci-ccm]: ./install-oci-ccm.md
 [configure-authentication]: ./install-cluster-api.html#configure-authentication
