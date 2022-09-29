@@ -20,6 +20,11 @@ allow dynamic-group [your dynamic group name] to manage load-balancers in compar
    ```
 2. Update values in the configuration file as necessary.
 
+   As an example using the provided [`cluster-template.yaml`](https://github.com/oracle/cluster-api-provider-oci/blob/main/templates/cluster-template.yaml)
+   you would modify the `cloud-provider-example.yaml` and make sure to set  `compartment` and `vcn` with the correct OCIDs.
+   Then set `subnet1` to the OCID of your `service-lb` subnet and remove `subnet2`. You would then set
+   `securityListManagementMode` to `"None"`.
+
 3. Create a secret:
 
    ```shell
