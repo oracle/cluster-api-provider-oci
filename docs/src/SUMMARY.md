@@ -18,6 +18,7 @@
     - [Provision a management cluster with OKE](./gs/mgmt/mgmt-oke.md)
   - [Install Cluster API for Oracle Cloud Infrastructure](./gs/install-cluster-api.md)
   - [Create Workload Cluster](./gs/create-workload-cluster.md)
+    - [Create GPU Workload Cluster](./gs/create-gpu-workload-cluster.md)
   - [Create Workload Templates](./gs/create-workload-templates.md)
   - [Using externally managed infrastructure](./gs/externally-managed-cluster-infrastructure.md)
   - [Install Oracle Cloud Infrastructure Cloud Controller Manager](./gs/install-oci-ccm.md)
