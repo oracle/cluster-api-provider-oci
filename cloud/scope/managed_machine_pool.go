@@ -498,10 +498,15 @@ func (m *ManagedMachinePoolScope) getWorkerMachineSubnet(name *string) *string {
 func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.NodePool) (bool, error) {
 	spec := m.OCIManagedMachinePool.Spec.DeepCopy()
 	setMachinePoolSpecDefaults(spec)
-
+	nodePoolSizeUpdateRequired := false
+	// if node pool size update flags is set and if the number of nodes in the spec is not equal to number set in the node pool
+	// update the node pool
+	if m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.UpdateNodePoolSize && (*m.MachinePool.Spec.Replicas != int32(*pool.NodeConfigDetails.Size)) {
+		nodePoolSizeUpdateRequired = true
+	}
 	actual := m.getSpecFromAPIObject(pool)
 	if !reflect.DeepEqual(spec, actual) ||
-		m.OCIManagedMachinePool.Name != *pool.Name {
+		m.OCIManagedMachinePool.Name != *pool.Name || nodePoolSizeUpdateRequired {
 		m.Logger.Info("Updating node pool")
 		// printing json specs will help debug problems when there are spurious/unwanted updates
 		jsonSpec, err := json.Marshal(*spec)
@@ -518,11 +523,13 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 			return false, err
 		}
 		nodeConfigDetails := oke.UpdateNodePoolNodeConfigDetails{
-			Size:                           common.Int(int(*m.MachinePool.Spec.Replicas)),
 			NsgIds:                         m.getWorkerMachineNSGs(),
 			PlacementConfigs:               placementConfig,
 			IsPvEncryptionInTransitEnabled: spec.NodePoolNodeConfig.IsPvEncryptionInTransitEnabled,
 			KmsKeyId:                       spec.NodePoolNodeConfig.KmsKeyId,
+		}
+		if m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.UpdateNodePoolSize {
+			nodeConfigDetails.Size = common.Int(int(*m.MachinePool.Spec.Replicas))
 		}
 		nodeShapeConfig := oke.UpdateNodeShapeConfigDetails{}
 		if spec.NodeShapeConfig != nil {
@@ -605,11 +612,15 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 func setMachinePoolSpecDefaults(spec *infrav1exp.OCIManagedMachinePoolSpec) {
 	spec.ProviderIDList = nil
 	spec.ProviderID = nil
-	if spec.NodePoolNodeConfig != nil && spec.NodePoolNodeConfig.PlacementConfigs != nil {
-		configs := spec.NodePoolNodeConfig.PlacementConfigs
-		sort.Slice(configs, func(i, j int) bool {
-			return *configs[i].AvailabilityDomain < *configs[j].AvailabilityDomain
-		})
+	if spec.NodePoolNodeConfig != nil {
+		if spec.NodePoolNodeConfig.PlacementConfigs != nil {
+			configs := spec.NodePoolNodeConfig.PlacementConfigs
+			sort.Slice(configs, func(i, j int) bool {
+				return *configs[i].AvailabilityDomain < *configs[j].AvailabilityDomain
+			})
+		}
+		// set to default value as we should not compare this field
+		spec.NodePoolNodeConfig.UpdateNodePoolSize = false
 	}
 	podNetworkOptions := spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails
 	if podNetworkOptions != nil {
