@@ -25,6 +25,11 @@ jobs:
       - name: Build Release Artifacts
         run: RELEASE_TAG="${{ github.ref_name }}" make release
 
+      - name: Update crds docs
+        run: |
+          echo "Release Tag: ${{ github.ref_name }}" 
+          curl -sSL https://doc.crds.dev/github.com/oracle/cluster-api-provider-oci@${{ github.ref_name }}
+
       - uses: actions/upload-artifact@v2
         with:
           name: CAPOCI Artifacts
