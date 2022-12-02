@@ -35,6 +35,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/component-base/logs"
+	logsV1 "k8s.io/component-base/logs/api/v1"
 	_ "k8s.io/component-base/logs/json/register"
 	"k8s.io/klog/v2"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -79,7 +80,7 @@ func main() {
 
 	fs := pflag.CommandLine
 	logs.AddFlags(fs, logs.SkipLoggingConfigurationFlags())
-	logOptions.AddFlags(fs)
+	logsV1.AddFlags(logOptions, fs)
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -122,7 +123,7 @@ func main() {
 	feature.MutableGates.AddFlag(pflag.CommandLine)
 	pflag.Parse()
 
-	if err := logOptions.ValidateAndApply(nil); err != nil {
+	if err := logsV1.ValidateAndApply(logOptions, nil); err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}

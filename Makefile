@@ -61,7 +61,7 @@ ENVSUBST_VER := v2.0.0-20210730161058-179042472c46
 ENVSUBST_BIN := envsubst
 ENVSUBST := $(TOOLS_BIN_DIR)/$(ENVSUBST_BIN)-$(ENVSUBST_VER)
 
-KUBECTL_VER := v1.22.9
+KUBECTL_VER := v1.23.14
 KUBECTL_BIN := kubectl
 KUBECTL := $(TOOLS_BIN_DIR)/$(KUBECTL_BIN)-$(KUBECTL_VER)
 
@@ -157,7 +157,7 @@ lint: $(GOLANGCI_LINT)
 .PHONY: docker-pull-prerequisites
 docker-pull-prerequisites:
     docker pull docker/dockerfile:1.1-experimental
-	docker pull docker.io/library/golang:1.16
+	docker pull docker.io/library/golang:1.19
 	docker pull gcr.io/distroless/static:latest
 
 .PHONY: lint docker-build
@@ -256,7 +256,7 @@ generate-e2e-templates: $(KUSTOMIZE)
 .PHONY: test-e2e-run
 test-e2e-run: generate-e2e-templates $(GINKGO) $(ENVSUBST) ## Run e2e tests
 	$(ENVSUBST) < $(E2E_CONF_FILE) > $(E2E_CONF_FILE_ENVSUBST) && \
-    $(GINKGO) -v -trace -tags=e2e -focus="$(GINKGO_FOCUS)" -skip=$(GINKGO_SKIP) -nodes=$(GINKGO_NODES) --noColor=$(GINKGO_NOCOLOR) $(GINKGO_ARGS) ./test/e2e -- \
+    $(GINKGO) -v -trace -tags=e2e -focus="$(GINKGO_FOCUS)" -skip=$(GINKGO_SKIP) -nodes=$(GINKGO_NODES) --no-color=$(GINKGO_NOCOLOR) $(GINKGO_ARGS) ./test/e2e -- \
     	-e2e.artifacts-folder="$(ARTIFACTS)" \
     	-e2e.config="$(E2E_CONF_FILE_ENVSUBST)" \
     	-e2e.skip-resource-cleanup=$(SKIP_CLEANUP) -e2e.use-existing-cluster=$(SKIP_CREATE_MGMT_CLUSTER) $(E2E_ARGS)
@@ -326,13 +326,13 @@ envsubst: $(ENVSUBST) ## Build a local copy of envsubst.
 kubectl: $(KUBECTL) ## Build a local copy of kubectl.
 
 $(CONTROLLER_GEN): ## Download controller-gen locally if necessary.
-	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) sigs.k8s.io/controller-tools/cmd/controller-gen $(CONTROLLER_GEN_BIN) v0.7.0
+	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) sigs.k8s.io/controller-tools/cmd/controller-gen $(CONTROLLER_GEN_BIN) v0.10.0
 
 $(KUSTOMIZE): ## Download kustomize locally if necessary.
 	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) sigs.k8s.io/kustomize/kustomize/v4 $(KUSTOMIZE_BIN) v4.5.2
 
 $(GINKGO): ## Build ginkgo.
-	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) github.com/onsi/ginkgo/ginkgo $(GINKGO_BIN) v1.16.5
+	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) github.com/onsi/ginkgo/v2/ginkgo $(GINKGO_BIN) v2.5.0
 
 $(GOLANGCI_LINT): ## Build golanci-lint.
 	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) github.com/golangci/golangci-lint/cmd/golangci-lint $(GOLANGCI_LINT_BIN) v1.44.0
