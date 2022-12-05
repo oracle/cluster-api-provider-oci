@@ -537,7 +537,7 @@ func (m *MachineScope) ReconcileCreateInstanceOnLB(ctx context.Context) error {
 // ReconcileDeleteInstanceOnLB checks to make sure the instance is part of a backend set then deletes the backend
 // on the NetworkLoadBalancer
 //
-// It will await the Work Request completion before returning
+// # It will await the Work Request completion before returning
 //
 // See https://docs.oracle.com/en-us/iaas/Content/NetworkLoadBalancer/BackendServers/backend_server_management.htm#BackendServerManagement
 // for more info on Backend Server Management

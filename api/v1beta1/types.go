@@ -878,7 +878,7 @@ type VCN struct {
 	NetworkSecurityGroups []*NSG `json:"networkSecurityGroups,omitempty"`
 }
 
-//LoadBalancer Configuration
+// LoadBalancer Configuration
 type LoadBalancer struct {
 	//LoadBalancer Name.
 	// +optional
