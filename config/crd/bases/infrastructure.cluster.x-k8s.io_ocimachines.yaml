@@ -1,10 +1,9 @@
-
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.7.0
+    controller-gen.kubebuilder.io/version: v0.10.0
   creationTimestamp: null
   name: ocimachines.infrastructure.cluster.x-k8s.io
 spec:
@@ -39,8 +38,8 @@ spec:
               for more information about the parameters below
             properties:
               agentConfig:
-                description: LaunchInstanceAgentConfig defines the options for the
-                  Oracle Cloud Agent software running on the instance.
+                description: AgentConfig defines the options for the Oracle Cloud
+                  Agent software running on the instance.
                 properties:
                   areAllPluginsDisabled:
                     description: AreAllPluginsDisabled defines whether Oracle Cloud
@@ -182,11 +181,11 @@ spec:
                       performance units (VPUs) that will be applied to this volume
                       per GB, representing the Block Volume service''s elastic performance
                       options. See Block Volume Performance Levels (https://docs.cloud.oracle.com/iaas/Content/Block/Concepts/blockvolumeperformance.htm#perf_levels)
-                      for more information. Allowed values:   * `10`: Represents Balanced
-                      option.   * `20`: Represents Higher Performance option.   *
-                      `30`-`120`: Represents the Ultra High Performance option. For
-                      volumes with the auto-tuned performance feature enabled, this
-                      is set to the default (minimum) VPUs/GB.'
+                      for more information. Allowed values: * `10`: Represents Balanced
+                      option. * `20`: Represents Higher Performance option. * `30`-`120`:
+                      Represents the Ultra High Performance option. For volumes with
+                      the auto-tuned performance feature enabled, this is set to the
+                      default (minimum) VPUs/GB.'
                     format: int64
                     type: integer
                   kmsKeyId:
@@ -301,8 +300,7 @@ spec:
                   please use NetworkDetails.NSGNames
                 type: string
               platformConfig:
-                description: InstanceSourceViaImageConfig defines the platform config
-                  parameters
+                description: PlatformConfig defines the platform config parameters
                 properties:
                   amdMilanBmPlatformConfig:
                     description: AmdMilanBmPlatformConfig describe AMD Milan BM platform
@@ -714,9 +712,3 @@ spec:
     storage: true
     subresources:
       status: {}
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []

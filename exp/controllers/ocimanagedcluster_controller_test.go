@@ -70,12 +70,12 @@ func TestOCIClusterReconciler_Reconcile(t *testing.T) {
 		},
 		{
 			name:          "no owner reference",
-			objects:       []client.Object{getSecret(), getOciClusterWithNoOwner()},
+			objects:       []client.Object{getSecret(), getOCIManagedClusterWithNoOwner()},
 			expectedEvent: "OwnerRefNotSet",
 		},
 		{
 			name:          "cluster is paused",
-			objects:       []client.Object{getSecret(), getOCIClusterWithOwner(), getPausedInfraCluster()},
+			objects:       []client.Object{getSecret(), getOCIManagedClusterWithOwner(), getPausedInfraCluster()},
 			expectedEvent: "ClusterPaused",
 		},
 	}
@@ -633,7 +633,7 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 	}
 }
 
-func getOciClusterWithNoOwner() *infrav1exp.OCIManagedCluster {
+func getOCIManagedClusterWithNoOwner() *infrav1exp.OCIManagedCluster {
 	ociCluster := &infrav1exp.OCIManagedCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-cluster",
@@ -690,8 +690,8 @@ func getOciClusterWithNoOwner() *infrav1exp.OCIManagedCluster {
 	return ociCluster
 }
 
-func getOCIClusterWithOwner() *infrav1exp.OCIManagedCluster {
-	ociCluster := getOciClusterWithNoOwner()
+func getOCIManagedClusterWithOwner() *infrav1exp.OCIManagedCluster {
+	ociCluster := getOCIManagedClusterWithNoOwner()
 	ociCluster.OwnerReferences = []metav1.OwnerReference{
 		{
 			Name:       "test-cluster",
@@ -722,7 +722,7 @@ func getSecret() *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "bootstrap",
-			Namespace: "default",
+			Namespace: "test",
 		},
 		Data: map[string][]byte{
 			"value": []byte("test"),

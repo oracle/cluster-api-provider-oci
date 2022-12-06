@@ -12,18 +12,18 @@ import (
 	core "github.com/oracle/oci-go-sdk/v65/core"
 )
 
-// MockComputeClient is a mock of ComputeClient interface.
+// MockComputeClient is a mock_computemanagement of ComputeClient interface.
 type MockComputeClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockComputeClientMockRecorder
 }
 
-// MockComputeClientMockRecorder is the mock recorder for MockComputeClient.
+// MockComputeClientMockRecorder is the mock_computemanagement recorder for MockComputeClient.
 type MockComputeClientMockRecorder struct {
 	mock *MockComputeClient
 }
 
-// NewMockComputeClient creates a new mock instance.
+// NewMockComputeClient creates a new mock_computemanagement instance.
 func NewMockComputeClient(ctrl *gomock.Controller) *MockComputeClient {
 	mock := &MockComputeClient{ctrl: ctrl}
 	mock.recorder = &MockComputeClientMockRecorder{mock}

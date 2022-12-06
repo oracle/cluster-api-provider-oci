@@ -84,7 +84,7 @@ func MockAuthConfig() (config.AuthConfig, error) {
 	authConfig := config.AuthConfig{
 		UseInstancePrincipals: false,
 		Region:                MockTestRegion,
-		Fingerprint:           "mock-finger-print",
+		Fingerprint:           "mock_computemanagement-finger-print",
 		PrivateKey:            privateKey,
 		UserID:                "ocid1.tenancy.oc1..<unique_ID>",
 		TenancyID:             "ocid1.tenancy.oc1..<unique_ID>",

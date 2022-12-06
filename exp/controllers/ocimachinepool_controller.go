@@ -23,6 +23,7 @@ import (
 
 	"github.com/go-logr/logr"
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	infrav1exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
 	"github.com/oracle/oci-go-sdk/v65/common"
@@ -90,14 +91,16 @@ func (r *OCIMachinePoolReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return reconcile.Result{}, err
 	}
 	if machinePool == nil {
+		r.Recorder.Eventf(ociMachinePool, corev1.EventTypeNormal, "OwnerRefNotSet", "Cluster Controller has not yet set OwnerRef")
 		logger.Info("MachinePool Controller has not yet set OwnerRef")
 		return reconcile.Result{}, nil
 	}
 	logger = logger.WithValues("machinePool", machinePool.Name)
 
 	// Fetch the Cluster.
-	cluster, err := util.GetClusterFromMetadata(ctx, r.Client, machinePool.ObjectMeta)
+	cluster, err := util.GetClusterFromMetadata(ctx, r.Client, ociMachinePool.ObjectMeta)
 	if err != nil {
+		r.Recorder.Eventf(ociMachinePool, corev1.EventTypeWarning, "ClusterDoesNotExist", "MachinePool is missing cluster label or cluster does not exist")
 		logger.Info("MachinePool is missing cluster label or cluster does not exist")
 		return reconcile.Result{}, nil
 	}
@@ -258,7 +261,7 @@ func (r *OCIMachinePoolReconciler) reconcileNormal(ctx context.Context, logger l
 	// Make sure bootstrap data is available and populated.
 	if machinePoolScope.MachinePool.Spec.Template.Spec.Bootstrap.DataSecretName == nil {
 		r.Recorder.Event(machinePoolScope.OCIMachinePool, corev1.EventTypeNormal, infrastructurev1beta1.WaitingForBootstrapDataReason, "Bootstrap data secret reference is not yet available")
-		conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrastructurev1beta1.InstanceReadyCondition, infrastructurev1beta1.WaitingForBootstrapDataReason, clusterv1.ConditionSeverityInfo, "")
+		conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav1exp.InstancePoolReadyCondition, infrastructurev1beta1.WaitingForBootstrapDataReason, clusterv1.ConditionSeverityInfo, "")
 		logger.Info("Bootstrap data secret reference is not yet available")
 		return reconcile.Result{}, nil
 	}
@@ -290,15 +293,9 @@ func (r *OCIMachinePoolReconciler) reconcileNormal(ctx context.Context, logger l
 		return ctrl.Result{}, nil
 	}
 
-	if err := machinePoolScope.UpdatePool(ctx, instancePool); err != nil {
-		r.Recorder.Eventf(machinePoolScope.OCIMachinePool, corev1.EventTypeWarning, "FailedUpdate", "Failed to update instance pool: %v", err)
-		machinePoolScope.Error(err, "error updating OCIMachinePool")
-		return ctrl.Result{}, err
-	}
-
 	machinePoolScope.Info("OCI Compute Instance Pool found", "InstancePoolId", *instancePool.Id)
 	machinePoolScope.OCIMachinePool.Spec.ProviderID = common.String(fmt.Sprintf("oci://%s", *instancePool.Id))
-	machinePoolScope.OCIMachinePool.Spec.OCID = *instancePool.Id
+	machinePoolScope.OCIMachinePool.Spec.OCID = instancePool.Id
 
 	switch instancePool.LifecycleState {
 	case core.InstancePoolLifecycleStateProvisioning, core.InstancePoolLifecycleStateStarting:
@@ -321,7 +318,16 @@ func (r *OCIMachinePoolReconciler) reconcileNormal(ctx context.Context, logger l
 		if err != nil {
 			return reconcile.Result{}, err
 		}
-
+		instancePool, err = machinePoolScope.UpdatePool(ctx, instancePool)
+		if err != nil {
+			r.Recorder.Eventf(machinePoolScope.OCIMachinePool, corev1.EventTypeWarning, "FailedUpdate", "Failed to update instance pool: %v", err)
+			machinePoolScope.Error(err, "error updating OCIMachinePool")
+			return ctrl.Result{}, err
+		}
+		err = machinePoolScope.CleanupInstanceConfiguration(ctx, instancePool)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 		machinePoolScope.SetReplicaCount(instanceCount)
 		machinePoolScope.SetReady()
 	default:
@@ -342,50 +348,60 @@ func (r *OCIMachinePoolReconciler) reconcileDelete(ctx context.Context, machineP
 	// Find existing Instance Pool
 	instancePool, err := machinePoolScope.FindInstancePool(ctx)
 	if err != nil {
-		conditions.MarkUnknown(machinePoolScope.OCIMachinePool, infrav1exp.InstancePoolReadyCondition, infrav1exp.InstancePoolNotFoundReason, err.Error())
-		return ctrl.Result{}, err
+		if !ociutil.IsNotFound(err) {
+			return ctrl.Result{}, err
+		}
 	}
 
 	if instancePool == nil {
-		machinePoolScope.V(2).Info("Unable to locate instance pool", "id", machinePoolScope.OCIMachinePool.Spec.ProviderID)
+		machinePoolScope.OCIMachinePool.Status.Ready = false
+		conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav1exp.InstancePoolReadyCondition, infrav1exp.InstancePoolNotFoundReason, clusterv1.ConditionSeverityWarning, "")
+		machinePoolScope.Info("Instance Pool may already be deleted", "displayName", instancePool.DisplayName, "id", instancePool.Id)
 		r.Recorder.Eventf(machinePoolScope.OCIMachinePool, corev1.EventTypeNormal, infrav1exp.InstancePoolNotFoundReason, "Unable to find matching instance pool")
 	} else {
 		switch instancePool.LifecycleState {
 		case core.InstancePoolLifecycleStateTerminating:
-			// Instance Pool is already deleting
+			machinePoolScope.Info("Instance Pool is already deleting", "displayName", instancePool.DisplayName, "id", instancePool.Id)
+			// check back after 30 seconds
+			return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
+		case core.InstancePoolLifecycleStateTerminated:
+			// Instance Pool is already deleted
 			machinePoolScope.OCIMachinePool.Status.Ready = false
 			conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav1exp.InstancePoolReadyCondition, infrav1exp.InstancePoolDeletionInProgress, clusterv1.ConditionSeverityWarning, "")
 			r.Recorder.Eventf(machinePoolScope.OCIMachinePool, corev1.EventTypeWarning, "DeletionInProgress", "Instance Pool deletion in progress: %s - %s", instancePool.DisplayName, instancePool.Id)
-			machinePoolScope.Info("Instance Pool is already deleting", "displayName", instancePool.DisplayName, "id", instancePool.Id)
-		case core.InstancePoolLifecycleStateTerminated:
 			machinePoolScope.Info("Instance Pool is already deleted", "displayName", instancePool.DisplayName, "id", instancePool.Id)
 		default:
 			if err := machinePoolScope.TerminateInstancePool(ctx, instancePool); err != nil {
 				r.Recorder.Eventf(machinePoolScope.OCIMachinePool, corev1.EventTypeWarning, "FailedDelete", "Failed to delete instance pool %q: %v", instancePool.Id, err)
 				return ctrl.Result{}, errors.Wrap(err, "failed to delete instance pool")
+			} else {
+				// check back after 30 seconds
+				return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 			}
 		}
 	}
 
-	instanceConfigurationId := machinePoolScope.GetInstanceConfigurationId()
-	if len(instanceConfigurationId) <= 0 {
-		machinePoolScope.V(2).Info("Unable to locate instance configuration")
-		r.Recorder.Eventf(machinePoolScope.OCIMachinePool, corev1.EventTypeNormal, infrav1exp.InstancePoolNotFoundReason, "Unable to find matching instance configuration")
-		controllerutil.RemoveFinalizer(machinePoolScope.OCIMachinePool, infrav1exp.MachinePoolFinalizer)
-		return ctrl.Result{}, nil
+	err = machinePoolScope.CleanupInstanceConfiguration(ctx, nil)
+	if err != nil {
+		return ctrl.Result{}, err
 	}
-
-	machinePoolScope.Info("deleting instance configuration", "id", instanceConfigurationId)
-	req := core.DeleteInstanceConfigurationRequest{InstanceConfigurationId: common.String(instanceConfigurationId)}
-	if _, err := machinePoolScope.ComputeManagementClient.DeleteInstanceConfiguration(ctx, req); err != nil {
-		r.Recorder.Eventf(machinePoolScope.OCIMachinePool, corev1.EventTypeWarning, "FailedDelete", "Failed to delete instance configuration %q: %v", instanceConfigurationId, err)
-		return ctrl.Result{}, errors.Wrap(err, "failed to delete instance pool")
+	instanceConfiguration, err := machinePoolScope.GetInstanceConfiguration(ctx)
+	if err != nil {
+		if !ociutil.IsNotFound(err) {
+			return reconcile.Result{}, err
+		}
 	}
-
+	if instanceConfiguration != nil {
+		instanceConfigurationId := instanceConfiguration.Id
+		machinePoolScope.Info("deleting instance configuration", "id", *instanceConfigurationId)
+		req := core.DeleteInstanceConfigurationRequest{InstanceConfigurationId: instanceConfigurationId}
+		if _, err := machinePoolScope.ComputeManagementClient.DeleteInstanceConfiguration(ctx, req); err != nil {
+			r.Recorder.Eventf(machinePoolScope.OCIMachinePool, corev1.EventTypeWarning, "FailedDelete", "Failed to delete instance configuration %q: %v", instanceConfigurationId, err)
+			return ctrl.Result{}, errors.Wrap(err, "failed to delete instance configuration")
+		}
+	}
 	machinePoolScope.Info("successfully deleted instance pool and Launch Template")
-
 	// remove finalizer
 	controllerutil.RemoveFinalizer(machinePoolScope.OCIMachinePool, infrav1exp.MachinePoolFinalizer)
-
 	return ctrl.Result{}, nil
 }

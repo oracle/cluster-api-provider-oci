@@ -11,18 +11,18 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
-// MockBaseClient is a mock of BaseClient interface.
+// MockBaseClient is a mock_computemanagement of BaseClient interface.
 type MockBaseClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockBaseClientMockRecorder
 }
 
-// MockBaseClientMockRecorder is the mock recorder for MockBaseClient.
+// MockBaseClientMockRecorder is the mock_computemanagement recorder for MockBaseClient.
 type MockBaseClientMockRecorder struct {
 	mock *MockBaseClient
 }
 
-// NewMockBaseClient creates a new mock instance.
+// NewMockBaseClient creates a new mock_computemanagement instance.
 func NewMockBaseClient(ctrl *gomock.Controller) *MockBaseClient {
 	mock := &MockBaseClient{ctrl: ctrl}
 	mock.recorder = &MockBaseClientMockRecorder{mock}

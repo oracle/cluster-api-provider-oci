@@ -193,7 +193,7 @@ func TestControlPlaneReconciliationFunction(t *testing.T) {
 		okeClient = mock_containerengine.NewMockClient(mockCtrl)
 		baseClient = mock_base.NewMockBaseClient(mockCtrl)
 		ociManagedControlPlane = getOCIManagedControlPlane()
-		ociCluster := getOCIClusterWithOwner()
+		ociCluster := getOCIManagedClusterWithOwner()
 		ociClusterAccess := scope.OCIManagedCluster{
 			OCIManagedCluster: ociCluster,
 		}
@@ -492,7 +492,7 @@ func TestControlPlaneDeletionFunction(t *testing.T) {
 		okeClient = mock_containerengine.NewMockClient(mockCtrl)
 		baseClient = mock_base.NewMockBaseClient(mockCtrl)
 		ociManagedControlPlane = getOCIManagedControlPlane()
-		ociCluster := getOCIClusterWithOwner()
+		ociCluster := getOCIManagedClusterWithOwner()
 		ociClusterAccess := scope.OCIManagedCluster{
 			OCIManagedCluster: ociCluster,
 		}
