@@ -12,18 +12,18 @@ import (
 	scope "github.com/oracle/cluster-api-provider-oci/cloud/scope"
 )
 
-// MockClusterScopeClient is a mock of ClusterScopeClient interface.
+// MockClusterScopeClient is a mock_computemanagement of ClusterScopeClient interface.
 type MockClusterScopeClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockClusterScopeClientMockRecorder
 }
 
-// MockClusterScopeClientMockRecorder is the mock recorder for MockClusterScopeClient.
+// MockClusterScopeClientMockRecorder is the mock_computemanagement recorder for MockClusterScopeClient.
 type MockClusterScopeClientMockRecorder struct {
 	mock *MockClusterScopeClient
 }
 
-// NewMockClusterScopeClient creates a new mock instance.
+// NewMockClusterScopeClient creates a new mock_computemanagement instance.
 func NewMockClusterScopeClient(ctrl *gomock.Controller) *MockClusterScopeClient {
 	mock := &MockClusterScopeClient{ctrl: ctrl}
 	mock.recorder = &MockClusterScopeClientMockRecorder{mock}

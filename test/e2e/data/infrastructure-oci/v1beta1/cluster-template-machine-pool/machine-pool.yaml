@@ -27,14 +27,15 @@ metadata:
   name: "${CLUSTER_NAME}-mp-0"
   namespace: default
 spec:
-  imageId: "${OCI_IMAGE_ID}"
-  metadata:
-    ssh_authorized_keys: "${OCI_SSH_KEY}"
-  shapeConfig:
-    ocpus: "1"
   instanceConfiguration:
-    instanceDetails:
-      shape: "${OCI_NODE_MACHINE_TYPE=VM.Standard.E4.Flex}"
+    metadata:
+      ssh_authorized_keys: "${OCI_SSH_KEY}"
+    instanceSourceViaImageConfig:
+      imageId: "${OCI_IMAGE_ID}"
+    shape: "${OCI_NODE_MACHINE_TYPE=VM.Standard.E4.Flex}"
+    shapeConfig:
+      ocpus: "1"
+
 ---
 apiVersion: bootstrap.cluster.x-k8s.io/v1alpha4
 kind: KubeadmConfig

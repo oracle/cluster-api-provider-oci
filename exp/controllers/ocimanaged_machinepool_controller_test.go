@@ -158,7 +158,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 		okeClient = mock_containerengine.NewMockClient(mockCtrl)
 		machinePool := getMachinePool()
 		ociManagedMachinePool = getOCIManagedMachinePool()
-		ociCluster := getOCIClusterWithOwner()
+		ociCluster := getOCIManagedClusterWithOwner()
 		ociManagedControlPlane := infrav1exp.OCIManagedControlPlane{
 			Spec: infrav1exp.OCIManagedControlPlaneSpec{
 				ID: common.String("cluster-id"),
@@ -454,7 +454,7 @@ func TestDeletionFunction(t *testing.T) {
 		okeClient = mock_containerengine.NewMockClient(mockCtrl)
 		machinePool := getMachinePool()
 		ociManagedMachinePool = getOCIManagedMachinePool()
-		ociCluster := getOCIClusterWithOwner()
+		ociCluster := getOCIManagedClusterWithOwner()
 		ociManagedControlPlane := infrav1exp.OCIManagedControlPlane{
 			Spec: infrav1exp.OCIManagedControlPlaneSpec{
 				ID: common.String("cluster-id"),

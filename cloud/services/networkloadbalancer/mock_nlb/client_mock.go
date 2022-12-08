@@ -12,18 +12,18 @@ import (
 	networkloadbalancer "github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
 )
 
-// MockNetworkLoadBalancerClient is a mock of LoadBalancerClient interface.
+// MockNetworkLoadBalancerClient is a mock_computemanagement of LoadBalancerClient interface.
 type MockNetworkLoadBalancerClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockNetworkLoadBalancerClientMockRecorder
 }
 
-// MockNetworkLoadBalancerClientMockRecorder is the mock recorder for MockNetworkLoadBalancerClient.
+// MockNetworkLoadBalancerClientMockRecorder is the mock_computemanagement recorder for MockNetworkLoadBalancerClient.
 type MockNetworkLoadBalancerClientMockRecorder struct {
 	mock *MockNetworkLoadBalancerClient
 }
 
-// NewMockNetworkLoadBalancerClient creates a new mock instance.
+// NewMockNetworkLoadBalancerClient creates a new mock_computemanagement instance.
 func NewMockNetworkLoadBalancerClient(ctrl *gomock.Controller) *MockNetworkLoadBalancerClient {
 	mock := &MockNetworkLoadBalancerClient{ctrl: ctrl}
 	mock.recorder = &MockNetworkLoadBalancerClientMockRecorder{mock}

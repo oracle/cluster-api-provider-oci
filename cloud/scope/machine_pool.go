@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -46,7 +47,7 @@ import (
 
 const OCIMachinePoolKind = "OCIMachinePool"
 
-// MachineScopeParams defines the params need to create a new MachineScope
+// MachinePoolScopeParams defines the params need to create a new MachineScope
 type MachinePoolScopeParams struct {
 	Logger                  *logr.Logger
 	Cluster                 *clusterv1.Cluster
@@ -55,7 +56,6 @@ type MachinePoolScopeParams struct {
 	ComputeManagementClient computemanagement.Client
 	OCICluster              *infrastructurev1beta1.OCICluster
 	OCIMachinePool          *expinfra1.OCIMachinePool
-	OCIMachine              *infrastructurev1beta1.OCIMachine
 }
 
 type MachinePoolScope struct {
@@ -67,7 +67,6 @@ type MachinePoolScope struct {
 	ComputeManagementClient computemanagement.Client
 	OCICluster              *infrastructurev1beta1.OCICluster
 	OCIMachinePool          *expinfra1.OCIMachinePool
-	OCIMachine              *infrastructurev1beta1.OCIMachine
 }
 
 // NewMachinePoolScope creates a MachinePoolScope given the MachinePoolScopeParams
@@ -116,13 +115,13 @@ func (m *MachinePoolScope) HasFailed() bool {
 }
 
 // GetInstanceConfigurationId returns the MachinePoolScope instance configuration id.
-func (m *MachinePoolScope) GetInstanceConfigurationId() string {
+func (m *MachinePoolScope) GetInstanceConfigurationId() *string {
 	return m.OCIMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId
 }
 
 // SetInstanceConfigurationIdStatus sets the MachinePool InstanceConfigurationId status.
 func (m *MachinePoolScope) SetInstanceConfigurationIdStatus(id string) {
-	m.OCIMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId = id
+	m.OCIMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId = &id
 }
 
 // SetFailureMessage sets the OCIMachine status error message.
@@ -156,14 +155,14 @@ func (m *MachinePoolScope) GetWorkerMachineSubnet() *string {
 
 // ListMachinePoolInstances returns the WorkerRole core.Subnet id for the cluster
 func (m *MachinePoolScope) ListMachinePoolInstances(ctx context.Context) ([]core.InstanceSummary, error) {
-	poolOid := m.OCIMachinePool.Spec.OCID
-	if len(poolOid) <= 0 {
+	poolOcid := m.OCIMachinePool.Spec.OCID
+	if poolOcid == nil {
 		return nil, errors.New("OCIMachinePool OCID can't be empty")
 	}
 
 	req := core.ListInstancePoolInstancesRequest{
 		CompartmentId:  common.String(m.OCICluster.Spec.CompartmentId),
-		InstancePoolId: common.String(poolOid),
+		InstancePoolId: poolOcid,
 	}
 
 	var instanceSummaries []core.InstanceSummary
@@ -191,7 +190,7 @@ func (m *MachinePoolScope) ListMachinePoolInstances(ctx context.Context) ([]core
 func (m *MachinePoolScope) SetListandSetMachinePoolInstances(ctx context.Context) (int32, error) {
 	poolInstanceSummaries, err := m.ListMachinePoolInstances(ctx)
 	if err != nil {
-		return 0, errors.New("Unable to list machine pool's instances")
+		return 0, err
 	}
 	providerIDList := make([]string, len(poolInstanceSummaries))
 
@@ -235,31 +234,28 @@ func (m *MachinePoolScope) GetWorkerMachineNSG() *string {
 	return nil
 }
 
-// BuildInstanceConfigurationShapeConfig builds the core.InstanceConfigurationLaunchInstanceShapeConfigDetails based
-// on the MachinePoolScope
-func (m *MachinePoolScope) BuildInstanceConfigurationShapeConfig() (core.InstanceConfigurationLaunchInstanceShapeConfigDetails, error) {
+func (m *MachinePoolScope) buildInstanceConfigurationShapeConfig() (core.InstanceConfigurationLaunchInstanceShapeConfigDetails, error) {
 	shapeConfig := core.InstanceConfigurationLaunchInstanceShapeConfigDetails{}
-	if (m.OCIMachinePool.Spec.ShapeConfig != expinfra1.ShapeConfig{}) {
-		ocpuString := m.OCIMachinePool.Spec.ShapeConfig.Ocpus
-		if ocpuString != "" {
-			ocpus, err := strconv.ParseFloat(ocpuString, 32)
+	shapeConfigSpec := m.OCIMachinePool.Spec.InstanceConfiguration.ShapeConfig
+	if shapeConfigSpec != nil {
+		if shapeConfigSpec.Ocpus != nil {
+			ocpus, err := strconv.ParseFloat(*shapeConfigSpec.Ocpus, 32)
 			if err != nil {
 				return core.InstanceConfigurationLaunchInstanceShapeConfigDetails{}, errors.New(fmt.Sprintf("ocpus provided %s is not a valid floating point",
-					ocpuString))
+					*shapeConfigSpec.Ocpus))
 			}
 			shapeConfig.Ocpus = common.Float32(float32(ocpus))
 		}
 
-		memoryInGBsString := m.OCIMachinePool.Spec.ShapeConfig.MemoryInGBs
-		if memoryInGBsString != "" {
-			memoryInGBs, err := strconv.ParseFloat(memoryInGBsString, 32)
+		if shapeConfigSpec.MemoryInGBs != nil {
+			memoryInGBs, err := strconv.ParseFloat(*shapeConfigSpec.MemoryInGBs, 32)
 			if err != nil {
 				return core.InstanceConfigurationLaunchInstanceShapeConfigDetails{}, errors.New(fmt.Sprintf("memoryInGBs provided %s is not a valid floating point",
-					memoryInGBsString))
+					*shapeConfigSpec.MemoryInGBs))
 			}
 			shapeConfig.MemoryInGBs = common.Float32(float32(memoryInGBs))
 		}
-		baselineOcpuOptString := m.OCIMachinePool.Spec.ShapeConfig.BaselineOcpuUtilization
+		baselineOcpuOptString := shapeConfigSpec.BaselineOcpuUtilization
 		if baselineOcpuOptString != "" {
 			value, err := ociutil.GetInstanceConfigBaseLineOcpuOptimizationEnum(baselineOcpuOptString)
 			if err != nil {
@@ -267,6 +263,7 @@ func (m *MachinePoolScope) BuildInstanceConfigurationShapeConfig() (core.Instanc
 			}
 			shapeConfig.BaselineOcpuUtilization = value
 		}
+		shapeConfig.Nvmes = shapeConfigSpec.Nvmes
 	}
 
 	return shapeConfig, nil
@@ -342,87 +339,144 @@ func (m *MachinePoolScope) GetFreeFormTags() map[string]string {
 // ReconcileInstanceConfiguration works to try to reconcile the state of the instance configuration for the cluster
 func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context) error {
 	var instanceConfiguration *core.InstanceConfiguration
-	instanceConfigurationId := m.GetInstanceConfigurationId()
-
-	if len(instanceConfigurationId) > 0 {
-		req := core.GetInstanceConfigurationRequest{InstanceConfigurationId: common.String(instanceConfigurationId)}
-		instanceConfiguration, err := m.ComputeManagementClient.GetInstanceConfiguration(ctx, req)
-		if err == nil {
-			m.Info("instance configuration found", "InstanceConfigurationId", instanceConfiguration.Id)
-			m.SetInstanceConfigurationIdStatus(instanceConfigurationId)
-			return m.PatchObject(ctx)
-		} else {
-			return errors.Wrap(err, fmt.Sprintf("error getting instance configuration by id %s", instanceConfigurationId))
+	instanceConfiguration, err := m.GetInstanceConfiguration(ctx)
+	if err != nil {
+		return err
+	}
+	freeFormTags := m.GetFreeFormTags()
+	definedTags := make(map[string]map[string]interface{})
+	if m.OCICluster.Spec.DefinedTags != nil {
+		for ns, mapNs := range m.OCICluster.Spec.DefinedTags {
+			mapValues := make(map[string]interface{})
+			for k, v := range mapNs {
+				mapValues[k] = v
+			}
+			definedTags[ns] = mapValues
 		}
 	}
-
+	instanceConfigurationSpec := m.OCIMachinePool.Spec.InstanceConfiguration
 	if instanceConfiguration == nil {
 		m.Info("Create new instance configuration")
 
-		tags := m.GetFreeFormTags()
-
-		cloudInitData, err := m.GetBootstrapData()
+		launchDetails, err := m.getLaunchInstanceDetails(instanceConfigurationSpec, freeFormTags, definedTags)
 		if err != nil {
 			return err
 		}
-
-		metadata := m.OCIMachinePool.Spec.Metadata
-		if metadata == nil {
-			metadata = make(map[string]string)
-		}
-		metadata["user_data"] = base64.StdEncoding.EncodeToString([]byte(cloudInitData))
-
-		subnetId := m.GetWorkerMachineSubnet()
-		nsgId := m.GetWorkerMachineNSG()
-
-		launchInstanceDetails := core.ComputeInstanceDetails{
-			LaunchDetails: &core.InstanceConfigurationLaunchInstanceDetails{
-				CompartmentId: common.String(m.OCICluster.Spec.CompartmentId),
-				DisplayName:   common.String(m.OCIMachinePool.GetName()),
-				Shape:         common.String(m.OCIMachinePool.Spec.InstanceConfiguration.InstanceDetails.Shape),
-				SourceDetails: core.InstanceConfigurationInstanceSourceViaImageDetails{
-					ImageId: common.String(m.OCIMachinePool.Spec.ImageId),
-				},
-				Metadata: metadata,
-				CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
-					SubnetId:       subnetId,
-					AssignPublicIp: common.Bool(m.OCIMachinePool.Spec.VNICAssignPublicIp),
-					NsgIds:         []string{*nsgId},
-				},
-			},
-		}
-
-		shapeConfig, err := m.BuildInstanceConfigurationShapeConfig()
+		err = m.createInstanceConfiguration(ctx, launchDetails, freeFormTags, definedTags)
 		if err != nil {
-			conditions.MarkFalse(m.MachinePool, infrav1exp.LaunchTemplateReadyCondition, infrav1exp.LaunchTemplateCreateFailedReason, clusterv1.ConditionSeverityError, err.Error())
-			m.Info("failed to create instance configuration due to shape config")
 			return err
 		}
-		if (shapeConfig != core.InstanceConfigurationLaunchInstanceShapeConfigDetails{}) {
-			launchInstanceDetails.LaunchDetails.ShapeConfig = &shapeConfig
-		}
-
-		req := core.CreateInstanceConfigurationRequest{
-			CreateInstanceConfiguration: core.CreateInstanceConfigurationDetails{
-				CompartmentId:   common.String(m.OCICluster.Spec.CompartmentId),
-				DisplayName:     common.String(m.OCIMachinePool.GetName()),
-				FreeformTags:    tags,
-				InstanceDetails: launchInstanceDetails,
-			},
-		}
-
-		resp, err := m.ComputeManagementClient.CreateInstanceConfiguration(ctx, req)
-		if err != nil {
-			conditions.MarkFalse(m.MachinePool, infrav1exp.LaunchTemplateReadyCondition, infrav1exp.LaunchTemplateCreateFailedReason, clusterv1.ConditionSeverityError, err.Error())
-			m.Info("failed to create instance configuration")
-			return err
-		}
-
-		m.SetInstanceConfigurationIdStatus(*resp.Id)
 		return m.PatchObject(ctx)
+	} else {
+		computeDetails, ok := instanceConfiguration.InstanceDetails.(core.ComputeInstanceDetails)
+		if ok {
+			launchDetailsActual := computeDetails.LaunchDetails
+			launchDetailsSpec, err := m.getLaunchInstanceDetails(instanceConfigurationSpec, freeFormTags, definedTags)
+			if err != nil {
+				return err
+			}
+			// do not compare defined tags
+			launchDetailsSpec.DefinedTags = nil
+			launchDetailsActual.DefinedTags = nil
+
+			if launchDetailsSpec.CreateVnicDetails != nil {
+				launchDetailsSpec.CreateVnicDetails.DefinedTags = nil
+			}
+			if launchDetailsActual.CreateVnicDetails != nil {
+				launchDetailsActual.CreateVnicDetails.DefinedTags = nil
+			}
+			launchDetailsActual.DisplayName = nil
+			launchDetailsSpec.DisplayName = nil
+			if !reflect.DeepEqual(launchDetailsSpec, launchDetailsActual) {
+				m.Logger.Info("Machine pool", "spec", launchDetailsSpec)
+				m.Logger.Info("Machine pool", "actual", launchDetailsActual)
+				// created the launch details pec again as we may have removed certain fields for comparison purposes
+				launchDetailsSpec, err := m.getLaunchInstanceDetails(instanceConfigurationSpec, freeFormTags, definedTags)
+				if err != nil {
+					return err
+				}
+				err = m.createInstanceConfiguration(ctx, launchDetailsSpec, freeFormTags, definedTags)
+				if err != nil {
+					return err
+				}
+				return m.PatchObject(ctx)
+			}
+		} else {
+			m.Logger.Info("Could not read the instance details as ComputeInstanceDetails, please create a github " +
+				"ticket in CAPOCI repository")
+		}
+	}
+	return nil
+}
+
+func (m *MachinePoolScope) createInstanceConfiguration(ctx context.Context, launchDetails *core.InstanceConfigurationLaunchInstanceDetails, freeFormTags map[string]string, definedTags map[string]map[string]interface{}) error {
+	launchInstanceDetails := core.ComputeInstanceDetails{
+		LaunchDetails: launchDetails,
+	}
+	req := core.CreateInstanceConfigurationRequest{
+		CreateInstanceConfiguration: core.CreateInstanceConfigurationDetails{
+			CompartmentId:   common.String(m.OCICluster.Spec.CompartmentId),
+			DisplayName:     common.String(fmt.Sprintf("%s-%s", m.OCIMachinePool.GetName(), m.OCIMachinePool.ResourceVersion)),
+			FreeformTags:    freeFormTags,
+			DefinedTags:     definedTags,
+			InstanceDetails: launchInstanceDetails,
+		},
 	}
 
+	resp, err := m.ComputeManagementClient.CreateInstanceConfiguration(ctx, req)
+	if err != nil {
+		conditions.MarkFalse(m.MachinePool, infrav1exp.LaunchTemplateReadyCondition, infrav1exp.LaunchTemplateCreateFailedReason, clusterv1.ConditionSeverityError, err.Error())
+		m.Info("failed to create instance configuration")
+		return err
+	}
+
+	m.SetInstanceConfigurationIdStatus(*resp.Id)
 	return nil
+}
+
+func (m *MachinePoolScope) getLaunchInstanceDetails(instanceConfigurationSpec infrav1exp.InstanceConfiguration, freeFormTags map[string]string, definedTags map[string]map[string]interface{}) (*core.InstanceConfigurationLaunchInstanceDetails, error) {
+	metadata := instanceConfigurationSpec.Metadata
+	if metadata == nil {
+		metadata = make(map[string]string)
+	}
+	cloudInitData, err := m.GetBootstrapData()
+	if err != nil {
+		return nil, err
+	}
+	metadata["user_data"] = base64.StdEncoding.EncodeToString([]byte(cloudInitData))
+
+	launchDetails := &core.InstanceConfigurationLaunchInstanceDetails{
+		CompartmentId:     common.String(m.OCICluster.Spec.CompartmentId),
+		DisplayName:       common.String(m.OCIMachinePool.GetName()),
+		Shape:             common.String(*m.OCIMachinePool.Spec.InstanceConfiguration.Shape),
+		Metadata:          metadata,
+		DedicatedVmHostId: instanceConfigurationSpec.DedicatedVmHostId,
+		FreeformTags:      freeFormTags,
+		DefinedTags:       definedTags,
+	}
+
+	if instanceConfigurationSpec.CapacityReservationId != nil {
+		launchDetails.CapacityReservationId = instanceConfigurationSpec.CapacityReservationId
+	}
+	launchDetails.CreateVnicDetails = m.getVnicDetails(instanceConfigurationSpec, freeFormTags, definedTags)
+	launchDetails.SourceDetails = m.getInstanceConfigurationInstanceSourceViaImageDetail()
+	launchDetails.AgentConfig = m.getAgentConfig()
+	launchDetails.LaunchOptions = m.getLaunchOptions()
+	launchDetails.InstanceOptions = m.getInstanceOptions()
+	launchDetails.AvailabilityConfig = m.getAvailabilityConfig()
+	launchDetails.PreemptibleInstanceConfig = m.getPreemptibleInstanceConfig()
+	launchDetails.PlatformConfig = m.getPlatformConfig()
+
+	shapeConfig, err := m.buildInstanceConfigurationShapeConfig()
+	if err != nil {
+		conditions.MarkFalse(m.MachinePool, infrav1exp.LaunchTemplateReadyCondition, infrav1exp.LaunchTemplateCreateFailedReason, clusterv1.ConditionSeverityError, err.Error())
+		m.Info("failed to create instance configuration due to shape config")
+		return nil, err
+	}
+	if (shapeConfig != core.InstanceConfigurationLaunchInstanceShapeConfigDetails{}) {
+		launchDetails.ShapeConfig = &shapeConfig
+	}
+	return launchDetails, nil
 }
 
 // ListInstancePoolSummaries list the core.InstancePoolSummary for the given core.ListInstancePoolsRequest
@@ -453,9 +507,18 @@ func (m *MachinePoolScope) ListInstancePoolSummaries(ctx context.Context, req co
 // FindInstancePool attempts to find the instance pool by name and checks to make sure
 // the instance pool was created by the cluster before returning the correct pool
 func (m *MachinePoolScope) FindInstancePool(ctx context.Context) (*core.InstancePool, error) {
+	if m.OCIMachinePool.Spec.OCID != nil {
+		response, err := m.ComputeManagementClient.GetInstancePool(ctx, core.GetInstancePoolRequest{
+			InstancePoolId: m.OCIMachinePool.Spec.OCID,
+		})
+		if err != nil {
+			return nil, err
+		}
+		return &response.InstancePool, nil
+	}
+
 	// We have to first list the pools to get the instance pool.
 	// List returns InstancePoolSummary which lacks some details of InstancePool
-
 	reqList := core.ListInstancePoolsRequest{
 		CompartmentId: common.String(m.OCICluster.Spec.CompartmentId),
 		DisplayName:   common.String(m.OCIMachinePool.GetName()),
@@ -497,8 +560,8 @@ func (m *MachinePoolScope) FindInstancePool(ctx context.Context) (*core.Instance
 
 // CreateInstancePool attempts to create an instance pool
 func (m *MachinePoolScope) CreateInstancePool(ctx context.Context) (*core.InstancePool, error) {
-	if m.GetInstanceConfigurationId() == "" {
-		return nil, errors.New("OCIMachinePool has no InstanceConfigurationId for some reason")
+	if m.GetInstanceConfigurationId() == nil {
+		return nil, errors.New("OCIMachinePool has no InstanceConfigurationId")
 	}
 
 	tags := m.GetFreeFormTags()
@@ -518,7 +581,7 @@ func (m *MachinePoolScope) CreateInstancePool(ctx context.Context) (*core.Instan
 	req := core.CreateInstancePoolRequest{
 		CreateInstancePoolDetails: core.CreateInstancePoolDetails{
 			CompartmentId:           common.String(m.OCICluster.Spec.CompartmentId),
-			InstanceConfigurationId: common.String(m.GetInstanceConfigurationId()),
+			InstanceConfigurationId: m.GetInstanceConfigurationId(),
 			Size:                    common.Int(replicas),
 			DisplayName:             common.String(m.OCIMachinePool.GetName()),
 
@@ -536,27 +599,27 @@ func (m *MachinePoolScope) CreateInstancePool(ctx context.Context) (*core.Instan
 }
 
 // UpdatePool attempts to update the instance pool
-func (m *MachinePoolScope) UpdatePool(ctx context.Context, instancePool *core.InstancePool) error {
-
+func (m *MachinePoolScope) UpdatePool(ctx context.Context, instancePool *core.InstancePool) (*core.InstancePool, error) {
 	if instancePoolNeedsUpdates(m, instancePool) {
-		m.Info("updating instance pool")
-
-		replicas := int(1)
+		m.Info("Updating instance pool")
+		replicas := 0
 		if m.MachinePool.Spec.Replicas != nil {
 			replicas = int(*m.MachinePool.Spec.Replicas)
 		}
-
 		req := core.UpdateInstancePoolRequest{InstancePoolId: instancePool.Id,
 			UpdateInstancePoolDetails: core.UpdateInstancePoolDetails{
-				Size: common.Int(replicas),
-			}}
-
-		if _, err := m.ComputeManagementClient.UpdateInstancePool(ctx, req); err != nil {
-			return errors.Wrap(err, "unable to update instance pool")
+				Size:                    common.Int(replicas),
+				InstanceConfigurationId: m.OCIMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId,
+			},
 		}
+		resp, err := m.ComputeManagementClient.UpdateInstancePool(ctx, req)
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to update instance pool")
+		}
+		m.Info("Successfully updated instance pool")
+		return &resp.InstancePool, nil
 	}
-
-	return nil
+	return instancePool, nil
 }
 
 func (m *MachinePoolScope) TerminateInstancePool(ctx context.Context, instancePool *core.InstancePool) error {
@@ -571,17 +634,320 @@ func (m *MachinePoolScope) TerminateInstancePool(ctx context.Context, instancePo
 
 // instancePoolNeedsUpdates compares incoming OCIMachinePool and compares against existing instance pool.
 func instancePoolNeedsUpdates(machinePoolScope *MachinePoolScope, instancePool *core.InstancePool) bool {
-
-	// Allow pool resize
+	instanePoolSize := 0
+	machinePoolReplicas := 0
 	if machinePoolScope.MachinePool.Spec.Replicas != nil {
-		if instancePool.Size == nil || int(*machinePoolScope.MachinePool.Spec.Replicas) != *instancePool.Size {
-			return true
-		}
-	} else if instancePool.Size != nil {
-		return true
+		machinePoolReplicas = int(*machinePoolScope.MachinePool.Spec.Replicas)
 	}
 
-	// todo subnet diff
-
+	if instancePool.Size != nil {
+		instanePoolSize = *instancePool.Size
+	}
+	if machinePoolReplicas != instanePoolSize {
+		return true
+	} else if !(reflect.DeepEqual(machinePoolScope.OCIMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId, instancePool.InstanceConfigurationId)) {
+		return true
+	}
 	return false
+}
+
+func (m *MachinePoolScope) getAgentConfig() *core.InstanceConfigurationLaunchInstanceAgentConfigDetails {
+	agentConfigSpec := m.OCIMachinePool.Spec.InstanceConfiguration.AgentConfig
+	if agentConfigSpec != nil {
+		agentConfig := &core.InstanceConfigurationLaunchInstanceAgentConfigDetails{
+			IsMonitoringDisabled:  agentConfigSpec.IsMonitoringDisabled,
+			IsManagementDisabled:  agentConfigSpec.IsManagementDisabled,
+			AreAllPluginsDisabled: agentConfigSpec.AreAllPluginsDisabled,
+		}
+		if len(agentConfigSpec.PluginsConfig) > 0 {
+			pluginConfigList := make([]core.InstanceAgentPluginConfigDetails, len(agentConfigSpec.PluginsConfig))
+			for i, pluginConfigSpec := range agentConfigSpec.PluginsConfig {
+				pluginConfigRequest := core.InstanceAgentPluginConfigDetails{
+					Name: pluginConfigSpec.Name,
+				}
+				desiredState, ok := core.GetMappingInstanceAgentPluginConfigDetailsDesiredStateEnum(string(pluginConfigSpec.DesiredState))
+				if ok {
+					pluginConfigRequest.DesiredState = desiredState
+				}
+				pluginConfigList[i] = pluginConfigRequest
+			}
+			agentConfig.PluginsConfig = pluginConfigList
+		}
+		return agentConfig
+	}
+	return nil
+}
+
+func (m *MachinePoolScope) getLaunchOptions() *core.InstanceConfigurationLaunchOptions {
+	launcOptionsSpec := m.OCIMachinePool.Spec.InstanceConfiguration.LaunchOptions
+	if launcOptionsSpec != nil {
+		launchOptions := &core.InstanceConfigurationLaunchOptions{
+			IsConsistentVolumeNamingEnabled: launcOptionsSpec.IsConsistentVolumeNamingEnabled,
+		}
+		if launcOptionsSpec.BootVolumeType != "" {
+			bootVolume, _ := core.GetMappingInstanceConfigurationLaunchOptionsBootVolumeTypeEnum(string(launcOptionsSpec.BootVolumeType))
+			launchOptions.BootVolumeType = bootVolume
+		}
+		if launcOptionsSpec.Firmware != "" {
+			firmware, _ := core.GetMappingInstanceConfigurationLaunchOptionsFirmwareEnum(string(launcOptionsSpec.Firmware))
+			launchOptions.Firmware = firmware
+		}
+		if launcOptionsSpec.NetworkType != "" {
+			networkType, _ := core.GetMappingInstanceConfigurationLaunchOptionsNetworkTypeEnum(string(launcOptionsSpec.NetworkType))
+			launchOptions.NetworkType = networkType
+		}
+		if launcOptionsSpec.RemoteDataVolumeType != "" {
+			remoteVolumeType, _ := core.GetMappingInstanceConfigurationLaunchOptionsRemoteDataVolumeTypeEnum(string(launcOptionsSpec.RemoteDataVolumeType))
+			launchOptions.RemoteDataVolumeType = remoteVolumeType
+		}
+		return launchOptions
+	}
+	return nil
+}
+
+func (m *MachinePoolScope) getInstanceOptions() *core.InstanceConfigurationInstanceOptions {
+	instanceOptionsSpec := m.OCIMachinePool.Spec.InstanceConfiguration.InstanceOptions
+	if instanceOptionsSpec != nil {
+		return &core.InstanceConfigurationInstanceOptions{
+			AreLegacyImdsEndpointsDisabled: instanceOptionsSpec.AreLegacyImdsEndpointsDisabled,
+		}
+	}
+	return nil
+}
+
+func (m *MachinePoolScope) getInstanceConfigurationInstanceSourceViaImageDetail() core.InstanceConfigurationInstanceSourceViaImageDetails {
+	sourceConfig := m.OCIMachinePool.Spec.InstanceConfiguration.InstanceSourceViaImageDetails
+	if sourceConfig != nil {
+		return core.InstanceConfigurationInstanceSourceViaImageDetails{
+			ImageId:             sourceConfig.ImageId,
+			BootVolumeVpusPerGB: sourceConfig.BootVolumeVpusPerGB,
+			BootVolumeSizeInGBs: sourceConfig.BootVolumeSizeInGBs,
+		}
+	}
+	return core.InstanceConfigurationInstanceSourceViaImageDetails{}
+}
+
+func (m *MachinePoolScope) getAvailabilityConfig() *core.InstanceConfigurationAvailabilityConfig {
+	avalabilityConfigSpec := m.OCIMachinePool.Spec.InstanceConfiguration.AvailabilityConfig
+	if avalabilityConfigSpec != nil {
+		recoveryAction, _ := core.GetMappingInstanceConfigurationAvailabilityConfigRecoveryActionEnum(string(avalabilityConfigSpec.RecoveryAction))
+		return &core.InstanceConfigurationAvailabilityConfig{
+			RecoveryAction: recoveryAction,
+		}
+	}
+	return nil
+}
+
+func (m *MachinePoolScope) getPreemptibleInstanceConfig() *core.PreemptibleInstanceConfigDetails {
+	preEmptibleInstanceConfigSpec := m.OCIMachinePool.Spec.InstanceConfiguration.PreemptibleInstanceConfig
+	if preEmptibleInstanceConfigSpec != nil {
+		preemptibleInstanceConfig := &core.PreemptibleInstanceConfigDetails{}
+		if preEmptibleInstanceConfigSpec.TerminatePreemptionAction != nil {
+			preemptibleInstanceConfig.PreemptionAction = core.TerminatePreemptionAction{
+				PreserveBootVolume: preEmptibleInstanceConfigSpec.TerminatePreemptionAction.PreserveBootVolume,
+			}
+		}
+		return preemptibleInstanceConfig
+	}
+	return nil
+}
+
+func (m *MachinePoolScope) getPlatformConfig() core.PlatformConfig {
+	platformConfig := m.OCIMachinePool.Spec.InstanceConfiguration.PlatformConfig
+	if platformConfig != nil {
+		switch platformConfig.PlatformConfigType {
+		case infrastructurev1beta1.PlatformConfigTypeAmdRomeBmGpu:
+			numaNodesPerSocket, _ := core.GetMappingAmdRomeBmGpuPlatformConfigNumaNodesPerSocketEnum(string(platformConfig.AmdRomeBmGpuPlatformConfig.NumaNodesPerSocket))
+			return core.AmdRomeBmGpuPlatformConfig{
+				IsSecureBootEnabled:                      platformConfig.AmdRomeBmGpuPlatformConfig.IsSecureBootEnabled,
+				IsTrustedPlatformModuleEnabled:           platformConfig.AmdRomeBmGpuPlatformConfig.IsTrustedPlatformModuleEnabled,
+				IsMeasuredBootEnabled:                    platformConfig.AmdRomeBmGpuPlatformConfig.IsMeasuredBootEnabled,
+				IsSymmetricMultiThreadingEnabled:         platformConfig.AmdRomeBmGpuPlatformConfig.IsSymmetricMultiThreadingEnabled,
+				IsAccessControlServiceEnabled:            platformConfig.AmdRomeBmGpuPlatformConfig.IsAccessControlServiceEnabled,
+				AreVirtualInstructionsEnabled:            platformConfig.AmdRomeBmGpuPlatformConfig.AreVirtualInstructionsEnabled,
+				IsInputOutputMemoryManagementUnitEnabled: platformConfig.AmdRomeBmGpuPlatformConfig.IsInputOutputMemoryManagementUnitEnabled,
+				NumaNodesPerSocket:                       numaNodesPerSocket,
+			}
+		case infrastructurev1beta1.PlatformConfigTypeAmdRomeBm:
+			numaNodesPerSocket, _ := core.GetMappingAmdRomeBmPlatformConfigNumaNodesPerSocketEnum(string(platformConfig.AmdRomeBmPlatformConfig.NumaNodesPerSocket))
+			return core.AmdRomeBmPlatformConfig{
+				IsSecureBootEnabled:                      platformConfig.AmdRomeBmPlatformConfig.IsSecureBootEnabled,
+				IsTrustedPlatformModuleEnabled:           platformConfig.AmdRomeBmPlatformConfig.IsTrustedPlatformModuleEnabled,
+				IsMeasuredBootEnabled:                    platformConfig.AmdRomeBmPlatformConfig.IsMeasuredBootEnabled,
+				IsSymmetricMultiThreadingEnabled:         platformConfig.AmdRomeBmPlatformConfig.IsSymmetricMultiThreadingEnabled,
+				IsAccessControlServiceEnabled:            platformConfig.AmdRomeBmPlatformConfig.IsAccessControlServiceEnabled,
+				AreVirtualInstructionsEnabled:            platformConfig.AmdRomeBmPlatformConfig.AreVirtualInstructionsEnabled,
+				IsInputOutputMemoryManagementUnitEnabled: platformConfig.AmdRomeBmPlatformConfig.IsInputOutputMemoryManagementUnitEnabled,
+				PercentageOfCoresEnabled:                 platformConfig.AmdRomeBmPlatformConfig.PercentageOfCoresEnabled,
+				NumaNodesPerSocket:                       numaNodesPerSocket,
+			}
+		case infrastructurev1beta1.PlatformConfigTypeIntelIcelakeBm:
+			numaNodesPerSocket, _ := core.GetMappingIntelIcelakeBmPlatformConfigNumaNodesPerSocketEnum(string(platformConfig.IntelIcelakeBmPlatformConfig.NumaNodesPerSocket))
+			return core.IntelIcelakeBmPlatformConfig{
+				IsSecureBootEnabled:                      platformConfig.IntelIcelakeBmPlatformConfig.IsSecureBootEnabled,
+				IsTrustedPlatformModuleEnabled:           platformConfig.IntelIcelakeBmPlatformConfig.IsTrustedPlatformModuleEnabled,
+				IsMeasuredBootEnabled:                    platformConfig.IntelIcelakeBmPlatformConfig.IsMeasuredBootEnabled,
+				IsSymmetricMultiThreadingEnabled:         platformConfig.IntelIcelakeBmPlatformConfig.IsSymmetricMultiThreadingEnabled,
+				PercentageOfCoresEnabled:                 platformConfig.IntelIcelakeBmPlatformConfig.PercentageOfCoresEnabled,
+				IsInputOutputMemoryManagementUnitEnabled: platformConfig.IntelIcelakeBmPlatformConfig.IsInputOutputMemoryManagementUnitEnabled,
+				NumaNodesPerSocket:                       numaNodesPerSocket,
+			}
+		case infrastructurev1beta1.PlatformConfigTypeAmdvm:
+			return core.AmdVmPlatformConfig{
+				IsSecureBootEnabled:            platformConfig.AmdVmPlatformConfig.IsSecureBootEnabled,
+				IsTrustedPlatformModuleEnabled: platformConfig.AmdVmPlatformConfig.IsTrustedPlatformModuleEnabled,
+				IsMeasuredBootEnabled:          platformConfig.AmdVmPlatformConfig.IsMeasuredBootEnabled,
+			}
+		case infrastructurev1beta1.PlatformConfigTypeIntelVm:
+			return core.IntelVmPlatformConfig{
+				IsSecureBootEnabled:            platformConfig.IntelVmPlatformConfig.IsSecureBootEnabled,
+				IsTrustedPlatformModuleEnabled: platformConfig.IntelVmPlatformConfig.IsTrustedPlatformModuleEnabled,
+				IsMeasuredBootEnabled:          platformConfig.IntelVmPlatformConfig.IsMeasuredBootEnabled,
+			}
+		case infrastructurev1beta1.PlatformConfigTypeIntelSkylakeBm:
+			return core.IntelSkylakeBmPlatformConfig{
+				IsSecureBootEnabled:            platformConfig.IntelSkylakeBmPlatformConfig.IsSecureBootEnabled,
+				IsTrustedPlatformModuleEnabled: platformConfig.IntelSkylakeBmPlatformConfig.IsTrustedPlatformModuleEnabled,
+				IsMeasuredBootEnabled:          platformConfig.IntelSkylakeBmPlatformConfig.IsMeasuredBootEnabled,
+			}
+		case infrastructurev1beta1.PlatformConfigTypeAmdMilanBm:
+			numaNodesPerSocket, _ := core.GetMappingAmdMilanBmPlatformConfigNumaNodesPerSocketEnum(string(platformConfig.AmdMilanBmPlatformConfig.NumaNodesPerSocket))
+			return core.AmdMilanBmPlatformConfig{
+				IsSecureBootEnabled:                      platformConfig.AmdMilanBmPlatformConfig.IsSecureBootEnabled,
+				IsTrustedPlatformModuleEnabled:           platformConfig.AmdMilanBmPlatformConfig.IsTrustedPlatformModuleEnabled,
+				IsMeasuredBootEnabled:                    platformConfig.AmdMilanBmPlatformConfig.IsMeasuredBootEnabled,
+				IsSymmetricMultiThreadingEnabled:         platformConfig.AmdMilanBmPlatformConfig.IsSymmetricMultiThreadingEnabled,
+				IsAccessControlServiceEnabled:            platformConfig.AmdMilanBmPlatformConfig.IsAccessControlServiceEnabled,
+				AreVirtualInstructionsEnabled:            platformConfig.AmdMilanBmPlatformConfig.AreVirtualInstructionsEnabled,
+				IsInputOutputMemoryManagementUnitEnabled: platformConfig.AmdMilanBmPlatformConfig.IsInputOutputMemoryManagementUnitEnabled,
+				PercentageOfCoresEnabled:                 platformConfig.AmdMilanBmPlatformConfig.PercentageOfCoresEnabled,
+				NumaNodesPerSocket:                       numaNodesPerSocket,
+			}
+		default:
+		}
+	}
+	return nil
+}
+
+func (m *MachinePoolScope) getWorkerMachineNSGs() []string {
+	instanceVnicConfiguration := m.OCIMachinePool.Spec.InstanceConfiguration.InstanceVnicConfiguration
+	if instanceVnicConfiguration != nil && len(instanceVnicConfiguration.NsgNames) > 0 {
+		nsgs := make([]string, 0)
+		for _, nsgName := range instanceVnicConfiguration.NsgNames {
+			for _, nsg := range m.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups {
+				if nsg.Name == nsgName {
+					nsgs = append(nsgs, *nsg.ID)
+				}
+			}
+		}
+		return nsgs
+	} else {
+		nsgs := make([]string, 0)
+		for _, nsg := range m.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups {
+			if nsg.Role == infrastructurev1beta1.WorkerRole {
+				nsgs = append(nsgs, *nsg.ID)
+			}
+		}
+		return nsgs
+	}
+}
+
+// GetInstanceConfiguration returns the instance configuration associated with the instance pool
+func (m *MachinePoolScope) GetInstanceConfiguration(ctx context.Context) (*core.InstanceConfiguration, error) {
+	instanceConfigurationId := m.GetInstanceConfigurationId()
+	if instanceConfigurationId != nil {
+		return m.getInstanceConfigurationFromOCID(ctx, instanceConfigurationId)
+	}
+
+	ids, err := m.getInstanceConfigurationsFromDisplayNameSortedTimeCreateDescending(ctx, m.OCIMachinePool.GetName())
+	if err != nil {
+		return nil, err
+	}
+	if len(ids) > 0 {
+		return m.getInstanceConfigurationFromOCID(ctx, ids[0])
+	}
+	return nil, nil
+}
+
+func (m *MachinePoolScope) CleanupInstanceConfiguration(ctx context.Context, instancePool *core.InstancePool) error {
+	m.Info("Cleaning up unused instance configurations")
+	ids, err := m.getInstanceConfigurationsFromDisplayNameSortedTimeCreateDescending(ctx, m.OCIMachinePool.GetName())
+	if err != nil {
+		return err
+	}
+	if len(ids) > 0 {
+		m.Info(fmt.Sprintf("Number of instance configurations found are %d", len(ids)))
+		for _, id := range ids {
+			// if instance pool is nil, delete all configurations associated with the pool
+			if instancePool == nil || !reflect.DeepEqual(id, instancePool.InstanceConfigurationId) {
+				req := core.DeleteInstanceConfigurationRequest{InstanceConfigurationId: id}
+				if _, err := m.ComputeManagementClient.DeleteInstanceConfiguration(ctx, req); err != nil {
+					return errors.Wrap(err, "failed to delete expired instance configuration")
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (m *MachinePoolScope) getInstanceConfigurationFromOCID(ctx context.Context, instanceConfigurationId *string) (*core.InstanceConfiguration, error) {
+	req := core.GetInstanceConfigurationRequest{InstanceConfigurationId: instanceConfigurationId}
+	instanceConfiguration, err := m.ComputeManagementClient.GetInstanceConfiguration(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return &instanceConfiguration.InstanceConfiguration, nil
+}
+
+func (m *MachinePoolScope) getInstanceConfigurationsFromDisplayNameSortedTimeCreateDescending(ctx context.Context, displayName string) ([]*string, error) {
+	listInstanceConfiguration := func(ctx context.Context, request core.ListInstanceConfigurationsRequest) (core.ListInstanceConfigurationsResponse, error) {
+		return m.ComputeManagementClient.ListInstanceConfigurations(ctx, request)
+	}
+
+	req := core.ListInstanceConfigurationsRequest{
+		CompartmentId: common.String(m.OCICluster.Spec.CompartmentId),
+		SortBy:        core.ListInstanceConfigurationsSortByTimecreated,
+		SortOrder:     core.ListInstanceConfigurationsSortOrderDesc,
+	}
+	ids := make([]*string, 0)
+	for {
+		resp, err := listInstanceConfiguration(ctx, req)
+
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to query InstanceConfiguration by name")
+		}
+
+		for _, instanceConfiguration := range resp.Items {
+			if strings.HasPrefix(*instanceConfiguration.DisplayName, displayName) &&
+				m.IsResourceCreatedByClusterAPI(instanceConfiguration.FreeformTags) {
+				ids = append(ids, instanceConfiguration.Id)
+			}
+		}
+		if resp.OpcNextPage == nil {
+			// no more pages
+			break
+		} else {
+			req.Page = resp.OpcNextPage
+		}
+	}
+
+	return ids, nil
+}
+
+func (m *MachinePoolScope) getVnicDetails(instanceConfigurationSpec infrav1exp.InstanceConfiguration, freeFormTags map[string]string, definedTags map[string]map[string]interface{}) *core.InstanceConfigurationCreateVnicDetails {
+	subnetId := m.GetWorkerMachineSubnet()
+	createVnicDetails := core.InstanceConfigurationCreateVnicDetails{
+		SubnetId:     subnetId,
+		FreeformTags: freeFormTags,
+		DefinedTags:  definedTags,
+		NsgIds:       m.getWorkerMachineNSGs(),
+	}
+	if instanceConfigurationSpec.InstanceVnicConfiguration != nil {
+		createVnicDetails.AssignPublicIp = &instanceConfigurationSpec.InstanceVnicConfiguration.AssignPublicIp
+		createVnicDetails.HostnameLabel = instanceConfigurationSpec.InstanceVnicConfiguration.HostnameLabel
+		createVnicDetails.SkipSourceDestCheck = instanceConfigurationSpec.InstanceVnicConfiguration.SkipSourceDestCheck
+		createVnicDetails.AssignPrivateDnsRecord = instanceConfigurationSpec.InstanceVnicConfiguration.AssignPrivateDnsRecord
+		createVnicDetails.DisplayName = instanceConfigurationSpec.InstanceVnicConfiguration.DisplayName
+	}
+	return &createVnicDetails
 }

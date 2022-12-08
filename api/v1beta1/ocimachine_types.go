@@ -74,13 +74,13 @@ type OCIMachineSpec struct {
 	// PreemptibleInstanceConfig Configuration options for preemptible instances.
 	PreemptibleInstanceConfig *PreemptibleInstanceConfig `json:"preemptibleInstanceConfig,omitempty"`
 
-	// LaunchInstanceAgentConfig defines the options for the Oracle Cloud Agent software running on the instance.
+	// AgentConfig defines the options for the Oracle Cloud Agent software running on the instance.
 	AgentConfig *LaunchInstanceAgentConfig `json:"agentConfig,omitempty"`
 
 	// InstanceSourceViaImageConfig defines the options for booting up instances via images
 	InstanceSourceViaImageDetails *InstanceSourceViaImageConfig `json:"instanceSourceViaImageConfig,omitempty"`
 
-	// InstanceSourceViaImageConfig defines the platform config parameters
+	// PlatformConfig defines the platform config parameters
 	PlatformConfig *PlatformConfig `json:"platformConfig,omitempty"`
 
 	// DedicatedVmHostId defines the OCID of the dedicated VM host.

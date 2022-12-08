@@ -115,14 +115,15 @@ metadata:
   name: ${CLUSTER_NAME}-mp-0
   namespace: default
 spec:
-  imageId: "${OCI_IMAGE_ID}"
-  metadata:
-    ssh_authorized_keys: "${OCI_SSH_KEY}"
-  shapeConfig:
-    ocpus: "${OCI_NODE_MACHINE_TYPE_OCPUS=1}"
   instanceConfiguration:
-    instanceDetails:
-      shape: "${OCI_NODE_MACHINE_TYPE=VM.Standard.E4.Flex}"
+    instanceSourceViaImageConfig:
+      imageId: "${OCI_IMAGE_ID}"
+    shape: "${OCI_NODE_MACHINE_TYPE=VM.Standard.E4.Flex}"
+    shapeConfig:
+      ocpus: "${OCI_NODE_MACHINE_TYPE_OCPUS=1}"
+    metadata:
+      ssh_authorized_keys: "${OCI_SSH_KEY}"
+
 # uncomment to assign a public IP address once you setup the VCN to allow public ips
 #  vnicAssignPublicIp: true
 #  uncomment if you want to set a specific availability domain
