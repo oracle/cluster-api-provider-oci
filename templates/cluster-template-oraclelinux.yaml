@@ -69,6 +69,7 @@ spec:
         criSocket: /var/run/containerd/containerd.sock
         kubeletExtraArgs:
           cloud-provider: external
+          provider-id: oci://{{ ds["id"] }}
     preKubeadmCommands:
       - sed -ri '/\sswap\s/s/^#?/#/' /etc/fstab
       - swapoff -a
