@@ -1,0 +1,40 @@
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachinePool
+metadata:
+  name: ${CLUSTER_NAME}-mp-0
+  namespace: default
+spec:
+  clusterName: ${CLUSTER_NAME}
+  replicas: ${NODE_MACHINE_COUNT}
+  template:
+    spec:
+      clusterName: ${CLUSTER_NAME}
+      bootstrap:
+        dataSecretName: ""
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        kind: OCIManagedMachinePool
+        name: ${CLUSTER_NAME}-mp-0
+      version: ${KUBERNETES_VERSION}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: OCIManagedMachinePool
+metadata:
+  name: ${CLUSTER_NAME}-mp-0
+  namespace: default
+spec:
+  version: "${OCI_MANAGED_KUBERNETES_VERSION}"
+  nodeShape: "${OCI_MANAGED_NODE_SHAPE}"
+  sshPublicKey: "${OCI_SSH_KEY}"
+  nodeMetadata:
+    user_data: "IyEvYmluL2Jhc2gKY3VybCAtLWZhaWwgLUggIkF1dGhvcml6YXRpb246IEJlYXJlciBPcmFjbGUiIC1MMCBodHRwOi8vMTY5LjI1NC4xNjkuMjU0L29wYy92Mi9pbnN0YW5jZS9tZXRhZGF0YS9va2VfaW5pdF9zY3JpcHQgfCBiYXNlNjQgLS1kZWNvZGUgPi92YXIvcnVuL29rZS1pbml0LnNoCnByb3ZpZGVyX2lkPSQoY3VybCAtLWZhaWwgLUggIkF1dGhvcml6YXRpb246IEJlYXJlciBPcmFjbGUiIC1MMCBodHRwOi8vMTY5LjI1NC4xNjkuMjU0L29wYy92Mi9pbnN0YW5jZS9pZCkKYmFzaCAvdmFyL3J1bi9va2UtaW5pdC5zaCAtLWt1YmVsZXQtZXh0cmEtYXJncyAiLS1wcm92aWRlci1pZD1vY2k6Ly8kcHJvdmlkZXJfaWQiCg=="
+  nodeSourceViaImage:
+    imageId: "${OCI_MANAGED_NODE_IMAGE_ID}"
+    bootVolumeSizeInGBs: 50
+  nodeShapeConfig:
+    memoryInGBs: "16"
+    ocpus: "1"
+  nodePoolNodeConfig:
+    updateNodePoolSize: true
+---

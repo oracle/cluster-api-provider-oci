@@ -17,7 +17,9 @@ limitations under the License.
 package v1beta1
 
 import (
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
@@ -49,7 +51,14 @@ func (c *OCIManagedControlPlane) SetupWebhookWithManager(mgr ctrl.Manager) error
 }
 
 func (c *OCIManagedControlPlane) ValidateCreate() error {
-	return nil
+	var allErrs field.ErrorList
+	if len(c.Name) > 31 {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("Name"), c.Name, "Name cannot be more than 31 characters"))
+	}
+	if len(allErrs) == 0 {
+		return nil
+	}
+	return apierrors.NewInvalid(c.GroupVersionKind().GroupKind(), c.Name, allErrs)
 }
 
 func (c *OCIManagedControlPlane) ValidateUpdate(old runtime.Object) error {
