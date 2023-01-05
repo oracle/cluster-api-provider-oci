@@ -38,6 +38,7 @@ import (
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/compute"
 	nlb "github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
+	infrav1exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/identity"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -50,7 +51,8 @@ import (
 )
 
 const (
-	AntreaCNIPath = "ANTREA_CNI"
+	AntreaCNIPath                   = "ANTREA_CNI"
+	ManagedKubernetesUpgradeVersion = "OCI_MANAGED_KUBERNETES_VERSION_UPGRADE"
 )
 
 // Test suite flags
@@ -262,6 +264,7 @@ func initScheme() *runtime.Scheme {
 	scheme := runtime.NewScheme()
 	framework.TryAddDefaultSchemes(scheme)
 	Expect(infrastructurev1beta1.AddToScheme(scheme)).To(Succeed())
+	Expect(infrav1exp.AddToScheme(scheme)).To(Succeed())
 	Expect(clusterv1.AddToScheme(scheme)).To(Succeed())
 	Expect(clusterv1exp.AddToScheme(scheme)).To(Succeed())
 	return scheme

@@ -177,7 +177,7 @@ func (m *ManagedMachinePoolScope) FindNodePool(ctx context.Context) (*oke.NodePo
 		reqList := oke.ListNodePoolsRequest{
 			CompartmentId: common.String(m.OCIManagedCluster.Spec.CompartmentId),
 			ClusterId:     m.OCIManagedControlPlane.Spec.ID,
-			Name:          common.String(m.OCIManagedMachinePool.GetName()),
+			Name:          common.String(m.getNodePoolName()),
 			Page:          page,
 		}
 
@@ -197,6 +197,10 @@ func (m *ManagedMachinePoolScope) FindNodePool(ctx context.Context) (*oke.NodePo
 		}
 	}
 	return nil, nil
+}
+
+func (m *ManagedMachinePoolScope) getNodePoolName() string {
+	return m.OCIManagedMachinePool.GetName()
 }
 
 // CreateNodePool attempts to create a node pool
@@ -285,7 +289,7 @@ func (m *ManagedMachinePoolScope) CreateNodePool(ctx context.Context) (*oke.Node
 	nodePoolDetails := oke.CreateNodePoolDetails{
 		CompartmentId:     common.String(m.OCIManagedCluster.Spec.CompartmentId),
 		ClusterId:         m.OCIManagedControlPlane.Spec.ID,
-		Name:              common.String(m.OCIManagedMachinePool.Name),
+		Name:              common.String(m.getNodePoolName()),
 		KubernetesVersion: m.OCIManagedMachinePool.Spec.Version,
 		NodeShape:         common.String(m.OCIManagedMachinePool.Spec.NodeShape),
 		NodeShapeConfig:   &nodeShapeConfig,
@@ -506,7 +510,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 	}
 	actual := m.getSpecFromAPIObject(pool)
 	if !reflect.DeepEqual(spec, actual) ||
-		m.OCIManagedMachinePool.Name != *pool.Name || nodePoolSizeUpdateRequired {
+		m.getNodePoolName() != *pool.Name || nodePoolSizeUpdateRequired {
 		m.Logger.Info("Updating node pool")
 		// printing json specs will help debug problems when there are spurious/unwanted updates
 		jsonSpec, err := json.Marshal(*spec)
@@ -574,7 +578,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 			}
 		}
 		nodePoolDetails := oke.UpdateNodePoolDetails{
-			Name:              common.String(m.OCIManagedMachinePool.Name),
+			Name:              common.String(m.getNodePoolName()),
 			KubernetesVersion: m.OCIManagedMachinePool.Spec.Version,
 			NodeShape:         common.String(m.OCIManagedMachinePool.Spec.NodeShape),
 			NodeShapeConfig:   &nodeShapeConfig,

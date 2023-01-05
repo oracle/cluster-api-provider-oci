@@ -221,6 +221,7 @@ func (r *OCIManagedClusterControlPlaneReconciler) reconcile(ctx context.Context,
 				Port: 6443,
 			}
 		}
+		controlPlane.Status.Version = okeControlPlane.KubernetesVersion
 		// record the event only when machine goes from not ready to ready state
 		r.Recorder.Eventf(controlPlane, corev1.EventTypeNormal, "ControlPlaneReady",
 			"Managed control plane is in ready state")

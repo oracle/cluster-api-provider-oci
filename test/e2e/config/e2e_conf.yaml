@@ -70,10 +70,13 @@ providers:
           - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-remote-vcn-peering.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-externally-managed-vcn.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-machine-pool.yaml"
+          - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-managed.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta1/metadata.yaml"
 
 variables:
   KUBERNETES_VERSION: "v1.24.4"
+  OCI_MANAGED_KUBERNETES_VERSION: "v1.23.4"
+  OCI_MANAGED_KUBERNETES_VERSION_UPGRADE: "v1.24.1"
   EXP_MACHINE_POOL: "true"
   EXP_CLUSTER_RESOURCE_SET: "true"
   NODE_DRAIN_TIMEOUT: "60s"

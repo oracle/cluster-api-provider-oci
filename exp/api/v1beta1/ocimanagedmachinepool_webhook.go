@@ -17,7 +17,9 @@ limitations under the License.
 package v1beta1
 
 import (
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
@@ -54,7 +56,14 @@ func (m *OCIManagedMachinePool) Default() {
 }
 
 func (m *OCIManagedMachinePool) ValidateCreate() error {
-	return nil
+	var allErrs field.ErrorList
+	if len(m.Name) > 31 {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("Name"), m.Name, "Name cannot be more than 31 characters"))
+	}
+	if len(allErrs) == 0 {
+		return nil
+	}
+	return apierrors.NewInvalid(m.GroupVersionKind().GroupKind(), m.Name, allErrs)
 }
 
 func (m *OCIManagedMachinePool) ValidateUpdate(old runtime.Object) error {

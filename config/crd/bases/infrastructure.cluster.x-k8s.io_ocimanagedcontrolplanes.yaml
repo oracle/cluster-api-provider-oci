@@ -180,6 +180,10 @@ spec:
                 type: boolean
               ready:
                 type: boolean
+              version:
+                description: Version represents the current Kubernetes version for
+                  the control plane.
+                type: string
             type: object
         type: object
     served: true

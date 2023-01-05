@@ -347,6 +347,14 @@ func (r *OCIManagedMachinePoolReconciler) reconcileDelete(ctx context.Context, m
 		}
 	}
 
+	if nodePool == nil {
+		machinePoolScope.Info("Node Pool is not found, may have been deleted")
+		controllerutil.RemoveFinalizer(machinePoolScope.OCIManagedMachinePool, infrav1exp.ManagedMachinePoolFinalizer)
+		conditions.MarkFalse(machinePool, infrav1exp.NodePoolReadyCondition, infrav1exp.NodePoolDeletedReason, clusterv1.ConditionSeverityWarning, "")
+		return reconcile.Result{}, nil
+	}
+
+	machinePoolScope.Info(fmt.Sprintf("Node Pool lifecycle state is %v", nodePool.LifecycleState))
 	switch nodePool.LifecycleState {
 	case oke.NodePoolLifecycleStateDeleting:
 		// Node Pool is already deleting

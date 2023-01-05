@@ -23,7 +23,7 @@ source "${REPO_ROOT}/hack/ensure-tags.sh"
 : "${OCI_ORACLE_LINUX_IMAGE_ID:?Environment variable empty or not defined.}"
 : "${OCI_UPGRADE_IMAGE_ID:?Environment variable empty or not defined.}"
 : "${OCI_ALTERNATIVE_REGION_IMAGE_ID:?Environment variable empty or not defined.}"
-
+: OCI_MANAGED_NODE_IMAGE_ID
 export LOCAL_ONLY=${LOCAL_ONLY:-"true"}
 
 defaultTag=$(date -u '+%Y%m%d%H%M%S')
@@ -36,7 +36,7 @@ export OCI_CONTROL_PLANE_MACHINE_TYPE_OCPUS="${OCI_CONTROL_PLANE_MACHINE_TYPE_OC
 export OCI_NODE_MACHINE_TYPE="${OCI_NODE_MACHINE_TYPE:-"VM.Standard.E3.Flex"}"
 export OCI_NODE_MACHINE_TYPE_OCPUS="${OCI_NODE_MACHINE_TYPE_OCPUS:-"1"}"
 export KIND_EXPERIMENTAL_DOCKER_NETWORK="bridge"
-
+export OCI_MANAGED_NODE_SHAPE="${OCI_NODE_MACHINE_TYPE:-"VM.Standard.E4.Flex"}"
 export OCI_ALTERNATIVE_REGION="${OCI_ALTERNATIVE_REGION:-"us-sanjose-1"}"
 
 # Generate SSH key.

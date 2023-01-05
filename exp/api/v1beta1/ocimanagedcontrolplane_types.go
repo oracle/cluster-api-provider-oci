@@ -143,6 +143,11 @@ type OCIManagedControlPlaneStatus struct {
 	// NetworkSpec encapsulates all things related to OCI network.
 	// +optional
 	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
+
+	// Version represents the current Kubernetes version for the control plane.
+	// +optional
+	Version *string `json:"version,omitempty"`
+
 	// Initialized denotes whether or not the control plane has the
 	// uploaded kubernetes config-map.
 	// +optional
