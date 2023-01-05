@@ -62,6 +62,16 @@ CAPOCI supports the following Cluster API versions.
 CAPOCI provider is able to install and manage the [versions of Kubernetes supported by
 Cluster API (CAPI)](https://cluster-api.sigs.k8s.io/reference/versions.html#supported-kubernetes-versions).
 
+## Security
+
+Please consult the [security guide](./SECURITY.md) for our responsible security vulnerability disclosure process
+
+## License
+
+Copyright (c) [2021, 2022] year Oracle and/or its affiliates.
+
+Released under the Apache License License Version 2.0 as shown at http://www.apache.org/licenses/.
+
 [cluster_api]: https://github.com/oracle/cluster-api-provider-oci
 [image_builder_book]: https://image-builder.sigs.k8s.io/capi/providers/oci.html
 [capoci_book]: https://oracle.github.io/cluster-api-provider-oci/
