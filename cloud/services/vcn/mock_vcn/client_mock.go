@@ -575,6 +575,21 @@ func (mr *MockClientMockRecorder) GetVnic(ctx, request interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVnic", reflect.TypeOf((*MockClient)(nil).GetVnic), ctx, request)
 }
 
+// UpdateVnic mocks base method.
+func (m *MockClient) UpdateVnic(ctx context.Context, request core.UpdateVnicRequest) (core.UpdateVnicResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateVnic", ctx, request)
+	ret0, _ := ret[0].(core.UpdateVnicResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateVnic indicates an expected call of UpdateVnic.
+func (mr *MockClientMockRecorder) UpdateVnic(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateVnic", reflect.TypeOf((*MockClient)(nil).UpdateVnic), ctx, request)
+}
+
 // ListDrgAttachments mocks base method.
 func (m *MockClient) ListDrgAttachments(ctx context.Context, request core.ListDrgAttachmentsRequest) (core.ListDrgAttachmentsResponse, error) {
 	m.ctrl.T.Helper()

@@ -69,6 +69,8 @@ const (
 	FailureDomainFailedReason = "FailureDomainFailedReconciliationFailed"
 	// InstanceLBBackendAdditionFailedReason used when addition to LB backend fails
 	InstanceLBBackendAdditionFailedReason = "BackendAdditionFailed"
+	// InstanceVnicAttachmentFailedReason used when attaching vnics to machine
+	InstanceVnicAttachmentFailedReason = "VnicAttachmentFailed"
 	// InstanceIPAddressNotFound used when IP address of the instance count not be found
 	InstanceIPAddressNotFound = "InstanceIPAddressNotFound"
 	// VcnEventReady used after reconciliation has completed successfully
@@ -91,6 +93,8 @@ const (
 	RouteTableEventReady = "RouteTableReady"
 	// SubnetEventReady used after reconciliation has completed successfully
 	SubnetEventReady = "SubnetReady"
+	// InstanceVnicAttachmentReady used after reconciliation has been completed successfully
+	InstanceVnicAttachmentReady = "VnicAttachmentReady"
 	// ApiServerLoadBalancerEventReady used after reconciliation has completed successfully
 	ApiServerLoadBalancerEventReady = "APIServerLoadBalancerReady"
 	// FailureDomainEventReady used after reconciliation has completed successfully

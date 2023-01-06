@@ -620,6 +620,36 @@ spec:
                   the subnets defined in the OCICluster Spec. Optional, only if multiple
                   subnets of a type is defined, else the first element is used.
                 type: string
+              vnicAttachments:
+                description: VnicAttachments defines the configuration options for
+                  the vnic(s) attached to the machine The network bandwidth and number
+                  of VNICs scale proportionately with the number of OCPUs.
+                items:
+                  properties:
+                    assignPublicIp:
+                      description: AssignPublicIp defines whether the vnic should
+                        have a public IP address
+                      type: boolean
+                    displayName:
+                      description: DisplayName defines a user-friendly name. Does
+                        not have to be unique. Avoid entering confidential information.
+                      type: string
+                    nicIndex:
+                      description: NicIndex defines which physical Network Interface
+                        Card (NIC) to use You can determine which NICs are active
+                        for a shape by reviewing the https://docs.oracle.com/en-us/iaas/Content/Compute/References/computeshapes.htm
+                      type: integer
+                    subnetName:
+                      description: SubnetName defines the subnet name to use for the
+                        VNIC Defaults to the "worker" subnet if not provided
+                      type: string
+                    vnicAttachmentId:
+                      description: VnicAttachmentId defines the ID of the VnicAttachment
+                      type: string
+                  required:
+                  - displayName
+                  type: object
+                type: array
             type: object
           status:
             description: OCIMachineStatus defines the observed state of OCIMachine.

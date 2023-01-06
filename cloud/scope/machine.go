@@ -220,16 +220,7 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 
 	tags := m.getFreeFormTags(*m.OCICluster)
 
-	definedTags := make(map[string]map[string]interface{})
-	if m.OCIMachine.Spec.DefinedTags != nil {
-		for ns, mapNs := range m.OCIMachine.Spec.DefinedTags {
-			mapValues := make(map[string]interface{})
-			for k, v := range mapNs {
-				mapValues[k] = v
-			}
-			definedTags[ns] = mapValues
-		}
-	}
+	definedTags := ConvertMachineDefinedTags(m.OCIMachine.Spec.DefinedTags)
 
 	availabilityDomain := m.OCICluster.Status.FailureDomains[*failureDomain].Attributes[AvailabilityDomain]
 	faultDomain := m.OCICluster.Status.FailureDomains[*failureDomain].Attributes[FaultDomain]
@@ -309,8 +300,8 @@ func (m *MachineScope) DeleteMachine(ctx context.Context) error {
 
 // IsResourceCreatedByClusterAPI determines if the instance was created by the cluster using the
 // tags created at instance launch.
-func (s *MachineScope) IsResourceCreatedByClusterAPI(resourceFreeFormTags map[string]string) bool {
-	tagsAddedByClusterAPI := ociutil.BuildClusterTags(string(s.OCICluster.GetOCIResourceIdentifier()))
+func (m *MachineScope) IsResourceCreatedByClusterAPI(resourceFreeFormTags map[string]string) bool {
+	tagsAddedByClusterAPI := ociutil.BuildClusterTags(string(m.OCICluster.GetOCIResourceIdentifier()))
 	for k, v := range tagsAddedByClusterAPI {
 		if resourceFreeFormTags[k] != v {
 			return false
@@ -474,8 +465,10 @@ func (m *MachineScope) GetInstanceIp(ctx context.Context) (*string, error) {
 			}
 		}
 
-		if page = resp.OpcNextPage; resp.OpcNextPage == nil {
+		if resp.OpcNextPage == nil {
 			break
+		} else {
+			page = resp.OpcNextPage
 		}
 	}
 
@@ -618,6 +611,17 @@ func (m *MachineScope) getGetControlPlaneMachineNSGs() []string {
 		}
 	}
 	return nsgs
+}
+
+// getMachineSubnet iterates through the OCICluster Vcn subnets
+// and returns the subnet ID if the name matches
+func (m *MachineScope) getMachineSubnet(name string) (*string, error) {
+	for _, subnet := range m.OCICluster.Spec.NetworkSpec.Vcn.Subnets {
+		if subnet.Name == name {
+			return subnet.ID, nil
+		}
+	}
+	return nil, errors.New(fmt.Sprintf("Subnet with name %s not found for cluster %s", name, m.OCICluster.Name))
 }
 
 func (m *MachineScope) getWorkerMachineSubnet() *string {

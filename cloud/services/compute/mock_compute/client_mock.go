@@ -35,6 +35,21 @@ func (m *MockComputeClient) EXPECT() *MockComputeClientMockRecorder {
 	return m.recorder
 }
 
+// AttachVnic mocks base method.
+func (m *MockComputeClient) AttachVnic(ctx context.Context, request core.AttachVnicRequest) (core.AttachVnicResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AttachVnic", ctx, request)
+	ret0, _ := ret[0].(core.AttachVnicResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AttachVnic indicates an expected call of AttachVnic.
+func (mr *MockComputeClientMockRecorder) AttachVnic(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AttachVnic", reflect.TypeOf((*MockComputeClient)(nil).AttachVnic), ctx, request)
+}
+
 // GetInstance mocks base method.
 func (m *MockComputeClient) GetInstance(ctx context.Context, request core.GetInstanceRequest) (core.GetInstanceResponse, error) {
 	m.ctrl.T.Helper()
