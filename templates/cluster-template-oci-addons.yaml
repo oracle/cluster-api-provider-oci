@@ -214,12 +214,15 @@ data:
           serviceAccountName: cloud-controller-manager
           hostNetwork: true
           nodeSelector:
-            node-role.kubernetes.io/master: ""
+            node-role.kubernetes.io/control-plane: ""
           tolerations:
           - key: node.cloudprovider.kubernetes.io/uninitialized
             value: "true"
             effect: NoSchedule
           - key: node-role.kubernetes.io/master
+            operator: Exists
+            effect: NoSchedule
+          - key: node-role.kubernetes.io/control-plane
             operator: Exists
             effect: NoSchedule
           volumes:
@@ -457,7 +460,7 @@ data:
             role: csi-oci
         spec:
           nodeSelector:
-            node-role.kubernetes.io/master: ""
+            node-role.kubernetes.io/control-plane: ""
           containers:
             - name: csi-volume-provisioner
               image: k8s.gcr.io/sig-storage/csi-provisioner:v3.2.1
@@ -475,8 +478,7 @@ data:
                 - mountPath: /var/run/shared-tmpfs
                   name: shared-tmpfs
             - name: csi-attacher
-              image: k8s.gcr.io/sig-storage/csi-attacher:v3.
-          5.0
+              image: k8s.gcr.io/sig-storage/csi-attacher:v3.5.0
               args:
                 - --csi-address=/var/run/shared-tmpfs/csi.sock
                 - --timeout=120s
