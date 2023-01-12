@@ -38,6 +38,7 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	capierrors "sigs.k8s.io/cluster-api/errors"
 	expclusterv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
+	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -503,9 +504,9 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 	spec := m.OCIManagedMachinePool.Spec.DeepCopy()
 	setMachinePoolSpecDefaults(spec)
 	nodePoolSizeUpdateRequired := false
-	// if node pool size update flags is set and if the number of nodes in the spec is not equal to number set in the node pool
+	// if replicas is not managed by cluster autoscaler and if the number of nodes in the spec is not equal to number set in the node pool
 	// update the node pool
-	if m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.UpdateNodePoolSize && (*m.MachinePool.Spec.Replicas != int32(*pool.NodeConfigDetails.Size)) {
+	if !annotations.ReplicasManagedByExternalAutoscaler(m.MachinePool) && (*m.MachinePool.Spec.Replicas != int32(*pool.NodeConfigDetails.Size)) {
 		nodePoolSizeUpdateRequired = true
 	}
 	actual := m.getSpecFromAPIObject(pool)
@@ -532,7 +533,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 			IsPvEncryptionInTransitEnabled: spec.NodePoolNodeConfig.IsPvEncryptionInTransitEnabled,
 			KmsKeyId:                       spec.NodePoolNodeConfig.KmsKeyId,
 		}
-		if m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.UpdateNodePoolSize {
+		if nodePoolSizeUpdateRequired {
 			nodeConfigDetails.Size = common.Int(int(*m.MachinePool.Spec.Replicas))
 		}
 		nodeShapeConfig := oke.UpdateNodeShapeConfigDetails{}
@@ -623,8 +624,6 @@ func setMachinePoolSpecDefaults(spec *infrav1exp.OCIManagedMachinePoolSpec) {
 				return *configs[i].AvailabilityDomain < *configs[j].AvailabilityDomain
 			})
 		}
-		// set to default value as we should not compare this field
-		spec.NodePoolNodeConfig.UpdateNodePoolSize = false
 	}
 	podNetworkOptions := spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails
 	if podNetworkOptions != nil {

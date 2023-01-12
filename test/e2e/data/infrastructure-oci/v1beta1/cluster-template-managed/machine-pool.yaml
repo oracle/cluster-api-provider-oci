@@ -35,6 +35,4 @@ spec:
   nodeShapeConfig:
     memoryInGBs: "16"
     ocpus: "1"
-  nodePoolNodeConfig:
-    updateNodePoolSize: true
 ---
