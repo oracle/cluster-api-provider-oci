@@ -39,6 +39,8 @@ kind: MachinePool
 metadata:
   name: ${CLUSTER_NAME}-mp-0
   namespace: default
+  annotations:
+    "cluster.x-k8s.io/replicas-managed-by": ""
 spec:
   clusterName: ${CLUSTER_NAME}
   replicas: ${NODE_MACHINE_COUNT}

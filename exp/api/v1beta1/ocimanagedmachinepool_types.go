@@ -88,14 +88,6 @@ type NodePoolNodeConfig struct {
 	// NodePoolPodNetworkOptionDetails defines the pod networking details of the node pool
 	// +optional
 	NodePoolPodNetworkOptionDetails *NodePoolPodNetworkOptionDetails `json:"nodePoolPodNetworkOptionDetails,omitempty"`
-
-	// UpdateNodePoolSize defines whether the node pool size should be updated when there is a spec change.
-	// By default the value is false, which means that on machine pool update, the node pool size is not updated.
-	// This is to make sure the provider reconciliation of node pool does not overwrite any changes done by an external system,
-	// most probably Kubernetes Cluster Autoscaler. This property can be set ot true if CAPI based cluster auto scaler is used
-	// rather than the cloud provider specific one.
-	// +optional
-	UpdateNodePoolSize bool `json:"updateNodePoolSize,omitempty"`
 }
 
 const (
