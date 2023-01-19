@@ -19,12 +19,31 @@ package scope
 import (
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
 	infrav1exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	"sigs.k8s.io/cluster-api/util/conditions"
 )
 
 // OCIManagedCluster is the ClusterAccessor implementation for managed clusters(OKE)
 type OCIManagedCluster struct {
 	OCIManagedCluster *infrav1exp.OCIManagedCluster
+}
+
+func (c OCIManagedCluster) GetNameSpace() string {
+	return c.OCIManagedCluster.Namespace
+}
+
+func (c OCIManagedCluster) GetRegion() string {
+	return c.OCIManagedCluster.Spec.Region
+}
+
+func (c OCIManagedCluster) MarkConditionFalse(t clusterv1.ConditionType, reason string, severity clusterv1.ConditionSeverity, messageFormat string, messageArgs ...interface{}) {
+	conditions.MarkFalse(c.OCIManagedCluster, infrastructurev1beta1.ClusterReadyCondition, reason, severity, messageFormat, messageArgs...)
+
+}
+
+func (c OCIManagedCluster) GetIdentityRef() *corev1.ObjectReference {
+	return c.OCIManagedCluster.Spec.IdentityRef
 }
 
 func (c OCIManagedCluster) GetOCIResourceIdentifier() string {

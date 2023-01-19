@@ -18,6 +18,7 @@ package scope
 
 import (
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
@@ -37,6 +38,10 @@ type OCIClusterAccessor interface {
 	GetFreeformTags() map[string]string
 	// GetName returns the name of the cluster.
 	GetName() string
+	// GetNameSpace returns the namespace of the cluster.
+	GetNameSpace() string
+	// GetRegion returns the region of the cluster, if specified in the spec.
+	GetRegion() string
 	// GetNetworkSpec returns the NetworkSpec of the cluster.
 	GetNetworkSpec() *infrastructurev1beta1.NetworkSpec
 	// SetControlPlaneEndpoint sets the control plane endpoint of the cluster.
@@ -47,4 +52,8 @@ type OCIClusterAccessor interface {
 	SetFailureDomain(id string, spec clusterv1.FailureDomainSpec)
 	// SetAvailabilityDomains sets the availability domain.
 	SetAvailabilityDomains(ads map[string]infrastructurev1beta1.OCIAvailabilityDomain)
+	// MarkConditionFalse marks the provided condition as false in the cluster object
+	MarkConditionFalse(t clusterv1.ConditionType, reason string, severity clusterv1.ConditionSeverity, messageFormat string, messageArgs ...interface{})
+	// GetIdentityRef returns the Identity reference of the cluster
+	GetIdentityRef() *corev1.ObjectReference
 }

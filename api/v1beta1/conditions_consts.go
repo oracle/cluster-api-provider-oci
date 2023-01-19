@@ -99,4 +99,6 @@ const (
 	ApiServerLoadBalancerEventReady = "APIServerLoadBalancerReady"
 	// FailureDomainEventReady used after reconciliation has completed successfully
 	FailureDomainEventReady = "FailureDomainsReady"
+	// NamespaceNotAllowedByIdentity used to indicate cluster in a namespace not allowed by identity.
+	NamespaceNotAllowedByIdentity = "NamespaceNotAllowedByIdentity"
 )

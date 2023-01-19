@@ -174,6 +174,48 @@ var _ = Describe("Managed Workload cluster creation", func() {
 		upgradeControlPlaneVersionSpec(ctx, bootstrapClusterProxy.GetClient(), clusterName, namespace.Name,
 			e2eConfig.GetIntervals(specName, "wait-control-plane"))
 	})
+	
+	It("Managed Cluster - Cluster Identity", func() {
+		clusterName = getClusterName(clusterNamePrefix, "cls-iden")
+		input := clusterctl.ApplyClusterTemplateAndWaitInput{
+			ClusterProxy: bootstrapClusterProxy,
+			ConfigCluster: clusterctl.ConfigClusterInput{
+				LogFolder:                filepath.Join(artifactFolder, "clusters", bootstrapClusterProxy.GetName()),
+				ClusterctlConfigPath:     clusterctlConfigPath,
+				KubeconfigPath:           bootstrapClusterProxy.GetKubeconfigPath(),
+				InfrastructureProvider:   clusterctl.DefaultInfrastructureProvider,
+				Flavor:                   "managed-cluster-identity",
+				Namespace:                namespace.Name,
+				ClusterName:              clusterName,
+				ControlPlaneMachineCount: pointer.Int64(1),
+				WorkerMachineCount:       pointer.Int64(1),
+				KubernetesVersion:        e2eConfig.GetVariable(capi_e2e.KubernetesVersion),
+			},
+			WaitForClusterIntervals:      e2eConfig.GetIntervals(specName, "wait-cluster"),
+			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),
+			WaitForMachinePools:          e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes"),
+			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
+		}
+		input.WaitForControlPlaneInitialized = func(ctx context.Context, input clusterctl.ApplyClusterTemplateAndWaitInput, result *clusterctl.ApplyClusterTemplateAndWaitResult) {
+			Expect(ctx).NotTo(BeNil(), "ctx is required for DiscoveryAndWaitForControlPlaneInitialized")
+			lister := input.ClusterProxy.GetClient()
+			Expect(lister).ToNot(BeNil(), "Invalid argument. input.Lister can't be nil when calling DiscoveryAndWaitForControlPlaneInitialized")
+			var controlPlane *infrav1exp.OCIManagedControlPlane
+			Eventually(func(g Gomega) {
+				controlPlane = GetOCIManagedControlPlaneByCluster(ctx, lister, result.Cluster.Name, result.Cluster.Namespace)
+				if controlPlane != nil {
+					Log(fmt.Sprintf("Control plane is not nil, status is %t", controlPlane.Status.Ready))
+				}
+				g.Expect(controlPlane).ToNot(BeNil())
+				g.Expect(controlPlane.Status.Ready).To(BeTrue())
+			}, input.WaitForControlPlaneIntervals...).Should(Succeed(), "Couldn't get the control plane ready status for the cluster %s", klog.KObj(result.Cluster))
+		}
+		input.WaitForControlPlaneMachinesReady = func(ctx context.Context, input clusterctl.ApplyClusterTemplateAndWaitInput, result *clusterctl.ApplyClusterTemplateAndWaitResult) {
+			// Not applicable
+		}
+
+		clusterctl.ApplyClusterTemplateAndWait(ctx, input, result)
+	})
 })
 
 // GetKubeadmControlPlaneByCluster returns the KubeadmControlPlane objects for a cluster.

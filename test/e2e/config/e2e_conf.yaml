@@ -71,6 +71,8 @@ providers:
           - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-externally-managed-vcn.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-machine-pool.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-managed.yaml"
+          - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-managed-cluster-identity.yaml"
+          - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-cluster-identity.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta1/metadata.yaml"
 
 variables:

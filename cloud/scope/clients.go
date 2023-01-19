@@ -100,6 +100,11 @@ func (c *ClientProvider) GetOrBuildClient(region string) (OCIClients, error) {
 	return regionalClient, nil
 }
 
+// GetRegion returns the region from the authentication config provider
+func (c *ClientProvider) GetRegion() (string, error) {
+	return c.ociAuthConfigProvider.Region()
+}
+
 func createClients(region string, oCIAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (OCIClients, error) {
 	vcnClient, err := createVncClient(region, oCIAuthConfigProvider, logger)
 	if err != nil {
