@@ -73,6 +73,7 @@ providers:
           - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-managed.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-managed-cluster-identity.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-cluster-identity.yaml"
+          - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-windows-calico.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta1/metadata.yaml"
 
 variables:
@@ -111,6 +112,7 @@ intervals:
   default/wait-cluster: ["30m", "10s"]
   default/wait-control-plane: ["30m", "10s"]
   default/wait-worker-nodes: ["30m", "10s"]
+  default/wait-windows-worker-nodes: ["60m", "30s"]
   default/wait-cluster-bare-metal: [ "60m", "10s" ]
   default/wait-control-plane-bare-metal: [ "60m", "10s" ]
   default/wait-worker-nodes-bare-metal: [ "60m", "10s" ]
