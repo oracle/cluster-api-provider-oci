@@ -24,6 +24,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
+	cloudutil "github.com/oracle/cluster-api-provider-oci/cloud/util"
 	infrav1exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
 	"github.com/oracle/oci-go-sdk/v65/containerengine"
 	"github.com/pkg/errors"
@@ -124,17 +125,12 @@ func (r *OCIManagedClusterControlPlaneReconciler) Reconcile(ctx context.Context,
 		return ctrl.Result{}, nil
 	}
 
-	regionOverride := r.Region
-	if len(ociManagedCluster.Spec.Region) > 0 {
-		regionOverride = ociManagedCluster.Spec.Region
+	clusterAccessor := scope.OCIManagedCluster{
+		OCIManagedCluster: ociManagedCluster,
 	}
-	if len(regionOverride) <= 0 {
-		return ctrl.Result{}, errors.New("OCIManagedControlPlane RegionIdentifier can't be nil")
-	}
-
-	clients, err := r.ClientProvider.GetOrBuildClient(regionOverride)
+	clientProvider, clusterRegion, clients, err := cloudutil.InitClientsAndRegion(ctx, r.Client, r.Region, clusterAccessor, r.ClientProvider)
 	if err != nil {
-		logger.Error(err, "Couldn't get the clients for region")
+		return ctrl.Result{}, err
 	}
 
 	helper, err := patch.NewHelper(controlPlane, r.Client)
@@ -154,17 +150,14 @@ func (r *OCIManagedClusterControlPlaneReconciler) Reconcile(ctx context.Context,
 
 	var controlPlaneScope *scope.ManagedControlPlaneScope
 
-	clusterAccessor := scope.OCIManagedCluster{
-		OCIManagedCluster: ociManagedCluster,
-	}
 	controlPlaneScope, err = scope.NewManagedControlPlaneScope(scope.ManagedControlPlaneScopeParams{
 		Client:                 r.Client,
 		Logger:                 &logger,
 		Cluster:                cluster,
 		OCIClusterAccessor:     clusterAccessor,
-		ClientProvider:         r.ClientProvider,
+		ClientProvider:         clientProvider,
 		ContainerEngineClient:  clients.ContainerEngineClient,
-		RegionIdentifier:       regionOverride,
+		RegionIdentifier:       clusterRegion,
 		OCIManagedControlPlane: controlPlane,
 		BaseClient:             clients.BaseClient,
 	})

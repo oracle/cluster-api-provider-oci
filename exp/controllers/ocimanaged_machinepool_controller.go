@@ -25,6 +25,7 @@ import (
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
+	cloudutil "github.com/oracle/cluster-api-provider-oci/cloud/util"
 	infrav1exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
@@ -125,17 +126,12 @@ func (r *OCIManagedMachinePoolReconciler) Reconcile(ctx context.Context, req ctr
 		return ctrl.Result{}, nil
 	}
 
-	regionOverride := r.Region
-	if len(ociManagedCluster.Spec.Region) > 0 {
-		regionOverride = ociManagedCluster.Spec.Region
+	clusterAccessor := scope.OCIManagedCluster{
+		OCIManagedCluster: ociManagedCluster,
 	}
-	if len(regionOverride) <= 0 {
-		return ctrl.Result{}, errors.New("OCIMachinePoolReconciler RegionIdentifier can't be nil")
-	}
-
-	clients, err := r.ClientProvider.GetOrBuildClient(regionOverride)
+	_, _, clients, err := cloudutil.InitClientsAndRegion(ctx, r.Client, r.Region, clusterAccessor, r.ClientProvider)
 	if err != nil {
-		logger.Error(err, "Couldn't get the clients for region")
+		return ctrl.Result{}, err
 	}
 
 	controlPlane := &infrav1exp.OCIManagedControlPlane{}

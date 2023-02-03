@@ -25,6 +25,7 @@ import (
 	"github.com/oracle/cluster-api-provider-oci/api/v1beta1"
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
+	cloudutil "github.com/oracle/cluster-api-provider-oci/cloud/util"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -80,13 +81,6 @@ func (r *OCIClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 		return ctrl.Result{}, err
 	}
-	regionOverride := r.Region
-	if len(ociCluster.Spec.Region) > 0 {
-		regionOverride = ociCluster.Spec.Region
-	}
-	if len(regionOverride) <= 0 {
-		return ctrl.Result{}, errors.New("OCIClusterReconciler RegionIdentifier can't be nil")
-	}
 
 	// Fetch the Cluster.
 	cluster, err := util.GetOwnerCluster(ctx, r.Client, ociCluster.ObjectMeta)
@@ -107,30 +101,29 @@ func (r *OCIClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	var clusterScope scope.ClusterScopeClient
-
-	clients, err := r.ClientProvider.GetOrBuildClient(regionOverride)
-	if err != nil {
-		logger.Error(err, "Couldn't get the clients for region")
+	var clients scope.OCIClients
+	var clientProvider *scope.ClientProvider
+	clusterAccessor := scope.OCISelfManagedCluster{
+		OCICluster: ociCluster,
 	}
-
+	clientProvider, clusterRegion, clients, err := cloudutil.InitClientsAndRegion(ctx, r.Client, r.Region, clusterAccessor, r.ClientProvider)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 	helper, err := patch.NewHelper(ociCluster, r.Client)
 	if err != nil {
 		return ctrl.Result{}, errors.Wrap(err, "failed to init patch helper")
-	}
-
-	clusterAccessor := scope.OCISelfManagedCluster{
-		OCICluster: ociCluster,
 	}
 	clusterScope, err = scope.NewClusterScope(scope.ClusterScopeParams{
 		Client:             r.Client,
 		Logger:             &logger,
 		Cluster:            cluster,
 		OCIClusterAccessor: clusterAccessor,
-		ClientProvider:     r.ClientProvider,
+		ClientProvider:     clientProvider,
 		VCNClient:          clients.VCNClient,
 		LoadBalancerClient: clients.LoadBalancerClient,
 		IdentityClient:     clients.IdentityClient,
-		RegionIdentifier:   regionOverride,
+		RegionIdentifier:   clusterRegion,
 	})
 	if err != nil {
 		logger.Error(err, "Couldn't create cluster scope")

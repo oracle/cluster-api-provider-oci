@@ -25,6 +25,7 @@ import (
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
+	cloudutil "github.com/oracle/cluster-api-provider-oci/cloud/util"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/pkg/errors"
@@ -115,18 +116,12 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		r.Recorder.Eventf(ociMachine, corev1.EventTypeWarning, "ClusterNotAvailable", "Cluster is not available yet")
 		return ctrl.Result{}, nil
 	}
-
-	regionOverride := r.Region
-	if len(ociCluster.Spec.Region) > 0 {
-		regionOverride = ociCluster.Spec.Region
+	clusterAccessor := scope.OCISelfManagedCluster{
+		OCICluster: ociCluster,
 	}
-	if len(regionOverride) <= 0 {
-		return ctrl.Result{}, errors.New("OCIMachineReconciler RegionIdentifier can't be nil")
-	}
-
-	clients, err := r.ClientProvider.GetOrBuildClient(regionOverride)
+	_, _, clients, err := cloudutil.InitClientsAndRegion(ctx, r.Client, r.Region, clusterAccessor, r.ClientProvider)
 	if err != nil {
-		logger.Error(err, "Couldn't get the clients for region")
+		return ctrl.Result{}, err
 	}
 
 	// Create the machine scope
