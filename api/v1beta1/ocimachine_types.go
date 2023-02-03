@@ -61,6 +61,10 @@ type OCIMachineSpec struct {
 	// NetworkDetails defines the configuration options for the network
 	NetworkDetails NetworkDetails `json:"networkDetails,omitempty"`
 
+	// VnicAttachments defines the configuration options for the vnic(s) attached to the machine
+	// The network bandwidth and number of VNICs scale proportionately with the number of OCPUs.
+	VnicAttachments []VnicAttachment `json:"vnicAttachments,omitempty"`
+
 	// LaunchOptions defines the options for tuning the compatibility and performance of VM shapes
 	LaunchOptions *LaunchOptions `json:"launchOptions,omitempty"`
 

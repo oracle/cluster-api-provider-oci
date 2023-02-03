@@ -64,6 +64,30 @@ type NetworkDetails struct {
 	AssignPrivateDnsRecord *bool `json:"assignPrivateDnsRecord,omitempty"`
 }
 
+type VnicAttachment struct {
+	// VnicAttachmentId defines the ID of the VnicAttachment
+	VnicAttachmentId *string `json:"vnicAttachmentId,omitempty"`
+
+	// AssignPublicIp defines whether the vnic should have a public IP address
+	// +optional
+	AssignPublicIp bool `json:"assignPublicIp,omitempty"`
+
+	// SubnetName defines the subnet name to use for the VNIC
+	// Defaults to the "worker" subnet if not provided
+	// +optional
+	SubnetName string `json:"subnetName,omitempty"`
+
+	// DisplayName defines a user-friendly name. Does not have to be unique.
+	// Avoid entering confidential information.
+	DisplayName *string `json:"displayName"`
+
+	// NicIndex defines which physical Network Interface Card (NIC) to use
+	// You can determine which NICs are active for a shape by reviewing the
+	// https://docs.oracle.com/en-us/iaas/Content/Compute/References/computeshapes.htm
+	// +optional
+	NicIndex *int `json:"nicIndex,omitempty"`
+}
+
 // LaunchOptionsBootVolumeTypeEnum Enum with underlying type: string
 type LaunchOptionsBootVolumeTypeEnum string
 

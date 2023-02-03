@@ -55,3 +55,20 @@ func GetSubnetNamesFromId(ids []string, subnets []*infrastructurev1beta1.Subnet)
 	}
 	return names
 }
+
+// ConvertMachineDefinedTags passes in the OCIMachineSpec DefinedTags and returns a converted map of defined tags
+// to be used when creating API requests.
+func ConvertMachineDefinedTags(machineDefinedTags map[string]map[string]string) map[string]map[string]interface{} {
+	definedTags := make(map[string]map[string]interface{})
+	if machineDefinedTags != nil {
+		for ns, mapNs := range machineDefinedTags {
+			mapValues := make(map[string]interface{})
+			for k, v := range mapNs {
+				mapValues[k] = v
+			}
+			definedTags[ns] = mapValues
+		}
+	}
+
+	return definedTags
+}

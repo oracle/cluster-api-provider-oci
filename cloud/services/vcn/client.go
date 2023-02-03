@@ -69,6 +69,7 @@ type Client interface {
 	ListServices(ctx context.Context, request core.ListServicesRequest) (response core.ListServicesResponse, err error)
 	// Vnic
 	GetVnic(ctx context.Context, request core.GetVnicRequest) (response core.GetVnicResponse, err error)
+	UpdateVnic(ctx context.Context, request core.UpdateVnicRequest) (response core.UpdateVnicResponse, err error)
 	// NSG
 	GetNetworkSecurityGroup(ctx context.Context, request core.GetNetworkSecurityGroupRequest) (response core.GetNetworkSecurityGroupResponse, err error)
 	ListNetworkSecurityGroups(ctx context.Context, request core.ListNetworkSecurityGroupsRequest) (response core.ListNetworkSecurityGroupsResponse, err error)

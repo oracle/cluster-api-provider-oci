@@ -289,6 +289,20 @@ func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.
 			}
 			machineScope.Info("Instance is added to the control plane LB")
 		}
+
+		if len(machine.Spec.VnicAttachments) > 0 {
+			err := machineScope.ReconcileVnicAttachments(ctx)
+			if err != nil {
+				r.Recorder.Event(machine, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to reconcile OCIMachine").Error())
+				conditions.MarkFalse(machineScope.OCIMachine, infrastructurev1beta1.InstanceReadyCondition,
+					infrastructurev1beta1.InstanceVnicAttachmentFailedReason, clusterv1.ConditionSeverityError, "")
+				return ctrl.Result{}, err
+			}
+			machineScope.Info("Instance vnic attachment success")
+			r.Recorder.Eventf(machineScope.OCIMachine, corev1.EventTypeNormal, infrastructurev1beta1.InstanceVnicAttachmentReady,
+				"VNICs have been attached to instance.")
+		}
+
 		// record the event only when machine goes from not ready to ready state
 		r.Recorder.Eventf(machine, corev1.EventTypeNormal, "InstanceReady",
 			"Instance is in ready state")
