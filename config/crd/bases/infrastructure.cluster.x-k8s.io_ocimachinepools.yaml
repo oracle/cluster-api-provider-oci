@@ -310,6 +310,11 @@ spec:
                             description: Whether the Measured Boot feature is enabled
                               on the instance.
                             type: boolean
+                          isMemoryEncryptionEnabled:
+                            description: Whether the instance is a confidential instance.
+                              If this value is `true`, the instance is a confidential
+                              instance. The default value is `false`.
+                            type: boolean
                           isSecureBootEnabled:
                             description: Whether Secure Boot is enabled on the instance.
                             type: boolean
@@ -369,6 +374,11 @@ spec:
                             description: Whether the Measured Boot feature is enabled
                               on the instance.
                             type: boolean
+                          isMemoryEncryptionEnabled:
+                            description: Whether the instance is a confidential instance.
+                              If this value is `true`, the instance is a confidential
+                              instance. The default value is `false`.
+                            type: boolean
                           isSecureBootEnabled:
                             description: Whether Secure Boot is enabled on the instance.
                             type: boolean
@@ -416,6 +426,11 @@ spec:
                             description: Whether the Measured Boot feature is enabled
                               on the instance.
                             type: boolean
+                          isMemoryEncryptionEnabled:
+                            description: Whether the instance is a confidential instance.
+                              If this value is `true`, the instance is a confidential
+                              instance. The default value is `false`.
+                            type: boolean
                           isSecureBootEnabled:
                             description: Whether Secure Boot is enabled on the instance.
                             type: boolean
@@ -461,6 +476,11 @@ spec:
                             description: Whether the Measured Boot feature is enabled
                               on the instance.
                             type: boolean
+                          isMemoryEncryptionEnabled:
+                            description: Whether the instance is a confidential instance.
+                              If this value is `true`, the instance is a confidential
+                              instance. The default value is `false`.
+                            type: boolean
                           isSecureBootEnabled:
                             description: Whether Secure Boot is enabled on the instance.
                             type: boolean
@@ -480,6 +500,11 @@ spec:
                           isMeasuredBootEnabled:
                             description: Whether the Measured Boot feature is enabled
                               on the instance.
+                            type: boolean
+                          isMemoryEncryptionEnabled:
+                            description: Whether the instance is a confidential instance.
+                              If this value is `true`, the instance is a confidential
+                              instance. The default value is `false`.
                             type: boolean
                           isSecureBootEnabled:
                             description: Whether Secure Boot is enabled on the instance.
@@ -525,6 +550,11 @@ spec:
                             description: Whether the Measured Boot feature is enabled
                               on the instance.
                             type: boolean
+                          isMemoryEncryptionEnabled:
+                            description: Whether the instance is a confidential instance.
+                              If this value is `true`, the instance is a confidential
+                              instance. The default value is `false`.
+                            type: boolean
                           isSecureBootEnabled:
                             description: Whether Secure Boot is enabled on the instance.
                             type: boolean
@@ -540,6 +570,11 @@ spec:
                           isMeasuredBootEnabled:
                             description: Whether the Measured Boot feature is enabled
                               on the instance.
+                            type: boolean
+                          isMemoryEncryptionEnabled:
+                            description: Whether the instance is a confidential instance.
+                              If this value is `true`, the instance is a confidential
+                              instance. The default value is `false`.
                             type: boolean
                           isSecureBootEnabled:
                             description: Whether Secure Boot is enabled on the instance.

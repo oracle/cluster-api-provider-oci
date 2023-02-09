@@ -228,6 +228,7 @@ func TestInstanceConfigCreate(t *testing.T) {
 							IsMeasuredBootEnabled:          common.Bool(false),
 							IsTrustedPlatformModuleEnabled: common.Bool(true),
 							IsSecureBootEnabled:            common.Bool(true),
+							IsMemoryEncryptionEnabled:      common.Bool(true),
 						},
 					},
 					AgentConfig: &infrastructurev1beta1.LaunchInstanceAgentConfig{
@@ -272,6 +273,7 @@ func TestInstanceConfigCreate(t *testing.T) {
 									IsMeasuredBootEnabled:          common.Bool(false),
 									IsTrustedPlatformModuleEnabled: common.Bool(true),
 									IsSecureBootEnabled:            common.Bool(true),
+									IsMemoryEncryptionEnabled:      common.Bool(true),
 								},
 								Metadata: map[string]string{"user_data": "dGVzdA=="},
 								Shape:    common.String("test-shape"),
