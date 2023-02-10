@@ -261,6 +261,9 @@ type AmdMilanBmPlatformConfig struct {
 	// Whether the Measured Boot feature is enabled on the instance.
 	IsMeasuredBootEnabled *bool `json:"isMeasuredBootEnabled,omitempty"`
 
+	// Whether the instance is a confidential instance. If this value is `true`, the instance is a confidential instance. The default value is `false`.
+	IsMemoryEncryptionEnabled *bool `json:"isMemoryEncryptionEnabled,omitempty"`
+
 	// Whether symmetric multithreading is enabled on the instance. Symmetric multithreading is also
 	// called simultaneous multithreading (SMT) or Intel Hyper-Threading.
 	// Intel and AMD processors have two hardware execution threads per core (OCPU). SMT permits multiple
@@ -319,6 +322,9 @@ type AmdRomeBmPlatformConfig struct {
 	// Whether the Measured Boot feature is enabled on the instance.
 	IsMeasuredBootEnabled *bool `json:"isMeasuredBootEnabled,omitempty"`
 
+	// Whether the instance is a confidential instance. If this value is `true`, the instance is a confidential instance. The default value is `false`.
+	IsMemoryEncryptionEnabled *bool `json:"isMemoryEncryptionEnabled,omitempty"`
+
 	// Whether symmetric multithreading is enabled on the instance. Symmetric multithreading is also
 	// called simultaneous multithreading (SMT) or Intel Hyper-Threading.
 	// Intel and AMD processors have two hardware execution threads per core (OCPU). SMT permits multiple
@@ -366,6 +372,9 @@ type IntelSkylakeBmPlatformConfig struct {
 
 	// Whether the Measured Boot feature is enabled on the instance.
 	IsMeasuredBootEnabled *bool `json:"isMeasuredBootEnabled,omitempty"`
+
+	// Whether the instance is a confidential instance. If this value is `true`, the instance is a confidential instance. The default value is `false`.
+	IsMemoryEncryptionEnabled *bool `json:"isMemoryEncryptionEnabled,omitempty"`
 }
 
 // AmdRomeBmGpuPlatformConfigNumaNodesPerSocketEnum Enum with underlying type: string
@@ -390,6 +399,9 @@ type AmdRomeBmGpuPlatformConfig struct {
 
 	// Whether the Measured Boot feature is enabled on the instance.
 	IsMeasuredBootEnabled *bool `json:"isMeasuredBootEnabled,omitempty"`
+
+	// Whether the instance is a confidential instance. If this value is `true`, the instance is a confidential instance. The default value is `false`.
+	IsMemoryEncryptionEnabled *bool `json:"isMemoryEncryptionEnabled,omitempty"`
 
 	// Whether symmetric multithreading is enabled on the instance. Symmetric multithreading is also
 	// called simultaneous multithreading (SMT) or Intel Hyper-Threading.
@@ -440,6 +452,9 @@ type IntelIcelakeBmPlatformConfig struct {
 	// Whether the Measured Boot feature is enabled on the instance.
 	IsMeasuredBootEnabled *bool `json:"isMeasuredBootEnabled,omitempty"`
 
+	// Whether the instance is a confidential instance. If this value is `true`, the instance is a confidential instance. The default value is `false`.
+	IsMemoryEncryptionEnabled *bool `json:"isMemoryEncryptionEnabled,omitempty"`
+
 	// Whether symmetric multithreading is enabled on the instance. Symmetric multithreading is also
 	// called simultaneous multithreading (SMT) or Intel Hyper-Threading.
 	// Intel and AMD processors have two hardware execution threads per core (OCPU). SMT permits multiple
@@ -476,6 +491,9 @@ type IntelVmPlatformConfig struct {
 
 	// Whether the Measured Boot feature is enabled on the instance.
 	IsMeasuredBootEnabled *bool `json:"isMeasuredBootEnabled,omitempty"`
+
+	// Whether the instance is a confidential instance. If this value is `true`, the instance is a confidential instance. The default value is `false`.
+	IsMemoryEncryptionEnabled *bool `json:"isMemoryEncryptionEnabled,omitempty"`
 }
 
 // AmdVmPlatformConfig The platform configuration of a virtual machine instance that uses the AMD platform.
@@ -488,6 +506,9 @@ type AmdVmPlatformConfig struct {
 
 	// Whether the Measured Boot feature is enabled on the instance.
 	IsMeasuredBootEnabled *bool `json:"isMeasuredBootEnabled,omitempty"`
+
+	// Whether the instance is a confidential instance. If this value is `true`, the instance is a confidential instance. The default value is `false`.
+	IsMemoryEncryptionEnabled *bool `json:"isMemoryEncryptionEnabled,omitempty"`
 }
 
 // InstanceOptions Optional mutable instance options

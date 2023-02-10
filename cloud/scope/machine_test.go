@@ -655,6 +655,7 @@ func TestInstanceReconciliation(t *testing.T) {
 						IsMeasuredBootEnabled:          common.Bool(false),
 						IsTrustedPlatformModuleEnabled: common.Bool(true),
 						IsSecureBootEnabled:            common.Bool(true),
+						IsMemoryEncryptionEnabled:      common.Bool(true),
 					},
 				}
 				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
@@ -666,6 +667,7 @@ func TestInstanceReconciliation(t *testing.T) {
 						IsMeasuredBootEnabled:          common.Bool(false),
 						IsTrustedPlatformModuleEnabled: common.Bool(true),
 						IsSecureBootEnabled:            common.Bool(true),
+						IsMemoryEncryptionEnabled:      common.Bool(true),
 					})
 				})).Return(core.LaunchInstanceResponse{}, nil)
 			},
@@ -681,6 +683,7 @@ func TestInstanceReconciliation(t *testing.T) {
 						IsMeasuredBootEnabled:          common.Bool(false),
 						IsTrustedPlatformModuleEnabled: common.Bool(true),
 						IsSecureBootEnabled:            common.Bool(true),
+						IsMemoryEncryptionEnabled:      common.Bool(false),
 					},
 				}
 				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
@@ -692,6 +695,7 @@ func TestInstanceReconciliation(t *testing.T) {
 						IsMeasuredBootEnabled:          common.Bool(false),
 						IsTrustedPlatformModuleEnabled: common.Bool(true),
 						IsSecureBootEnabled:            common.Bool(true),
+						IsMemoryEncryptionEnabled:      common.Bool(false),
 					})
 				})).Return(core.LaunchInstanceResponse{}, nil)
 			},
@@ -707,6 +711,7 @@ func TestInstanceReconciliation(t *testing.T) {
 						IsMeasuredBootEnabled:                    common.Bool(false),
 						IsTrustedPlatformModuleEnabled:           common.Bool(true),
 						IsSecureBootEnabled:                      common.Bool(true),
+						IsMemoryEncryptionEnabled:                common.Bool(true),
 						IsSymmetricMultiThreadingEnabled:         common.Bool(false),
 						IsAccessControlServiceEnabled:            common.Bool(true),
 						AreVirtualInstructionsEnabled:            common.Bool(false),
@@ -724,6 +729,7 @@ func TestInstanceReconciliation(t *testing.T) {
 						IsMeasuredBootEnabled:                    common.Bool(false),
 						IsTrustedPlatformModuleEnabled:           common.Bool(true),
 						IsSecureBootEnabled:                      common.Bool(true),
+						IsMemoryEncryptionEnabled:                common.Bool(true),
 						IsSymmetricMultiThreadingEnabled:         common.Bool(false),
 						IsAccessControlServiceEnabled:            common.Bool(true),
 						AreVirtualInstructionsEnabled:            common.Bool(false),
@@ -745,6 +751,7 @@ func TestInstanceReconciliation(t *testing.T) {
 						IsMeasuredBootEnabled:                    common.Bool(false),
 						IsTrustedPlatformModuleEnabled:           common.Bool(true),
 						IsSecureBootEnabled:                      common.Bool(true),
+						IsMemoryEncryptionEnabled:                common.Bool(false),
 						IsSymmetricMultiThreadingEnabled:         common.Bool(false),
 						IsAccessControlServiceEnabled:            common.Bool(true),
 						AreVirtualInstructionsEnabled:            common.Bool(false),
@@ -761,6 +768,7 @@ func TestInstanceReconciliation(t *testing.T) {
 						IsMeasuredBootEnabled:                    common.Bool(false),
 						IsTrustedPlatformModuleEnabled:           common.Bool(true),
 						IsSecureBootEnabled:                      common.Bool(true),
+						IsMemoryEncryptionEnabled:                common.Bool(false),
 						IsSymmetricMultiThreadingEnabled:         common.Bool(false),
 						IsAccessControlServiceEnabled:            common.Bool(true),
 						AreVirtualInstructionsEnabled:            common.Bool(false),
@@ -781,6 +789,7 @@ func TestInstanceReconciliation(t *testing.T) {
 						IsMeasuredBootEnabled:                    common.Bool(false),
 						IsTrustedPlatformModuleEnabled:           common.Bool(true),
 						IsSecureBootEnabled:                      common.Bool(true),
+						IsMemoryEncryptionEnabled:                common.Bool(true),
 						IsSymmetricMultiThreadingEnabled:         common.Bool(false),
 						IsInputOutputMemoryManagementUnitEnabled: common.Bool(false),
 						PercentageOfCoresEnabled:                 common.Int(56),
@@ -796,6 +805,7 @@ func TestInstanceReconciliation(t *testing.T) {
 						IsMeasuredBootEnabled:                    common.Bool(false),
 						IsTrustedPlatformModuleEnabled:           common.Bool(true),
 						IsSecureBootEnabled:                      common.Bool(true),
+						IsMemoryEncryptionEnabled:                common.Bool(true),
 						IsSymmetricMultiThreadingEnabled:         common.Bool(false),
 						IsInputOutputMemoryManagementUnitEnabled: common.Bool(false),
 						PercentageOfCoresEnabled:                 common.Int(56),
@@ -815,6 +825,7 @@ func TestInstanceReconciliation(t *testing.T) {
 						IsMeasuredBootEnabled:          common.Bool(false),
 						IsTrustedPlatformModuleEnabled: common.Bool(true),
 						IsSecureBootEnabled:            common.Bool(true),
+						IsMemoryEncryptionEnabled:      common.Bool(false),
 					},
 				}
 				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
@@ -826,6 +837,7 @@ func TestInstanceReconciliation(t *testing.T) {
 						IsMeasuredBootEnabled:          common.Bool(false),
 						IsTrustedPlatformModuleEnabled: common.Bool(true),
 						IsSecureBootEnabled:            common.Bool(true),
+						IsMemoryEncryptionEnabled:      common.Bool(false),
 					})
 				})).Return(core.LaunchInstanceResponse{}, nil)
 			},
@@ -842,6 +854,7 @@ func TestInstanceReconciliation(t *testing.T) {
 						IsTrustedPlatformModuleEnabled:           common.Bool(true),
 						IsSecureBootEnabled:                      common.Bool(true),
 						IsAccessControlServiceEnabled:            common.Bool(true),
+						IsMemoryEncryptionEnabled:                common.Bool(true),
 						IsSymmetricMultiThreadingEnabled:         common.Bool(false),
 						IsInputOutputMemoryManagementUnitEnabled: common.Bool(false),
 						AreVirtualInstructionsEnabled:            common.Bool(true),
@@ -858,6 +871,7 @@ func TestInstanceReconciliation(t *testing.T) {
 						IsMeasuredBootEnabled:                    common.Bool(false),
 						IsTrustedPlatformModuleEnabled:           common.Bool(true),
 						IsSecureBootEnabled:                      common.Bool(true),
+						IsMemoryEncryptionEnabled:                common.Bool(true),
 						IsAccessControlServiceEnabled:            common.Bool(true),
 						IsSymmetricMultiThreadingEnabled:         common.Bool(false),
 						IsInputOutputMemoryManagementUnitEnabled: common.Bool(false),

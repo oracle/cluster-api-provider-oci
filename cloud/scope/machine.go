@@ -767,6 +767,7 @@ func (m *MachineScope) getPlatformConfig() core.PlatformConfig {
 				IsSecureBootEnabled:                      platformConfig.AmdRomeBmGpuPlatformConfig.IsSecureBootEnabled,
 				IsTrustedPlatformModuleEnabled:           platformConfig.AmdRomeBmGpuPlatformConfig.IsTrustedPlatformModuleEnabled,
 				IsMeasuredBootEnabled:                    platformConfig.AmdRomeBmGpuPlatformConfig.IsMeasuredBootEnabled,
+				IsMemoryEncryptionEnabled:                platformConfig.AmdRomeBmGpuPlatformConfig.IsMemoryEncryptionEnabled,
 				IsSymmetricMultiThreadingEnabled:         platformConfig.AmdRomeBmGpuPlatformConfig.IsSymmetricMultiThreadingEnabled,
 				IsAccessControlServiceEnabled:            platformConfig.AmdRomeBmGpuPlatformConfig.IsAccessControlServiceEnabled,
 				AreVirtualInstructionsEnabled:            platformConfig.AmdRomeBmGpuPlatformConfig.AreVirtualInstructionsEnabled,
@@ -779,6 +780,7 @@ func (m *MachineScope) getPlatformConfig() core.PlatformConfig {
 				IsSecureBootEnabled:                      platformConfig.AmdRomeBmPlatformConfig.IsSecureBootEnabled,
 				IsTrustedPlatformModuleEnabled:           platformConfig.AmdRomeBmPlatformConfig.IsTrustedPlatformModuleEnabled,
 				IsMeasuredBootEnabled:                    platformConfig.AmdRomeBmPlatformConfig.IsMeasuredBootEnabled,
+				IsMemoryEncryptionEnabled:                platformConfig.AmdRomeBmPlatformConfig.IsMemoryEncryptionEnabled,
 				IsSymmetricMultiThreadingEnabled:         platformConfig.AmdRomeBmPlatformConfig.IsSymmetricMultiThreadingEnabled,
 				IsAccessControlServiceEnabled:            platformConfig.AmdRomeBmPlatformConfig.IsAccessControlServiceEnabled,
 				AreVirtualInstructionsEnabled:            platformConfig.AmdRomeBmPlatformConfig.AreVirtualInstructionsEnabled,
@@ -792,6 +794,7 @@ func (m *MachineScope) getPlatformConfig() core.PlatformConfig {
 				IsSecureBootEnabled:                      platformConfig.IntelIcelakeBmPlatformConfig.IsSecureBootEnabled,
 				IsTrustedPlatformModuleEnabled:           platformConfig.IntelIcelakeBmPlatformConfig.IsTrustedPlatformModuleEnabled,
 				IsMeasuredBootEnabled:                    platformConfig.IntelIcelakeBmPlatformConfig.IsMeasuredBootEnabled,
+				IsMemoryEncryptionEnabled:                platformConfig.IntelIcelakeBmPlatformConfig.IsMemoryEncryptionEnabled,
 				IsSymmetricMultiThreadingEnabled:         platformConfig.IntelIcelakeBmPlatformConfig.IsSymmetricMultiThreadingEnabled,
 				PercentageOfCoresEnabled:                 platformConfig.IntelIcelakeBmPlatformConfig.PercentageOfCoresEnabled,
 				IsInputOutputMemoryManagementUnitEnabled: platformConfig.IntelIcelakeBmPlatformConfig.IsInputOutputMemoryManagementUnitEnabled,
@@ -802,18 +805,21 @@ func (m *MachineScope) getPlatformConfig() core.PlatformConfig {
 				IsSecureBootEnabled:            platformConfig.AmdVmPlatformConfig.IsSecureBootEnabled,
 				IsTrustedPlatformModuleEnabled: platformConfig.AmdVmPlatformConfig.IsTrustedPlatformModuleEnabled,
 				IsMeasuredBootEnabled:          platformConfig.AmdVmPlatformConfig.IsMeasuredBootEnabled,
+				IsMemoryEncryptionEnabled:      platformConfig.AmdVmPlatformConfig.IsMemoryEncryptionEnabled,
 			}
 		case infrastructurev1beta1.PlatformConfigTypeIntelVm:
 			return core.IntelVmPlatformConfig{
 				IsSecureBootEnabled:            platformConfig.IntelVmPlatformConfig.IsSecureBootEnabled,
 				IsTrustedPlatformModuleEnabled: platformConfig.IntelVmPlatformConfig.IsTrustedPlatformModuleEnabled,
 				IsMeasuredBootEnabled:          platformConfig.IntelVmPlatformConfig.IsMeasuredBootEnabled,
+				IsMemoryEncryptionEnabled:      platformConfig.IntelVmPlatformConfig.IsMemoryEncryptionEnabled,
 			}
 		case infrastructurev1beta1.PlatformConfigTypeIntelSkylakeBm:
 			return core.IntelSkylakeBmPlatformConfig{
 				IsSecureBootEnabled:            platformConfig.IntelSkylakeBmPlatformConfig.IsSecureBootEnabled,
 				IsTrustedPlatformModuleEnabled: platformConfig.IntelSkylakeBmPlatformConfig.IsTrustedPlatformModuleEnabled,
 				IsMeasuredBootEnabled:          platformConfig.IntelSkylakeBmPlatformConfig.IsMeasuredBootEnabled,
+				IsMemoryEncryptionEnabled:      platformConfig.IntelSkylakeBmPlatformConfig.IsMemoryEncryptionEnabled,
 			}
 		case infrastructurev1beta1.PlatformConfigTypeAmdMilanBm:
 			numaNodesPerSocket, _ := core.GetMappingAmdMilanBmPlatformConfigNumaNodesPerSocketEnum(string(platformConfig.AmdMilanBmPlatformConfig.NumaNodesPerSocket))
@@ -821,6 +827,7 @@ func (m *MachineScope) getPlatformConfig() core.PlatformConfig {
 				IsSecureBootEnabled:                      platformConfig.AmdMilanBmPlatformConfig.IsSecureBootEnabled,
 				IsTrustedPlatformModuleEnabled:           platformConfig.AmdMilanBmPlatformConfig.IsTrustedPlatformModuleEnabled,
 				IsMeasuredBootEnabled:                    platformConfig.AmdMilanBmPlatformConfig.IsMeasuredBootEnabled,
+				IsMemoryEncryptionEnabled:                platformConfig.AmdMilanBmPlatformConfig.IsMemoryEncryptionEnabled,
 				IsSymmetricMultiThreadingEnabled:         platformConfig.AmdMilanBmPlatformConfig.IsSymmetricMultiThreadingEnabled,
 				IsAccessControlServiceEnabled:            platformConfig.AmdMilanBmPlatformConfig.IsAccessControlServiceEnabled,
 				AreVirtualInstructionsEnabled:            platformConfig.AmdMilanBmPlatformConfig.AreVirtualInstructionsEnabled,
