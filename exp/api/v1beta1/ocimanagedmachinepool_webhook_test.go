@@ -44,6 +44,23 @@ func TestOCIManagedMachinePool_CreateDefault(t *testing.T) {
 				}))
 			},
 		},
+		{
+			name: "should not override cni type",
+			m: &OCIManagedMachinePool{
+				Spec: OCIManagedMachinePoolSpec{
+					NodePoolNodeConfig: &NodePoolNodeConfig{
+						NodePoolPodNetworkOptionDetails: &NodePoolPodNetworkOptionDetails{
+							CniType: FlannelCNI,
+						},
+					},
+				},
+			},
+			expect: func(g *gomega.WithT, c *OCIManagedMachinePool) {
+				g.Expect(c.Spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails).To(Equal(&NodePoolPodNetworkOptionDetails{
+					CniType: FlannelCNI,
+				}))
+			},
+		},
 	}
 
 	for _, test := range tests {
