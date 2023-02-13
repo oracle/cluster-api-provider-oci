@@ -9,6 +9,9 @@ custom resources:
 - `OCIManagedCluster`
 - `OCIManagedMachinePool`
 
+> NOTE: CAPOCI does not support flannel as the CNI provider in OKE clusters. This will be fixed in 
+> an upcoming release.
+
 ## Workload Cluster Parameters
 
 The following Oracle Cloud Infrastructure (OCI) configuration parameters are available
@@ -21,6 +24,16 @@ when creating a managed workload cluster on OCI using one of our predefined temp
 | `OCI_MANAGED_NODE_SHAPE `             | VM.Standard.E4.Flex | The [shape][node-images-shapes] of the Kubernetes worker nodes.                                                        |
 | `OCI_MANAGED_NODE_MACHINE_TYPE_OCPUS` | 1                   | The number of OCPUs allocated to the worker node instance.                                                             |
 | `OCI_SSH_KEY`                         |                     | The public SSH key to be added to the Kubernetes nodes. It can be used to login to the node and troubleshoot failures. |
+
+The following Cluster API parameters are also available:
+
+| Parameter                     | Default Value  | Description                                                                                                                                                                               |
+|-------------------------------|----------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `CLUSTER_NAME`                |                | The name of the workload cluster to create.                                                                                                                                               |
+| `KUBERNETES_VERSION`          |                | The Kubernetes version installed on the workload cluster nodes. If this environement variable is not configured, the version must be specified in the `.cluster-api/clusterctl.yaml` file |
+| `NAMESPACE`                   |                | The namespace for the workload cluster. If not specified, the current namespace is used.                                                                                                  |
+| `NODE_MACHINE_COUNT`          |                | The number of machines in the OKE nodepool.                                                                                                                                               |
+
 
 ## Pre-Requisites
 
@@ -82,12 +95,32 @@ clusterctl generate cluster <cluster-name>\
 --from cluster-template-managedprivate.yaml | kubectl apply -f -
 ```
 
+## Access kubeconfig of an OKE cluster
+
+###  Step 1 - Identify Cluster OCID
+
+Access the management cluster using kubectl and identify the OKE cluster OCID
+
+```bash
+kubectl get ocimanagedcontrolplane <workload-cluster-name> -n <workload-cluster-namespace> -o jsonpath='{.spec.id}'
+```
+
+###  Step 2 - Access kubeconfig
+
+Access kubeconfig
+
+```bash
+oci ce cluster create-kubeconfig --cluster-id <cluster-ocid> --file <file-name>  --region <region>  --kube-endpoint PUBLIC_ENDPOINT
+```
+Please read the [doc][download-kubeconfig] for more details on how to access kubeconfig file of OKE clusters.
 
 
-[node-images-shapes]: https://docs.oracle.com/en-us/iaas/Content/ContEng/Reference/contengimagesshapes.htm
+[node-images]: https://docs.oracle.com/en-us/iaas/Content/ContEng/Reference/contengimagesshapes.htm#images
+[node-images-shapes]: https://docs.oracle.com/en-us/iaas/Content/ContEng/Reference/contengimagesshapes.htm#shapes
 [oke-policies]: https://docs.oracle.com/en-us/iaas/Content/ContEng/Concepts/contengpolicyconfig.htm
 [install-cluster-api]: ../gs/install-cluster-api.md
 [latest-release]: https://github.com/oracle/cluster-api-provider-oci/releases/latest
 [api-reference]: ../reference/api-reference.md
 [supported-versions]: https://docs.oracle.com/en-us/iaas/Content/ContEng/Concepts/contengaboutk8sversions.htm#supportedk8sversions
 [vcn-native-pod-networking]: https://docs.oracle.com/en-us/iaas/Content/ContEng/Concepts/contengpodnetworking_topic-OCI_CNI_plugin.htm
+[download-kubeconfig]:https://docs.oracle.com/en-us/iaas/Content/ContEng/Tasks/contengdownloadkubeconfigfile.htm
