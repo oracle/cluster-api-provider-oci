@@ -33,15 +33,15 @@ and OCPU count.
 
 The following Cluster API parameters are also available:
 
-| Parameter                     | Default Value  | Description                                                                                                                                                                               |
-|-------------------------------|----------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `CLUSTER_NAME`                |                | The name of the workload cluster to create.                                                                                                                                               |
-| `CONTROL_PLANE_MACHINE_COUNT` | 1              | The number of control plane machines for the workload cluster.                                                                                                                            |
-| `KUBERNETES_VERSION`          |                | The Kubernetes version installed on the workload cluster nodes. If this environement variable is not configured, the version must be specifed in the `.cluster-api/clusterctl.yaml` file  |
-| `NAMESPACE`                   |                | The namespace for the workload cluster. If not specified, the current namespace is used.                                                                                                  |
-| `POD_CIDR`                    | 192.168.0.0/16 | CIDR range of the Kubernetes pod-to-pod network.                                                                                                                                          |
-| `SERVICE_CIDR`                | 10.128.0.0/12  | CIDR range of the Kubernetes pod-to-services network.                                                                                                                                     |
-| `NODE_MACHINE_COUNT`          |                | The number of worker machines for the workload cluster.                                                                                                                                   |
+| Parameter                     | Default Value  | Description                                                                                                                                                                              |
+|-------------------------------|----------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `CLUSTER_NAME`                |                | The name of the workload cluster to create.                                                                                                                                              |
+| `CONTROL_PLANE_MACHINE_COUNT` | 1              | The number of control plane machines for the workload cluster.                                                                                                                           |
+| `KUBERNETES_VERSION`          |                | The Kubernetes version installed on the workload cluster nodes. If this environment variable is not configured, the version must be specified in the `.cluster-api/clusterctl.yaml` file |
+| `NAMESPACE`                   |                | The namespace for the workload cluster. If not specified, the current namespace is used.                                                                                                 |
+| `POD_CIDR`                    | 192.168.0.0/16 | CIDR range of the Kubernetes pod-to-pod network.                                                                                                                                         |
+| `SERVICE_CIDR`                | 10.128.0.0/12  | CIDR range of the Kubernetes pod-to-services network.                                                                                                                                    |
+| `NODE_MACHINE_COUNT`          |                | The number of worker machines for the workload cluster.                                                                                                                                  |
 
 ## Create a new workload cluster on virtual instances using an Ubuntu custom image
 
