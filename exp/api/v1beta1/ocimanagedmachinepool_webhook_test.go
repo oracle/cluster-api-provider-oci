@@ -22,6 +22,7 @@ import (
 
 	"github.com/onsi/gomega"
 	. "github.com/onsi/gomega"
+	"github.com/oracle/oci-go-sdk/v65/common"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -73,6 +74,8 @@ func TestOCIManagedMachinePool_CreateDefault(t *testing.T) {
 }
 
 func TestOCIManagedMachinePool_ValidateCreate(t *testing.T) {
+	validVersion := common.String("v1.25.1")
+	inValidVersion := common.String("abcd")
 	tests := []struct {
 		name                  string
 		m                     *OCIManagedMachinePool
@@ -85,6 +88,9 @@ func TestOCIManagedMachinePool_ValidateCreate(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrst",
 				},
+				Spec: OCIManagedMachinePoolSpec{
+					Version: validVersion,
+				},
 			},
 			errorMgsShouldContain: "Name cannot be more than 31 characters",
 			expectErr:             true,
@@ -95,8 +101,32 @@ func TestOCIManagedMachinePool_ValidateCreate(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "abcdefghijklmno",
 				},
+				Spec: OCIManagedMachinePoolSpec{
+					Version: validVersion,
+				},
 			},
 			expectErr: false,
+		},
+		{
+			name: "should not allow nil version",
+			m: &OCIManagedMachinePool{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "abcdefghijklmno",
+				},
+			},
+			expectErr: true,
+		},
+		{
+			name: "should not allow invalid version",
+			m: &OCIManagedMachinePool{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "abcdefghijklmno",
+				},
+				Spec: OCIManagedMachinePoolSpec{
+					Version: inValidVersion,
+				},
+			},
+			expectErr: true,
 		},
 	}
 	for _, test := range tests {
@@ -105,6 +135,64 @@ func TestOCIManagedMachinePool_ValidateCreate(t *testing.T) {
 
 			if test.expectErr {
 				err := test.m.ValidateCreate()
+				g.Expect(err).NotTo(gomega.Succeed())
+				g.Expect(strings.Contains(err.Error(), test.errorMgsShouldContain)).To(gomega.BeTrue())
+			} else {
+				g.Expect(test.m.ValidateCreate()).To(gomega.Succeed())
+			}
+		})
+	}
+}
+
+func TestOCIManagedMachinePool_ValidateUpdate(t *testing.T) {
+	validVersion := common.String("v1.25.1")
+	inValidVersion := common.String("abcd")
+	tests := []struct {
+		name                  string
+		m                     *OCIManagedMachinePool
+		errorMgsShouldContain string
+		expectErr             bool
+	}{
+		{
+			name: "should allow valid version",
+			m: &OCIManagedMachinePool{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "abcde",
+				},
+				Spec: OCIManagedMachinePoolSpec{
+					Version: validVersion,
+				},
+			},
+			expectErr: false,
+		},
+		{
+			name: "should not allow nil version",
+			m: &OCIManagedMachinePool{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "abcdefghijklmno",
+				},
+			},
+			expectErr: true,
+		},
+		{
+			name: "should not allow invalid version",
+			m: &OCIManagedMachinePool{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "abcdefghijklmno",
+				},
+				Spec: OCIManagedMachinePoolSpec{
+					Version: inValidVersion,
+				},
+			},
+			expectErr: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := gomega.NewWithT(t)
+
+			if test.expectErr {
+				err := test.m.ValidateUpdate(nil)
 				g.Expect(err).NotTo(gomega.Succeed())
 				g.Expect(strings.Contains(err.Error(), test.errorMgsShouldContain)).To(gomega.BeTrue())
 			} else {

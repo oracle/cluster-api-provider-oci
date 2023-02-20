@@ -36,6 +36,8 @@ type Client interface {
 	UpdateNodePool(ctx context.Context, request containerengine.UpdateNodePoolRequest) (response containerengine.UpdateNodePoolResponse, err error)
 	GetNodePool(ctx context.Context, request containerengine.GetNodePoolRequest) (response containerengine.GetNodePoolResponse, err error)
 	ListNodePools(ctx context.Context, request containerengine.ListNodePoolsRequest) (response containerengine.ListNodePoolsResponse, err error)
+	//NodePool Options
+	GetNodePoolOptions(ctx context.Context, request containerengine.GetNodePoolOptionsRequest) (response containerengine.GetNodePoolOptionsResponse, err error)
 	//Work Request
 	GetWorkRequest(ctx context.Context, request containerengine.GetWorkRequestRequest) (response containerengine.GetWorkRequestResponse, err error)
 }

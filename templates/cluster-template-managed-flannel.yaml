@@ -272,7 +272,7 @@ spec:
   nodeShape: "${OCI_MANAGED_NODE_SHAPE=VM.Standard.E4.Flex}"
   sshPublicKey: "${OCI_SSH_KEY}"
   nodeSourceViaImage:
-    imageId: "${OCI_MANAGED_NODE_IMAGE_ID}"
+    imageId: ${OCI_MANAGED_NODE_IMAGE_ID:=""}
     bootVolumeSizeInGBs: ${OCI_MANAGED_NODE_BOOT_VOLUME_SIZE=50}
   nodeMetadata:
     # The custom cloud int script generated from the script scripts.oke-custom-cloud-init.sh

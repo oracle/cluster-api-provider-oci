@@ -20,6 +20,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"sigs.k8s.io/cluster-api/util/version"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
@@ -60,14 +61,36 @@ func (m *OCIManagedMachinePool) ValidateCreate() error {
 	if len(m.Name) > 31 {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("Name"), m.Name, "Name cannot be more than 31 characters"))
 	}
+	allErrs = m.validateVersion(allErrs)
 	if len(allErrs) == 0 {
 		return nil
 	}
 	return apierrors.NewInvalid(m.GroupVersionKind().GroupKind(), m.Name, allErrs)
 }
 
+func (m *OCIManagedMachinePool) validateVersion(allErrs field.ErrorList) field.ErrorList {
+	if m.Spec.Version == nil {
+		allErrs = append(
+			allErrs,
+			field.Invalid(field.NewPath("spec", "version"), m.Spec.Version, "field is required"))
+	}
+	if m.Spec.Version != nil {
+		if !version.KubeSemver.MatchString(*m.Spec.Version) {
+			allErrs = append(
+				allErrs,
+				field.Invalid(field.NewPath("spec", "version"), m.Spec.Version, "must be a valid semantic version"))
+		}
+	}
+	return allErrs
+}
+
 func (m *OCIManagedMachinePool) ValidateUpdate(old runtime.Object) error {
-	return nil
+	var allErrs field.ErrorList
+	allErrs = m.validateVersion(allErrs)
+	if len(allErrs) == 0 {
+		return nil
+	}
+	return apierrors.NewInvalid(m.GroupVersionKind().GroupKind(), m.Name, allErrs)
 }
 
 func (m *OCIManagedMachinePool) ValidateDelete() error {

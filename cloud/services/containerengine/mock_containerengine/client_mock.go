@@ -12,18 +12,18 @@ import (
 	containerengine "github.com/oracle/oci-go-sdk/v65/containerengine"
 )
 
-// MockClient is a mock_computemanagement of Client interface.
+// MockClient is a mock of Client interface.
 type MockClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockClientMockRecorder
 }
 
-// MockClientMockRecorder is the mock_computemanagement recorder for MockClient.
+// MockClientMockRecorder is the mock recorder for MockClient.
 type MockClientMockRecorder struct {
 	mock *MockClient
 }
 
-// NewMockClient creates a new mock_computemanagement instance.
+// NewMockClient creates a new mock instance.
 func NewMockClient(ctrl *gomock.Controller) *MockClient {
 	mock := &MockClient{ctrl: ctrl}
 	mock.recorder = &MockClientMockRecorder{mock}
@@ -138,6 +138,21 @@ func (m *MockClient) GetNodePool(ctx context.Context, request containerengine.Ge
 func (mr *MockClientMockRecorder) GetNodePool(ctx, request interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNodePool", reflect.TypeOf((*MockClient)(nil).GetNodePool), ctx, request)
+}
+
+// GetNodePoolOptions mocks base method.
+func (m *MockClient) GetNodePoolOptions(ctx context.Context, request containerengine.GetNodePoolOptionsRequest) (containerengine.GetNodePoolOptionsResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNodePoolOptions", ctx, request)
+	ret0, _ := ret[0].(containerengine.GetNodePoolOptionsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetNodePoolOptions indicates an expected call of GetNodePoolOptions.
+func (mr *MockClientMockRecorder) GetNodePoolOptions(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNodePoolOptions", reflect.TypeOf((*MockClient)(nil).GetNodePoolOptions), ctx, request)
 }
 
 // GetWorkRequest mocks base method.
