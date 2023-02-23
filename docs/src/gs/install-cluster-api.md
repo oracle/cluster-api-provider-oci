@@ -52,11 +52,19 @@ allow dynamic-group [your dynamic group name] to manage load-balancers in compar
 
 ## Initialize management cluster
 
-Initialize management cluster and install CAPOCI
+Initialize management cluster and install CAPOCI.
 
-   ```bash
-      clusterctl init --infrastructure oci:v0.6.0
-   ```
+The following command will use the [latest version][capoci-latest-release]:
+
+```bash
+  clusterctl init --infrastructure oci
+```
+
+In production, it is recommended to set a specific released version. 
+
+```bash
+  clusterctl init --infrastructure oci:vX.X.X
+```
 
 ## CAPOCI Components
 
@@ -73,3 +81,4 @@ Please inspect the `infrastructure-components.yaml` present in the release artif
 [kind]: https://kind.sigs.k8s.io/
 [api-signing-key]: https://docs.oracle.com/en-us/iaas/Content/API/Concepts/apisigningkey.htm
 [instance-principals]: https://docs.oracle.com/en-us/iaas/Content/Identity/Tasks/callingservicesfrominstances.htm
+[capoci-latest-release]: https://github.com/oracle/cluster-api-provider-oci/releases/latest
