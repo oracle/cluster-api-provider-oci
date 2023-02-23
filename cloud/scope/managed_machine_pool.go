@@ -23,6 +23,7 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/go-logr/logr"
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
@@ -43,7 +44,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const OCIManagedMachinePoolKind = "OCIManagedMachinePool"
+const (
+	OCIManagedMachinePoolKind = "OCIManagedMachinePool"
+)
 
 // ManagedMachinePoolScopeParams defines the params need to create a new ManagedMachinePoolScope
 type ManagedMachinePoolScopeParams struct {
@@ -267,11 +270,14 @@ func (m *ManagedMachinePoolScope) CreateNodePool(ctx context.Context) (*oke.Node
 			nodeShapeConfig.MemoryInGBs = common.Float32(float32(memoryInGBs))
 		}
 	}
+	err = m.setNodepoolImageId(ctx)
+	if err != nil {
+		return nil, err
+	}
 	sourceDetails := oke.NodeSourceViaImageDetails{
-		ImageId:             m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId,
+		ImageId:             machinePool.Spec.NodeSourceViaImage.ImageId,
 		BootVolumeSizeInGBs: machinePool.Spec.NodeSourceViaImage.BootVolumeSizeInGBs,
 	}
-
 	podNetworkOptions := machinePool.Spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails
 	if podNetworkOptions != nil {
 		if podNetworkOptions.CniType == expinfra1.VCNNativeCNI {
@@ -341,6 +347,80 @@ func (m *ManagedMachinePoolScope) CreateNodePool(ctx context.Context) (*oke.Node
 	m.OCIManagedMachinePool.Spec.ID = nodePoolId
 	m.Info("Created Node Pool", "id", nodePoolId)
 	return m.getOKENodePoolFromOCID(ctx, nodePoolId)
+}
+
+func (m *ManagedMachinePoolScope) setNodepoolImageId(ctx context.Context) error {
+	imageId := m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId
+	if imageId != nil && *imageId != "" {
+		return nil
+	}
+	response, err := m.ContainerEngineClient.GetNodePoolOptions(ctx, oke.GetNodePoolOptionsRequest{
+		NodePoolOptionId: common.String("all"),
+		CompartmentId:    common.String(m.OCIManagedCluster.Spec.CompartmentId),
+	})
+	if err != nil {
+		m.Logger.Error(err, "Could not lookup node pool options")
+		return err
+	}
+	// version in the capoci spec starts with v, wheres as in the node pool options API in OKE
+	// the image name does not contain . For example
+	//       {
+	//        "image-id": "ocid1.image.oc1.iad.aaaaaaaafp7ysdbfl2bg67s4jzbpewxo3k772baixa3vwzecwogl474qecza",
+	//        "source-name": "Oracle-Linux-8.6-aarch64-2022.12.15-0-OKE-1.25.4-543",
+	//        "source-type": "IMAGE"
+	//      },
+	//      {
+	//        "image-id": "ocid1.image.oc1.iad.aaaaaaaauwwokidwf5nfi34ucbvgnjsni3klnfmu6pz73ctdohb2byiw6ztq",
+	//        "source-name": "Oracle-Linux-8.6-2022.12.15-0-OKE-1.23.4-543",
+	//        "source-type": "IMAGE"
+	//      },
+	// we will only default to non gpu image
+
+	// proper validation exists in webhook, this is to be fail-safe
+	specVersion := m.OCIManagedMachinePool.Spec.Version
+	if specVersion == nil || len(*specVersion) < 1 {
+		return errors.New(fmt.Sprintf("invalid/nil kubernetes version is set in OCIManagedMachinePool Spec"))
+	}
+	k8sVersion := (*specVersion)[1:]
+	shape := m.OCIManagedMachinePool.Spec.NodeShape
+	isArmShape := strings.Contains(shape, "A1")
+	for _, source := range response.Sources {
+		image, ok := source.(oke.NodeSourceViaImageOption)
+		if ok {
+			sourceName := *image.SourceName
+			if isValidImage(sourceName) {
+				// if source is an arm source and expectation is not an arm image, ignore
+				if strings.Contains(sourceName, "aarch64") && !isArmShape {
+					continue
+				}
+				if strings.Contains(sourceName, k8sVersion) {
+					m.Info("Image being used", "Name", sourceName, "OCID", *image.ImageId)
+					m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId = image.ImageId
+					return nil
+				}
+			}
+		}
+	}
+	sourceJson, err := json.Marshal(response.Sources)
+	if err != nil {
+		return err
+	}
+	err = errors.New(fmt.Sprintf("could not lookup nodepool image id from nodepool options"))
+	m.Logger.Error(err, "Could not lookup an image corresponding to the kubernetes version from OKE nodepool options",
+		"oke-node-pool-image-sources", sourceJson)
+	return err
+}
+
+func isValidImage(sourceName string) bool {
+	// invalidImageSources is the array of names of source images that should be ignored to be considered as defaults
+	// for node pool images
+	invalidImageSources := []string{"GPU"}
+	for _, invalidImageSource := range invalidImageSources {
+		if strings.Contains(sourceName, invalidImageSource) {
+			return false
+		}
+	}
+	return true
 }
 
 func (m *ManagedMachinePoolScope) getOKENodePoolFromOCID(ctx context.Context, nodePoolId *string) (*oke.NodePool, error) {
@@ -557,6 +637,10 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 				}
 				nodeShapeConfig.MemoryInGBs = common.Float32(float32(memoryInGBs))
 			}
+		}
+		err = m.setNodepoolImageId(ctx)
+		if err != nil {
+			return false, err
 		}
 		sourceDetails := oke.NodeSourceViaImageDetails{
 			ImageId:             spec.NodeSourceViaImage.ImageId,

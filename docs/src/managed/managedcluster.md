@@ -17,14 +17,16 @@ custom resources:
 The following Oracle Cloud Infrastructure (OCI) configuration parameters are available
 when creating a managed workload cluster on OCI using one of our predefined templates:
 
-| Parameter                             | Default Value       | Description                                                                                                            |
-|---------------------------------------|---------------------|------------------------------------------------------------------------------------------------------------------------|
-| `OCI_COMPARTMENT_ID`                  |                     | The OCID of the compartment in which to create the required compute, storage and network resources.                    |
-| `OCI_MANAGED_NODE_IMAGE_ID`           |                     | The OCID of the image for the Kubernetes worker nodes. Please read the [doc][node-images] for more details.            |
-| `OCI_MANAGED_NODE_SHAPE `             | VM.Standard.E4.Flex | The [shape][node-images-shapes] of the Kubernetes worker nodes.                                                        |
-| `OCI_MANAGED_NODE_MACHINE_TYPE_OCPUS` | 1                   | The number of OCPUs allocated to the worker node instance.                                                             |
-| `OCI_SSH_KEY`                         |                     | The public SSH key to be added to the Kubernetes nodes. It can be used to login to the node and troubleshoot failures. |
+| Parameter                             | Mandatory | Default Value       | Description                                                                                                                                                                                            |
+|---------------------------------------|-----------|---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `OCI_COMPARTMENT_ID`                  | Yes       |                     | The OCID of the compartment in which to create the required compute, storage and network resources.                                                                                                    |
+| `OCI_MANAGED_NODE_IMAGE_ID`           | No        | ""                  | The OCID of the image for the Kubernetes worker nodes. Please read the [doc][node-images] for more details.  If no value is specified, a default Oracle Linux OKE platform image is looked up and used |
+| `OCI_MANAGED_NODE_SHAPE `             | No        | VM.Standard.E4.Flex | The [shape][node-images-shapes] of the Kubernetes worker nodes.                                                                                                                                        |
+| `OCI_MANAGED_NODE_MACHINE_TYPE_OCPUS` | No        | 1                   | The number of OCPUs allocated to the worker node instance.                                                                                                                                             |
+| `OCI_SSH_KEY`                         | Yes       |                     | The public SSH key to be added to the Kubernetes nodes. It can be used to login to the node and troubleshoot failures.                                                                                 |
 
+> Note: In production use-case, the node pool image id must be provided explicitly and the default lookup mechanism must not be used.
+> 
 The following Cluster API parameters are also available:
 
 | Parameter                     | Default Value  | Description                                                                                                                                                                               |
