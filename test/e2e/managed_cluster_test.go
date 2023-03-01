@@ -55,7 +55,7 @@ const (
 var _ = Describe("Managed Workload cluster creation", func() {
 	var (
 		ctx               = context.TODO()
-		specName          = "create-workload-cluster"
+		specName          = "create-managed-workload-cluster"
 		namespace         *corev1.Namespace
 		cancelWatches     context.CancelFunc
 		result            *clusterctl.ApplyClusterTemplateAndWaitResult
