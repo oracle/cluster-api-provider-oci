@@ -234,13 +234,13 @@ data:
                 path: /etc/kubernetes
           containers:
             - name: oci-cloud-controller-manager
-              image: ghcr.io/oracle/cloud-provider-oci:v1.24.0
+              image: ghcr.io/oracle/cloud-provider-oci:v.1.25.0
               command: ["/usr/local/bin/oci-cloud-controller-manager"]
               args:
                 - --cloud-config=/etc/oci/cloud-provider.yaml
                 - --cloud-provider=oci
-                - --leader-elect-resource-lock=configmapsleases 
-                - -v=2
+                - --leader-elect-resource-lock=configmapsleases
+                - --v=2
               volumeMounts:
                 - name: cfg
                   mountPath: /etc/oci
@@ -371,6 +371,8 @@ data:
         - "extension-apiserver-authentication"
       verbs:
         - get
+        - list
+        - watch
 
     - apiGroups:
       - ""
@@ -477,8 +479,23 @@ data:
                   readOnly: true
                 - mountPath: /var/run/shared-tmpfs
                   name: shared-tmpfs
+            - name: csi-fss-volume-provisioner
+              image: k8s.gcr.io/sig-storage/csi-provisioner:v3.2.1
+              args:
+                - --csi-address=/var/run/shared-tmpfs/csi-fss.sock
+                - --volume-name-prefix=csi-fss
+                - --feature-gates=Topology=true
+                - --timeout=120s
+                - --leader-election
+                - --leader-election-namespace=kube-system
+              volumeMounts:
+                - name: config
+                  mountPath: /etc/oci/
+                  readOnly: true
+                - mountPath: /var/run/shared-tmpfs
+                  name: shared-tmpfs
             - name: csi-attacher
-              image: k8s.gcr.io/sig-storage/csi-attacher:v3.5.0
+              image: k8s.gcr.io/sig-storage/csi-attacher:v4.2.0
               args:
                 - --csi-address=/var/run/shared-tmpfs/csi.sock
                 - --timeout=120s
@@ -491,7 +508,7 @@ data:
                 - mountPath: /var/run/shared-tmpfs
                   name: shared-tmpfs
             - name: csi-resizer
-              image: k8s.gcr.io/sig-storage/csi-resizer:v1.5.0
+              image: k8s.gcr.io/sig-storage/csi-resizer:v1.7.0
               args:
                 - --csi-address=/var/run/shared-tmpfs/csi.sock
                 - --leader-election
@@ -502,9 +519,10 @@ data:
             - name: oci-csi-controller-driver
               args:
                 - --endpoint=unix://var/run/shared-tmpfs/csi.sock
+                - --fss-csi-endpoint=unix://var/run/shared-tmpfs/csi-fss.sock
               command:
                 - /usr/local/bin/oci-csi-controller-driver
-              image: ghcr.io/oracle/cloud-provider-oci:v1.24.0
+              image: ghcr.io/oracle/cloud-provider-oci:v.1.25.0
               imagePullPolicy: IfNotPresent
               volumeMounts:
                 - name: config
@@ -534,7 +552,7 @@ data:
           serviceAccountName: csi-oci-node-sa
           terminationGracePeriodSeconds: 30
           tolerations:
-            - operator: Exists 
+            - operator: Exists
     ---
     apiVersion: storage.k8s.io/v1
     kind: CSIDriver
@@ -543,6 +561,13 @@ data:
     spec:
       attachRequired: false
       podInfoOnMount: false
+    ---
+    apiVersion: storage.k8s.io/v1
+    kind: CSIDriver
+    metadata:
+      name: blockvolume.csi.oraclecloud.com
+    spec:
+      fsGroupPolicy: File
     ---
     kind: ConfigMap
     apiVersion: v1
@@ -648,7 +673,7 @@ data:
                       fieldPath: spec.nodeName
                 - name: PATH
                   value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/host/usr/bin:/host/sbin
-              image: ghcr.io/oracle/cloud-provider-oci:v1.24.0
+              image: ghcr.io/oracle/cloud-provider-oci:v.1.25.0
               securityContext:
                 privileged: true
               volumeMounts:
