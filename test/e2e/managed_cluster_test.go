@@ -254,7 +254,7 @@ func upgradeControlPlaneVersionSpec(ctx context.Context, lister client.Client, c
 	Log(fmt.Sprintf("Upgrade test is starting, upgrade version is %s", managedKubernetesUpgradeVersion))
 	controlPlane.Spec.Version = &managedKubernetesUpgradeVersion
 	Expect(patchHelper.Patch(ctx, controlPlane)).To(Succeed())
-	Logf("Upgrade test is starting")
+	Log("Upgrade test is starting")
 
 	Eventually(func() (bool, error) {
 		controlPlane := GetOCIManagedControlPlaneByCluster(ctx, lister, clusterName, namespaceName)
