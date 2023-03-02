@@ -160,7 +160,7 @@ var _ = Describe("Managed Workload cluster creation", func() {
 			Cluster:                   result.Cluster,
 			Replicas:                  2,
 			MachinePools:              result.MachinePools,
-			WaitForMachinePoolToScale: e2eConfig.GetIntervals("", "wait-machine-pool-nodes"),
+			WaitForMachinePoolToScale: e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes"),
 		})
 
 		By("Scaling the machine pool down")
@@ -169,10 +169,10 @@ var _ = Describe("Managed Workload cluster creation", func() {
 			Cluster:                   result.Cluster,
 			Replicas:                  1,
 			MachinePools:              result.MachinePools,
-			WaitForMachinePoolToScale: e2eConfig.GetIntervals("", "wait-machine-pool-nodes"),
+			WaitForMachinePoolToScale: e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes"),
 		})
 		upgradeControlPlaneVersionSpec(ctx, bootstrapClusterProxy.GetClient(), clusterName, namespace.Name,
-			e2eConfig.GetIntervals("", "wait-control-plane")...)
+			e2eConfig.GetIntervals(specName, "wait-control-plane"))
 	})
 
 	It("Managed Cluster - Cluster Identity", func() {
@@ -243,7 +243,7 @@ func byClusterOptions(name, namespace string) []client.ListOption {
 	}
 }
 
-func upgradeControlPlaneVersionSpec(ctx context.Context, lister client.Client, clusterName string, namespaceName string, intervals ...interface{}) {
+func upgradeControlPlaneVersionSpec(ctx context.Context, lister client.Client, clusterName string, namespaceName string, WaitForControlPlaneIntervals []interface{}) {
 	controlPlane := GetOCIManagedControlPlaneByCluster(ctx, lister, clusterName, namespaceName)
 	Expect(controlPlane).NotTo(BeNil())
 
@@ -263,6 +263,6 @@ func upgradeControlPlaneVersionSpec(ctx context.Context, lister client.Client, c
 			return true, nil
 		}
 		return false, nil
-	}, intervals...).Should(BeTrue())
+	}, WaitForControlPlaneIntervals...).Should(BeTrue())
 	Log("Upgrade test has completed")
 }
