@@ -55,7 +55,7 @@ const (
 var _ = Describe("Managed Workload cluster creation", func() {
 	var (
 		ctx               = context.TODO()
-		specName          = "create-workload-cluster"
+		specName          = "create-managed-workload-cluster"
 		namespace         *corev1.Namespace
 		cancelWatches     context.CancelFunc
 		result            *clusterctl.ApplyClusterTemplateAndWaitResult
@@ -174,7 +174,7 @@ var _ = Describe("Managed Workload cluster creation", func() {
 		upgradeControlPlaneVersionSpec(ctx, bootstrapClusterProxy.GetClient(), clusterName, namespace.Name,
 			e2eConfig.GetIntervals(specName, "wait-control-plane"))
 	})
-	
+
 	It("Managed Cluster - Cluster Identity", func() {
 		clusterName = getClusterName(clusterNamePrefix, "cls-iden")
 		input := clusterctl.ApplyClusterTemplateAndWaitInput{
