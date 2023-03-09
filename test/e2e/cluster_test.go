@@ -199,6 +199,29 @@ var _ = Describe("Workload cluster creation", func() {
 		validateOLImage(namespace.Name, clusterName)
 	})
 
+	It("Windows - With 1 Linux control-plane nodes and with 1 Windows worker nodes using Calico CNI", func() {
+		clusterName = getClusterName(clusterNamePrefix, "windows-calico")
+		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
+			ClusterProxy: bootstrapClusterProxy,
+			ConfigCluster: clusterctl.ConfigClusterInput{
+				LogFolder:                filepath.Join(artifactFolder, "clusters", bootstrapClusterProxy.GetName()),
+				ClusterctlConfigPath:     clusterctlConfigPath,
+				KubeconfigPath:           bootstrapClusterProxy.GetKubeconfigPath(),
+				InfrastructureProvider:   clusterctl.DefaultInfrastructureProvider,
+				Flavor:                   "windows-calico",
+				Namespace:                namespace.Name,
+				ClusterName:              clusterName,
+				KubernetesVersion:        e2eConfig.GetVariable(capi_e2e.KubernetesVersion),
+				ControlPlaneMachineCount: pointer.Int64Ptr(1),
+				WorkerMachineCount:       pointer.Int64Ptr(1),
+			},
+			WaitForClusterIntervals:      e2eConfig.GetIntervals(specName, "wait-cluster"),
+			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),
+			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-windows-worker-nodes"),
+		}, result)
+		validateWindowsImage(namespace.Name, clusterName)
+	})
+
 	It("Cloud Provider OCI testing [PRBlocking]", func() {
 		clusterName = getClusterName(clusterNamePrefix, "ccm-testing")
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
@@ -980,6 +1003,33 @@ func validateOLImage(nameSpace string, clusterName string) {
 		instanceSourceDetails, ok := resp.SourceDetails.(core.InstanceSourceViaImageDetails)
 		Expect(ok).To(BeTrue())
 		Expect(*instanceSourceDetails.ImageId).To(Equal(os.Getenv("OCI_ORACLE_LINUX_IMAGE_ID")))
+	}
+}
+
+func validateWindowsImage(nameSpace string, clusterName string) {
+	lister := bootstrapClusterProxy.GetClient()
+	inClustersNamespaceListOption := client.InNamespace(nameSpace)
+	matchClusterListOption := client.MatchingLabels{
+		clusterv1.ClusterLabelName: clusterName,
+	}
+
+	machineList := &clusterv1.MachineList{}
+	Expect(lister.List(context.Background(), machineList, inClustersNamespaceListOption, matchClusterListOption)).
+		To(Succeed(), "Couldn't list machines for the cluster %q", clusterName)
+
+	Expect(len(machineList.Items)).To(Equal(2))
+	for _, machine := range machineList.Items {
+		if machine.Labels["os"] == "windows" {
+			instanceOcid := strings.Split(*machine.Spec.ProviderID, "//")[1]
+			Log(fmt.Sprintf("Instance OCID is %s", instanceOcid))
+			resp, err := computeClient.GetInstance(context.Background(), core.GetInstanceRequest{
+				InstanceId: common.String(instanceOcid),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			instanceSourceDetails, ok := resp.SourceDetails.(core.InstanceSourceViaImageDetails)
+			Expect(ok).To(BeTrue())
+			Expect(*instanceSourceDetails.ImageId).To(Equal(os.Getenv("OCI_WINDOWS_IMAGE_ID")))
+		}
 	}
 }
 

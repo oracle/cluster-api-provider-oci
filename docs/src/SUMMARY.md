@@ -20,6 +20,7 @@
   - [Create Workload Cluster](./gs/create-workload-cluster.md)
     - [MachineHealthChecks](./gs/create-mhc-workload-cluster.md)
     - [Create GPU Workload Cluster](./gs/create-gpu-workload-cluster.md)
+    - [Create Windows Workload Cluster](./gs/create-windows-workload-cluster.md)
   - [Create Workload Templates](./gs/create-workload-templates.md)
   - [Using externally managed infrastructure](./gs/externally-managed-cluster-infrastructure.md)
   - [Install Oracle Cloud Infrastructure Cloud Controller Manager](./gs/install-oci-ccm.md)
