@@ -171,28 +171,12 @@ spec:
                               id:
                                 description: VCN OCID.
                                 type: string
-                              internetGateway:
-                                description: Configuration for Internet Gateway.
-                                properties:
-                                  skip:
-                                    description: Skip specifies whether to skip creating
-                                      internet gateway even if any one Subnet is public.
-                                    type: boolean
-                                type: object
                               internetGatewayId:
                                 description: ID of Internet Gateway.
                                 type: string
                               name:
                                 description: VCN Name.
                                 type: string
-                              natGateway:
-                                description: Configuration for NAT Gateway.
-                                properties:
-                                  skip:
-                                    description: Skip specifies whether to skip creating
-                                      NAT gateway even if any one Subnet is private.
-                                    type: boolean
-                                type: object
                               natGatewayId:
                                 description: ID of Nat Gateway.
                                 type: string
@@ -630,22 +614,6 @@ spec:
                               publicRouteTableId:
                                 description: ID of Public Route Table.
                                 type: string
-                              routeTable:
-                                description: Configuration for Route table.
-                                properties:
-                                  skip:
-                                    description: Skip specifies whether to skip creating
-                                      Route table.
-                                    type: boolean
-                                type: object
-                              serviceGateway:
-                                description: Configuration for Service Gateway.
-                                properties:
-                                  skip:
-                                    description: Skip specifies whether to skip creating
-                                      Service gateway.
-                                    type: boolean
-                                type: object
                               serviceGatewayId:
                                 description: ID of Service Gateway.
                                 type: string
