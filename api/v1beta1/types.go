@@ -921,22 +921,6 @@ type VCN struct {
 	// +listType=map
 	// +listMapKey=name
 	NetworkSecurityGroups []*NSG `json:"networkSecurityGroups,omitempty"`
-
-	// Configuration for Internet Gateway.
-	// +optional
-	InternetGateway InternetGateway `json:"internetGateway,omitempty"`
-
-	// Configuration for NAT Gateway.
-	// +optional
-	NATGateway NATGateway `json:"natGateway,omitempty"`
-
-	// Configuration for Service Gateway.
-	// +optional
-	ServiceGateway ServiceGateway `json:"serviceGateway,omitempty"`
-
-	// Configuration for Route table.
-	// +optional
-	RouteTable RouteTable `json:"routeTable,omitempty"`
 }
 
 // LoadBalancer Configuration
@@ -1041,32 +1025,4 @@ type RemotePeeringConnection struct {
 
 	// RPCConnectionId is the connection ID of the connection between peer and local RPC.
 	RPCConnectionId *string `json:"rpcConnectionId,omitempty"`
-}
-
-// InternetGateway is used to specify the options for creating internet gateway.
-type InternetGateway struct {
-	// Skip specifies whether to skip creating internet gateway even if any one Subnet is public.
-	// +optional
-	Skip bool `json:"skip,omitempty"`
-}
-
-// NATGateway is used to specify the options for creating NAT gateway.
-type NATGateway struct {
-	// Skip specifies whether to skip creating NAT gateway even if any one Subnet is private.
-	// +optional
-	Skip bool `json:"skip,omitempty"`
-}
-
-// ServiceGateway is used to specify the options for creating Service gateway.
-type ServiceGateway struct {
-	// Skip specifies whether to skip creating Service gateway.
-	// +optional
-	Skip bool `json:"skip,omitempty"`
-}
-
-// RouteTable is used to specify the options for creating Route table.
-type RouteTable struct {
-	// Skip specifies whether to skip creating Route table.
-	// +optional
-	Skip bool `json:"skip,omitempty"`
 }
