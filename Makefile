@@ -79,6 +79,13 @@ GINKGO := $(BIN_DIR)/$(GINKGO_BIN)
 CONTROLLER_GEN_BIN = controller-gen
 CONTROLLER_GEN := $(BIN_DIR)/$(CONTROLLER_GEN_BIN)
 
+# set up `setup-envtest` to install kubebuilder dependency
+export KUBEBUILDER_ENVTEST_KUBERNETES_VERSION ?= 1.24.2
+SETUP_ENVTEST_VER := v0.0.0-20230131074648-f5014c077fc3
+SETUP_ENVTEST_BIN := setup-envtest
+SETUP_ENVTEST := $(abspath $(TOOLS_BIN_DIR)/$(SETUP_ENVTEST_BIN)-$(SETUP_ENVTEST_VER))
+SETUP_ENVTEST_PKG := sigs.k8s.io/controller-runtime/tools/setup-envtest
+
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -128,12 +135,31 @@ fmt: ## Run go fmt against code.
 vet: ## Run go vet against code.
 	go vet ./...
 
-ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
-test: manifests generate fmt vet ## Run tests.
-	mkdir -p ${ENVTEST_ASSETS_DIR}
-	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.8.3/hack/setup-envtest.sh
-	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./... -coverprofile cover.out && go tool cover -html=cover.out -o cover.html
+##@ test:
 
+.PHONY: install-setup-envtest
+install-setup-envtest: # Install setup-envtest so that setup-envtest's eval is executed after the tool has been installed.
+	GOBIN=$(abspath $(TOOLS_BIN_DIR)) $(GO_INSTALL) $(SETUP_ENVTEST_PKG) $(SETUP_ENVTEST_BIN) $(SETUP_ENVTEST_VER)
+
+.PHONY: setup-envtest
+setup-envtest: install-setup-envtest # Build setup-envtest from tools folder.
+	@$(eval KUBEBUILDER_ASSETS := $(shell $(SETUP_ENVTEST) use --use-env -p path $(KUBEBUILDER_ENVTEST_KUBERNETES_VERSION))) \
+	if [ -z "$(KUBEBUILDER_ASSETS)" ]; then echo "Failed to find kubebuilder assets, see errors above"; exit 1; fi; \
+	echo "kube-builder assets: $(KUBEBUILDER_ASSETS)"
+
+.PHONY: test
+test: setup-envtest ## Run tests
+	KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" go test ./...
+
+.PHONY: test-verbose
+test-verbose: setup-envtest ## Run tests with verbose settings.
+	KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" go test -v ./...
+
+.PHONY: test-cover
+test-cover: setup-envtest ## Run tests with code coverage and code generate  reports
+	KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" go test -coverprofile=coverage.out ./... $(TEST_ARGS)
+	go tool cover -func=coverage.out -o coverage.txt
+	go tool cover -html=coverage.out -o coverage.html
 
 ##@ Build
 

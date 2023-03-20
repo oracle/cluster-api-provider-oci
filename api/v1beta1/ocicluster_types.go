@@ -69,6 +69,11 @@ type OCIClusterSpec struct {
 	// ControlPlaneEndpoint represents the endpoint used to communicate with the control plane.
 	// +optional
 	ControlPlaneEndpoint clusterv1.APIEndpoint `json:"controlPlaneEndpoint"`
+
+	// AvailabilityDomains encapsulates the clusters Availability Domain (AD) information in a map
+	// where the map key is the AD name and the struct is details about the AD.
+	// +optional
+	AvailabilityDomains map[string]OCIAvailabilityDomain `json:"availabilityDomains,omitempty"`
 }
 
 // OCIClusterStatus defines the observed state of OCICluster
@@ -79,6 +84,7 @@ type OCIClusterStatus struct {
 	// AvailabilityDomains encapsulates the clusters Availability Domain (AD) information in a map
 	// where the map key is the AD name and the struct is details about the AD.
 	// +optional
+	// Deprecated, set the field in OCIClusterSpec
 	AvailabilityDomains map[string]OCIAvailabilityDomain `json:"availabilityDomains,omitempty"`
 
 	// +optional

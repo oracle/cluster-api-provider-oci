@@ -50,6 +50,8 @@ type OCIClusterAccessor interface {
 	GetFailureDomains() clusterv1.FailureDomains
 	// SetFailureDomain sets the failure domain.
 	SetFailureDomain(id string, spec clusterv1.FailureDomainSpec)
+	// GetAvailabilityDomains get the availability domain.
+	GetAvailabilityDomains() map[string]infrastructurev1beta1.OCIAvailabilityDomain
 	// SetAvailabilityDomains sets the availability domain.
 	SetAvailabilityDomains(ads map[string]infrastructurev1beta1.OCIAvailabilityDomain)
 	// MarkConditionFalse marks the provided condition as false in the cluster object

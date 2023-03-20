@@ -35,6 +35,25 @@ spec:
           spec:
             description: OCIClusterSpec defines the desired state of OciCluster
             properties:
+              availabilityDomains:
+                additionalProperties:
+                  description: OCIAvailabilityDomain contains information about an
+                    Availability Domain (AD).
+                  properties:
+                    faultDomains:
+                      description: 'FaultDomains a list of fault domain (FD) names.
+                        Example: ["FAULT-DOMAIN-1"]'
+                      items:
+                        type: string
+                      type: array
+                    name:
+                      description: 'Name is the AD''s full name. Example: Uocm:PHX-AD-1'
+                      type: string
+                  type: object
+                description: AvailabilityDomains encapsulates the clusters Availability
+                  Domain (AD) information in a map where the map key is the AD name
+                  and the struct is details about the AD.
+                type: object
               compartmentId:
                 description: Compartment to create the cluster network.
                 type: string
@@ -133,12 +152,28 @@ spec:
                       id:
                         description: VCN OCID.
                         type: string
+                      internetGateway:
+                        description: Configuration for Internet Gateway.
+                        properties:
+                          skip:
+                            description: Skip specifies whether to skip creating internet
+                              gateway even if any one Subnet is public.
+                            type: boolean
+                        type: object
                       internetGatewayId:
                         description: ID of Internet Gateway.
                         type: string
                       name:
                         description: VCN Name.
                         type: string
+                      natGateway:
+                        description: Configuration for NAT Gateway.
+                        properties:
+                          skip:
+                            description: Skip specifies whether to skip creating NAT
+                              gateway even if any one Subnet is private.
+                            type: boolean
+                        type: object
                       natGatewayId:
                         description: ID of Nat Gateway.
                         type: string
@@ -522,6 +557,22 @@ spec:
                       publicRouteTableId:
                         description: ID of Public Route Table.
                         type: string
+                      routeTable:
+                        description: Configuration for Route table.
+                        properties:
+                          skip:
+                            description: Skip specifies whether to skip creating Route
+                              table.
+                            type: boolean
+                        type: object
+                      serviceGateway:
+                        description: Configuration for Service Gateway.
+                        properties:
+                          skip:
+                            description: Skip specifies whether to skip creating Service
+                              gateway.
+                            type: boolean
+                        type: object
                       serviceGatewayId:
                         description: ID of Service Gateway.
                         type: string
@@ -1011,7 +1062,8 @@ spec:
                   type: object
                 description: AvailabilityDomains encapsulates the clusters Availability
                   Domain (AD) information in a map where the map key is the AD name
-                  and the struct is details about the AD.
+                  and the struct is details about the AD. Deprecated, set the field
+                  in OCIClusterSpec
                 type: object
               conditions:
                 description: NetworkSpec encapsulates all things related to OCI network.
