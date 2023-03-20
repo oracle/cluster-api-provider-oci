@@ -108,8 +108,6 @@ func TestInstanceConfigCreate(t *testing.T) {
 						},
 					},
 				},
-			},
-			Status: infrastructurev1beta1.OCIClusterStatus{
 				AvailabilityDomains: map[string]infrastructurev1beta1.OCIAvailabilityDomain{
 					"ad-1": {
 						Name:         "ad-1",
@@ -466,8 +464,6 @@ func TestInstancePoolCreate(t *testing.T) {
 						},
 					},
 				},
-			},
-			Status: infrastructurev1beta1.OCIClusterStatus{
 				AvailabilityDomains: map[string]infrastructurev1beta1.OCIAvailabilityDomain{
 					"ad-1": {
 						Name:         "ad-1",
@@ -647,8 +643,6 @@ func TestInstancePoolUpdate(t *testing.T) {
 						},
 					},
 				},
-			},
-			Status: infrastructurev1beta1.OCIClusterStatus{
 				AvailabilityDomains: map[string]infrastructurev1beta1.OCIAvailabilityDomain{
 					"ad-1": {
 						Name:         "ad-1",

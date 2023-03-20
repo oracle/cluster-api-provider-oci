@@ -272,7 +272,7 @@ func (m *MachinePoolScope) buildInstanceConfigurationShapeConfig() (core.Instanc
 func (s *MachinePoolScope) BuildInstancePoolPlacement() ([]core.CreateInstancePoolPlacementConfigurationDetails, error) {
 	var placements []core.CreateInstancePoolPlacementConfigurationDetails
 
-	ads := s.OCICluster.Status.AvailabilityDomains
+	ads := s.OCICluster.Spec.AvailabilityDomains
 
 	specPlacementDetails := s.OCIMachinePool.Spec.PlacementDetails
 

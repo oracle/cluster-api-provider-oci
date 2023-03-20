@@ -110,8 +110,6 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 						},
 					},
 				},
-			},
-			Status: infrav1exp.OCIManagedClusterStatus{
 				AvailabilityDomains: map[string]infrastructurev1beta1.OCIAvailabilityDomain{
 					"ad-1": {
 						Name:         "ad-1",
@@ -904,8 +902,6 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 						},
 					},
 				},
-			},
-			Status: infrav1exp.OCIManagedClusterStatus{
 				AvailabilityDomains: map[string]infrastructurev1beta1.OCIAvailabilityDomain{
 					"ad-1": {
 						Name:         "ad-1",

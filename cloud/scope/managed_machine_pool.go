@@ -222,7 +222,7 @@ func (m *ManagedMachinePoolScope) CreateNodePool(ctx context.Context) (*oke.Node
 		if len(workerSubnets) == 0 {
 			return nil, errors.New("worker subnets are not specified")
 		}
-		adMap := m.OCIManagedCluster.Status.AvailabilityDomains
+		adMap := m.OCIManagedCluster.Spec.AvailabilityDomains
 		for k, v := range adMap {
 			placementConfigs = append(placementConfigs, expinfra1.PlacementConfig{
 				AvailabilityDomain: common.String(k),
