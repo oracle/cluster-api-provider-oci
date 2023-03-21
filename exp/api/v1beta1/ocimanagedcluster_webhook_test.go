@@ -684,6 +684,25 @@ func TestOCIManagedCluster_CreateDefault(t *testing.T) {
 				g.Expect(c.Spec.NetworkSpec.Vcn.NetworkSecurityGroups).To(Equal(nsgs))
 			},
 		},
+		{
+			name: "should set default nsg",
+			c: &OCIManagedCluster{
+				ObjectMeta: metav1.ObjectMeta{},
+				Spec: OCIManagedClusterSpec{
+					CompartmentId: "ocid",
+					NetworkSpec: infrastructurev1beta1.NetworkSpec{
+						Vcn: infrastructurev1beta1.VCN{
+							NetworkSecurityGroupManagement: infrastructurev1beta1.NetworkSecurityGroupManagement{
+								Skip: true,
+							},
+						},
+					},
+				},
+			},
+			expect: func(g *gomega.WithT, c *OCIManagedCluster) {
+				g.Expect(len(c.Spec.NetworkSpec.Vcn.NetworkSecurityGroups)).To(Equal(0))
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

@@ -74,7 +74,7 @@ func (c *OCIManagedCluster) Default() {
 			}
 			c.Spec.NetworkSpec.Vcn.Subnets = subnets
 		}
-		if len(c.Spec.NetworkSpec.Vcn.NetworkSecurityGroups) == 0 {
+		if len(c.Spec.NetworkSpec.Vcn.NetworkSecurityGroups) == 0 && !c.Spec.NetworkSpec.Vcn.NetworkSecurityGroupManagement.Skip {
 			nsgs := make([]*infrastructurev1beta1.NSG, 4)
 			nsgs[0] = &infrastructurev1beta1.NSG{
 				Role:         infrastructurev1beta1.ControlPlaneEndpointRole,

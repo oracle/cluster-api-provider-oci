@@ -610,6 +610,25 @@ func TestOCICluster_CreateDefault(t *testing.T) {
 			},
 		},
 		{
+			name: "should set default nsg",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{},
+				Spec: OCIClusterSpec{
+					CompartmentId: "ocid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							NetworkSecurityGroupManagement: NetworkSecurityGroupManagement{
+								Skip: true,
+							},
+						},
+					},
+				},
+			},
+			expect: func(g *gomega.WithT, c *OCICluster) {
+				g.Expect(len(c.Spec.NetworkSpec.Vcn.NetworkSecurityGroups)).To(Equal(0))
+			},
+		},
+		{
 			name: "should add missing subnets",
 			c: &OCICluster{
 				ObjectMeta: metav1.ObjectMeta{},

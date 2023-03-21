@@ -214,6 +214,22 @@ func TestClusterScope_ReconcileInternetGateway(t *testing.T) {
 			wantErr:       true,
 			expectedError: "failed create internet gateway: some error",
 		},
+		{
+			name: "creation skip",
+			spec: infrastructurev1beta1.OCIClusterSpec{
+				CompartmentId: "foo",
+				DefinedTags:   definedTags,
+				NetworkSpec: infrastructurev1beta1.NetworkSpec{
+					Vcn: infrastructurev1beta1.VCN{
+						ID: common.String("vcn1"),
+						InternetGateway: infrastructurev1beta1.InternetGateway{
+							Skip: true,
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
 	}
 	l := log.FromContext(context.Background())
 	for _, tt := range tests {

@@ -356,6 +356,34 @@ func TestClusterScope_ReconcileRouteTable(t *testing.T) {
 			wantErr:       true,
 			expectedError: "failed create route table: some error",
 		},
+		{
+			name: "route table creation skip",
+			spec: infrastructurev1beta1.OCIClusterSpec{
+				CompartmentId: "foo",
+				DefinedTags:   definedTags,
+				NetworkSpec: infrastructurev1beta1.NetworkSpec{
+					Vcn: infrastructurev1beta1.VCN{
+						ID:               common.String("vcn1"),
+						NatGatewayId:     common.String("ngw"),
+						ServiceGatewayId: common.String("sgw"),
+						RouteTable: infrastructurev1beta1.RouteTable{
+							Skip: true,
+						},
+						Subnets: []*infrastructurev1beta1.Subnet{
+							{
+								Type: infrastructurev1beta1.Private,
+								Role: infrastructurev1beta1.ControlPlaneEndpointRole,
+							},
+							{
+								Type: infrastructurev1beta1.Private,
+								Role: infrastructurev1beta1.ServiceLoadBalancerRole,
+							},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
 	}
 	l := log.FromContext(context.Background())
 	for _, tt := range tests {

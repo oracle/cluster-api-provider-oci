@@ -217,6 +217,9 @@ func (c *OCICluster) SubnetSpec() []*Subnet {
 
 func (c *OCICluster) NSGSpec() []*NSG {
 	nsgs := c.Spec.NetworkSpec.Vcn.NetworkSecurityGroups
+	if c.Spec.NetworkSpec.Vcn.NetworkSecurityGroupManagement.Skip {
+		return nsgs
+	}
 
 	if !c.IsNSGExitsByRole(ControlPlaneEndpointRole) && !c.IsSecurityListExitsByRole(ControlPlaneEndpointRole) {
 		nsgs = append(nsgs, &NSG{
