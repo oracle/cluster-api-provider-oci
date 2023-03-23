@@ -38,6 +38,7 @@ type OCIManagedClusterTemplate struct {
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:storageversion
 
 // OCIManagedClusterTemplateList contains a list of OCIManagedClusterTemplate.
 type OCIManagedClusterTemplateList struct {

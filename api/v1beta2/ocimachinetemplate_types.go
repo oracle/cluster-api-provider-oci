@@ -44,6 +44,7 @@ type OCIMachineTemplate struct {
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:storageversion
 
 // OCIMachineTemplateList contains a list of OCIMachineTemplate.
 type OCIMachineTemplateList struct {

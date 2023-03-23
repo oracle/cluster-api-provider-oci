@@ -101,6 +101,7 @@ type OCICluster struct {
 }
 
 //+kubebuilder:object:root=true
+// +kubebuilder:storageversion
 
 // OCIClusterList contains a list of OCICluster.
 type OCIClusterList struct {

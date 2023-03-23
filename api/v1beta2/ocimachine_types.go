@@ -170,6 +170,7 @@ type OCIMachineStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+// +kubebuilder:storageversion
 
 // OCIMachine is the Schema for the ocimachines API.
 type OCIMachine struct {
@@ -181,6 +182,7 @@ type OCIMachine struct {
 }
 
 //+kubebuilder:object:root=true
+// +kubebuilder:storageversion
 
 // OCIMachineList contains a list of OCIMachine.
 type OCIMachineList struct {

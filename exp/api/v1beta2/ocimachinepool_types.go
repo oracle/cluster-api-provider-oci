@@ -221,6 +221,7 @@ type OCIMachinePool struct {
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:storageversion
 
 // OCIMachinePoolList contains a list of OCIMachinePool.
 type OCIMachinePoolList struct {

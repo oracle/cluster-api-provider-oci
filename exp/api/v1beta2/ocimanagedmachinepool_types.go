@@ -211,6 +211,7 @@ type OCIManagedMachinePoolStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+// +kubebuilder:storageversion
 
 // OCIManagedMachinePool is the Schema for the ocimanagedmachinepool API.
 type OCIManagedMachinePool struct {

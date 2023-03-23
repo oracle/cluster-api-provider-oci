@@ -87,6 +87,7 @@ type OCIManagedClusterStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+// +kubebuilder:storageversion
 
 // OCIManagedCluster is the Schema for the ocimanagedclusters API.
 type OCIManagedCluster struct {

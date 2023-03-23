@@ -78,6 +78,7 @@ type OCIClusterIdentityStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+// +kubebuilder:storageversion
 
 // OCIClusterIdentity is the Schema for the OCI Cluster Identity API
 type OCIClusterIdentity struct {

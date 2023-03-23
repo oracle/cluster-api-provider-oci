@@ -167,6 +167,7 @@ type OCIManagedControlPlane struct {
 }
 
 //+kubebuilder:object:root=true
+// +kubebuilder:storageversion
 
 // OCIManagedControlPlaneList contains a list of OCIManagedControlPlane.
 type OCIManagedControlPlaneList struct {

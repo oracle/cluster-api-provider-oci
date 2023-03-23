@@ -38,6 +38,7 @@ type OCIManagedMachinePoolTemplate struct {
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:storageversion
 
 // OCIManagedMachinePoolTemplateList contains a list of OCIManagedMachinePoolTemplate.
 type OCIManagedMachinePoolTemplateList struct {
