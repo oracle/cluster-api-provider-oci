@@ -23,20 +23,20 @@ import (
 )
 
 // ConvertTo converts the v1beta1 OCIManagedCluster receiver to a v1beta2 OCIManagedCluster.
-func (src *OCIManagedCluster) ConvertTo(dstRaw conversion.Hub) error {
-	dst := dstRaw.(*v1beta2.OCIManagedCluster)
+func (src *OCIManagedControlPlane) ConvertTo(dstRaw conversion.Hub) error {
+	dst := dstRaw.(*v1beta2.OCIManagedControlPlane)
 
-	if err := Convert_v1beta1_OCIManagedCluster_To_v1beta2_OCIManagedCluster(src, dst, nil); err != nil {
+	if err := Convert_v1beta1_OCIManagedControlPlane_To_v1beta2_OCIManagedControlPlane(src, dst, nil); err != nil {
 		return err
 	}
 	return nil
 }
 
-// ConvertFrom converts receiver to a v1beta2 OCICluster.
-func (r *OCIManagedCluster) ConvertFrom(srcRaw conversion.Hub) error {
-	src := srcRaw.(*v1beta2.OCIManagedCluster)
+// ConvertFrom converts receiver to a v1beta2 OCIManagedControlPlane.
+func (r *OCIManagedControlPlane) ConvertFrom(srcRaw conversion.Hub) error {
+	src := srcRaw.(*v1beta2.OCIManagedControlPlane)
 
-	if err := Convert_v1beta2_OCIManagedCluster_To_v1beta1_OCIManagedCluster(src, r, nil); err != nil {
+	if err := Convert_v1beta2_OCIManagedControlPlane_To_v1beta1_OCIManagedControlPlane(src, r, nil); err != nil {
 		return err
 	}
 

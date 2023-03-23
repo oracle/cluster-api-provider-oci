@@ -22,21 +22,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 )
 
-// ConvertTo converts the v1beta1 OCIManagedCluster receiver to a v1beta2 OCIManagedCluster.
-func (src *OCIManagedCluster) ConvertTo(dstRaw conversion.Hub) error {
-	dst := dstRaw.(*v1beta2.OCIManagedCluster)
+// ConvertTo converts the v1beta1 OCIMachinePool receiver to a v1beta2 OCIMachinePool.
+func (src *OCIMachinePool) ConvertTo(dstRaw conversion.Hub) error {
+	dst := dstRaw.(*v1beta2.OCIMachinePool)
 
-	if err := Convert_v1beta1_OCIManagedCluster_To_v1beta2_OCIManagedCluster(src, dst, nil); err != nil {
+	if err := Convert_v1beta1_OCIMachinePool_To_v1beta2_OCIMachinePool(src, dst, nil); err != nil {
 		return err
 	}
 	return nil
 }
 
-// ConvertFrom converts receiver to a v1beta2 OCICluster.
-func (r *OCIManagedCluster) ConvertFrom(srcRaw conversion.Hub) error {
-	src := srcRaw.(*v1beta2.OCIManagedCluster)
+// ConvertFrom converts receiver to a v1beta2 OCIManagedMachinePool.
+func (r *OCIMachinePool) ConvertFrom(srcRaw conversion.Hub) error {
+	src := srcRaw.(*v1beta2.OCIMachinePool)
 
-	if err := Convert_v1beta2_OCIManagedCluster_To_v1beta1_OCIManagedCluster(src, r, nil); err != nil {
+	if err := Convert_v1beta2_OCIMachinePool_To_v1beta1_OCIMachinePool(src, r, nil); err != nil {
 		return err
 	}
 
