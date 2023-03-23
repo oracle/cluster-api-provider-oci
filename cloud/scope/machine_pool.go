@@ -25,11 +25,11 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/computemanagement"
-	expinfra1 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
-	infrav1exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
+	expinfra1 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
+	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/pkg/errors"
@@ -54,7 +54,7 @@ type MachinePoolScopeParams struct {
 	MachinePool             *expclusterv1.MachinePool
 	Client                  client.Client
 	ComputeManagementClient computemanagement.Client
-	OCICluster              *infrastructurev1beta1.OCICluster
+	OCICluster              *infrastructurev1beta2.OCICluster
 	OCIMachinePool          *expinfra1.OCIMachinePool
 }
 
@@ -65,7 +65,7 @@ type MachinePoolScope struct {
 	Cluster                 *clusterv1.Cluster
 	MachinePool             *expclusterv1.MachinePool
 	ComputeManagementClient computemanagement.Client
-	OCICluster              *infrastructurev1beta1.OCICluster
+	OCICluster              *infrastructurev1beta2.OCICluster
 	OCIMachinePool          *expinfra1.OCIMachinePool
 }
 
@@ -146,7 +146,7 @@ func (m *MachinePoolScope) SetReplicaCount(count int32) {
 // GetWorkerMachineSubnet returns the WorkerRole core.Subnet id for the cluster
 func (m *MachinePoolScope) GetWorkerMachineSubnet() *string {
 	for _, subnet := range m.OCICluster.Spec.NetworkSpec.Vcn.Subnets {
-		if subnet.Role == infrastructurev1beta1.WorkerRole {
+		if subnet.Role == infrastructurev1beta2.WorkerRole {
 			return subnet.ID
 		}
 	}
@@ -226,8 +226,8 @@ func (m *MachinePoolScope) GetBootstrapData() (string, error) {
 
 // GetWorkerMachineNSG returns the worker role core.NetworkSecurityGroup id for the cluster
 func (m *MachinePoolScope) GetWorkerMachineNSG() *string {
-	for _, nsg := range m.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups {
-		if nsg.Role == infrastructurev1beta1.WorkerRole {
+	for _, nsg := range m.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups.NSGList {
+		if nsg.Role == infrastructurev1beta2.WorkerRole {
 			return nsg.ID
 		}
 	}
@@ -425,7 +425,7 @@ func (m *MachinePoolScope) createInstanceConfiguration(ctx context.Context, laun
 
 	resp, err := m.ComputeManagementClient.CreateInstanceConfiguration(ctx, req)
 	if err != nil {
-		conditions.MarkFalse(m.MachinePool, infrav1exp.LaunchTemplateReadyCondition, infrav1exp.LaunchTemplateCreateFailedReason, clusterv1.ConditionSeverityError, err.Error())
+		conditions.MarkFalse(m.MachinePool, infrav2exp.LaunchTemplateReadyCondition, infrav2exp.LaunchTemplateCreateFailedReason, clusterv1.ConditionSeverityError, err.Error())
 		m.Info("failed to create instance configuration")
 		return err
 	}
@@ -434,7 +434,7 @@ func (m *MachinePoolScope) createInstanceConfiguration(ctx context.Context, laun
 	return nil
 }
 
-func (m *MachinePoolScope) getLaunchInstanceDetails(instanceConfigurationSpec infrav1exp.InstanceConfiguration, freeFormTags map[string]string, definedTags map[string]map[string]interface{}) (*core.InstanceConfigurationLaunchInstanceDetails, error) {
+func (m *MachinePoolScope) getLaunchInstanceDetails(instanceConfigurationSpec infrav2exp.InstanceConfiguration, freeFormTags map[string]string, definedTags map[string]map[string]interface{}) (*core.InstanceConfigurationLaunchInstanceDetails, error) {
 	metadata := instanceConfigurationSpec.Metadata
 	if metadata == nil {
 		metadata = make(map[string]string)
@@ -469,7 +469,7 @@ func (m *MachinePoolScope) getLaunchInstanceDetails(instanceConfigurationSpec in
 
 	shapeConfig, err := m.buildInstanceConfigurationShapeConfig()
 	if err != nil {
-		conditions.MarkFalse(m.MachinePool, infrav1exp.LaunchTemplateReadyCondition, infrav1exp.LaunchTemplateCreateFailedReason, clusterv1.ConditionSeverityError, err.Error())
+		conditions.MarkFalse(m.MachinePool, infrav2exp.LaunchTemplateReadyCondition, infrav2exp.LaunchTemplateCreateFailedReason, clusterv1.ConditionSeverityError, err.Error())
 		m.Info("failed to create instance configuration due to shape config")
 		return nil, err
 	}
@@ -756,7 +756,7 @@ func (m *MachinePoolScope) getPlatformConfig() core.PlatformConfig {
 	platformConfig := m.OCIMachinePool.Spec.InstanceConfiguration.PlatformConfig
 	if platformConfig != nil {
 		switch platformConfig.PlatformConfigType {
-		case infrastructurev1beta1.PlatformConfigTypeAmdRomeBmGpu:
+		case infrastructurev1beta2.PlatformConfigTypeAmdRomeBmGpu:
 			numaNodesPerSocket, _ := core.GetMappingAmdRomeBmGpuPlatformConfigNumaNodesPerSocketEnum(string(platformConfig.AmdRomeBmGpuPlatformConfig.NumaNodesPerSocket))
 			return core.AmdRomeBmGpuPlatformConfig{
 				IsSecureBootEnabled:                      platformConfig.AmdRomeBmGpuPlatformConfig.IsSecureBootEnabled,
@@ -769,7 +769,7 @@ func (m *MachinePoolScope) getPlatformConfig() core.PlatformConfig {
 				IsInputOutputMemoryManagementUnitEnabled: platformConfig.AmdRomeBmGpuPlatformConfig.IsInputOutputMemoryManagementUnitEnabled,
 				NumaNodesPerSocket:                       numaNodesPerSocket,
 			}
-		case infrastructurev1beta1.PlatformConfigTypeAmdRomeBm:
+		case infrastructurev1beta2.PlatformConfigTypeAmdRomeBm:
 			numaNodesPerSocket, _ := core.GetMappingAmdRomeBmPlatformConfigNumaNodesPerSocketEnum(string(platformConfig.AmdRomeBmPlatformConfig.NumaNodesPerSocket))
 			return core.AmdRomeBmPlatformConfig{
 				IsSecureBootEnabled:                      platformConfig.AmdRomeBmPlatformConfig.IsSecureBootEnabled,
@@ -783,7 +783,7 @@ func (m *MachinePoolScope) getPlatformConfig() core.PlatformConfig {
 				PercentageOfCoresEnabled:                 platformConfig.AmdRomeBmPlatformConfig.PercentageOfCoresEnabled,
 				NumaNodesPerSocket:                       numaNodesPerSocket,
 			}
-		case infrastructurev1beta1.PlatformConfigTypeIntelIcelakeBm:
+		case infrastructurev1beta2.PlatformConfigTypeIntelIcelakeBm:
 			numaNodesPerSocket, _ := core.GetMappingIntelIcelakeBmPlatformConfigNumaNodesPerSocketEnum(string(platformConfig.IntelIcelakeBmPlatformConfig.NumaNodesPerSocket))
 			return core.IntelIcelakeBmPlatformConfig{
 				IsSecureBootEnabled:                      platformConfig.IntelIcelakeBmPlatformConfig.IsSecureBootEnabled,
@@ -795,28 +795,28 @@ func (m *MachinePoolScope) getPlatformConfig() core.PlatformConfig {
 				IsInputOutputMemoryManagementUnitEnabled: platformConfig.IntelIcelakeBmPlatformConfig.IsInputOutputMemoryManagementUnitEnabled,
 				NumaNodesPerSocket:                       numaNodesPerSocket,
 			}
-		case infrastructurev1beta1.PlatformConfigTypeAmdvm:
+		case infrastructurev1beta2.PlatformConfigTypeAmdvm:
 			return core.AmdVmPlatformConfig{
 				IsSecureBootEnabled:            platformConfig.AmdVmPlatformConfig.IsSecureBootEnabled,
 				IsTrustedPlatformModuleEnabled: platformConfig.AmdVmPlatformConfig.IsTrustedPlatformModuleEnabled,
 				IsMeasuredBootEnabled:          platformConfig.AmdVmPlatformConfig.IsMeasuredBootEnabled,
 				IsMemoryEncryptionEnabled:      platformConfig.AmdVmPlatformConfig.IsMemoryEncryptionEnabled,
 			}
-		case infrastructurev1beta1.PlatformConfigTypeIntelVm:
+		case infrastructurev1beta2.PlatformConfigTypeIntelVm:
 			return core.IntelVmPlatformConfig{
 				IsSecureBootEnabled:            platformConfig.IntelVmPlatformConfig.IsSecureBootEnabled,
 				IsTrustedPlatformModuleEnabled: platformConfig.IntelVmPlatformConfig.IsTrustedPlatformModuleEnabled,
 				IsMeasuredBootEnabled:          platformConfig.IntelVmPlatformConfig.IsMeasuredBootEnabled,
 				IsMemoryEncryptionEnabled:      platformConfig.IntelVmPlatformConfig.IsMemoryEncryptionEnabled,
 			}
-		case infrastructurev1beta1.PlatformConfigTypeIntelSkylakeBm:
+		case infrastructurev1beta2.PlatformConfigTypeIntelSkylakeBm:
 			return core.IntelSkylakeBmPlatformConfig{
 				IsSecureBootEnabled:            platformConfig.IntelSkylakeBmPlatformConfig.IsSecureBootEnabled,
 				IsTrustedPlatformModuleEnabled: platformConfig.IntelSkylakeBmPlatformConfig.IsTrustedPlatformModuleEnabled,
 				IsMeasuredBootEnabled:          platformConfig.IntelSkylakeBmPlatformConfig.IsMeasuredBootEnabled,
 				IsMemoryEncryptionEnabled:      platformConfig.IntelSkylakeBmPlatformConfig.IsMemoryEncryptionEnabled,
 			}
-		case infrastructurev1beta1.PlatformConfigTypeAmdMilanBm:
+		case infrastructurev1beta2.PlatformConfigTypeAmdMilanBm:
 			numaNodesPerSocket, _ := core.GetMappingAmdMilanBmPlatformConfigNumaNodesPerSocketEnum(string(platformConfig.AmdMilanBmPlatformConfig.NumaNodesPerSocket))
 			return core.AmdMilanBmPlatformConfig{
 				IsSecureBootEnabled:                      platformConfig.AmdMilanBmPlatformConfig.IsSecureBootEnabled,
@@ -841,7 +841,7 @@ func (m *MachinePoolScope) getWorkerMachineNSGs() []string {
 	if instanceVnicConfiguration != nil && len(instanceVnicConfiguration.NsgNames) > 0 {
 		nsgs := make([]string, 0)
 		for _, nsgName := range instanceVnicConfiguration.NsgNames {
-			for _, nsg := range m.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups {
+			for _, nsg := range m.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups.NSGList {
 				if nsg.Name == nsgName {
 					nsgs = append(nsgs, *nsg.ID)
 				}
@@ -850,8 +850,8 @@ func (m *MachinePoolScope) getWorkerMachineNSGs() []string {
 		return nsgs
 	} else {
 		nsgs := make([]string, 0)
-		for _, nsg := range m.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups {
-			if nsg.Role == infrastructurev1beta1.WorkerRole {
+		for _, nsg := range m.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups.NSGList {
+			if nsg.Role == infrastructurev1beta2.WorkerRole {
 				nsgs = append(nsgs, *nsg.ID)
 			}
 		}
@@ -941,7 +941,7 @@ func (m *MachinePoolScope) getInstanceConfigurationsFromDisplayNameSortedTimeCre
 	return ids, nil
 }
 
-func (m *MachinePoolScope) getVnicDetails(instanceConfigurationSpec infrav1exp.InstanceConfiguration, freeFormTags map[string]string, definedTags map[string]map[string]interface{}) *core.InstanceConfigurationCreateVnicDetails {
+func (m *MachinePoolScope) getVnicDetails(instanceConfigurationSpec infrav2exp.InstanceConfiguration, freeFormTags map[string]string, definedTags map[string]map[string]interface{}) *core.InstanceConfigurationCreateVnicDetails {
 	subnetId := m.GetWorkerMachineSubnet()
 	createVnicDetails := core.InstanceConfigurationCreateVnicDetails{
 		SubnetId:     subnetId,

@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"reflect"
 
-	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/config"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	"github.com/oracle/oci-go-sdk/v65/common"
@@ -34,8 +34,8 @@ import (
 )
 
 // GetClusterIdentityFromRef returns the OCIClusterIdentity referenced by the OCICluster.
-func GetClusterIdentityFromRef(ctx context.Context, c client.Client, ociClusterNamespace string, ref *corev1.ObjectReference) (*infrastructurev1beta1.OCIClusterIdentity, error) {
-	identity := &infrastructurev1beta1.OCIClusterIdentity{}
+func GetClusterIdentityFromRef(ctx context.Context, c client.Client, ociClusterNamespace string, ref *corev1.ObjectReference) (*infrastructurev1beta2.OCIClusterIdentity, error) {
+	identity := &infrastructurev1beta2.OCIClusterIdentity{}
 	if ref != nil {
 		namespace := ref.Namespace
 		if namespace == "" {
@@ -51,8 +51,8 @@ func GetClusterIdentityFromRef(ctx context.Context, c client.Client, ociClusterN
 }
 
 // GetOrBuildClientFromIdentity creates ClientProvider from OCIClusterIdentity object
-func GetOrBuildClientFromIdentity(ctx context.Context, c client.Client, identity *infrastructurev1beta1.OCIClusterIdentity, defaultRegion string) (*scope.ClientProvider, error) {
-	if identity.Spec.Type == infrastructurev1beta1.UserPrincipal {
+func GetOrBuildClientFromIdentity(ctx context.Context, c client.Client, identity *infrastructurev1beta2.OCIClusterIdentity, defaultRegion string) (*scope.ClientProvider, error) {
+	if identity.Spec.Type == infrastructurev1beta2.UserPrincipal {
 		secretRef := identity.Spec.PrincipalSecret
 		key := types.NamespacedName{
 			Namespace: secretRef.Namespace,
@@ -92,13 +92,13 @@ func GetOrBuildClientFromIdentity(ctx context.Context, c client.Client, identity
 }
 
 // IsClusterNamespaceAllowed indicates if the cluster namespace is allowed.
-func IsClusterNamespaceAllowed(ctx context.Context, k8sClient client.Client, allowedNamespaces *infrastructurev1beta1.AllowedNamespaces, namespace string) bool {
+func IsClusterNamespaceAllowed(ctx context.Context, k8sClient client.Client, allowedNamespaces *infrastructurev1beta2.AllowedNamespaces, namespace string) bool {
 	if allowedNamespaces == nil {
 		return false
 	}
 
 	// empty value matches with all namespaces
-	if reflect.DeepEqual(*allowedNamespaces, infrastructurev1beta1.AllowedNamespaces{}) {
+	if reflect.DeepEqual(*allowedNamespaces, infrastructurev1beta2.AllowedNamespaces{}) {
 		return true
 	}
 
@@ -179,7 +179,7 @@ func CreateClientProviderFromClusterIdentity(ctx context.Context, client client.
 		return nil, err
 	}
 	if !IsClusterNamespaceAllowed(ctx, client, identity.Spec.AllowedNamespaces, namespace) {
-		clusterAccessor.MarkConditionFalse(infrastructurev1beta1.ClusterReadyCondition, infrastructurev1beta1.NamespaceNotAllowedByIdentity, clusterv1.ConditionSeverityError, "")
+		clusterAccessor.MarkConditionFalse(infrastructurev1beta2.ClusterReadyCondition, infrastructurev1beta2.NamespaceNotAllowedByIdentity, clusterv1.ConditionSeverityError, "")
 		return nil, errors.Errorf("OCIClusterIdentity list of allowed namespaces doesn't include current cluster namespace %s", namespace)
 	}
 	clientProvider, err := GetOrBuildClientFromIdentity(ctx, client, identity, defaultRegion)

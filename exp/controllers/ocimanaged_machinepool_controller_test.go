@@ -25,7 +25,7 @@ import (
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/containerengine/mock_containerengine"
-	infrav1exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
+	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
 	corev1 "k8s.io/api/core/v1"
@@ -142,7 +142,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 		r                     OCIManagedMachinePoolReconciler
 		mockCtrl              *gomock.Controller
 		recorder              *record.FakeRecorder
-		ociManagedMachinePool *infrav1exp.OCIManagedMachinePool
+		ociManagedMachinePool *infrav2exp.OCIManagedMachinePool
 		okeClient             *mock_containerengine.MockClient
 		ms                    *scope.ManagedMachinePoolScope
 	)
@@ -159,11 +159,11 @@ func TestNormalReconciliationFunction(t *testing.T) {
 		machinePool := getMachinePool()
 		ociManagedMachinePool = getOCIManagedMachinePool()
 		ociCluster := getOCIManagedClusterWithOwner()
-		ociManagedControlPlane := infrav1exp.OCIManagedControlPlane{
-			Spec: infrav1exp.OCIManagedControlPlaneSpec{
+		ociManagedControlPlane := infrav2exp.OCIManagedControlPlane{
+			Spec: infrav2exp.OCIManagedControlPlaneSpec{
 				ID: common.String("cluster-id"),
 			},
-			Status: infrav1exp.OCIManagedControlPlaneStatus{
+			Status: infrav2exp.OCIManagedControlPlaneStatus{
 				Ready: true,
 			},
 		}
@@ -200,7 +200,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 		{
 			name:               "node pool in creating state",
 			errorExpected:      false,
-			conditionAssertion: []conditionAssertion{{infrav1exp.NodePoolReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityInfo, infrav1exp.NodePoolNotReadyReason}},
+			conditionAssertion: []conditionAssertion{{infrav2exp.NodePoolReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityInfo, infrav2exp.NodePoolNotReadyReason}},
 			testSpecificSetup: func(machinePoolScope *scope.ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				okeClient.EXPECT().GetNodePool(gomock.Any(), gomock.Eq(oke.GetNodePoolRequest{
 					NodePoolId: common.String("test"),
@@ -218,7 +218,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			name:               "node pool create",
 			errorExpected:      false,
 			expectedEvent:      "Created new Node Pool: test",
-			conditionAssertion: []conditionAssertion{{infrav1exp.NodePoolReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityInfo, infrav1exp.NodePoolNotReadyReason}},
+			conditionAssertion: []conditionAssertion{{infrav2exp.NodePoolReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityInfo, infrav2exp.NodePoolNotReadyReason}},
 			testSpecificSetup: func(machinePoolScope *scope.ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				ociManagedMachinePool.Spec.ID = nil
 				okeClient.EXPECT().ListNodePools(gomock.Any(), gomock.Any()).
@@ -247,7 +247,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 		{
 			name:               "node pool is created, no update",
 			errorExpected:      false,
-			conditionAssertion: []conditionAssertion{{infrav1exp.NodePoolReadyCondition, corev1.ConditionTrue, "", ""}},
+			conditionAssertion: []conditionAssertion{{infrav2exp.NodePoolReadyCondition, corev1.ConditionTrue, "", ""}},
 			testSpecificSetup: func(machinePoolScope *scope.ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				okeClient.EXPECT().GetNodePool(gomock.Any(), gomock.Eq(oke.GetNodePoolRequest{
 					NodePoolId: common.String("test"),
@@ -306,7 +306,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 		{
 			name:               "node pool in created, pdate",
 			errorExpected:      false,
-			conditionAssertion: []conditionAssertion{{infrav1exp.NodePoolReadyCondition, corev1.ConditionTrue, "", ""}},
+			conditionAssertion: []conditionAssertion{{infrav2exp.NodePoolReadyCondition, corev1.ConditionTrue, "", ""}},
 			testSpecificSetup: func(machinePoolScope *scope.ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				okeClient.EXPECT().GetNodePool(gomock.Any(), gomock.Eq(oke.GetNodePoolRequest{
 					NodePoolId: common.String("test"),
@@ -368,7 +368,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			name:                    "node pool in error state",
 			errorExpected:           true,
 			expectedFailureMessages: []string{"test error!", "Node Pool status FAILED is unexpected"},
-			conditionAssertion:      []conditionAssertion{{infrav1exp.NodePoolReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrav1exp.NodePoolProvisionFailedReason}},
+			conditionAssertion:      []conditionAssertion{{infrav2exp.NodePoolReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrav2exp.NodePoolProvisionFailedReason}},
 			testSpecificSetup: func(machinePoolScope *scope.ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				okeClient.EXPECT().GetNodePool(gomock.Any(), gomock.Eq(oke.GetNodePoolRequest{
 					NodePoolId: common.String("test"),
@@ -438,7 +438,7 @@ func TestDeletionFunction(t *testing.T) {
 		r                     OCIManagedMachinePoolReconciler
 		mockCtrl              *gomock.Controller
 		recorder              *record.FakeRecorder
-		ociManagedMachinePool *infrav1exp.OCIManagedMachinePool
+		ociManagedMachinePool *infrav2exp.OCIManagedMachinePool
 		okeClient             *mock_containerengine.MockClient
 		ms                    *scope.ManagedMachinePoolScope
 	)
@@ -455,11 +455,11 @@ func TestDeletionFunction(t *testing.T) {
 		machinePool := getMachinePool()
 		ociManagedMachinePool = getOCIManagedMachinePool()
 		ociCluster := getOCIManagedClusterWithOwner()
-		ociManagedControlPlane := infrav1exp.OCIManagedControlPlane{
-			Spec: infrav1exp.OCIManagedControlPlaneSpec{
+		ociManagedControlPlane := infrav2exp.OCIManagedControlPlane{
+			Spec: infrav2exp.OCIManagedControlPlaneSpec{
 				ID: common.String("cluster-id"),
 			},
-			Status: infrav1exp.OCIManagedControlPlaneStatus{
+			Status: infrav2exp.OCIManagedControlPlaneStatus{
 				Ready: true,
 			},
 		}
@@ -496,7 +496,7 @@ func TestDeletionFunction(t *testing.T) {
 		{
 			name:               "node pool to be deleted",
 			errorExpected:      false,
-			conditionAssertion: []conditionAssertion{{infrav1exp.NodePoolReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityWarning, infrav1exp.NodePoolDeletionInProgress}},
+			conditionAssertion: []conditionAssertion{{infrav2exp.NodePoolReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityWarning, infrav2exp.NodePoolDeletionInProgress}},
 			testSpecificSetup: func(machinePoolScope *scope.ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				okeClient.EXPECT().GetNodePool(gomock.Any(), gomock.Eq(oke.GetNodePoolRequest{
 					NodePoolId: common.String("test"),
@@ -517,7 +517,7 @@ func TestDeletionFunction(t *testing.T) {
 		{
 			name:               "node pool not found",
 			errorExpected:      false,
-			conditionAssertion: []conditionAssertion{{infrav1exp.NodePoolNotFoundReason, corev1.ConditionTrue, "", ""}},
+			conditionAssertion: []conditionAssertion{{infrav2exp.NodePoolNotFoundReason, corev1.ConditionTrue, "", ""}},
 			testSpecificSetup: func(machinePoolScope *scope.ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				okeClient.EXPECT().GetNodePool(gomock.Any(), gomock.Eq(oke.GetNodePoolRequest{
 					NodePoolId: common.String("test"),
@@ -528,7 +528,7 @@ func TestDeletionFunction(t *testing.T) {
 		{
 			name:               "node pool ",
 			errorExpected:      false,
-			conditionAssertion: []conditionAssertion{{infrav1exp.NodePoolNotFoundReason, corev1.ConditionTrue, "", ""}},
+			conditionAssertion: []conditionAssertion{{infrav2exp.NodePoolNotFoundReason, corev1.ConditionTrue, "", ""}},
 			testSpecificSetup: func(machinePoolScope *scope.ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				okeClient.EXPECT().GetNodePool(gomock.Any(), gomock.Eq(oke.GetNodePoolRequest{
 					NodePoolId: common.String("test"),
@@ -539,7 +539,7 @@ func TestDeletionFunction(t *testing.T) {
 		{
 			name:               "node pool deleting",
 			errorExpected:      false,
-			conditionAssertion: []conditionAssertion{{infrav1exp.NodePoolReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityWarning, infrav1exp.NodePoolDeletionInProgress}},
+			conditionAssertion: []conditionAssertion{{infrav2exp.NodePoolReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityWarning, infrav2exp.NodePoolDeletionInProgress}},
 			testSpecificSetup: func(machinePoolScope *scope.ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				okeClient.EXPECT().GetNodePool(gomock.Any(), gomock.Eq(oke.GetNodePoolRequest{
 					NodePoolId: common.String("test"),
@@ -556,7 +556,7 @@ func TestDeletionFunction(t *testing.T) {
 		{
 			name:               "node pool deleted",
 			errorExpected:      false,
-			conditionAssertion: []conditionAssertion{{infrav1exp.NodePoolReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityWarning, infrav1exp.NodePoolDeletedReason}},
+			conditionAssertion: []conditionAssertion{{infrav2exp.NodePoolReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityWarning, infrav2exp.NodePoolDeletedReason}},
 			testSpecificSetup: func(machinePoolScope *scope.ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				okeClient.EXPECT().GetNodePool(gomock.Any(), gomock.Eq(oke.GetNodePoolRequest{
 					NodePoolId: common.String("test"),
@@ -598,14 +598,14 @@ func TestDeletionFunction(t *testing.T) {
 	}
 }
 
-func getOCIManagedMachinePoolWithNoOwner() *infrav1exp.OCIManagedMachinePool {
+func getOCIManagedMachinePoolWithNoOwner() *infrav2exp.OCIManagedMachinePool {
 	ociMachine := getOCIManagedMachinePool()
 	ociMachine.OwnerReferences = []metav1.OwnerReference{}
 	return ociMachine
 }
 
-func getOCIManagedMachinePool() *infrav1exp.OCIManagedMachinePool {
-	return &infrav1exp.OCIManagedMachinePool{
+func getOCIManagedMachinePool() *infrav2exp.OCIManagedMachinePool {
+	return &infrav2exp.OCIManagedMachinePool{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
 			Namespace: "test",
@@ -626,25 +626,25 @@ func getOCIManagedMachinePool() *infrav1exp.OCIManagedMachinePool {
 				},
 			},
 		},
-		Spec: infrav1exp.OCIManagedMachinePoolSpec{
+		Spec: infrav2exp.OCIManagedMachinePoolSpec{
 			ID:           common.String("test"),
 			NodeMetadata: map[string]string{"key1": "value1"},
-			InitialNodeLabels: []infrav1exp.KeyValue{{
+			InitialNodeLabels: []infrav2exp.KeyValue{{
 				Key:   common.String("key"),
 				Value: common.String("value"),
 			}},
 			Version:   common.String("v1.24.5"),
 			NodeShape: "test-shape",
-			NodeShapeConfig: &infrav1exp.NodeShapeConfig{
+			NodeShapeConfig: &infrav2exp.NodeShapeConfig{
 				Ocpus:       common.String("2"),
 				MemoryInGBs: common.String("16"),
 			},
-			NodeSourceViaImage: &infrav1exp.NodeSourceViaImage{
+			NodeSourceViaImage: &infrav2exp.NodeSourceViaImage{
 				ImageId: common.String("test-image-id"),
 			},
 			SshPublicKey: "test-ssh-public-key",
-			NodePoolNodeConfig: &infrav1exp.NodePoolNodeConfig{
-				PlacementConfigs: []infrav1exp.PlacementConfig{
+			NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
+				PlacementConfigs: []infrav2exp.PlacementConfig{
 					{
 						AvailabilityDomain:    common.String("test-ad"),
 						SubnetName:            common.String("worker-subnet"),
@@ -655,16 +655,16 @@ func getOCIManagedMachinePool() *infrav1exp.OCIManagedMachinePool {
 				NsgNames:                       []string{"worker-nsg"},
 				KmsKeyId:                       common.String("kms-key-id"),
 				IsPvEncryptionInTransitEnabled: common.Bool(true),
-				NodePoolPodNetworkOptionDetails: &infrav1exp.NodePoolPodNetworkOptionDetails{
-					CniType: infrav1exp.VCNNativeCNI,
-					VcnIpNativePodNetworkOptions: infrav1exp.VcnIpNativePodNetworkOptions{
+				NodePoolPodNetworkOptionDetails: &infrav2exp.NodePoolPodNetworkOptionDetails{
+					CniType: infrav2exp.VCNNativeCNI,
+					VcnIpNativePodNetworkOptions: infrav2exp.VcnIpNativePodNetworkOptions{
 						SubnetNames:    []string{"pod-subnet"},
 						MaxPodsPerNode: common.Int(31),
 						NSGNames:       []string{"pod-nsg"},
 					},
 				},
 			},
-			NodeEvictionNodePoolSettings: &infrav1exp.NodeEvictionNodePoolSettings{
+			NodeEvictionNodePoolSettings: &infrav2exp.NodeEvictionNodePoolSettings{
 				EvictionGraceDuration:           common.String("PT30M"),
 				IsForceDeleteAfterGraceDuration: common.Bool(true),
 			},
@@ -711,7 +711,7 @@ func getPausedCluster() *clusterv1.Cluster {
 	return cluster
 }
 
-func expectConditions(g *WithT, m *infrav1exp.OCIManagedMachinePool, expected []conditionAssertion) {
+func expectConditions(g *WithT, m *infrav2exp.OCIManagedMachinePool, expected []conditionAssertion) {
 	g.Expect(len(m.Status.Conditions)).To(BeNumerically(">=", len(expected)), "number of conditions")
 	for _, c := range expected {
 		actual := conditions.Get(m, c.conditionType)

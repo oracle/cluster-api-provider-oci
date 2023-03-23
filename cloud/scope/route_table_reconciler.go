@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"strings"
 
-	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
@@ -56,19 +56,19 @@ func (s *ClusterScope) ReconcileRouteTable(ctx context.Context) error {
 func (s *ClusterScope) GetDesiredRouteTables() []string {
 	var desiredRouteTables []string
 	if s.IsAllSubnetsPrivate() {
-		desiredRouteTables = []string{infrastructurev1beta1.Private}
+		desiredRouteTables = []string{infrastructurev1beta2.Private}
 	} else if s.IsAllSubnetsPublic() {
-		desiredRouteTables = []string{infrastructurev1beta1.Public}
+		desiredRouteTables = []string{infrastructurev1beta2.Public}
 	} else {
-		desiredRouteTables = []string{infrastructurev1beta1.Private, infrastructurev1beta1.Public}
+		desiredRouteTables = []string{infrastructurev1beta2.Private, infrastructurev1beta2.Public}
 	}
 	return desiredRouteTables
 }
 
 func (s *ClusterScope) getRouteTable(ctx context.Context, routeTableType string) (*core.RouteTable, error) {
-	routeTableId := s.OCIClusterAccessor.GetNetworkSpec().Vcn.PublicRouteTableId
-	if routeTableType == infrastructurev1beta1.Private {
-		routeTableId = s.OCIClusterAccessor.GetNetworkSpec().Vcn.PrivateRouteTableId
+	routeTableId := s.OCIClusterAccessor.GetNetworkSpec().Vcn.RouteTable.PublicRouteTableId
+	if routeTableType == infrastructurev1beta2.Private {
+		routeTableId = s.OCIClusterAccessor.GetNetworkSpec().Vcn.RouteTable.PrivateRouteTableId
 	}
 	if routeTableId != nil {
 		resp, err := s.VCNClient.GetRouteTable(ctx, core.GetRouteTableRequest{
@@ -87,7 +87,7 @@ func (s *ClusterScope) getRouteTable(ctx context.Context, routeTableType string)
 	}
 	vcId := s.getVcnId()
 	routeTableName := PublicRouteTableName
-	if routeTableType == infrastructurev1beta1.Private {
+	if routeTableType == infrastructurev1beta2.Private {
 		routeTableName = PrivateRouteTableName
 	}
 	rts, err := s.VCNClient.ListRouteTables(ctx, core.ListRouteTablesRequest{
@@ -110,18 +110,18 @@ func (s *ClusterScope) getRouteTable(ctx context.Context, routeTableType string)
 func (s *ClusterScope) CreateRouteTable(ctx context.Context, routeTableType string) (*string, error) {
 	var routeRules []core.RouteRule
 	var routeTableName string
-	if routeTableType == infrastructurev1beta1.Private {
+	if routeTableType == infrastructurev1beta2.Private {
 		routeRules = []core.RouteRule{
 			{
 				DestinationType: core.RouteRuleDestinationTypeCidrBlock,
 				Destination:     common.String("0.0.0.0/0"),
-				NetworkEntityId: s.OCIClusterAccessor.GetNetworkSpec().Vcn.NatGatewayId,
+				NetworkEntityId: s.OCIClusterAccessor.GetNetworkSpec().Vcn.NATGateway.Id,
 				Description:     common.String("traffic to the internet"),
 			},
 			{
 				DestinationType: core.RouteRuleDestinationTypeServiceCidrBlock,
 				Destination:     common.String(fmt.Sprintf("all-%s-services-in-oracle-services-network", strings.ToLower(s.RegionKey))),
-				NetworkEntityId: s.OCIClusterAccessor.GetNetworkSpec().Vcn.ServiceGatewayId,
+				NetworkEntityId: s.OCIClusterAccessor.GetNetworkSpec().Vcn.ServiceGateway.Id,
 				Description:     common.String("traffic to OCI services"),
 			},
 		}
@@ -143,7 +143,7 @@ func (s *ClusterScope) CreateRouteTable(ctx context.Context, routeTableType stri
 			{
 				DestinationType: core.RouteRuleDestinationTypeCidrBlock,
 				Destination:     common.String("0.0.0.0/0"),
-				NetworkEntityId: s.OCIClusterAccessor.GetNetworkSpec().Vcn.InternetGatewayId,
+				NetworkEntityId: s.OCIClusterAccessor.GetNetworkSpec().Vcn.InternetGateway.Id,
 				Description:     common.String("traffic to/from internet"),
 			},
 		}
@@ -170,11 +170,11 @@ func (s *ClusterScope) CreateRouteTable(ctx context.Context, routeTableType stri
 }
 
 func (s *ClusterScope) setRTStatus(id *string, routeTableType string) {
-	if routeTableType == infrastructurev1beta1.Private {
-		s.OCIClusterAccessor.GetNetworkSpec().Vcn.PrivateRouteTableId = id
+	if routeTableType == infrastructurev1beta2.Private {
+		s.OCIClusterAccessor.GetNetworkSpec().Vcn.RouteTable.PrivateRouteTableId = id
 		return
 	}
-	s.OCIClusterAccessor.GetNetworkSpec().Vcn.PublicRouteTableId = id
+	s.OCIClusterAccessor.GetNetworkSpec().Vcn.RouteTable.PublicRouteTableId = id
 }
 
 func (s *ClusterScope) DeleteRouteTables(ctx context.Context) error {
@@ -201,8 +201,8 @@ func (s *ClusterScope) DeleteRouteTables(ctx context.Context) error {
 }
 
 func (s *ClusterScope) getRouteTableId(routeTableType string) *string {
-	if routeTableType == infrastructurev1beta1.Private {
-		return s.OCIClusterAccessor.GetNetworkSpec().Vcn.PrivateRouteTableId
+	if routeTableType == infrastructurev1beta2.Private {
+		return s.OCIClusterAccessor.GetNetworkSpec().Vcn.RouteTable.PrivateRouteTableId
 	}
-	return s.OCIClusterAccessor.GetNetworkSpec().Vcn.PublicRouteTableId
+	return s.OCIClusterAccessor.GetNetworkSpec().Vcn.RouteTable.PublicRouteTableId
 }

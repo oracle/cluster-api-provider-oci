@@ -23,10 +23,10 @@ import (
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
-	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/containerengine/mock_containerengine"
-	infrav1exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
+	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
 	"github.com/pkg/errors"
@@ -72,47 +72,49 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 		var err error
 		mockCtrl = gomock.NewController(t)
 		okeClient = mock_containerengine.NewMockClient(mockCtrl)
-		ociManagedCluster := &infrav1exp.OCIManagedCluster{
+		ociManagedCluster := &infrav2exp.OCIManagedCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				UID: "cluster_uid",
 			},
-			Spec: infrav1exp.OCIManagedClusterSpec{
+			Spec: infrav2exp.OCIManagedClusterSpec{
 				CompartmentId: "test-compartment",
 				DefinedTags:   definedTags,
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
 						ID: common.String("vcn-id"),
-						Subnets: []*infrastructurev1beta1.Subnet{
+						Subnets: []*infrastructurev1beta2.Subnet{
 							{
-								Role: infrastructurev1beta1.WorkerRole,
+								Role: infrastructurev1beta2.WorkerRole,
 								ID:   common.String("subnet-id"),
-								Type: infrastructurev1beta1.Private,
+								Type: infrastructurev1beta2.Private,
 								Name: "worker-subnet",
 							},
 							{
-								Role: infrastructurev1beta1.PodRole,
+								Role: infrastructurev1beta2.PodRole,
 								ID:   common.String("pod-subnet-id"),
-								Type: infrastructurev1beta1.Private,
+								Type: infrastructurev1beta2.Private,
 								Name: "pod-subnet",
 							},
 						},
-						NetworkSecurityGroups: []*infrastructurev1beta1.NSG{
-							{
-								Role: infrastructurev1beta1.WorkerRole,
-								ID:   common.String("nsg-id"),
-								Name: "worker-nsg",
-							},
-							{
-								Role: infrastructurev1beta1.PodRole,
-								ID:   common.String("pod-nsg-id"),
-								Name: "pod-nsg",
+						NetworkSecurityGroups: infrastructurev1beta2.NetworkSecurityGroups{
+							NSGList: []*infrastructurev1beta2.NSG{
+								{
+									Role: infrastructurev1beta2.WorkerRole,
+									ID:   common.String("nsg-id"),
+									Name: "worker-nsg",
+								},
+								{
+									Role: infrastructurev1beta2.PodRole,
+									ID:   common.String("pod-nsg-id"),
+									Name: "pod-nsg",
+								},
 							},
 						},
 					},
 				},
 			},
-			Status: infrav1exp.OCIManagedClusterStatus{
-				AvailabilityDomains: map[string]infrastructurev1beta1.OCIAvailabilityDomain{
+			Status: infrav2exp.OCIManagedClusterStatus{
+				AvailabilityDomains: map[string]infrastructurev1beta2.OCIAvailabilityDomain{
 					"ad-1": {
 						Name:         "ad-1",
 						FaultDomains: []string{"fd-5", "fd-6"},
@@ -125,19 +127,19 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 
 		ms, err = NewManagedMachinePoolScope(ManagedMachinePoolScopeParams{
 			ContainerEngineClient: okeClient,
-			OCIManagedControlPlane: &infrav1exp.OCIManagedControlPlane{
+			OCIManagedControlPlane: &infrav2exp.OCIManagedControlPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
-				Spec: infrav1exp.OCIManagedControlPlaneSpec{
+				Spec: infrav2exp.OCIManagedControlPlaneSpec{
 					ID: common.String("cluster-id"),
 				},
 			},
-			OCIManagedMachinePool: &infrav1exp.OCIManagedMachinePool{
+			OCIManagedMachinePool: &infrav2exp.OCIManagedMachinePool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
-				Spec: infrav1exp.OCIManagedMachinePoolSpec{
+				Spec: infrav2exp.OCIManagedMachinePoolSpec{
 					Version: common.String("v1.24.5"),
 				},
 			},
@@ -173,25 +175,25 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
-				ms.OCIManagedMachinePool.Spec = infrav1exp.OCIManagedMachinePoolSpec{
+				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
 					Version:      common.String("v1.24.5"),
 					NodeMetadata: map[string]string{"key1": "value1"},
-					InitialNodeLabels: []infrav1exp.KeyValue{{
+					InitialNodeLabels: []infrav2exp.KeyValue{{
 						Key:   common.String("key"),
 						Value: common.String("value"),
 					}},
 					NodeShape: "test-shape",
-					NodeShapeConfig: &infrav1exp.NodeShapeConfig{
+					NodeShapeConfig: &infrav2exp.NodeShapeConfig{
 						Ocpus:       common.String("2"),
 						MemoryInGBs: common.String("16"),
 					},
-					NodeSourceViaImage: &infrav1exp.NodeSourceViaImage{
+					NodeSourceViaImage: &infrav2exp.NodeSourceViaImage{
 						ImageId:             common.String("test-image-id"),
 						BootVolumeSizeInGBs: common.Int64(75),
 					},
 					SshPublicKey: "test-ssh-public-key",
-					NodePoolNodeConfig: &infrav1exp.NodePoolNodeConfig{
-						PlacementConfigs: []infrav1exp.PlacementConfig{
+					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
+						PlacementConfigs: []infrav2exp.PlacementConfig{
 							{
 								AvailabilityDomain:    common.String("test-ad"),
 								SubnetName:            common.String("worker-subnet"),
@@ -202,16 +204,16 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 						NsgNames:                       []string{"worker-nsg"},
 						KmsKeyId:                       common.String("kms-key-id"),
 						IsPvEncryptionInTransitEnabled: common.Bool(true),
-						NodePoolPodNetworkOptionDetails: &infrav1exp.NodePoolPodNetworkOptionDetails{
-							CniType: infrav1exp.VCNNativeCNI,
-							VcnIpNativePodNetworkOptions: infrav1exp.VcnIpNativePodNetworkOptions{
+						NodePoolPodNetworkOptionDetails: &infrav2exp.NodePoolPodNetworkOptionDetails{
+							CniType: infrav2exp.VCNNativeCNI,
+							VcnIpNativePodNetworkOptions: infrav2exp.VcnIpNativePodNetworkOptions{
 								SubnetNames:    []string{"pod-subnet"},
 								MaxPodsPerNode: common.Int(25),
 								NSGNames:       []string{"pod-nsg"},
 							},
 						},
 					},
-					NodeEvictionNodePoolSettings: &infrav1exp.NodeEvictionNodePoolSettings{
+					NodeEvictionNodePoolSettings: &infrav2exp.NodeEvictionNodePoolSettings{
 						EvictionGraceDuration:           common.String("PT30M"),
 						IsForceDeleteAfterGraceDuration: common.Bool(true),
 					},
@@ -299,24 +301,24 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
-				ms.OCIManagedMachinePool.Spec = infrav1exp.OCIManagedMachinePoolSpec{
+				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
 					Version:      common.String("v1.24.5"),
 					NodeMetadata: map[string]string{"key1": "value1"},
-					InitialNodeLabels: []infrav1exp.KeyValue{{
+					InitialNodeLabels: []infrav2exp.KeyValue{{
 						Key:   common.String("key"),
 						Value: common.String("value"),
 					}},
 					NodeShape: "test-shape",
-					NodeShapeConfig: &infrav1exp.NodeShapeConfig{
+					NodeShapeConfig: &infrav2exp.NodeShapeConfig{
 						Ocpus:       common.String("2"),
 						MemoryInGBs: common.String("16"),
 					},
-					NodeSourceViaImage: &infrav1exp.NodeSourceViaImage{
+					NodeSourceViaImage: &infrav2exp.NodeSourceViaImage{
 						BootVolumeSizeInGBs: common.Int64(75),
 					},
 					SshPublicKey: "test-ssh-public-key",
-					NodePoolNodeConfig: &infrav1exp.NodePoolNodeConfig{
-						PlacementConfigs: []infrav1exp.PlacementConfig{
+					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
+						PlacementConfigs: []infrav2exp.PlacementConfig{
 							{
 								AvailabilityDomain:    common.String("test-ad"),
 								SubnetName:            common.String("worker-subnet"),
@@ -327,16 +329,16 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 						NsgNames:                       []string{"worker-nsg"},
 						KmsKeyId:                       common.String("kms-key-id"),
 						IsPvEncryptionInTransitEnabled: common.Bool(true),
-						NodePoolPodNetworkOptionDetails: &infrav1exp.NodePoolPodNetworkOptionDetails{
-							CniType: infrav1exp.VCNNativeCNI,
-							VcnIpNativePodNetworkOptions: infrav1exp.VcnIpNativePodNetworkOptions{
+						NodePoolPodNetworkOptionDetails: &infrav2exp.NodePoolPodNetworkOptionDetails{
+							CniType: infrav2exp.VCNNativeCNI,
+							VcnIpNativePodNetworkOptions: infrav2exp.VcnIpNativePodNetworkOptions{
 								SubnetNames:    []string{"pod-subnet"},
 								MaxPodsPerNode: common.Int(25),
 								NSGNames:       []string{"pod-nsg"},
 							},
 						},
 					},
-					NodeEvictionNodePoolSettings: &infrav1exp.NodeEvictionNodePoolSettings{
+					NodeEvictionNodePoolSettings: &infrav2exp.NodeEvictionNodePoolSettings{
 						EvictionGraceDuration:           common.String("PT30M"),
 						IsForceDeleteAfterGraceDuration: common.Bool(true),
 					},
@@ -446,24 +448,24 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
-				ms.OCIManagedMachinePool.Spec = infrav1exp.OCIManagedMachinePoolSpec{
+				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
 					Version:      common.String("v1.24.5"),
 					NodeMetadata: map[string]string{"key1": "value1"},
-					InitialNodeLabels: []infrav1exp.KeyValue{{
+					InitialNodeLabels: []infrav2exp.KeyValue{{
 						Key:   common.String("key"),
 						Value: common.String("value"),
 					}},
 					NodeShape: "test-shape-A1",
-					NodeShapeConfig: &infrav1exp.NodeShapeConfig{
+					NodeShapeConfig: &infrav2exp.NodeShapeConfig{
 						Ocpus:       common.String("2"),
 						MemoryInGBs: common.String("16"),
 					},
-					NodeSourceViaImage: &infrav1exp.NodeSourceViaImage{
+					NodeSourceViaImage: &infrav2exp.NodeSourceViaImage{
 						BootVolumeSizeInGBs: common.Int64(75),
 					},
 					SshPublicKey: "test-ssh-public-key",
-					NodePoolNodeConfig: &infrav1exp.NodePoolNodeConfig{
-						PlacementConfigs: []infrav1exp.PlacementConfig{
+					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
+						PlacementConfigs: []infrav2exp.PlacementConfig{
 							{
 								AvailabilityDomain:    common.String("test-ad"),
 								SubnetName:            common.String("worker-subnet"),
@@ -474,16 +476,16 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 						NsgNames:                       []string{"worker-nsg"},
 						KmsKeyId:                       common.String("kms-key-id"),
 						IsPvEncryptionInTransitEnabled: common.Bool(true),
-						NodePoolPodNetworkOptionDetails: &infrav1exp.NodePoolPodNetworkOptionDetails{
-							CniType: infrav1exp.VCNNativeCNI,
-							VcnIpNativePodNetworkOptions: infrav1exp.VcnIpNativePodNetworkOptions{
+						NodePoolPodNetworkOptionDetails: &infrav2exp.NodePoolPodNetworkOptionDetails{
+							CniType: infrav2exp.VCNNativeCNI,
+							VcnIpNativePodNetworkOptions: infrav2exp.VcnIpNativePodNetworkOptions{
 								SubnetNames:    []string{"pod-subnet"},
 								MaxPodsPerNode: common.Int(25),
 								NSGNames:       []string{"pod-nsg"},
 							},
 						},
 					},
-					NodeEvictionNodePoolSettings: &infrav1exp.NodeEvictionNodePoolSettings{
+					NodeEvictionNodePoolSettings: &infrav2exp.NodeEvictionNodePoolSettings{
 						EvictionGraceDuration:           common.String("PT30M"),
 						IsForceDeleteAfterGraceDuration: common.Bool(true),
 					},
@@ -595,24 +597,24 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 			matchError:          errors.New("could not lookup nodepool image id from nodepool options"),
 			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
-				ms.OCIManagedMachinePool.Spec = infrav1exp.OCIManagedMachinePoolSpec{
+				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
 					Version:      common.String("v1.24.5"),
 					NodeMetadata: map[string]string{"key1": "value1"},
-					InitialNodeLabels: []infrav1exp.KeyValue{{
+					InitialNodeLabels: []infrav2exp.KeyValue{{
 						Key:   common.String("key"),
 						Value: common.String("value"),
 					}},
 					NodeShape: "test-shape-A1",
-					NodeShapeConfig: &infrav1exp.NodeShapeConfig{
+					NodeShapeConfig: &infrav2exp.NodeShapeConfig{
 						Ocpus:       common.String("2"),
 						MemoryInGBs: common.String("16"),
 					},
-					NodeSourceViaImage: &infrav1exp.NodeSourceViaImage{
+					NodeSourceViaImage: &infrav2exp.NodeSourceViaImage{
 						BootVolumeSizeInGBs: common.Int64(75),
 					},
 					SshPublicKey: "test-ssh-public-key",
-					NodePoolNodeConfig: &infrav1exp.NodePoolNodeConfig{
-						PlacementConfigs: []infrav1exp.PlacementConfig{
+					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
+						PlacementConfigs: []infrav2exp.PlacementConfig{
 							{
 								AvailabilityDomain:    common.String("test-ad"),
 								SubnetName:            common.String("worker-subnet"),
@@ -623,16 +625,16 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 						NsgNames:                       []string{"worker-nsg"},
 						KmsKeyId:                       common.String("kms-key-id"),
 						IsPvEncryptionInTransitEnabled: common.Bool(true),
-						NodePoolPodNetworkOptionDetails: &infrav1exp.NodePoolPodNetworkOptionDetails{
-							CniType: infrav1exp.VCNNativeCNI,
-							VcnIpNativePodNetworkOptions: infrav1exp.VcnIpNativePodNetworkOptions{
+						NodePoolPodNetworkOptionDetails: &infrav2exp.NodePoolPodNetworkOptionDetails{
+							CniType: infrav2exp.VCNNativeCNI,
+							VcnIpNativePodNetworkOptions: infrav2exp.VcnIpNativePodNetworkOptions{
 								SubnetNames:    []string{"pod-subnet"},
 								MaxPodsPerNode: common.Int(25),
 								NSGNames:       []string{"pod-nsg"},
 							},
 						},
 					},
-					NodeEvictionNodePoolSettings: &infrav1exp.NodeEvictionNodePoolSettings{
+					NodeEvictionNodePoolSettings: &infrav2exp.NodeEvictionNodePoolSettings{
 						EvictionGraceDuration:           common.String("PT30M"),
 						IsForceDeleteAfterGraceDuration: common.Bool(true),
 					},
@@ -666,36 +668,36 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
-				ms.OCIManagedMachinePool.Spec = infrav1exp.OCIManagedMachinePoolSpec{
+				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
 					Version:      common.String("v1.24.5"),
 					NodeMetadata: map[string]string{"key1": "value1"},
-					InitialNodeLabels: []infrav1exp.KeyValue{{
+					InitialNodeLabels: []infrav2exp.KeyValue{{
 						Key:   common.String("key"),
 						Value: common.String("value"),
 					}},
 					NodeShape: "test-shape",
-					NodeShapeConfig: &infrav1exp.NodeShapeConfig{
+					NodeShapeConfig: &infrav2exp.NodeShapeConfig{
 						Ocpus:       common.String("2"),
 						MemoryInGBs: common.String("16"),
 					},
-					NodeSourceViaImage: &infrav1exp.NodeSourceViaImage{
+					NodeSourceViaImage: &infrav2exp.NodeSourceViaImage{
 						ImageId: common.String("test-image-id"),
 					},
 					SshPublicKey: "test-ssh-public-key",
-					NodePoolNodeConfig: &infrav1exp.NodePoolNodeConfig{
+					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
 						NsgNames:                       []string{"worker-nsg"},
 						KmsKeyId:                       common.String("kms-key-id"),
 						IsPvEncryptionInTransitEnabled: common.Bool(true),
-						NodePoolPodNetworkOptionDetails: &infrav1exp.NodePoolPodNetworkOptionDetails{
-							CniType: infrav1exp.VCNNativeCNI,
-							VcnIpNativePodNetworkOptions: infrav1exp.VcnIpNativePodNetworkOptions{
+						NodePoolPodNetworkOptionDetails: &infrav2exp.NodePoolPodNetworkOptionDetails{
+							CniType: infrav2exp.VCNNativeCNI,
+							VcnIpNativePodNetworkOptions: infrav2exp.VcnIpNativePodNetworkOptions{
 								SubnetNames:    []string{"pod-subnet"},
 								MaxPodsPerNode: common.Int(15),
 								NSGNames:       []string{"pod-nsg"},
 							},
 						},
 					},
-					NodeEvictionNodePoolSettings: &infrav1exp.NodeEvictionNodePoolSettings{
+					NodeEvictionNodePoolSettings: &infrav2exp.NodeEvictionNodePoolSettings{
 						EvictionGraceDuration:           common.String("PT30M"),
 						IsForceDeleteAfterGraceDuration: common.Bool(true),
 					},
@@ -782,8 +784,8 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 			matchError:    errors.New("worker subnets are not specified"),
 			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
-				ms.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets = []*infrastructurev1beta1.Subnet{}
-				ms.OCIManagedMachinePool.Spec = infrav1exp.OCIManagedMachinePoolSpec{}
+				ms.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets = []*infrastructurev1beta2.Subnet{}
+				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{}
 			},
 		},
 		{
@@ -793,10 +795,10 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 				"worker-subnet-invalid")),
 			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
-				ms.OCIManagedMachinePool.Spec = infrav1exp.OCIManagedMachinePoolSpec{
+				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
 					SshPublicKey: "test-ssh-public-key",
-					NodePoolNodeConfig: &infrav1exp.NodePoolNodeConfig{
-						PlacementConfigs: []infrav1exp.PlacementConfig{
+					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
+						PlacementConfigs: []infrav2exp.PlacementConfig{
 							{
 								AvailabilityDomain:    common.String("test-ad"),
 								SubnetName:            common.String("worker-subnet-invalid"),
@@ -866,47 +868,49 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 		var err error
 		mockCtrl = gomock.NewController(t)
 		okeClient = mock_containerengine.NewMockClient(mockCtrl)
-		ociManagedCluster := &infrav1exp.OCIManagedCluster{
+		ociManagedCluster := &infrav2exp.OCIManagedCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				UID: "cluster_uid",
 			},
-			Spec: infrav1exp.OCIManagedClusterSpec{
+			Spec: infrav2exp.OCIManagedClusterSpec{
 				CompartmentId: "test-compartment",
 				DefinedTags:   definedTags,
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
 						ID: common.String("vcn-id"),
-						Subnets: []*infrastructurev1beta1.Subnet{
+						Subnets: []*infrastructurev1beta2.Subnet{
 							{
-								Role: infrastructurev1beta1.WorkerRole,
+								Role: infrastructurev1beta2.WorkerRole,
 								ID:   common.String("subnet-id"),
-								Type: infrastructurev1beta1.Private,
+								Type: infrastructurev1beta2.Private,
 								Name: "worker-subnet",
 							},
 							{
-								Role: infrastructurev1beta1.PodRole,
+								Role: infrastructurev1beta2.PodRole,
 								ID:   common.String("pod-subnet-id"),
-								Type: infrastructurev1beta1.Private,
+								Type: infrastructurev1beta2.Private,
 								Name: "pod-subnet",
 							},
 						},
-						NetworkSecurityGroups: []*infrastructurev1beta1.NSG{
-							{
-								Role: infrastructurev1beta1.WorkerRole,
-								ID:   common.String("nsg-id"),
-								Name: "worker-nsg",
-							},
-							{
-								Role: infrastructurev1beta1.PodRole,
-								ID:   common.String("pod-nsg-id"),
-								Name: "pod-nsg",
+						NetworkSecurityGroups: infrastructurev1beta2.NetworkSecurityGroups{
+							NSGList: []*infrastructurev1beta2.NSG{
+								{
+									Role: infrastructurev1beta2.WorkerRole,
+									ID:   common.String("nsg-id"),
+									Name: "worker-nsg",
+								},
+								{
+									Role: infrastructurev1beta2.PodRole,
+									ID:   common.String("pod-nsg-id"),
+									Name: "pod-nsg",
+								},
 							},
 						},
 					},
 				},
 			},
-			Status: infrav1exp.OCIManagedClusterStatus{
-				AvailabilityDomains: map[string]infrastructurev1beta1.OCIAvailabilityDomain{
+			Status: infrav2exp.OCIManagedClusterStatus{
+				AvailabilityDomains: map[string]infrastructurev1beta2.OCIAvailabilityDomain{
 					"ad-1": {
 						Name:         "ad-1",
 						FaultDomains: []string{"fd-5", "fd-6"},
@@ -919,19 +923,19 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 
 		ms, err = NewManagedMachinePoolScope(ManagedMachinePoolScopeParams{
 			ContainerEngineClient: okeClient,
-			OCIManagedControlPlane: &infrav1exp.OCIManagedControlPlane{
+			OCIManagedControlPlane: &infrav2exp.OCIManagedControlPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
-				Spec: infrav1exp.OCIManagedControlPlaneSpec{
+				Spec: infrav2exp.OCIManagedControlPlaneSpec{
 					ID: common.String("cluster-id"),
 				},
 			},
-			OCIManagedMachinePool: &infrav1exp.OCIManagedMachinePool{
+			OCIManagedMachinePool: &infrav2exp.OCIManagedMachinePool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
-				Spec: infrav1exp.OCIManagedMachinePoolSpec{
+				Spec: infrav2exp.OCIManagedMachinePoolSpec{
 					Version: common.String("v1.24.5"),
 				},
 			},
@@ -969,24 +973,24 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
-				ms.OCIManagedMachinePool.Spec = infrav1exp.OCIManagedMachinePoolSpec{
+				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
 					Version:      common.String("v1.24.5"),
 					NodeMetadata: map[string]string{"key1": "value1"},
-					InitialNodeLabels: []infrav1exp.KeyValue{{
+					InitialNodeLabels: []infrav2exp.KeyValue{{
 						Key:   common.String("key"),
 						Value: common.String("value"),
 					}},
 					NodeShape: "test-shape",
-					NodeShapeConfig: &infrav1exp.NodeShapeConfig{
+					NodeShapeConfig: &infrav2exp.NodeShapeConfig{
 						Ocpus:       common.String("2"),
 						MemoryInGBs: common.String("16"),
 					},
-					NodeSourceViaImage: &infrav1exp.NodeSourceViaImage{
+					NodeSourceViaImage: &infrav2exp.NodeSourceViaImage{
 						ImageId: common.String("test-image-id"),
 					},
 					SshPublicKey: "test-ssh-public-key",
-					NodePoolNodeConfig: &infrav1exp.NodePoolNodeConfig{
-						PlacementConfigs: []infrav1exp.PlacementConfig{
+					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
+						PlacementConfigs: []infrav2exp.PlacementConfig{
 							{
 								AvailabilityDomain:    common.String("test-ad"),
 								SubnetName:            common.String("worker-subnet"),
@@ -997,15 +1001,15 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 						NsgNames:                       []string{"worker-nsg"},
 						KmsKeyId:                       common.String("kms-key-id"),
 						IsPvEncryptionInTransitEnabled: common.Bool(true),
-						NodePoolPodNetworkOptionDetails: &infrav1exp.NodePoolPodNetworkOptionDetails{
-							CniType: infrav1exp.VCNNativeCNI,
-							VcnIpNativePodNetworkOptions: infrav1exp.VcnIpNativePodNetworkOptions{
+						NodePoolPodNetworkOptionDetails: &infrav2exp.NodePoolPodNetworkOptionDetails{
+							CniType: infrav2exp.VCNNativeCNI,
+							VcnIpNativePodNetworkOptions: infrav2exp.VcnIpNativePodNetworkOptions{
 								SubnetNames: []string{"pod-subnet"},
 								NSGNames:    []string{"pod-nsg"},
 							},
 						},
 					},
-					NodeEvictionNodePoolSettings: &infrav1exp.NodeEvictionNodePoolSettings{
+					NodeEvictionNodePoolSettings: &infrav2exp.NodeEvictionNodePoolSettings{
 						EvictionGraceDuration:           common.String("PT30M"),
 						IsForceDeleteAfterGraceDuration: common.Bool(true),
 					},
@@ -1066,25 +1070,25 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
 				newReplicas := int32(4)
 				ms.MachinePool.Spec.Replicas = &newReplicas
-				ms.OCIManagedMachinePool.Spec = infrav1exp.OCIManagedMachinePoolSpec{
+				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
 					Version:      common.String("v1.24.5"),
 					ID:           common.String("node-pool-id"),
 					NodeMetadata: map[string]string{"key1": "value1"},
-					InitialNodeLabels: []infrav1exp.KeyValue{{
+					InitialNodeLabels: []infrav2exp.KeyValue{{
 						Key:   common.String("key"),
 						Value: common.String("value"),
 					}},
 					NodeShape: "test-shape",
-					NodeShapeConfig: &infrav1exp.NodeShapeConfig{
+					NodeShapeConfig: &infrav2exp.NodeShapeConfig{
 						Ocpus:       common.String("2"),
 						MemoryInGBs: common.String("16"),
 					},
-					NodeSourceViaImage: &infrav1exp.NodeSourceViaImage{
+					NodeSourceViaImage: &infrav2exp.NodeSourceViaImage{
 						ImageId: common.String("test-image-id"),
 					},
 					SshPublicKey: "test-ssh-public-key",
-					NodePoolNodeConfig: &infrav1exp.NodePoolNodeConfig{
-						PlacementConfigs: []infrav1exp.PlacementConfig{
+					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
+						PlacementConfigs: []infrav2exp.PlacementConfig{
 							{
 								AvailabilityDomain:    common.String("test-ad"),
 								SubnetName:            common.String("worker-subnet"),
@@ -1095,16 +1099,16 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 						NsgNames:                       []string{"worker-nsg"},
 						KmsKeyId:                       common.String("kms-key-id"),
 						IsPvEncryptionInTransitEnabled: common.Bool(true),
-						NodePoolPodNetworkOptionDetails: &infrav1exp.NodePoolPodNetworkOptionDetails{
-							CniType: infrav1exp.VCNNativeCNI,
-							VcnIpNativePodNetworkOptions: infrav1exp.VcnIpNativePodNetworkOptions{
+						NodePoolPodNetworkOptionDetails: &infrav2exp.NodePoolPodNetworkOptionDetails{
+							CniType: infrav2exp.VCNNativeCNI,
+							VcnIpNativePodNetworkOptions: infrav2exp.VcnIpNativePodNetworkOptions{
 								SubnetNames:    []string{"pod-subnet"},
 								MaxPodsPerNode: common.Int(31),
 								NSGNames:       []string{"pod-nsg"},
 							},
 						},
 					},
-					NodeEvictionNodePoolSettings: &infrav1exp.NodeEvictionNodePoolSettings{
+					NodeEvictionNodePoolSettings: &infrav2exp.NodeEvictionNodePoolSettings{
 						EvictionGraceDuration:           common.String("PT30M"),
 						IsForceDeleteAfterGraceDuration: common.Bool(true),
 					},
@@ -1215,25 +1219,25 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 				ms.MachinePool.Annotations[clusterv1.ReplicasManagedByAnnotation] = ""
 				newReplicas := int32(4)
 				ms.MachinePool.Spec.Replicas = &newReplicas
-				ms.OCIManagedMachinePool.Spec = infrav1exp.OCIManagedMachinePoolSpec{
+				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
 					Version:      common.String("v1.24.5"),
 					ID:           common.String("node-pool-id"),
 					NodeMetadata: map[string]string{"key1": "value1"},
-					InitialNodeLabels: []infrav1exp.KeyValue{{
+					InitialNodeLabels: []infrav2exp.KeyValue{{
 						Key:   common.String("key"),
 						Value: common.String("value"),
 					}},
 					NodeShape: "test-shape",
-					NodeShapeConfig: &infrav1exp.NodeShapeConfig{
+					NodeShapeConfig: &infrav2exp.NodeShapeConfig{
 						Ocpus:       common.String("2"),
 						MemoryInGBs: common.String("16"),
 					},
-					NodeSourceViaImage: &infrav1exp.NodeSourceViaImage{
+					NodeSourceViaImage: &infrav2exp.NodeSourceViaImage{
 						ImageId: common.String("test-image-id"),
 					},
 					SshPublicKey: "test-ssh-public-key",
-					NodePoolNodeConfig: &infrav1exp.NodePoolNodeConfig{
-						PlacementConfigs: []infrav1exp.PlacementConfig{
+					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
+						PlacementConfigs: []infrav2exp.PlacementConfig{
 							{
 								AvailabilityDomain:    common.String("test-ad"),
 								SubnetName:            common.String("worker-subnet"),
@@ -1244,16 +1248,16 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 						NsgNames:                       []string{"worker-nsg"},
 						KmsKeyId:                       common.String("kms-key-id"),
 						IsPvEncryptionInTransitEnabled: common.Bool(true),
-						NodePoolPodNetworkOptionDetails: &infrav1exp.NodePoolPodNetworkOptionDetails{
-							CniType: infrav1exp.VCNNativeCNI,
-							VcnIpNativePodNetworkOptions: infrav1exp.VcnIpNativePodNetworkOptions{
+						NodePoolPodNetworkOptionDetails: &infrav2exp.NodePoolPodNetworkOptionDetails{
+							CniType: infrav2exp.VCNNativeCNI,
+							VcnIpNativePodNetworkOptions: infrav2exp.VcnIpNativePodNetworkOptions{
 								SubnetNames:    []string{"pod-subnet"},
 								MaxPodsPerNode: common.Int(31),
 								NSGNames:       []string{"pod-nsg"},
 							},
 						},
 					},
-					NodeEvictionNodePoolSettings: &infrav1exp.NodeEvictionNodePoolSettings{
+					NodeEvictionNodePoolSettings: &infrav2exp.NodeEvictionNodePoolSettings{
 						EvictionGraceDuration:           common.String("PT30M"),
 						IsForceDeleteAfterGraceDuration: common.Bool(true),
 					},
@@ -1313,25 +1317,25 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
-				ms.OCIManagedMachinePool.Spec = infrav1exp.OCIManagedMachinePoolSpec{
+				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
 					Version:      common.String("v1.24.5"),
 					ID:           common.String("node-pool-id"),
 					NodeMetadata: map[string]string{"key1": "value1"},
-					InitialNodeLabels: []infrav1exp.KeyValue{{
+					InitialNodeLabels: []infrav2exp.KeyValue{{
 						Key:   common.String("key"),
 						Value: common.String("value"),
 					}},
 					NodeShape: "test-shape",
-					NodeShapeConfig: &infrav1exp.NodeShapeConfig{
+					NodeShapeConfig: &infrav2exp.NodeShapeConfig{
 						Ocpus:       common.String("2"),
 						MemoryInGBs: common.String("16"),
 					},
-					NodeSourceViaImage: &infrav1exp.NodeSourceViaImage{
+					NodeSourceViaImage: &infrav2exp.NodeSourceViaImage{
 						ImageId: common.String("test-image-id"),
 					},
 					SshPublicKey: "test-ssh-public-key",
-					NodePoolNodeConfig: &infrav1exp.NodePoolNodeConfig{
-						PlacementConfigs: []infrav1exp.PlacementConfig{
+					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
+						PlacementConfigs: []infrav2exp.PlacementConfig{
 							{
 								AvailabilityDomain:    common.String("test-ad"),
 								SubnetName:            common.String("worker-subnet"),
@@ -1342,16 +1346,16 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 						NsgNames:                       []string{"worker-nsg"},
 						KmsKeyId:                       common.String("kms-key-id"),
 						IsPvEncryptionInTransitEnabled: common.Bool(true),
-						NodePoolPodNetworkOptionDetails: &infrav1exp.NodePoolPodNetworkOptionDetails{
-							CniType: infrav1exp.VCNNativeCNI,
-							VcnIpNativePodNetworkOptions: infrav1exp.VcnIpNativePodNetworkOptions{
+						NodePoolPodNetworkOptionDetails: &infrav2exp.NodePoolPodNetworkOptionDetails{
+							CniType: infrav2exp.VCNNativeCNI,
+							VcnIpNativePodNetworkOptions: infrav2exp.VcnIpNativePodNetworkOptions{
 								SubnetNames:    []string{"pod-subnet"},
 								MaxPodsPerNode: common.Int(31),
 								NSGNames:       []string{"pod-nsg"},
 							},
 						},
 					},
-					NodeEvictionNodePoolSettings: &infrav1exp.NodeEvictionNodePoolSettings{
+					NodeEvictionNodePoolSettings: &infrav2exp.NodeEvictionNodePoolSettings{
 						EvictionGraceDuration:           common.String("PT30M"),
 						IsForceDeleteAfterGraceDuration: common.Bool(true),
 					},
@@ -1457,25 +1461,25 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
-				ms.OCIManagedMachinePool.Spec = infrav1exp.OCIManagedMachinePoolSpec{
+				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
 					Version:      common.String("v1.24.5"),
 					ID:           common.String("node-pool-id"),
 					NodeMetadata: map[string]string{"key1": "value1"},
-					InitialNodeLabels: []infrav1exp.KeyValue{{
+					InitialNodeLabels: []infrav2exp.KeyValue{{
 						Key:   common.String("key"),
 						Value: common.String("value"),
 					}},
 					NodeShape: "test-shape",
-					NodeShapeConfig: &infrav1exp.NodeShapeConfig{
+					NodeShapeConfig: &infrav2exp.NodeShapeConfig{
 						Ocpus:       common.String("2"),
 						MemoryInGBs: common.String("16"),
 					},
-					NodeSourceViaImage: &infrav1exp.NodeSourceViaImage{
+					NodeSourceViaImage: &infrav2exp.NodeSourceViaImage{
 						ImageId: common.String("test-image-id"),
 					},
 					SshPublicKey: "test-ssh-public-key",
-					NodePoolNodeConfig: &infrav1exp.NodePoolNodeConfig{
-						PlacementConfigs: []infrav1exp.PlacementConfig{
+					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
+						PlacementConfigs: []infrav2exp.PlacementConfig{
 							{
 								AvailabilityDomain:    common.String("test-ad"),
 								SubnetName:            common.String("worker-subnet"),
@@ -1486,16 +1490,16 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 						NsgNames:                       []string{"worker-nsg"},
 						KmsKeyId:                       common.String("kms-key-id"),
 						IsPvEncryptionInTransitEnabled: common.Bool(true),
-						NodePoolPodNetworkOptionDetails: &infrav1exp.NodePoolPodNetworkOptionDetails{
-							CniType: infrav1exp.VCNNativeCNI,
-							VcnIpNativePodNetworkOptions: infrav1exp.VcnIpNativePodNetworkOptions{
+						NodePoolPodNetworkOptionDetails: &infrav2exp.NodePoolPodNetworkOptionDetails{
+							CniType: infrav2exp.VCNNativeCNI,
+							VcnIpNativePodNetworkOptions: infrav2exp.VcnIpNativePodNetworkOptions{
 								SubnetNames:    []string{"pod-subnet"},
 								MaxPodsPerNode: common.Int(31),
 								NSGNames:       []string{"pod-nsg"},
 							},
 						},
 					},
-					NodeEvictionNodePoolSettings: &infrav1exp.NodeEvictionNodePoolSettings{
+					NodeEvictionNodePoolSettings: &infrav2exp.NodeEvictionNodePoolSettings{
 						EvictionGraceDuration:           common.String("PT30M"),
 						IsForceDeleteAfterGraceDuration: common.Bool(true),
 					},
@@ -1602,25 +1606,25 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
 				ms.OCIManagedMachinePool.Name = "changed"
-				ms.OCIManagedMachinePool.Spec = infrav1exp.OCIManagedMachinePoolSpec{
+				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
 					Version:      common.String("v1.24.5"),
 					ID:           common.String("node-pool-id"),
 					NodeMetadata: map[string]string{"key1": "value1"},
-					InitialNodeLabels: []infrav1exp.KeyValue{{
+					InitialNodeLabels: []infrav2exp.KeyValue{{
 						Key:   common.String("key"),
 						Value: common.String("value"),
 					}},
 					NodeShape: "test-shape",
-					NodeShapeConfig: &infrav1exp.NodeShapeConfig{
+					NodeShapeConfig: &infrav2exp.NodeShapeConfig{
 						Ocpus:       common.String("2"),
 						MemoryInGBs: common.String("16"),
 					},
-					NodeSourceViaImage: &infrav1exp.NodeSourceViaImage{
+					NodeSourceViaImage: &infrav2exp.NodeSourceViaImage{
 						ImageId: common.String("test-image-id"),
 					},
 					SshPublicKey: "test-ssh-public-key",
-					NodePoolNodeConfig: &infrav1exp.NodePoolNodeConfig{
-						PlacementConfigs: []infrav1exp.PlacementConfig{
+					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
+						PlacementConfigs: []infrav2exp.PlacementConfig{
 							{
 								AvailabilityDomain:    common.String("test-ad"),
 								SubnetName:            common.String("worker-subnet"),
@@ -1631,16 +1635,16 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 						NsgNames:                       []string{"worker-nsg"},
 						KmsKeyId:                       common.String("kms-key-id"),
 						IsPvEncryptionInTransitEnabled: common.Bool(true),
-						NodePoolPodNetworkOptionDetails: &infrav1exp.NodePoolPodNetworkOptionDetails{
-							CniType: infrav1exp.VCNNativeCNI,
-							VcnIpNativePodNetworkOptions: infrav1exp.VcnIpNativePodNetworkOptions{
+						NodePoolPodNetworkOptionDetails: &infrav2exp.NodePoolPodNetworkOptionDetails{
+							CniType: infrav2exp.VCNNativeCNI,
+							VcnIpNativePodNetworkOptions: infrav2exp.VcnIpNativePodNetworkOptions{
 								SubnetNames:    []string{"pod-subnet"},
 								MaxPodsPerNode: common.Int(31),
 								NSGNames:       []string{"pod-nsg"},
 							},
 						},
 					},
-					NodeEvictionNodePoolSettings: &infrav1exp.NodeEvictionNodePoolSettings{
+					NodeEvictionNodePoolSettings: &infrav2exp.NodeEvictionNodePoolSettings{
 						EvictionGraceDuration:           common.String("PT30M"),
 						IsForceDeleteAfterGraceDuration: common.Bool(true),
 					},

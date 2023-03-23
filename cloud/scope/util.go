@@ -17,11 +17,11 @@ limitations under the License.
 package scope
 
 import (
-	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 )
 
 // GetNsgNamesFromId returns the names of the NSGs with the provided IDs
-func GetNsgNamesFromId(ids []string, nsgs []*infrastructurev1beta1.NSG) []string {
+func GetNsgNamesFromId(ids []string, nsgs []*infrastructurev1beta2.NSG) []string {
 	names := make([]string, 0)
 	for _, id := range ids {
 		for _, nsg := range nsgs {
@@ -34,7 +34,7 @@ func GetNsgNamesFromId(ids []string, nsgs []*infrastructurev1beta1.NSG) []string
 }
 
 // GetSubnetNameFromId returns the name of the Subnet with the provided ID
-func GetSubnetNameFromId(id *string, subnets []*infrastructurev1beta1.Subnet) string {
+func GetSubnetNameFromId(id *string, subnets []*infrastructurev1beta2.Subnet) string {
 	for _, subnet := range subnets {
 		if *id == *subnet.ID {
 			return subnet.Name
@@ -44,7 +44,7 @@ func GetSubnetNameFromId(id *string, subnets []*infrastructurev1beta1.Subnet) st
 }
 
 // GetSubnetNamesFromId returns the names of the Subnets with the provided IDs
-func GetSubnetNamesFromId(ids []string, subnets []*infrastructurev1beta1.Subnet) []string {
+func GetSubnetNamesFromId(ids []string, subnets []*infrastructurev1beta2.Subnet) []string {
 	names := make([]string, 0)
 	for _, id := range ids {
 		for _, subnet := range subnets {

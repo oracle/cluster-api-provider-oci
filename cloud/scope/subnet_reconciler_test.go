@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn/mock_vcn"
 	"github.com/oracle/oci-go-sdk/v65/common"
@@ -62,53 +62,53 @@ func TestClusterScope_ReconcileSubnet(t *testing.T) {
 		definedTagsInterface[ns] = mapValues
 	}
 
-	customIngress := []infrastructurev1beta1.IngressSecurityRule{
+	customIngress := []infrastructurev1beta2.IngressSecurityRule{
 		{
 			Description: common.String("test-ingress"),
 			Protocol:    common.String("8"),
-			TcpOptions: &infrastructurev1beta1.TcpOptions{
-				DestinationPortRange: &infrastructurev1beta1.PortRange{
+			TcpOptions: &infrastructurev1beta2.TcpOptions{
+				DestinationPortRange: &infrastructurev1beta2.PortRange{
 					Max: common.Int(123),
 					Min: common.Int(234),
 				},
 			},
-			SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
+			SourceType: infrastructurev1beta2.IngressSecurityRuleSourceTypeCidrBlock,
 			Source:     common.String("1.1.1.1/1"),
 		},
 	}
-	customEgress := []infrastructurev1beta1.EgressSecurityRule{
+	customEgress := []infrastructurev1beta2.EgressSecurityRule{
 		{
 			Description: common.String("test-egress"),
 			Protocol:    common.String("1"),
-			TcpOptions: &infrastructurev1beta1.TcpOptions{
-				DestinationPortRange: &infrastructurev1beta1.PortRange{
+			TcpOptions: &infrastructurev1beta2.TcpOptions{
+				DestinationPortRange: &infrastructurev1beta2.PortRange{
 					Max: common.Int(345),
 					Min: common.Int(567),
 				},
 			},
-			DestinationType: infrastructurev1beta1.EgressSecurityRuleDestinationTypeCidrBlock,
+			DestinationType: infrastructurev1beta2.EgressSecurityRuleDestinationTypeCidrBlock,
 			Destination:     common.String("2.2.2.2/2"),
 		},
 	}
 
-	customIngress_updated := []infrastructurev1beta1.IngressSecurityRule{
+	customIngress_updated := []infrastructurev1beta2.IngressSecurityRule{
 		{
 			Description: common.String("test-ingress-updated"),
 			Protocol:    common.String("7"),
-			TcpOptions: &infrastructurev1beta1.TcpOptions{
-				DestinationPortRange: &infrastructurev1beta1.PortRange{
+			TcpOptions: &infrastructurev1beta2.TcpOptions{
+				DestinationPortRange: &infrastructurev1beta2.PortRange{
 					Max: common.Int(789),
 					Min: common.Int(343),
 				},
 			},
-			SourceType: infrastructurev1beta1.IngressSecurityRuleSourceTypeCidrBlock,
+			SourceType: infrastructurev1beta2.IngressSecurityRuleSourceTypeCidrBlock,
 			Source:     common.String("1.1.1.2/1"),
 		},
 	}
 
 	tests := []struct {
 		name              string
-		spec              infrastructurev1beta1.OCIClusterSpec
+		spec              infrastructurev1beta2.OCIClusterSpec
 		wantErr           bool
 		expectedError     string
 		testSpecificSetup func(clusterScope *ClusterScope, nlbClient *mock_vcn.MockClient)
@@ -116,48 +116,48 @@ func TestClusterScope_ReconcileSubnet(t *testing.T) {
 		{
 			name: "subnet reconciliation successful - one creation - one update - one no update - one security list " +
 				"creation - one security list update",
-			spec: infrastructurev1beta1.OCIClusterSpec{
+			spec: infrastructurev1beta2.OCIClusterSpec{
 				DefinedTags:   definedTags,
 				CompartmentId: "foo",
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
 						ID: common.String("vcn"),
-						Subnets: []*infrastructurev1beta1.Subnet{
+						Subnets: []*infrastructurev1beta2.Subnet{
 							{
-								Role: infrastructurev1beta1.ControlPlaneEndpointRole,
+								Role: infrastructurev1beta2.ControlPlaneEndpointRole,
 								Name: "creation_needed",
 								CIDR: "2.2.2.2/10",
-								Type: infrastructurev1beta1.Private,
-								SecurityList: &infrastructurev1beta1.SecurityList{
+								Type: infrastructurev1beta2.Private,
+								SecurityList: &infrastructurev1beta2.SecurityList{
 									Name:         "test-cp-endpoint-seclist",
 									EgressRules:  customEgress,
 									IngressRules: customIngress,
 								},
 							},
 							{
-								Role: infrastructurev1beta1.ServiceLoadBalancerRole,
+								Role: infrastructurev1beta2.ServiceLoadBalancerRole,
 								ID:   common.String("update_needed_id"),
 								Name: "update_needed",
-								Type: infrastructurev1beta1.Private,
+								Type: infrastructurev1beta2.Private,
 								CIDR: "10.0.0.32/27",
 							},
 							{
-								Role: infrastructurev1beta1.WorkerRole,
+								Role: infrastructurev1beta2.WorkerRole,
 								ID:   common.String("sec_list_added_id"),
 								Name: "sec_list_added",
 								CIDR: "10.0.64.0/20",
-								SecurityList: &infrastructurev1beta1.SecurityList{
+								SecurityList: &infrastructurev1beta2.SecurityList{
 									Name:         "test-cp-endpoint-seclist",
 									IngressRules: customIngress,
 									EgressRules:  customEgress,
 								},
 							},
 							{
-								Role: infrastructurev1beta1.WorkerRole,
+								Role: infrastructurev1beta2.WorkerRole,
 								ID:   common.String("sec_list_updated_id"),
 								Name: "sec_list_added",
 								CIDR: "10.0.64.0/20",
-								SecurityList: &infrastructurev1beta1.SecurityList{
+								SecurityList: &infrastructurev1beta2.SecurityList{
 									ID:           common.String("seclist_id"),
 									Name:         "update_seclist",
 									IngressRules: customIngress,
@@ -165,7 +165,9 @@ func TestClusterScope_ReconcileSubnet(t *testing.T) {
 								},
 							},
 						},
-						PrivateRouteTableId: common.String("private"),
+						RouteTable: infrastructurev1beta2.RouteTable{
+							PrivateRouteTableId: common.String("private"),
+						},
 					},
 				},
 			},
@@ -412,12 +414,12 @@ func TestClusterScope_ReconcileSubnet(t *testing.T) {
 		},
 		{
 			name: "update subnet error",
-			spec: infrastructurev1beta1.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
-						Subnets: []*infrastructurev1beta1.Subnet{
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
+						Subnets: []*infrastructurev1beta2.Subnet{
 							{
-								Role: infrastructurev1beta1.ControlPlaneEndpointRole,
+								Role: infrastructurev1beta2.ControlPlaneEndpointRole,
 								ID:   common.String("update_subnet_error"),
 								Name: "update",
 								CIDR: "2.2.2.2/1",
@@ -454,15 +456,17 @@ func TestClusterScope_ReconcileSubnet(t *testing.T) {
 		},
 		{
 			name: "create subnet error",
-			spec: infrastructurev1beta1.OCIClusterSpec{
+			spec: infrastructurev1beta2.OCIClusterSpec{
 				CompartmentId: "foo",
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
-						ID:                 common.String("vcn"),
-						PublicRouteTableId: common.String("public"),
-						Subnets: []*infrastructurev1beta1.Subnet{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
+						ID: common.String("vcn"),
+						RouteTable: infrastructurev1beta2.RouteTable{
+							PublicRouteTableId: common.String("public"),
+						},
+						Subnets: []*infrastructurev1beta2.Subnet{
 							{
-								Role: infrastructurev1beta1.ControlPlaneEndpointRole,
+								Role: infrastructurev1beta2.ControlPlaneEndpointRole,
 								Name: "creation_needed",
 								CIDR: "2.2.2.2/10",
 							},
@@ -499,18 +503,20 @@ func TestClusterScope_ReconcileSubnet(t *testing.T) {
 		},
 		{
 			name: "create security list error",
-			spec: infrastructurev1beta1.OCIClusterSpec{
+			spec: infrastructurev1beta2.OCIClusterSpec{
 				CompartmentId: "foo",
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
-						ID:                 common.String("vcn"),
-						PublicRouteTableId: common.String("public"),
-						Subnets: []*infrastructurev1beta1.Subnet{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
+						ID: common.String("vcn"),
+						RouteTable: infrastructurev1beta2.RouteTable{
+							PublicRouteTableId: common.String("public"),
+						},
+						Subnets: []*infrastructurev1beta2.Subnet{
 							{
-								Role: infrastructurev1beta1.ControlPlaneEndpointRole,
+								Role: infrastructurev1beta2.ControlPlaneEndpointRole,
 								ID:   common.String("sec_list_added_id"),
 								Name: "sec_list_added",
-								SecurityList: &infrastructurev1beta1.SecurityList{
+								SecurityList: &infrastructurev1beta2.SecurityList{
 									Name:         "test-cp-endpoint-seclist",
 									IngressRules: customIngress_updated,
 									EgressRules:  customEgress,
@@ -587,18 +593,20 @@ func TestClusterScope_ReconcileSubnet(t *testing.T) {
 		},
 		{
 			name: "update security list error",
-			spec: infrastructurev1beta1.OCIClusterSpec{
+			spec: infrastructurev1beta2.OCIClusterSpec{
 				CompartmentId: "foo",
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
-						ID:                 common.String("vcn"),
-						PublicRouteTableId: common.String("public"),
-						Subnets: []*infrastructurev1beta1.Subnet{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
+						ID: common.String("vcn"),
+						RouteTable: infrastructurev1beta2.RouteTable{
+							PublicRouteTableId: common.String("public"),
+						},
+						Subnets: []*infrastructurev1beta2.Subnet{
 							{
-								Role: infrastructurev1beta1.ControlPlaneEndpointRole,
+								Role: infrastructurev1beta2.ControlPlaneEndpointRole,
 								ID:   common.String("sec_list_updated_id"),
 								Name: "sec_list_added",
-								SecurityList: &infrastructurev1beta1.SecurityList{
+								SecurityList: &infrastructurev1beta2.SecurityList{
 									ID:           common.String("seclist_id"),
 									Name:         "bar",
 									IngressRules: customIngress_updated,
@@ -679,7 +687,7 @@ func TestClusterScope_ReconcileSubnet(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ociClusterAccessor := OCISelfManagedCluster{
-				&infrastructurev1beta1.OCICluster{
+				&infrastructurev1beta2.OCICluster{
 					ObjectMeta: metav1.ObjectMeta{
 						UID: "cluster_uid",
 					},
@@ -770,16 +778,16 @@ func TestClusterScope_DeleteSubnets(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		spec          infrastructurev1beta1.OCIClusterSpec
+		spec          infrastructurev1beta2.OCIClusterSpec
 		wantErr       bool
 		expectedError string
 	}{
 		{
 			name: "delete subnet is successful",
-			spec: infrastructurev1beta1.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
-						Subnets: []*infrastructurev1beta1.Subnet{
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
+						Subnets: []*infrastructurev1beta2.Subnet{
 							{
 								ID: common.String("cp_endpoint_id"),
 							},
@@ -794,10 +802,10 @@ func TestClusterScope_DeleteSubnets(t *testing.T) {
 		},
 		{
 			name: "subnet already deleted",
-			spec: infrastructurev1beta1.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
-						Subnets: []*infrastructurev1beta1.Subnet{
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
+						Subnets: []*infrastructurev1beta2.Subnet{
 							{
 								ID: common.String("ep_subnet_deleted"),
 							},
@@ -812,10 +820,10 @@ func TestClusterScope_DeleteSubnets(t *testing.T) {
 		},
 		{
 			name: "delete subnet error when calling get subnet",
-			spec: infrastructurev1beta1.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
-						Subnets: []*infrastructurev1beta1.Subnet{
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
+						Subnets: []*infrastructurev1beta2.Subnet{
 							{
 								ID: common.String("cp_endpoint_id_error"),
 							},
@@ -828,10 +836,10 @@ func TestClusterScope_DeleteSubnets(t *testing.T) {
 		},
 		{
 			name: "delete subnet error when calling delete subnet",
-			spec: infrastructurev1beta1.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
-						Subnets: []*infrastructurev1beta1.Subnet{
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
+						Subnets: []*infrastructurev1beta2.Subnet{
 							{
 								ID: common.String("cp_endpoint_id_error_delete"),
 							},
@@ -847,7 +855,7 @@ func TestClusterScope_DeleteSubnets(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ociClusterAccessor := OCISelfManagedCluster{
-				&infrastructurev1beta1.OCICluster{
+				&infrastructurev1beta2.OCICluster{
 					Spec: tt.spec,
 					ObjectMeta: metav1.ObjectMeta{
 						UID: "cluster_uid",
@@ -874,7 +882,7 @@ func TestClusterScope_DeleteSubnets(t *testing.T) {
 	}
 }
 
-func isSubnetsEqual(desiredSubnets []*infrastructurev1beta1.Subnet, actualSubnets []*infrastructurev1beta1.Subnet) bool {
+func isSubnetsEqual(desiredSubnets []*infrastructurev1beta2.Subnet, actualSubnets []*infrastructurev1beta2.Subnet) bool {
 	var found bool
 	if len(desiredSubnets) != len(actualSubnets) {
 		return false

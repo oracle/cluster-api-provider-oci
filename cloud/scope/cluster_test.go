@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/identity/mock_identity"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/identity"
@@ -194,33 +194,33 @@ func TestClusterScope_ReconcileFailureDomains(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		spec          infrastructurev1beta1.OCIClusterSpec
+		spec          infrastructurev1beta2.OCIClusterSpec
 		wantErr       bool
 		expectedError string
 	}{
 		{
 			name: "3ad region",
-			spec: infrastructurev1beta1.OCIClusterSpec{CompartmentId: "3ad"},
+			spec: infrastructurev1beta2.OCIClusterSpec{CompartmentId: "3ad"},
 		},
 		{
 			name: "1ad region",
-			spec: infrastructurev1beta1.OCIClusterSpec{CompartmentId: "1ad"},
+			spec: infrastructurev1beta2.OCIClusterSpec{CompartmentId: "1ad"},
 		},
 		{
 			name:          "2ad region",
-			spec:          infrastructurev1beta1.OCIClusterSpec{CompartmentId: "2ad"},
+			spec:          infrastructurev1beta2.OCIClusterSpec{CompartmentId: "2ad"},
 			wantErr:       true,
 			expectedError: "invalid number of Availability Domains, should be either 1 or 3, but got 2",
 		},
 		{
 			name:          "list ad error",
-			spec:          infrastructurev1beta1.OCIClusterSpec{CompartmentId: "list-ad-error"},
+			spec:          infrastructurev1beta2.OCIClusterSpec{CompartmentId: "list-ad-error"},
 			wantErr:       true,
 			expectedError: "some error",
 		},
 		{
 			name:          "list fd error",
-			spec:          infrastructurev1beta1.OCIClusterSpec{CompartmentId: "list-fd-error"},
+			spec:          infrastructurev1beta2.OCIClusterSpec{CompartmentId: "list-fd-error"},
 			wantErr:       true,
 			expectedError: "some error",
 		},
@@ -229,7 +229,7 @@ func TestClusterScope_ReconcileFailureDomains(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ociClusterAccessor := OCISelfManagedCluster{
-				OCICluster: &infrastructurev1beta1.OCICluster{
+				OCICluster: &infrastructurev1beta2.OCICluster{
 					Spec: tt.spec,
 					ObjectMeta: metav1.ObjectMeta{
 						UID: "a",

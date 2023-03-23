@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn/mock_vcn"
 	"github.com/oracle/oci-go-sdk/v65/common"
@@ -132,23 +132,23 @@ func TestClusterScope_ReconcileInternetGateway(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		spec          infrastructurev1beta1.OCIClusterSpec
+		spec          infrastructurev1beta2.OCIClusterSpec
 		wantErr       bool
 		expectedError string
 	}{
 		{
 			name: "all subnets are private",
-			spec: infrastructurev1beta1.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
-						Subnets: []*infrastructurev1beta1.Subnet{
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
+						Subnets: []*infrastructurev1beta2.Subnet{
 							{
-								Type: infrastructurev1beta1.Private,
-								Role: infrastructurev1beta1.ControlPlaneEndpointRole,
+								Type: infrastructurev1beta2.Private,
+								Role: infrastructurev1beta2.ControlPlaneEndpointRole,
 							},
 							{
-								Type: infrastructurev1beta1.Private,
-								Role: infrastructurev1beta1.ServiceLoadBalancerRole,
+								Type: infrastructurev1beta2.Private,
+								Role: infrastructurev1beta2.ServiceLoadBalancerRole,
 							},
 						},
 					},
@@ -158,11 +158,13 @@ func TestClusterScope_ReconcileInternetGateway(t *testing.T) {
 		},
 		{
 			name: "no update needed",
-			spec: infrastructurev1beta1.OCIClusterSpec{
+			spec: infrastructurev1beta2.OCIClusterSpec{
 				DefinedTags: definedTags,
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
-						InternetGatewayId: common.String("foo"),
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
+						InternetGateway: infrastructurev1beta2.InternetGateway{
+							Id: common.String("foo"),
+						},
 					},
 				},
 			},
@@ -170,14 +172,14 @@ func TestClusterScope_ReconcileInternetGateway(t *testing.T) {
 		},
 		{
 			name: "id not present in spec but found by name and no update needed",
-			spec: infrastructurev1beta1.OCIClusterSpec{
+			spec: infrastructurev1beta2.OCIClusterSpec{
 				CompartmentId: "foo",
 				FreeformTags: map[string]string{
 					"foo": "bar",
 				},
 				DefinedTags: definedTags,
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
 						ID: common.String("vcn"),
 					},
 				},
@@ -186,14 +188,14 @@ func TestClusterScope_ReconcileInternetGateway(t *testing.T) {
 		},
 		{
 			name: "creation needed",
-			spec: infrastructurev1beta1.OCIClusterSpec{
+			spec: infrastructurev1beta2.OCIClusterSpec{
 				CompartmentId: "foo",
 				FreeformTags: map[string]string{
 					"foo": "bar",
 				},
 				DefinedTags: definedTags,
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
 						ID: common.String("vcn1"),
 					},
 				},
@@ -202,11 +204,11 @@ func TestClusterScope_ReconcileInternetGateway(t *testing.T) {
 		},
 		{
 			name: "creation failed",
-			spec: infrastructurev1beta1.OCIClusterSpec{
+			spec: infrastructurev1beta2.OCIClusterSpec{
 				CompartmentId: "foo",
 				DefinedTags:   definedTags,
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
 						ID: common.String("vcn1"),
 					},
 				},
@@ -219,7 +221,7 @@ func TestClusterScope_ReconcileInternetGateway(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ociClusterAccessor := OCISelfManagedCluster{
-				&infrastructurev1beta1.OCICluster{
+				&infrastructurev1beta2.OCICluster{
 					ObjectMeta: metav1.ObjectMeta{
 						UID: "cluster_uid",
 					},
@@ -293,16 +295,18 @@ func TestClusterScope_DeleteInternetGateway(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		spec          infrastructurev1beta1.OCIClusterSpec
+		spec          infrastructurev1beta2.OCIClusterSpec
 		wantErr       bool
 		expectedError string
 	}{
 		{
 			name: "delete internet gateway is successful",
-			spec: infrastructurev1beta1.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
-						InternetGatewayId: common.String("normal_id"),
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
+						InternetGateway: infrastructurev1beta2.InternetGateway{
+							Id: common.String("normal_id"),
+						},
 					},
 				},
 			},
@@ -310,10 +314,12 @@ func TestClusterScope_DeleteInternetGateway(t *testing.T) {
 		},
 		{
 			name: "internet gateway already deleted",
-			spec: infrastructurev1beta1.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
-						InternetGatewayId: common.String("igw_deleted"),
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
+						InternetGateway: infrastructurev1beta2.InternetGateway{
+							Id: common.String("igw_deleted"),
+						},
 					},
 				},
 			},
@@ -321,10 +327,12 @@ func TestClusterScope_DeleteInternetGateway(t *testing.T) {
 		},
 		{
 			name: "delete internet gateway error when calling get internet gateway",
-			spec: infrastructurev1beta1.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
-						InternetGatewayId: common.String("error"),
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
+						InternetGateway: infrastructurev1beta2.InternetGateway{
+							Id: common.String("error"),
+						},
 					},
 				},
 			},
@@ -333,10 +341,12 @@ func TestClusterScope_DeleteInternetGateway(t *testing.T) {
 		},
 		{
 			name: "delete internet gateway error when calling delete internet gateway",
-			spec: infrastructurev1beta1.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
-						InternetGatewayId: common.String("error_delete_igw"),
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
+						InternetGateway: infrastructurev1beta2.InternetGateway{
+							Id: common.String("error_delete_igw"),
+						},
 					},
 				},
 			},
@@ -348,7 +358,7 @@ func TestClusterScope_DeleteInternetGateway(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ociClusterAccessor := OCISelfManagedCluster{
-				&infrastructurev1beta1.OCICluster{
+				&infrastructurev1beta2.OCICluster{
 					Spec: tt.spec,
 					ObjectMeta: metav1.ObjectMeta{
 						UID: "cluster_uid",

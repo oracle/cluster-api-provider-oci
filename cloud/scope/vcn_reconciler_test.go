@@ -23,7 +23,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn/mock_vcn"
 	"github.com/oracle/oci-go-sdk/v65/common"
@@ -54,15 +54,15 @@ func TestClusterScope_CreateVCN(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		spec    infrastructurev1beta1.OCIClusterSpec
+		spec    infrastructurev1beta2.OCIClusterSpec
 		want    *string
 		wantErr bool
 	}{
 		{
 			name: "create vcn is successful",
-			spec: infrastructurev1beta1.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
 						Name: "normal",
 					},
 				},
@@ -72,9 +72,9 @@ func TestClusterScope_CreateVCN(t *testing.T) {
 		},
 		{
 			name: "create vcn error",
-			spec: infrastructurev1beta1.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
 						Name: "error",
 					},
 				},
@@ -87,7 +87,7 @@ func TestClusterScope_CreateVCN(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ociClusterAccessor := OCISelfManagedCluster{
-				&infrastructurev1beta1.OCICluster{
+				&infrastructurev1beta2.OCICluster{
 					Spec: tt.spec,
 				},
 			}
@@ -157,15 +157,15 @@ func TestClusterScope_DeleteVCN(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		spec          infrastructurev1beta1.OCIClusterSpec
+		spec          infrastructurev1beta2.OCIClusterSpec
 		wantErr       bool
 		expectedError string
 	}{
 		{
 			name: "delete vcn is successful",
-			spec: infrastructurev1beta1.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
 						ID: common.String("normal_id"),
 					},
 				},
@@ -174,9 +174,9 @@ func TestClusterScope_DeleteVCN(t *testing.T) {
 		},
 		{
 			name: "vcn already deleted",
-			spec: infrastructurev1beta1.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
 						ID: common.String("vcn_deleted"),
 					},
 				},
@@ -185,9 +185,9 @@ func TestClusterScope_DeleteVCN(t *testing.T) {
 		},
 		{
 			name: "delete vcn error when calling get vcn",
-			spec: infrastructurev1beta1.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
 						ID: common.String("error"),
 					},
 				},
@@ -197,9 +197,9 @@ func TestClusterScope_DeleteVCN(t *testing.T) {
 		},
 		{
 			name: "delete vcn error when calling delete vcn",
-			spec: infrastructurev1beta1.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
 						ID: common.String("error_delete_vcn"),
 					},
 				},
@@ -212,7 +212,7 @@ func TestClusterScope_DeleteVCN(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ociClusterAccessor := OCISelfManagedCluster{
-				&infrastructurev1beta1.OCICluster{
+				&infrastructurev1beta2.OCICluster{
 					ObjectMeta: metav1.ObjectMeta{
 						UID: "cluster_uid",
 					},
@@ -288,17 +288,17 @@ func TestClusterScope_GetVCN(t *testing.T) {
 		}, nil)
 	tests := []struct {
 		name          string
-		spec          infrastructurev1beta1.OCIClusterSpec
+		spec          infrastructurev1beta2.OCIClusterSpec
 		want          *core.Vcn
 		expectedError string
 		wantErr       bool
 	}{
 		{
 			name: "vcn id not present in spec find by name successful",
-			spec: infrastructurev1beta1.OCIClusterSpec{
+			spec: infrastructurev1beta2.OCIClusterSpec{
 				CompartmentId: "bar",
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
 						Name: "foo",
 					},
 				},
@@ -311,10 +311,10 @@ func TestClusterScope_GetVCN(t *testing.T) {
 		},
 		{
 			name: "vcn id not present in spec find by name error",
-			spec: infrastructurev1beta1.OCIClusterSpec{
+			spec: infrastructurev1beta2.OCIClusterSpec{
 				CompartmentId: "bar",
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
 						Name: "error",
 					},
 				},
@@ -324,10 +324,10 @@ func TestClusterScope_GetVCN(t *testing.T) {
 		},
 		{
 			name: "vcn id not present in spec not found by name",
-			spec: infrastructurev1beta1.OCIClusterSpec{
+			spec: infrastructurev1beta2.OCIClusterSpec{
 				CompartmentId: "bar",
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
 						Name: "not_found",
 					},
 				},
@@ -336,9 +336,9 @@ func TestClusterScope_GetVCN(t *testing.T) {
 		},
 		{
 			name: "vcn id not present in spec but not managed by clusterapi",
-			spec: infrastructurev1beta1.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
 						ID: common.String("not_managed"),
 					},
 				},
@@ -351,7 +351,7 @@ func TestClusterScope_GetVCN(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ociClusterAccessor := OCISelfManagedCluster{
-				&infrastructurev1beta1.OCICluster{
+				&infrastructurev1beta2.OCICluster{
 					Spec: tt.spec,
 					ObjectMeta: metav1.ObjectMeta{
 						UID: "cluster_uid",
@@ -390,7 +390,7 @@ func TestClusterScope_GetVCN(t *testing.T) {
 func TestClusterScope_GetVcnCidr(t *testing.T) {
 	tests := []struct {
 		name string
-		spec infrastructurev1beta1.OCIClusterSpec
+		spec infrastructurev1beta2.OCIClusterSpec
 		want string
 	}{
 		{
@@ -399,9 +399,9 @@ func TestClusterScope_GetVcnCidr(t *testing.T) {
 		},
 		{
 			name: "cidr present",
-			spec: infrastructurev1beta1.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
 						CIDR: "foo",
 					},
 				},
@@ -413,7 +413,7 @@ func TestClusterScope_GetVcnCidr(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ociClusterAccessor := OCISelfManagedCluster{
-				&infrastructurev1beta1.OCICluster{
+				&infrastructurev1beta2.OCICluster{
 					Spec: tt.spec,
 					ObjectMeta: metav1.ObjectMeta{
 						UID: "cluster_uid",
@@ -435,7 +435,7 @@ func TestClusterScope_GetVcnCidr(t *testing.T) {
 func TestClusterScope_GetVcnName(t *testing.T) {
 	tests := []struct {
 		name string
-		spec infrastructurev1beta1.OCIClusterSpec
+		spec infrastructurev1beta2.OCIClusterSpec
 		want string
 	}{
 		{
@@ -444,9 +444,9 @@ func TestClusterScope_GetVcnName(t *testing.T) {
 		},
 		{
 			name: "name present",
-			spec: infrastructurev1beta1.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
 						Name: "foo",
 					},
 				},
@@ -458,7 +458,7 @@ func TestClusterScope_GetVcnName(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ociClusterAccessor := OCISelfManagedCluster{
-				&infrastructurev1beta1.OCICluster{
+				&infrastructurev1beta2.OCICluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "bar",
 						UID:  "cluster_uid",
@@ -481,9 +481,9 @@ func TestClusterScope_GetVcnName(t *testing.T) {
 func TestClusterScope_IsVcnEquals(t *testing.T) {
 	tests := []struct {
 		name    string
-		spec    infrastructurev1beta1.OCIClusterSpec
+		spec    infrastructurev1beta2.OCIClusterSpec
 		actual  *core.Vcn
-		desired infrastructurev1beta1.VCN
+		desired infrastructurev1beta2.VCN
 		want    bool
 	}{
 		{
@@ -491,7 +491,7 @@ func TestClusterScope_IsVcnEquals(t *testing.T) {
 			actual: &core.Vcn{
 				DisplayName: common.String("foo"),
 			},
-			desired: infrastructurev1beta1.VCN{
+			desired: infrastructurev1beta2.VCN{
 				Name: "bar",
 			},
 			want: false,
@@ -501,7 +501,7 @@ func TestClusterScope_IsVcnEquals(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ociClusterAccessor := OCISelfManagedCluster{
-				&infrastructurev1beta1.OCICluster{
+				&infrastructurev1beta2.OCICluster{
 					Spec: tt.spec,
 					ObjectMeta: metav1.ObjectMeta{
 						UID: "cluster_uid",
@@ -612,16 +612,16 @@ func TestClusterScope_ReconcileVCN(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		spec          infrastructurev1beta1.OCIClusterSpec
+		spec          infrastructurev1beta2.OCIClusterSpec
 		wantErr       bool
 		expectedError string
 	}{
 		{
 			name: "no reconciliation needed",
-			spec: infrastructurev1beta1.OCIClusterSpec{
+			spec: infrastructurev1beta2.OCIClusterSpec{
 				DefinedTags: definedTags,
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
 						ID:   common.String("normal_id"),
 						Name: "foo",
 						CIDR: "bar",
@@ -632,9 +632,9 @@ func TestClusterScope_ReconcileVCN(t *testing.T) {
 		},
 		{
 			name: "vcn update needed",
-			spec: infrastructurev1beta1.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
 						ID:   common.String("normal_id"),
 						Name: "foo1",
 						CIDR: "bar",
@@ -645,9 +645,9 @@ func TestClusterScope_ReconcileVCN(t *testing.T) {
 		},
 		{
 			name: "vcn update needed but error out",
-			spec: infrastructurev1beta1.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
 						ID:   common.String("normal_id"),
 						Name: "foo2",
 						CIDR: "bar",
@@ -659,10 +659,10 @@ func TestClusterScope_ReconcileVCN(t *testing.T) {
 		},
 		{
 			name: "vcn creation needed",
-			spec: infrastructurev1beta1.OCIClusterSpec{
+			spec: infrastructurev1beta2.OCIClusterSpec{
 				CompartmentId: "bar",
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
 						Name: "not_found",
 					},
 				},
@@ -674,7 +674,7 @@ func TestClusterScope_ReconcileVCN(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ociClusterAccessor := OCISelfManagedCluster{
-				&infrastructurev1beta1.OCICluster{
+				&infrastructurev1beta2.OCICluster{
 					Spec: tt.spec,
 					ObjectMeta: metav1.ObjectMeta{
 						UID: "cluster_uid",

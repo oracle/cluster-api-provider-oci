@@ -22,7 +22,7 @@ import (
 	"strconv"
 
 	"github.com/go-logr/logr"
-	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	identityClient "github.com/oracle/cluster-api-provider-oci/cloud/services/identity"
 	nlb "github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer"
@@ -178,8 +178,8 @@ func (s *ClusterScope) SetFailureDomain(id string, spec clusterv1.FailureDomainS
 
 // setAvailabiltyDomainStatus builds the OCIAvailabilityDomain list and sets the OCICluster's status with this list
 // so that other parts of the provider have access to ADs and FDs without having to make multiple calls to identity.
-func (s *ClusterScope) setAvailabiltyDomainStatus(ctx context.Context, ads []identity.AvailabilityDomain) (map[string]infrastructurev1beta1.OCIAvailabilityDomain, error) {
-	clusterAds := make(map[string]infrastructurev1beta1.OCIAvailabilityDomain)
+func (s *ClusterScope) setAvailabiltyDomainStatus(ctx context.Context, ads []identity.AvailabilityDomain) (map[string]infrastructurev1beta2.OCIAvailabilityDomain, error) {
+	clusterAds := make(map[string]infrastructurev1beta2.OCIAvailabilityDomain)
 	for _, ad := range ads {
 		reqFd := identity.ListFaultDomainsRequest{
 			CompartmentId:      common.String(s.GetCompartmentId()),
@@ -197,7 +197,7 @@ func (s *ClusterScope) setAvailabiltyDomainStatus(ctx context.Context, ads []ide
 		}
 
 		adName := *ad.Name
-		clusterAds[adName] = infrastructurev1beta1.OCIAvailabilityDomain{
+		clusterAds[adName] = infrastructurev1beta2.OCIAvailabilityDomain{
 			Name:         adName,
 			FaultDomains: faultDomains,
 		}
@@ -255,7 +255,7 @@ func (s *ClusterScope) GetOCIClusterAccessor() OCIClusterAccessor {
 	return s.OCIClusterAccessor
 }
 
-func (s *ClusterScope) getDRG() *infrastructurev1beta1.DRG {
+func (s *ClusterScope) getDRG() *infrastructurev1beta2.DRG {
 	return s.OCIClusterAccessor.GetNetworkSpec().VCNPeering.DRG
 }
 

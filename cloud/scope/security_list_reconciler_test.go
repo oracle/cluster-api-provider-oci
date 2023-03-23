@@ -29,7 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 )
 
 func TestClusterScope_DeleteSecurityLists(t *testing.T) {
@@ -91,23 +91,23 @@ func TestClusterScope_DeleteSecurityLists(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		spec          infrastructurev1beta1.OCIClusterSpec
+		spec          infrastructurev1beta2.OCIClusterSpec
 		wantErr       bool
 		expectedError string
 	}{
 		{
 			name: "delete SecurityList is successful",
-			spec: infrastructurev1beta1.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
-						Subnets: []*infrastructurev1beta1.Subnet{
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
+						Subnets: []*infrastructurev1beta2.Subnet{
 							{
-								SecurityList: &infrastructurev1beta1.SecurityList{
+								SecurityList: &infrastructurev1beta2.SecurityList{
 									ID: common.String("cp_mc_id"),
 								},
 							},
 							{
-								SecurityList: &infrastructurev1beta1.SecurityList{
+								SecurityList: &infrastructurev1beta2.SecurityList{
 									ID: common.String("cp_endpoint_id"),
 								},
 							},
@@ -119,17 +119,17 @@ func TestClusterScope_DeleteSecurityLists(t *testing.T) {
 		},
 		{
 			name: "SecurityList already deleted",
-			spec: infrastructurev1beta1.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
-						Subnets: []*infrastructurev1beta1.Subnet{
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
+						Subnets: []*infrastructurev1beta2.Subnet{
 							{
-								SecurityList: &infrastructurev1beta1.SecurityList{
+								SecurityList: &infrastructurev1beta2.SecurityList{
 									ID: common.String("ep_SecurityList_deleted"),
 								},
 							},
 							{
-								SecurityList: &infrastructurev1beta1.SecurityList{
+								SecurityList: &infrastructurev1beta2.SecurityList{
 									ID: common.String("mc_SecurityList_deleted"),
 								},
 							},
@@ -141,12 +141,12 @@ func TestClusterScope_DeleteSecurityLists(t *testing.T) {
 		},
 		{
 			name: "delete SecurityList error when calling get SecurityList",
-			spec: infrastructurev1beta1.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
-						Subnets: []*infrastructurev1beta1.Subnet{
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
+						Subnets: []*infrastructurev1beta2.Subnet{
 							{
-								SecurityList: &infrastructurev1beta1.SecurityList{
+								SecurityList: &infrastructurev1beta2.SecurityList{
 									ID: common.String("cp_endpoint_id_error"),
 								},
 							},
@@ -159,12 +159,12 @@ func TestClusterScope_DeleteSecurityLists(t *testing.T) {
 		},
 		{
 			name: "delete security list error when calling delete security list",
-			spec: infrastructurev1beta1.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
-						Subnets: []*infrastructurev1beta1.Subnet{
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
+						Subnets: []*infrastructurev1beta2.Subnet{
 							{
-								SecurityList: &infrastructurev1beta1.SecurityList{
+								SecurityList: &infrastructurev1beta2.SecurityList{
 									ID: common.String("cp_endpoint_id_error_delete"),
 								},
 							},
@@ -180,7 +180,7 @@ func TestClusterScope_DeleteSecurityLists(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ociClusterAccessor := OCISelfManagedCluster{
-				&infrastructurev1beta1.OCICluster{
+				&infrastructurev1beta2.OCICluster{
 					Spec: tt.spec,
 					ObjectMeta: metav1.ObjectMeta{
 						UID: "cluster_uid",

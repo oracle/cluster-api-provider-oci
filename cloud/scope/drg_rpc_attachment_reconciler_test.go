@@ -23,7 +23,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
-	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn/mock_vcn"
 	"github.com/oracle/oci-go-sdk/v65/common"
@@ -42,7 +42,7 @@ func TestDRGRPCAttachmentReconciliation(t *testing.T) {
 		peerVcnClient      *mock_vcn.MockClient
 		ociClusterAccessor OCISelfManagedCluster
 		tags               map[string]string
-		vcnPeering         infrastructurev1beta1.VCNPeering
+		vcnPeering         infrastructurev1beta2.VCNPeering
 	)
 
 	setup := func(t *testing.T, g *WithT) {
@@ -52,12 +52,12 @@ func TestDRGRPCAttachmentReconciliation(t *testing.T) {
 		peerVcnClient = mock_vcn.NewMockClient(mockCtrl)
 		client := fake.NewClientBuilder().Build()
 		ociClusterAccessor = OCISelfManagedCluster{
-			&infrastructurev1beta1.OCICluster{
+			&infrastructurev1beta2.OCICluster{
 				ObjectMeta: metav1.ObjectMeta{
 					UID:  "cluster_uid",
 					Name: "cluster",
 				},
-				Spec: infrastructurev1beta1.OCIClusterSpec{
+				Spec: infrastructurev1beta2.OCIClusterSpec{
 					CompartmentId:         "compartment-id",
 					OCIResourceIdentifier: "resource_uid",
 				},
@@ -80,7 +80,7 @@ func TestDRGRPCAttachmentReconciliation(t *testing.T) {
 		tags = make(map[string]string)
 		tags[ociutil.CreatedBy] = ociutil.OCIClusterAPIProvider
 		tags[ociutil.ClusterResourceIdentifier] = "resource_uid"
-		vcnPeering = infrastructurev1beta1.VCNPeering{}
+		vcnPeering = infrastructurev1beta2.VCNPeering{}
 		g.Expect(err).To(BeNil())
 	}
 	teardown := func(t *testing.T, g *WithT) {
@@ -107,9 +107,9 @@ func TestDRGRPCAttachmentReconciliation(t *testing.T) {
 			name:          "create local rpc",
 			errorExpected: false,
 			testSpecificSetup: func(clusterScope *ClusterScope, vcnClient *mock_vcn.MockClient) {
-				vcnPeering.DRG = &infrastructurev1beta1.DRG{}
+				vcnPeering.DRG = &infrastructurev1beta2.DRG{}
 				vcnPeering.DRG.ID = common.String("drg-id")
-				vcnPeering.RemotePeeringConnections = []infrastructurev1beta1.RemotePeeringConnection{
+				vcnPeering.RemotePeeringConnections = []infrastructurev1beta2.RemotePeeringConnection{
 					{
 						ManagePeerRPC:       false,
 						PeerDRGId:           common.String("peer-drg-id"),
@@ -171,9 +171,9 @@ func TestDRGRPCAttachmentReconciliation(t *testing.T) {
 			name:          "create remote rpc",
 			errorExpected: false,
 			testSpecificSetup: func(clusterScope *ClusterScope, vcnClient *mock_vcn.MockClient) {
-				vcnPeering.DRG = &infrastructurev1beta1.DRG{}
+				vcnPeering.DRG = &infrastructurev1beta2.DRG{}
 				vcnPeering.DRG.ID = common.String("drg-id")
-				vcnPeering.RemotePeeringConnections = []infrastructurev1beta1.RemotePeeringConnection{
+				vcnPeering.RemotePeeringConnections = []infrastructurev1beta2.RemotePeeringConnection{
 					{
 						ManagePeerRPC:  true,
 						PeerDRGId:      common.String("peer-drg-id"),
@@ -276,7 +276,7 @@ func TestDRGRPCAttachmentReconciliation(t *testing.T) {
 			errorSubStringMatch: true,
 			matchError:          errors.New("DRG ID has not been set"),
 			testSpecificSetup: func(clusterScope *ClusterScope, vcnClient *mock_vcn.MockClient) {
-				vcnPeering.DRG = &infrastructurev1beta1.DRG{}
+				vcnPeering.DRG = &infrastructurev1beta2.DRG{}
 				ociClusterAccessor.OCICluster.Spec.NetworkSpec.VCNPeering = &vcnPeering
 			},
 		},
@@ -286,9 +286,9 @@ func TestDRGRPCAttachmentReconciliation(t *testing.T) {
 			errorSubStringMatch: true,
 			matchError:          errors.New("peer DRG ID has not been specified"),
 			testSpecificSetup: func(clusterScope *ClusterScope, vcnClient *mock_vcn.MockClient) {
-				vcnPeering.DRG = &infrastructurev1beta1.DRG{}
+				vcnPeering.DRG = &infrastructurev1beta2.DRG{}
 				vcnPeering.DRG.ID = common.String("drg-id")
-				vcnPeering.RemotePeeringConnections = []infrastructurev1beta1.RemotePeeringConnection{
+				vcnPeering.RemotePeeringConnections = []infrastructurev1beta2.RemotePeeringConnection{
 					{
 						ManagePeerRPC:  true,
 						PeerRegionName: "us-sanjose-1",
@@ -333,9 +333,9 @@ func TestDRGRPCAttachmentReconciliation(t *testing.T) {
 			errorSubStringMatch: true,
 			matchError:          errors.New("peer RPC Connection ID is empty"),
 			testSpecificSetup: func(clusterScope *ClusterScope, vcnClient *mock_vcn.MockClient) {
-				vcnPeering.DRG = &infrastructurev1beta1.DRG{}
+				vcnPeering.DRG = &infrastructurev1beta2.DRG{}
 				vcnPeering.DRG.ID = common.String("drg-id")
-				vcnPeering.RemotePeeringConnections = []infrastructurev1beta1.RemotePeeringConnection{
+				vcnPeering.RemotePeeringConnections = []infrastructurev1beta2.RemotePeeringConnection{
 					{
 						ManagePeerRPC:  false,
 						PeerDRGId:      common.String("peer-drg-id"),
@@ -381,9 +381,9 @@ func TestDRGRPCAttachmentReconciliation(t *testing.T) {
 			errorSubStringMatch: true,
 			matchError:          errors.New("request failed"),
 			testSpecificSetup: func(clusterScope *ClusterScope, vcnClient *mock_vcn.MockClient) {
-				vcnPeering.DRG = &infrastructurev1beta1.DRG{}
+				vcnPeering.DRG = &infrastructurev1beta2.DRG{}
 				vcnPeering.DRG.ID = common.String("drg-id")
-				vcnPeering.RemotePeeringConnections = []infrastructurev1beta1.RemotePeeringConnection{
+				vcnPeering.RemotePeeringConnections = []infrastructurev1beta2.RemotePeeringConnection{
 					{
 						ManagePeerRPC:  true,
 						PeerDRGId:      common.String("peer-drg-id"),
@@ -404,9 +404,9 @@ func TestDRGRPCAttachmentReconciliation(t *testing.T) {
 			errorSubStringMatch: true,
 			matchError:          errors.New("request failed"),
 			testSpecificSetup: func(clusterScope *ClusterScope, vcnClient *mock_vcn.MockClient) {
-				vcnPeering.DRG = &infrastructurev1beta1.DRG{}
+				vcnPeering.DRG = &infrastructurev1beta2.DRG{}
 				vcnPeering.DRG.ID = common.String("drg-id")
-				vcnPeering.RemotePeeringConnections = []infrastructurev1beta1.RemotePeeringConnection{
+				vcnPeering.RemotePeeringConnections = []infrastructurev1beta2.RemotePeeringConnection{
 					{
 						ManagePeerRPC:  true,
 						PeerDRGId:      common.String("peer-drg-id"),
@@ -443,9 +443,9 @@ func TestDRGRPCAttachmentReconciliation(t *testing.T) {
 			errorSubStringMatch: true,
 			matchError:          errors.New("request failed"),
 			testSpecificSetup: func(clusterScope *ClusterScope, vcnClient *mock_vcn.MockClient) {
-				vcnPeering.DRG = &infrastructurev1beta1.DRG{}
+				vcnPeering.DRG = &infrastructurev1beta2.DRG{}
 				vcnPeering.DRG.ID = common.String("drg-id")
-				vcnPeering.RemotePeeringConnections = []infrastructurev1beta1.RemotePeeringConnection{
+				vcnPeering.RemotePeeringConnections = []infrastructurev1beta2.RemotePeeringConnection{
 					{
 						ManagePeerRPC:  true,
 						PeerDRGId:      common.String("peer-drg-id"),
@@ -492,9 +492,9 @@ func TestDRGRPCAttachmentReconciliation(t *testing.T) {
 			errorSubStringMatch: true,
 			matchError:          errors.New("request failed"),
 			testSpecificSetup: func(clusterScope *ClusterScope, vcnClient *mock_vcn.MockClient) {
-				vcnPeering.DRG = &infrastructurev1beta1.DRG{}
+				vcnPeering.DRG = &infrastructurev1beta2.DRG{}
 				vcnPeering.DRG.ID = common.String("drg-id")
-				vcnPeering.RemotePeeringConnections = []infrastructurev1beta1.RemotePeeringConnection{
+				vcnPeering.RemotePeeringConnections = []infrastructurev1beta2.RemotePeeringConnection{
 					{
 						ManagePeerRPC:  true,
 						PeerDRGId:      common.String("peer-drg-id"),
@@ -556,9 +556,9 @@ func TestDRGRPCAttachmentReconciliation(t *testing.T) {
 			errorSubStringMatch: true,
 			matchError:          errors.New("request failed"),
 			testSpecificSetup: func(clusterScope *ClusterScope, vcnClient *mock_vcn.MockClient) {
-				vcnPeering.DRG = &infrastructurev1beta1.DRG{}
+				vcnPeering.DRG = &infrastructurev1beta2.DRG{}
 				vcnPeering.DRG.ID = common.String("drg-id")
-				vcnPeering.RemotePeeringConnections = []infrastructurev1beta1.RemotePeeringConnection{
+				vcnPeering.RemotePeeringConnections = []infrastructurev1beta2.RemotePeeringConnection{
 					{
 						ManagePeerRPC:  true,
 						PeerDRGId:      common.String("peer-drg-id"),
@@ -629,9 +629,9 @@ func TestDRGRPCAttachmentReconciliation(t *testing.T) {
 			errorSubStringMatch: true,
 			matchError:          errors.New("request failed"),
 			testSpecificSetup: func(clusterScope *ClusterScope, vcnClient *mock_vcn.MockClient) {
-				vcnPeering.DRG = &infrastructurev1beta1.DRG{}
+				vcnPeering.DRG = &infrastructurev1beta2.DRG{}
 				vcnPeering.DRG.ID = common.String("drg-id")
-				vcnPeering.RemotePeeringConnections = []infrastructurev1beta1.RemotePeeringConnection{
+				vcnPeering.RemotePeeringConnections = []infrastructurev1beta2.RemotePeeringConnection{
 					{
 						ManagePeerRPC:  true,
 						PeerDRGId:      common.String("peer-drg-id"),
@@ -716,9 +716,9 @@ func TestDRGRPCAttachmentReconciliation(t *testing.T) {
 			errorSubStringMatch: true,
 			matchError:          errors.New("invalid peering status INVALID of RPC local-connection-id"),
 			testSpecificSetup: func(clusterScope *ClusterScope, vcnClient *mock_vcn.MockClient) {
-				vcnPeering.DRG = &infrastructurev1beta1.DRG{}
+				vcnPeering.DRG = &infrastructurev1beta2.DRG{}
 				vcnPeering.DRG.ID = common.String("drg-id")
-				vcnPeering.RemotePeeringConnections = []infrastructurev1beta1.RemotePeeringConnection{
+				vcnPeering.RemotePeeringConnections = []infrastructurev1beta2.RemotePeeringConnection{
 					{
 						ManagePeerRPC:  true,
 						PeerDRGId:      common.String("peer-drg-id"),
@@ -837,7 +837,7 @@ func TestDRGRPCAttachmentDeletion(t *testing.T) {
 		peerVcnClient      *mock_vcn.MockClient
 		ociClusterAccessor OCISelfManagedCluster
 		tags               map[string]string
-		vcnPeering         infrastructurev1beta1.VCNPeering
+		vcnPeering         infrastructurev1beta2.VCNPeering
 	)
 
 	setup := func(t *testing.T, g *WithT) {
@@ -846,12 +846,12 @@ func TestDRGRPCAttachmentDeletion(t *testing.T) {
 		vcnClient = mock_vcn.NewMockClient(mockCtrl)
 		client := fake.NewClientBuilder().Build()
 		ociClusterAccessor = OCISelfManagedCluster{
-			&infrastructurev1beta1.OCICluster{
+			&infrastructurev1beta2.OCICluster{
 				ObjectMeta: metav1.ObjectMeta{
 					UID:  "cluster_uid",
 					Name: "cluster",
 				},
-				Spec: infrastructurev1beta1.OCIClusterSpec{
+				Spec: infrastructurev1beta2.OCIClusterSpec{
 					CompartmentId:         "compartment-id",
 					OCIResourceIdentifier: "resource_uid",
 				},
@@ -876,7 +876,7 @@ func TestDRGRPCAttachmentDeletion(t *testing.T) {
 		tags = make(map[string]string)
 		tags[ociutil.CreatedBy] = ociutil.OCIClusterAPIProvider
 		tags[ociutil.ClusterResourceIdentifier] = "resource_uid"
-		vcnPeering = infrastructurev1beta1.VCNPeering{}
+		vcnPeering = infrastructurev1beta2.VCNPeering{}
 		g.Expect(err).To(BeNil())
 	}
 	teardown := func(t *testing.T, g *WithT) {
@@ -903,9 +903,9 @@ func TestDRGRPCAttachmentDeletion(t *testing.T) {
 			name:          "delete local rpc",
 			errorExpected: false,
 			testSpecificSetup: func(clusterScope *ClusterScope, vcnClient *mock_vcn.MockClient) {
-				vcnPeering.DRG = &infrastructurev1beta1.DRG{}
+				vcnPeering.DRG = &infrastructurev1beta2.DRG{}
 				vcnPeering.DRG.ID = common.String("drg-id")
-				vcnPeering.RemotePeeringConnections = []infrastructurev1beta1.RemotePeeringConnection{
+				vcnPeering.RemotePeeringConnections = []infrastructurev1beta2.RemotePeeringConnection{
 					{
 						ManagePeerRPC:       false,
 						PeerDRGId:           common.String("peer-drg-id"),
@@ -946,9 +946,9 @@ func TestDRGRPCAttachmentDeletion(t *testing.T) {
 			name:          "delete remote rpc",
 			errorExpected: false,
 			testSpecificSetup: func(clusterScope *ClusterScope, vcnClient *mock_vcn.MockClient) {
-				vcnPeering.DRG = &infrastructurev1beta1.DRG{}
+				vcnPeering.DRG = &infrastructurev1beta2.DRG{}
 				vcnPeering.DRG.ID = common.String("drg-id")
-				vcnPeering.RemotePeeringConnections = []infrastructurev1beta1.RemotePeeringConnection{
+				vcnPeering.RemotePeeringConnections = []infrastructurev1beta2.RemotePeeringConnection{
 					{
 						ManagePeerRPC:       true,
 						PeerDRGId:           common.String("peer-drg-id"),
@@ -1017,9 +1017,9 @@ func TestDRGRPCAttachmentDeletion(t *testing.T) {
 			errorSubStringMatch: true,
 			matchError:          errors.New("request failed"),
 			testSpecificSetup: func(clusterScope *ClusterScope, vcnClient *mock_vcn.MockClient) {
-				vcnPeering.DRG = &infrastructurev1beta1.DRG{}
+				vcnPeering.DRG = &infrastructurev1beta2.DRG{}
 				vcnPeering.DRG.ID = common.String("drg-id")
-				vcnPeering.RemotePeeringConnections = []infrastructurev1beta1.RemotePeeringConnection{
+				vcnPeering.RemotePeeringConnections = []infrastructurev1beta2.RemotePeeringConnection{
 					{
 						ManagePeerRPC:       true,
 						PeerDRGId:           common.String("peer-drg-id"),
@@ -1051,9 +1051,9 @@ func TestDRGRPCAttachmentDeletion(t *testing.T) {
 			errorSubStringMatch: true,
 			matchError:          errors.New("request failed"),
 			testSpecificSetup: func(clusterScope *ClusterScope, vcnClient *mock_vcn.MockClient) {
-				vcnPeering.DRG = &infrastructurev1beta1.DRG{}
+				vcnPeering.DRG = &infrastructurev1beta2.DRG{}
 				vcnPeering.DRG.ID = common.String("drg-id")
-				vcnPeering.RemotePeeringConnections = []infrastructurev1beta1.RemotePeeringConnection{
+				vcnPeering.RemotePeeringConnections = []infrastructurev1beta2.RemotePeeringConnection{
 					{
 						ManagePeerRPC:       true,
 						PeerDRGId:           common.String("peer-drg-id"),

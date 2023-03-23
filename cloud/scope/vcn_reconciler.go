@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
@@ -48,7 +48,7 @@ func (s *ClusterScope) ReconcileVCN(ctx context.Context) error {
 	return err
 }
 
-func (s *ClusterScope) IsVcnEquals(actual *core.Vcn, desired infrastructurev1beta1.VCN) bool {
+func (s *ClusterScope) IsVcnEquals(actual *core.Vcn, desired infrastructurev1beta2.VCN) bool {
 	if *actual.DisplayName != desired.Name {
 		return false
 	}
@@ -69,8 +69,8 @@ func (s *ClusterScope) GetVcnCidr() string {
 	return VcnDefaultCidr
 }
 
-func (s *ClusterScope) VCNSpec() infrastructurev1beta1.VCN {
-	vcnSpec := infrastructurev1beta1.VCN{
+func (s *ClusterScope) VCNSpec() infrastructurev1beta2.VCN {
+	vcnSpec := infrastructurev1beta2.VCN{
 		Name: s.GetVcnName(),
 		CIDR: s.GetVcnCidr(),
 	}
@@ -110,7 +110,7 @@ func (s *ClusterScope) GetVCN(ctx context.Context) (*core.Vcn, error) {
 	return nil, nil
 }
 
-func (s *ClusterScope) UpdateVCN(ctx context.Context, vcn infrastructurev1beta1.VCN) error {
+func (s *ClusterScope) UpdateVCN(ctx context.Context, vcn infrastructurev1beta2.VCN) error {
 	updateVCNDetails := core.UpdateVcnDetails{
 		DisplayName: common.String(vcn.Name),
 	}
@@ -126,7 +126,7 @@ func (s *ClusterScope) UpdateVCN(ctx context.Context, vcn infrastructurev1beta1.
 	return nil
 }
 
-func (s *ClusterScope) CreateVCN(ctx context.Context, spec infrastructurev1beta1.VCN) (*string, error) {
+func (s *ClusterScope) CreateVCN(ctx context.Context, spec infrastructurev1beta2.VCN) (*string, error) {
 	vcnDetails := core.CreateVcnDetails{
 		CompartmentId: common.String(s.GetCompartmentId()),
 		DisplayName:   common.String(spec.Name),

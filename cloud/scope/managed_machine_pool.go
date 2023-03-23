@@ -26,12 +26,12 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/computemanagement"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/containerengine"
-	expinfra1 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
-	infrav1exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
+	expinfra1 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
+	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
 	"github.com/pkg/errors"
@@ -55,8 +55,8 @@ type ManagedMachinePoolScopeParams struct {
 	MachinePool             *expclusterv1.MachinePool
 	Client                  client.Client
 	ComputeManagementClient computemanagement.Client
-	OCIManagedCluster       *infrav1exp.OCIManagedCluster
-	OCIManagedControlPlane  *infrav1exp.OCIManagedControlPlane
+	OCIManagedCluster       *infrav2exp.OCIManagedCluster
+	OCIManagedControlPlane  *infrav2exp.OCIManagedControlPlane
 	OCIManagedMachinePool   *expinfra1.OCIManagedMachinePool
 	ContainerEngineClient   containerengine.Client
 }
@@ -68,10 +68,10 @@ type ManagedMachinePoolScope struct {
 	Cluster                 *clusterv1.Cluster
 	MachinePool             *expclusterv1.MachinePool
 	ComputeManagementClient computemanagement.Client
-	OCIManagedCluster       *infrav1exp.OCIManagedCluster
+	OCIManagedCluster       *infrav2exp.OCIManagedCluster
 	OCIManagedMachinePool   *expinfra1.OCIManagedMachinePool
 	ContainerEngineClient   containerengine.Client
-	OCIManagedControlPlane  *infrav1exp.OCIManagedControlPlane
+	OCIManagedControlPlane  *infrav2exp.OCIManagedControlPlane
 }
 
 // NewManagedMachinePoolScope creates a ManagedMachinePoolScope given the ManagedMachinePoolScopeParams
@@ -128,7 +128,7 @@ func (m *ManagedMachinePoolScope) SetReplicaCount(count int32) {
 // GetWorkerMachineSubnet returns the WorkerRole core.Subnet id for the cluster
 func (m *ManagedMachinePoolScope) GetWorkerMachineSubnet() *string {
 	for _, subnet := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets {
-		if subnet.Role == infrastructurev1beta1.WorkerRole {
+		if subnet.Role == infrastructurev1beta2.WorkerRole {
 			return subnet.ID
 		}
 	}
@@ -475,7 +475,7 @@ func (m *ManagedMachinePoolScope) getFreeFormTags() map[string]string {
 func (m *ManagedMachinePoolScope) getWorkerMachineSubnets() []string {
 	subnetList := make([]string, 0)
 	for _, subnet := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets {
-		if subnet.Role == infrastructurev1beta1.WorkerRole {
+		if subnet.Role == infrastructurev1beta2.WorkerRole {
 			subnetList = append(subnetList, subnet.Name)
 		}
 	}
@@ -487,15 +487,15 @@ func (m *ManagedMachinePoolScope) getWorkerMachineNSGs() []string {
 	specNsgNames := m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.NsgNames
 	if len(specNsgNames) > 0 {
 		for _, nsgName := range specNsgNames {
-			for _, nsg := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups {
+			for _, nsg := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups.NSGList {
 				if nsg.Name == nsgName {
 					nsgList = append(nsgList, *nsg.ID)
 				}
 			}
 		}
 	} else {
-		for _, nsg := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups {
-			if nsg.Role == infrastructurev1beta1.WorkerRole {
+		for _, nsg := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups.NSGList {
+			if nsg.Role == infrastructurev1beta2.WorkerRole {
 				nsgList = append(nsgList, *nsg.ID)
 			}
 		}
@@ -505,8 +505,8 @@ func (m *ManagedMachinePoolScope) getWorkerMachineNSGs() []string {
 
 func (m *ManagedMachinePoolScope) getWorkerMachineNSGList() []string {
 	nsgList := make([]string, 0)
-	for _, nsg := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups {
-		if nsg.Role == infrastructurev1beta1.WorkerRole {
+	for _, nsg := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups.NSGList {
+		if nsg.Role == infrastructurev1beta2.WorkerRole {
 			nsgList = append(nsgList, nsg.Name)
 		}
 	}
@@ -531,7 +531,7 @@ func (m *ManagedMachinePoolScope) getPodNSGs(nsgs []string) []string {
 	nsgList := make([]string, 0)
 	if len(nsgs) > 0 {
 		for _, nsgName := range nsgs {
-			for _, nsg := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups {
+			for _, nsg := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups.NSGList {
 				if nsg.Name == nsgName {
 					nsgList = append(nsgList, *nsg.ID)
 				}
@@ -698,7 +698,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 
 // setMachinePoolSpecDefaults sets the defaults in the spec as returned by OKE API. We need to set defaults here rather than webhook as
 // there is a chance user will edit the cluster
-func setMachinePoolSpecDefaults(spec *infrav1exp.OCIManagedMachinePoolSpec) {
+func setMachinePoolSpecDefaults(spec *infrav2exp.OCIManagedMachinePoolSpec) {
 	spec.ProviderIDList = nil
 	spec.ProviderID = nil
 	if spec.NodePoolNodeConfig != nil {
@@ -724,7 +724,7 @@ func (m *ManagedMachinePoolScope) getSpecFromAPIObject(pool *oke.NodePool) *expi
 	if actualNodeConfigDetails != nil {
 		nodePoolNodeConfig.IsPvEncryptionInTransitEnabled = actualNodeConfigDetails.IsPvEncryptionInTransitEnabled
 		nodePoolNodeConfig.KmsKeyId = actualNodeConfigDetails.KmsKeyId
-		nodePoolNodeConfig.NsgNames = GetNsgNamesFromId(actualNodeConfigDetails.NsgIds, m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups)
+		nodePoolNodeConfig.NsgNames = GetNsgNamesFromId(actualNodeConfigDetails.NsgIds, m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups.NSGList)
 		configs := m.buildPlacementConfigFromActual(actualNodeConfigDetails.PlacementConfigs)
 		sort.Slice(configs, func(i, j int) bool {
 			return *configs[i].AvailabilityDomain < *configs[j].AvailabilityDomain
@@ -736,7 +736,7 @@ func (m *ManagedMachinePoolScope) getSpecFromAPIObject(pool *oke.NodePool) *expi
 				CniType: expinfra1.VCNNativeCNI,
 				VcnIpNativePodNetworkOptions: expinfra1.VcnIpNativePodNetworkOptions{
 					MaxPodsPerNode: podDetails.MaxPodsPerNode,
-					NSGNames:       GetNsgNamesFromId(podDetails.PodNsgIds, m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups),
+					NSGNames:       GetNsgNamesFromId(podDetails.PodNsgIds, m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups.NSGList),
 					SubnetNames:    GetSubnetNamesFromId(podDetails.PodSubnetIds, m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets),
 				},
 			}

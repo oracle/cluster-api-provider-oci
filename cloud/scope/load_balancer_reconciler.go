@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
@@ -94,8 +94,8 @@ func (s *ClusterScope) DeleteApiServerLB(ctx context.Context) error {
 }
 
 // LBSpec builds the LoadBalancer from the ClusterScope and returns it
-func (s *ClusterScope) LBSpec() infrastructurev1beta1.LoadBalancer {
-	lbSpec := infrastructurev1beta1.LoadBalancer{
+func (s *ClusterScope) LBSpec() infrastructurev1beta2.LoadBalancer {
+	lbSpec := infrastructurev1beta2.LoadBalancer{
 		Name: s.GetControlPlaneLoadBalancerName(),
 	}
 	return lbSpec
@@ -111,7 +111,7 @@ func (s *ClusterScope) GetControlPlaneLoadBalancerName() string {
 }
 
 // UpdateLB updates existing Load Balancer's DisplayName, FreeformTags and DefinedTags
-func (s *ClusterScope) UpdateLB(ctx context.Context, lb infrastructurev1beta1.LoadBalancer) error {
+func (s *ClusterScope) UpdateLB(ctx context.Context, lb infrastructurev1beta2.LoadBalancer) error {
 	lbId := s.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerId
 	updateLBDetails := networkloadbalancer.UpdateNetworkLoadBalancerDetails{
 		DisplayName: common.String(lb.Name),
@@ -138,7 +138,7 @@ func (s *ClusterScope) UpdateLB(ctx context.Context, lb infrastructurev1beta1.Lo
 //
 // See https://docs.oracle.com/en-us/iaas/Content/NetworkLoadBalancer/overview.htm for more details on the Network
 // Load Balancer
-func (s *ClusterScope) CreateLB(ctx context.Context, lb infrastructurev1beta1.LoadBalancer) (*string, *string, error) {
+func (s *ClusterScope) CreateLB(ctx context.Context, lb infrastructurev1beta2.LoadBalancer) (*string, *string, error) {
 	listenerDetails := make(map[string]networkloadbalancer.ListenerDetails)
 	listenerDetails[APIServerLBListener] = networkloadbalancer.ListenerDetails{
 		Protocol:              networkloadbalancer.ListenerProtocolsTcp,
@@ -162,7 +162,7 @@ func (s *ClusterScope) CreateLB(ctx context.Context, lb infrastructurev1beta1.Lo
 
 	var controlPlaneEndpointSubnets []string
 	for _, subnet := range s.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets {
-		if subnet.Role == infrastructurev1beta1.ControlPlaneEndpointRole {
+		if subnet.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
 			controlPlaneEndpointSubnets = append(controlPlaneEndpointSubnets, *subnet.ID)
 		}
 	}
@@ -184,8 +184,8 @@ func (s *ClusterScope) CreateLB(ctx context.Context, lb infrastructurev1beta1.Lo
 		DefinedTags:   s.GetDefinedTags(),
 	}
 
-	for _, nsg := range s.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroups {
-		if nsg.Role == infrastructurev1beta1.ControlPlaneEndpointRole {
+	for _, nsg := range s.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroups.NSGList {
+		if nsg.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
 			if nsg.ID != nil {
 				lbDetails.NetworkSecurityGroupIds = []string{*nsg.ID}
 			}
@@ -245,7 +245,7 @@ func (s *ClusterScope) getLoadbalancerIp(nlb networkloadbalancer.NetworkLoadBala
 
 // IsLBEqual determines if the actual networkloadbalancer.NetworkLoadBalancer is equal to the desired.
 // Equality is determined by DisplayName
-func (s *ClusterScope) IsLBEqual(actual *networkloadbalancer.NetworkLoadBalancer, desired infrastructurev1beta1.LoadBalancer) bool {
+func (s *ClusterScope) IsLBEqual(actual *networkloadbalancer.NetworkLoadBalancer, desired infrastructurev1beta2.LoadBalancer) bool {
 	if desired.Name != *actual.DisplayName {
 		return false
 	}

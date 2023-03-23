@@ -24,11 +24,11 @@ import (
 	"reflect"
 
 	"github.com/go-logr/logr"
-	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	baseclient "github.com/oracle/cluster-api-provider-oci/cloud/services/base"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/containerengine"
-	infrav1exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
+	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
 	"github.com/pkg/errors"
@@ -54,7 +54,7 @@ type ManagedControlPlaneScopeParams struct {
 	ContainerEngineClient  containerengine.Client
 	BaseClient             baseclient.BaseClient
 	ClientProvider         *ClientProvider
-	OCIManagedControlPlane *infrav1exp.OCIManagedControlPlane
+	OCIManagedControlPlane *infrav2exp.OCIManagedControlPlane
 	OCIClusterAccessor     OCIClusterAccessor
 	RegionIdentifier       string
 }
@@ -66,7 +66,7 @@ type ManagedControlPlaneScope struct {
 	ContainerEngineClient  containerengine.Client
 	BaseClient             baseclient.BaseClient
 	ClientProvider         *ClientProvider
-	OCIManagedControlPlane *infrav1exp.OCIManagedControlPlane
+	OCIManagedControlPlane *infrav2exp.OCIManagedControlPlane
 	OCIClusterAccessor     OCIClusterAccessor
 	RegionIdentifier       string
 	patchHelper            *patch.Helper
@@ -120,9 +120,9 @@ func (s *ManagedControlPlaneScope) GetOrCreateControlPlane(ctx context.Context) 
 	podNetworks := make([]oke.ClusterPodNetworkOptionDetails, 0)
 	if len(controlPlaneSpec.ClusterPodNetworkOptions) > 0 {
 		for _, cniOption := range controlPlaneSpec.ClusterPodNetworkOptions {
-			if cniOption.CniType == infrav1exp.FlannelCNI {
+			if cniOption.CniType == infrav2exp.FlannelCNI {
 				podNetworks = append(podNetworks, oke.FlannelOverlayClusterPodNetworkOptionDetails{})
-			} else if cniOption.CniType == infrav1exp.VCNNativeCNI {
+			} else if cniOption.CniType == infrav2exp.VCNNativeCNI {
 				podNetworks = append(podNetworks, oke.OciVcnIpNativeClusterPodNetworkOptionDetails{})
 			}
 		}
@@ -315,7 +315,7 @@ func (s *ManagedControlPlaneScope) getFreeFormTags() map[string]string {
 func (s *ManagedControlPlaneScope) getServiceLbSubnets() []string {
 	subnets := make([]string, 0)
 	for _, subnet := range s.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets {
-		if subnet.Role == infrastructurev1beta1.ServiceLoadBalancerRole {
+		if subnet.Role == infrastructurev1beta2.ServiceLoadBalancerRole {
 			subnets = append(subnets, *subnet.ID)
 		}
 	}
@@ -324,7 +324,7 @@ func (s *ManagedControlPlaneScope) getServiceLbSubnets() []string {
 
 func (s *ManagedControlPlaneScope) getControlPlaneEndpointSubnet() *string {
 	for _, subnet := range s.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets {
-		if subnet.Role == infrastructurev1beta1.ControlPlaneEndpointRole {
+		if subnet.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
 			return subnet.ID
 		}
 	}
@@ -333,8 +333,8 @@ func (s *ManagedControlPlaneScope) getControlPlaneEndpointSubnet() *string {
 
 func (s *ManagedControlPlaneScope) getControlPlaneEndpointNSGList() []string {
 	nsgs := make([]string, 0)
-	for _, nsg := range s.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroups {
-		if nsg.Role == infrastructurev1beta1.ControlPlaneEndpointRole {
+	for _, nsg := range s.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroups.NSGList {
+		if nsg.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
 			nsgs = append(nsgs, *nsg.ID)
 		}
 	}
@@ -344,7 +344,7 @@ func (s *ManagedControlPlaneScope) getControlPlaneEndpointNSGList() []string {
 // IsControlPlaneEndpointSubnetPublic returns true if the control plane endpoint subnet is public
 func (s *ManagedControlPlaneScope) IsControlPlaneEndpointSubnetPublic() bool {
 	for _, subnet := range s.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets {
-		if subnet.Role == infrastructurev1beta1.ControlPlaneEndpointRole && subnet.Type == infrastructurev1beta1.Public {
+		if subnet.Role == infrastructurev1beta2.ControlPlaneEndpointRole && subnet.Type == infrastructurev1beta2.Public {
 			return true
 		}
 	}
@@ -359,7 +359,7 @@ func (s *ManagedControlPlaneScope) DeleteOKECluster(ctx context.Context, cluster
 }
 
 func (s *ManagedControlPlaneScope) createCAPIKubeconfigSecret(ctx context.Context, okeCluster *oke.Cluster, clusterRef types.NamespacedName) error {
-	controllerOwnerRef := *metav1.NewControllerRef(s.OCIManagedControlPlane, infrastructurev1beta1.GroupVersion.WithKind("OCIManagedControlPlane"))
+	controllerOwnerRef := *metav1.NewControllerRef(s.OCIManagedControlPlane, infrastructurev1beta2.GroupVersion.WithKind("OCIManagedControlPlane"))
 	req := oke.CreateKubeconfigRequest{ClusterId: okeCluster.Id}
 	response, err := s.ContainerEngineClient.CreateKubeconfig(ctx, req)
 	if err != nil {
@@ -565,56 +565,56 @@ func (s *ManagedControlPlaneScope) UpdateControlPlane(ctx context.Context, okeCl
 
 // setControlPlaneSpecDefaults sets the defaults in the spec as returned by OKE API. We need to set defaults here rather than webhook as well as
 // there is a chance user will edit the cluster
-func setControlPlaneSpecDefaults(spec *infrav1exp.OCIManagedControlPlaneSpec) {
+func setControlPlaneSpecDefaults(spec *infrav2exp.OCIManagedControlPlaneSpec) {
 	spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{}
 	if spec.ImagePolicyConfig == nil {
-		spec.ImagePolicyConfig = &infrav1exp.ImagePolicyConfig{
+		spec.ImagePolicyConfig = &infrav2exp.ImagePolicyConfig{
 			IsPolicyEnabled: common.Bool(false),
-			KeyDetails:      make([]infrav1exp.KeyDetails, 0),
+			KeyDetails:      make([]infrav2exp.KeyDetails, 0),
 		}
 	}
 	if spec.ClusterOption.AdmissionControllerOptions == nil {
-		spec.ClusterOption.AdmissionControllerOptions = &infrav1exp.AdmissionControllerOptions{
+		spec.ClusterOption.AdmissionControllerOptions = &infrav2exp.AdmissionControllerOptions{
 			IsPodSecurityPolicyEnabled: common.Bool(false),
 		}
 	}
 	if spec.ClusterOption.AddOnOptions == nil {
-		spec.ClusterOption.AddOnOptions = &infrav1exp.AddOnOptions{
+		spec.ClusterOption.AddOnOptions = &infrav2exp.AddOnOptions{
 			IsTillerEnabled:              common.Bool(false),
 			IsKubernetesDashboardEnabled: common.Bool(false),
 		}
 	}
 }
 
-func (s *ManagedControlPlaneScope) getSpecFromActual(cluster *oke.Cluster) *infrav1exp.OCIManagedControlPlaneSpec {
-	spec := infrav1exp.OCIManagedControlPlaneSpec{
+func (s *ManagedControlPlaneScope) getSpecFromActual(cluster *oke.Cluster) *infrav2exp.OCIManagedControlPlaneSpec {
+	spec := infrav2exp.OCIManagedControlPlaneSpec{
 		Version:  cluster.KubernetesVersion,
 		KmsKeyId: cluster.KmsKeyId,
 		ID:       cluster.Id,
 	}
 	if cluster.ImagePolicyConfig != nil {
-		keys := make([]infrav1exp.KeyDetails, 0)
+		keys := make([]infrav2exp.KeyDetails, 0)
 		for _, key := range cluster.ImagePolicyConfig.KeyDetails {
-			keys = append(keys, infrav1exp.KeyDetails{
+			keys = append(keys, infrav2exp.KeyDetails{
 				KmsKeyId: key.KmsKeyId,
 			})
 		}
-		spec.ImagePolicyConfig = &infrav1exp.ImagePolicyConfig{
+		spec.ImagePolicyConfig = &infrav2exp.ImagePolicyConfig{
 			IsPolicyEnabled: cluster.ImagePolicyConfig.IsPolicyEnabled,
 			KeyDetails:      keys,
 		}
 	}
 	if len(cluster.ClusterPodNetworkOptions) > 0 {
-		podNetworks := make([]infrav1exp.ClusterPodNetworkOptions, 0)
+		podNetworks := make([]infrav2exp.ClusterPodNetworkOptions, 0)
 		for _, cniOption := range cluster.ClusterPodNetworkOptions {
 			_, ok := cniOption.(oke.OciVcnIpNativeClusterPodNetworkOptionDetails)
 			if ok {
-				podNetworks = append(podNetworks, infrav1exp.ClusterPodNetworkOptions{
-					CniType: infrav1exp.VCNNativeCNI,
+				podNetworks = append(podNetworks, infrav2exp.ClusterPodNetworkOptions{
+					CniType: infrav2exp.VCNNativeCNI,
 				})
 			} else {
-				podNetworks = append(podNetworks, infrav1exp.ClusterPodNetworkOptions{
-					CniType: infrav1exp.FlannelCNI,
+				podNetworks = append(podNetworks, infrav2exp.ClusterPodNetworkOptions{
+					CniType: infrav2exp.FlannelCNI,
 				})
 			}
 		}
@@ -622,12 +622,12 @@ func (s *ManagedControlPlaneScope) getSpecFromActual(cluster *oke.Cluster) *infr
 	}
 	if cluster.Options != nil {
 		if cluster.Options.AdmissionControllerOptions != nil {
-			spec.ClusterOption.AdmissionControllerOptions = &infrav1exp.AdmissionControllerOptions{
+			spec.ClusterOption.AdmissionControllerOptions = &infrav2exp.AdmissionControllerOptions{
 				IsPodSecurityPolicyEnabled: cluster.Options.AdmissionControllerOptions.IsPodSecurityPolicyEnabled,
 			}
 		}
 		if cluster.Options.AddOns != nil {
-			spec.ClusterOption.AddOnOptions = &infrav1exp.AddOnOptions{
+			spec.ClusterOption.AddOnOptions = &infrav2exp.AddOnOptions{
 				IsTillerEnabled:              cluster.Options.AddOns.IsTillerEnabled,
 				IsKubernetesDashboardEnabled: cluster.Options.AddOns.IsKubernetesDashboardEnabled,
 			}

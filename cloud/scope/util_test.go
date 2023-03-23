@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"github.com/onsi/gomega"
-	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/oci-go-sdk/v65/common"
 )
 
@@ -28,13 +28,13 @@ func Test_GetNsgNamesFromId(t *testing.T) {
 	tests := []struct {
 		name     string
 		ids      []string
-		nsgs     []*infrastructurev1beta1.NSG
+		nsgs     []*infrastructurev1beta2.NSG
 		expected []string
 	}{
 		{
 			name: "single",
 			ids:  []string{"id-1"},
-			nsgs: []*infrastructurev1beta1.NSG{
+			nsgs: []*infrastructurev1beta2.NSG{
 				{
 					ID:   common.String("id-1"),
 					Name: "test-1",
@@ -49,7 +49,7 @@ func Test_GetNsgNamesFromId(t *testing.T) {
 		{
 			name: "multiple",
 			ids:  []string{"id-1", "id-2"},
-			nsgs: []*infrastructurev1beta1.NSG{
+			nsgs: []*infrastructurev1beta2.NSG{
 				{
 					ID:   common.String("id-1"),
 					Name: "test-1",
@@ -64,7 +64,7 @@ func Test_GetNsgNamesFromId(t *testing.T) {
 		{
 			name: "none",
 			ids:  []string{"id-3"},
-			nsgs: []*infrastructurev1beta1.NSG{
+			nsgs: []*infrastructurev1beta2.NSG{
 				{
 					ID:   common.String("id-1"),
 					Name: "test-1",
@@ -90,13 +90,13 @@ func Test_GetSubnetNameFromId(t *testing.T) {
 	tests := []struct {
 		name     string
 		id       string
-		nsgs     []*infrastructurev1beta1.Subnet
+		nsgs     []*infrastructurev1beta2.Subnet
 		expected string
 	}{
 		{
 			name: "single",
 			id:   "id-1",
-			nsgs: []*infrastructurev1beta1.Subnet{
+			nsgs: []*infrastructurev1beta2.Subnet{
 				{
 					ID:   common.String("id-1"),
 					Name: "test-1",
@@ -111,7 +111,7 @@ func Test_GetSubnetNameFromId(t *testing.T) {
 		{
 			name: "none",
 			id:   "id-3",
-			nsgs: []*infrastructurev1beta1.Subnet{
+			nsgs: []*infrastructurev1beta2.Subnet{
 				{
 					ID:   common.String("id-1"),
 					Name: "test-1",
@@ -137,13 +137,13 @@ func Test_GetSubnetNamesFromId(t *testing.T) {
 	tests := []struct {
 		name     string
 		ids      []string
-		subnets  []*infrastructurev1beta1.Subnet
+		subnets  []*infrastructurev1beta2.Subnet
 		expected []string
 	}{
 		{
 			name: "single",
 			ids:  []string{"id-1"},
-			subnets: []*infrastructurev1beta1.Subnet{
+			subnets: []*infrastructurev1beta2.Subnet{
 				{
 					ID:   common.String("id-1"),
 					Name: "test-1",
@@ -158,7 +158,7 @@ func Test_GetSubnetNamesFromId(t *testing.T) {
 		{
 			name: "multiple",
 			ids:  []string{"id-1", "id-2"},
-			subnets: []*infrastructurev1beta1.Subnet{
+			subnets: []*infrastructurev1beta2.Subnet{
 				{
 					ID:   common.String("id-1"),
 					Name: "test-1",
@@ -173,7 +173,7 @@ func Test_GetSubnetNamesFromId(t *testing.T) {
 		{
 			name: "none",
 			ids:  []string{"id-3"},
-			subnets: []*infrastructurev1beta1.Subnet{
+			subnets: []*infrastructurev1beta2.Subnet{
 				{
 					ID:   common.String("id-1"),
 					Name: "test-1",
