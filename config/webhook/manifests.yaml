@@ -6,8 +6,7 @@ metadata:
   name: mutating-webhook-configuration
 webhooks:
 - admissionReviewVersions:
-  - v1
-  - v1beta2
+  - v1beta1
   clientConfig:
     service:
       name: webhook-service
@@ -28,7 +27,6 @@ webhooks:
     - ociclusters
   sideEffects: None
 - admissionReviewVersions:
-  - v1
   - v1beta1
   clientConfig:
     service:
@@ -42,7 +40,7 @@ webhooks:
   - apiGroups:
     - infrastructure.cluster.x-k8s.io
     apiVersions:
-    - v1beta1
+    - v1beta2
     operations:
     - CREATE
     - UPDATE
@@ -50,7 +48,6 @@ webhooks:
     - ocimanagedclusters
   sideEffects: None
 - admissionReviewVersions:
-  - v1
   - v1beta1
   clientConfig:
     service:
@@ -64,7 +61,7 @@ webhooks:
   - apiGroups:
     - infrastructure.cluster.x-k8s.io
     apiVersions:
-    - v1beta1
+    - v1beta2
     operations:
     - CREATE
     - UPDATE
@@ -86,7 +83,7 @@ webhooks:
   - apiGroups:
     - infrastructure.cluster.x-k8s.io
     apiVersions:
-    - v1beta1
+    - v1beta2
     operations:
     - CREATE
     - UPDATE
@@ -101,7 +98,7 @@ metadata:
   name: validating-webhook-configuration
 webhooks:
 - admissionReviewVersions:
-  - v1beta2
+  - v1beta1
   clientConfig:
     service:
       name: webhook-service
@@ -122,7 +119,7 @@ webhooks:
     - ociclusters
   sideEffects: None
 - admissionReviewVersions:
-  - v1beta2
+  - v1beta1
   clientConfig:
     service:
       name: webhook-service
