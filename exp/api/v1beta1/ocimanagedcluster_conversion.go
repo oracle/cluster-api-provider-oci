@@ -17,6 +17,7 @@ limitations under the License.
 package v1beta1
 
 import (
+	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
 	"github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	utilconversion "sigs.k8s.io/cluster-api/util/conversion"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
@@ -29,6 +30,24 @@ func (src *OCIManagedCluster) ConvertTo(dstRaw conversion.Hub) error {
 	if err := Convert_v1beta1_OCIManagedCluster_To_v1beta2_OCIManagedCluster(src, dst, nil); err != nil {
 		return err
 	}
+
+	ad, err := infrastructurev1beta1.Convertv1beta1AdMapTov1beta2AdMap(src.Status.AvailabilityDomains)
+	if err != nil {
+		return err
+	}
+	dst.Spec.AvailabilityDomains = ad
+
+	// Manually restore data.
+	restored := &v1beta2.OCIManagedCluster{}
+	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+		return err
+	}
+
+	dst.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.Skip = restored.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.Skip
+	dst.Spec.NetworkSpec.Vcn.NATGateway.Skip = restored.Spec.NetworkSpec.Vcn.NATGateway.Skip
+	dst.Spec.NetworkSpec.Vcn.ServiceGateway.Skip = restored.Spec.NetworkSpec.Vcn.ServiceGateway.Skip
+	dst.Spec.NetworkSpec.Vcn.InternetGateway.Skip = restored.Spec.NetworkSpec.Vcn.InternetGateway.Skip
+	dst.Spec.NetworkSpec.Vcn.RouteTable.Skip = restored.Spec.NetworkSpec.Vcn.RouteTable.Skip
 	return nil
 }
 
@@ -39,6 +58,12 @@ func (r *OCIManagedCluster) ConvertFrom(srcRaw conversion.Hub) error {
 	if err := Convert_v1beta2_OCIManagedCluster_To_v1beta1_OCIManagedCluster(src, r, nil); err != nil {
 		return err
 	}
+
+	ad, err := infrastructurev1beta1.Convertv1beta2AdMapTov1beta1AdMap(src.Spec.AvailabilityDomains)
+	if err != nil {
+		return err
+	}
+	r.Status.AvailabilityDomains = ad
 
 	// Preserve Hub data on down-conversion.
 	if err := utilconversion.MarshalData(src, r); err != nil {

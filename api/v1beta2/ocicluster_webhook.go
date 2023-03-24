@@ -47,7 +47,7 @@ func (c *OCICluster) Default() {
 	}
 	if !c.Spec.NetworkSpec.SkipNetworkManagement {
 		c.Spec.NetworkSpec.Vcn.Subnets = c.SubnetSpec()
-		c.Spec.NetworkSpec.Vcn.NetworkSecurityGroups.NSGList = c.NSGSpec()
+		c.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List = c.NSGSpec()
 	}
 }
 
@@ -216,8 +216,10 @@ func (c *OCICluster) SubnetSpec() []*Subnet {
 }
 
 func (c *OCICluster) NSGSpec() []*NSG {
-	nsgs := c.Spec.NetworkSpec.Vcn.NetworkSecurityGroups.NSGList
-
+	nsgs := c.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List
+	if c.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.Skip {
+		return nsgs
+	}
 	if !c.IsNSGExitsByRole(ControlPlaneEndpointRole) && !c.IsSecurityListExitsByRole(ControlPlaneEndpointRole) {
 		nsgs = append(nsgs, &NSG{
 			Role:         ControlPlaneEndpointRole,
@@ -707,7 +709,7 @@ func (c *OCICluster) GetNodeSubnet() []*Subnet {
 }
 
 func (c *OCICluster) IsNSGExitsByRole(role Role) bool {
-	for _, nsg := range c.Spec.NetworkSpec.Vcn.NetworkSecurityGroups.NSGList {
+	for _, nsg := range c.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
 		if role == nsg.Role {
 			return true
 		}

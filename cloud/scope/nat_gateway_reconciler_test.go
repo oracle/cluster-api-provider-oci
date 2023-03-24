@@ -231,6 +231,22 @@ func TestClusterScope_ReconcileNatGateway(t *testing.T) {
 			wantErr:       true,
 			expectedError: "failed create nat gateway: some error",
 		},
+		{
+			name: "creation skip",
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				CompartmentId: "foo",
+				DefinedTags:   definedTags,
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
+						ID: common.String("vcn1"),
+						NATGateway: infrastructurev1beta2.NATGateway{
+							Skip: true,
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
 	}
 	l := log.FromContext(context.Background())
 	for _, tt := range tests {

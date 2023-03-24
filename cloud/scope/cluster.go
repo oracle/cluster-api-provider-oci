@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/go-logr/logr"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
@@ -127,21 +128,24 @@ func (s *ClusterScope) ReconcileFailureDomains(ctx context.Context) error {
 // in case of single AD regions, the failure domain will be fault domain, in case of multi Ad regions, it will
 // be AD
 func (s *ClusterScope) setFailureDomains(ctx context.Context) error {
-	reqAd := identity.ListAvailabilityDomainsRequest{CompartmentId: common.String(s.GetCompartmentId())}
+	adMap := s.OCIClusterAccessor.GetAvailabilityDomains()
+	if adMap == nil {
+		reqAd := identity.ListAvailabilityDomainsRequest{CompartmentId: common.String(s.GetCompartmentId())}
 
-	respAd, err := s.IdentityClient.ListAvailabilityDomains(ctx, reqAd)
-	if err != nil {
-		s.Logger.Error(err, "failed to list identity domains")
-		return err
+		respAd, err := s.IdentityClient.ListAvailabilityDomains(ctx, reqAd)
+		if err != nil {
+			s.Logger.Error(err, "failed to list identity domains")
+			return err
+		}
+
+		// build the AD list for cluster
+		adMap, err = s.setAvailabiltyDomainSpec(ctx, respAd.Items)
+		if err != nil {
+			return err
+		}
 	}
 
-	// build the AD list for cluster
-	ads, err := s.setAvailabiltyDomainStatus(ctx, respAd.Items)
-	if err != nil {
-		return err
-	}
-
-	numOfAds := len(respAd.Items)
+	numOfAds := len(adMap)
 	if numOfAds != 1 && numOfAds != 3 {
 		err := errors.New(fmt.Sprintf("invalid number of Availability Domains, should be either 1 or 3, but got %d", numOfAds))
 		s.Logger.Error(err, "invalid number of Availability Domains")
@@ -149,23 +153,36 @@ func (s *ClusterScope) setFailureDomains(ctx context.Context) error {
 	}
 
 	if numOfAds == 3 {
-		for i, ad := range respAd.Items {
-			s.SetFailureDomain(strconv.Itoa(i+1), clusterv1.FailureDomainSpec{
+		for k := range adMap {
+			adIndex := strings.LastIndexAny(k, "-")
+			if adIndex < 0 {
+				return errors.New(fmt.Sprintf("could not infer ad number from availability domain %s", k))
+			}
+			adNumber := k[adIndex+1:]
+			_, err := strconv.Atoi(adNumber)
+			if err != nil {
+				return errors.New(fmt.Sprintf("availability domain is not a valid integer: availability domain %s", k))
+			}
+			s.SetFailureDomain(adNumber, clusterv1.FailureDomainSpec{
 				ControlPlane: true,
-				Attributes:   map[string]string{AvailabilityDomain: *ad.Name},
+				Attributes:   map[string]string{AvailabilityDomain: k},
 			})
 		}
 	} else {
-		adName := *respAd.Items[0].Name
-		for i, fd := range ads[adName].FaultDomains {
-			s.SetFailureDomain(strconv.Itoa(i+1), clusterv1.FailureDomainSpec{
-				ControlPlane: true,
-				Attributes: map[string]string{
-					AvailabilityDomain: adName,
-					FaultDomain:        fd,
-				},
-			})
+		// only first element is used, hence break at the end
+		for k := range adMap {
+			for i, fd := range adMap[k].FaultDomains {
+				s.SetFailureDomain(strconv.Itoa(i+1), clusterv1.FailureDomainSpec{
+					ControlPlane: true,
+					Attributes: map[string]string{
+						AvailabilityDomain: k,
+						FaultDomain:        fd,
+					},
+				})
+			}
+			break
 		}
+
 	}
 
 	return nil
@@ -176,9 +193,9 @@ func (s *ClusterScope) SetFailureDomain(id string, spec clusterv1.FailureDomainS
 	s.OCIClusterAccessor.SetFailureDomain(id, spec)
 }
 
-// setAvailabiltyDomainStatus builds the OCIAvailabilityDomain list and sets the OCICluster's status with this list
+// setAvailabiltyDomainSpec builds the OCIAvailabilityDomain list and sets the OCICluster's spec with this list
 // so that other parts of the provider have access to ADs and FDs without having to make multiple calls to identity.
-func (s *ClusterScope) setAvailabiltyDomainStatus(ctx context.Context, ads []identity.AvailabilityDomain) (map[string]infrastructurev1beta2.OCIAvailabilityDomain, error) {
+func (s *ClusterScope) setAvailabiltyDomainSpec(ctx context.Context, ads []identity.AvailabilityDomain) (map[string]infrastructurev1beta2.OCIAvailabilityDomain, error) {
 	clusterAds := make(map[string]infrastructurev1beta2.OCIAvailabilityDomain)
 	for _, ad := range ads {
 		reqFd := identity.ListFaultDomainsRequest{

@@ -286,16 +286,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1beta2.OCIManagedClusterSpec)(nil), (*OCIManagedClusterSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta2_OCIManagedClusterSpec_To_v1beta1_OCIManagedClusterSpec(a.(*v1beta2.OCIManagedClusterSpec), b.(*OCIManagedClusterSpec), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*OCIManagedClusterStatus)(nil), (*v1beta2.OCIManagedClusterStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_OCIManagedClusterStatus_To_v1beta2_OCIManagedClusterStatus(a.(*OCIManagedClusterStatus), b.(*v1beta2.OCIManagedClusterStatus), scope)
-	}); err != nil {
-		return err
-	}
 	if err := s.AddGeneratedConversionFunc((*v1beta2.OCIManagedClusterStatus)(nil), (*OCIManagedClusterStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta2_OCIManagedClusterStatus_To_v1beta1_OCIManagedClusterStatus(a.(*v1beta2.OCIManagedClusterStatus), b.(*OCIManagedClusterStatus), scope)
 	}); err != nil {
@@ -546,8 +536,23 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddConversionFunc((*OCIManagedClusterStatus)(nil), (*v1beta2.OCIManagedClusterStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_OCIManagedClusterStatus_To_v1beta2_OCIManagedClusterStatus(a.(*OCIManagedClusterStatus), b.(*v1beta2.OCIManagedClusterStatus), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*apiv1beta2.NetworkDetails)(nil), (*apiv1beta1.NetworkDetails)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta2_NetworkDetails_To_v1beta1_NetworkDetails(a.(*apiv1beta2.NetworkDetails), b.(*apiv1beta1.NetworkDetails), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddConversionFunc((*apiv1beta2.NetworkSpec)(nil), (*apiv1beta1.NetworkSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta2_NetworkSpec_To_v1beta1_NetworkSpec(a.(*apiv1beta2.NetworkSpec), b.(*apiv1beta1.NetworkSpec), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*v1beta2.OCIManagedClusterSpec)(nil), (*OCIManagedClusterSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta2_OCIManagedClusterSpec_To_v1beta1_OCIManagedClusterSpec(a.(*v1beta2.OCIManagedClusterSpec), b.(*OCIManagedClusterSpec), scope)
 	}); err != nil {
 		return err
 	}
@@ -684,7 +689,15 @@ func autoConvert_v1beta1_InstanceConfiguration_To_v1beta2_InstanceConfiguration(
 	out.InstanceConfigurationId = (*string)(unsafe.Pointer(in.InstanceConfigurationId))
 	out.Shape = (*string)(unsafe.Pointer(in.Shape))
 	out.ShapeConfig = (*v1beta2.ShapeConfig)(unsafe.Pointer(in.ShapeConfig))
-	out.InstanceVnicConfiguration = (*apiv1beta2.NetworkDetails)(unsafe.Pointer(in.InstanceVnicConfiguration))
+	if in.InstanceVnicConfiguration != nil {
+		in, out := &in.InstanceVnicConfiguration, &out.InstanceVnicConfiguration
+		*out = new(apiv1beta2.NetworkDetails)
+		if err := apiv1beta1.Convert_v1beta1_NetworkDetails_To_v1beta2_NetworkDetails(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.InstanceVnicConfiguration = nil
+	}
 	out.PlatformConfig = (*apiv1beta2.PlatformConfig)(unsafe.Pointer(in.PlatformConfig))
 	out.AgentConfig = (*apiv1beta2.LaunchInstanceAgentConfig)(unsafe.Pointer(in.AgentConfig))
 	out.PreemptibleInstanceConfig = (*apiv1beta2.PreemptibleInstanceConfig)(unsafe.Pointer(in.PreemptibleInstanceConfig))
@@ -708,7 +721,15 @@ func autoConvert_v1beta2_InstanceConfiguration_To_v1beta1_InstanceConfiguration(
 	out.InstanceConfigurationId = (*string)(unsafe.Pointer(in.InstanceConfigurationId))
 	out.Shape = (*string)(unsafe.Pointer(in.Shape))
 	out.ShapeConfig = (*ShapeConfig)(unsafe.Pointer(in.ShapeConfig))
-	out.InstanceVnicConfiguration = (*apiv1beta1.NetworkDetails)(unsafe.Pointer(in.InstanceVnicConfiguration))
+	if in.InstanceVnicConfiguration != nil {
+		in, out := &in.InstanceVnicConfiguration, &out.InstanceVnicConfiguration
+		*out = new(apiv1beta1.NetworkDetails)
+		if err := Convert_v1beta2_NetworkDetails_To_v1beta1_NetworkDetails(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.InstanceVnicConfiguration = nil
+	}
 	out.PlatformConfig = (*apiv1beta1.PlatformConfig)(unsafe.Pointer(in.PlatformConfig))
 	out.AgentConfig = (*apiv1beta1.LaunchInstanceAgentConfig)(unsafe.Pointer(in.AgentConfig))
 	out.PreemptibleInstanceConfig = (*apiv1beta1.PreemptibleInstanceConfig)(unsafe.Pointer(in.PreemptibleInstanceConfig))
@@ -1028,7 +1049,17 @@ func Convert_v1beta2_OCIMachinePool_To_v1beta1_OCIMachinePool(in *v1beta2.OCIMac
 
 func autoConvert_v1beta1_OCIMachinePoolList_To_v1beta2_OCIMachinePoolList(in *OCIMachinePoolList, out *v1beta2.OCIMachinePoolList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]v1beta2.OCIMachinePool)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]v1beta2.OCIMachinePool, len(*in))
+		for i := range *in {
+			if err := Convert_v1beta1_OCIMachinePool_To_v1beta2_OCIMachinePool(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -1039,7 +1070,17 @@ func Convert_v1beta1_OCIMachinePoolList_To_v1beta2_OCIMachinePoolList(in *OCIMac
 
 func autoConvert_v1beta2_OCIMachinePoolList_To_v1beta1_OCIMachinePoolList(in *v1beta2.OCIMachinePoolList, out *OCIMachinePoolList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]OCIMachinePool)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]OCIMachinePool, len(*in))
+		for i := range *in {
+			if err := Convert_v1beta2_OCIMachinePool_To_v1beta1_OCIMachinePool(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -1212,30 +1253,20 @@ func autoConvert_v1beta2_OCIManagedClusterSpec_To_v1beta1_OCIManagedClusterSpec(
 	out.CompartmentId = in.CompartmentId
 	out.Region = in.Region
 	out.ControlPlaneEndpoint = in.ControlPlaneEndpoint
+	// WARNING: in.AvailabilityDomains requires manual conversion: does not exist in peer-type
 	return nil
-}
-
-// Convert_v1beta2_OCIManagedClusterSpec_To_v1beta1_OCIManagedClusterSpec is an autogenerated conversion function.
-func Convert_v1beta2_OCIManagedClusterSpec_To_v1beta1_OCIManagedClusterSpec(in *v1beta2.OCIManagedClusterSpec, out *OCIManagedClusterSpec, s conversion.Scope) error {
-	return autoConvert_v1beta2_OCIManagedClusterSpec_To_v1beta1_OCIManagedClusterSpec(in, out, s)
 }
 
 func autoConvert_v1beta1_OCIManagedClusterStatus_To_v1beta2_OCIManagedClusterStatus(in *OCIManagedClusterStatus, out *v1beta2.OCIManagedClusterStatus, s conversion.Scope) error {
 	out.FailureDomains = *(*clusterapiapiv1beta1.FailureDomains)(unsafe.Pointer(&in.FailureDomains))
-	out.AvailabilityDomains = *(*map[string]apiv1beta2.OCIAvailabilityDomain)(unsafe.Pointer(&in.AvailabilityDomains))
+	// WARNING: in.AvailabilityDomains requires manual conversion: does not exist in peer-type
 	out.Ready = in.Ready
 	out.Conditions = *(*clusterapiapiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
 	return nil
 }
 
-// Convert_v1beta1_OCIManagedClusterStatus_To_v1beta2_OCIManagedClusterStatus is an autogenerated conversion function.
-func Convert_v1beta1_OCIManagedClusterStatus_To_v1beta2_OCIManagedClusterStatus(in *OCIManagedClusterStatus, out *v1beta2.OCIManagedClusterStatus, s conversion.Scope) error {
-	return autoConvert_v1beta1_OCIManagedClusterStatus_To_v1beta2_OCIManagedClusterStatus(in, out, s)
-}
-
 func autoConvert_v1beta2_OCIManagedClusterStatus_To_v1beta1_OCIManagedClusterStatus(in *v1beta2.OCIManagedClusterStatus, out *OCIManagedClusterStatus, s conversion.Scope) error {
 	out.FailureDomains = *(*clusterapiapiv1beta1.FailureDomains)(unsafe.Pointer(&in.FailureDomains))
-	out.AvailabilityDomains = *(*map[string]apiv1beta1.OCIAvailabilityDomain)(unsafe.Pointer(&in.AvailabilityDomains))
 	out.Ready = in.Ready
 	out.Conditions = *(*clusterapiapiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
 	return nil

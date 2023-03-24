@@ -98,8 +98,8 @@ func TestControlPlaneReconciliation(t *testing.T) {
 									ID:   common.String("lb-subnet-id"),
 								},
 							},
-							NetworkSecurityGroups: infrastructurev1beta2.NetworkSecurityGroups{
-								NSGList: []*infrastructurev1beta2.NSG{
+							NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
+								List: []*infrastructurev1beta2.NSG{
 									{
 										Role: infrastructurev1beta2.ControlPlaneEndpointRole,
 										ID:   common.String("nsg-id"),
@@ -386,8 +386,8 @@ func TestControlPlaneUpdation(t *testing.T) {
 									ID:   common.String("lb-subnet-id"),
 								},
 							},
-							NetworkSecurityGroups: infrastructurev1beta2.NetworkSecurityGroups{
-								NSGList: []*infrastructurev1beta2.NSG{
+							NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
+								List: []*infrastructurev1beta2.NSG{
 									{
 										Role: infrastructurev1beta2.ControlPlaneEndpointRole,
 										ID:   common.String("nsg-id"),

@@ -92,7 +92,9 @@ func (c OCIManagedCluster) SetFailureDomain(id string, spec clusterv1.FailureDom
 	}
 	c.OCIManagedCluster.Status.FailureDomains[id] = spec
 }
-
+func (c OCIManagedCluster) GetAvailabilityDomains() map[string]infrastructurev1beta2.OCIAvailabilityDomain {
+	return c.OCIManagedCluster.Spec.AvailabilityDomains
+}
 func (c OCIManagedCluster) SetAvailabilityDomains(ads map[string]infrastructurev1beta2.OCIAvailabilityDomain) {
-	c.OCIManagedCluster.Status.AvailabilityDomains = ads
+	c.OCIManagedCluster.Spec.AvailabilityDomains = ads
 }

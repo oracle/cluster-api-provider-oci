@@ -222,7 +222,7 @@ func (m *ManagedMachinePoolScope) CreateNodePool(ctx context.Context) (*oke.Node
 		if len(workerSubnets) == 0 {
 			return nil, errors.New("worker subnets are not specified")
 		}
-		adMap := m.OCIManagedCluster.Status.AvailabilityDomains
+		adMap := m.OCIManagedCluster.Spec.AvailabilityDomains
 		for k, v := range adMap {
 			placementConfigs = append(placementConfigs, expinfra1.PlacementConfig{
 				AvailabilityDomain: common.String(k),
@@ -487,14 +487,14 @@ func (m *ManagedMachinePoolScope) getWorkerMachineNSGs() []string {
 	specNsgNames := m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.NsgNames
 	if len(specNsgNames) > 0 {
 		for _, nsgName := range specNsgNames {
-			for _, nsg := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups.NSGList {
+			for _, nsg := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
 				if nsg.Name == nsgName {
 					nsgList = append(nsgList, *nsg.ID)
 				}
 			}
 		}
 	} else {
-		for _, nsg := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups.NSGList {
+		for _, nsg := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
 			if nsg.Role == infrastructurev1beta2.WorkerRole {
 				nsgList = append(nsgList, *nsg.ID)
 			}
@@ -505,7 +505,7 @@ func (m *ManagedMachinePoolScope) getWorkerMachineNSGs() []string {
 
 func (m *ManagedMachinePoolScope) getWorkerMachineNSGList() []string {
 	nsgList := make([]string, 0)
-	for _, nsg := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups.NSGList {
+	for _, nsg := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
 		if nsg.Role == infrastructurev1beta2.WorkerRole {
 			nsgList = append(nsgList, nsg.Name)
 		}
@@ -531,7 +531,7 @@ func (m *ManagedMachinePoolScope) getPodNSGs(nsgs []string) []string {
 	nsgList := make([]string, 0)
 	if len(nsgs) > 0 {
 		for _, nsgName := range nsgs {
-			for _, nsg := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups.NSGList {
+			for _, nsg := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
 				if nsg.Name == nsgName {
 					nsgList = append(nsgList, *nsg.ID)
 				}
@@ -724,7 +724,7 @@ func (m *ManagedMachinePoolScope) getSpecFromAPIObject(pool *oke.NodePool) *expi
 	if actualNodeConfigDetails != nil {
 		nodePoolNodeConfig.IsPvEncryptionInTransitEnabled = actualNodeConfigDetails.IsPvEncryptionInTransitEnabled
 		nodePoolNodeConfig.KmsKeyId = actualNodeConfigDetails.KmsKeyId
-		nodePoolNodeConfig.NsgNames = GetNsgNamesFromId(actualNodeConfigDetails.NsgIds, m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups.NSGList)
+		nodePoolNodeConfig.NsgNames = GetNsgNamesFromId(actualNodeConfigDetails.NsgIds, m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List)
 		configs := m.buildPlacementConfigFromActual(actualNodeConfigDetails.PlacementConfigs)
 		sort.Slice(configs, func(i, j int) bool {
 			return *configs[i].AvailabilityDomain < *configs[j].AvailabilityDomain
@@ -736,7 +736,7 @@ func (m *ManagedMachinePoolScope) getSpecFromAPIObject(pool *oke.NodePool) *expi
 				CniType: expinfra1.VCNNativeCNI,
 				VcnIpNativePodNetworkOptions: expinfra1.VcnIpNativePodNetworkOptions{
 					MaxPodsPerNode: podDetails.MaxPodsPerNode,
-					NSGNames:       GetNsgNamesFromId(podDetails.PodNsgIds, m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups.NSGList),
+					NSGNames:       GetNsgNamesFromId(podDetails.PodNsgIds, m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List),
 					SubnetNames:    GetSubnetNamesFromId(podDetails.PodSubnetIds, m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets),
 				},
 			}

@@ -1156,6 +1156,27 @@ spec:
                   spec:
                     description: OCIClusterSpec defines the desired state of OciCluster
                     properties:
+                      availabilityDomains:
+                        additionalProperties:
+                          description: OCIAvailabilityDomain contains information
+                            about an Availability Domain (AD).
+                          properties:
+                            faultDomains:
+                              description: 'FaultDomains a list of fault domain (FD)
+                                names. Example: ["FAULT-DOMAIN-1"]'
+                              items:
+                                type: string
+                              type: array
+                            name:
+                              description: 'Name is the AD''s full name. Example:
+                                Uocm:PHX-AD-1'
+                              type: string
+                          type: object
+                        description: AvailabilityDomains encapsulates the clusters
+                          Availability Domain (AD) information in a map where the
+                          map key is the AD name and the struct is details about the
+                          AD.
+                        type: object
                       compartmentId:
                         description: Compartment to create the cluster network.
                         type: string
@@ -1251,11 +1272,11 @@ spec:
                           vcn:
                             description: VCN configuration.
                             properties:
-                              NetworkSecurityGroups:
+                              NetworkSecurityGroup:
                                 description: Configuration for NSG management.
                                 properties:
                                   list:
-                                    description: NetworkSecurityGroups is the configuration
+                                    description: NetworkSecurityGroup is the configuration
                                       for the Network Security Groups required in
                                       the VCN.
                                     items:
@@ -1470,12 +1491,6 @@ spec:
                                                         type: object
                                                     type: object
                                                 type: object
-                                              id:
-                                                description: 'EgressSecurityRule ID
-                                                  for NSG. Deprecated: this field
-                                                  is not populated and used during
-                                                  reconciliation'
-                                                type: string
                                             type: object
                                           type: array
                                         id:
@@ -1487,12 +1502,6 @@ spec:
                                             description: IngressSecurityRuleForNSG
                                               is IngressSecurityRule for NSG
                                             properties:
-                                              id:
-                                                description: 'IngressSecurityRule
-                                                  ID for NSG. Deprecated: this field
-                                                  is not populated and used during
-                                                  reconciliation'
-                                                type: string
                                               ingressRule:
                                                 description: IngressSecurityRule A
                                                   rule for allowing inbound IP packets.
@@ -1725,7 +1734,7 @@ spec:
                               internetGateway:
                                 description: Configuration for Internet Gateway.
                                 properties:
-                                  internetGatewayId:
+                                  id:
                                     description: ID of Internet Gateway.
                                     type: string
                                   skip:
@@ -1739,7 +1748,7 @@ spec:
                               natGateway:
                                 description: Configuration for NAT Gateway.
                                 properties:
-                                  natGatewayId:
+                                  id:
                                     description: ID of Nat Gateway.
                                     type: string
                                   skip:
@@ -1764,7 +1773,7 @@ spec:
                               serviceGateway:
                                 description: Configuration for Service Gateway.
                                 properties:
-                                  serviceGatewayId:
+                                  id:
                                     description: ID of Service Gateway.
                                     type: string
                                   skip:

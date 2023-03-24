@@ -100,8 +100,8 @@ func TestClusterScope_DeleteNSGs(t *testing.T) {
 			spec: infrastructurev1beta2.OCIClusterSpec{
 				NetworkSpec: infrastructurev1beta2.NetworkSpec{
 					Vcn: infrastructurev1beta2.VCN{
-						NetworkSecurityGroups: infrastructurev1beta2.NetworkSecurityGroups{
-							NSGList: []*infrastructurev1beta2.NSG{
+						NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
+							List: []*infrastructurev1beta2.NSG{
 								{
 									ID: common.String("nsg1"),
 								},
@@ -120,8 +120,8 @@ func TestClusterScope_DeleteNSGs(t *testing.T) {
 			spec: infrastructurev1beta2.OCIClusterSpec{
 				NetworkSpec: infrastructurev1beta2.NetworkSpec{
 					Vcn: infrastructurev1beta2.VCN{
-						NetworkSecurityGroups: infrastructurev1beta2.NetworkSecurityGroups{
-							NSGList: []*infrastructurev1beta2.NSG{
+						NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
+							List: []*infrastructurev1beta2.NSG{
 								{
 									ID: common.String("nsg_deleted"),
 								},
@@ -137,8 +137,8 @@ func TestClusterScope_DeleteNSGs(t *testing.T) {
 			spec: infrastructurev1beta2.OCIClusterSpec{
 				NetworkSpec: infrastructurev1beta2.NetworkSpec{
 					Vcn: infrastructurev1beta2.VCN{
-						NetworkSecurityGroups: infrastructurev1beta2.NetworkSecurityGroups{
-							NSGList: []*infrastructurev1beta2.NSG{
+						NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
+							List: []*infrastructurev1beta2.NSG{
 								{
 									ID: common.String("nsg_get_error"),
 								},
@@ -155,8 +155,8 @@ func TestClusterScope_DeleteNSGs(t *testing.T) {
 			spec: infrastructurev1beta2.OCIClusterSpec{
 				NetworkSpec: infrastructurev1beta2.NetworkSpec{
 					Vcn: infrastructurev1beta2.VCN{
-						NetworkSecurityGroups: infrastructurev1beta2.NetworkSecurityGroups{
-							NSGList: []*infrastructurev1beta2.NSG{
+						NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
+							List: []*infrastructurev1beta2.NSG{
 								{
 									ID: common.String("nsg_error_delete"),
 								},
@@ -287,8 +287,8 @@ func TestClusterScope_ReconcileNSG(t *testing.T) {
 				NetworkSpec: infrastructurev1beta2.NetworkSpec{
 					Vcn: infrastructurev1beta2.VCN{
 						ID: common.String("vcn"),
-						NetworkSecurityGroups: infrastructurev1beta2.NetworkSecurityGroups{
-							NSGList: []*infrastructurev1beta2.NSG{
+						NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
+							List: []*infrastructurev1beta2.NSG{
 								{
 									ID:           common.String("no-update-id"),
 									Name:         "no-update",
@@ -558,8 +558,8 @@ func TestClusterScope_ReconcileNSG(t *testing.T) {
 								},
 							},
 						},
-						NetworkSecurityGroups: infrastructurev1beta2.NetworkSecurityGroups{
-							NSGList: []*infrastructurev1beta2.NSG{
+						NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
+							List: []*infrastructurev1beta2.NSG{
 								{
 									ID:           common.String("update-id"),
 									Name:         "update-nsg-error",
@@ -615,8 +615,8 @@ func TestClusterScope_ReconcileNSG(t *testing.T) {
 								},
 							},
 						},
-						NetworkSecurityGroups: infrastructurev1beta2.NetworkSecurityGroups{
-							NSGList: []*infrastructurev1beta2.NSG{
+						NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
+							List: []*infrastructurev1beta2.NSG{
 								{
 									Name: "service-lb",
 									Role: "service-lb",
@@ -676,8 +676,8 @@ func TestClusterScope_ReconcileNSG(t *testing.T) {
 								},
 							},
 						},
-						NetworkSecurityGroups: infrastructurev1beta2.NetworkSecurityGroups{
-							NSGList: []*infrastructurev1beta2.NSG{
+						NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
+							List: []*infrastructurev1beta2.NSG{
 								{
 									ID:          common.String("loadbalancer-nsg-id"),
 									Name:        "service-lb",

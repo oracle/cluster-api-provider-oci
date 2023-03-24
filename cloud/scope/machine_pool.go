@@ -226,7 +226,7 @@ func (m *MachinePoolScope) GetBootstrapData() (string, error) {
 
 // GetWorkerMachineNSG returns the worker role core.NetworkSecurityGroup id for the cluster
 func (m *MachinePoolScope) GetWorkerMachineNSG() *string {
-	for _, nsg := range m.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups.NSGList {
+	for _, nsg := range m.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
 		if nsg.Role == infrastructurev1beta2.WorkerRole {
 			return nsg.ID
 		}
@@ -272,7 +272,7 @@ func (m *MachinePoolScope) buildInstanceConfigurationShapeConfig() (core.Instanc
 func (s *MachinePoolScope) BuildInstancePoolPlacement() ([]core.CreateInstancePoolPlacementConfigurationDetails, error) {
 	var placements []core.CreateInstancePoolPlacementConfigurationDetails
 
-	ads := s.OCICluster.Status.AvailabilityDomains
+	ads := s.OCICluster.Spec.AvailabilityDomains
 
 	specPlacementDetails := s.OCIMachinePool.Spec.PlacementDetails
 
@@ -841,7 +841,7 @@ func (m *MachinePoolScope) getWorkerMachineNSGs() []string {
 	if instanceVnicConfiguration != nil && len(instanceVnicConfiguration.NsgNames) > 0 {
 		nsgs := make([]string, 0)
 		for _, nsgName := range instanceVnicConfiguration.NsgNames {
-			for _, nsg := range m.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups.NSGList {
+			for _, nsg := range m.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
 				if nsg.Name == nsgName {
 					nsgs = append(nsgs, *nsg.ID)
 				}
@@ -850,7 +850,7 @@ func (m *MachinePoolScope) getWorkerMachineNSGs() []string {
 		return nsgs
 	} else {
 		nsgs := make([]string, 0)
-		for _, nsg := range m.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups.NSGList {
+		for _, nsg := range m.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
 			if nsg.Role == infrastructurev1beta2.WorkerRole {
 				nsgs = append(nsgs, *nsg.ID)
 			}

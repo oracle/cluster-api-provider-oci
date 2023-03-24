@@ -29,6 +29,10 @@ import (
 )
 
 func (s *ClusterScope) ReconcileRouteTable(ctx context.Context) error {
+	if s.OCIClusterAccessor.GetNetworkSpec().Vcn.RouteTable.Skip {
+		s.Logger.Info("Skipping Route table reconciliation as per spec")
+		return nil
+	}
 	desiredRouteTables := s.GetDesiredRouteTables()
 	for _, rt := range desiredRouteTables {
 		routeTable, err := s.getRouteTable(ctx, rt)
@@ -178,6 +182,10 @@ func (s *ClusterScope) setRTStatus(id *string, routeTableType string) {
 }
 
 func (s *ClusterScope) DeleteRouteTables(ctx context.Context) error {
+	if s.OCIClusterAccessor.GetNetworkSpec().Vcn.RouteTable.Skip {
+		s.Logger.Info("Skipping Route table reconciliation as per spec")
+		return nil
+	}
 	desiredRouteTables := s.GetDesiredRouteTables()
 	for _, routeTable := range desiredRouteTables {
 		rt, err := s.getRouteTable(ctx, routeTable)

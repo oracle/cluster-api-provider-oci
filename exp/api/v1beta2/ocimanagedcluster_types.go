@@ -66,17 +66,17 @@ type OCIManagedClusterSpec struct {
 	// ControlPlaneEndpoint represents the endpoint used to communicate with the control plane. This will not be set by the user, this will be updated by the Cluster Reconciler after OKe cluster has been created and the cluster has an endpoint address
 	// +optional
 	ControlPlaneEndpoint clusterv1.APIEndpoint `json:"controlPlaneEndpoint"`
+
+	// AvailabilityDomains encapsulates the clusters Availability Domain (AD) information in a map
+	// where the map key is the AD name and the struct is details about the AD.
+	// +optional
+	AvailabilityDomains map[string]infrastructurev1beta2.OCIAvailabilityDomain `json:"availabilityDomains,omitempty"`
 }
 
 // OCIManagedClusterStatus defines the observed state of OCICluster
 type OCIManagedClusterStatus struct {
 	// +optional
 	FailureDomains clusterv1.FailureDomains `json:"failureDomains,omitempty"`
-
-	// AvailabilityDomains encapsulates the clusters Availability Domain (AD) information in a map
-	// where the map key is the AD name and the struct is details about the AD.
-	// +optional
-	AvailabilityDomains map[string]infrastructurev1beta2.OCIAvailabilityDomain `json:"availabilityDomains,omitempty"`
 
 	// +optional
 	Ready bool `json:"ready"`

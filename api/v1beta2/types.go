@@ -34,18 +34,11 @@ var OCIManagedClusterSubnetRoles = []Role{PodRole, ControlPlaneEndpointRole, Wor
 
 // NetworkDetails defines the configuration options for the network
 type NetworkDetails struct {
-	// SubnetId defines the ID of the subnet to use.
-	// Deprecated, use SubnetName parameter
-	SubnetId *string `json:"subnetId,omitempty"`
-
 	// AssignPublicIp defines whether the instance should have a public IP address
 	AssignPublicIp bool `json:"assignPublicIp,omitempty"`
 
 	// SubnetName defines the subnet name to use for the VNIC
 	SubnetName string `json:"subnetName,omitempty"`
-
-	// Deprecated, use 	NsgNames parameter to define the NSGs
-	NSGId *string `json:"nsgId,omitempty"`
 
 	// SkipSourceDestCheck defines whether the source/destination check is disabled on the VNIC.
 	SkipSourceDestCheck *bool `json:"skipSourceDestCheck,omitempty"`
@@ -738,19 +731,11 @@ type IngressSecurityRule struct {
 
 // IngressSecurityRuleForNSG is IngressSecurityRule for NSG
 type IngressSecurityRuleForNSG struct {
-	//IngressSecurityRule ID for NSG.
-	// +optional
-	// Deprecated: this field is not populated and used during reconciliation
-	ID                  *string `json:"id,omitempty"`
 	IngressSecurityRule `json:"ingressRule,omitempty"`
 }
 
 // EgressSecurityRuleForNSG is EgressSecurityRule for NSG.
 type EgressSecurityRuleForNSG struct {
-	// EgressSecurityRule ID for NSG.
-	// +optional
-	// Deprecated: this field is not populated and used during reconciliation
-	ID                 *string `json:"id,omitempty"`
 	EgressSecurityRule `json:"egressRule,omitempty"`
 }
 
@@ -914,7 +899,7 @@ type VCN struct {
 
 	// Configuration for NSG management.
 	// +optional
-	NetworkSecurityGroups NetworkSecurityGroups `json:"NetworkSecurityGroups,omitempty"`
+	NetworkSecurityGroup NetworkSecurityGroup `json:"NetworkSecurityGroup,omitempty"`
 }
 
 // LoadBalancer Configuration
@@ -1029,7 +1014,7 @@ type InternetGateway struct {
 
 	// ID of Internet Gateway.
 	// +optional
-	Id *string `json:"internetGatewayId,omitempty"`
+	Id *string `json:"id,omitempty"`
 }
 
 // NATGateway is used to specify the options for creating NAT gateway.
@@ -1040,7 +1025,7 @@ type NATGateway struct {
 
 	// ID of Nat Gateway.
 	// +optional
-	Id *string `json:"natGatewayId,omitempty"`
+	Id *string `json:"id,omitempty"`
 }
 
 // ServiceGateway is used to specify the options for creating Service gateway.
@@ -1051,7 +1036,7 @@ type ServiceGateway struct {
 
 	// ID of Service Gateway.
 	// +optional
-	Id *string `json:"serviceGatewayId,omitempty"`
+	Id *string `json:"id,omitempty"`
 }
 
 // RouteTable is used to specify the options for creating Route table.
@@ -1069,15 +1054,15 @@ type RouteTable struct {
 	PublicRouteTableId *string `json:"publicRouteTableId,omitempty"`
 }
 
-// NetworkSecurityGroups is used to specify the options for managing network security groups.
-type NetworkSecurityGroups struct {
+// NetworkSecurityGroup is used to specify the options for managing network security groups.
+type NetworkSecurityGroup struct {
 	// Skip specifies whether to skip creating network security groups.
 	// +optional
 	Skip bool `json:"skip,omitempty"`
 
-	// NetworkSecurityGroups is the configuration for the Network Security Groups required in the VCN.
+	// NetworkSecurityGroup is the configuration for the Network Security Groups required in the VCN.
 	// +optional
 	// +listType=map
 	// +listMapKey=name
-	NSGList []*NSG `json:"list,omitempty"`
+	List []*NSG `json:"list,omitempty"`
 }

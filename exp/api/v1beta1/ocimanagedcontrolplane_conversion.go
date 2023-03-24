@@ -29,6 +29,11 @@ func (src *OCIManagedControlPlane) ConvertTo(dstRaw conversion.Hub) error {
 	if err := Convert_v1beta1_OCIManagedControlPlane_To_v1beta2_OCIManagedControlPlane(src, dst, nil); err != nil {
 		return err
 	}
+
+	restored := &v1beta2.OCIManagedControlPlane{}
+	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+		return err
+	}
 	return nil
 }
 

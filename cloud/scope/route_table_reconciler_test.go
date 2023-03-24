@@ -18,6 +18,7 @@ package scope
 
 import (
 	"context"
+	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -376,6 +377,38 @@ func TestClusterScope_ReconcileRouteTable(t *testing.T) {
 			wantErr:       true,
 			expectedError: "failed create route table: some error",
 		},
+		{
+			name: "route table creation skip",
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				CompartmentId: "foo",
+				DefinedTags:   definedTags,
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
+						ID: common.String("vcn1"),
+						NATGateway: infrastructurev1beta2.NATGateway{
+							Id: common.String("ngw"),
+						},
+						ServiceGateway: infrastructurev1beta2.ServiceGateway{
+							Id: common.String("sgw"),
+						},
+						RouteTable: infrastructurev1beta2.RouteTable{
+							Skip: true,
+						},
+						Subnets: []*infrastructurev1beta2.Subnet{
+							{
+								Type: infrastructurev1beta1.Private,
+								Role: infrastructurev1beta1.ControlPlaneEndpointRole,
+							},
+							{
+								Type: infrastructurev1beta1.Private,
+								Role: infrastructurev1beta1.ServiceLoadBalancerRole,
+							},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
 	}
 	l := log.FromContext(context.Background())
 	for _, tt := range tests {
@@ -481,8 +514,8 @@ func TestClusterScope_DeleteRouteTables(t *testing.T) {
 				NetworkSpec: infrastructurev1beta2.NetworkSpec{
 					Vcn: infrastructurev1beta2.VCN{
 						RouteTable: infrastructurev1beta2.RouteTable{
-							PrivateRouteTableId: common.String("private"),
-							PublicRouteTableId:  common.String("public"),
+							PrivateRouteTableId: common.String("private_id"),
+							PublicRouteTableId:  common.String("public_id"),
 						},
 					},
 				},

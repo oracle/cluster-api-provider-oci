@@ -312,8 +312,8 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 				Spec: OCIClusterSpec{
 					NetworkSpec: NetworkSpec{
 						Vcn: VCN{
-							NetworkSecurityGroups: NetworkSecurityGroups{
-								NSGList: []*NSG{{
+							NetworkSecurityGroup: NetworkSecurityGroup{
+								List: []*NSG{{
 									EgressRules: []EgressSecurityRuleForNSG{{
 										EgressSecurityRule: EgressSecurityRule{
 											Destination:     common.String("bad/15"),
@@ -338,8 +338,8 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 				Spec: OCIClusterSpec{
 					NetworkSpec: NetworkSpec{
 						Vcn: VCN{
-							NetworkSecurityGroups: NetworkSecurityGroups{
-								NSGList: []*NSG{{
+							NetworkSecurityGroup: NetworkSecurityGroup{
+								List: []*NSG{{
 									IngressRules: []IngressSecurityRuleForNSG{{
 										IngressSecurityRule: IngressSecurityRule{
 											Source:     common.String("bad/15"),
@@ -364,8 +364,8 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 				Spec: OCIClusterSpec{
 					NetworkSpec: NetworkSpec{
 						Vcn: VCN{
-							NetworkSecurityGroups: NetworkSecurityGroups{
-								NSGList: []*NSG{{
+							NetworkSecurityGroup: NetworkSecurityGroup{
+								List: []*NSG{{
 									Role: "bad-role",
 								}},
 							},
@@ -383,7 +383,7 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 				Spec: OCIClusterSpec{
 					NetworkSpec: NetworkSpec{
 						Vcn: VCN{
-							NetworkSecurityGroups: NetworkSecurityGroups{NSGList: []*NSG{{
+							NetworkSecurityGroup: NetworkSecurityGroup{List: []*NSG{{
 								Role: PodRole,
 							}}},
 						},
@@ -612,7 +612,26 @@ func TestOCICluster_CreateDefault(t *testing.T) {
 				},
 			},
 			expect: func(g *gomega.WithT, c *OCICluster) {
-				g.Expect(c.Spec.NetworkSpec.Vcn.NetworkSecurityGroups).To(Equal(c.NSGSpec()))
+				g.Expect(c.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List).To(Equal(c.NSGSpec()))
+			},
+		},
+		{
+			name: "should set default nsg",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{},
+				Spec: OCIClusterSpec{
+					CompartmentId: "ocid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							NetworkSecurityGroup: NetworkSecurityGroup{
+								Skip: true,
+							},
+						},
+					},
+				},
+			},
+			expect: func(g *gomega.WithT, c *OCICluster) {
+				g.Expect(len(c.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List)).To(Equal(0))
 			},
 		},
 		{
@@ -673,8 +692,8 @@ func TestOCICluster_CreateDefault(t *testing.T) {
 					CompartmentId: "ocid",
 					NetworkSpec: NetworkSpec{
 						Vcn: VCN{
-							NetworkSecurityGroups: NetworkSecurityGroups{
-								NSGList: []*NSG{
+							NetworkSecurityGroup: NetworkSecurityGroup{
+								List: []*NSG{
 									{
 										Role: ServiceLoadBalancerRole,
 										Name: ServiceLBDefaultName,
@@ -712,7 +731,7 @@ func TestOCICluster_CreateDefault(t *testing.T) {
 						EgressRules:  c.GetNodeDefaultEgressRules(),
 					},
 				}
-				g.Expect(c.Spec.NetworkSpec.Vcn.NetworkSecurityGroups).To(Equal(nsgs))
+				g.Expect(c.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List).To(Equal(nsgs))
 			},
 		},
 	}

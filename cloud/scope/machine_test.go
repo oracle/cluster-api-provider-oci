@@ -534,7 +534,7 @@ func TestInstanceReconciliation(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				setupAllParams(ms)
-				ms.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups.NSGList = append(ms.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups.NSGList, &infrastructurev1beta2.NSG{
+				ms.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List = append(ms.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List, &infrastructurev1beta2.NSG{
 					Role: infrastructurev1beta2.WorkerRole,
 					ID:   common.String("test-nsg-1"),
 					Name: "test-nsg",
@@ -591,7 +591,7 @@ func TestInstanceReconciliation(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				setupAllParams(ms)
-				ms.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups.NSGList = append(ms.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups.NSGList, &infrastructurev1beta2.NSG{
+				ms.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List = append(ms.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List, &infrastructurev1beta2.NSG{
 					Role: infrastructurev1beta2.WorkerRole,
 					ID:   common.String("test-nsg-1"),
 					Name: "test-nsg",
@@ -600,7 +600,7 @@ func TestInstanceReconciliation(t *testing.T) {
 					ID:   common.String("test-nsg-2"),
 					Name: "test-nsg-name-2",
 				})
-				ms.OCIMachine.Spec.NSGName = "test-nsg-name-2"
+				ms.OCIMachine.Spec.NetworkDetails.NsgNames = []string{"test-nsg-name-2"}
 				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
 					DisplayName:   common.String("name"),
 					CompartmentId: common.String("test"),

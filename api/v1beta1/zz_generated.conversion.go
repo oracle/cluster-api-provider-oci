@@ -110,11 +110,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*EgressSecurityRuleForNSG)(nil), (*v1beta2.EgressSecurityRuleForNSG)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_EgressSecurityRuleForNSG_To_v1beta2_EgressSecurityRuleForNSG(a.(*EgressSecurityRuleForNSG), b.(*v1beta2.EgressSecurityRuleForNSG), scope)
-	}); err != nil {
-		return err
-	}
 	if err := s.AddGeneratedConversionFunc((*v1beta2.EgressSecurityRuleForNSG)(nil), (*EgressSecurityRuleForNSG)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta2_EgressSecurityRuleForNSG_To_v1beta1_EgressSecurityRuleForNSG(a.(*v1beta2.EgressSecurityRuleForNSG), b.(*EgressSecurityRuleForNSG), scope)
 	}); err != nil {
@@ -137,11 +132,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*v1beta2.IngressSecurityRule)(nil), (*IngressSecurityRule)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta2_IngressSecurityRule_To_v1beta1_IngressSecurityRule(a.(*v1beta2.IngressSecurityRule), b.(*IngressSecurityRule), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*IngressSecurityRuleForNSG)(nil), (*v1beta2.IngressSecurityRuleForNSG)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_IngressSecurityRuleForNSG_To_v1beta2_IngressSecurityRuleForNSG(a.(*IngressSecurityRuleForNSG), b.(*v1beta2.IngressSecurityRuleForNSG), scope)
 	}); err != nil {
 		return err
 	}
@@ -260,11 +250,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NetworkDetails)(nil), (*v1beta2.NetworkDetails)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_NetworkDetails_To_v1beta2_NetworkDetails(a.(*NetworkDetails), b.(*v1beta2.NetworkDetails), scope)
-	}); err != nil {
-		return err
-	}
 	if err := s.AddGeneratedConversionFunc((*v1beta2.NetworkDetails)(nil), (*NetworkDetails)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta2_NetworkDetails_To_v1beta1_NetworkDetails(a.(*v1beta2.NetworkDetails), b.(*NetworkDetails), scope)
 	}); err != nil {
@@ -355,16 +340,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1beta2.OCIClusterSpec)(nil), (*OCIClusterSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta2_OCIClusterSpec_To_v1beta1_OCIClusterSpec(a.(*v1beta2.OCIClusterSpec), b.(*OCIClusterSpec), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*OCIClusterStatus)(nil), (*v1beta2.OCIClusterStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_OCIClusterStatus_To_v1beta2_OCIClusterStatus(a.(*OCIClusterStatus), b.(*v1beta2.OCIClusterStatus), scope)
-	}); err != nil {
-		return err
-	}
 	if err := s.AddGeneratedConversionFunc((*v1beta2.OCIClusterStatus)(nil), (*OCIClusterStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta2_OCIClusterStatus_To_v1beta1_OCIClusterStatus(a.(*v1beta2.OCIClusterStatus), b.(*OCIClusterStatus), scope)
 	}); err != nil {
@@ -427,11 +402,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*v1beta2.OCIMachineList)(nil), (*OCIMachineList)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta2_OCIMachineList_To_v1beta1_OCIMachineList(a.(*v1beta2.OCIMachineList), b.(*OCIMachineList), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*OCIMachineSpec)(nil), (*v1beta2.OCIMachineSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_OCIMachineSpec_To_v1beta2_OCIMachineSpec(a.(*OCIMachineSpec), b.(*v1beta2.OCIMachineSpec), scope)
 	}); err != nil {
 		return err
 	}
@@ -620,8 +590,38 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddConversionFunc((*EgressSecurityRuleForNSG)(nil), (*v1beta2.EgressSecurityRuleForNSG)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_EgressSecurityRuleForNSG_To_v1beta2_EgressSecurityRuleForNSG(a.(*EgressSecurityRuleForNSG), b.(*v1beta2.EgressSecurityRuleForNSG), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*IngressSecurityRuleForNSG)(nil), (*v1beta2.IngressSecurityRuleForNSG)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_IngressSecurityRuleForNSG_To_v1beta2_IngressSecurityRuleForNSG(a.(*IngressSecurityRuleForNSG), b.(*v1beta2.IngressSecurityRuleForNSG), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*NetworkDetails)(nil), (*v1beta2.NetworkDetails)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_NetworkDetails_To_v1beta2_NetworkDetails(a.(*NetworkDetails), b.(*v1beta2.NetworkDetails), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*OCIClusterStatus)(nil), (*v1beta2.OCIClusterStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_OCIClusterStatus_To_v1beta2_OCIClusterStatus(a.(*OCIClusterStatus), b.(*v1beta2.OCIClusterStatus), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*OCIMachineSpec)(nil), (*v1beta2.OCIMachineSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_OCIMachineSpec_To_v1beta2_OCIMachineSpec(a.(*OCIMachineSpec), b.(*v1beta2.OCIMachineSpec), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddConversionFunc((*VCN)(nil), (*v1beta2.VCN)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta1_VCN_To_v1beta2_VCN(a.(*VCN), b.(*v1beta2.VCN), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*v1beta2.OCIClusterSpec)(nil), (*OCIClusterSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta2_OCIClusterSpec_To_v1beta1_OCIClusterSpec(a.(*v1beta2.OCIClusterSpec), b.(*OCIClusterSpec), scope)
 	}); err != nil {
 		return err
 	}
@@ -854,20 +854,14 @@ func Convert_v1beta2_EgressSecurityRule_To_v1beta1_EgressSecurityRule(in *v1beta
 }
 
 func autoConvert_v1beta1_EgressSecurityRuleForNSG_To_v1beta2_EgressSecurityRuleForNSG(in *EgressSecurityRuleForNSG, out *v1beta2.EgressSecurityRuleForNSG, s conversion.Scope) error {
-	out.ID = (*string)(unsafe.Pointer(in.ID))
+	// WARNING: in.ID requires manual conversion: does not exist in peer-type
 	if err := Convert_v1beta1_EgressSecurityRule_To_v1beta2_EgressSecurityRule(&in.EgressSecurityRule, &out.EgressSecurityRule, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1beta1_EgressSecurityRuleForNSG_To_v1beta2_EgressSecurityRuleForNSG is an autogenerated conversion function.
-func Convert_v1beta1_EgressSecurityRuleForNSG_To_v1beta2_EgressSecurityRuleForNSG(in *EgressSecurityRuleForNSG, out *v1beta2.EgressSecurityRuleForNSG, s conversion.Scope) error {
-	return autoConvert_v1beta1_EgressSecurityRuleForNSG_To_v1beta2_EgressSecurityRuleForNSG(in, out, s)
-}
-
 func autoConvert_v1beta2_EgressSecurityRuleForNSG_To_v1beta1_EgressSecurityRuleForNSG(in *v1beta2.EgressSecurityRuleForNSG, out *EgressSecurityRuleForNSG, s conversion.Scope) error {
-	out.ID = (*string)(unsafe.Pointer(in.ID))
 	if err := Convert_v1beta2_EgressSecurityRule_To_v1beta1_EgressSecurityRule(&in.EgressSecurityRule, &out.EgressSecurityRule, s); err != nil {
 		return err
 	}
@@ -936,20 +930,14 @@ func Convert_v1beta2_IngressSecurityRule_To_v1beta1_IngressSecurityRule(in *v1be
 }
 
 func autoConvert_v1beta1_IngressSecurityRuleForNSG_To_v1beta2_IngressSecurityRuleForNSG(in *IngressSecurityRuleForNSG, out *v1beta2.IngressSecurityRuleForNSG, s conversion.Scope) error {
-	out.ID = (*string)(unsafe.Pointer(in.ID))
+	// WARNING: in.ID requires manual conversion: does not exist in peer-type
 	if err := Convert_v1beta1_IngressSecurityRule_To_v1beta2_IngressSecurityRule(&in.IngressSecurityRule, &out.IngressSecurityRule, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1beta1_IngressSecurityRuleForNSG_To_v1beta2_IngressSecurityRuleForNSG is an autogenerated conversion function.
-func Convert_v1beta1_IngressSecurityRuleForNSG_To_v1beta2_IngressSecurityRuleForNSG(in *IngressSecurityRuleForNSG, out *v1beta2.IngressSecurityRuleForNSG, s conversion.Scope) error {
-	return autoConvert_v1beta1_IngressSecurityRuleForNSG_To_v1beta2_IngressSecurityRuleForNSG(in, out, s)
-}
-
 func autoConvert_v1beta2_IngressSecurityRuleForNSG_To_v1beta1_IngressSecurityRuleForNSG(in *v1beta2.IngressSecurityRuleForNSG, out *IngressSecurityRuleForNSG, s conversion.Scope) error {
-	out.ID = (*string)(unsafe.Pointer(in.ID))
 	if err := Convert_v1beta2_IngressSecurityRule_To_v1beta1_IngressSecurityRule(&in.IngressSecurityRule, &out.IngressSecurityRule, s); err != nil {
 		return err
 	}
@@ -1213,8 +1201,28 @@ func autoConvert_v1beta1_NSG_To_v1beta2_NSG(in *NSG, out *v1beta2.NSG, s convers
 	out.ID = (*string)(unsafe.Pointer(in.ID))
 	out.Name = in.Name
 	out.Role = v1beta2.Role(in.Role)
-	out.EgressRules = *(*[]v1beta2.EgressSecurityRuleForNSG)(unsafe.Pointer(&in.EgressRules))
-	out.IngressRules = *(*[]v1beta2.IngressSecurityRuleForNSG)(unsafe.Pointer(&in.IngressRules))
+	if in.EgressRules != nil {
+		in, out := &in.EgressRules, &out.EgressRules
+		*out = make([]v1beta2.EgressSecurityRuleForNSG, len(*in))
+		for i := range *in {
+			if err := Convert_v1beta1_EgressSecurityRuleForNSG_To_v1beta2_EgressSecurityRuleForNSG(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.EgressRules = nil
+	}
+	if in.IngressRules != nil {
+		in, out := &in.IngressRules, &out.IngressRules
+		*out = make([]v1beta2.IngressSecurityRuleForNSG, len(*in))
+		for i := range *in {
+			if err := Convert_v1beta1_IngressSecurityRuleForNSG_To_v1beta2_IngressSecurityRuleForNSG(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.IngressRules = nil
+	}
 	return nil
 }
 
@@ -1227,8 +1235,28 @@ func autoConvert_v1beta2_NSG_To_v1beta1_NSG(in *v1beta2.NSG, out *NSG, s convers
 	out.ID = (*string)(unsafe.Pointer(in.ID))
 	out.Name = in.Name
 	out.Role = Role(in.Role)
-	out.EgressRules = *(*[]EgressSecurityRuleForNSG)(unsafe.Pointer(&in.EgressRules))
-	out.IngressRules = *(*[]IngressSecurityRuleForNSG)(unsafe.Pointer(&in.IngressRules))
+	if in.EgressRules != nil {
+		in, out := &in.EgressRules, &out.EgressRules
+		*out = make([]EgressSecurityRuleForNSG, len(*in))
+		for i := range *in {
+			if err := Convert_v1beta2_EgressSecurityRuleForNSG_To_v1beta1_EgressSecurityRuleForNSG(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.EgressRules = nil
+	}
+	if in.IngressRules != nil {
+		in, out := &in.IngressRules, &out.IngressRules
+		*out = make([]IngressSecurityRuleForNSG, len(*in))
+		for i := range *in {
+			if err := Convert_v1beta2_IngressSecurityRuleForNSG_To_v1beta1_IngressSecurityRuleForNSG(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.IngressRules = nil
+	}
 	return nil
 }
 
@@ -1238,10 +1266,10 @@ func Convert_v1beta2_NSG_To_v1beta1_NSG(in *v1beta2.NSG, out *NSG, s conversion.
 }
 
 func autoConvert_v1beta1_NetworkDetails_To_v1beta2_NetworkDetails(in *NetworkDetails, out *v1beta2.NetworkDetails, s conversion.Scope) error {
-	out.SubnetId = (*string)(unsafe.Pointer(in.SubnetId))
+	// WARNING: in.SubnetId requires manual conversion: does not exist in peer-type
 	out.AssignPublicIp = in.AssignPublicIp
 	out.SubnetName = in.SubnetName
-	out.NSGId = (*string)(unsafe.Pointer(in.NSGId))
+	// WARNING: in.NSGId requires manual conversion: does not exist in peer-type
 	out.SkipSourceDestCheck = (*bool)(unsafe.Pointer(in.SkipSourceDestCheck))
 	out.NsgNames = *(*[]string)(unsafe.Pointer(&in.NsgNames))
 	out.HostnameLabel = (*string)(unsafe.Pointer(in.HostnameLabel))
@@ -1250,16 +1278,9 @@ func autoConvert_v1beta1_NetworkDetails_To_v1beta2_NetworkDetails(in *NetworkDet
 	return nil
 }
 
-// Convert_v1beta1_NetworkDetails_To_v1beta2_NetworkDetails is an autogenerated conversion function.
-func Convert_v1beta1_NetworkDetails_To_v1beta2_NetworkDetails(in *NetworkDetails, out *v1beta2.NetworkDetails, s conversion.Scope) error {
-	return autoConvert_v1beta1_NetworkDetails_To_v1beta2_NetworkDetails(in, out, s)
-}
-
 func autoConvert_v1beta2_NetworkDetails_To_v1beta1_NetworkDetails(in *v1beta2.NetworkDetails, out *NetworkDetails, s conversion.Scope) error {
-	out.SubnetId = (*string)(unsafe.Pointer(in.SubnetId))
 	out.AssignPublicIp = in.AssignPublicIp
 	out.SubnetName = in.SubnetName
-	out.NSGId = (*string)(unsafe.Pointer(in.NSGId))
 	out.SkipSourceDestCheck = (*bool)(unsafe.Pointer(in.SkipSourceDestCheck))
 	out.NsgNames = *(*[]string)(unsafe.Pointer(&in.NsgNames))
 	out.HostnameLabel = (*string)(unsafe.Pointer(in.HostnameLabel))
@@ -1531,30 +1552,20 @@ func autoConvert_v1beta2_OCIClusterSpec_To_v1beta1_OCIClusterSpec(in *v1beta2.OC
 	out.CompartmentId = in.CompartmentId
 	out.Region = in.Region
 	out.ControlPlaneEndpoint = in.ControlPlaneEndpoint
+	// WARNING: in.AvailabilityDomains requires manual conversion: does not exist in peer-type
 	return nil
-}
-
-// Convert_v1beta2_OCIClusterSpec_To_v1beta1_OCIClusterSpec is an autogenerated conversion function.
-func Convert_v1beta2_OCIClusterSpec_To_v1beta1_OCIClusterSpec(in *v1beta2.OCIClusterSpec, out *OCIClusterSpec, s conversion.Scope) error {
-	return autoConvert_v1beta2_OCIClusterSpec_To_v1beta1_OCIClusterSpec(in, out, s)
 }
 
 func autoConvert_v1beta1_OCIClusterStatus_To_v1beta2_OCIClusterStatus(in *OCIClusterStatus, out *v1beta2.OCIClusterStatus, s conversion.Scope) error {
 	out.FailureDomains = *(*apiv1beta1.FailureDomains)(unsafe.Pointer(&in.FailureDomains))
-	out.AvailabilityDomains = *(*map[string]v1beta2.OCIAvailabilityDomain)(unsafe.Pointer(&in.AvailabilityDomains))
+	// WARNING: in.AvailabilityDomains requires manual conversion: does not exist in peer-type
 	out.Ready = in.Ready
 	out.Conditions = *(*apiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
 	return nil
 }
 
-// Convert_v1beta1_OCIClusterStatus_To_v1beta2_OCIClusterStatus is an autogenerated conversion function.
-func Convert_v1beta1_OCIClusterStatus_To_v1beta2_OCIClusterStatus(in *OCIClusterStatus, out *v1beta2.OCIClusterStatus, s conversion.Scope) error {
-	return autoConvert_v1beta1_OCIClusterStatus_To_v1beta2_OCIClusterStatus(in, out, s)
-}
-
 func autoConvert_v1beta2_OCIClusterStatus_To_v1beta1_OCIClusterStatus(in *v1beta2.OCIClusterStatus, out *OCIClusterStatus, s conversion.Scope) error {
 	out.FailureDomains = *(*apiv1beta1.FailureDomains)(unsafe.Pointer(&in.FailureDomains))
-	out.AvailabilityDomains = *(*map[string]OCIAvailabilityDomain)(unsafe.Pointer(&in.AvailabilityDomains))
 	out.Ready = in.Ready
 	out.Conditions = *(*apiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
 	return nil
@@ -1715,7 +1726,17 @@ func Convert_v1beta2_OCIMachine_To_v1beta1_OCIMachine(in *v1beta2.OCIMachine, ou
 
 func autoConvert_v1beta1_OCIMachineList_To_v1beta2_OCIMachineList(in *OCIMachineList, out *v1beta2.OCIMachineList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]v1beta2.OCIMachine)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]v1beta2.OCIMachine, len(*in))
+		for i := range *in {
+			if err := Convert_v1beta1_OCIMachine_To_v1beta2_OCIMachine(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -1726,7 +1747,17 @@ func Convert_v1beta1_OCIMachineList_To_v1beta2_OCIMachineList(in *OCIMachineList
 
 func autoConvert_v1beta2_OCIMachineList_To_v1beta1_OCIMachineList(in *v1beta2.OCIMachineList, out *OCIMachineList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]OCIMachine)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]OCIMachine, len(*in))
+		for i := range *in {
+			if err := Convert_v1beta2_OCIMachine_To_v1beta1_OCIMachine(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -1764,13 +1795,8 @@ func autoConvert_v1beta1_OCIMachineSpec_To_v1beta2_OCIMachineSpec(in *OCIMachine
 	out.FreeformTags = *(*map[string]string)(unsafe.Pointer(&in.FreeformTags))
 	out.DefinedTags = *(*map[string]map[string]string)(unsafe.Pointer(&in.DefinedTags))
 	out.SubnetName = in.SubnetName
-	out.NSGName = in.NSGName
+	// WARNING: in.NSGName requires manual conversion: does not exist in peer-type
 	return nil
-}
-
-// Convert_v1beta1_OCIMachineSpec_To_v1beta2_OCIMachineSpec is an autogenerated conversion function.
-func Convert_v1beta1_OCIMachineSpec_To_v1beta2_OCIMachineSpec(in *OCIMachineSpec, out *v1beta2.OCIMachineSpec, s conversion.Scope) error {
-	return autoConvert_v1beta1_OCIMachineSpec_To_v1beta2_OCIMachineSpec(in, out, s)
 }
 
 func autoConvert_v1beta2_OCIMachineSpec_To_v1beta1_OCIMachineSpec(in *v1beta2.OCIMachineSpec, out *OCIMachineSpec, s conversion.Scope) error {
@@ -1802,7 +1828,6 @@ func autoConvert_v1beta2_OCIMachineSpec_To_v1beta1_OCIMachineSpec(in *v1beta2.OC
 	out.FreeformTags = *(*map[string]string)(unsafe.Pointer(&in.FreeformTags))
 	out.DefinedTags = *(*map[string]map[string]string)(unsafe.Pointer(&in.DefinedTags))
 	out.SubnetName = in.SubnetName
-	out.NSGName = in.NSGName
 	return nil
 }
 
@@ -1873,7 +1898,17 @@ func Convert_v1beta2_OCIMachineTemplate_To_v1beta1_OCIMachineTemplate(in *v1beta
 
 func autoConvert_v1beta1_OCIMachineTemplateList_To_v1beta2_OCIMachineTemplateList(in *OCIMachineTemplateList, out *v1beta2.OCIMachineTemplateList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]v1beta2.OCIMachineTemplate)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]v1beta2.OCIMachineTemplate, len(*in))
+		for i := range *in {
+			if err := Convert_v1beta1_OCIMachineTemplate_To_v1beta2_OCIMachineTemplate(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -1884,7 +1919,17 @@ func Convert_v1beta1_OCIMachineTemplateList_To_v1beta2_OCIMachineTemplateList(in
 
 func autoConvert_v1beta2_OCIMachineTemplateList_To_v1beta1_OCIMachineTemplateList(in *v1beta2.OCIMachineTemplateList, out *OCIMachineTemplateList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]OCIMachineTemplate)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]OCIMachineTemplate, len(*in))
+		for i := range *in {
+			if err := Convert_v1beta2_OCIMachineTemplate_To_v1beta1_OCIMachineTemplate(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -2249,7 +2294,7 @@ func autoConvert_v1beta1_VCN_To_v1beta2_VCN(in *VCN, out *v1beta2.VCN, s convers
 	// WARNING: in.PrivateRouteTableId requires manual conversion: does not exist in peer-type
 	// WARNING: in.PublicRouteTableId requires manual conversion: does not exist in peer-type
 	out.Subnets = *(*[]*v1beta2.Subnet)(unsafe.Pointer(&in.Subnets))
-	// WARNING: in.NetworkSecurityGroups requires manual conversion: inconvertible types ([]*github.com/oracle/cluster-api-provider-oci/api/v1beta1.NSG vs github.com/oracle/cluster-api-provider-oci/api/v1beta2.NetworkSecurityGroups)
+	// WARNING: in.NetworkSecurityGroups requires manual conversion: does not exist in peer-type
 	return nil
 }
 
@@ -2262,7 +2307,7 @@ func autoConvert_v1beta2_VCN_To_v1beta1_VCN(in *v1beta2.VCN, out *VCN, s convers
 	// WARNING: in.NATGateway requires manual conversion: does not exist in peer-type
 	// WARNING: in.ServiceGateway requires manual conversion: does not exist in peer-type
 	// WARNING: in.RouteTable requires manual conversion: does not exist in peer-type
-	// WARNING: in.NetworkSecurityGroups requires manual conversion: inconvertible types (github.com/oracle/cluster-api-provider-oci/api/v1beta2.NetworkSecurityGroups vs []*github.com/oracle/cluster-api-provider-oci/api/v1beta1.NSG)
+	// WARNING: in.NetworkSecurityGroup requires manual conversion: does not exist in peer-type
 	return nil
 }
 

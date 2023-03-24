@@ -27,6 +27,10 @@ import (
 
 // ReconcileInternetGateway tries to move the Internet Gateway to the desired OCICluster Spec
 func (s *ClusterScope) ReconcileInternetGateway(ctx context.Context) error {
+	if s.OCIClusterAccessor.GetNetworkSpec().Vcn.InternetGateway.Skip {
+		s.Logger.Info("Skipping Internet Gateway reconciliation as per spec")
+		return nil
+	}
 	if s.IsAllSubnetsPrivate() {
 		s.Logger.Info("All subnets are private, we don't need internet gateway")
 		return nil
@@ -110,6 +114,10 @@ func (s *ClusterScope) CreateInternetGateway(ctx context.Context) (*string, erro
 
 // DeleteInternetGateway retrieves and attempts to delete the Internet Gateway if found.
 func (s *ClusterScope) DeleteInternetGateway(ctx context.Context) error {
+	if s.OCIClusterAccessor.GetNetworkSpec().Vcn.RouteTable.Skip {
+		s.Logger.Info("Skipping Internet Gateway reconciliation as per spec")
+		return nil
+	}
 	igw, err := s.GetInternetGateway(ctx)
 	if err != nil && !ociutil.IsNotFound(err) {
 		return err

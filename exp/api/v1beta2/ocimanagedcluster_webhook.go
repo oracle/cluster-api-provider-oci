@@ -74,7 +74,7 @@ func (c *OCIManagedCluster) Default() {
 			}
 			c.Spec.NetworkSpec.Vcn.Subnets = subnets
 		}
-		if len(c.Spec.NetworkSpec.Vcn.NetworkSecurityGroups.NSGList) == 0 {
+		if len(c.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List) == 0 && !c.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.Skip {
 			nsgs := make([]*infrastructurev1beta2.NSG, 4)
 			nsgs[0] = &infrastructurev1beta2.NSG{
 				Role:         infrastructurev1beta2.ControlPlaneEndpointRole,
@@ -100,7 +100,7 @@ func (c *OCIManagedCluster) Default() {
 				IngressRules: c.GetPodDefaultIngressRules(),
 				EgressRules:  c.GetPodDefaultEgressRules(),
 			}
-			c.Spec.NetworkSpec.Vcn.NetworkSecurityGroups.NSGList = nsgs
+			c.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List = nsgs
 		}
 		if c.Spec.NetworkSpec.Vcn.CIDR == "" {
 			c.Spec.NetworkSpec.Vcn.CIDR = infrastructurev1beta2.VcnDefaultCidr

@@ -172,25 +172,18 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 		sourceDetails.BootVolumeVpusPerGB = m.OCIMachine.Spec.InstanceSourceViaImageDetails.BootVolumeVpusPerGB
 	}
 
-	subnetId := m.OCIMachine.Spec.NetworkDetails.SubnetId
-	if subnetId == nil {
-		if m.IsControlPlane() {
-			subnetId = m.getGetControlPlaneMachineSubnet()
-		} else {
-			subnetId = m.getWorkerMachineSubnet()
-		}
+	var subnetId *string
+	if m.IsControlPlane() {
+		subnetId = m.getGetControlPlaneMachineSubnet()
+	} else {
+		subnetId = m.getWorkerMachineSubnet()
 	}
 
 	var nsgIds []string
-	if m.OCIMachine.Spec.NetworkDetails.NSGId != nil {
-		nsgIds = []string{*m.OCIMachine.Spec.NetworkDetails.NSGId}
-	}
-	if len(nsgIds) == 0 {
-		if m.IsControlPlane() {
-			nsgIds = m.getGetControlPlaneMachineNSGs()
-		} else {
-			nsgIds = m.getWorkerMachineNSGs()
-		}
+	if m.IsControlPlane() {
+		nsgIds = m.getGetControlPlaneMachineNSGs()
+	} else {
+		nsgIds = m.getWorkerMachineNSGs()
 	}
 
 	failureDomain := m.Machine.Spec.FailureDomain
@@ -605,7 +598,7 @@ func (m *MachineScope) getGetControlPlaneMachineSubnet() *string {
 
 func (m *MachineScope) getGetControlPlaneMachineNSGs() []string {
 	nsgs := make([]string, 0)
-	for _, nsg := range m.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups.NSGList {
+	for _, nsg := range m.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
 		if nsg.Role == infrastructurev1beta2.ControlPlaneRole {
 			nsgs = append(nsgs, *nsg.ID)
 		}
@@ -644,7 +637,7 @@ func (m *MachineScope) getWorkerMachineNSGs() []string {
 	if len(m.OCIMachine.Spec.NetworkDetails.NsgNames) > 0 {
 		nsgs := make([]string, 0)
 		for _, nsgName := range m.OCIMachine.Spec.NetworkDetails.NsgNames {
-			for _, nsg := range m.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups.NSGList {
+			for _, nsg := range m.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
 				if nsg.Name == nsgName {
 					nsgs = append(nsgs, *nsg.ID)
 				}
@@ -653,16 +646,9 @@ func (m *MachineScope) getWorkerMachineNSGs() []string {
 		return nsgs
 	} else {
 		nsgs := make([]string, 0)
-		for _, nsg := range m.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups.NSGList {
+		for _, nsg := range m.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
 			if nsg.Role == infrastructurev1beta2.WorkerRole {
-				// if an NSG name is defined, use the correct NSG
-				if m.OCIMachine.Spec.NSGName != "" {
-					if m.OCIMachine.Spec.NSGName == nsg.Name {
-						nsgs = append(nsgs, *nsg.ID)
-					}
-				} else {
-					nsgs = append(nsgs, *nsg.ID)
-				}
+				nsgs = append(nsgs, *nsg.ID)
 			}
 		}
 		return nsgs

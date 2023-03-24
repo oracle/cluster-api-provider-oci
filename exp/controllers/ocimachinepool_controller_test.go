@@ -614,8 +614,8 @@ func getOCIClusterWithNoOwner() *infrastructurev1beta2.OCICluster {
 							Name: "worker-subnet",
 						},
 					},
-					NetworkSecurityGroups: infrastructurev1beta2.NetworkSecurityGroups{
-						NSGList: []*infrastructurev1beta2.NSG{
+					NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
+						List: []*infrastructurev1beta2.NSG{
 							{
 								Role: infrastructurev1beta2.ControlPlaneEndpointRole,
 								ID:   common.String("nsg-id"),
@@ -630,8 +630,6 @@ func getOCIClusterWithNoOwner() *infrastructurev1beta2.OCICluster {
 					},
 				},
 			},
-		},
-		Status: infrastructurev1beta2.OCIClusterStatus{
 			AvailabilityDomains: map[string]infrastructurev1beta2.OCIAvailabilityDomain{
 				"ad-1": {
 					Name:         "ad-1",

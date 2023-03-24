@@ -27,6 +27,10 @@ import (
 
 // ReconcileNatGateway tries to move the NAT Gateway to the desired OCICluster Spec
 func (s *ClusterScope) ReconcileNatGateway(ctx context.Context) error {
+	if s.OCIClusterAccessor.GetNetworkSpec().Vcn.NATGateway.Skip {
+		s.Logger.Info("Skipping NAT Gateway reconciliation as per spec")
+		return nil
+	}
 	if s.IsAllSubnetsPublic() {
 		s.Logger.Info("All subnets are public, we don't need NAT gateway")
 		return nil
@@ -124,6 +128,10 @@ func (s *ClusterScope) CreateNatGateway(ctx context.Context) (*string, error) {
 
 // DeleteNatGateway retrieves and attempts to delete the NAT Gateway if found.
 func (s *ClusterScope) DeleteNatGateway(ctx context.Context) error {
+	if s.OCIClusterAccessor.GetNetworkSpec().Vcn.NATGateway.Skip {
+		s.Logger.Info("Skipping NAT Gateway reconciliation as per spec")
+		return nil
+	}
 	ngw, err := s.GetNatGateway(ctx)
 	if err != nil && !ociutil.IsNotFound(err) {
 		return err

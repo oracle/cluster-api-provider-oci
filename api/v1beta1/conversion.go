@@ -1,6 +1,23 @@
+/*
+ Copyright (c) 2023 Oracle and/or its affiliates.
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+      https://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+*/
+
 package v1beta1
 
 import (
+	"errors"
 	"github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"k8s.io/apimachinery/pkg/conversion"
 )
@@ -27,11 +44,71 @@ func Convert_v1beta1_VCN_To_v1beta2_VCN(in *VCN, out *v1beta2.VCN, s conversion.
 		if err != nil {
 			return err
 		}
-		out.NetworkSecurityGroups.NSGList = nsgList
+		out.NetworkSecurityGroup.List = nsgList
 	}
 	return nil
 }
 
 func Convert_v1beta2_VCN_To_v1beta1_VCN(in *v1beta2.VCN, out *VCN, s conversion.Scope) error {
-	return autoConvert_v1beta2_VCN_To_v1beta1_VCN(in, out, s)
+	autoConvert_v1beta2_VCN_To_v1beta1_VCN(in, out, s)
+	if in.InternetGateway.Id != nil {
+		out.InternetGatewayId = in.InternetGateway.Id
+	}
+	if in.NATGateway.Id != nil {
+		out.NatGatewayId = in.NATGateway.Id
+	}
+	if in.ServiceGateway.Id != nil {
+		out.ServiceGatewayId = in.ServiceGateway.Id
+	}
+	if in.RouteTable.PublicRouteTableId != nil {
+		out.PublicRouteTableId = in.RouteTable.PublicRouteTableId
+	}
+	if in.RouteTable.PrivateRouteTableId != nil {
+		out.PrivateRouteTableId = in.RouteTable.PrivateRouteTableId
+	}
+	if in.NetworkSecurityGroup.List != nil {
+		nsgList, err := convertv1beta2NSGListTov1beta1NSGList(in.NetworkSecurityGroup.List)
+		if err != nil {
+			return err
+		}
+		out.NetworkSecurityGroups = nsgList
+	}
+	return nil
+}
+
+func Convert_v1beta1_OCIClusterStatus_To_v1beta2_OCIClusterStatus(in *OCIClusterStatus, out *v1beta2.OCIClusterStatus, s conversion.Scope) error {
+	return autoConvert_v1beta1_OCIClusterStatus_To_v1beta2_OCIClusterStatus(in, out, s)
+}
+
+func Convert_v1beta2_OCIClusterSpec_To_v1beta1_OCIClusterSpec(in *v1beta2.OCIClusterSpec, out *OCIClusterSpec, s conversion.Scope) error {
+	return autoConvert_v1beta2_OCIClusterSpec_To_v1beta1_OCIClusterSpec(in, out, s)
+}
+
+func Convert_v1beta1_EgressSecurityRuleForNSG_To_v1beta2_EgressSecurityRuleForNSG(in *EgressSecurityRuleForNSG, out *v1beta2.EgressSecurityRuleForNSG, s conversion.Scope) error {
+	return autoConvert_v1beta1_EgressSecurityRuleForNSG_To_v1beta2_EgressSecurityRuleForNSG(in, out, s)
+}
+
+func Convert_v1beta1_IngressSecurityRuleForNSG_To_v1beta2_IngressSecurityRuleForNSG(in *IngressSecurityRuleForNSG, out *v1beta2.IngressSecurityRuleForNSG, s conversion.Scope) error {
+	return autoConvert_v1beta1_IngressSecurityRuleForNSG_To_v1beta2_IngressSecurityRuleForNSG(in, out, s)
+}
+
+func Convert_v1beta1_NetworkDetails_To_v1beta2_NetworkDetails(in *NetworkDetails, out *v1beta2.NetworkDetails, s conversion.Scope) error {
+	return autoConvert_v1beta1_NetworkDetails_To_v1beta2_NetworkDetails(in, out, s)
+}
+
+func Convert_v1beta1_OCIMachineSpec_To_v1beta2_OCIMachineSpec(in *OCIMachineSpec, out *v1beta2.OCIMachineSpec, s conversion.Scope) error {
+	err := autoConvert_v1beta1_OCIMachineSpec_To_v1beta2_OCIMachineSpec(in, out, s)
+	if err != nil {
+		return err
+	}
+	if in.NetworkDetails.SubnetId != nil {
+		return errors.New("deprecated field NetworkDetails.SubnetId is present in OCIMachineSpec")
+	}
+	if in.NetworkDetails.NSGId != nil {
+		return errors.New("deprecated field NetworkDetails.NSGId is present in OCIMachineSpec")
+	}
+	if in.NSGName != "" && len(in.NetworkDetails.NsgNames) == 0 {
+		out.NetworkDetails.NsgNames = []string{in.NSGName}
+	}
+	return nil
 }

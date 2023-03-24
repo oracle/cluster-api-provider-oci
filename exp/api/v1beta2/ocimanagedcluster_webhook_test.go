@@ -296,8 +296,8 @@ func TestOCIManagedCluster_ValidateCreate(t *testing.T) {
 				Spec: OCIManagedClusterSpec{
 					NetworkSpec: infrastructurev1beta2.NetworkSpec{
 						Vcn: infrastructurev1beta2.VCN{
-							NetworkSecurityGroups: infrastructurev1beta2.NetworkSecurityGroups{
-								NSGList: []*infrastructurev1beta2.NSG{{
+							NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
+								List: []*infrastructurev1beta2.NSG{{
 									EgressRules: []infrastructurev1beta2.EgressSecurityRuleForNSG{{
 										EgressSecurityRule: infrastructurev1beta2.EgressSecurityRule{
 											Destination:     common.String("bad/15"),
@@ -322,8 +322,8 @@ func TestOCIManagedCluster_ValidateCreate(t *testing.T) {
 				Spec: OCIManagedClusterSpec{
 					NetworkSpec: infrastructurev1beta2.NetworkSpec{
 						Vcn: infrastructurev1beta2.VCN{
-							NetworkSecurityGroups: infrastructurev1beta2.NetworkSecurityGroups{
-								NSGList: []*infrastructurev1beta2.NSG{{
+							NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
+								List: []*infrastructurev1beta2.NSG{{
 									IngressRules: []infrastructurev1beta2.IngressSecurityRuleForNSG{{
 										IngressSecurityRule: infrastructurev1beta2.IngressSecurityRule{
 											Source:     common.String("bad/15"),
@@ -348,8 +348,8 @@ func TestOCIManagedCluster_ValidateCreate(t *testing.T) {
 				Spec: OCIManagedClusterSpec{
 					NetworkSpec: infrastructurev1beta2.NetworkSpec{
 						Vcn: infrastructurev1beta2.VCN{
-							NetworkSecurityGroups: infrastructurev1beta2.NetworkSecurityGroups{
-								NSGList: []*infrastructurev1beta2.NSG{{
+							NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
+								List: []*infrastructurev1beta2.NSG{{
 									Role: "bad-role",
 								}},
 							},
@@ -369,8 +369,8 @@ func TestOCIManagedCluster_ValidateCreate(t *testing.T) {
 				Spec: OCIManagedClusterSpec{
 					NetworkSpec: infrastructurev1beta2.NetworkSpec{
 						Vcn: infrastructurev1beta2.VCN{
-							NetworkSecurityGroups: infrastructurev1beta2.NetworkSecurityGroups{
-								NSGList: []*infrastructurev1beta2.NSG{{
+							NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
+								List: []*infrastructurev1beta2.NSG{{
 									Role: infrastructurev1beta2.ControlPlaneRole,
 								}},
 							},
@@ -689,7 +689,26 @@ func TestOCIManagedCluster_CreateDefault(t *testing.T) {
 					IngressRules: c.GetPodDefaultIngressRules(),
 					EgressRules:  c.GetPodDefaultEgressRules(),
 				}
-				g.Expect(c.Spec.NetworkSpec.Vcn.NetworkSecurityGroups).To(Equal(nsgs))
+				g.Expect(c.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List).To(Equal(nsgs))
+			},
+		},
+		{
+			name: "should set default nsg",
+			c: &OCIManagedCluster{
+				ObjectMeta: metav1.ObjectMeta{},
+				Spec: OCIManagedClusterSpec{
+					CompartmentId: "ocid",
+					NetworkSpec: infrastructurev1beta2.NetworkSpec{
+						Vcn: infrastructurev1beta2.VCN{
+							NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
+								Skip: true,
+							},
+						},
+					},
+				},
+			},
+			expect: func(g *gomega.WithT, c *OCIManagedCluster) {
+				g.Expect(len(c.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List)).To(Equal(0))
 			},
 		},
 	}

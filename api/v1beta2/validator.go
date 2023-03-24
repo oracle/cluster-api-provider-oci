@@ -80,8 +80,8 @@ func ValidateNetworkSpec(validRoles []Role, networkSpec NetworkSpec, old Network
 		allErrs = append(allErrs, validateSubnets(validRoles, networkSpec.Vcn.Subnets, networkSpec.Vcn, fldPath.Child("subnets"))...)
 	}
 
-	if networkSpec.Vcn.NetworkSecurityGroups.NSGList != nil {
-		allErrs = append(allErrs, validateNSGs(validRoles, networkSpec.Vcn.NetworkSecurityGroups.NSGList, fldPath.Child("networkSecurityGroups"))...)
+	if networkSpec.Vcn.NetworkSecurityGroup.List != nil {
+		allErrs = append(allErrs, validateNSGs(validRoles, networkSpec.Vcn.NetworkSecurityGroup.List, fldPath.Child("networkSecurityGroups"))...)
 	}
 
 	if len(allErrs) == 0 {

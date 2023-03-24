@@ -99,8 +99,8 @@ func TestInstanceConfigCreate(t *testing.T) {
 								Name: "worker-subnet",
 							},
 						},
-						NetworkSecurityGroups: infrastructurev1beta2.NetworkSecurityGroups{
-							NSGList: []*infrastructurev1beta2.NSG{
+						NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
+							List: []*infrastructurev1beta2.NSG{
 								{
 									Role: infrastructurev1beta2.WorkerRole,
 									ID:   common.String("nsg-id"),
@@ -110,8 +110,6 @@ func TestInstanceConfigCreate(t *testing.T) {
 						},
 					},
 				},
-			},
-			Status: infrastructurev1beta2.OCIClusterStatus{
 				AvailabilityDomains: map[string]infrastructurev1beta2.OCIAvailabilityDomain{
 					"ad-1": {
 						Name:         "ad-1",
@@ -459,8 +457,8 @@ func TestInstancePoolCreate(t *testing.T) {
 								Name: "worker-subnet",
 							},
 						},
-						NetworkSecurityGroups: infrastructurev1beta2.NetworkSecurityGroups{
-							NSGList: []*infrastructurev1beta2.NSG{
+						NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
+							List: []*infrastructurev1beta2.NSG{
 								{
 									Role: infrastructurev1beta2.WorkerRole,
 									ID:   common.String("nsg-id"),
@@ -470,8 +468,6 @@ func TestInstancePoolCreate(t *testing.T) {
 						},
 					},
 				},
-			},
-			Status: infrastructurev1beta2.OCIClusterStatus{
 				AvailabilityDomains: map[string]infrastructurev1beta2.OCIAvailabilityDomain{
 					"ad-1": {
 						Name:         "ad-1",
@@ -642,8 +638,8 @@ func TestInstancePoolUpdate(t *testing.T) {
 								Name: "worker-subnet",
 							},
 						},
-						NetworkSecurityGroups: infrastructurev1beta2.NetworkSecurityGroups{
-							NSGList: []*infrastructurev1beta2.NSG{
+						NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
+							List: []*infrastructurev1beta2.NSG{
 								{
 									Role: infrastructurev1beta2.WorkerRole,
 									ID:   common.String("nsg-id"),
@@ -653,8 +649,6 @@ func TestInstancePoolUpdate(t *testing.T) {
 						},
 					},
 				},
-			},
-			Status: infrastructurev1beta2.OCIClusterStatus{
 				AvailabilityDomains: map[string]infrastructurev1beta2.OCIAvailabilityDomain{
 					"ad-1": {
 						Name:         "ad-1",

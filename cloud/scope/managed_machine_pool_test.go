@@ -96,8 +96,8 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 								Name: "pod-subnet",
 							},
 						},
-						NetworkSecurityGroups: infrastructurev1beta2.NetworkSecurityGroups{
-							NSGList: []*infrastructurev1beta2.NSG{
+						NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
+							List: []*infrastructurev1beta2.NSG{
 								{
 									Role: infrastructurev1beta2.WorkerRole,
 									ID:   common.String("nsg-id"),
@@ -112,8 +112,6 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 						},
 					},
 				},
-			},
-			Status: infrav2exp.OCIManagedClusterStatus{
 				AvailabilityDomains: map[string]infrastructurev1beta2.OCIAvailabilityDomain{
 					"ad-1": {
 						Name:         "ad-1",
@@ -892,8 +890,8 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 								Name: "pod-subnet",
 							},
 						},
-						NetworkSecurityGroups: infrastructurev1beta2.NetworkSecurityGroups{
-							NSGList: []*infrastructurev1beta2.NSG{
+						NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
+							List: []*infrastructurev1beta2.NSG{
 								{
 									Role: infrastructurev1beta2.WorkerRole,
 									ID:   common.String("nsg-id"),
@@ -908,8 +906,6 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 						},
 					},
 				},
-			},
-			Status: infrav2exp.OCIManagedClusterStatus{
 				AvailabilityDomains: map[string]infrastructurev1beta2.OCIAvailabilityDomain{
 					"ad-1": {
 						Name:         "ad-1",

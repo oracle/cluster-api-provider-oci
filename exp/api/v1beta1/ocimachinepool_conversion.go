@@ -29,6 +29,13 @@ func (src *OCIMachinePool) ConvertTo(dstRaw conversion.Hub) error {
 	if err := Convert_v1beta1_OCIMachinePool_To_v1beta2_OCIMachinePool(src, dst, nil); err != nil {
 		return err
 	}
+
+	// Manually restore data.
+	restored := &v1beta2.OCIMachinePool{}
+	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+		return err
+	}
+
 	return nil
 }
 

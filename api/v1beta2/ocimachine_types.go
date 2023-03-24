@@ -123,13 +123,6 @@ type OCIMachineSpec struct {
 	// is defined, else the first element is used.
 	// +optional
 	SubnetName string `json:"subnetName,omitempty"`
-
-	// The name of NSG to use. The name here refers to the NSGs
-	// defined in the OCICluster Spec. Optional, only if multiple NSGs of a type
-	// is defined, else the first element is used.
-	// +optional
-	// Deprecated, please use NetworkDetails.NSGNames
-	NSGName string `json:"nsgName,omitempty"`
 }
 
 // OCIMachineStatus defines the observed state of OCIMachine.

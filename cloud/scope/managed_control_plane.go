@@ -333,7 +333,7 @@ func (s *ManagedControlPlaneScope) getControlPlaneEndpointSubnet() *string {
 
 func (s *ManagedControlPlaneScope) getControlPlaneEndpointNSGList() []string {
 	nsgs := make([]string, 0)
-	for _, nsg := range s.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroups.NSGList {
+	for _, nsg := range s.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List {
 		if nsg.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
 			nsgs = append(nsgs, *nsg.ID)
 		}

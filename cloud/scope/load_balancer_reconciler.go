@@ -184,7 +184,7 @@ func (s *ClusterScope) CreateLB(ctx context.Context, lb infrastructurev1beta2.Lo
 		DefinedTags:   s.GetDefinedTags(),
 	}
 
-	for _, nsg := range s.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroups.NSGList {
+	for _, nsg := range s.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List {
 		if nsg.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
 			if nsg.ID != nil {
 				lbDetails.NetworkSecurityGroupIds = []string{*nsg.ID}
