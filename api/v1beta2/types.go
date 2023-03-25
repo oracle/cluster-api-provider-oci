@@ -899,7 +899,7 @@ type VCN struct {
 
 	// Configuration for NSG management.
 	// +optional
-	NetworkSecurityGroup NetworkSecurityGroup `json:"NetworkSecurityGroup,omitempty"`
+	NetworkSecurityGroup NetworkSecurityGroup `json:"networkSecurityGroup,omitempty"`
 }
 
 // LoadBalancer Configuration
