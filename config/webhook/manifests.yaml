@@ -139,7 +139,7 @@ webhooks:
     - ocimachinetemplates
   sideEffects: None
 - admissionReviewVersions:
-  - v1beta2
+  - v1beta1
   clientConfig:
     service:
       name: webhook-service
