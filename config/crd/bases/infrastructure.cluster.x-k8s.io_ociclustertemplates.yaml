@@ -1272,7 +1272,38 @@ spec:
                           vcn:
                             description: VCN configuration.
                             properties:
-                              NetworkSecurityGroup:
+                              cidr:
+                                description: VCN CIDR.
+                                type: string
+                              id:
+                                description: VCN OCID.
+                                type: string
+                              internetGateway:
+                                description: Configuration for Internet Gateway.
+                                properties:
+                                  id:
+                                    description: ID of Internet Gateway.
+                                    type: string
+                                  skip:
+                                    description: Skip specifies whether to skip creating
+                                      internet gateway even if any one Subnet is public.
+                                    type: boolean
+                                type: object
+                              name:
+                                description: VCN Name.
+                                type: string
+                              natGateway:
+                                description: Configuration for NAT Gateway.
+                                properties:
+                                  id:
+                                    description: ID of Nat Gateway.
+                                    type: string
+                                  skip:
+                                    description: Skip specifies whether to skip creating
+                                      NAT gateway even if any one Subnet is private.
+                                    type: boolean
+                                type: object
+                              networkSecurityGroup:
                                 description: Configuration for NSG management.
                                 properties:
                                   list:
@@ -1723,37 +1754,6 @@ spec:
                                   skip:
                                     description: Skip specifies whether to skip creating
                                       network security groups.
-                                    type: boolean
-                                type: object
-                              cidr:
-                                description: VCN CIDR.
-                                type: string
-                              id:
-                                description: VCN OCID.
-                                type: string
-                              internetGateway:
-                                description: Configuration for Internet Gateway.
-                                properties:
-                                  id:
-                                    description: ID of Internet Gateway.
-                                    type: string
-                                  skip:
-                                    description: Skip specifies whether to skip creating
-                                      internet gateway even if any one Subnet is public.
-                                    type: boolean
-                                type: object
-                              name:
-                                description: VCN Name.
-                                type: string
-                              natGateway:
-                                description: Configuration for NAT Gateway.
-                                properties:
-                                  id:
-                                    description: ID of Nat Gateway.
-                                    type: string
-                                  skip:
-                                    description: Skip specifies whether to skip creating
-                                      NAT gateway even if any one Subnet is private.
                                     type: boolean
                                 type: object
                               routeTable:

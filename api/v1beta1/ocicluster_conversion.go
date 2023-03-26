@@ -19,8 +19,11 @@ package v1beta1
 import (
 	"github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	utilconversion "sigs.k8s.io/cluster-api/util/conversion"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 )
+
+var clusterlogger = ctrl.Log.WithName("ocimanagedcluster-resource")
 
 // ConvertTo converts the v1beta1 AWSCluster receiver to a v1beta2 AWSCluster.
 func (src *OCICluster) ConvertTo(dstRaw conversion.Hub) error {
@@ -29,6 +32,10 @@ func (src *OCICluster) ConvertTo(dstRaw conversion.Hub) error {
 	if err := Convert_v1beta1_OCICluster_To_v1beta2_OCICluster(src, dst, nil); err != nil {
 		return err
 	}
+	clusterlogger.Info("beta1 to beta2")
+	clusterlogger.Info("source is", "source", src)
+	clusterlogger.Info("destination is", "destination", dst)
+
 	ad, err := Convertv1beta1AdMapTov1beta2AdMap(src.Status.AvailabilityDomains)
 	if err != nil {
 		return err

@@ -69,7 +69,6 @@ webhooks:
     - ocimanagedcontrolplanes
   sideEffects: None
 - admissionReviewVersions:
-  - v1
   - v1beta1
   clientConfig:
     service:
@@ -140,7 +139,7 @@ webhooks:
     - ocimachinetemplates
   sideEffects: None
 - admissionReviewVersions:
-  - v1beta1
+  - v1beta2
   clientConfig:
     service:
       name: webhook-service

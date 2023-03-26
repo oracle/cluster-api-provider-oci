@@ -30,6 +30,9 @@ var managedclusterlogger = ctrl.Log.WithName("ocimanagedcluster-resource")
 func (src *OCIManagedCluster) ConvertTo(dstRaw conversion.Hub) error {
 	dst := dstRaw.(*v1beta2.OCIManagedCluster)
 
+	managedclusterlogger.Info("before - beta1 to beta2")
+	managedclusterlogger.Info("before - source is", "source", src)
+	managedclusterlogger.Info("before - destination is", "destination", dst)
 	if err := Convert_v1beta1_OCIManagedCluster_To_v1beta2_OCIManagedCluster(src, dst, nil); err != nil {
 		return err
 	}
