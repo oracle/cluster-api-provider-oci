@@ -20,26 +20,16 @@ import (
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
 	"github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	utilconversion "sigs.k8s.io/cluster-api/util/conversion"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 )
-
-var managedclusterlogger = ctrl.Log.WithName("ocimanagedcluster-resource")
 
 // ConvertTo converts the v1beta1 OCIManagedCluster receiver to a v1beta2 OCIManagedCluster.
 func (src *OCIManagedCluster) ConvertTo(dstRaw conversion.Hub) error {
 	dst := dstRaw.(*v1beta2.OCIManagedCluster)
 
-	managedclusterlogger.Info("before - beta1 to beta2")
-	managedclusterlogger.Info("before - source is", "source", src)
-	managedclusterlogger.Info("before - destination is", "destination", dst)
 	if err := Convert_v1beta1_OCIManagedCluster_To_v1beta2_OCIManagedCluster(src, dst, nil); err != nil {
 		return err
 	}
-
-	managedclusterlogger.Info("beta1 to beta2")
-	managedclusterlogger.Info("source is", "source", src)
-	managedclusterlogger.Info("destination is", "destination", dst)
 
 	ad, err := infrastructurev1beta1.Convertv1beta1AdMapTov1beta2AdMap(src.Status.AvailabilityDomains)
 	if err != nil {
