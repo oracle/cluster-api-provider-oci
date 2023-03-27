@@ -33,6 +33,7 @@ func fuzzFuncs(_ runtimeserializer.CodecFactory) []interface{} {
 		OCIMachineFuzzer,
 		OCIMachineTemplateFuzzer,
 		OCIClusterFuzzer,
+		OCIClusterTemplateFuzzer,
 	}
 }
 
@@ -48,6 +49,28 @@ func OCIClusterFuzzer(obj *OCICluster, c fuzz.Continue) {
 	c.FuzzNoCustom(obj)
 	// nil fields which have been removed so that tests dont fail
 	for _, nsg := range obj.Spec.NetworkSpec.Vcn.NetworkSecurityGroups {
+		if nsg != nil {
+			ingressRules := make([]IngressSecurityRuleForNSG, len(nsg.IngressRules))
+			for _, rule := range nsg.IngressRules {
+				rule.ID = nil
+				ingressRules = append(ingressRules, rule)
+			}
+			nsg.IngressRules = ingressRules
+
+			egressRules := make([]EgressSecurityRuleForNSG, len(nsg.EgressRules))
+			for _, rule := range nsg.EgressRules {
+				(&rule).ID = nil
+				egressRules = append(egressRules, rule)
+			}
+			nsg.EgressRules = egressRules
+		}
+	}
+}
+
+func OCIClusterTemplateFuzzer(obj *OCIClusterTemplate, c fuzz.Continue) {
+	c.FuzzNoCustom(obj)
+	// nil fields which have been removed so that tests dont fail
+	for _, nsg := range obj.Spec.Template.Spec.NetworkSpec.Vcn.NetworkSecurityGroups {
 		if nsg != nil {
 			ingressRules := make([]IngressSecurityRuleForNSG, len(nsg.IngressRules))
 			for _, rule := range nsg.IngressRules {
@@ -84,6 +107,13 @@ func TestFuzzyConversion(t *testing.T) {
 		Scheme:      scheme,
 		Hub:         &v1beta2.OCICluster{},
 		Spoke:       &OCICluster{},
+		FuzzerFuncs: []fuzzer.FuzzerFuncs{fuzzFuncs},
+	}))
+
+	t.Run("for OCIClusterTemplate", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
+		Scheme:      scheme,
+		Hub:         &v1beta2.OCIClusterTemplate{},
+		Spoke:       &OCIClusterTemplate{},
 		FuzzerFuncs: []fuzzer.FuzzerFuncs{fuzzFuncs},
 	}))
 
