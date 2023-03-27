@@ -65,10 +65,6 @@ func (r *OCIManagedCluster) ConvertFrom(srcRaw conversion.Hub) error {
 	}
 	r.Status.AvailabilityDomains = ad
 
-	managedclusterlogger.Info("beta2 to beta1")
-	managedclusterlogger.Info("source is", "source", src)
-	managedclusterlogger.Info("receiver is", "receiver", r)
-
 	// Preserve Hub data on down-conversion.
 	if err := utilconversion.MarshalData(src, r); err != nil {
 		return err
