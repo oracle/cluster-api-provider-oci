@@ -19,29 +19,29 @@ package v1beta2
 // Hub marks OCICluster as a conversion hub.
 func (*OCICluster) Hub() {}
 
-// Hub marks OCICluster as a conversion hub.
+// Hub marks OCIClusterList as a conversion hub.
 func (*OCIClusterList) Hub() {}
 
-// Hub marks OCICluster as a conversion hub.
+// Hub marks OCIClusterTemplate as a conversion hub.
 func (*OCIClusterTemplate) Hub() {}
 
-// Hub marks OCICluster as a conversion hub.
+// Hub marks OCIClusterTemplateList as a conversion hub.
 func (*OCIClusterTemplateList) Hub() {}
 
 // Hub marks OCICluster as a conversion hub.
 func (*OCIMachine) Hub() {}
 
-// Hub marks OCICluster as a conversion hub.
+// Hub marks OCIMachineList as a conversion hub.
 func (*OCIMachineList) Hub() {}
 
-// Hub marks OCICluster as a conversion hub.
+// Hub marks OCIMachineTemplate as a conversion hub.
 func (*OCIMachineTemplate) Hub() {}
 
-// Hub marks OCICluster as a conversion hub.
+// Hub marks OCIMachineTemplateList as a conversion hub.
 func (*OCIMachineTemplateList) Hub() {}
 
-// Hub marks OCICluster as a conversion hub.
+// Hub marks OCIClusterIdentity as a conversion hub.
 func (*OCIClusterIdentity) Hub() {}
 
-// Hub marks OCICluster as a conversion hub.
+// Hub marks OCIClusterIdentityList as a conversion hub.
 func (*OCIClusterIdentityList) Hub() {}
