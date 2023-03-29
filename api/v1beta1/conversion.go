@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/conversion"
 )
 
+// Convert_v1beta1_VCN_To_v1beta2_VCN converts v1beta1 VCN to v1beta2 VCN
 func Convert_v1beta1_VCN_To_v1beta2_VCN(in *VCN, out *v1beta2.VCN, s conversion.Scope) error {
 	autoConvert_v1beta1_VCN_To_v1beta2_VCN(in, out, s)
 	if in.InternetGatewayId != nil {
@@ -49,6 +50,7 @@ func Convert_v1beta1_VCN_To_v1beta2_VCN(in *VCN, out *v1beta2.VCN, s conversion.
 	return nil
 }
 
+// Convert_v1beta2_VCN_To_v1beta1_VCN converts v1beta2 VCN to v1beta1 VCN
 func Convert_v1beta2_VCN_To_v1beta1_VCN(in *v1beta2.VCN, out *VCN, s conversion.Scope) error {
 	autoConvert_v1beta2_VCN_To_v1beta1_VCN(in, out, s)
 	if in.InternetGateway.Id != nil {
@@ -76,26 +78,32 @@ func Convert_v1beta2_VCN_To_v1beta1_VCN(in *v1beta2.VCN, out *VCN, s conversion.
 	return nil
 }
 
+// Convert_v1beta1_OCIClusterStatus_To_v1beta2_OCIClusterStatus converts v1beta1 OCIClusterStatus to v1beta2 OCIClusterStatus
 func Convert_v1beta1_OCIClusterStatus_To_v1beta2_OCIClusterStatus(in *OCIClusterStatus, out *v1beta2.OCIClusterStatus, s conversion.Scope) error {
 	return autoConvert_v1beta1_OCIClusterStatus_To_v1beta2_OCIClusterStatus(in, out, s)
 }
 
+// Convert_v1beta2_OCIClusterSpec_To_v1beta1_OCIClusterSpec converts v1beta2 OCIClusterStatus to v1beta1 OCIClusterStatus
 func Convert_v1beta2_OCIClusterSpec_To_v1beta1_OCIClusterSpec(in *v1beta2.OCIClusterSpec, out *OCIClusterSpec, s conversion.Scope) error {
 	return autoConvert_v1beta2_OCIClusterSpec_To_v1beta1_OCIClusterSpec(in, out, s)
 }
 
+// Convert_v1beta1_EgressSecurityRuleForNSG_To_v1beta2_EgressSecurityRuleForNSG converts v1beta1 EgressSecurityRuleForNSG to v1beta2 EgressSecurityRuleForNSG
 func Convert_v1beta1_EgressSecurityRuleForNSG_To_v1beta2_EgressSecurityRuleForNSG(in *EgressSecurityRuleForNSG, out *v1beta2.EgressSecurityRuleForNSG, s conversion.Scope) error {
 	return autoConvert_v1beta1_EgressSecurityRuleForNSG_To_v1beta2_EgressSecurityRuleForNSG(in, out, s)
 }
 
+// Convert_v1beta1_IngressSecurityRuleForNSG_To_v1beta2_IngressSecurityRuleForNSG converts v1beta1 IngressSecurityRuleForNSG to v1beta2 IngressSecurityRuleForNSG
 func Convert_v1beta1_IngressSecurityRuleForNSG_To_v1beta2_IngressSecurityRuleForNSG(in *IngressSecurityRuleForNSG, out *v1beta2.IngressSecurityRuleForNSG, s conversion.Scope) error {
 	return autoConvert_v1beta1_IngressSecurityRuleForNSG_To_v1beta2_IngressSecurityRuleForNSG(in, out, s)
 }
 
+// Convert_v1beta1_NetworkDetails_To_v1beta2_NetworkDetails converts v1beta1 NetworkDetails to v1beta2 NetworkDetails
 func Convert_v1beta1_NetworkDetails_To_v1beta2_NetworkDetails(in *NetworkDetails, out *v1beta2.NetworkDetails, s conversion.Scope) error {
 	return autoConvert_v1beta1_NetworkDetails_To_v1beta2_NetworkDetails(in, out, s)
 }
 
+// Convert_v1beta1_OCIMachineSpec_To_v1beta2_OCIMachineSpec converts v1beta1 OCIMachineSpec to v1beta2 OCIMachineSpec
 func Convert_v1beta1_OCIMachineSpec_To_v1beta2_OCIMachineSpec(in *OCIMachineSpec, out *v1beta2.OCIMachineSpec, s conversion.Scope) error {
 	err := autoConvert_v1beta1_OCIMachineSpec_To_v1beta2_OCIMachineSpec(in, out, s)
 	if err != nil {

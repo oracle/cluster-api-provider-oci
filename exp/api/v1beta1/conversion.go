@@ -23,24 +23,27 @@ import (
 	"k8s.io/apimachinery/pkg/conversion"
 )
 
-// Convert_v1beta1_NetworkSpec_To_v1beta2_NetworkSpec is a conversion function.
+// Convert_v1beta1_NetworkSpec_To_v1beta2_NetworkSpec converts v1beta1 NetworkSpec to v1beta2 NetworkSpec
 func Convert_v1beta1_NetworkSpec_To_v1beta2_NetworkSpec(in *infrastructurev1beta1.NetworkSpec, out *infrastructurev1beta2.NetworkSpec, s conversion.Scope) error {
 	return infrastructurev1beta1.Convert_v1beta1_NetworkSpec_To_v1beta2_NetworkSpec(in, out, s)
 }
 
+// Convert_v1beta2_OCIManagedClusterSpec_To_v1beta1_OCIManagedClusterSpec converts v1beta1 OCIManagedClusterSpec to v1beta2 OCIManagedClusterSpec
 func Convert_v1beta2_OCIManagedClusterSpec_To_v1beta1_OCIManagedClusterSpec(in *v1beta2.OCIManagedClusterSpec, out *OCIManagedClusterSpec, s conversion.Scope) error {
 	return autoConvert_v1beta2_OCIManagedClusterSpec_To_v1beta1_OCIManagedClusterSpec(in, out, s)
 }
 
-// Convert_v1beta1_NetworkSpec_To_v1beta2_NetworkSpec is a conversion function.
+// Convert_v1beta2_NetworkSpec_To_v1beta1_NetworkSpec converts v1beta2 NetworkSpec to v1beta1 NetworkSpec
 func Convert_v1beta2_NetworkSpec_To_v1beta1_NetworkSpec(in *infrastructurev1beta2.NetworkSpec, out *infrastructurev1beta1.NetworkSpec, s conversion.Scope) error {
 	return infrastructurev1beta1.Convert_v1beta2_NetworkSpec_To_v1beta1_NetworkSpec(in, out, s)
 }
 
+// Convert_v1beta1_OCIManagedClusterStatus_To_v1beta2_OCIManagedClusterStatus converts v1beta1 OCIManagedClusterStatus to v1beta2 OCIManagedClusterStatus
 func Convert_v1beta1_OCIManagedClusterStatus_To_v1beta2_OCIManagedClusterStatus(in *OCIManagedClusterStatus, out *v1beta2.OCIManagedClusterStatus, s conversion.Scope) error {
 	return autoConvert_v1beta1_OCIManagedClusterStatus_To_v1beta2_OCIManagedClusterStatus(in, out, s)
 }
 
+// Convert_v1beta2_NetworkDetails_To_v1beta1_NetworkDetails converts v1beta2 NetworkDetails to v1beta1 NetworkDetails
 func Convert_v1beta2_NetworkDetails_To_v1beta1_NetworkDetails(in *infrastructurev1beta2.NetworkDetails, out *infrastructurev1beta1.NetworkDetails, s conversion.Scope) error {
 	return infrastructurev1beta1.Convert_v1beta2_NetworkDetails_To_v1beta1_NetworkDetails(in, out, s)
 }
