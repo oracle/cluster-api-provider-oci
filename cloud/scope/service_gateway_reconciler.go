@@ -37,12 +37,12 @@ func (s *ClusterScope) ReconcileServiceGateway(ctx context.Context) error {
 		return err
 	}
 	if sgw != nil {
-		s.OCIClusterAccessor.GetNetworkSpec().Vcn.ServiceGatewayId = sgw.Id
+		s.OCIClusterAccessor.GetNetworkSpec().Vcn.ServiceGateway.Id = sgw.Id
 		s.Logger.Info("No Reconciliation Required for Service Gateway", "service_gateway", sgw.Id)
 		return nil
 	}
 	serviceGateway, err := s.CreateServiceGateway(ctx)
-	s.OCIClusterAccessor.GetNetworkSpec().Vcn.ServiceGatewayId = serviceGateway
+	s.OCIClusterAccessor.GetNetworkSpec().Vcn.ServiceGateway.Id = serviceGateway
 	return err
 }
 
@@ -106,7 +106,7 @@ func (s *ClusterScope) DeleteServiceGateway(ctx context.Context) error {
 }
 
 func (s *ClusterScope) GetServiceGateway(ctx context.Context) (*core.ServiceGateway, error) {
-	sgwId := s.OCIClusterAccessor.GetNetworkSpec().Vcn.ServiceGatewayId
+	sgwId := s.OCIClusterAccessor.GetNetworkSpec().Vcn.ServiceGateway.Id
 	if sgwId != nil {
 		resp, err := s.VCNClient.GetServiceGateway(ctx, core.GetServiceGatewayRequest{
 			ServiceGatewayId: sgwId,

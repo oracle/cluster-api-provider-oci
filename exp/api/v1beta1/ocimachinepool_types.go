@@ -211,6 +211,7 @@ type OCIMachinePoolStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+// +kubebuilder:storageversion
 
 type OCIMachinePool struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -221,6 +222,7 @@ type OCIMachinePool struct {
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:storageversion
 
 // OCIMachinePoolList contains a list of OCIMachinePool.
 type OCIMachinePoolList struct {

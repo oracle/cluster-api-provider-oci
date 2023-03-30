@@ -27,7 +27,6 @@ type OCIClusterTemplateSpec struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:path=ociclustertemplates,scope=Namespaced,categories=cluster-api
-// +kubebuilder:storageversion
 
 // OCIClusterTemplate is the Schema for the ociclustertemplates API.
 type OCIClusterTemplate struct {

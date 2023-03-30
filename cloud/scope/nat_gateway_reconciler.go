@@ -27,6 +27,10 @@ import (
 
 // ReconcileNatGateway tries to move the NAT Gateway to the desired OCICluster Spec
 func (s *ClusterScope) ReconcileNatGateway(ctx context.Context) error {
+	if s.OCIClusterAccessor.GetNetworkSpec().Vcn.NATGateway.Skip {
+		s.Logger.Info("Skipping NAT Gateway reconciliation as per spec")
+		return nil
+	}
 	if s.IsAllSubnetsPublic() {
 		s.Logger.Info("All subnets are public, we don't need NAT gateway")
 		return nil
@@ -37,12 +41,12 @@ func (s *ClusterScope) ReconcileNatGateway(ctx context.Context) error {
 		return err
 	}
 	if ngw != nil {
-		s.OCIClusterAccessor.GetNetworkSpec().Vcn.NatGatewayId = ngw.Id
+		s.OCIClusterAccessor.GetNetworkSpec().Vcn.NATGateway.Id = ngw.Id
 		s.Logger.Info("No Reconciliation Required for Nat Gateway", "nat_gateway", ngw.Id)
 		return nil
 	}
 	natGateway, err := s.CreateNatGateway(ctx)
-	s.OCIClusterAccessor.GetNetworkSpec().Vcn.NatGatewayId = natGateway
+	s.OCIClusterAccessor.GetNetworkSpec().Vcn.NATGateway.Id = natGateway
 	return err
 }
 
@@ -52,7 +56,7 @@ func (s *ClusterScope) ReconcileNatGateway(ctx context.Context) error {
 //
 // 2. Listing the NAT Gateways for the Compartment (by ID), VCN and DisplayName and filtering by tag
 func (s *ClusterScope) GetNatGateway(ctx context.Context) (*core.NatGateway, error) {
-	ngwId := s.OCIClusterAccessor.GetNetworkSpec().Vcn.NatGatewayId
+	ngwId := s.OCIClusterAccessor.GetNetworkSpec().Vcn.NATGateway.Id
 	if ngwId != nil {
 		resp, err := s.VCNClient.GetNatGateway(ctx, core.GetNatGatewayRequest{
 			NatGatewayId: ngwId,
@@ -91,7 +95,7 @@ func (s *ClusterScope) UpdateNatGateway(ctx context.Context) error {
 		DefinedTags:  s.GetDefinedTags(),
 	}
 	igwResponse, err := s.VCNClient.UpdateNatGateway(ctx, core.UpdateNatGatewayRequest{
-		NatGatewayId:            s.OCIClusterAccessor.GetNetworkSpec().Vcn.NatGatewayId,
+		NatGatewayId:            s.OCIClusterAccessor.GetNetworkSpec().Vcn.NATGateway.Id,
 		UpdateNatGatewayDetails: updateNGWDetails,
 	})
 	if err != nil {
@@ -124,6 +128,10 @@ func (s *ClusterScope) CreateNatGateway(ctx context.Context) (*string, error) {
 
 // DeleteNatGateway retrieves and attempts to delete the NAT Gateway if found.
 func (s *ClusterScope) DeleteNatGateway(ctx context.Context) error {
+	if s.OCIClusterAccessor.GetNetworkSpec().Vcn.NATGateway.Skip {
+		s.Logger.Info("Skipping NAT Gateway reconciliation as per spec")
+		return nil
+	}
 	ngw, err := s.GetNatGateway(ctx)
 	if err != nil && !ociutil.IsNotFound(err) {
 		return err

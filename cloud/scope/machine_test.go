@@ -29,7 +29,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
-	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/compute/mock_compute"
 	"github.com/oracle/oci-go-sdk/v65/common"
@@ -46,7 +46,7 @@ func TestInstanceReconciliation(t *testing.T) {
 		ms            *MachineScope
 		mockCtrl      *gomock.Controller
 		computeClient *mock_compute.MockComputeClient
-		ociCluster    infrastructurev1beta1.OCICluster
+		ociCluster    infrastructurev1beta2.OCICluster
 	)
 
 	setup := func(t *testing.T, g *WithT) {
@@ -64,22 +64,22 @@ func TestInstanceReconciliation(t *testing.T) {
 		mockCtrl = gomock.NewController(t)
 		computeClient = mock_compute.NewMockComputeClient(mockCtrl)
 		client := fake.NewClientBuilder().WithObjects(secret).Build()
-		ociCluster = infrastructurev1beta1.OCICluster{
+		ociCluster = infrastructurev1beta2.OCICluster{
 			ObjectMeta: metav1.ObjectMeta{
 				UID: "uid",
 			},
-			Spec: infrastructurev1beta1.OCIClusterSpec{
+			Spec: infrastructurev1beta2.OCIClusterSpec{
 				OCIResourceIdentifier: "resource_uid",
 			},
 		}
 		ociCluster.Spec.ControlPlaneEndpoint.Port = 6443
 		ms, err = NewMachineScope(MachineScopeParams{
 			ComputeClient: computeClient,
-			OCIMachine: &infrastructurev1beta1.OCIMachine{
+			OCIMachine: &infrastructurev1beta2.OCIMachine{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
-				Spec: infrastructurev1beta1.OCIMachineSpec{
+				Spec: infrastructurev1beta2.OCIMachineSpec{
 					CompartmentId: "test",
 				},
 			},
@@ -324,7 +324,7 @@ func TestInstanceReconciliation(t *testing.T) {
 				ms.OCIMachine.Spec.NetworkDetails.SkipSourceDestCheck = common.Bool(true)
 				ms.OCIMachine.Spec.NetworkDetails.AssignPrivateDnsRecord = common.Bool(true)
 				ms.OCIMachine.Spec.NetworkDetails.DisplayName = common.String("display-name")
-				ms.OCIMachine.Spec.InstanceSourceViaImageDetails = &infrastructurev1beta1.InstanceSourceViaImageConfig{
+				ms.OCIMachine.Spec.InstanceSourceViaImageDetails = &infrastructurev1beta2.InstanceSourceViaImageConfig{
 					KmsKeyId:            common.String("kms-key-id"),
 					BootVolumeVpusPerGB: common.Int64(32),
 				}
@@ -384,7 +384,7 @@ func TestInstanceReconciliation(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				setupAllParams(ms)
-				ms.OCIMachine.Spec.ShapeConfig = infrastructurev1beta1.ShapeConfig{}
+				ms.OCIMachine.Spec.ShapeConfig = infrastructurev1beta2.ShapeConfig{}
 				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
 					DisplayName:   common.String("name"),
 					CompartmentId: common.String("test"),
@@ -428,8 +428,8 @@ func TestInstanceReconciliation(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				setupAllParams(ms)
-				ms.OCICluster.Spec.NetworkSpec.Vcn.Subnets = append(ms.OCICluster.Spec.NetworkSpec.Vcn.Subnets, &infrastructurev1beta1.Subnet{
-					Role: infrastructurev1beta1.WorkerRole,
+				ms.OCICluster.Spec.NetworkSpec.Vcn.Subnets = append(ms.OCICluster.Spec.NetworkSpec.Vcn.Subnets, &infrastructurev1beta2.Subnet{
+					Role: infrastructurev1beta2.WorkerRole,
 					ID:   common.String("test-subnet-1"),
 				})
 				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
@@ -480,8 +480,8 @@ func TestInstanceReconciliation(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				setupAllParams(ms)
-				ms.OCICluster.Spec.NetworkSpec.Vcn.Subnets = append(ms.OCICluster.Spec.NetworkSpec.Vcn.Subnets, &infrastructurev1beta1.Subnet{
-					Role: infrastructurev1beta1.WorkerRole,
+				ms.OCICluster.Spec.NetworkSpec.Vcn.Subnets = append(ms.OCICluster.Spec.NetworkSpec.Vcn.Subnets, &infrastructurev1beta2.Subnet{
+					Role: infrastructurev1beta2.WorkerRole,
 					Name: "test-subnet-name",
 					ID:   common.String("test-subnet-1"),
 				})
@@ -534,12 +534,12 @@ func TestInstanceReconciliation(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				setupAllParams(ms)
-				ms.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups = append(ms.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups, &infrastructurev1beta1.NSG{
-					Role: infrastructurev1beta1.WorkerRole,
+				ms.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List = append(ms.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List, &infrastructurev1beta2.NSG{
+					Role: infrastructurev1beta2.WorkerRole,
 					ID:   common.String("test-nsg-1"),
 					Name: "test-nsg",
-				}, &infrastructurev1beta1.NSG{
-					Role: infrastructurev1beta1.WorkerRole,
+				}, &infrastructurev1beta2.NSG{
+					Role: infrastructurev1beta2.WorkerRole,
 					ID:   common.String("test-nsg-2"),
 					Name: "test-nsg-2",
 				})
@@ -591,16 +591,16 @@ func TestInstanceReconciliation(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				setupAllParams(ms)
-				ms.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups = append(ms.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups, &infrastructurev1beta1.NSG{
-					Role: infrastructurev1beta1.WorkerRole,
+				ms.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List = append(ms.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List, &infrastructurev1beta2.NSG{
+					Role: infrastructurev1beta2.WorkerRole,
 					ID:   common.String("test-nsg-1"),
 					Name: "test-nsg",
-				}, &infrastructurev1beta1.NSG{
-					Role: infrastructurev1beta1.WorkerRole,
+				}, &infrastructurev1beta2.NSG{
+					Role: infrastructurev1beta2.WorkerRole,
 					ID:   common.String("test-nsg-2"),
 					Name: "test-nsg-name-2",
 				})
-				ms.OCIMachine.Spec.NSGName = "test-nsg-name-2"
+				ms.OCIMachine.Spec.NetworkDetails.NsgNames = []string{"test-nsg-name-2"}
 				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
 					DisplayName:   common.String("name"),
 					CompartmentId: common.String("test"),
@@ -649,9 +649,9 @@ func TestInstanceReconciliation(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				setupAllParams(ms)
-				ms.OCIMachine.Spec.PlatformConfig = &infrastructurev1beta1.PlatformConfig{
-					PlatformConfigType: infrastructurev1beta1.PlatformConfigTypeAmdvm,
-					AmdVmPlatformConfig: infrastructurev1beta1.AmdVmPlatformConfig{
+				ms.OCIMachine.Spec.PlatformConfig = &infrastructurev1beta2.PlatformConfig{
+					PlatformConfigType: infrastructurev1beta2.PlatformConfigTypeAmdvm,
+					AmdVmPlatformConfig: infrastructurev1beta2.AmdVmPlatformConfig{
 						IsMeasuredBootEnabled:          common.Bool(false),
 						IsTrustedPlatformModuleEnabled: common.Bool(true),
 						IsSecureBootEnabled:            common.Bool(true),
@@ -677,9 +677,9 @@ func TestInstanceReconciliation(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				setupAllParams(ms)
-				ms.OCIMachine.Spec.PlatformConfig = &infrastructurev1beta1.PlatformConfig{
-					PlatformConfigType: infrastructurev1beta1.PlatformConfigTypeIntelVm,
-					IntelVmPlatformConfig: infrastructurev1beta1.IntelVmPlatformConfig{
+				ms.OCIMachine.Spec.PlatformConfig = &infrastructurev1beta2.PlatformConfig{
+					PlatformConfigType: infrastructurev1beta2.PlatformConfigTypeIntelVm,
+					IntelVmPlatformConfig: infrastructurev1beta2.IntelVmPlatformConfig{
 						IsMeasuredBootEnabled:          common.Bool(false),
 						IsTrustedPlatformModuleEnabled: common.Bool(true),
 						IsSecureBootEnabled:            common.Bool(true),
@@ -705,9 +705,9 @@ func TestInstanceReconciliation(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				setupAllParams(ms)
-				ms.OCIMachine.Spec.PlatformConfig = &infrastructurev1beta1.PlatformConfig{
-					PlatformConfigType: infrastructurev1beta1.PlatformConfigTypeAmdRomeBm,
-					AmdRomeBmPlatformConfig: infrastructurev1beta1.AmdRomeBmPlatformConfig{
+				ms.OCIMachine.Spec.PlatformConfig = &infrastructurev1beta2.PlatformConfig{
+					PlatformConfigType: infrastructurev1beta2.PlatformConfigTypeAmdRomeBm,
+					AmdRomeBmPlatformConfig: infrastructurev1beta2.AmdRomeBmPlatformConfig{
 						IsMeasuredBootEnabled:                    common.Bool(false),
 						IsTrustedPlatformModuleEnabled:           common.Bool(true),
 						IsSecureBootEnabled:                      common.Bool(true),
@@ -717,7 +717,7 @@ func TestInstanceReconciliation(t *testing.T) {
 						AreVirtualInstructionsEnabled:            common.Bool(false),
 						IsInputOutputMemoryManagementUnitEnabled: common.Bool(false),
 						PercentageOfCoresEnabled:                 common.Int(50),
-						NumaNodesPerSocket:                       infrastructurev1beta1.AmdRomeBmPlatformConfigNumaNodesPerSocketNps4,
+						NumaNodesPerSocket:                       infrastructurev1beta2.AmdRomeBmPlatformConfigNumaNodesPerSocketNps4,
 					},
 				}
 				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
@@ -745,9 +745,9 @@ func TestInstanceReconciliation(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				setupAllParams(ms)
-				ms.OCIMachine.Spec.PlatformConfig = &infrastructurev1beta1.PlatformConfig{
-					PlatformConfigType: infrastructurev1beta1.PlatformConfigTypeAmdRomeBmGpu,
-					AmdRomeBmGpuPlatformConfig: infrastructurev1beta1.AmdRomeBmGpuPlatformConfig{
+				ms.OCIMachine.Spec.PlatformConfig = &infrastructurev1beta2.PlatformConfig{
+					PlatformConfigType: infrastructurev1beta2.PlatformConfigTypeAmdRomeBmGpu,
+					AmdRomeBmGpuPlatformConfig: infrastructurev1beta2.AmdRomeBmGpuPlatformConfig{
 						IsMeasuredBootEnabled:                    common.Bool(false),
 						IsTrustedPlatformModuleEnabled:           common.Bool(true),
 						IsSecureBootEnabled:                      common.Bool(true),
@@ -756,7 +756,7 @@ func TestInstanceReconciliation(t *testing.T) {
 						IsAccessControlServiceEnabled:            common.Bool(true),
 						AreVirtualInstructionsEnabled:            common.Bool(false),
 						IsInputOutputMemoryManagementUnitEnabled: common.Bool(false),
-						NumaNodesPerSocket:                       infrastructurev1beta1.AmdRomeBmGpuPlatformConfigNumaNodesPerSocketNps2,
+						NumaNodesPerSocket:                       infrastructurev1beta2.AmdRomeBmGpuPlatformConfigNumaNodesPerSocketNps2,
 					},
 				}
 				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
@@ -783,9 +783,9 @@ func TestInstanceReconciliation(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				setupAllParams(ms)
-				ms.OCIMachine.Spec.PlatformConfig = &infrastructurev1beta1.PlatformConfig{
-					PlatformConfigType: infrastructurev1beta1.PlatformConfigTypeIntelIcelakeBm,
-					IntelIcelakeBmPlatformConfig: infrastructurev1beta1.IntelIcelakeBmPlatformConfig{
+				ms.OCIMachine.Spec.PlatformConfig = &infrastructurev1beta2.PlatformConfig{
+					PlatformConfigType: infrastructurev1beta2.PlatformConfigTypeIntelIcelakeBm,
+					IntelIcelakeBmPlatformConfig: infrastructurev1beta2.IntelIcelakeBmPlatformConfig{
 						IsMeasuredBootEnabled:                    common.Bool(false),
 						IsTrustedPlatformModuleEnabled:           common.Bool(true),
 						IsSecureBootEnabled:                      common.Bool(true),
@@ -793,7 +793,7 @@ func TestInstanceReconciliation(t *testing.T) {
 						IsSymmetricMultiThreadingEnabled:         common.Bool(false),
 						IsInputOutputMemoryManagementUnitEnabled: common.Bool(false),
 						PercentageOfCoresEnabled:                 common.Int(56),
-						NumaNodesPerSocket:                       infrastructurev1beta1.IntelIcelakeBmPlatformConfigNumaNodesPerSocketNps1,
+						NumaNodesPerSocket:                       infrastructurev1beta2.IntelIcelakeBmPlatformConfigNumaNodesPerSocketNps1,
 					},
 				}
 				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
@@ -819,9 +819,9 @@ func TestInstanceReconciliation(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				setupAllParams(ms)
-				ms.OCIMachine.Spec.PlatformConfig = &infrastructurev1beta1.PlatformConfig{
-					PlatformConfigType: infrastructurev1beta1.PlatformConfigTypeIntelSkylakeBm,
-					IntelSkylakeBmPlatformConfig: infrastructurev1beta1.IntelSkylakeBmPlatformConfig{
+				ms.OCIMachine.Spec.PlatformConfig = &infrastructurev1beta2.PlatformConfig{
+					PlatformConfigType: infrastructurev1beta2.PlatformConfigTypeIntelSkylakeBm,
+					IntelSkylakeBmPlatformConfig: infrastructurev1beta2.IntelSkylakeBmPlatformConfig{
 						IsMeasuredBootEnabled:          common.Bool(false),
 						IsTrustedPlatformModuleEnabled: common.Bool(true),
 						IsSecureBootEnabled:            common.Bool(true),
@@ -847,9 +847,9 @@ func TestInstanceReconciliation(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				setupAllParams(ms)
-				ms.OCIMachine.Spec.PlatformConfig = &infrastructurev1beta1.PlatformConfig{
-					PlatformConfigType: infrastructurev1beta1.PlatformConfigTypeAmdMilanBm,
-					AmdMilanBmPlatformConfig: infrastructurev1beta1.AmdMilanBmPlatformConfig{
+				ms.OCIMachine.Spec.PlatformConfig = &infrastructurev1beta2.PlatformConfig{
+					PlatformConfigType: infrastructurev1beta2.PlatformConfigTypeAmdMilanBm,
+					AmdMilanBmPlatformConfig: infrastructurev1beta2.AmdMilanBmPlatformConfig{
 						IsMeasuredBootEnabled:                    common.Bool(false),
 						IsTrustedPlatformModuleEnabled:           common.Bool(true),
 						IsSecureBootEnabled:                      common.Bool(true),
@@ -859,7 +859,7 @@ func TestInstanceReconciliation(t *testing.T) {
 						IsInputOutputMemoryManagementUnitEnabled: common.Bool(false),
 						AreVirtualInstructionsEnabled:            common.Bool(true),
 						PercentageOfCoresEnabled:                 common.Int(56),
-						NumaNodesPerSocket:                       infrastructurev1beta1.AmdMilanBmPlatformConfigNumaNodesPerSocketNps1,
+						NumaNodesPerSocket:                       infrastructurev1beta2.AmdMilanBmPlatformConfigNumaNodesPerSocketNps1,
 					},
 				}
 				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
@@ -887,14 +887,14 @@ func TestInstanceReconciliation(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				setupAllParams(ms)
-				ms.OCIMachine.Spec.AgentConfig = &infrastructurev1beta1.LaunchInstanceAgentConfig{
+				ms.OCIMachine.Spec.AgentConfig = &infrastructurev1beta2.LaunchInstanceAgentConfig{
 					IsMonitoringDisabled:  common.Bool(false),
 					IsManagementDisabled:  common.Bool(true),
 					AreAllPluginsDisabled: common.Bool(true),
-					PluginsConfig: []infrastructurev1beta1.InstanceAgentPluginConfig{
+					PluginsConfig: []infrastructurev1beta2.InstanceAgentPluginConfig{
 						{
 							Name:         common.String("test-plugin"),
-							DesiredState: infrastructurev1beta1.InstanceAgentPluginConfigDetailsDesiredStateEnabled,
+							DesiredState: infrastructurev1beta2.InstanceAgentPluginConfigDetailsDesiredStateEnabled,
 						},
 					},
 				}
@@ -922,11 +922,11 @@ func TestInstanceReconciliation(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				setupAllParams(ms)
-				ms.OCIMachine.Spec.LaunchOptions = &infrastructurev1beta1.LaunchOptions{
-					BootVolumeType:                  infrastructurev1beta1.LaunchOptionsBootVolumeTypeIde,
-					Firmware:                        infrastructurev1beta1.LaunchOptionsFirmwareUefi64,
-					NetworkType:                     infrastructurev1beta1.LaunchOptionsNetworkTypeVfio,
-					RemoteDataVolumeType:            infrastructurev1beta1.LaunchOptionsRemoteDataVolumeTypeIde,
+				ms.OCIMachine.Spec.LaunchOptions = &infrastructurev1beta2.LaunchOptions{
+					BootVolumeType:                  infrastructurev1beta2.LaunchOptionsBootVolumeTypeIde,
+					Firmware:                        infrastructurev1beta2.LaunchOptionsFirmwareUefi64,
+					NetworkType:                     infrastructurev1beta2.LaunchOptionsNetworkTypeVfio,
+					RemoteDataVolumeType:            infrastructurev1beta2.LaunchOptionsRemoteDataVolumeTypeIde,
 					IsConsistentVolumeNamingEnabled: common.Bool(true),
 				}
 				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
@@ -949,7 +949,7 @@ func TestInstanceReconciliation(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				setupAllParams(ms)
-				ms.OCIMachine.Spec.InstanceOptions = &infrastructurev1beta1.InstanceOptions{
+				ms.OCIMachine.Spec.InstanceOptions = &infrastructurev1beta2.InstanceOptions{
 					AreLegacyImdsEndpointsDisabled: common.Bool(true),
 				}
 				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
@@ -968,9 +968,9 @@ func TestInstanceReconciliation(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				setupAllParams(ms)
-				ms.OCIMachine.Spec.AvailabilityConfig = &infrastructurev1beta1.LaunchInstanceAvailabilityConfig{
+				ms.OCIMachine.Spec.AvailabilityConfig = &infrastructurev1beta2.LaunchInstanceAvailabilityConfig{
 					IsLiveMigrationPreferred: common.Bool(true),
-					RecoveryAction:           infrastructurev1beta1.LaunchInstanceAvailabilityConfigDetailsRecoveryActionRestoreInstance,
+					RecoveryAction:           infrastructurev1beta2.LaunchInstanceAvailabilityConfigDetailsRecoveryActionRestoreInstance,
 				}
 				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
 					DisplayName:   common.String("name"),
@@ -989,8 +989,8 @@ func TestInstanceReconciliation(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				setupAllParams(ms)
-				ms.OCIMachine.Spec.PreemptibleInstanceConfig = &infrastructurev1beta1.PreemptibleInstanceConfig{
-					TerminatePreemptionAction: &infrastructurev1beta1.TerminatePreemptionAction{
+				ms.OCIMachine.Spec.PreemptibleInstanceConfig = &infrastructurev1beta2.PreemptibleInstanceConfig{
+					TerminatePreemptionAction: &infrastructurev1beta2.TerminatePreemptionAction{
 						PreserveBootVolume: common.Bool(true),
 					},
 				}
@@ -1122,14 +1122,14 @@ func TestLBReconciliationCreation(t *testing.T) {
 		ms         *MachineScope
 		mockCtrl   *gomock.Controller
 		nlbClient  *mock_nlb.MockNetworkLoadBalancerClient
-		ociCluster infrastructurev1beta1.OCICluster
+		ociCluster infrastructurev1beta2.OCICluster
 	)
 	setup := func(t *testing.T, g *WithT) {
 		var err error
 		mockCtrl = gomock.NewController(t)
 		nlbClient = mock_nlb.NewMockNetworkLoadBalancerClient(mockCtrl)
 		client := fake.NewClientBuilder().WithObjects().Build()
-		ociCluster = infrastructurev1beta1.OCICluster{
+		ociCluster = infrastructurev1beta2.OCICluster{
 			ObjectMeta: metav1.ObjectMeta{
 				UID: "uid",
 			},
@@ -1138,12 +1138,12 @@ func TestLBReconciliationCreation(t *testing.T) {
 		ociCluster.Spec.ControlPlaneEndpoint.Port = 6443
 		ms, err = NewMachineScope(MachineScopeParams{
 			NetworkLoadBalancerClient: nlbClient,
-			OCIMachine: &infrastructurev1beta1.OCIMachine{
+			OCIMachine: &infrastructurev1beta2.OCIMachine{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 					UID:  "uid",
 				},
-				Spec: infrastructurev1beta1.OCIMachineSpec{
+				Spec: infrastructurev1beta2.OCIMachineSpec{
 					CompartmentId: "test",
 				},
 			},
@@ -1444,14 +1444,14 @@ func TestLBReconciliationDeletion(t *testing.T) {
 		ms         *MachineScope
 		mockCtrl   *gomock.Controller
 		nlbClient  *mock_nlb.MockNetworkLoadBalancerClient
-		ociCluster infrastructurev1beta1.OCICluster
+		ociCluster infrastructurev1beta2.OCICluster
 	)
 	setup := func(t *testing.T, g *WithT) {
 		var err error
 		mockCtrl = gomock.NewController(t)
 		nlbClient = mock_nlb.NewMockNetworkLoadBalancerClient(mockCtrl)
 		client := fake.NewClientBuilder().WithObjects().Build()
-		ociCluster = infrastructurev1beta1.OCICluster{
+		ociCluster = infrastructurev1beta2.OCICluster{
 			ObjectMeta: metav1.ObjectMeta{
 				UID: "uid",
 			},
@@ -1460,12 +1460,12 @@ func TestLBReconciliationDeletion(t *testing.T) {
 		ociCluster.Spec.ControlPlaneEndpoint.Port = 6443
 		ms, err = NewMachineScope(MachineScopeParams{
 			NetworkLoadBalancerClient: nlbClient,
-			OCIMachine: &infrastructurev1beta1.OCIMachine{
+			OCIMachine: &infrastructurev1beta2.OCIMachine{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 					UID:  "uid",
 				},
-				Spec: infrastructurev1beta1.OCIMachineSpec{
+				Spec: infrastructurev1beta2.OCIMachineSpec{
 					CompartmentId: "test",
 				},
 			},
@@ -1682,7 +1682,7 @@ func TestInstanceDeletion(t *testing.T) {
 		ms            *MachineScope
 		mockCtrl      *gomock.Controller
 		computeClient *mock_compute.MockComputeClient
-		ociCluster    infrastructurev1beta1.OCICluster
+		ociCluster    infrastructurev1beta2.OCICluster
 	)
 
 	setup := func(t *testing.T, g *WithT) {
@@ -1690,11 +1690,11 @@ func TestInstanceDeletion(t *testing.T) {
 		mockCtrl = gomock.NewController(t)
 		computeClient = mock_compute.NewMockComputeClient(mockCtrl)
 		client := fake.NewClientBuilder().Build()
-		ociCluster = infrastructurev1beta1.OCICluster{}
+		ociCluster = infrastructurev1beta2.OCICluster{}
 		ms, err = NewMachineScope(MachineScopeParams{
 			ComputeClient: computeClient,
-			OCIMachine: &infrastructurev1beta1.OCIMachine{
-				Spec: infrastructurev1beta1.OCIMachineSpec{
+			OCIMachine: &infrastructurev1beta2.OCIMachine{
+				Spec: infrastructurev1beta2.OCIMachineSpec{
 					CompartmentId: "test",
 					InstanceId:    common.String("test"),
 				},
@@ -1794,9 +1794,9 @@ func setupAllParams(ms *MachineScope) {
 		},
 	}
 	ms.Machine.Spec.FailureDomain = common.String("2")
-	ms.OCICluster.Spec.NetworkSpec.Vcn.Subnets = []*infrastructurev1beta1.Subnet{
+	ms.OCICluster.Spec.NetworkSpec.Vcn.Subnets = []*infrastructurev1beta2.Subnet{
 		{
-			Role: infrastructurev1beta1.WorkerRole,
+			Role: infrastructurev1beta2.WorkerRole,
 			ID:   common.String("nodesubnet"),
 		},
 	}

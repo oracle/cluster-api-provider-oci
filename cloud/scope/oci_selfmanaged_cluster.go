@@ -17,7 +17,7 @@ limitations under the License.
 package scope
 
 import (
-	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	corev1 "k8s.io/api/core/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -25,7 +25,7 @@ import (
 
 // OCISelfManagedCluster is the ClusterAccessor implementation for self managed clusters
 type OCISelfManagedCluster struct {
-	OCICluster *infrastructurev1beta1.OCICluster
+	OCICluster *infrastructurev1beta2.OCICluster
 }
 
 func (c OCISelfManagedCluster) GetNameSpace() string {
@@ -41,7 +41,7 @@ func (c OCISelfManagedCluster) GetIdentityRef() *corev1.ObjectReference {
 }
 
 func (c OCISelfManagedCluster) MarkConditionFalse(t clusterv1.ConditionType, reason string, severity clusterv1.ConditionSeverity, messageFormat string, messageArgs ...interface{}) {
-	conditions.MarkFalse(c.OCICluster, infrastructurev1beta1.ClusterReadyCondition, reason, severity, messageFormat, messageArgs...)
+	conditions.MarkFalse(c.OCICluster, infrastructurev1beta2.ClusterReadyCondition, reason, severity, messageFormat, messageArgs...)
 }
 
 func (c OCISelfManagedCluster) GetOCIResourceIdentifier() string {
@@ -64,15 +64,15 @@ func (c OCISelfManagedCluster) GetFreeformTags() map[string]string {
 	return c.OCICluster.Spec.FreeformTags
 }
 
-func (c OCISelfManagedCluster) GetDRG() *infrastructurev1beta1.DRG {
+func (c OCISelfManagedCluster) GetDRG() *infrastructurev1beta2.DRG {
 	return c.OCICluster.Spec.NetworkSpec.VCNPeering.DRG
 }
 
-func (c OCISelfManagedCluster) GetVCNPeering() *infrastructurev1beta1.VCNPeering {
+func (c OCISelfManagedCluster) GetVCNPeering() *infrastructurev1beta2.VCNPeering {
 	return c.OCICluster.Spec.NetworkSpec.VCNPeering
 }
 
-func (c OCISelfManagedCluster) GetNetworkSpec() *infrastructurev1beta1.NetworkSpec {
+func (c OCISelfManagedCluster) GetNetworkSpec() *infrastructurev1beta2.NetworkSpec {
 	return &c.OCICluster.Spec.NetworkSpec
 }
 
@@ -91,6 +91,9 @@ func (c OCISelfManagedCluster) SetFailureDomain(id string, spec clusterv1.Failur
 	c.OCICluster.Status.FailureDomains[id] = spec
 }
 
-func (c OCISelfManagedCluster) SetAvailabilityDomains(ads map[string]infrastructurev1beta1.OCIAvailabilityDomain) {
-	c.OCICluster.Status.AvailabilityDomains = ads
+func (c OCISelfManagedCluster) GetAvailabilityDomains() map[string]infrastructurev1beta2.OCIAvailabilityDomain {
+	return c.OCICluster.Spec.AvailabilityDomains
+}
+func (c OCISelfManagedCluster) SetAvailabilityDomains(ads map[string]infrastructurev1beta2.OCIAvailabilityDomain) {
+	c.OCICluster.Spec.AvailabilityDomains = ads
 }

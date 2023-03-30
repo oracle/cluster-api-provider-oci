@@ -27,6 +27,10 @@ import (
 
 // ReconcileInternetGateway tries to move the Internet Gateway to the desired OCICluster Spec
 func (s *ClusterScope) ReconcileInternetGateway(ctx context.Context) error {
+	if s.OCIClusterAccessor.GetNetworkSpec().Vcn.InternetGateway.Skip {
+		s.Logger.Info("Skipping Internet Gateway reconciliation as per spec")
+		return nil
+	}
 	if s.IsAllSubnetsPrivate() {
 		s.Logger.Info("All subnets are private, we don't need internet gateway")
 		return nil
@@ -37,7 +41,7 @@ func (s *ClusterScope) ReconcileInternetGateway(ctx context.Context) error {
 		return err
 	}
 	if igw != nil {
-		s.OCIClusterAccessor.GetNetworkSpec().Vcn.InternetGatewayId = igw.Id
+		s.OCIClusterAccessor.GetNetworkSpec().Vcn.InternetGateway.Id = igw.Id
 		s.Logger.Info("No Reconciliation Required for Internet Gateway", "internet_gateway", igw.Id)
 		return nil
 	}
@@ -45,7 +49,7 @@ func (s *ClusterScope) ReconcileInternetGateway(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	s.OCIClusterAccessor.GetNetworkSpec().Vcn.InternetGatewayId = internetGateway
+	s.OCIClusterAccessor.GetNetworkSpec().Vcn.InternetGateway.Id = internetGateway
 	return err
 }
 
@@ -55,7 +59,7 @@ func (s *ClusterScope) ReconcileInternetGateway(ctx context.Context) error {
 //
 // 2. Listing the Internet Gateways for the Compartment (by ID) and filtering by tag
 func (s *ClusterScope) GetInternetGateway(ctx context.Context) (*core.InternetGateway, error) {
-	gwId := s.OCIClusterAccessor.GetNetworkSpec().Vcn.InternetGatewayId
+	gwId := s.OCIClusterAccessor.GetNetworkSpec().Vcn.InternetGateway.Id
 	if gwId != nil {
 		resp, err := s.VCNClient.GetInternetGateway(ctx, core.GetInternetGatewayRequest{
 			IgId: gwId,
@@ -110,6 +114,10 @@ func (s *ClusterScope) CreateInternetGateway(ctx context.Context) (*string, erro
 
 // DeleteInternetGateway retrieves and attempts to delete the Internet Gateway if found.
 func (s *ClusterScope) DeleteInternetGateway(ctx context.Context) error {
+	if s.OCIClusterAccessor.GetNetworkSpec().Vcn.RouteTable.Skip {
+		s.Logger.Info("Skipping Internet Gateway reconciliation as per spec")
+		return nil
+	}
 	igw, err := s.GetInternetGateway(ctx)
 	if err != nil && !ociutil.IsNotFound(err) {
 		return err

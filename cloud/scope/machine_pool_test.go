@@ -22,10 +22,10 @@ import (
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
-	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/computemanagement/mock_computemanagement"
-	infrav1exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
+	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
 	corev1 "k8s.io/api/core/v1"
@@ -80,37 +80,37 @@ func TestInstanceConfigCreate(t *testing.T) {
 			},
 		}
 		computeManagementClient = mock_computemanagement.NewMockClient(mockCtrl)
-		ociCluster := &infrastructurev1beta1.OCICluster{
+		ociCluster := &infrastructurev1beta2.OCICluster{
 			ObjectMeta: metav1.ObjectMeta{
 				UID: "cluster_uid",
 			},
-			Spec: infrastructurev1beta1.OCIClusterSpec{
+			Spec: infrastructurev1beta2.OCIClusterSpec{
 				CompartmentId:         "test-compartment",
 				DefinedTags:           definedTags,
 				OCIResourceIdentifier: "resource_uid",
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
 						ID: common.String("vcn-id"),
-						Subnets: []*infrastructurev1beta1.Subnet{
+						Subnets: []*infrastructurev1beta2.Subnet{
 							{
-								Role: infrastructurev1beta1.WorkerRole,
+								Role: infrastructurev1beta2.WorkerRole,
 								ID:   common.String("subnet-id"),
-								Type: infrastructurev1beta1.Private,
+								Type: infrastructurev1beta2.Private,
 								Name: "worker-subnet",
 							},
 						},
-						NetworkSecurityGroups: []*infrastructurev1beta1.NSG{
-							{
-								Role: infrastructurev1beta1.WorkerRole,
-								ID:   common.String("nsg-id"),
-								Name: "worker-nsg",
+						NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
+							List: []*infrastructurev1beta2.NSG{
+								{
+									Role: infrastructurev1beta2.WorkerRole,
+									ID:   common.String("nsg-id"),
+									Name: "worker-nsg",
+								},
 							},
 						},
 					},
 				},
-			},
-			Status: infrastructurev1beta1.OCIClusterStatus{
-				AvailabilityDomains: map[string]infrastructurev1beta1.OCIAvailabilityDomain{
+				AvailabilityDomains: map[string]infrastructurev1beta2.OCIAvailabilityDomain{
 					"ad-1": {
 						Name:         "ad-1",
 						FaultDomains: []string{"fd-5", "fd-6"},
@@ -119,12 +119,12 @@ func TestInstanceConfigCreate(t *testing.T) {
 			},
 		}
 		size := int32(3)
-		machinePool := &infrav1exp.OCIMachinePool{
+		machinePool := &infrav2exp.OCIMachinePool{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            "test",
 				ResourceVersion: "20",
 			},
-			Spec: infrav1exp.OCIMachinePoolSpec{},
+			Spec: infrav2exp.OCIMachinePoolSpec{},
 		}
 		client := fake.NewClientBuilder().WithObjects(secret, machinePool).Build()
 		ms, err = NewMachinePoolScope(MachinePoolScopeParams{
@@ -171,7 +171,7 @@ func TestInstanceConfigCreate(t *testing.T) {
 			name:          "instance config exists",
 			errorExpected: false,
 			testSpecificSetup: func(ms *MachinePoolScope) {
-				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav1exp.InstanceConfiguration{
+				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
 					Shape:                   common.String("test-shape"),
 					InstanceConfigurationId: common.String("test"),
 				}
@@ -205,15 +205,15 @@ func TestInstanceConfigCreate(t *testing.T) {
 			name:          "instance config create",
 			errorExpected: false,
 			testSpecificSetup: func(ms *MachinePoolScope) {
-				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav1exp.InstanceConfiguration{
+				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
 					Shape: common.String("test-shape"),
-					ShapeConfig: &infrav1exp.ShapeConfig{
+					ShapeConfig: &infrav2exp.ShapeConfig{
 						Ocpus:                   common.String("2"),
 						MemoryInGBs:             common.String("65"),
 						BaselineOcpuUtilization: "BASELINE_1_1",
 						Nvmes:                   common.Int(5),
 					},
-					InstanceVnicConfiguration: &infrastructurev1beta1.NetworkDetails{
+					InstanceVnicConfiguration: &infrastructurev1beta2.NetworkDetails{
 						AssignPublicIp:         true,
 						SubnetName:             "worker-subnet",
 						SkipSourceDestCheck:    common.Bool(true),
@@ -222,23 +222,23 @@ func TestInstanceConfigCreate(t *testing.T) {
 						DisplayName:            common.String("test-display"),
 						AssignPrivateDnsRecord: common.Bool(true),
 					},
-					PlatformConfig: &infrastructurev1beta1.PlatformConfig{
-						PlatformConfigType: infrastructurev1beta1.PlatformConfigTypeAmdvm,
-						AmdVmPlatformConfig: infrastructurev1beta1.AmdVmPlatformConfig{
+					PlatformConfig: &infrastructurev1beta2.PlatformConfig{
+						PlatformConfigType: infrastructurev1beta2.PlatformConfigTypeAmdvm,
+						AmdVmPlatformConfig: infrastructurev1beta2.AmdVmPlatformConfig{
 							IsMeasuredBootEnabled:          common.Bool(false),
 							IsTrustedPlatformModuleEnabled: common.Bool(true),
 							IsSecureBootEnabled:            common.Bool(true),
 							IsMemoryEncryptionEnabled:      common.Bool(true),
 						},
 					},
-					AgentConfig: &infrastructurev1beta1.LaunchInstanceAgentConfig{
+					AgentConfig: &infrastructurev1beta2.LaunchInstanceAgentConfig{
 						IsMonitoringDisabled:  common.Bool(false),
 						IsManagementDisabled:  common.Bool(true),
 						AreAllPluginsDisabled: common.Bool(true),
-						PluginsConfig: []infrastructurev1beta1.InstanceAgentPluginConfig{
+						PluginsConfig: []infrastructurev1beta2.InstanceAgentPluginConfig{
 							{
 								Name:         common.String("test-plugin"),
-								DesiredState: infrastructurev1beta1.InstanceAgentPluginConfigDetailsDesiredStateEnabled,
+								DesiredState: infrastructurev1beta2.InstanceAgentPluginConfigDetailsDesiredStateEnabled,
 							},
 						},
 					},
@@ -311,7 +311,7 @@ func TestInstanceConfigCreate(t *testing.T) {
 			name:          "instance config update",
 			errorExpected: false,
 			testSpecificSetup: func(ms *MachinePoolScope) {
-				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav1exp.InstanceConfiguration{
+				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
 					Shape:                   common.String("test-shape"),
 					InstanceConfigurationId: common.String("test"),
 				}
@@ -438,37 +438,37 @@ func TestInstancePoolCreate(t *testing.T) {
 			},
 		}
 		computeManagementClient = mock_computemanagement.NewMockClient(mockCtrl)
-		ociCluster := &infrastructurev1beta1.OCICluster{
+		ociCluster := &infrastructurev1beta2.OCICluster{
 			ObjectMeta: metav1.ObjectMeta{
 				UID: "cluster_uid",
 			},
-			Spec: infrastructurev1beta1.OCIClusterSpec{
+			Spec: infrastructurev1beta2.OCIClusterSpec{
 				CompartmentId:         "test-compartment",
 				DefinedTags:           definedTags,
 				OCIResourceIdentifier: "resource_uid",
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
 						ID: common.String("vcn-id"),
-						Subnets: []*infrastructurev1beta1.Subnet{
+						Subnets: []*infrastructurev1beta2.Subnet{
 							{
-								Role: infrastructurev1beta1.WorkerRole,
+								Role: infrastructurev1beta2.WorkerRole,
 								ID:   common.String("subnet-id"),
-								Type: infrastructurev1beta1.Private,
+								Type: infrastructurev1beta2.Private,
 								Name: "worker-subnet",
 							},
 						},
-						NetworkSecurityGroups: []*infrastructurev1beta1.NSG{
-							{
-								Role: infrastructurev1beta1.WorkerRole,
-								ID:   common.String("nsg-id"),
-								Name: "worker-nsg",
+						NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
+							List: []*infrastructurev1beta2.NSG{
+								{
+									Role: infrastructurev1beta2.WorkerRole,
+									ID:   common.String("nsg-id"),
+									Name: "worker-nsg",
+								},
 							},
 						},
 					},
 				},
-			},
-			Status: infrastructurev1beta1.OCIClusterStatus{
-				AvailabilityDomains: map[string]infrastructurev1beta1.OCIAvailabilityDomain{
+				AvailabilityDomains: map[string]infrastructurev1beta2.OCIAvailabilityDomain{
 					"ad-1": {
 						Name:         "ad-1",
 						FaultDomains: []string{"fd-5", "fd-6"},
@@ -477,12 +477,12 @@ func TestInstancePoolCreate(t *testing.T) {
 			},
 		}
 		size := int32(3)
-		machinePool := &infrav1exp.OCIMachinePool{
+		machinePool := &infrav2exp.OCIMachinePool{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            "test",
 				ResourceVersion: "20",
 			},
-			Spec: infrav1exp.OCIMachinePoolSpec{},
+			Spec: infrav2exp.OCIMachinePoolSpec{},
 		}
 		client := fake.NewClientBuilder().WithObjects(secret, machinePool).Build()
 		ms, err = NewMachinePoolScope(MachinePoolScopeParams{
@@ -619,37 +619,37 @@ func TestInstancePoolUpdate(t *testing.T) {
 			},
 		}
 		computeManagementClient = mock_computemanagement.NewMockClient(mockCtrl)
-		ociCluster := &infrastructurev1beta1.OCICluster{
+		ociCluster := &infrastructurev1beta2.OCICluster{
 			ObjectMeta: metav1.ObjectMeta{
 				UID: "cluster_uid",
 			},
-			Spec: infrastructurev1beta1.OCIClusterSpec{
+			Spec: infrastructurev1beta2.OCIClusterSpec{
 				CompartmentId:         "test-compartment",
 				DefinedTags:           definedTags,
 				OCIResourceIdentifier: "resource_uid",
-				NetworkSpec: infrastructurev1beta1.NetworkSpec{
-					Vcn: infrastructurev1beta1.VCN{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
 						ID: common.String("vcn-id"),
-						Subnets: []*infrastructurev1beta1.Subnet{
+						Subnets: []*infrastructurev1beta2.Subnet{
 							{
-								Role: infrastructurev1beta1.WorkerRole,
+								Role: infrastructurev1beta2.WorkerRole,
 								ID:   common.String("subnet-id"),
-								Type: infrastructurev1beta1.Private,
+								Type: infrastructurev1beta2.Private,
 								Name: "worker-subnet",
 							},
 						},
-						NetworkSecurityGroups: []*infrastructurev1beta1.NSG{
-							{
-								Role: infrastructurev1beta1.WorkerRole,
-								ID:   common.String("nsg-id"),
-								Name: "worker-nsg",
+						NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
+							List: []*infrastructurev1beta2.NSG{
+								{
+									Role: infrastructurev1beta2.WorkerRole,
+									ID:   common.String("nsg-id"),
+									Name: "worker-nsg",
+								},
 							},
 						},
 					},
 				},
-			},
-			Status: infrastructurev1beta1.OCIClusterStatus{
-				AvailabilityDomains: map[string]infrastructurev1beta1.OCIAvailabilityDomain{
+				AvailabilityDomains: map[string]infrastructurev1beta2.OCIAvailabilityDomain{
 					"ad-1": {
 						Name:         "ad-1",
 						FaultDomains: []string{"fd-5", "fd-6"},
@@ -658,12 +658,12 @@ func TestInstancePoolUpdate(t *testing.T) {
 			},
 		}
 		size := int32(3)
-		machinePool := &infrav1exp.OCIMachinePool{
+		machinePool := &infrav2exp.OCIMachinePool{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            "test",
 				ResourceVersion: "20",
 			},
-			Spec: infrav1exp.OCIMachinePoolSpec{},
+			Spec: infrav2exp.OCIMachinePoolSpec{},
 		}
 		client := fake.NewClientBuilder().WithObjects(secret, machinePool).Build()
 		ms, err = NewMachinePoolScope(MachinePoolScopeParams{

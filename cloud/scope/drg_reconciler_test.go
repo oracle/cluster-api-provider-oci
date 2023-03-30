@@ -23,7 +23,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
-	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn/mock_vcn"
 	"github.com/oracle/oci-go-sdk/v65/common"
@@ -41,7 +41,7 @@ func TestDRGReconciliation(t *testing.T) {
 		vcnClient          *mock_vcn.MockClient
 		ociClusterAccessor OCISelfManagedCluster
 		tags               map[string]string
-		vcnPeering         infrastructurev1beta1.VCNPeering
+		vcnPeering         infrastructurev1beta2.VCNPeering
 	)
 
 	setup := func(t *testing.T, g *WithT) {
@@ -50,12 +50,12 @@ func TestDRGReconciliation(t *testing.T) {
 		vcnClient = mock_vcn.NewMockClient(mockCtrl)
 		client := fake.NewClientBuilder().Build()
 		ociClusterAccessor = OCISelfManagedCluster{
-			&infrastructurev1beta1.OCICluster{
+			&infrastructurev1beta2.OCICluster{
 				ObjectMeta: metav1.ObjectMeta{
 					UID:  "cluster_uid",
 					Name: "cluster",
 				},
-				Spec: infrastructurev1beta1.OCIClusterSpec{
+				Spec: infrastructurev1beta2.OCIClusterSpec{
 					CompartmentId:         "compartment-id",
 					OCIResourceIdentifier: "resource_uid",
 				},
@@ -71,7 +71,7 @@ func TestDRGReconciliation(t *testing.T) {
 		tags = make(map[string]string)
 		tags[ociutil.CreatedBy] = ociutil.OCIClusterAPIProvider
 		tags[ociutil.ClusterResourceIdentifier] = "resource_uid"
-		vcnPeering = infrastructurev1beta1.VCNPeering{}
+		vcnPeering = infrastructurev1beta2.VCNPeering{}
 		g.Expect(err).To(BeNil())
 	}
 	teardown := func(t *testing.T, g *WithT) {
@@ -105,7 +105,7 @@ func TestDRGReconciliation(t *testing.T) {
 			name:          "drg is unmanaged",
 			errorExpected: false,
 			testSpecificSetup: func(clusterScope *ClusterScope, vcnClient *mock_vcn.MockClient) {
-				vcnPeering.DRG = &infrastructurev1beta1.DRG{}
+				vcnPeering.DRG = &infrastructurev1beta2.DRG{}
 				vcnPeering.DRG.Manage = false
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().VCNPeering = &vcnPeering
 			},
@@ -116,7 +116,7 @@ func TestDRGReconciliation(t *testing.T) {
 			errorSubStringMatch: true,
 			matchError:          errors.New("request failed"),
 			testSpecificSetup: func(clusterScope *ClusterScope, vcnClient *mock_vcn.MockClient) {
-				vcnPeering.DRG = &infrastructurev1beta1.DRG{}
+				vcnPeering.DRG = &infrastructurev1beta2.DRG{}
 				vcnPeering.DRG.Manage = true
 				vcnPeering.DRG.ID = common.String("drg-id")
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().VCNPeering = &vcnPeering
@@ -132,7 +132,7 @@ func TestDRGReconciliation(t *testing.T) {
 			errorSubStringMatch: true,
 			matchError:          errors.New("request failed"),
 			testSpecificSetup: func(clusterScope *ClusterScope, vcnClient *mock_vcn.MockClient) {
-				vcnPeering.DRG = &infrastructurev1beta1.DRG{}
+				vcnPeering.DRG = &infrastructurev1beta2.DRG{}
 				vcnPeering.DRG.Manage = true
 				vcnPeering.DRG.ID = common.String("drg-id")
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().VCNPeering = &vcnPeering
@@ -146,7 +146,7 @@ func TestDRGReconciliation(t *testing.T) {
 			name:          "get drg call success",
 			errorExpected: false,
 			testSpecificSetup: func(clusterScope *ClusterScope, vcnClient *mock_vcn.MockClient) {
-				vcnPeering.DRG = &infrastructurev1beta1.DRG{}
+				vcnPeering.DRG = &infrastructurev1beta2.DRG{}
 				vcnPeering.DRG.Manage = true
 				vcnPeering.DRG.ID = common.String("drg-id")
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().VCNPeering = &vcnPeering
@@ -166,7 +166,7 @@ func TestDRGReconciliation(t *testing.T) {
 			name:          "drg create",
 			errorExpected: false,
 			testSpecificSetup: func(clusterScope *ClusterScope, vcnClient *mock_vcn.MockClient) {
-				vcnPeering.DRG = &infrastructurev1beta1.DRG{}
+				vcnPeering.DRG = &infrastructurev1beta2.DRG{}
 				vcnPeering.DRG.Manage = true
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().VCNPeering = &vcnPeering
 				vcnClient.EXPECT().ListDrgs(gomock.Any(), gomock.Eq(core.ListDrgsRequest{
@@ -219,7 +219,7 @@ func TestDRGDeletion(t *testing.T) {
 		vcnClient          *mock_vcn.MockClient
 		ociClusterAccessor OCISelfManagedCluster
 		tags               map[string]string
-		vcnPeering         infrastructurev1beta1.VCNPeering
+		vcnPeering         infrastructurev1beta2.VCNPeering
 	)
 
 	setup := func(t *testing.T, g *WithT) {
@@ -228,12 +228,12 @@ func TestDRGDeletion(t *testing.T) {
 		vcnClient = mock_vcn.NewMockClient(mockCtrl)
 		client := fake.NewClientBuilder().Build()
 		ociClusterAccessor = OCISelfManagedCluster{
-			&infrastructurev1beta1.OCICluster{
+			&infrastructurev1beta2.OCICluster{
 				ObjectMeta: metav1.ObjectMeta{
 					UID:  "cluster_uid",
 					Name: "cluster",
 				},
-				Spec: infrastructurev1beta1.OCIClusterSpec{
+				Spec: infrastructurev1beta2.OCIClusterSpec{
 					CompartmentId:         "compartment-id",
 					OCIResourceIdentifier: "resource_uid",
 				},
@@ -250,7 +250,7 @@ func TestDRGDeletion(t *testing.T) {
 		tags = make(map[string]string)
 		tags[ociutil.CreatedBy] = ociutil.OCIClusterAPIProvider
 		tags[ociutil.ClusterResourceIdentifier] = "resource_uid"
-		vcnPeering = infrastructurev1beta1.VCNPeering{}
+		vcnPeering = infrastructurev1beta2.VCNPeering{}
 		g.Expect(err).To(BeNil())
 	}
 	teardown := func(t *testing.T, g *WithT) {
@@ -284,7 +284,7 @@ func TestDRGDeletion(t *testing.T) {
 			name:          "drg is unmanaged",
 			errorExpected: false,
 			testSpecificSetup: func(clusterScope *ClusterScope, vcnClient *mock_vcn.MockClient) {
-				vcnPeering.DRG = &infrastructurev1beta1.DRG{}
+				vcnPeering.DRG = &infrastructurev1beta2.DRG{}
 				vcnPeering.DRG.Manage = false
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().VCNPeering = &vcnPeering
 			},
@@ -295,7 +295,7 @@ func TestDRGDeletion(t *testing.T) {
 			errorSubStringMatch: true,
 			matchError:          errors.New("request failed"),
 			testSpecificSetup: func(clusterScope *ClusterScope, vcnClient *mock_vcn.MockClient) {
-				vcnPeering.DRG = &infrastructurev1beta1.DRG{}
+				vcnPeering.DRG = &infrastructurev1beta2.DRG{}
 				vcnPeering.DRG.Manage = true
 				vcnPeering.DRG.ID = common.String("drg-id")
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().VCNPeering = &vcnPeering
@@ -309,7 +309,7 @@ func TestDRGDeletion(t *testing.T) {
 			name:          "drg not found",
 			errorExpected: false,
 			testSpecificSetup: func(clusterScope *ClusterScope, vcnClient *mock_vcn.MockClient) {
-				vcnPeering.DRG = &infrastructurev1beta1.DRG{}
+				vcnPeering.DRG = &infrastructurev1beta2.DRG{}
 				vcnPeering.DRG.Manage = true
 				vcnPeering.DRG.ID = common.String("drg-id")
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().VCNPeering = &vcnPeering
@@ -323,7 +323,7 @@ func TestDRGDeletion(t *testing.T) {
 			name:          "delete success",
 			errorExpected: false,
 			testSpecificSetup: func(clusterScope *ClusterScope, vcnClient *mock_vcn.MockClient) {
-				vcnPeering.DRG = &infrastructurev1beta1.DRG{}
+				vcnPeering.DRG = &infrastructurev1beta2.DRG{}
 				vcnPeering.DRG.Manage = true
 				vcnPeering.DRG.ID = common.String("drg-id")
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().VCNPeering = &vcnPeering

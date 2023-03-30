@@ -17,7 +17,7 @@ limitations under the License.
 package scope
 
 import (
-	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	corev1 "k8s.io/api/core/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
@@ -43,15 +43,17 @@ type OCIClusterAccessor interface {
 	// GetRegion returns the region of the cluster, if specified in the spec.
 	GetRegion() string
 	// GetNetworkSpec returns the NetworkSpec of the cluster.
-	GetNetworkSpec() *infrastructurev1beta1.NetworkSpec
+	GetNetworkSpec() *infrastructurev1beta2.NetworkSpec
 	// SetControlPlaneEndpoint sets the control plane endpoint of the cluster.
 	SetControlPlaneEndpoint(endpoint clusterv1.APIEndpoint)
 	// GetFailureDomains returns the failure domains of the cluster.
 	GetFailureDomains() clusterv1.FailureDomains
 	// SetFailureDomain sets the failure domain.
 	SetFailureDomain(id string, spec clusterv1.FailureDomainSpec)
+	// GetAvailabilityDomains get the availability domain.
+	GetAvailabilityDomains() map[string]infrastructurev1beta2.OCIAvailabilityDomain
 	// SetAvailabilityDomains sets the availability domain.
-	SetAvailabilityDomains(ads map[string]infrastructurev1beta1.OCIAvailabilityDomain)
+	SetAvailabilityDomains(ads map[string]infrastructurev1beta2.OCIAvailabilityDomain)
 	// MarkConditionFalse marks the provided condition as false in the cluster object
 	MarkConditionFalse(t clusterv1.ConditionType, reason string, severity clusterv1.ConditionSeverity, messageFormat string, messageArgs ...interface{})
 	// GetIdentityRef returns the Identity reference of the cluster

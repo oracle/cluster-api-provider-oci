@@ -90,6 +90,7 @@ type OCIClusterStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+// +kubebuilder:storageversion
 
 // OCICluster is the Schema for the ociclusters API.
 type OCICluster struct {
@@ -101,6 +102,7 @@ type OCICluster struct {
 }
 
 //+kubebuilder:object:root=true
+// +kubebuilder:storageversion
 
 // OCIClusterList contains a list of OCICluster.
 type OCIClusterList struct {

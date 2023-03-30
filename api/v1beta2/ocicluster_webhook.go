@@ -17,7 +17,7 @@
  *
  */
 
-package v1beta1
+package v1beta2
 
 import (
 	"fmt"
@@ -38,8 +38,8 @@ var (
 	_ webhook.Validator = &OCICluster{}
 )
 
-// +kubebuilder:webhook:verbs=create;update,path=/validate-infrastructure-cluster-x-k8s-io-v1beta1-ocicluster,mutating=false,failurePolicy=fail,matchPolicy=Equivalent,groups=infrastructure.cluster.x-k8s.io,resources=ociclusters,versions=v1beta1,name=validation.ocicluster.infrastructure.cluster.x-k8s.io,sideEffects=None,admissionReviewVersions=v1beta1
-// +kubebuilder:webhook:verbs=create;update,path=/mutate-infrastructure-cluster-x-k8s-io-v1beta1-ocicluster,mutating=true,failurePolicy=fail,matchPolicy=Equivalent,groups=infrastructure.cluster.x-k8s.io,resources=ociclusters,versions=v1beta1,name=default.ocicluster.infrastructure.cluster.x-k8s.io,sideEffects=None,admissionReviewVersions=v1;v1beta1
+// +kubebuilder:webhook:verbs=create;update,path=/validate-infrastructure-cluster-x-k8s-io-v1beta2-ocicluster,mutating=false,failurePolicy=fail,matchPolicy=Equivalent,groups=infrastructure.cluster.x-k8s.io,resources=ociclusters,versions=v1beta2,name=validation.ocicluster.infrastructure.cluster.x-k8s.io,sideEffects=None,admissionReviewVersions=v1beta1
+// +kubebuilder:webhook:verbs=create;update,path=/mutate-infrastructure-cluster-x-k8s-io-v1beta2-ocicluster,mutating=true,failurePolicy=fail,matchPolicy=Equivalent,groups=infrastructure.cluster.x-k8s.io,resources=ociclusters,versions=v1beta2,name=default.ocicluster.infrastructure.cluster.x-k8s.io,sideEffects=None,admissionReviewVersions=v1beta1
 
 func (c *OCICluster) Default() {
 	if c.Spec.OCIResourceIdentifier == "" {
@@ -47,7 +47,7 @@ func (c *OCICluster) Default() {
 	}
 	if !c.Spec.NetworkSpec.SkipNetworkManagement {
 		c.Spec.NetworkSpec.Vcn.Subnets = c.SubnetSpec()
-		c.Spec.NetworkSpec.Vcn.NetworkSecurityGroups = c.NSGSpec()
+		c.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List = c.NSGSpec()
 	}
 }
 
@@ -216,8 +216,10 @@ func (c *OCICluster) SubnetSpec() []*Subnet {
 }
 
 func (c *OCICluster) NSGSpec() []*NSG {
-	nsgs := c.Spec.NetworkSpec.Vcn.NetworkSecurityGroups
-
+	nsgs := c.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List
+	if c.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.Skip {
+		return nsgs
+	}
 	if !c.IsNSGExitsByRole(ControlPlaneEndpointRole) && !c.IsSecurityListExitsByRole(ControlPlaneEndpointRole) {
 		nsgs = append(nsgs, &NSG{
 			Role:         ControlPlaneEndpointRole,
@@ -707,7 +709,7 @@ func (c *OCICluster) GetNodeSubnet() []*Subnet {
 }
 
 func (c *OCICluster) IsNSGExitsByRole(role Role) bool {
-	for _, nsg := range c.Spec.NetworkSpec.Vcn.NetworkSecurityGroups {
+	for _, nsg := range c.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
 		if role == nsg.Role {
 			return true
 		}

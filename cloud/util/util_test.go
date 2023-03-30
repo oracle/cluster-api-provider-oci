@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
-	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/config"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	corev1 "k8s.io/api/core/v1"
@@ -37,7 +37,7 @@ func TestGetClusterIdentityFromRef(t *testing.T) {
 		ref           *corev1.ObjectReference
 		objects       []client.Object
 		errorExpected bool
-		expectedSpec  infrastructurev1beta1.OCIClusterIdentitySpec
+		expectedSpec  infrastructurev1beta2.OCIClusterIdentitySpec
 	}{
 		{
 			name:      "simple",
@@ -48,21 +48,21 @@ func TestGetClusterIdentityFromRef(t *testing.T) {
 				Name:       "test-identity",
 				APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
 			},
-			objects: []client.Object{&infrastructurev1beta1.OCIClusterIdentity{
+			objects: []client.Object{&infrastructurev1beta2.OCIClusterIdentity{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-identity",
 					Namespace: "default",
 				},
-				Spec: infrastructurev1beta1.OCIClusterIdentitySpec{
-					Type: infrastructurev1beta1.UserPrincipal,
+				Spec: infrastructurev1beta2.OCIClusterIdentitySpec{
+					Type: infrastructurev1beta2.UserPrincipal,
 					PrincipalSecret: corev1.SecretReference{
 						Name:      "test",
 						Namespace: "test",
 					},
 				},
 			}},
-			expectedSpec: infrastructurev1beta1.OCIClusterIdentitySpec{
-				Type: infrastructurev1beta1.UserPrincipal,
+			expectedSpec: infrastructurev1beta2.OCIClusterIdentitySpec{
+				Type: infrastructurev1beta2.UserPrincipal,
 				PrincipalSecret: corev1.SecretReference{
 					Name:      "test",
 					Namespace: "test",
@@ -103,7 +103,7 @@ func TestGetOrBuildClientFromIdentity(t *testing.T) {
 	testCases := []struct {
 		name            string
 		namespace       string
-		clusterIdentity *infrastructurev1beta1.OCIClusterIdentity
+		clusterIdentity *infrastructurev1beta2.OCIClusterIdentity
 		objects         []client.Object
 		errorExpected   bool
 		defaultRegion   string
@@ -111,9 +111,9 @@ func TestGetOrBuildClientFromIdentity(t *testing.T) {
 		{
 			name:      "error - secret not found",
 			namespace: "default",
-			clusterIdentity: &infrastructurev1beta1.OCIClusterIdentity{
-				Spec: infrastructurev1beta1.OCIClusterIdentitySpec{
-					Type: infrastructurev1beta1.UserPrincipal,
+			clusterIdentity: &infrastructurev1beta2.OCIClusterIdentity{
+				Spec: infrastructurev1beta2.OCIClusterIdentitySpec{
+					Type: infrastructurev1beta2.UserPrincipal,
 					PrincipalSecret: corev1.SecretReference{
 						Name:      "test",
 						Namespace: "test",
@@ -126,8 +126,8 @@ func TestGetOrBuildClientFromIdentity(t *testing.T) {
 		{
 			name:      "error - invalid principal type",
 			namespace: "default",
-			clusterIdentity: &infrastructurev1beta1.OCIClusterIdentity{
-				Spec: infrastructurev1beta1.OCIClusterIdentitySpec{
+			clusterIdentity: &infrastructurev1beta2.OCIClusterIdentity{
+				Spec: infrastructurev1beta2.OCIClusterIdentitySpec{
 					Type: "invalid",
 				},
 			},
@@ -137,9 +137,9 @@ func TestGetOrBuildClientFromIdentity(t *testing.T) {
 		{
 			name:      "secret found",
 			namespace: "default",
-			clusterIdentity: &infrastructurev1beta1.OCIClusterIdentity{
-				Spec: infrastructurev1beta1.OCIClusterIdentitySpec{
-					Type: infrastructurev1beta1.UserPrincipal,
+			clusterIdentity: &infrastructurev1beta2.OCIClusterIdentity{
+				Spec: infrastructurev1beta2.OCIClusterIdentitySpec{
+					Type: infrastructurev1beta2.UserPrincipal,
 					PrincipalSecret: corev1.SecretReference{
 						Name:      "test",
 						Namespace: "test",
@@ -175,7 +175,7 @@ func TestIsClusterNamespaceAllowed(t *testing.T) {
 	testCases := []struct {
 		name              string
 		namespace         string
-		allowedNamespaces *infrastructurev1beta1.AllowedNamespaces
+		allowedNamespaces *infrastructurev1beta2.AllowedNamespaces
 		objects           []client.Object
 		expected          bool
 	}{
@@ -188,14 +188,14 @@ func TestIsClusterNamespaceAllowed(t *testing.T) {
 		{
 			name:              "empty allowednamespace, allowed",
 			namespace:         "default",
-			allowedNamespaces: &infrastructurev1beta1.AllowedNamespaces{},
+			allowedNamespaces: &infrastructurev1beta2.AllowedNamespaces{},
 			objects:           []client.Object{},
 			expected:          true,
 		},
 		{
 			name:      "not allowed",
 			namespace: "test",
-			allowedNamespaces: &infrastructurev1beta1.AllowedNamespaces{
+			allowedNamespaces: &infrastructurev1beta2.AllowedNamespaces{
 				NamespaceList: []string{"test123"},
 			},
 			objects:  []client.Object{},
@@ -204,7 +204,7 @@ func TestIsClusterNamespaceAllowed(t *testing.T) {
 		{
 			name:      "allowed",
 			namespace: "test",
-			allowedNamespaces: &infrastructurev1beta1.AllowedNamespaces{
+			allowedNamespaces: &infrastructurev1beta2.AllowedNamespaces{
 				NamespaceList: []string{"test"},
 			},
 			objects:  []client.Object{},
@@ -213,7 +213,7 @@ func TestIsClusterNamespaceAllowed(t *testing.T) {
 		{
 			name:      "empty label selector",
 			namespace: "test",
-			allowedNamespaces: &infrastructurev1beta1.AllowedNamespaces{
+			allowedNamespaces: &infrastructurev1beta2.AllowedNamespaces{
 				Selector: &metav1.LabelSelector{},
 			},
 			objects:  []client.Object{},
@@ -222,7 +222,7 @@ func TestIsClusterNamespaceAllowed(t *testing.T) {
 		{
 			name:      "allowed label selector",
 			namespace: "test",
-			allowedNamespaces: &infrastructurev1beta1.AllowedNamespaces{
+			allowedNamespaces: &infrastructurev1beta2.AllowedNamespaces{
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{"key": "value"},
 				},
@@ -261,7 +261,7 @@ func TestCreateClientProviderFromClusterIdentity(t *testing.T) {
 			name:      "error - secret not found",
 			namespace: "default",
 			clusterAccessor: scope.OCISelfManagedCluster{
-				OCICluster: &infrastructurev1beta1.OCICluster{},
+				OCICluster: &infrastructurev1beta2.OCICluster{},
 			},
 			ref: &corev1.ObjectReference{
 				Kind:       "OCIClusterIdentity",
@@ -269,13 +269,13 @@ func TestCreateClientProviderFromClusterIdentity(t *testing.T) {
 				Name:       "test-identity",
 				APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
 			},
-			objects: []client.Object{&infrastructurev1beta1.OCIClusterIdentity{
+			objects: []client.Object{&infrastructurev1beta2.OCIClusterIdentity{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-identity",
 					Namespace: "default",
 				},
-				Spec: infrastructurev1beta1.OCIClusterIdentitySpec{
-					Type: infrastructurev1beta1.UserPrincipal,
+				Spec: infrastructurev1beta2.OCIClusterIdentitySpec{
+					Type: infrastructurev1beta2.UserPrincipal,
 					PrincipalSecret: corev1.SecretReference{
 						Name:      "test",
 						Namespace: "test",

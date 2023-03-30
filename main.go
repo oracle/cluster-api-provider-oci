@@ -21,11 +21,12 @@ import (
 	"os"
 
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/config"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	"github.com/oracle/cluster-api-provider-oci/controllers"
 	expV1Beta1 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
-	infrav1exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
+	expV1Beta2 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	expcontrollers "github.com/oracle/cluster-api-provider-oci/exp/controllers"
 	"github.com/oracle/cluster-api-provider-oci/feature"
 	"github.com/oracle/cluster-api-provider-oci/version"
@@ -66,8 +67,10 @@ const (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(infrastructurev1beta1.AddToScheme(scheme))
+	utilruntime.Must(infrastructurev1beta2.AddToScheme(scheme))
 	utilruntime.Must(clusterv1.AddToScheme(scheme))
 	utilruntime.Must(expV1Beta1.AddToScheme(scheme))
+	utilruntime.Must(expV1Beta2.AddToScheme(scheme))
 	utilruntime.Must(expclusterv1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
@@ -257,27 +260,27 @@ func main() {
 		}
 	}
 
-	if err = (&infrastructurev1beta1.OCICluster{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = (&infrastructurev1beta2.OCICluster{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "OCICluster")
 		os.Exit(1)
 	}
 
-	if err = (&infrastructurev1beta1.OCIMachineTemplate{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = (&infrastructurev1beta2.OCIMachineTemplate{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "OCIMachineTemplate")
 		os.Exit(1)
 	}
 
-	if err = (&infrav1exp.OCIManagedCluster{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = (&expV1Beta2.OCIManagedCluster{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "OCIManagedCluster")
 		os.Exit(1)
 	}
 
-	if err = (&infrav1exp.OCIManagedControlPlane{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = (&expV1Beta2.OCIManagedControlPlane{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "OCIManagedControlPlane")
 		os.Exit(1)
 	}
 
-	if err = (&infrav1exp.OCIManagedMachinePool{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = (&expV1Beta2.OCIManagedMachinePool{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "OCIManagedMachinePool")
 		os.Exit(1)
 	}

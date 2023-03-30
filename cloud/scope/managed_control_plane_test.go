@@ -24,11 +24,11 @@ import (
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
-	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/base/mock_base"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/containerengine/mock_containerengine"
-	infrav1exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
+	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
 	corev1 "k8s.io/api/core/v1"
@@ -77,31 +77,33 @@ func TestControlPlaneReconciliation(t *testing.T) {
 		mockCtrl = gomock.NewController(t)
 		okeClient = mock_containerengine.NewMockClient(mockCtrl)
 		ociClusterAccessor := OCIManagedCluster{
-			&infrav1exp.OCIManagedCluster{
+			&infrav2exp.OCIManagedCluster{
 				ObjectMeta: metav1.ObjectMeta{
 					UID: "cluster_uid",
 				},
-				Spec: infrav1exp.OCIManagedClusterSpec{
+				Spec: infrav2exp.OCIManagedClusterSpec{
 					CompartmentId: "test-compartment",
 					DefinedTags:   definedTags,
-					NetworkSpec: infrastructurev1beta1.NetworkSpec{
-						Vcn: infrastructurev1beta1.VCN{
+					NetworkSpec: infrastructurev1beta2.NetworkSpec{
+						Vcn: infrastructurev1beta2.VCN{
 							ID: common.String("vcn-id"),
-							Subnets: []*infrastructurev1beta1.Subnet{
+							Subnets: []*infrastructurev1beta2.Subnet{
 								{
-									Role: infrastructurev1beta1.ControlPlaneEndpointRole,
+									Role: infrastructurev1beta2.ControlPlaneEndpointRole,
 									ID:   common.String("subnet-id"),
-									Type: infrastructurev1beta1.Public,
+									Type: infrastructurev1beta2.Public,
 								},
 								{
-									Role: infrastructurev1beta1.ServiceLoadBalancerRole,
+									Role: infrastructurev1beta2.ServiceLoadBalancerRole,
 									ID:   common.String("lb-subnet-id"),
 								},
 							},
-							NetworkSecurityGroups: []*infrastructurev1beta1.NSG{
-								{
-									Role: infrastructurev1beta1.ControlPlaneEndpointRole,
-									ID:   common.String("nsg-id"),
+							NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
+								List: []*infrastructurev1beta2.NSG{
+									{
+										Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+										ID:   common.String("nsg-id"),
+									},
 								},
 							},
 						},
@@ -112,11 +114,11 @@ func TestControlPlaneReconciliation(t *testing.T) {
 		ociClusterAccessor.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
 		cs, err = NewManagedControlPlaneScope(ManagedControlPlaneScopeParams{
 			ContainerEngineClient: okeClient,
-			OCIManagedControlPlane: &infrav1exp.OCIManagedControlPlane{
+			OCIManagedControlPlane: &infrav2exp.OCIManagedControlPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
-				Spec: infrav1exp.OCIManagedControlPlaneSpec{},
+				Spec: infrav2exp.OCIManagedControlPlaneSpec{},
 			},
 			OCIClusterAccessor: ociClusterAccessor,
 			Cluster: &clusterv1.Cluster{
@@ -195,26 +197,26 @@ func TestControlPlaneReconciliation(t *testing.T) {
 			name:          "control plane create all params",
 			errorExpected: false,
 			testSpecificSetup: func(cs *ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
-				cs.OCIManagedControlPlane.Spec = infrav1exp.OCIManagedControlPlaneSpec{
-					ClusterPodNetworkOptions: []infrav1exp.ClusterPodNetworkOptions{
+				cs.OCIManagedControlPlane.Spec = infrav2exp.OCIManagedControlPlaneSpec{
+					ClusterPodNetworkOptions: []infrav2exp.ClusterPodNetworkOptions{
 						{
-							CniType: infrav1exp.FlannelCNI,
+							CniType: infrav2exp.FlannelCNI,
 						},
 						{
-							CniType: infrav1exp.VCNNativeCNI,
+							CniType: infrav2exp.VCNNativeCNI,
 						},
 					},
-					ImagePolicyConfig: &infrav1exp.ImagePolicyConfig{
+					ImagePolicyConfig: &infrav2exp.ImagePolicyConfig{
 						IsPolicyEnabled: common.Bool(true),
-						KeyDetails: []infrav1exp.KeyDetails{{
+						KeyDetails: []infrav2exp.KeyDetails{{
 							KmsKeyId: common.String("kms-key-id"),
 						}},
 					},
-					ClusterOption: infrav1exp.ClusterOptions{
-						AdmissionControllerOptions: &infrav1exp.AdmissionControllerOptions{
+					ClusterOption: infrav2exp.ClusterOptions{
+						AdmissionControllerOptions: &infrav2exp.AdmissionControllerOptions{
 							IsPodSecurityPolicyEnabled: common.Bool(true),
 						},
-						AddOnOptions: &infrav1exp.AddOnOptions{
+						AddOnOptions: &infrav2exp.AddOnOptions{
 							IsKubernetesDashboardEnabled: common.Bool(true),
 							IsTillerEnabled:              common.Bool(false),
 						},
@@ -363,31 +365,33 @@ func TestControlPlaneUpdation(t *testing.T) {
 		mockCtrl = gomock.NewController(t)
 		okeClient = mock_containerengine.NewMockClient(mockCtrl)
 		ociClusterAccessor := OCIManagedCluster{
-			&infrav1exp.OCIManagedCluster{
+			&infrav2exp.OCIManagedCluster{
 				ObjectMeta: metav1.ObjectMeta{
 					UID: "cluster_uid",
 				},
-				Spec: infrav1exp.OCIManagedClusterSpec{
+				Spec: infrav2exp.OCIManagedClusterSpec{
 					CompartmentId: "test-compartment",
 					DefinedTags:   definedTags,
-					NetworkSpec: infrastructurev1beta1.NetworkSpec{
-						Vcn: infrastructurev1beta1.VCN{
+					NetworkSpec: infrastructurev1beta2.NetworkSpec{
+						Vcn: infrastructurev1beta2.VCN{
 							ID: common.String("vcn-id"),
-							Subnets: []*infrastructurev1beta1.Subnet{
+							Subnets: []*infrastructurev1beta2.Subnet{
 								{
-									Role: infrastructurev1beta1.ControlPlaneEndpointRole,
+									Role: infrastructurev1beta2.ControlPlaneEndpointRole,
 									ID:   common.String("subnet-id"),
-									Type: infrastructurev1beta1.Public,
+									Type: infrastructurev1beta2.Public,
 								},
 								{
-									Role: infrastructurev1beta1.ServiceLoadBalancerRole,
+									Role: infrastructurev1beta2.ServiceLoadBalancerRole,
 									ID:   common.String("lb-subnet-id"),
 								},
 							},
-							NetworkSecurityGroups: []*infrastructurev1beta1.NSG{
-								{
-									Role: infrastructurev1beta1.ControlPlaneEndpointRole,
-									ID:   common.String("nsg-id"),
+							NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
+								List: []*infrastructurev1beta2.NSG{
+									{
+										Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+										ID:   common.String("nsg-id"),
+									},
 								},
 							},
 						},
@@ -398,11 +402,11 @@ func TestControlPlaneUpdation(t *testing.T) {
 		ociClusterAccessor.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
 		cs, err = NewManagedControlPlaneScope(ManagedControlPlaneScopeParams{
 			ContainerEngineClient: okeClient,
-			OCIManagedControlPlane: &infrav1exp.OCIManagedControlPlane{
+			OCIManagedControlPlane: &infrav2exp.OCIManagedControlPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
-				Spec: infrav1exp.OCIManagedControlPlaneSpec{},
+				Spec: infrav2exp.OCIManagedControlPlaneSpec{},
 			},
 			OCIClusterAccessor: ociClusterAccessor,
 			Cluster: &clusterv1.Cluster{
@@ -439,23 +443,23 @@ func TestControlPlaneUpdation(t *testing.T) {
 			name:          "control plane no change",
 			errorExpected: false,
 			testSpecificSetup: func(cs *ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
-				cs.OCIManagedControlPlane.Spec = infrav1exp.OCIManagedControlPlaneSpec{
-					ClusterPodNetworkOptions: []infrav1exp.ClusterPodNetworkOptions{
+				cs.OCIManagedControlPlane.Spec = infrav2exp.OCIManagedControlPlaneSpec{
+					ClusterPodNetworkOptions: []infrav2exp.ClusterPodNetworkOptions{
 						{
-							CniType: infrav1exp.FlannelCNI,
+							CniType: infrav2exp.FlannelCNI,
 						},
 					},
-					ImagePolicyConfig: &infrav1exp.ImagePolicyConfig{
+					ImagePolicyConfig: &infrav2exp.ImagePolicyConfig{
 						IsPolicyEnabled: common.Bool(true),
-						KeyDetails: []infrav1exp.KeyDetails{{
+						KeyDetails: []infrav2exp.KeyDetails{{
 							KmsKeyId: common.String("kms-key-id"),
 						}},
 					},
-					ClusterOption: infrav1exp.ClusterOptions{
-						AdmissionControllerOptions: &infrav1exp.AdmissionControllerOptions{
+					ClusterOption: infrav2exp.ClusterOptions{
+						AdmissionControllerOptions: &infrav2exp.AdmissionControllerOptions{
 							IsPodSecurityPolicyEnabled: common.Bool(true),
 						},
-						AddOnOptions: &infrav1exp.AddOnOptions{
+						AddOnOptions: &infrav2exp.AddOnOptions{
 							IsKubernetesDashboardEnabled: common.Bool(true),
 							IsTillerEnabled:              common.Bool(false),
 						},
@@ -514,26 +518,26 @@ func TestControlPlaneUpdation(t *testing.T) {
 			name:          "control plane change",
 			errorExpected: false,
 			testSpecificSetup: func(cs *ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
-				cs.OCIManagedControlPlane.Spec = infrav1exp.OCIManagedControlPlaneSpec{
-					ClusterPodNetworkOptions: []infrav1exp.ClusterPodNetworkOptions{
+				cs.OCIManagedControlPlane.Spec = infrav2exp.OCIManagedControlPlaneSpec{
+					ClusterPodNetworkOptions: []infrav2exp.ClusterPodNetworkOptions{
 						{
-							CniType: infrav1exp.FlannelCNI,
+							CniType: infrav2exp.FlannelCNI,
 						},
 						{
-							CniType: infrav1exp.VCNNativeCNI,
+							CniType: infrav2exp.VCNNativeCNI,
 						},
 					},
-					ImagePolicyConfig: &infrav1exp.ImagePolicyConfig{
+					ImagePolicyConfig: &infrav2exp.ImagePolicyConfig{
 						IsPolicyEnabled: common.Bool(true),
-						KeyDetails: []infrav1exp.KeyDetails{{
+						KeyDetails: []infrav2exp.KeyDetails{{
 							KmsKeyId: common.String("new-kms-key-id"),
 						}},
 					},
-					ClusterOption: infrav1exp.ClusterOptions{
-						AdmissionControllerOptions: &infrav1exp.AdmissionControllerOptions{
+					ClusterOption: infrav2exp.ClusterOptions{
+						AdmissionControllerOptions: &infrav2exp.AdmissionControllerOptions{
 							IsPodSecurityPolicyEnabled: common.Bool(true),
 						},
-						AddOnOptions: &infrav1exp.AddOnOptions{
+						AddOnOptions: &infrav2exp.AddOnOptions{
 							IsKubernetesDashboardEnabled: common.Bool(true),
 							IsTillerEnabled:              common.Bool(false),
 						},
@@ -649,17 +653,17 @@ func TestControlPlaneKubeconfigReconcile(t *testing.T) {
 		okeClient = mock_containerengine.NewMockClient(mockCtrl)
 		baseClient = mock_base.NewMockBaseClient(mockCtrl)
 		ociClusterAccessor := OCIManagedCluster{
-			&infrav1exp.OCIManagedCluster{},
+			&infrav2exp.OCIManagedCluster{},
 		}
 		ociClusterAccessor.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
 		cs, err = NewManagedControlPlaneScope(ManagedControlPlaneScopeParams{
 			ContainerEngineClient: okeClient,
 			BaseClient:            baseClient,
-			OCIManagedControlPlane: &infrav1exp.OCIManagedControlPlane{
+			OCIManagedControlPlane: &infrav2exp.OCIManagedControlPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
-				Spec: infrav1exp.OCIManagedControlPlaneSpec{},
+				Spec: infrav2exp.OCIManagedControlPlaneSpec{},
 			},
 			OCIClusterAccessor: ociClusterAccessor,
 			Cluster: &clusterv1.Cluster{

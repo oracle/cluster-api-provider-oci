@@ -23,7 +23,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
-	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/compute/mock_compute"
 	"github.com/oracle/oci-go-sdk/v65/common"
@@ -41,7 +41,7 @@ func TestReconcileVnicAttachment(t *testing.T) {
 		ms            *MachineScope
 		mockCtrl      *gomock.Controller
 		computeClient *mock_compute.MockComputeClient
-		ociCluster    infrastructurev1beta1.OCICluster
+		ociCluster    infrastructurev1beta2.OCICluster
 	)
 
 	setup := func(t *testing.T, g *WithT) {
@@ -59,24 +59,24 @@ func TestReconcileVnicAttachment(t *testing.T) {
 		mockCtrl = gomock.NewController(t)
 		computeClient = mock_compute.NewMockComputeClient(mockCtrl)
 		client := fake.NewClientBuilder().WithObjects(secret).Build()
-		ociCluster = infrastructurev1beta1.OCICluster{
+		ociCluster = infrastructurev1beta2.OCICluster{
 			ObjectMeta: metav1.ObjectMeta{
 				UID: "uid",
 			},
-			Spec: infrastructurev1beta1.OCIClusterSpec{
+			Spec: infrastructurev1beta2.OCIClusterSpec{
 				OCIResourceIdentifier: "resource_uid",
 			},
 		}
 		ociCluster.Spec.ControlPlaneEndpoint.Port = 6443
 		ms, err = NewMachineScope(MachineScopeParams{
 			ComputeClient: computeClient,
-			OCIMachine: &infrastructurev1beta1.OCIMachine{
+			OCIMachine: &infrastructurev1beta2.OCIMachine{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
-				Spec: infrastructurev1beta1.OCIMachineSpec{
+				Spec: infrastructurev1beta2.OCIMachineSpec{
 					CompartmentId: "testCompartment",
-					VnicAttachments: []infrastructurev1beta1.VnicAttachment{
+					VnicAttachments: []infrastructurev1beta2.VnicAttachment{
 						{
 							DisplayName: common.String("VnicTest"),
 							NicIndex:    common.Int(0),

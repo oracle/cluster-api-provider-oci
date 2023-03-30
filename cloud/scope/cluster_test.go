@@ -18,10 +18,11 @@ package scope
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/identity/mock_identity"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/identity"
@@ -38,13 +39,13 @@ func TestClusterScope_ReconcileFailureDomains(t *testing.T) {
 		CompartmentId: common.String("3ad"),
 	})).Return(identity.ListAvailabilityDomainsResponse{Items: []identity.AvailabilityDomain{
 		{
-			Name: common.String("ad1"),
+			Name: common.String("ad-1"),
 		},
 		{
-			Name: common.String("ad2"),
+			Name: common.String("ad-2"),
 		},
 		{
-			Name: common.String("ad3"),
+			Name: common.String("ad-3"),
 		},
 	}}, nil)
 
@@ -56,7 +57,7 @@ func TestClusterScope_ReconcileFailureDomains(t *testing.T) {
 		CompartmentId: common.String("1ad"),
 	})).Return(identity.ListAvailabilityDomainsResponse{Items: []identity.AvailabilityDomain{
 		{
-			Name: common.String("ad1"),
+			Name: common.String("ad-1"),
 		},
 	}}, nil)
 
@@ -64,7 +65,7 @@ func TestClusterScope_ReconcileFailureDomains(t *testing.T) {
 		CompartmentId: common.String("list-fd-error"),
 	})).Return(identity.ListAvailabilityDomainsResponse{Items: []identity.AvailabilityDomain{
 		{
-			Name: common.String("ad1"),
+			Name: common.String("ad-1"),
 		},
 	}}, nil)
 
@@ -72,164 +73,222 @@ func TestClusterScope_ReconcileFailureDomains(t *testing.T) {
 		CompartmentId: common.String("2ad"),
 	})).Return(identity.ListAvailabilityDomainsResponse{Items: []identity.AvailabilityDomain{
 		{
-			Name: common.String("ad1"),
+			Name: common.String("ad-1"),
 		},
 		{
-			Name: common.String("ad2"),
+			Name: common.String("ad-2"),
 		},
 	}}, nil)
 
 	identityClient.EXPECT().ListFaultDomains(gomock.Any(), gomock.Eq(identity.ListFaultDomainsRequest{
 		CompartmentId:      common.String("1ad"),
-		AvailabilityDomain: common.String("ad1"),
+		AvailabilityDomain: common.String("ad-1"),
 	})).Return(identity.ListFaultDomainsResponse{Items: []identity.FaultDomain{
 		{
 			Name:               common.String("fd1"),
-			AvailabilityDomain: common.String("ad1"),
+			AvailabilityDomain: common.String("ad-1"),
 		},
 		{
 			Name:               common.String("fd2"),
-			AvailabilityDomain: common.String("ad1"),
+			AvailabilityDomain: common.String("ad-1"),
 		},
 		{
 			Name:               common.String("fd3"),
-			AvailabilityDomain: common.String("ad1"),
+			AvailabilityDomain: common.String("ad-1"),
 		},
 	}}, nil)
 
 	identityClient.EXPECT().ListFaultDomains(gomock.Any(), gomock.Eq(identity.ListFaultDomainsRequest{
 		CompartmentId:      common.String("3ad"),
-		AvailabilityDomain: common.String("ad1"),
+		AvailabilityDomain: common.String("ad-1"),
 	})).Return(identity.ListFaultDomainsResponse{Items: []identity.FaultDomain{
 		{
 			Name:               common.String("fault-domain-1"),
-			AvailabilityDomain: common.String("ad1"),
+			AvailabilityDomain: common.String("ad-1"),
 		},
 		{
 			Name:               common.String("fault-domain-2"),
-			AvailabilityDomain: common.String("ad1"),
+			AvailabilityDomain: common.String("ad-1"),
 		},
 		{
 			Name:               common.String("fault-domain-3"),
-			AvailabilityDomain: common.String("ad1"),
+			AvailabilityDomain: common.String("ad-1"),
 		},
 	}}, nil)
 
 	identityClient.EXPECT().ListFaultDomains(gomock.Any(), gomock.Eq(identity.ListFaultDomainsRequest{
 		CompartmentId:      common.String("3ad"),
-		AvailabilityDomain: common.String("ad2"),
+		AvailabilityDomain: common.String("ad-2"),
 	})).Return(identity.ListFaultDomainsResponse{Items: []identity.FaultDomain{
 		{
 			Name:               common.String("fault-domain-1"),
-			AvailabilityDomain: common.String("ad1"),
+			AvailabilityDomain: common.String("ad-1"),
 		},
 		{
 			Name:               common.String("fault-domain-2"),
-			AvailabilityDomain: common.String("ad1"),
+			AvailabilityDomain: common.String("ad-1"),
 		},
 		{
 			Name:               common.String("fault-domain-3"),
-			AvailabilityDomain: common.String("ad1"),
+			AvailabilityDomain: common.String("ad-1"),
 		},
 	}}, nil)
 
 	identityClient.EXPECT().ListFaultDomains(gomock.Any(), gomock.Eq(identity.ListFaultDomainsRequest{
 		CompartmentId:      common.String("3ad"),
-		AvailabilityDomain: common.String("ad3"),
+		AvailabilityDomain: common.String("ad-3"),
 	})).Return(identity.ListFaultDomainsResponse{Items: []identity.FaultDomain{
 		{
 			Name:               common.String("fault-domain-1"),
-			AvailabilityDomain: common.String("ad1"),
+			AvailabilityDomain: common.String("ad-1"),
 		},
 		{
 			Name:               common.String("fault-domain-2"),
-			AvailabilityDomain: common.String("ad1"),
+			AvailabilityDomain: common.String("ad-1"),
 		},
 		{
 			Name:               common.String("fault-domain-3"),
-			AvailabilityDomain: common.String("ad1"),
+			AvailabilityDomain: common.String("ad-1"),
 		},
 	}}, nil)
 
 	identityClient.EXPECT().ListFaultDomains(gomock.Any(), gomock.Eq(identity.ListFaultDomainsRequest{
 		CompartmentId:      common.String("2ad"),
-		AvailabilityDomain: common.String("ad1"),
+		AvailabilityDomain: common.String("ad-1"),
 	})).Return(identity.ListFaultDomainsResponse{Items: []identity.FaultDomain{
 		{
 			Name:               common.String("fd1"),
-			AvailabilityDomain: common.String("ad1"),
+			AvailabilityDomain: common.String("ad-1"),
 		},
 		{
 			Name:               common.String("fd2"),
-			AvailabilityDomain: common.String("ad1"),
+			AvailabilityDomain: common.String("ad-1"),
 		},
 		{
 			Name:               common.String("fd3"),
-			AvailabilityDomain: common.String("ad1"),
+			AvailabilityDomain: common.String("ad-1"),
 		},
 	}}, nil)
 
 	identityClient.EXPECT().ListFaultDomains(gomock.Any(), gomock.Eq(identity.ListFaultDomainsRequest{
 		CompartmentId:      common.String("2ad"),
-		AvailabilityDomain: common.String("ad2"),
+		AvailabilityDomain: common.String("ad-2"),
 	})).Return(identity.ListFaultDomainsResponse{Items: []identity.FaultDomain{
 		{
 			Name:               common.String("fd1"),
-			AvailabilityDomain: common.String("ad1"),
+			AvailabilityDomain: common.String("ad-1"),
 		},
 		{
 			Name:               common.String("fd2"),
-			AvailabilityDomain: common.String("ad1"),
+			AvailabilityDomain: common.String("ad-1"),
 		},
 		{
 			Name:               common.String("fd3"),
-			AvailabilityDomain: common.String("ad1"),
+			AvailabilityDomain: common.String("ad-1"),
 		},
 	}}, nil)
 
 	identityClient.EXPECT().ListFaultDomains(gomock.Any(), gomock.Eq(identity.ListFaultDomainsRequest{
 		CompartmentId:      common.String("list-fd-error"),
-		AvailabilityDomain: common.String("ad1"),
+		AvailabilityDomain: common.String("ad-1"),
 	})).Return(identity.ListFaultDomainsResponse{}, errors.New("some error"))
 
 	tests := []struct {
-		name          string
-		spec          infrastructurev1beta1.OCIClusterSpec
-		wantErr       bool
-		expectedError string
+		name                string
+		spec                infrastructurev1beta2.OCIClusterSpec
+		wantErr             bool
+		expectedError       string
+		expectedErrorPrefix string
 	}{
 		{
 			name: "3ad region",
-			spec: infrastructurev1beta1.OCIClusterSpec{CompartmentId: "3ad"},
+			spec: infrastructurev1beta2.OCIClusterSpec{CompartmentId: "3ad"},
 		},
 		{
 			name: "1ad region",
-			spec: infrastructurev1beta1.OCIClusterSpec{CompartmentId: "1ad"},
+			spec: infrastructurev1beta2.OCIClusterSpec{CompartmentId: "1ad"},
 		},
 		{
 			name:          "2ad region",
-			spec:          infrastructurev1beta1.OCIClusterSpec{CompartmentId: "2ad"},
+			spec:          infrastructurev1beta2.OCIClusterSpec{CompartmentId: "2ad"},
 			wantErr:       true,
 			expectedError: "invalid number of Availability Domains, should be either 1 or 3, but got 2",
 		},
 		{
 			name:          "list ad error",
-			spec:          infrastructurev1beta1.OCIClusterSpec{CompartmentId: "list-ad-error"},
+			spec:          infrastructurev1beta2.OCIClusterSpec{CompartmentId: "list-ad-error"},
 			wantErr:       true,
 			expectedError: "some error",
 		},
 		{
 			name:          "list fd error",
-			spec:          infrastructurev1beta1.OCIClusterSpec{CompartmentId: "list-fd-error"},
+			spec:          infrastructurev1beta2.OCIClusterSpec{CompartmentId: "list-fd-error"},
 			wantErr:       true,
 			expectedError: "some error",
+		},
+		{
+			name: "should not call oci api",
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				CompartmentId: "2ad",
+				AvailabilityDomains: map[string]infrastructurev1beta2.OCIAvailabilityDomain{
+					"ad-1": {
+						Name:         "ad-1",
+						FaultDomains: []string{"fault-domain-1", "fault-domain-2", "fault-domain-3"},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "ad does not have number suffix",
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				CompartmentId: "2ad",
+				AvailabilityDomains: map[string]infrastructurev1beta2.OCIAvailabilityDomain{
+					"ad1": {
+						Name:         "ad1",
+						FaultDomains: []string{"fault-domain-1", "fault-domain-2", "fault-domain-3"},
+					},
+					"ad2": {
+						Name:         "ad2",
+						FaultDomains: []string{"fault-domain-1", "fault-domain-2", "fault-domain-3"},
+					},
+					"ad3": {
+						Name:         "ad3",
+						FaultDomains: []string{"fault-domain-1", "fault-domain-2", "fault-domain-3"},
+					},
+				},
+			},
+			wantErr:             true,
+			expectedErrorPrefix: "could not infer ad number from availability domain ad",
+		},
+		{
+			name: "ad suffix is not a valid integer",
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				CompartmentId: "2ad",
+				AvailabilityDomains: map[string]infrastructurev1beta2.OCIAvailabilityDomain{
+					"adone": {
+						Name:         "ad1",
+						FaultDomains: []string{"fault-domain-1", "fault-domain-2", "fault-domain-3"},
+					},
+					"adtwo": {
+						Name:         "ad2",
+						FaultDomains: []string{"fault-domain-1", "fault-domain-2", "fault-domain-3"},
+					},
+					"adthree": {
+						Name:         "ad3",
+						FaultDomains: []string{"fault-domain-1", "fault-domain-2", "fault-domain-3"},
+					},
+				},
+			},
+			wantErr:             true,
+			expectedErrorPrefix: "could not infer ad number from availability domain ad",
 		},
 	}
 	l := log.FromContext(context.Background())
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ociClusterAccessor := OCISelfManagedCluster{
-				OCICluster: &infrastructurev1beta1.OCICluster{
+				OCICluster: &infrastructurev1beta2.OCICluster{
 					Spec: tt.spec,
 					ObjectMeta: metav1.ObjectMeta{
 						UID: "a",
@@ -246,7 +305,11 @@ func TestClusterScope_ReconcileFailureDomains(t *testing.T) {
 				t.Errorf("ReconcileFailureDomains() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if err != nil {
-				if err.Error() != tt.expectedError {
+				if tt.expectedErrorPrefix != "" {
+					if !strings.HasPrefix(err.Error(), tt.expectedErrorPrefix) {
+						t.Errorf("ReconcileFailureDomains() expected prefix = %s, actual error %s", tt.expectedErrorPrefix, err.Error())
+					}
+				} else if err.Error() != tt.expectedError {
 					t.Errorf("ReconcileFailureDomains() expected error = %s, actual error %s", tt.expectedError, err.Error())
 				}
 

@@ -22,11 +22,11 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	cloudutil "github.com/oracle/cluster-api-provider-oci/cloud/util"
-	infrav1exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
+	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/pkg/errors"
@@ -77,7 +77,7 @@ func (r *OCIMachinePoolReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	logger.Info("Got reconciliation event for machine pool")
 
 	// Fetch the OCIMachinePool.
-	ociMachinePool := &infrav1exp.OCIMachinePool{}
+	ociMachinePool := &infrav2exp.OCIMachinePool{}
 	err := r.Get(ctx, req.NamespacedName, ociMachinePool)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -113,7 +113,7 @@ func (r *OCIMachinePoolReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, nil
 	}
 
-	ociCluster := &infrastructurev1beta1.OCICluster{}
+	ociCluster := &infrastructurev1beta2.OCICluster{}
 	ociClusterName := client.ObjectKey{
 		Namespace: cluster.Namespace,
 		Name:      cluster.Name,
@@ -169,10 +169,10 @@ func (r *OCIMachinePoolReconciler) SetupWithManager(ctx context.Context, mgr ctr
 	logger := log.FromContext(ctx)
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(options).
-		For(&infrav1exp.OCIMachinePool{}).
+		For(&infrav2exp.OCIMachinePool{}).
 		Watches(
 			&source.Kind{Type: &expclusterv1.MachinePool{}},
-			handler.EnqueueRequestsFromMapFunc(machinePoolToInfrastructureMapFunc(infrav1exp.
+			handler.EnqueueRequestsFromMapFunc(machinePoolToInfrastructureMapFunc(infrav2exp.
 				GroupVersion.WithKind(scope.OCIMachinePoolKind), logger)),
 		).
 		WithEventFilter(predicates.ResourceNotPaused(ctrl.LoggerFrom(ctx))).
@@ -243,7 +243,7 @@ func (r *OCIMachinePoolReconciler) reconcileNormal(ctx context.Context, logger l
 	}
 
 	// If the OCIMachinePool doesn't have our finalizer, add it.
-	controllerutil.AddFinalizer(machinePoolScope.OCIMachinePool, infrav1exp.MachinePoolFinalizer)
+	controllerutil.AddFinalizer(machinePoolScope.OCIMachinePool, infrav2exp.MachinePoolFinalizer)
 	// Register the finalizer immediately to avoid orphaning OCI resources on delete
 	if err := machinePoolScope.PatchObject(ctx); err != nil {
 		return reconcile.Result{}, err
@@ -256,8 +256,8 @@ func (r *OCIMachinePoolReconciler) reconcileNormal(ctx context.Context, logger l
 
 	// Make sure bootstrap data is available and populated.
 	if machinePoolScope.MachinePool.Spec.Template.Spec.Bootstrap.DataSecretName == nil {
-		r.Recorder.Event(machinePoolScope.OCIMachinePool, corev1.EventTypeNormal, infrastructurev1beta1.WaitingForBootstrapDataReason, "Bootstrap data secret reference is not yet available")
-		conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav1exp.InstancePoolReadyCondition, infrastructurev1beta1.WaitingForBootstrapDataReason, clusterv1.ConditionSeverityInfo, "")
+		r.Recorder.Event(machinePoolScope.OCIMachinePool, corev1.EventTypeNormal, infrastructurev1beta2.WaitingForBootstrapDataReason, "Bootstrap data secret reference is not yet available")
+		conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav2exp.InstancePoolReadyCondition, infrastructurev1beta2.WaitingForBootstrapDataReason, clusterv1.ConditionSeverityInfo, "")
 		logger.Info("Bootstrap data secret reference is not yet available")
 		return reconcile.Result{}, nil
 	}
@@ -271,18 +271,18 @@ func (r *OCIMachinePoolReconciler) reconcileNormal(ctx context.Context, logger l
 	}
 
 	// set the LaunchTemplateReady condition
-	conditions.MarkTrue(machinePoolScope.OCIMachinePool, infrav1exp.LaunchTemplateReadyCondition)
+	conditions.MarkTrue(machinePoolScope.OCIMachinePool, infrav2exp.LaunchTemplateReadyCondition)
 
 	// Find existing Instance Pool
 	instancePool, err := machinePoolScope.FindInstancePool(ctx)
 	if err != nil {
-		conditions.MarkUnknown(machinePoolScope.OCIMachinePool, infrav1exp.InstancePoolReadyCondition, infrav1exp.InstancePoolNotFoundReason, err.Error())
+		conditions.MarkUnknown(machinePoolScope.OCIMachinePool, infrav2exp.InstancePoolReadyCondition, infrav2exp.InstancePoolNotFoundReason, err.Error())
 		return ctrl.Result{}, err
 	}
 
 	if instancePool == nil {
 		if _, err := machinePoolScope.CreateInstancePool(ctx); err != nil {
-			conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav1exp.InstancePoolReadyCondition, infrav1exp.InstancePoolProvisionFailedReason, clusterv1.ConditionSeverityError, err.Error())
+			conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav2exp.InstancePoolReadyCondition, infrav2exp.InstancePoolProvisionFailedReason, clusterv1.ConditionSeverityError, err.Error())
 			return ctrl.Result{}, err
 		}
 		r.Recorder.Eventf(machinePoolScope.OCIMachinePool, "SuccessfulCreate", "Created new Instance Pool: %s", machinePoolScope.OCIMachinePool.GetName())
@@ -296,11 +296,11 @@ func (r *OCIMachinePoolReconciler) reconcileNormal(ctx context.Context, logger l
 	switch instancePool.LifecycleState {
 	case core.InstancePoolLifecycleStateProvisioning, core.InstancePoolLifecycleStateStarting:
 		machinePoolScope.Info("Instance Pool is pending")
-		conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav1exp.InstancePoolReadyCondition, infrav1exp.InstancePoolNotReadyReason, clusterv1.ConditionSeverityInfo, "")
+		conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav2exp.InstancePoolReadyCondition, infrav2exp.InstancePoolNotReadyReason, clusterv1.ConditionSeverityInfo, "")
 		return reconcile.Result{RequeueAfter: 10 * time.Second}, nil
 	case core.InstancePoolLifecycleStateScaling:
 		machinePoolScope.Info("Instance Pool is scaling")
-		conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav1exp.InstancePoolReadyCondition, infrav1exp.InstancePoolNotReadyReason, clusterv1.ConditionSeverityInfo, "")
+		conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav2exp.InstancePoolReadyCondition, infrav2exp.InstancePoolNotReadyReason, clusterv1.ConditionSeverityInfo, "")
 		return reconcile.Result{RequeueAfter: 10 * time.Second}, nil
 	case core.InstancePoolLifecycleStateRunning:
 		machinePoolScope.Info("Instance pool is active")
@@ -308,7 +308,7 @@ func (r *OCIMachinePoolReconciler) reconcileNormal(ctx context.Context, logger l
 		// record the event only when pool goes from not ready to ready state
 		r.Recorder.Eventf(machinePoolScope.OCIMachinePool, corev1.EventTypeNormal, "InstancePoolReady",
 			"Instance pool is in ready state")
-		conditions.MarkTrue(machinePoolScope.OCIMachinePool, infrav1exp.InstancePoolReadyCondition)
+		conditions.MarkTrue(machinePoolScope.OCIMachinePool, infrav2exp.InstancePoolReadyCondition)
 
 		instanceCount, err := machinePoolScope.SetListandSetMachinePoolInstances(ctx)
 		if err != nil {
@@ -327,7 +327,7 @@ func (r *OCIMachinePoolReconciler) reconcileNormal(ctx context.Context, logger l
 		machinePoolScope.SetReplicaCount(instanceCount)
 		machinePoolScope.SetReady()
 	default:
-		conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav1exp.InstancePoolReadyCondition, infrav1exp.InstancePoolProvisionFailedReason, clusterv1.ConditionSeverityError, "")
+		conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav2exp.InstancePoolReadyCondition, infrav2exp.InstancePoolProvisionFailedReason, clusterv1.ConditionSeverityError, "")
 		machinePoolScope.SetFailureReason(capierrors.CreateMachineError)
 		machinePoolScope.SetFailureMessage(errors.Errorf("Instance Pool status %q is unexpected", instancePool.LifecycleState))
 		r.Recorder.Eventf(machinePoolScope.OCIMachinePool, corev1.EventTypeWarning, "ReconcileError",
@@ -351,9 +351,9 @@ func (r *OCIMachinePoolReconciler) reconcileDelete(ctx context.Context, machineP
 
 	if instancePool == nil {
 		machinePoolScope.OCIMachinePool.Status.Ready = false
-		conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav1exp.InstancePoolReadyCondition, infrav1exp.InstancePoolNotFoundReason, clusterv1.ConditionSeverityWarning, "")
+		conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav2exp.InstancePoolReadyCondition, infrav2exp.InstancePoolNotFoundReason, clusterv1.ConditionSeverityWarning, "")
 		machinePoolScope.Info("Instance Pool may already be deleted", "displayName", instancePool.DisplayName, "id", instancePool.Id)
-		r.Recorder.Eventf(machinePoolScope.OCIMachinePool, corev1.EventTypeNormal, infrav1exp.InstancePoolNotFoundReason, "Unable to find matching instance pool")
+		r.Recorder.Eventf(machinePoolScope.OCIMachinePool, corev1.EventTypeNormal, infrav2exp.InstancePoolNotFoundReason, "Unable to find matching instance pool")
 	} else {
 		switch instancePool.LifecycleState {
 		case core.InstancePoolLifecycleStateTerminating:
@@ -363,7 +363,7 @@ func (r *OCIMachinePoolReconciler) reconcileDelete(ctx context.Context, machineP
 		case core.InstancePoolLifecycleStateTerminated:
 			// Instance Pool is already deleted
 			machinePoolScope.OCIMachinePool.Status.Ready = false
-			conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav1exp.InstancePoolReadyCondition, infrav1exp.InstancePoolDeletionInProgress, clusterv1.ConditionSeverityWarning, "")
+			conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav2exp.InstancePoolReadyCondition, infrav2exp.InstancePoolDeletionInProgress, clusterv1.ConditionSeverityWarning, "")
 			r.Recorder.Eventf(machinePoolScope.OCIMachinePool, corev1.EventTypeWarning, "DeletionInProgress", "Instance Pool deletion in progress: %s - %s", instancePool.DisplayName, instancePool.Id)
 			machinePoolScope.Info("Instance Pool is already deleted", "displayName", instancePool.DisplayName, "id", instancePool.Id)
 		default:
@@ -398,6 +398,6 @@ func (r *OCIMachinePoolReconciler) reconcileDelete(ctx context.Context, machineP
 	}
 	machinePoolScope.Info("successfully deleted instance pool and Launch Template")
 	// remove finalizer
-	controllerutil.RemoveFinalizer(machinePoolScope.OCIMachinePool, infrav1exp.MachinePoolFinalizer)
+	controllerutil.RemoveFinalizer(machinePoolScope.OCIMachinePool, infrav2exp.MachinePoolFinalizer)
 	return ctrl.Result{}, nil
 }

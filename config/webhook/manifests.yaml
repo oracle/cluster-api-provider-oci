@@ -6,13 +6,12 @@ metadata:
   name: mutating-webhook-configuration
 webhooks:
 - admissionReviewVersions:
-  - v1
   - v1beta1
   clientConfig:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-infrastructure-cluster-x-k8s-io-v1beta1-ocicluster
+      path: /mutate-infrastructure-cluster-x-k8s-io-v1beta2-ocicluster
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: default.ocicluster.infrastructure.cluster.x-k8s.io
@@ -20,7 +19,7 @@ webhooks:
   - apiGroups:
     - infrastructure.cluster.x-k8s.io
     apiVersions:
-    - v1beta1
+    - v1beta2
     operations:
     - CREATE
     - UPDATE
@@ -28,13 +27,12 @@ webhooks:
     - ociclusters
   sideEffects: None
 - admissionReviewVersions:
-  - v1
   - v1beta1
   clientConfig:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-infrastructure-cluster-x-k8s-io-v1beta1-ocimanagedcluster
+      path: /mutate-infrastructure-cluster-x-k8s-io-v1beta2-ocimanagedcluster
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: default.ocimanagedcluster.infrastructure.cluster.x-k8s.io
@@ -42,7 +40,7 @@ webhooks:
   - apiGroups:
     - infrastructure.cluster.x-k8s.io
     apiVersions:
-    - v1beta1
+    - v1beta2
     operations:
     - CREATE
     - UPDATE
@@ -50,13 +48,12 @@ webhooks:
     - ocimanagedclusters
   sideEffects: None
 - admissionReviewVersions:
-  - v1
   - v1beta1
   clientConfig:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-infrastructure-cluster-x-k8s-io-v1beta1-ocimanagedcontrolplane
+      path: /mutate-infrastructure-cluster-x-k8s-io-v1beta2-ocimanagedcontrolplane
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: default.ocimanagedcontrolplane.infrastructure.cluster.x-k8s.io
@@ -64,7 +61,7 @@ webhooks:
   - apiGroups:
     - infrastructure.cluster.x-k8s.io
     apiVersions:
-    - v1beta1
+    - v1beta2
     operations:
     - CREATE
     - UPDATE
@@ -72,13 +69,12 @@ webhooks:
     - ocimanagedcontrolplanes
   sideEffects: None
 - admissionReviewVersions:
-  - v1
   - v1beta1
   clientConfig:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-infrastructure-cluster-x-k8s-io-v1beta1-ocimanagedmachinepool
+      path: /mutate-infrastructure-cluster-x-k8s-io-v1beta2-ocimanagedmachinepool
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: default.ocimanagedmachinepool.infrastructure.cluster.x-k8s.io
@@ -86,7 +82,7 @@ webhooks:
   - apiGroups:
     - infrastructure.cluster.x-k8s.io
     apiVersions:
-    - v1beta1
+    - v1beta2
     operations:
     - CREATE
     - UPDATE
@@ -106,7 +102,7 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-infrastructure-cluster-x-k8s-io-v1beta1-ocicluster
+      path: /validate-infrastructure-cluster-x-k8s-io-v1beta2-ocicluster
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: validation.ocicluster.infrastructure.cluster.x-k8s.io
@@ -114,7 +110,7 @@ webhooks:
   - apiGroups:
     - infrastructure.cluster.x-k8s.io
     apiVersions:
-    - v1beta1
+    - v1beta2
     operations:
     - CREATE
     - UPDATE
@@ -127,7 +123,7 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-infrastructure-cluster-x-k8s-io-v1beta1-ocimachinetemplate
+      path: /validate-infrastructure-cluster-x-k8s-io-v1beta2-ocimachinetemplate
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: validation.ocimachinetemplate.infrastructure.cluster.x-k8s.io
@@ -135,7 +131,7 @@ webhooks:
   - apiGroups:
     - infrastructure.cluster.x-k8s.io
     apiVersions:
-    - v1beta1
+    - v1beta2
     operations:
     - CREATE
     - UPDATE
@@ -148,7 +144,7 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-infrastructure-cluster-x-k8s-io-v1beta1-ocimanagedcluster
+      path: /validate-infrastructure-cluster-x-k8s-io-v1beta2-ocimanagedcluster
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: validation.ocimanagedcluster.infrastructure.cluster.x-k8s.io
@@ -156,7 +152,7 @@ webhooks:
   - apiGroups:
     - infrastructure.cluster.x-k8s.io
     apiVersions:
-    - v1beta1
+    - v1beta2
     operations:
     - CREATE
     - UPDATE
@@ -169,7 +165,7 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-infrastructure-cluster-x-k8s-io-v1beta1-ocimanagedcontrolplane
+      path: /validate-infrastructure-cluster-x-k8s-io-v1beta2-ocimanagedcontrolplane
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: validation.ocimanagedcontrolplane.infrastructure.cluster.x-k8s.io
@@ -177,7 +173,7 @@ webhooks:
   - apiGroups:
     - infrastructure.cluster.x-k8s.io
     apiVersions:
-    - v1beta1
+    - v1beta2
     operations:
     - CREATE
     - UPDATE
@@ -190,7 +186,7 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-infrastructure-cluster-x-k8s-io-v1beta1-ocimanagedmachinepool
+      path: /validate-infrastructure-cluster-x-k8s-io-v1beta2-ocimanagedmachinepool
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: validation.ocimanagedmachinepool.infrastructure.cluster.x-k8s.io
@@ -198,7 +194,7 @@ webhooks:
   - apiGroups:
     - infrastructure.cluster.x-k8s.io
     apiVersions:
-    - v1beta1
+    - v1beta2
     operations:
     - CREATE
     - UPDATE

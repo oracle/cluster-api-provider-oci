@@ -17,7 +17,7 @@
  *
  */
 
-package v1beta1
+package v1beta2
 
 import (
 	"strings"
@@ -312,14 +312,16 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 				Spec: OCIClusterSpec{
 					NetworkSpec: NetworkSpec{
 						Vcn: VCN{
-							NetworkSecurityGroups: []*NSG{{
-								EgressRules: []EgressSecurityRuleForNSG{{
-									EgressSecurityRule: EgressSecurityRule{
-										Destination:     common.String("bad/15"),
-										DestinationType: EgressSecurityRuleDestinationTypeCidrBlock,
-									},
+							NetworkSecurityGroup: NetworkSecurityGroup{
+								List: []*NSG{{
+									EgressRules: []EgressSecurityRuleForNSG{{
+										EgressSecurityRule: EgressSecurityRule{
+											Destination:     common.String("bad/15"),
+											DestinationType: EgressSecurityRuleDestinationTypeCidrBlock,
+										},
+									}},
 								}},
-							}},
+							},
 						},
 					},
 				},
@@ -336,14 +338,16 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 				Spec: OCIClusterSpec{
 					NetworkSpec: NetworkSpec{
 						Vcn: VCN{
-							NetworkSecurityGroups: []*NSG{{
-								IngressRules: []IngressSecurityRuleForNSG{{
-									IngressSecurityRule: IngressSecurityRule{
-										Source:     common.String("bad/15"),
-										SourceType: IngressSecurityRuleSourceTypeCidrBlock,
-									},
+							NetworkSecurityGroup: NetworkSecurityGroup{
+								List: []*NSG{{
+									IngressRules: []IngressSecurityRuleForNSG{{
+										IngressSecurityRule: IngressSecurityRule{
+											Source:     common.String("bad/15"),
+											SourceType: IngressSecurityRuleSourceTypeCidrBlock,
+										},
+									}},
 								}},
-							}},
+							},
 						},
 					},
 				},
@@ -360,9 +364,11 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 				Spec: OCIClusterSpec{
 					NetworkSpec: NetworkSpec{
 						Vcn: VCN{
-							NetworkSecurityGroups: []*NSG{{
-								Role: "bad-role",
-							}},
+							NetworkSecurityGroup: NetworkSecurityGroup{
+								List: []*NSG{{
+									Role: "bad-role",
+								}},
+							},
 						},
 					},
 				},
@@ -377,9 +383,9 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 				Spec: OCIClusterSpec{
 					NetworkSpec: NetworkSpec{
 						Vcn: VCN{
-							NetworkSecurityGroups: []*NSG{{
+							NetworkSecurityGroup: NetworkSecurityGroup{List: []*NSG{{
 								Role: PodRole,
-							}},
+							}}},
 						},
 					},
 				},
@@ -606,7 +612,26 @@ func TestOCICluster_CreateDefault(t *testing.T) {
 				},
 			},
 			expect: func(g *gomega.WithT, c *OCICluster) {
-				g.Expect(c.Spec.NetworkSpec.Vcn.NetworkSecurityGroups).To(Equal(c.NSGSpec()))
+				g.Expect(c.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List).To(Equal(c.NSGSpec()))
+			},
+		},
+		{
+			name: "should set default nsg",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{},
+				Spec: OCIClusterSpec{
+					CompartmentId: "ocid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							NetworkSecurityGroup: NetworkSecurityGroup{
+								Skip: true,
+							},
+						},
+					},
+				},
+			},
+			expect: func(g *gomega.WithT, c *OCICluster) {
+				g.Expect(len(c.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List)).To(Equal(0))
 			},
 		},
 		{
@@ -667,14 +692,16 @@ func TestOCICluster_CreateDefault(t *testing.T) {
 					CompartmentId: "ocid",
 					NetworkSpec: NetworkSpec{
 						Vcn: VCN{
-							NetworkSecurityGroups: []*NSG{
-								{
-									Role: ServiceLoadBalancerRole,
-									Name: ServiceLBDefaultName,
-								},
-								{
-									Role: ControlPlaneEndpointRole,
-									Name: ControlPlaneEndpointDefaultName,
+							NetworkSecurityGroup: NetworkSecurityGroup{
+								List: []*NSG{
+									{
+										Role: ServiceLoadBalancerRole,
+										Name: ServiceLBDefaultName,
+									},
+									{
+										Role: ControlPlaneEndpointRole,
+										Name: ControlPlaneEndpointDefaultName,
+									},
 								},
 							},
 						},
@@ -704,7 +731,7 @@ func TestOCICluster_CreateDefault(t *testing.T) {
 						EgressRules:  c.GetNodeDefaultEgressRules(),
 					},
 				}
-				g.Expect(c.Spec.NetworkSpec.Vcn.NetworkSecurityGroups).To(Equal(nsgs))
+				g.Expect(c.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List).To(Equal(nsgs))
 			},
 		},
 	}

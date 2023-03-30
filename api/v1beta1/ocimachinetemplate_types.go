@@ -33,7 +33,6 @@ type OCIMachineTemplateResource struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:path=ocimachinetemplates,scope=Namespaced,categories=cluster-api
-// +kubebuilder:storageversion
 
 // OCIMachineTemplate is the schema for the OCI compute instance machine template.
 type OCIMachineTemplate struct {

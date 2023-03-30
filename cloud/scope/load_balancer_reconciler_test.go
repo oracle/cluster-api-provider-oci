@@ -24,7 +24,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
-	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer/mock_nlb"
 	"github.com/oracle/oci-go-sdk/v65/common"
@@ -50,12 +50,12 @@ func TestLBReconciliation(t *testing.T) {
 		nlbClient = mock_nlb.NewMockNetworkLoadBalancerClient(mockCtrl)
 		client := fake.NewClientBuilder().Build()
 		ociClusterAccessor = OCISelfManagedCluster{
-			&infrastructurev1beta1.OCICluster{
+			&infrastructurev1beta2.OCICluster{
 				ObjectMeta: metav1.ObjectMeta{
 					UID:  "a",
 					Name: "cluster",
 				},
-				Spec: infrastructurev1beta1.OCIClusterSpec{
+				Spec: infrastructurev1beta2.OCIClusterSpec{
 					CompartmentId:         "compartment-id",
 					OCIResourceIdentifier: "resource_uid",
 				},
@@ -223,13 +223,13 @@ func TestLBReconciliation(t *testing.T) {
 			errorExpected: true,
 			matchError:    errors.New("cannot have more than 1 control plane endpoint subnet"),
 			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
-				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta1.Subnet{
+				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta2.Subnet{
 					{
-						Role: infrastructurev1beta1.ControlPlaneEndpointRole,
+						Role: infrastructurev1beta2.ControlPlaneEndpointRole,
 						ID:   common.String("s1"),
 					},
 					{
-						Role: infrastructurev1beta1.ControlPlaneEndpointRole,
+						Role: infrastructurev1beta2.ControlPlaneEndpointRole,
 						ID:   common.String("s2"),
 					},
 				}
@@ -244,9 +244,9 @@ func TestLBReconciliation(t *testing.T) {
 			name:          "create load balancer",
 			errorExpected: false,
 			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
-				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta1.Subnet{
+				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta2.Subnet{
 					{
-						Role: infrastructurev1beta1.ControlPlaneEndpointRole,
+						Role: infrastructurev1beta2.ControlPlaneEndpointRole,
 						ID:   common.String("s1"),
 					},
 				}
@@ -329,9 +329,9 @@ func TestLBReconciliation(t *testing.T) {
 			errorSubStringMatch: true,
 			matchError:          errors.New("request failed"),
 			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
-				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta1.Subnet{
+				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta2.Subnet{
 					{
-						Role: infrastructurev1beta1.ControlPlaneEndpointRole,
+						Role: infrastructurev1beta2.ControlPlaneEndpointRole,
 						ID:   common.String("s1"),
 					},
 				}
@@ -381,9 +381,9 @@ func TestLBReconciliation(t *testing.T) {
 			errorSubStringMatch: true,
 			matchError:          errors.New("WorkRequest opc-wr-id failed"),
 			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
-				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta1.Subnet{
+				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta2.Subnet{
 					{
-						Role: infrastructurev1beta1.ControlPlaneEndpointRole,
+						Role: infrastructurev1beta2.ControlPlaneEndpointRole,
 						ID:   common.String("s1"),
 					},
 				}
@@ -553,12 +553,12 @@ func TestLBDeletion(t *testing.T) {
 		nlbClient = mock_nlb.NewMockNetworkLoadBalancerClient(mockCtrl)
 		client := fake.NewClientBuilder().Build()
 		ociClusterAccessor = OCISelfManagedCluster{
-			&infrastructurev1beta1.OCICluster{
+			&infrastructurev1beta2.OCICluster{
 				ObjectMeta: metav1.ObjectMeta{
 					UID:  "a",
 					Name: "cluster",
 				},
-				Spec: infrastructurev1beta1.OCIClusterSpec{
+				Spec: infrastructurev1beta2.OCIClusterSpec{
 					CompartmentId:         "compartment-id",
 					OCIResourceIdentifier: "resource_uid",
 				},
