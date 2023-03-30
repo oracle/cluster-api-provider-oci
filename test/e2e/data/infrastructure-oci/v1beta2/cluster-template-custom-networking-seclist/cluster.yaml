@@ -1,0 +1,93 @@
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: OCICluster
+metadata:
+  name: "${CLUSTER_NAME}"
+spec:
+  networkSpec:
+    vcn:
+      name: ${CLUSTER_NAME}-test
+      subnets:
+        - name: ep-subnet
+          role: control-plane-endpoint
+          type: public
+          securityList:
+            name: ep-seclist
+            egressRules:
+              - destination: "10.0.0.0/29"
+                protocol: "6"
+                destinationType: "CIDR_BLOCK"
+                description: "All traffic to control plane nodes"
+                tcpOptions:
+                  destinationPortRange:
+                    max: 6443
+                    min: 6443
+            ingressRules:
+              - source: "0.0.0.0/0"
+                protocol: "6"
+                sourceType: "CIDR_BLOCK"
+                description: "External access to Kubernetes API endpoint"
+                tcpOptions:
+                  destinationPortRange:
+                    max: 6443
+                    min: 6443
+              - source: "10.0.0.0/29"
+                protocol: "6"
+                sourceType: "CIDR_BLOCK"
+                description: "Control plane worker nodes to API Server endpoint"
+              - source: "0.0.0.0/0"
+                protocol: "6"
+                sourceType: "CIDR_BLOCK"
+                description: "SSH access"
+                tcpOptions:
+                  destinationPortRange:
+                    max: 22
+                    min: 22
+        - name: cp-mc-subnet
+          role: control-plane
+          type: private
+          securityList:
+            name: cp-mc-seclist
+            egressRules:
+              - destination: "0.0.0.0/0"
+                protocol: "6"
+                destinationType: "CIDR_BLOCK"
+                description: "control plane machine access to internet"
+            ingressRules:
+              - source: "10.0.0.0/16"
+                protocol: "all"
+                sourceType: "CIDR_BLOCK"
+                description: "Allow inter vcn communication"
+              - source: "0.0.0.0/0"
+                protocol: "6"
+                sourceType: "CIDR_BLOCK"
+                description: "SSH access"
+                tcpOptions:
+                  destinationPortRange:
+                    max: 22
+                    min: 22
+        - name: worker-subnet
+          role: worker
+          type: private
+          securityList:
+            name: worker-seclist
+            egressRules:
+              - destination: "0.0.0.0/0"
+                protocol: "6"
+                destinationType: "CIDR_BLOCK"
+                description: "Worker workers access to Internet"
+            ingressRules:
+              - source: "10.0.0.0/16"
+                protocol: "all"
+                sourceType: "CIDR_BLOCK"
+                description: "Allow inter vcn communication"
+        - name: svc-lb-subnet
+          role: service-lb
+          type: public
+          securityList:
+            name: service-lb-seclist
+            ingressRules:
+              - source: "10.0.0.0/16"
+                protocol: "all"
+                sourceType: "CIDR_BLOCK"
+                description: "Allow ingress from vcn subnets"

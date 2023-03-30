@@ -7,17 +7,17 @@ metadata:
   namespace: "${NAMESPACE}"
 spec:
   infrastructureRef:
-    apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
     kind: OCIManagedCluster
     name: "${CLUSTER_NAME}"
     namespace: "${NAMESPACE}"
   controlPlaneRef:
-    apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
     kind: OCIManagedControlPlane
     name: "${CLUSTER_NAME}"
     namespace: "${NAMESPACE}"
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCIManagedCluster
 metadata:
   labels:
@@ -27,7 +27,7 @@ spec:
   compartmentId: "${OCI_COMPARTMENT_ID}"
 ---
 kind: OCIManagedControlPlane
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 metadata:
   name: "${CLUSTER_NAME}"
   namespace: "${NAMESPACE}"
@@ -50,12 +50,12 @@ spec:
       bootstrap:
         dataSecretName: ""
       infrastructureRef:
-        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
         kind: OCIManagedMachinePool
         name: ${CLUSTER_NAME}-mp-0
       version: ${KUBERNETES_VERSION}
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCIManagedMachinePool
 metadata:
   name: ${CLUSTER_NAME}-mp-0

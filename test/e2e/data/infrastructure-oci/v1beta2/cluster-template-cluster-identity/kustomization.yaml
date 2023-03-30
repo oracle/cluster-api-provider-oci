@@ -1,0 +1,9 @@
+bases:
+  - ../bases/cluster.yaml
+  - ../bases/md.yaml
+  - ../../bases/crs.yaml
+  - ../../bases/ccm.yaml
+  - ./cluster-identity.yaml
+
+patchesStrategicMerge:
+  - ./cluster.yaml

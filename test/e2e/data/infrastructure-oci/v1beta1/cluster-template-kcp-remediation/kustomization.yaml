@@ -1,6 +1,0 @@
-bases:
-  - ../bases/cluster.yaml
-  - ../bases/md.yaml
-  - mhc.yaml
-  - ../bases/crs.yaml
-  - ../bases/ccm.yaml

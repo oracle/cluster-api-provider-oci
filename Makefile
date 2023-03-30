@@ -272,26 +272,26 @@ serve-book: build-book ## Build and serve the book with live-reloading enabled
 
 .PHONY: generate-e2e-templates ## Generate OCI infrastructure templates for e2e test suite.
 generate-e2e-templates: $(KUSTOMIZE)
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-alternative-region --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-alternative-region.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-bare-metal --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-bare-metal.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-md-remediation --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-md-remediation.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-kcp-remediation --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-kcp-remediation.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-node-drain --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-node-drain.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-antrea --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-antrea.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-oracle-linux --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-oracle-linux.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-custom-networking-seclist --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-custom-networking-seclist.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-alternative-region --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-alternative-region.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-bare-metal --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-bare-metal.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-md-remediation --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-md-remediation.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-kcp-remediation --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-kcp-remediation.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-node-drain --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-node-drain.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-antrea --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-antrea.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-oracle-linux --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-oracle-linux.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-custom-networking-seclist --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-custom-networking-seclist.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-custom-networking-nsg --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-custom-networking-nsg.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-multiple-node-nsg --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-multiple-node-nsg.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-cluster-class --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-cluster-class.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-local-vcn-peering --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-local-vcn-peering.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-remote-vcn-peering --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-remote-vcn-peering.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-externally-managed-vcn --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-externally-managed-vcn.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-machine-pool --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-machine-pool.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-managed --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-managed.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-managed-cluster-identity --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-managed-cluster-identity.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-cluster-identity --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-cluster-identity.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-windows-calico --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-windows-calico.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-multiple-node-nsg --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-multiple-node-nsg.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-cluster-class --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-cluster-class.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-local-vcn-peering --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-local-vcn-peering.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-remote-vcn-peering --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-remote-vcn-peering.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-externally-managed-vcn --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-externally-managed-vcn.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-machine-pool --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-machine-pool.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-managed --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-managed.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-managed-cluster-identity --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-managed-cluster-identity.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-cluster-identity --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-cluster-identity.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-windows-calico --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-windows-calico.yaml
 
 .PHONY: test-e2e-run
 test-e2e-run: generate-e2e-templates $(GINKGO) $(ENVSUBST) ## Run e2e tests

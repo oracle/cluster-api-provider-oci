@@ -1,0 +1,11 @@
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: OCICluster
+metadata:
+  name: "${CLUSTER_NAME}"
+spec:
+  identityRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+    kind: OCIClusterIdentity
+    name: cluster-identity-user-principal
+    namespace: "${NAMESPACE}"

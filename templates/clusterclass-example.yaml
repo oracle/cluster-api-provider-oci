@@ -11,11 +11,11 @@ spec:
     machineInfrastructure:
       ref:
         kind: OCIMachineTemplate
-        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
         name: control-plane
   infrastructure:
     ref:
-      apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+      apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
       kind: OCIClusterTemplate
       name: ocicluster
   workers:
@@ -29,7 +29,7 @@ spec:
             name: worker-bootstrap-template
         infrastructure:
           ref:
-            apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+            apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
             kind: OCIMachineTemplate
             name: worker-machine-template
   variables:
@@ -71,7 +71,7 @@ spec:
   - name: compartmentId
     definitions:
       - selector:
-          apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+          apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
           kind: OCIClusterTemplate
           matchResources:
             infrastructureCluster: true
@@ -83,7 +83,7 @@ spec:
   - name: sshAuthorizedKeys
     definitions:
     - selector:
-        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
         kind: OCIMachineTemplate
         matchResources:
           controlPlane: true
@@ -98,7 +98,7 @@ spec:
   - name: shape
     definitions:
     - selector:
-        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
         kind: OCIMachineTemplate
         matchResources:
           controlPlane: true
@@ -113,7 +113,7 @@ spec:
   - name: imageId
     definitions:
     - selector:
-        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
         kind: OCIMachineTemplate
         matchResources:
           controlPlane: true
@@ -128,7 +128,7 @@ spec:
   - name: isPvEncryptionInTransitEnabled
     definitions:
     - selector:
-        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
         kind: OCIMachineTemplate
         matchResources:
           controlPlane: true
@@ -143,7 +143,7 @@ spec:
   - name: ocpus
     definitions:
     - selector:
-        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
         kind: OCIMachineTemplate
         matchResources:
           controlPlane: true
@@ -156,7 +156,7 @@ spec:
           valueFrom:
             variable: ocpus
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCIClusterTemplate
 metadata:
   name: ocicluster
@@ -193,7 +193,7 @@ spec:
               cloud-provider: external
               provider-id: oci://{{ ds["id"] }}
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCIMachineTemplate
 metadata:
   name: control-plane
@@ -206,7 +206,7 @@ spec:
       shapeConfig: {}
 
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCIMachineTemplate
 metadata:
   name: worker-machine-template
