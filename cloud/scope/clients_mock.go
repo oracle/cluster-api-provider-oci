@@ -29,15 +29,17 @@ import (
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/compute"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/identity"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
+	"github.com/oracle/oci-go-sdk/v65/loadbalancer"
 	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
 	"k8s.io/klog/v2/klogr"
 )
 
 type MockOCIClients struct {
-	VCNClient          vcn.Client
-	ComputeClient      compute.ComputeClient
-	LoadBalancerClient *networkloadbalancer.NetworkLoadBalancerClient
-	IdentityClient     identity.Client
+	VCNClient                 vcn.Client
+	ComputeClient             compute.ComputeClient
+	LoadBalancerClient        *networkloadbalancer.NetworkLoadBalancerClient
+	LoadBalancerServiceClient *loadbalancer.LoadBalancerClient
+	IdentityClient            identity.Client
 }
 
 var (
@@ -47,10 +49,11 @@ var (
 func MockNewClientProvider(mockClients MockOCIClients) (*ClientProvider, error) {
 
 	clientsInject := map[string]OCIClients{MockTestRegion: {
-		VCNClient:          mockClients.VCNClient,
-		LoadBalancerClient: mockClients.LoadBalancerClient,
-		IdentityClient:     mockClients.IdentityClient,
-		ComputeClient:      mockClients.ComputeClient,
+		VCNClient:                 mockClients.VCNClient,
+		LoadBalancerClient:        mockClients.LoadBalancerClient,
+		LoadBalancerServiceClient: mockClients.LoadBalancerServiceClient,
+		IdentityClient:            mockClients.IdentityClient,
+		ComputeClient:             mockClients.ComputeClient,
 	}}
 
 	authConfig, err := MockAuthConfig()

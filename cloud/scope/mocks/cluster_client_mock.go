@@ -49,6 +49,20 @@ func (mr *MockClusterScopeClientMockRecorder) DeleteApiServerLB(ctx interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteApiServerLB", reflect.TypeOf((*MockClusterScopeClient)(nil).DeleteApiServerLB), ctx)
 }
 
+// DeleteApiServerLbsLB mocks base method.
+func (m *MockClusterScopeClient) DeleteApiServerLbsLB(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteApiServerLbsLB", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteApiServerLbsLB indicates an expected call of DeleteApiServerLbsLB.
+func (mr *MockClusterScopeClientMockRecorder) DeleteApiServerLbsLB(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteApiServerLbsLB", reflect.TypeOf((*MockClusterScopeClient)(nil).DeleteApiServerLbsLB), arg0)
+}
+
 // DeleteDRG mocks base method.
 func (m *MockClusterScopeClient) DeleteDRG(ctx context.Context) error {
 	m.ctrl.T.Helper()
@@ -229,6 +243,20 @@ func (m *MockClusterScopeClient) ReconcileApiServerLB(ctx context.Context) error
 func (mr *MockClusterScopeClientMockRecorder) ReconcileApiServerLB(ctx interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileApiServerLB", reflect.TypeOf((*MockClusterScopeClient)(nil).ReconcileApiServerLB), ctx)
+}
+
+// ReconcileApiServerLbsLB mocks base method.
+func (m *MockClusterScopeClient) ReconcileApiServerLbsLB(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReconcileApiServerLbsLB", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ReconcileApiServerLbsLB indicates an expected call of ReconcileApiServerLbsLB.
+func (mr *MockClusterScopeClientMockRecorder) ReconcileApiServerLbsLB(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileApiServerLbsLB", reflect.TypeOf((*MockClusterScopeClient)(nil).ReconcileApiServerLbsLB), arg0)
 }
 
 // ReconcileDRG mocks base method.

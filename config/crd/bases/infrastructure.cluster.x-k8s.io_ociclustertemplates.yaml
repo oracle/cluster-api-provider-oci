@@ -127,6 +127,10 @@ spec:
                               loadBalancerId:
                                 description: ID of Load Balancer.
                                 type: string
+                              loadBalancerType:
+                                description: 'Type of Load Balancer: NLB (default)
+                                  or LBaaS.'
+                                type: string
                               name:
                                 description: LoadBalancer Name.
                                 type: string
@@ -1258,6 +1262,10 @@ spec:
                             properties:
                               loadBalancerId:
                                 description: ID of Load Balancer.
+                                type: string
+                              loadBalancerType:
+                                description: 'Type of Load Balancer: NLB (default)
+                                  or LBaaS.'
                                 type: string
                               name:
                                 description: LoadBalancer Name.

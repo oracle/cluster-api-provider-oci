@@ -26,6 +26,7 @@ import (
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	identityClient "github.com/oracle/cluster-api-provider-oci/cloud/services/identity"
+	lbs "github.com/oracle/cluster-api-provider-oci/cloud/services/loadbalancerservice"
 	nlb "github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
 	"github.com/oracle/oci-go-sdk/v65/common"
@@ -47,12 +48,13 @@ const (
 
 // ClusterScopeParams defines the params need to create a new ClusterScope
 type ClusterScopeParams struct {
-	Client             client.Client
-	Logger             *logr.Logger
-	Cluster            *clusterv1.Cluster
-	VCNClient          vcn.Client
-	LoadBalancerClient nlb.NetworkLoadBalancerClient
-	IdentityClient     identityClient.Client
+	Client                    client.Client
+	Logger                    *logr.Logger
+	Cluster                   *clusterv1.Cluster
+	VCNClient                 vcn.Client
+	LoadBalancerClient        nlb.NetworkLoadBalancerClient
+	LoadBalancerServiceClient lbs.LoadBalancerServiceClient
+	IdentityClient            identityClient.Client
 	// RegionIdentifier Identifier as specified here https://docs.oracle.com/en-us/iaas/Content/General/Concepts/regions.htm
 	RegionIdentifier      string
 	OCIAuthConfigProvider common.ConfigurationProvider
@@ -64,12 +66,13 @@ type ClusterScopeParams struct {
 
 type ClusterScope struct {
 	*logr.Logger
-	client             client.Client
-	patchHelper        *patch.Helper
-	Cluster            *clusterv1.Cluster
-	VCNClient          vcn.Client
-	LoadBalancerClient nlb.NetworkLoadBalancerClient
-	IdentityClient     identityClient.Client
+	client                    client.Client
+	patchHelper               *patch.Helper
+	Cluster                   *clusterv1.Cluster
+	VCNClient                 vcn.Client
+	LoadBalancerClient        nlb.NetworkLoadBalancerClient
+	LoadBalancerServiceClient lbs.LoadBalancerServiceClient
+	IdentityClient            identityClient.Client
 	// RegionIdentifier Identifier as specified here https://docs.oracle.com/en-us/iaas/Content/General/Concepts/regions.htm
 	RegionIdentifier   string
 	ClientProvider     *ClientProvider
@@ -94,16 +97,17 @@ func NewClusterScope(params ClusterScopeParams) (*ClusterScope, error) {
 	}
 
 	return &ClusterScope{
-		Logger:             params.Logger,
-		client:             params.Client,
-		Cluster:            params.Cluster,
-		VCNClient:          params.VCNClient,
-		LoadBalancerClient: params.LoadBalancerClient,
-		IdentityClient:     params.IdentityClient,
-		RegionIdentifier:   params.RegionIdentifier,
-		ClientProvider:     params.ClientProvider,
-		OCIClusterAccessor: params.OCIClusterAccessor,
-		RegionKey:          params.RegionKey,
+		Logger:                    params.Logger,
+		client:                    params.Client,
+		Cluster:                   params.Cluster,
+		VCNClient:                 params.VCNClient,
+		LoadBalancerClient:        params.LoadBalancerClient,
+		LoadBalancerServiceClient: params.LoadBalancerServiceClient,
+		IdentityClient:            params.IdentityClient,
+		RegionIdentifier:          params.RegionIdentifier,
+		ClientProvider:            params.ClientProvider,
+		OCIClusterAccessor:        params.OCIClusterAccessor,
+		RegionKey:                 params.RegionKey,
 	}, nil
 }
 

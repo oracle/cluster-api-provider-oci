@@ -1178,6 +1178,7 @@ func Convert_v1beta2_LaunchOptions_To_v1beta1_LaunchOptions(in *v1beta2.LaunchOp
 func autoConvert_v1beta1_LoadBalancer_To_v1beta2_LoadBalancer(in *LoadBalancer, out *v1beta2.LoadBalancer, s conversion.Scope) error {
 	out.Name = in.Name
 	out.LoadBalancerId = (*string)(unsafe.Pointer(in.LoadBalancerId))
+	out.LoadBalancerType = v1beta2.LoadBalancerType(in.LoadBalancerType)
 	return nil
 }
 
@@ -1189,6 +1190,7 @@ func Convert_v1beta1_LoadBalancer_To_v1beta2_LoadBalancer(in *LoadBalancer, out 
 func autoConvert_v1beta2_LoadBalancer_To_v1beta1_LoadBalancer(in *v1beta2.LoadBalancer, out *LoadBalancer, s conversion.Scope) error {
 	out.Name = in.Name
 	out.LoadBalancerId = (*string)(unsafe.Pointer(in.LoadBalancerId))
+	out.LoadBalancerType = LoadBalancerType(in.LoadBalancerType)
 	return nil
 }
 

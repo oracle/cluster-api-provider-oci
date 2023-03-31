@@ -19,8 +19,9 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"strings"
+
+	"github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 
 	"github.com/go-logr/logr"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
@@ -115,15 +116,16 @@ func (r *OCIClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, errors.Wrap(err, "failed to init patch helper")
 	}
 	clusterScope, err = scope.NewClusterScope(scope.ClusterScopeParams{
-		Client:             r.Client,
-		Logger:             &logger,
-		Cluster:            cluster,
-		OCIClusterAccessor: clusterAccessor,
-		ClientProvider:     clientProvider,
-		VCNClient:          clients.VCNClient,
-		LoadBalancerClient: clients.LoadBalancerClient,
-		IdentityClient:     clients.IdentityClient,
-		RegionIdentifier:   clusterRegion,
+		Client:                    r.Client,
+		Logger:                    &logger,
+		Cluster:                   cluster,
+		OCIClusterAccessor:        clusterAccessor,
+		ClientProvider:            clientProvider,
+		VCNClient:                 clients.VCNClient,
+		LoadBalancerClient:        clients.LoadBalancerClient,
+		LoadBalancerServiceClient: clients.LoadBalancerServiceClient,
+		IdentityClient:            clients.IdentityClient,
+		RegionIdentifier:          clusterRegion,
 	})
 	if err != nil {
 		logger.Error(err, "Couldn't create cluster scope")
@@ -244,9 +246,18 @@ func (r *OCIClusterReconciler) reconcile(ctx context.Context, logger logr.Logger
 		return ctrl.Result{}, err
 	}
 
-	if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileApiServerLB, "Api Server Loadbalancer",
-		infrastructurev1beta2.APIServerLoadBalancerFailedReason, infrastructurev1beta2.ApiServerLoadBalancerEventReady); err != nil {
-		return ctrl.Result{}, err
+	// Reconcile the API Server LoadBalancer based on the specified LoadBalancerType.
+	loadBalancerType := cluster.Spec.NetworkSpec.APIServerLB.LoadBalancerType
+	if loadBalancerType == infrastructurev1beta2.ApplicationLoadBalancer {
+		if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileApiServerLbsLB, "Api Server LBS Loadbalancer",
+			infrastructurev1beta2.APIServerLoadBalancerFailedReason, infrastructurev1beta2.ApiServerLoadBalancerEventReady); err != nil {
+			return ctrl.Result{}, err
+		}
+	} else {
+		if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileApiServerLB, "Api Server Network Loadbalancer",
+			infrastructurev1beta2.APIServerLoadBalancerFailedReason, infrastructurev1beta2.ApiServerLoadBalancerEventReady); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	conditions.MarkTrue(cluster, infrastructurev1beta2.ClusterReadyCondition)
@@ -327,7 +338,22 @@ func (r *OCIClusterReconciler) clusterToInfrastructureMapFunc(ctx context.Contex
 }
 
 func (r *OCIClusterReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, clusterScope scope.ClusterScopeClient, cluster *infrastructurev1beta2.OCICluster) (ctrl.Result, error) {
-	err := clusterScope.DeleteApiServerLB(ctx)
+	// Declare the err variable before the if-else block
+	var err error
+
+	// Delete API Server LoadBalancer based on the specified LoadBalancerType
+	// If the type is ApplicationLoadBalancer, it calls DeleteApiServerLbsLB(),
+	// and if the type is NetworkLoadBalancer, it calls DeleteApiServerLB().
+	// If no specific type is provided, it defaults to calling DeleteApiServerLB().
+	loadBalancerType := cluster.Spec.NetworkSpec.APIServerLB.LoadBalancerType
+	if loadBalancerType == infrastructurev1beta2.ApplicationLoadBalancer {
+		err = clusterScope.DeleteApiServerLbsLB(ctx)
+	} else if loadBalancerType == infrastructurev1beta2.NetworkLoadBalancer {
+		err = clusterScope.DeleteApiServerLB(ctx)
+	} else {
+		err = clusterScope.DeleteApiServerLB(ctx)
+	}
+
 	if err != nil {
 		r.Recorder.Event(cluster, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to delete Api Server Loadbalancer").Error())
 		conditions.MarkFalse(cluster, infrastructurev1beta2.ClusterReadyCondition, infrastructurev1beta2.APIServerLoadBalancerFailedReason, clusterv1.ConditionSeverityError, "")

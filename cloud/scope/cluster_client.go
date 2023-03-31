@@ -13,12 +13,14 @@ type ClusterScopeClient interface {
 	ReconcileRouteTable(ctx context.Context) error
 	ReconcileSubnet(ctx context.Context) error
 	ReconcileApiServerLB(ctx context.Context) error
+	ReconcileApiServerLbsLB(ctx context.Context) error
 	ReconcileFailureDomains(ctx context.Context) error
 	ReconcileDRG(ctx context.Context) error
 	DeleteDRG(ctx context.Context) error
 	ReconcileDRGVCNAttachment(ctx context.Context) error
 	ReconcileDRGRPCAttachment(ctx context.Context) error
 	DeleteApiServerLB(ctx context.Context) error
+	DeleteApiServerLbsLB(ctx context.Context) error
 	DeleteNSGs(ctx context.Context) error
 	DeleteSubnets(ctx context.Context) error
 	DeleteRouteTables(ctx context.Context) error

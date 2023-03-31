@@ -135,6 +135,7 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		OCIMachine:                ociMachine,
 		VCNClient:                 clients.VCNClient,
 		NetworkLoadBalancerClient: clients.LoadBalancerClient,
+		LoadBalancerServiceClient: clients.LoadBalancerServiceClient,
 	})
 	if err != nil {
 		return ctrl.Result{}, errors.Errorf("failed to create scope: %+v", err)
