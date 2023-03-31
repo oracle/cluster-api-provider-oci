@@ -22,7 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 )
 
-// ConvertTo converts the v1beta1 AWSCluster receiver to a v1beta2 AWSCluster.
+// ConvertTo converts the v1beta1 OCICluster receiver to a v1beta2 OCICluster.
 func (src *OCICluster) ConvertTo(dstRaw conversion.Hub) error {
 	dst := dstRaw.(*v1beta2.OCICluster)
 
