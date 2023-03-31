@@ -166,7 +166,6 @@ spec:
                   destinationType: CIDR_BLOCK
                   isStateless: false
                   protocol: all
-                id: C2F829
             ingressRules:
               - ingressRule:
                   description: Inbound SSH traffic to worker node
