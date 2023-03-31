@@ -9,7 +9,9 @@ spec:
       compartmentId: "${OCI_COMPARTMENT_ID}"
       shape: "${OCI_NODE_MACHINE_TYPE}"
       subnetName: "worker-subnet-2"
-      nsgName: "worker-nsg-2"
+      networkDetails:
+        nsgNames:
+          - "worker-nsg-2"
       shapeConfig:
         ocpus: "1"
       metadata:
