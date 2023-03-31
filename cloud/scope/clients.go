@@ -26,7 +26,7 @@ import (
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/computemanagement"
 	containerEngineClient "github.com/oracle/cluster-api-provider-oci/cloud/services/containerengine"
 	identityClient "github.com/oracle/cluster-api-provider-oci/cloud/services/identity"
-	lbs "github.com/oracle/cluster-api-provider-oci/cloud/services/loadbalancerservice"
+	lb "github.com/oracle/cluster-api-provider-oci/cloud/services/loadbalancer"
 	nlb "github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
 	"github.com/oracle/cluster-api-provider-oci/version"
@@ -45,8 +45,8 @@ type OCIClients struct {
 	ComputeClient             compute.ComputeClient
 	ComputeManagementClient   computemanagement.Client
 	VCNClient                 vcn.Client
-	LoadBalancerClient        nlb.NetworkLoadBalancerClient
-	LoadBalancerServiceClient lbs.LoadBalancerServiceClient
+	NetworkLoadBalancerClient nlb.NetworkLoadBalancerClient
+	LoadBalancerClient        lb.LoadBalancerClient
 	IdentityClient            identityClient.Client
 	ContainerEngineClient     containerEngineClient.Client
 	BaseClient                base.BaseClient
@@ -113,11 +113,11 @@ func createClients(region string, oCIAuthConfigProvider common.ConfigurationProv
 	if err != nil {
 		return OCIClients{}, err
 	}
-	lbClient, err := createLbClient(region, oCIAuthConfigProvider, logger)
+	nlbClient, err := createNLbClient(region, oCIAuthConfigProvider, logger)
 	if err != nil {
 		return OCIClients{}, err
 	}
-	lbsClient, err := createLBSClient(region, oCIAuthConfigProvider, logger)
+	lbClient, err := createLBClient(region, oCIAuthConfigProvider, logger)
 	if err != nil {
 		return OCIClients{}, err
 	}
@@ -148,8 +148,8 @@ func createClients(region string, oCIAuthConfigProvider common.ConfigurationProv
 
 	return OCIClients{
 		VCNClient:                 vcnClient,
+		NetworkLoadBalancerClient: nlbClient,
 		LoadBalancerClient:        lbClient,
-		LoadBalancerServiceClient: lbsClient,
 		IdentityClient:            identityClient,
 		ComputeClient:             computeClient,
 		ComputeManagementClient:   computeManagementClient,
@@ -170,19 +170,19 @@ func createVncClient(region string, ociAuthConfigProvider common.ConfigurationPr
 	return &vcnClient, nil
 }
 
-func createLbClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (*networkloadbalancer.NetworkLoadBalancerClient, error) {
-	lbClient, err := networkloadbalancer.NewNetworkLoadBalancerClientWithConfigurationProvider(ociAuthConfigProvider)
+func createNLbClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (*networkloadbalancer.NetworkLoadBalancerClient, error) {
+	nlbClient, err := networkloadbalancer.NewNetworkLoadBalancerClientWithConfigurationProvider(ociAuthConfigProvider)
 	if err != nil {
 		logger.Error(err, "unable to create OCI LB Client")
 		return nil, err
 	}
-	lbClient.SetRegion(region)
-	lbClient.Interceptor = setVersionHeader()
+	nlbClient.SetRegion(region)
+	nlbClient.Interceptor = setVersionHeader()
 
-	return &lbClient, nil
+	return &nlbClient, nil
 }
 
-func createLBSClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (*loadbalancer.LoadBalancerClient, error) {
+func createLBClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (*loadbalancer.LoadBalancerClient, error) {
 	lbClient, err := loadbalancer.NewLoadBalancerClientWithConfigurationProvider(ociAuthConfigProvider)
 	if err != nil {
 		logger.Error(err, "unable to create OCI LBaaS Client")

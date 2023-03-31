@@ -122,8 +122,8 @@ func (r *OCIClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		OCIClusterAccessor:        clusterAccessor,
 		ClientProvider:            clientProvider,
 		VCNClient:                 clients.VCNClient,
+		NetworkLoadBalancerClient: clients.NetworkLoadBalancerClient,
 		LoadBalancerClient:        clients.LoadBalancerClient,
-		LoadBalancerServiceClient: clients.LoadBalancerServiceClient,
 		IdentityClient:            clients.IdentityClient,
 		RegionIdentifier:          clusterRegion,
 	})
@@ -248,13 +248,13 @@ func (r *OCIClusterReconciler) reconcile(ctx context.Context, logger logr.Logger
 
 	// Reconcile the API Server LoadBalancer based on the specified LoadBalancerType.
 	loadBalancerType := cluster.Spec.NetworkSpec.APIServerLB.LoadBalancerType
-	if loadBalancerType == infrastructurev1beta2.ApplicationLoadBalancer {
-		if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileApiServerLbsLB, "Api Server LBS Loadbalancer",
+	if loadBalancerType == infrastructurev1beta2.LoadBalancerTypeLB {
+		if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileApiServerLB, "Api Server Loadbalancer",
 			infrastructurev1beta2.APIServerLoadBalancerFailedReason, infrastructurev1beta2.ApiServerLoadBalancerEventReady); err != nil {
 			return ctrl.Result{}, err
 		}
 	} else {
-		if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileApiServerLB, "Api Server Network Loadbalancer",
+		if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileApiServerNLB, "Api Server Network Loadbalancer",
 			infrastructurev1beta2.APIServerLoadBalancerFailedReason, infrastructurev1beta2.ApiServerLoadBalancerEventReady); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -342,16 +342,13 @@ func (r *OCIClusterReconciler) reconcileDelete(ctx context.Context, logger logr.
 	var err error
 
 	// Delete API Server LoadBalancer based on the specified LoadBalancerType
-	// If the type is ApplicationLoadBalancer, it calls DeleteApiServerLbsLB(),
-	// and if the type is NetworkLoadBalancer, it calls DeleteApiServerLB().
+	// If the type is LB, it calls DeleteApiServerLbsLB(),
 	// If no specific type is provided, it defaults to calling DeleteApiServerLB().
 	loadBalancerType := cluster.Spec.NetworkSpec.APIServerLB.LoadBalancerType
-	if loadBalancerType == infrastructurev1beta2.ApplicationLoadBalancer {
-		err = clusterScope.DeleteApiServerLbsLB(ctx)
-	} else if loadBalancerType == infrastructurev1beta2.NetworkLoadBalancer {
+	if loadBalancerType == infrastructurev1beta2.LoadBalancerTypeLB {
 		err = clusterScope.DeleteApiServerLB(ctx)
 	} else {
-		err = clusterScope.DeleteApiServerLB(ctx)
+		err = clusterScope.DeleteApiServerNLB(ctx)
 	}
 
 	if err != nil {

@@ -37,8 +37,8 @@ import (
 type MockOCIClients struct {
 	VCNClient                 vcn.Client
 	ComputeClient             compute.ComputeClient
-	LoadBalancerClient        *networkloadbalancer.NetworkLoadBalancerClient
-	LoadBalancerServiceClient *loadbalancer.LoadBalancerClient
+	NetworkLoadBalancerClient *networkloadbalancer.NetworkLoadBalancerClient
+	LoadBalancerClient        *loadbalancer.LoadBalancerClient
 	IdentityClient            identity.Client
 }
 
@@ -50,8 +50,8 @@ func MockNewClientProvider(mockClients MockOCIClients) (*ClientProvider, error) 
 
 	clientsInject := map[string]OCIClients{MockTestRegion: {
 		VCNClient:                 mockClients.VCNClient,
+		NetworkLoadBalancerClient: mockClients.NetworkLoadBalancerClient,
 		LoadBalancerClient:        mockClients.LoadBalancerClient,
-		LoadBalancerServiceClient: mockClients.LoadBalancerServiceClient,
 		IdentityClient:            mockClients.IdentityClient,
 		ComputeClient:             mockClients.ComputeClient,
 	}}

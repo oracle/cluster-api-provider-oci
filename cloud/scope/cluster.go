@@ -26,7 +26,7 @@ import (
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	identityClient "github.com/oracle/cluster-api-provider-oci/cloud/services/identity"
-	lbs "github.com/oracle/cluster-api-provider-oci/cloud/services/loadbalancerservice"
+	lb "github.com/oracle/cluster-api-provider-oci/cloud/services/loadbalancer"
 	nlb "github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
 	"github.com/oracle/oci-go-sdk/v65/common"
@@ -52,8 +52,8 @@ type ClusterScopeParams struct {
 	Logger                    *logr.Logger
 	Cluster                   *clusterv1.Cluster
 	VCNClient                 vcn.Client
-	LoadBalancerClient        nlb.NetworkLoadBalancerClient
-	LoadBalancerServiceClient lbs.LoadBalancerServiceClient
+	NetworkLoadBalancerClient nlb.NetworkLoadBalancerClient
+	LoadBalancerClient        lb.LoadBalancerClient
 	IdentityClient            identityClient.Client
 	// RegionIdentifier Identifier as specified here https://docs.oracle.com/en-us/iaas/Content/General/Concepts/regions.htm
 	RegionIdentifier      string
@@ -70,8 +70,8 @@ type ClusterScope struct {
 	patchHelper               *patch.Helper
 	Cluster                   *clusterv1.Cluster
 	VCNClient                 vcn.Client
-	LoadBalancerClient        nlb.NetworkLoadBalancerClient
-	LoadBalancerServiceClient lbs.LoadBalancerServiceClient
+	NetworkLoadBalancerClient nlb.NetworkLoadBalancerClient
+	LoadBalancerClient        lb.LoadBalancerClient
 	IdentityClient            identityClient.Client
 	// RegionIdentifier Identifier as specified here https://docs.oracle.com/en-us/iaas/Content/General/Concepts/regions.htm
 	RegionIdentifier   string
@@ -101,8 +101,8 @@ func NewClusterScope(params ClusterScopeParams) (*ClusterScope, error) {
 		client:                    params.Client,
 		Cluster:                   params.Cluster,
 		VCNClient:                 params.VCNClient,
+		NetworkLoadBalancerClient: params.NetworkLoadBalancerClient,
 		LoadBalancerClient:        params.LoadBalancerClient,
-		LoadBalancerServiceClient: params.LoadBalancerServiceClient,
 		IdentityClient:            params.IdentityClient,
 		RegionIdentifier:          params.RegionIdentifier,
 		ClientProvider:            params.ClientProvider,

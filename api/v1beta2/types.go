@@ -907,10 +907,10 @@ type LoadBalancerType string
 
 const (
 	// NetworkLoadBalancer is the default load balancer type.
-	NetworkLoadBalancer LoadBalancerType = "NLB"
+	LoadBalancerTypeNLB LoadBalancerType = LoadBalancerType("nlb")
 
-	// ApplicationLoadBalancer is the alternative load balancer type.
-	ApplicationLoadBalancer LoadBalancerType = "LBaaS"
+	// LoadBalancer is the alternative load balancer type.
+	LoadBalancerTypeLB LoadBalancerType = LoadBalancerType("lb")
 )
 
 // LoadBalancer Configuration

@@ -923,17 +923,6 @@ type VCN struct {
 	NetworkSecurityGroups []*NSG `json:"networkSecurityGroups,omitempty"`
 }
 
-// LoadBalancerType is an enumeration of the supported load balancer types.
-type LoadBalancerType string
-
-const (
-	// NetworkLoadBalancer is the default load balancer type.
-	NetworkLoadBalancer LoadBalancerType = "NLB"
-
-	// ApplicationLoadBalancer is the alternative load balancer type.
-	ApplicationLoadBalancer LoadBalancerType = "LBaaS"
-)
-
 // LoadBalancer Configuration
 type LoadBalancer struct {
 	//LoadBalancer Name.
@@ -943,10 +932,6 @@ type LoadBalancer struct {
 	// ID of Load Balancer.
 	// +optional
 	LoadBalancerId *string `json:"loadBalancerId,omitempty"`
-
-	// Type of Load Balancer: NLB (default) or LBaaS.
-	// +optional
-	LoadBalancerType LoadBalancerType `json:"loadBalancerType,omitempty"`
 }
 
 // NetworkSpec specifies what the OCI networking resources should look like.

@@ -14,7 +14,7 @@
  limitations under the License.
 */
 
-package lbs
+package lb
 
 import (
 	"context"
@@ -22,7 +22,7 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/loadbalancer"
 )
 
-type LoadBalancerServiceClient interface {
+type LoadBalancerClient interface {
 	ListLoadBalancers(ctx context.Context, request loadbalancer.ListLoadBalancersRequest) (response loadbalancer.ListLoadBalancersResponse, err error)
 	GetLoadBalancer(ctx context.Context, request loadbalancer.GetLoadBalancerRequest) (response loadbalancer.GetLoadBalancerResponse, err error)
 	CreateBackend(ctx context.Context, request loadbalancer.CreateBackendRequest) (response loadbalancer.CreateBackendResponse, err error)

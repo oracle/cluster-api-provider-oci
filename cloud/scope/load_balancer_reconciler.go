@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2021, 2022 Oracle and/or its affiliates.
+ Copyright (c) 2022 Oracle and/or its affiliates.
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import (
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/oci-go-sdk/v65/common"
-	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
+	"github.com/oracle/oci-go-sdk/v65/loadbalancer"
 	"github.com/pkg/errors"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
@@ -32,7 +32,7 @@ import (
 func (s *ClusterScope) ReconcileApiServerLB(ctx context.Context) error {
 	desiredApiServerLb := s.LBSpec()
 
-	lb, err := s.GetLoadBalancer(ctx)
+	lb, err := s.GetLoadBalancers(ctx)
 	if err != nil {
 		return err
 	}
@@ -67,10 +67,10 @@ func (s *ClusterScope) ReconcileApiServerLB(ctx context.Context) error {
 	return err
 }
 
-// DeleteApiServerLB retrieves and attempts to delete the Network Load Balancer if found.
+// DeleteApiServerLB retrieves and attempts to delete the Load Balancer if found.
 // It will await the Work Request completion before returning
 func (s *ClusterScope) DeleteApiServerLB(ctx context.Context) error {
-	lb, err := s.GetLoadBalancer(ctx)
+	lb, err := s.GetLoadBalancers(ctx)
 	if err != nil && !ociutil.IsNotFound(err) {
 		return err
 	}
@@ -78,8 +78,8 @@ func (s *ClusterScope) DeleteApiServerLB(ctx context.Context) error {
 		s.Logger.Info("loadbalancer is already deleted")
 		return nil
 	}
-	lbResponse, err := s.LoadBalancerClient.DeleteNetworkLoadBalancer(ctx, networkloadbalancer.DeleteNetworkLoadBalancerRequest{
-		NetworkLoadBalancerId: lb.Id,
+	lbResponse, err := s.LoadBalancerClient.DeleteLoadBalancer(ctx, loadbalancer.DeleteLoadBalancerRequest{
+		LoadBalancerId: lb.Id,
 	})
 	if err != nil {
 		s.Logger.Error(err, "failed to delete apiserver lb")
@@ -103,7 +103,7 @@ func (s *ClusterScope) LBSpec() infrastructurev1beta2.LoadBalancer {
 
 // GetControlPlaneLoadBalancerName returns the user defined APIServerLB name from the spec or
 // assigns the name based on the OCICluster's name
-func (s *ClusterScope) GetControlPlaneLoadBalancerName() string {
+func (s *ClusterScope) GetControlPlaneLbsLoadBalancerName() string {
 	if s.OCIClusterAccessor.GetNetworkSpec().APIServerLB.Name != "" {
 		return s.OCIClusterAccessor.GetNetworkSpec().APIServerLB.Name
 	}
@@ -113,12 +113,14 @@ func (s *ClusterScope) GetControlPlaneLoadBalancerName() string {
 // UpdateLB updates existing Load Balancer's DisplayName, FreeformTags and DefinedTags
 func (s *ClusterScope) UpdateLB(ctx context.Context, lb infrastructurev1beta2.LoadBalancer) error {
 	lbId := s.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerId
-	updateLBDetails := networkloadbalancer.UpdateNetworkLoadBalancerDetails{
-		DisplayName: common.String(lb.Name),
+	updateLBDetails := loadbalancer.UpdateLoadBalancerDetails{
+		DisplayName:  common.String(lb.Name),
+		FreeformTags: s.GetFreeFormTags(),
+		DefinedTags:  s.GetDefinedTags(),
 	}
-	lbResponse, err := s.LoadBalancerClient.UpdateNetworkLoadBalancer(ctx, networkloadbalancer.UpdateNetworkLoadBalancerRequest{
-		UpdateNetworkLoadBalancerDetails: updateLBDetails,
-		NetworkLoadBalancerId:            lbId,
+	lbResponse, err := s.LoadBalancerClient.UpdateLoadBalancer(ctx, loadbalancer.UpdateLoadBalancerRequest{
+		UpdateLoadBalancerDetails: updateLBDetails,
+		LoadBalancerId:            lbId,
 	})
 	if err != nil {
 		s.Logger.Error(err, "failed to reconcile the apiserver LB, failed to generate update lb workrequest")
@@ -132,34 +134,28 @@ func (s *ClusterScope) UpdateLB(ctx context.Context, lb infrastructurev1beta2.Lo
 	return nil
 }
 
-// CreateLB configures and creates the Network Load Balancer for the cluster based on the ClusterScope.
-// This configures the LB Listeners and Backend Sets in order to create the Network Load Balancer.
+// CreateLB configures and creates the Load Balancer for the cluster based on the ClusterScope.
+// This configures the LB Listeners and Backend Sets in order to create the Load Balancer.
 // It will await the Work Request completion before returning
 //
-// See https://docs.oracle.com/en-us/iaas/Content/NetworkLoadBalancer/overview.htm for more details on the Network
+// See https://docs.oracle.com/en-us/iaas/Content/LoadBalancer/overview.htm for more details on the Network
 // Load Balancer
 func (s *ClusterScope) CreateLB(ctx context.Context, lb infrastructurev1beta2.LoadBalancer) (*string, *string, error) {
-	listenerDetails := make(map[string]networkloadbalancer.ListenerDetails)
-	listenerDetails[APIServerLBListener] = networkloadbalancer.ListenerDetails{
-		Protocol:              networkloadbalancer.ListenerProtocolsTcp,
+	listenerDetails := make(map[string]loadbalancer.ListenerDetails)
+	listenerDetails[APIServerLBListener] = loadbalancer.ListenerDetails{
+		Protocol:              common.String("TCP"),
 		Port:                  common.Int(int(s.APIServerPort())),
 		DefaultBackendSetName: common.String(APIServerLBBackendSetName),
-		Name:                  common.String(APIServerLBListener),
 	}
-
-	backendSetDetails := make(map[string]networkloadbalancer.BackendSetDetails)
-	backendSetDetails[APIServerLBBackendSetName] = networkloadbalancer.BackendSetDetails{
-		Policy:           LoadBalancerPolicy,
-		IsPreserveSource: common.Bool(false),
-		HealthChecker: &networkloadbalancer.HealthChecker{
-			Port:       common.Int(int(s.APIServerPort())),
-			Protocol:   networkloadbalancer.HealthCheckProtocolsHttps,
-			UrlPath:    common.String("/healthz"),
-			ReturnCode: common.Int(200),
+	backendSetDetails := make(map[string]loadbalancer.BackendSetDetails)
+	backendSetDetails[APIServerLBBackendSetName] = loadbalancer.BackendSetDetails{
+		Policy: common.String("ROUND_ROBIN"),
+		HealthChecker: &loadbalancer.HealthCheckerDetails{
+			Port:     common.Int(int(s.APIServerPort())),
+			Protocol: common.String("TCP"),
 		},
-		Backends: []networkloadbalancer.Backend{},
+		Backends: []loadbalancer.BackendDetails{},
 	}
-
 	var controlPlaneEndpointSubnets []string
 	for _, subnet := range s.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets {
 		if subnet.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
@@ -173,15 +169,18 @@ func (s *ClusterScope) CreateLB(ctx context.Context, lb infrastructurev1beta2.Lo
 	if len(controlPlaneEndpointSubnets) > 1 {
 		return nil, nil, errors.New("cannot have more than 1 control plane endpoint subnet")
 	}
-	lbDetails := networkloadbalancer.CreateNetworkLoadBalancerDetails{
+	lbDetails := loadbalancer.CreateLoadBalancerDetails{
 		CompartmentId: common.String(s.GetCompartmentId()),
 		DisplayName:   common.String(lb.Name),
-		SubnetId:      common.String(controlPlaneEndpointSubnets[0]),
-		IsPrivate:     common.Bool(s.isControlPlaneEndpointSubnetPrivate()),
-		Listeners:     listenerDetails,
-		BackendSets:   backendSetDetails,
-		FreeformTags:  s.GetFreeFormTags(),
-		DefinedTags:   s.GetDefinedTags(),
+		ShapeName:     common.String("flexible"),
+		ShapeDetails: &loadbalancer.ShapeDetails{MinimumBandwidthInMbps: common.Int(10),
+			MaximumBandwidthInMbps: common.Int(100)},
+		SubnetIds:    controlPlaneEndpointSubnets,
+		IsPrivate:    common.Bool(s.isControlPlaneEndpointSubnetPrivate()),
+		Listeners:    listenerDetails,
+		BackendSets:  backendSetDetails,
+		FreeformTags: s.GetFreeFormTags(),
+		DefinedTags:  s.GetDefinedTags(),
 	}
 
 	for _, nsg := range s.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List {
@@ -192,46 +191,47 @@ func (s *ClusterScope) CreateLB(ctx context.Context, lb infrastructurev1beta2.Lo
 		}
 	}
 
-	s.Logger.Info("Creating network load balancer")
-	lbResponse, err := s.LoadBalancerClient.CreateNetworkLoadBalancer(ctx, networkloadbalancer.CreateNetworkLoadBalancerRequest{
-		CreateNetworkLoadBalancerDetails: lbDetails,
-		OpcRetryToken:                    ociutil.GetOPCRetryToken("%s-%s", "create-lb", s.OCIClusterAccessor.GetOCIResourceIdentifier()),
+	s.Logger.Info("Creating load balancer...")
+	lbResponse, err := s.LoadBalancerClient.CreateLoadBalancer(ctx, loadbalancer.CreateLoadBalancerRequest{
+		CreateLoadBalancerDetails: lbDetails,
+		OpcRetryToken:             ociutil.GetOPCRetryToken("%s-%s", "create-lb", s.OCIClusterAccessor.GetOCIResourceIdentifier()),
 	})
 	if err != nil {
 		s.Logger.Error(err, "failed to create apiserver lb, failed to create work request")
 		return nil, nil, errors.Wrap(err, "failed to create apiserver lb, failed to create work request")
 	}
-	_, err = ociutil.AwaitLBWorkRequest(ctx, s.LoadBalancerClient, lbResponse.OpcWorkRequestId)
+
+	wr, err := ociutil.AwaitLBWorkRequest(ctx, s.LoadBalancerClient, lbResponse.OpcWorkRequestId)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "awaiting load balancer")
 	}
 
-	nlb, err := s.LoadBalancerClient.GetNetworkLoadBalancer(ctx, networkloadbalancer.GetNetworkLoadBalancerRequest{
-		NetworkLoadBalancerId: lbResponse.Id,
+	lbs, err := s.LoadBalancerClient.GetLoadBalancer(ctx, loadbalancer.GetLoadBalancerRequest{
+		LoadBalancerId: wr.LoadBalancerId,
 	})
 	if err != nil {
 		s.Logger.Error(err, "failed to get apiserver lb after creation")
 		return nil, nil, errors.Wrap(err, "failed to get apiserver lb after creation")
 	}
 
-	lbIp, err := s.getLoadbalancerIp(nlb.NetworkLoadBalancer)
+	lbIp, err := s.getLoadbalancerIp(lbs.LoadBalancer)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	s.Logger.Info("Successfully created apiserver lb", "lb", nlb.Id, "ip", lbIp)
-	return nlb.Id, lbIp, nil
+	s.Logger.Info("Successfully created apiserver lb", "lb", lbs.Id, "ip", lbIp)
+	return lbs.Id, lbIp, nil
 }
 
-func (s *ClusterScope) getLoadbalancerIp(nlb networkloadbalancer.NetworkLoadBalancer) (*string, error) {
+func (s *ClusterScope) getLoadbalancerIp(lb loadbalancer.LoadBalancer) (*string, error) {
 	var lbIp *string
-	if len(nlb.IpAddresses) < 1 {
+	if len(lb.IpAddresses) < 1 {
 		return nil, errors.New("lb does not have valid ip addresses")
 	}
-	if *nlb.IsPrivate {
-		lbIp = nlb.IpAddresses[0].IpAddress
+	if *lb.IsPrivate {
+		lbIp = lb.IpAddresses[0].IpAddress
 	} else {
-		for _, ip := range nlb.IpAddresses {
+		for _, ip := range lb.IpAddresses {
 			if *ip.IsPublic {
 				lbIp = ip.IpAddress
 			}
@@ -243,37 +243,37 @@ func (s *ClusterScope) getLoadbalancerIp(nlb networkloadbalancer.NetworkLoadBala
 	return lbIp, nil
 }
 
-// IsLBEqual determines if the actual networkloadbalancer.NetworkLoadBalancer is equal to the desired.
-// Equality is determined by DisplayName
-func (s *ClusterScope) IsLBEqual(actual *networkloadbalancer.NetworkLoadBalancer, desired infrastructurev1beta2.LoadBalancer) bool {
+// IsLBEqual determines if the actual loadbalancer.LoadBalancer is equal to the desired.
+// Equality is determined by DisplayName, FreeformTags and DefinedTags matching.
+func (s *ClusterScope) IsLBEqual(actual *loadbalancer.LoadBalancer, desired infrastructurev1beta2.LoadBalancer) bool {
 	if desired.Name != *actual.DisplayName {
 		return false
 	}
 	return true
 }
 
-// GetLoadBalancer retrieves the Cluster's networkloadbalancer.NetworkLoadBalancer using the one of the following methods
+// GetLoadBalancers retrieves the Cluster's loadbalancer.LoadBalancer using the one of the following methods
 //
 // 1. the OCICluster's spec LoadBalancerId
 //
-// 2. Listing the NetworkLoadBalancers for the Compartment (by ID) and DisplayName then filtering by tag
-func (s *ClusterScope) GetLoadBalancer(ctx context.Context) (*networkloadbalancer.NetworkLoadBalancer, error) {
+// 2. Listing the LoadBalancers for the Compartment (by ID) and DisplayName then filtering by tag
+func (s *ClusterScope) GetLoadBalancers(ctx context.Context) (*loadbalancer.LoadBalancer, error) {
 	lbOcid := s.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerId
 	if lbOcid != nil {
-		resp, err := s.LoadBalancerClient.GetNetworkLoadBalancer(ctx, networkloadbalancer.GetNetworkLoadBalancerRequest{
-			NetworkLoadBalancerId: lbOcid,
+		resp, err := s.LoadBalancerClient.GetLoadBalancer(ctx, loadbalancer.GetLoadBalancerRequest{
+			LoadBalancerId: lbOcid,
 		})
 		if err != nil {
 			return nil, err
 		}
-		nlb := resp.NetworkLoadBalancer
+		nlb := resp.LoadBalancer
 		if s.IsResourceCreatedByClusterAPI(nlb.FreeformTags) {
 			return &nlb, nil
 		} else {
 			return nil, errors.New("cluster api tags have been modified out of context")
 		}
 	}
-	lbs, err := s.LoadBalancerClient.ListNetworkLoadBalancers(ctx, networkloadbalancer.ListNetworkLoadBalancersRequest{
+	lbs, err := s.LoadBalancerClient.ListLoadBalancers(ctx, loadbalancer.ListLoadBalancersRequest{
 		CompartmentId: common.String(s.GetCompartmentId()),
 		DisplayName:   common.String(s.GetControlPlaneLoadBalancerName()),
 	})
@@ -284,13 +284,13 @@ func (s *ClusterScope) GetLoadBalancer(ctx context.Context) (*networkloadbalance
 
 	for _, lb := range lbs.Items {
 		if s.IsResourceCreatedByClusterAPI(lb.FreeformTags) {
-			resp, err := s.LoadBalancerClient.GetNetworkLoadBalancer(ctx, networkloadbalancer.GetNetworkLoadBalancerRequest{
-				NetworkLoadBalancerId: lb.Id,
+			resp, err := s.LoadBalancerClient.GetLoadBalancer(ctx, loadbalancer.GetLoadBalancerRequest{
+				LoadBalancerId: lb.Id,
 			})
 			if err != nil {
 				return nil, err
 			}
-			return &resp.NetworkLoadBalancer, nil
+			return &resp.LoadBalancer, nil
 		}
 	}
 	return nil, nil
