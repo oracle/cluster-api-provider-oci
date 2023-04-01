@@ -4,7 +4,7 @@ Use the following configuration in `OCIMachineTemplate` to use a [customer
 managed boot volume encryption key][customer_managed_keys].
 ```yaml
 kind: OCIMachineTemplate
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 spec:
   template:
     spec:
@@ -19,7 +19,7 @@ for an enumeration of all the possible configurations.
 
 ```yaml
 kind: OCIMachineTemplate
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 spec:
   template:
     spec:
@@ -38,7 +38,7 @@ for an enumeration of all the possible configurations.
 
 ```yaml
 kind: OCIMachineTemplate
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 spec:
   template:
     spec:
@@ -52,7 +52,7 @@ Use the following configuration in `OCIMachineTemplate` to create [preemtible in
 
 ```yaml
 kind: OCIMachineTemplate
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 spec:
   template:
     spec:
@@ -66,7 +66,7 @@ Use the following configuration in `OCIMachineTemplate` to use [capacity reserva
 
 ```yaml
 kind: OCIMachineTemplate
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 spec:
   template:
     spec:
@@ -79,7 +79,7 @@ The example below enables Bastion plugin.
 
 ```yaml
 kind: OCIMachineTemplate
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 spec:
   template:
     spec:
@@ -98,7 +98,7 @@ The following values are supported for `baselineOcpuUtilization`.
 
 ```yaml
 kind: OCIMachineTemplate
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 spec:
   template:
     spec:

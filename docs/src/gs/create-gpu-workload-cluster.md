@@ -199,7 +199,7 @@ spec:
       cidrBlocks:
         - ${SERVICE_CIDR:="10.128.0.0/12"}
   infrastructureRef:
-    apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
     kind: OCICluster
     name: "${CLUSTER_NAME}"
     namespace: "${NAMESPACE}"
@@ -209,7 +209,7 @@ spec:
     name: "${CLUSTER_NAME}-control-plane"
     namespace: "${NAMESPACE}"
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCICluster
 metadata:
   labels:
@@ -229,7 +229,7 @@ spec:
   machineTemplate:
     infrastructureRef:
       kind: OCIMachineTemplate
-      apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+      apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
       name: "${CLUSTER_NAME}-control-plane"
       namespace: "${NAMESPACE}"
   kubeadmConfigSpec:
@@ -256,7 +256,7 @@ spec:
           provider-id: oci://{{ ds["id"] }}
 ---
 kind: OCIMachineTemplate
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 metadata:
   name: "${CLUSTER_NAME}-control-plane"
 spec:
@@ -271,7 +271,7 @@ spec:
         ssh_authorized_keys: "${OCI_SSH_KEY}"
       isPvEncryptionInTransitEnabled: ${OCI_CONTROL_PLANE_PV_TRANSIT_ENCRYPTION=true}
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCIMachineTemplate
 metadata:
   name: "${CLUSTER_NAME}-md"
@@ -320,7 +320,7 @@ spec:
           kind: KubeadmConfigTemplate
       infrastructureRef:
         name: "${CLUSTER_NAME}-md"
-        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
         kind: OCIMachineTemplate
       # Cluster-API calls them Failure Domains while OCI calls them Availability Domains
       # In the example this would be targeting US-ASHBURN-AD-2

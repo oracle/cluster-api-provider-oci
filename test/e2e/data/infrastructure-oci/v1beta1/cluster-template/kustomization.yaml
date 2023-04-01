@@ -1,5 +1,0 @@
-bases:
-- ../bases/cluster.yaml
-- ../bases/md.yaml
-- ../bases/crs.yaml
-- ../bases/ccm.yaml

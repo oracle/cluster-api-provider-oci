@@ -1,6 +1,0 @@
-bases:
-  - ../bases/cluster.yaml
-  - ./machine-pool.yaml
-  - ../bases/ccm.yaml
-
-

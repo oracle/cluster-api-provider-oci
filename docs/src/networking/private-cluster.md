@@ -10,7 +10,7 @@ and is accessible only within the VCN or peered VCNs. In order to use private cl
 endpoint subnet has to be marked as private. An example spec is given below.
 
 ```yaml
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCICluster
 metadata:
   labels:

@@ -1,0 +1,54 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: OCIMachineTemplate
+metadata:
+  name: "${CLUSTER_NAME}-md-1"
+spec:
+  template:
+    spec:
+      imageId: "${OCI_IMAGE_ID}"
+      compartmentId: "${OCI_COMPARTMENT_ID}"
+      shape: "${OCI_NODE_MACHINE_TYPE}"
+      subnetName: "worker-subnet-2"
+      networkDetails:
+        nsgNames:
+          - "worker-nsg-2"
+      shapeConfig:
+        ocpus: "1"
+      metadata:
+        ssh_authorized_keys: "${OCI_SSH_KEY}"
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1alpha4
+kind: KubeadmConfigTemplate
+metadata:
+  name: "${CLUSTER_NAME}-md-1"
+spec:
+  template:
+    spec:
+      joinConfiguration:
+        nodeRegistration:
+          kubeletExtraArgs:
+            cloud-provider: external
+            provider-id: oci://{{ ds["id"] }}
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  name: "${CLUSTER_NAME}-md-1"
+spec:
+  clusterName: "${CLUSTER_NAME}"
+  replicas: ${WORKER_MACHINE_COUNT}
+  selector:
+    matchLabels:
+  template:
+    spec:
+      clusterName: "${CLUSTER_NAME}"
+      version: "${KUBERNETES_VERSION}"
+      bootstrap:
+        configRef:
+          name: "${CLUSTER_NAME}-md-1"
+          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+          kind: KubeadmConfigTemplate
+      infrastructureRef:
+        name: "${CLUSTER_NAME}-md-1"
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        kind: OCIMachineTemplate

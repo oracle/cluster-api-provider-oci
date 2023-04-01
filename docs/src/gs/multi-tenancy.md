@@ -44,7 +44,7 @@ spec:
     namespace: default
   allowedNamespaces: {}
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCICluster
 metadata:
   labels:
@@ -53,7 +53,7 @@ metadata:
 spec:
   compartmentId: "${OCI_COMPARTMENT_ID}"
   identityRef:
-    apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
     kind: OCIClusterIdentity
     name: cluster-identity
     namespace: default

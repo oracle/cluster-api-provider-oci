@@ -11,16 +11,17 @@ spec:
     skipNetworkManagement: true
     vcn:
       id: "<vcn-id>"
-      networkSecurityGroups:
-        - id: "<control-plane-endpoint-nsg-id>"
-          role: control-plane-endpoint
-          name: control-plane-endpoint
-        - id:  "<worker-nsg-id>"
-          role: worker
-          name: worker
-        - id: "<pod-nsg-id>"
-          role: pod
-          name: pod
+      networkSecurityGroup:
+        list:
+          - id: "<control-plane-endpoint-nsg-id>"
+            role: control-plane-endpoint
+            name: control-plane-endpoint
+          - id:  "<worker-nsg-id>"
+            role: worker
+            name: worker
+          - id: "<pod-nsg-id>"
+            role: pod
+            name: pod
       subnets:
         - id: "<control-plane-endpoint-subnet-id>"
           role: control-plane-endpoint

@@ -13,7 +13,7 @@ API Server Load Balancer will be managed by CAPOCI.
 Example spec is given below
 
 ```yaml
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCICluster
 metadata:
   name: "${CLUSTER_NAME}"
@@ -23,16 +23,17 @@ spec:
     skipNetworkManagement: true
     vcn:
       id: <Insert VCN OCID Here>
-      networkSecurityGroups:
-        - id: <Insert Control Plane Endpoint NSG OCID Here>
-          role: control-plane-endpoint
-          name: control-plane-endpoint
-        - id: <Insert Worker NSG OCID Here>
-          role: worker
-          name: worker
-        - id: <Insert Control Plane NSG OCID Here>
-          role: control-plane
-          name: control-plane
+      networkSecurityGroup:
+        list:
+          - id: <Insert Control Plane Endpoint NSG OCID Here>
+            role: control-plane-endpoint
+            name: control-plane-endpoint
+          - id: <Insert Worker NSG OCID Here>
+            role: worker
+            name: worker
+          - id: <Insert Control Plane NSG OCID Here>
+            role: control-plane
+            name: control-plane
       subnets:
         - id: <Insert Control Plane Endpoint Subnet OCID Here>
           role: control-plane-endpoint
@@ -59,7 +60,7 @@ This is useful for scenarios where a different persona is managing the cluster i
 The following `OCICluster` Spec includes the mandatory fields to be specified for externally managed infrastructure to work properly. In this example neither the VCN nor the network load balancer will be managed by CAPOCI.
 
 ```yaml
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCICluster
 metadata:
   labels:
@@ -77,13 +78,14 @@ spec:
       loadBalancerId: <OCID of Control Plane Endpoint LoadBalancer>
     vcn:
       id: <OCID of VCN>
-      networkSecurityGroups:
-        - id: <OCID of Control Plane NSG>
-          name: <Name of Control Plane NSG>
-          role: control-plane
-        - id: <OCID of Worker NSG>
-          name: <Name of Worker NSG>
-          role: worker
+      networkSecurityGroup:
+        list:
+          - id: <OCID of Control Plane NSG>
+            name: <Name of Control Plane NSG>
+            role: control-plane
+          - id: <OCID of Worker NSG>
+            name: <Name of Worker NSG>
+            role: worker
       subnets:
         - id: <OCID of Control Plane Subnet>
           role: control-plane
@@ -115,7 +117,7 @@ curl -o  -s -X PATCH -H "Accept: application/json, */*" \
 --cacert ca.crt \
 --cert client.crt \
 --key client.key \
-https://<management-plane-api-endpoint>/apis/infrastructure.cluster.x-k8s.io/v1beta1/namespaces/<cluster-namespace>/ociclusters/<cluster-name>/status \
+https://<management-plane-api-endpoint>/apis/infrastructure.cluster.x-k8s.io/v1beta2/namespaces/<cluster-namespace>/ociclusters/<cluster-name>/status \
 --data '{"status":{"ready":true,"failureDomains":{"1":{"attributes":{"AvailabilityDomain":"zkJl:AP-HYDERABAD-1-AD-1","FaultDomain":"FAULT-DOMAIN-1"},"controlPlane":true},"2":{"attributes":{"AvailabilityDomain":"zkJl:AP-HYDERABAD-1-AD-1","FaultDomain":"FAULT-DOMAIN-2"},"controlPlane":true},"3":{"attributes":{"AvailabilityDomain":"zkJl:AP-HYDERABAD-1-AD-1","FaultDomain":"FAULT-DOMAIN-3"}}}}}'
 ```
 
@@ -127,7 +129,7 @@ curl -o  -s -X PATCH -H "Accept: application/json, */*" \
 --cacert ca.crt \
 --cert client.crt \
 --key client.key \
-https://<management-plane-api-endpoint>/apis/infrastructure.cluster.x-k8s.io/v1beta1/namespaces/<cluster-namespace>/ociclusters/<cluster-name>/status \
+https://<management-plane-api-endpoint>/apis/infrastructure.cluster.x-k8s.io/v1beta2/namespaces/<cluster-namespace>/ociclusters/<cluster-name>/status \
 --data '{"status":{"ready":true,"failureDomains":{"1":{"attributes":{"AvailabilityDomain":"zkJl:US-ASHBURN-1-AD-1"},"controlPlane":true},"2":{"attributes":{"AvailabilityDomain":"zkJl:US-ASHBURN-1-AD-2"},"controlPlane":true},"3":{"attributes":{"AvailabilityDomain":"zkJl:US-ASHBURN-1-AD-3"}}}}}'
 ```
 

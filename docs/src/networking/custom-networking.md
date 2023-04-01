@@ -14,7 +14,7 @@ The `OCICluster` spec in the cluster templates can be modified to customize the 
 The spec below shows how to change the CIDR range of the VCN from the default `10.0.0.0/16` to `172.16.0.0/16`.
 
 ```yaml
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCICluster
 metadata:
   name: "${CLUSTER_NAME}"
@@ -49,7 +49,7 @@ The spec below shows how to change the default NSG rules.
 
 ```yaml
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCICluster
 metadata:
   name: "${CLUSTER_NAME}"
@@ -59,98 +59,99 @@ spec:
     vcn:
       name: ${CLUSTER_NAME}
       cidr: "172.16.0.0/16"
-      networkSecurityGroups:
-        - name: ep-nsg
-          role: control-plane-endpoint
-          egressRules:
-            - egressRule:
-                isStateless: false
-                destination: "172.16.5.0/28"
-                protocol: "6"
-                destinationType: "CIDR_BLOCK"
-                description: "All traffic to control plane nodes"
-                tcpOptions:
-                  destinationPortRange:
-                    max: 6443
-                    min: 6443
-          ingressRules:
-            - ingressRule:
-                isStateless: false
-                source: "0.0.0.0/0"
-                protocol: "6"
-                sourceType: "CIDR_BLOCK"
-                description: "External access to Kubernetes API endpoint"
-                tcpOptions:
-                  destinationPortRange:
-                    max: 6443
-                    min: 6443
-            - ingressRule:
-                isStateless: false
-                source: "172.16.5.0/28"
-                protocol: "6"
-                sourceType: "CIDR_BLOCK"
-                description: "Control plane worker nodes to API Server endpoint"
-            - ingressRule:
-                isStateless: false
-                source: "0.0.0.0/0"
-                protocol: "6"
-                sourceType: "CIDR_BLOCK"
-                description: "SSH access"
-                tcpOptions:
-                  destinationPortRange:
-                    max: 22
-                    min: 22
-        - name: cp-mc-nsg
-          role: control-plane
-          egressRules:
-            - egressRule:
-                isStateless: false
-                destination: "0.0.0.0/0"
-                protocol: "6"
-                destinationType: "CIDR_BLOCK"
-                description: "control plane machine access to internet"
-          ingressRules:
-            - ingressRule:
-                isStateless: false
-                source: "172.16.0.0/16"
-                protocol: "all"
-                sourceType: "CIDR_BLOCK"
-                description: "Allow inter vcn communication"
-            - ingressRule:
-                isStateless: false
-                source: "0.0.0.0/0"
-                protocol: "6"
-                sourceType: "CIDR_BLOCK"
-                description: "SSH access"
-                tcpOptions:
-                  destinationPortRange:
-                    max: 22
-                    min: 22
-        - name: worker-nsg
-          role: worker
-          egressRules:
-            - egressRule:
-                isStateless: false
-                destination: "0.0.0.0/0"
-                protocol: "6"
-                destinationType: "CIDR_BLOCK"
-                description: "Worker Nodes access to Internet"
-          ingressRules:
-            - ingressRule:
-                isStateless: false
-                source: "172.16.0.0/16"
-                protocol: "all"
-                sourceType: "CIDR_BLOCK"
-                description: "Allow inter vcn communication"
-        - name: service-lb-nsg
-          role: service-lb
-          ingressRules:
-            - ingressRule:
-                isStateless: false
-                source: "172.16.0.0/16"
-                protocol: "all"
-                sourceType: "CIDR_BLOCK"
-                description: "Allow ingress from vcn subnets"
+      networkSecurityGroup:
+        list:
+          - name: ep-nsg
+            role: control-plane-endpoint
+            egressRules:
+              - egressRule:
+                  isStateless: false
+                  destination: "172.16.5.0/28"
+                  protocol: "6"
+                  destinationType: "CIDR_BLOCK"
+                  description: "All traffic to control plane nodes"
+                  tcpOptions:
+                    destinationPortRange:
+                      max: 6443
+                      min: 6443
+            ingressRules:
+              - ingressRule:
+                  isStateless: false
+                  source: "0.0.0.0/0"
+                  protocol: "6"
+                  sourceType: "CIDR_BLOCK"
+                  description: "External access to Kubernetes API endpoint"
+                  tcpOptions:
+                    destinationPortRange:
+                      max: 6443
+                      min: 6443
+              - ingressRule:
+                  isStateless: false
+                  source: "172.16.5.0/28"
+                  protocol: "6"
+                  sourceType: "CIDR_BLOCK"
+                  description: "Control plane worker nodes to API Server endpoint"
+              - ingressRule:
+                  isStateless: false
+                  source: "0.0.0.0/0"
+                  protocol: "6"
+                  sourceType: "CIDR_BLOCK"
+                  description: "SSH access"
+                  tcpOptions:
+                    destinationPortRange:
+                      max: 22
+                      min: 22
+          - name: cp-mc-nsg
+            role: control-plane
+            egressRules:
+              - egressRule:
+                  isStateless: false
+                  destination: "0.0.0.0/0"
+                  protocol: "6"
+                  destinationType: "CIDR_BLOCK"
+                  description: "control plane machine access to internet"
+            ingressRules:
+              - ingressRule:
+                  isStateless: false
+                  source: "172.16.0.0/16"
+                  protocol: "all"
+                  sourceType: "CIDR_BLOCK"
+                  description: "Allow inter vcn communication"
+              - ingressRule:
+                  isStateless: false
+                  source: "0.0.0.0/0"
+                  protocol: "6"
+                  sourceType: "CIDR_BLOCK"
+                  description: "SSH access"
+                  tcpOptions:
+                    destinationPortRange:
+                      max: 22
+                      min: 22
+          - name: worker-nsg
+            role: worker
+            egressRules:
+              - egressRule:
+                  isStateless: false
+                  destination: "0.0.0.0/0"
+                  protocol: "6"
+                  destinationType: "CIDR_BLOCK"
+                  description: "Worker Nodes access to Internet"
+            ingressRules:
+              - ingressRule:
+                  isStateless: false
+                  source: "172.16.0.0/16"
+                  protocol: "all"
+                  sourceType: "CIDR_BLOCK"
+                  description: "Allow inter vcn communication"
+          - name: service-lb-nsg
+            role: service-lb
+            ingressRules:
+              - ingressRule:
+                  isStateless: false
+                  source: "172.16.0.0/16"
+                  protocol: "all"
+                  sourceType: "CIDR_BLOCK"
+                  description: "Allow ingress from vcn subnets"
       subnets:
         - name: ep-subnet
           role: control-plane-endpoint
@@ -176,7 +177,7 @@ The spec below shows how to implement the security posture using security lists 
 
 ```yaml
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCICluster
 metadata:
   name: "${CLUSTER_NAME}"
