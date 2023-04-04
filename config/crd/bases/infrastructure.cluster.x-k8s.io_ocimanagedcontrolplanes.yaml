@@ -250,6 +250,9 @@ spec:
                       type: string
                   type: object
                 type: array
+              clusterType:
+                description: ClusterTypeEnum defines the type of cluster.
+                type: string
               controlPlaneEndpoint:
                 description: ControlPlaneEndpoint represents the endpoint used to
                   communicate with the control plane.

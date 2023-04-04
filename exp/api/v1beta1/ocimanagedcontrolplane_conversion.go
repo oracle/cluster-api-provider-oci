@@ -34,6 +34,7 @@ func (src *OCIManagedControlPlane) ConvertTo(dstRaw conversion.Hub) error {
 	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
 		return err
 	}
+	dst.Spec.ClusterType = restored.Spec.ClusterType
 	return nil
 }
 

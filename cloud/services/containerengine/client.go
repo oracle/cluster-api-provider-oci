@@ -38,6 +38,14 @@ type Client interface {
 	ListNodePools(ctx context.Context, request containerengine.ListNodePoolsRequest) (response containerengine.ListNodePoolsResponse, err error)
 	//NodePool Options
 	GetNodePoolOptions(ctx context.Context, request containerengine.GetNodePoolOptionsRequest) (response containerengine.GetNodePoolOptionsResponse, err error)
+	//VirtualNodePool
+	DeleteVirtualNodePool(ctx context.Context, request containerengine.DeleteVirtualNodePoolRequest) (response containerengine.DeleteVirtualNodePoolResponse, err error)
+	CreateVirtualNodePool(ctx context.Context, request containerengine.CreateVirtualNodePoolRequest) (response containerengine.CreateVirtualNodePoolResponse, err error)
+	UpdateVirtualNodePool(ctx context.Context, request containerengine.UpdateVirtualNodePoolRequest) (response containerengine.UpdateVirtualNodePoolResponse, err error)
+	GetVirtualNodePool(ctx context.Context, request containerengine.GetVirtualNodePoolRequest) (response containerengine.GetVirtualNodePoolResponse, err error)
+	ListVirtualNodePools(ctx context.Context, request containerengine.ListVirtualNodePoolsRequest) (response containerengine.ListVirtualNodePoolsResponse, err error)
+	ListVirtualNodes(ctx context.Context, request containerengine.ListVirtualNodesRequest) (response containerengine.ListVirtualNodesResponse, err error)
+
 	//Work Request
 	GetWorkRequest(ctx context.Context, request containerengine.GetWorkRequestRequest) (response containerengine.GetWorkRequestResponse, err error)
 }
