@@ -178,9 +178,6 @@ func (s *ManagedControlPlaneScope) GetOrCreateControlPlane(ctx context.Context) 
 			break
 		}
 	}
-	if clusterType != oke.ClusterTypeEnhancedCluster {
-		return nil, errors.New("blah blah blah")
-	}
 
 	details := oke.CreateClusterDetails{
 		Name:                     common.String(s.GetClusterName()),
