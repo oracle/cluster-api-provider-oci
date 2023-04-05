@@ -165,7 +165,7 @@ func (s *ManagedControlPlaneScope) GetOrCreateControlPlane(ctx context.Context) 
 			IsPodSecurityPolicyEnabled: controlPlaneSpec.ClusterOption.AdmissionControllerOptions.IsPodSecurityPolicyEnabled,
 		}
 	}
-	/*var clusterType oke.ClusterTypeEnum
+	var clusterType oke.ClusterTypeEnum
 	if controlPlaneSpec.ClusterType != "" {
 		switch controlPlaneSpec.ClusterType {
 		case infrav2exp.BasicClusterType:
@@ -177,7 +177,10 @@ func (s *ManagedControlPlaneScope) GetOrCreateControlPlane(ctx context.Context) 
 		default:
 			break
 		}
-	}*/
+	}
+	if clusterType != oke.ClusterTypeEnhancedCluster {
+		return nil, errors.New("blah blah blah")
+	}
 
 	details := oke.CreateClusterDetails{
 		Name:                     common.String(s.GetClusterName()),
@@ -190,7 +193,7 @@ func (s *ManagedControlPlaneScope) GetOrCreateControlPlane(ctx context.Context) 
 		EndpointConfig:           endpointConfig,
 		ClusterPodNetworkOptions: podNetworks,
 		KmsKeyId:                 controlPlaneSpec.KmsKeyId,
-		Type:                     oke.ClusterTypeEnhancedCluster,
+		Type:                     clusterType,
 	}
 
 	if controlPlaneSpec.ImagePolicyConfig != nil {
@@ -560,7 +563,7 @@ func (s *ManagedControlPlaneScope) UpdateControlPlane(ctx context.Context, okeCl
 				KeyDetails:      s.getKeyDetails(),
 			}
 		}
-		/*var clusterType oke.ClusterTypeEnum
+		var clusterType oke.ClusterTypeEnum
 		if controlPlaneSpec.ClusterType != "" {
 			switch controlPlaneSpec.ClusterType {
 			case infrav2exp.BasicClusterType:
@@ -572,8 +575,8 @@ func (s *ManagedControlPlaneScope) UpdateControlPlane(ctx context.Context, okeCl
 			default:
 				break
 			}
-		}*/
-		details.Type = oke.ClusterTypeEnhancedCluster
+		}
+		details.Type = clusterType
 		updateClusterRequest := oke.UpdateClusterRequest{
 			ClusterId:            okeCluster.Id,
 			UpdateClusterDetails: details,
