@@ -49,7 +49,7 @@ func (m *OCIVirtualMachinePool) Default() {
 		m.Spec.PodConfiguration.SubnetName = common.String(PodDefaultName)
 	}
 	if m.Spec.PodConfiguration.Shape == nil {
-		m.Spec.PodConfiguration.Shape = common.String(PodDefaultName)
+		m.Spec.PodConfiguration.Shape = common.String("Pod.Standard.E4.Flex")
 	}
 }
 
