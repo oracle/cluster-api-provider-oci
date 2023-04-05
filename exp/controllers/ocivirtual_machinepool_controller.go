@@ -181,7 +181,7 @@ func (r *OCIVirtualMachinePoolReconciler) SetupWithManager(ctx context.Context, 
 	logger := log.FromContext(ctx)
 	gvk, err := apiutil.GVKForObject(new(infrav2exp.OCIVirtualMachinePool), mgr.GetScheme())
 	if err != nil {
-		return errors.Wrapf(err, "failed to find GVK for OCIManagedMachinePool")
+		return errors.Wrapf(err, "failed to find GVK for OCIVirtualMachinePool")
 	}
 	managedClusterToVirtualMachinePoolMapFunc := managedClusterToVirtualMachinePoolMapFunc(r.Client, gvk, logger)
 	return ctrl.NewControllerManagedBy(mgr).

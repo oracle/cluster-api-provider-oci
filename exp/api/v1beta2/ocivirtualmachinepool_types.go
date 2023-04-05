@@ -116,7 +116,7 @@ type OCIVirtualMachinePoolStatus struct {
 //+kubebuilder:subresource:status
 //+kubebuilder:storageversion
 
-// OCIManagedMachinePool is the Schema for the ocivirtualmachinepool API.
+// OCIVirtualMachinePool is the Schema for the ocivirtualmachinepool API.
 type OCIVirtualMachinePool struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -131,7 +131,7 @@ type OCIVirtualMachinePool struct {
 type OCIVirtualMachinePoolList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []OCIManagedMachinePool `json:"items"`
+	Items           []OCIVirtualMachinePool `json:"items"`
 }
 
 // GetConditions returns the list of conditions for an OCIMachine API object.
