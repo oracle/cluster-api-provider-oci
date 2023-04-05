@@ -114,7 +114,6 @@ type OCIVirtualMachinePoolStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-//+kubebuilder:storageversion
 
 // OCIVirtualMachinePool is the Schema for the ocivirtualmachinepool API.
 type OCIVirtualMachinePool struct {
