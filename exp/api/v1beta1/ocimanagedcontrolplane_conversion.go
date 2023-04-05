@@ -19,22 +19,27 @@ package v1beta1
 import (
 	"github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	utilconversion "sigs.k8s.io/cluster-api/util/conversion"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 )
+
+var logger = ctrl.Log.WithName("ocimanagedcplane-resource")
 
 // ConvertTo converts the v1beta1 OCIManagedCluster receiver to a v1beta2 OCIManagedCluster.
 func (src *OCIManagedControlPlane) ConvertTo(dstRaw conversion.Hub) error {
 	dst := dstRaw.(*v1beta2.OCIManagedControlPlane)
-
+	logger.Info("before 1", "dst", dst)
 	if err := Convert_v1beta1_OCIManagedControlPlane_To_v1beta2_OCIManagedControlPlane(src, dst, nil); err != nil {
 		return err
 	}
+	logger.Info("after 1", "dst", dst)
 
 	restored := &v1beta2.OCIManagedControlPlane{}
 	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
 		return err
 	}
 	dst.Spec.ClusterType = restored.Spec.ClusterType
+	logger.Info("after 2", "dst", dst)
 	return nil
 }
 
@@ -46,6 +51,7 @@ func (r *OCIManagedControlPlane) ConvertFrom(srcRaw conversion.Hub) error {
 		return err
 	}
 
+	logger.Info("conv2 2", "dst", src)
 	// Preserve Hub data on down-conversion.
 	if err := utilconversion.MarshalData(src, r); err != nil {
 		return err
