@@ -190,7 +190,7 @@ func (s *ManagedControlPlaneScope) GetOrCreateControlPlane(ctx context.Context) 
 		EndpointConfig:           endpointConfig,
 		ClusterPodNetworkOptions: podNetworks,
 		KmsKeyId:                 controlPlaneSpec.KmsKeyId,
-		Type:                     clusterType,
+		Type:                     oke.ClusterTypeEnhancedCluster,
 	}
 
 	if controlPlaneSpec.ImagePolicyConfig != nil {
