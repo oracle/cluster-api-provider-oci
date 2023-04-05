@@ -33,6 +33,7 @@ metadata:
   namespace: "${NAMESPACE}"
 spec:
   version: "${KUBERNETES_VERSION}"
+  clusterType: "ENHANCED_CLUSTER"
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachinePool
