@@ -1408,7 +1408,7 @@ func (in *OCIVirtualMachinePoolList) DeepCopyInto(out *OCIVirtualMachinePoolList
 	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
-		*out = make([]OCIManagedMachinePool, len(*in))
+		*out = make([]OCIVirtualMachinePool, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
