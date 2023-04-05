@@ -29,6 +29,7 @@ patchesStrategicMerge:
 - patches/webhook_in_ociclustertemplates.yaml
 - patches/webhook_in_ocimachinepools.yaml
 - patches/webhook_in_ocimanagedclusters.yaml
+- patches/webhook_in_ocimanagedcontrolplanes.yaml
 - patches/webhook_in_ocimanagedmachinepools.yaml
 - patches/webhook_in_ocimanagedcontrolplanes.yaml
 - patches/webhook_in_ociclusteridentities.yaml
@@ -42,6 +43,7 @@ patchesStrategicMerge:
 - patches/cainjection_in_ociclustertemplates.yaml
 - patches/cainjection_in_ocimachinepools.yaml
 - patches/cainjection_in_ocimanagedclusters.yaml
+- patches/cainjection_in_ocimanagedcontrolplanes.yaml
 - patches/cainjection_in_ocimanagedmachinepools.yaml
 - patches/cainjection_in_ocimanagedcontrolplanes.yaml
 - patches/cainjection_in_ociclusteridentities.yaml
