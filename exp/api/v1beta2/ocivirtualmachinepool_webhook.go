@@ -18,9 +18,7 @@ package v1beta2
 
 import (
 	"github.com/oracle/oci-go-sdk/v65/common"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
@@ -54,13 +52,11 @@ func (m *OCIVirtualMachinePool) Default() {
 }
 
 func (m *OCIVirtualMachinePool) ValidateCreate() error {
-	var allErrs field.ErrorList
-	return apierrors.NewInvalid(m.GroupVersionKind().GroupKind(), m.Name, allErrs)
+	return nil
 }
 
 func (m *OCIVirtualMachinePool) ValidateUpdate(old runtime.Object) error {
-	var allErrs field.ErrorList
-	return apierrors.NewInvalid(m.GroupVersionKind().GroupKind(), m.Name, allErrs)
+	return nil
 }
 
 func (m *OCIVirtualMachinePool) ValidateDelete() error {
