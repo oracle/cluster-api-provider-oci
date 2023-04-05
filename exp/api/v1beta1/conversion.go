@@ -47,3 +47,7 @@ func Convert_v1beta1_OCIManagedClusterStatus_To_v1beta2_OCIManagedClusterStatus(
 func Convert_v1beta2_NetworkDetails_To_v1beta1_NetworkDetails(in *infrastructurev1beta2.NetworkDetails, out *infrastructurev1beta1.NetworkDetails, s conversion.Scope) error {
 	return infrastructurev1beta1.Convert_v1beta2_NetworkDetails_To_v1beta1_NetworkDetails(in, out, s)
 }
+
+func Convert_v1beta2_OCIManagedControlPlaneSpec_To_v1beta1_OCIManagedControlPlaneSpec(in *v1beta2.OCIManagedControlPlaneSpec, out *OCIManagedControlPlaneSpec, s conversion.Scope) error {
+	return autoConvert_v1beta2_OCIManagedControlPlaneSpec_To_v1beta1_OCIManagedControlPlaneSpec(in, out, s)
+}
