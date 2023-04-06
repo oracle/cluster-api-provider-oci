@@ -212,7 +212,7 @@ func (r *OCIMachineReconciler) OCIClusterToOCIMachines(ctx context.Context) hand
 			return result
 		}
 
-		labels := map[string]string{clusterv1.ClusterLabelName: cluster.Name}
+		labels := map[string]string{clusterv1.ClusterNameLabel: cluster.Name}
 		machineList := &clusterv1.MachineList{}
 		if err := r.List(ctx, machineList, client.InNamespace(c.Namespace), client.MatchingLabels(labels)); err != nil {
 			log.Error(err, "failed to list Machines")
