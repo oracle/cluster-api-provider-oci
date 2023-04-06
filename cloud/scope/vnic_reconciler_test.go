@@ -186,7 +186,7 @@ func TestReconcileVnicAttachment(t *testing.T) {
 			matchError:    fmt.Errorf("cannot attach multiple vnics to ControlPlane machines"),
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				ms.Machine.ObjectMeta.Labels = make(map[string]string)
-				ms.Machine.ObjectMeta.Labels[clusterv1.MachineControlPlaneLabelName] = "Test"
+				ms.Machine.ObjectMeta.Labels[clusterv1.MachineControlPlaneLabel] = "Test"
 			},
 		},
 	}
