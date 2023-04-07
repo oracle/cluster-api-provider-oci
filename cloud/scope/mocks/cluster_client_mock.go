@@ -12,18 +12,18 @@ import (
 	scope "github.com/oracle/cluster-api-provider-oci/cloud/scope"
 )
 
-// MockClusterScopeClient is a mock_computemanagement of ClusterScopeClient interface.
+// MockClusterScopeClient is a mock of ClusterScopeClient interface.
 type MockClusterScopeClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockClusterScopeClientMockRecorder
 }
 
-// MockClusterScopeClientMockRecorder is the mock_computemanagement recorder for MockClusterScopeClient.
+// MockClusterScopeClientMockRecorder is the mock recorder for MockClusterScopeClient.
 type MockClusterScopeClientMockRecorder struct {
 	mock *MockClusterScopeClient
 }
 
-// NewMockClusterScopeClient creates a new mock_computemanagement instance.
+// NewMockClusterScopeClient creates a new mock instance.
 func NewMockClusterScopeClient(ctrl *gomock.Controller) *MockClusterScopeClient {
 	mock := &MockClusterScopeClient{ctrl: ctrl}
 	mock.recorder = &MockClusterScopeClientMockRecorder{mock}
@@ -36,171 +36,185 @@ func (m *MockClusterScopeClient) EXPECT() *MockClusterScopeClientMockRecorder {
 }
 
 // DeleteApiServerLB mocks base method.
-func (m *MockClusterScopeClient) DeleteApiServerLB(ctx context.Context) error {
+func (m *MockClusterScopeClient) DeleteApiServerLB(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteApiServerLB", ctx)
+	ret := m.ctrl.Call(m, "DeleteApiServerLB", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteApiServerLB indicates an expected call of DeleteApiServerLB.
-func (mr *MockClusterScopeClientMockRecorder) DeleteApiServerLB(ctx interface{}) *gomock.Call {
+func (mr *MockClusterScopeClientMockRecorder) DeleteApiServerLB(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteApiServerLB", reflect.TypeOf((*MockClusterScopeClient)(nil).DeleteApiServerLB), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteApiServerLB", reflect.TypeOf((*MockClusterScopeClient)(nil).DeleteApiServerLB), arg0)
+}
+
+// DeleteApiServerNLB mocks base method.
+func (m *MockClusterScopeClient) DeleteApiServerNLB(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteApiServerNLB", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteApiServerNLB indicates an expected call of DeleteApiServerNLB.
+func (mr *MockClusterScopeClientMockRecorder) DeleteApiServerNLB(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteApiServerNLB", reflect.TypeOf((*MockClusterScopeClient)(nil).DeleteApiServerNLB), arg0)
 }
 
 // DeleteDRG mocks base method.
-func (m *MockClusterScopeClient) DeleteDRG(ctx context.Context) error {
+func (m *MockClusterScopeClient) DeleteDRG(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteDRG", ctx)
+	ret := m.ctrl.Call(m, "DeleteDRG", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteDRG indicates an expected call of DeleteDRG.
-func (mr *MockClusterScopeClientMockRecorder) DeleteDRG(ctx interface{}) *gomock.Call {
+func (mr *MockClusterScopeClientMockRecorder) DeleteDRG(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteDRG", reflect.TypeOf((*MockClusterScopeClient)(nil).DeleteDRG), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteDRG", reflect.TypeOf((*MockClusterScopeClient)(nil).DeleteDRG), arg0)
 }
 
 // DeleteDRGRPCAttachment mocks base method.
-func (m *MockClusterScopeClient) DeleteDRGRPCAttachment(ctx context.Context) error {
+func (m *MockClusterScopeClient) DeleteDRGRPCAttachment(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteDRGRPCAttachment", ctx)
+	ret := m.ctrl.Call(m, "DeleteDRGRPCAttachment", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteDRGRPCAttachment indicates an expected call of DeleteDRGRPCAttachment.
-func (mr *MockClusterScopeClientMockRecorder) DeleteDRGRPCAttachment(ctx interface{}) *gomock.Call {
+func (mr *MockClusterScopeClientMockRecorder) DeleteDRGRPCAttachment(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteDRGRPCAttachment", reflect.TypeOf((*MockClusterScopeClient)(nil).DeleteDRGRPCAttachment), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteDRGRPCAttachment", reflect.TypeOf((*MockClusterScopeClient)(nil).DeleteDRGRPCAttachment), arg0)
 }
 
 // DeleteDRGVCNAttachment mocks base method.
-func (m *MockClusterScopeClient) DeleteDRGVCNAttachment(ctx context.Context) error {
+func (m *MockClusterScopeClient) DeleteDRGVCNAttachment(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteDRGVCNAttachment", ctx)
+	ret := m.ctrl.Call(m, "DeleteDRGVCNAttachment", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteDRGVCNAttachment indicates an expected call of DeleteDRGVCNAttachment.
-func (mr *MockClusterScopeClientMockRecorder) DeleteDRGVCNAttachment(ctx interface{}) *gomock.Call {
+func (mr *MockClusterScopeClientMockRecorder) DeleteDRGVCNAttachment(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteDRGVCNAttachment", reflect.TypeOf((*MockClusterScopeClient)(nil).DeleteDRGVCNAttachment), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteDRGVCNAttachment", reflect.TypeOf((*MockClusterScopeClient)(nil).DeleteDRGVCNAttachment), arg0)
 }
 
 // DeleteInternetGateway mocks base method.
-func (m *MockClusterScopeClient) DeleteInternetGateway(ctx context.Context) error {
+func (m *MockClusterScopeClient) DeleteInternetGateway(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteInternetGateway", ctx)
+	ret := m.ctrl.Call(m, "DeleteInternetGateway", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteInternetGateway indicates an expected call of DeleteInternetGateway.
-func (mr *MockClusterScopeClientMockRecorder) DeleteInternetGateway(ctx interface{}) *gomock.Call {
+func (mr *MockClusterScopeClientMockRecorder) DeleteInternetGateway(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteInternetGateway", reflect.TypeOf((*MockClusterScopeClient)(nil).DeleteInternetGateway), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteInternetGateway", reflect.TypeOf((*MockClusterScopeClient)(nil).DeleteInternetGateway), arg0)
 }
 
 // DeleteNSGs mocks base method.
-func (m *MockClusterScopeClient) DeleteNSGs(ctx context.Context) error {
+func (m *MockClusterScopeClient) DeleteNSGs(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteNSGs", ctx)
+	ret := m.ctrl.Call(m, "DeleteNSGs", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteNSGs indicates an expected call of DeleteNSGs.
-func (mr *MockClusterScopeClientMockRecorder) DeleteNSGs(ctx interface{}) *gomock.Call {
+func (mr *MockClusterScopeClientMockRecorder) DeleteNSGs(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteNSGs", reflect.TypeOf((*MockClusterScopeClient)(nil).DeleteNSGs), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteNSGs", reflect.TypeOf((*MockClusterScopeClient)(nil).DeleteNSGs), arg0)
 }
 
 // DeleteNatGateway mocks base method.
-func (m *MockClusterScopeClient) DeleteNatGateway(ctx context.Context) error {
+func (m *MockClusterScopeClient) DeleteNatGateway(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteNatGateway", ctx)
+	ret := m.ctrl.Call(m, "DeleteNatGateway", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteNatGateway indicates an expected call of DeleteNatGateway.
-func (mr *MockClusterScopeClientMockRecorder) DeleteNatGateway(ctx interface{}) *gomock.Call {
+func (mr *MockClusterScopeClientMockRecorder) DeleteNatGateway(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteNatGateway", reflect.TypeOf((*MockClusterScopeClient)(nil).DeleteNatGateway), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteNatGateway", reflect.TypeOf((*MockClusterScopeClient)(nil).DeleteNatGateway), arg0)
 }
 
 // DeleteRouteTables mocks base method.
-func (m *MockClusterScopeClient) DeleteRouteTables(ctx context.Context) error {
+func (m *MockClusterScopeClient) DeleteRouteTables(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteRouteTables", ctx)
+	ret := m.ctrl.Call(m, "DeleteRouteTables", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteRouteTables indicates an expected call of DeleteRouteTables.
-func (mr *MockClusterScopeClientMockRecorder) DeleteRouteTables(ctx interface{}) *gomock.Call {
+func (mr *MockClusterScopeClientMockRecorder) DeleteRouteTables(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteRouteTables", reflect.TypeOf((*MockClusterScopeClient)(nil).DeleteRouteTables), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteRouteTables", reflect.TypeOf((*MockClusterScopeClient)(nil).DeleteRouteTables), arg0)
 }
 
 // DeleteSecurityLists mocks base method.
-func (m *MockClusterScopeClient) DeleteSecurityLists(ctx context.Context) error {
+func (m *MockClusterScopeClient) DeleteSecurityLists(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteSecurityLists", ctx)
+	ret := m.ctrl.Call(m, "DeleteSecurityLists", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteSecurityLists indicates an expected call of DeleteSecurityLists.
-func (mr *MockClusterScopeClientMockRecorder) DeleteSecurityLists(ctx interface{}) *gomock.Call {
+func (mr *MockClusterScopeClientMockRecorder) DeleteSecurityLists(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSecurityLists", reflect.TypeOf((*MockClusterScopeClient)(nil).DeleteSecurityLists), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSecurityLists", reflect.TypeOf((*MockClusterScopeClient)(nil).DeleteSecurityLists), arg0)
 }
 
 // DeleteServiceGateway mocks base method.
-func (m *MockClusterScopeClient) DeleteServiceGateway(ctx context.Context) error {
+func (m *MockClusterScopeClient) DeleteServiceGateway(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteServiceGateway", ctx)
+	ret := m.ctrl.Call(m, "DeleteServiceGateway", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteServiceGateway indicates an expected call of DeleteServiceGateway.
-func (mr *MockClusterScopeClientMockRecorder) DeleteServiceGateway(ctx interface{}) *gomock.Call {
+func (mr *MockClusterScopeClientMockRecorder) DeleteServiceGateway(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteServiceGateway", reflect.TypeOf((*MockClusterScopeClient)(nil).DeleteServiceGateway), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteServiceGateway", reflect.TypeOf((*MockClusterScopeClient)(nil).DeleteServiceGateway), arg0)
 }
 
 // DeleteSubnets mocks base method.
-func (m *MockClusterScopeClient) DeleteSubnets(ctx context.Context) error {
+func (m *MockClusterScopeClient) DeleteSubnets(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteSubnets", ctx)
+	ret := m.ctrl.Call(m, "DeleteSubnets", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteSubnets indicates an expected call of DeleteSubnets.
-func (mr *MockClusterScopeClientMockRecorder) DeleteSubnets(ctx interface{}) *gomock.Call {
+func (mr *MockClusterScopeClientMockRecorder) DeleteSubnets(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSubnets", reflect.TypeOf((*MockClusterScopeClient)(nil).DeleteSubnets), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSubnets", reflect.TypeOf((*MockClusterScopeClient)(nil).DeleteSubnets), arg0)
 }
 
 // DeleteVCN mocks base method.
-func (m *MockClusterScopeClient) DeleteVCN(ctx context.Context) error {
+func (m *MockClusterScopeClient) DeleteVCN(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteVCN", ctx)
+	ret := m.ctrl.Call(m, "DeleteVCN", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteVCN indicates an expected call of DeleteVCN.
-func (mr *MockClusterScopeClientMockRecorder) DeleteVCN(ctx interface{}) *gomock.Call {
+func (mr *MockClusterScopeClientMockRecorder) DeleteVCN(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteVCN", reflect.TypeOf((*MockClusterScopeClient)(nil).DeleteVCN), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteVCN", reflect.TypeOf((*MockClusterScopeClient)(nil).DeleteVCN), arg0)
 }
 
 // GetOCIClusterAccessor mocks base method.
@@ -218,179 +232,199 @@ func (mr *MockClusterScopeClientMockRecorder) GetOCIClusterAccessor() *gomock.Ca
 }
 
 // ReconcileApiServerLB mocks base method.
-func (m *MockClusterScopeClient) ReconcileApiServerLB(ctx context.Context) error {
+func (m *MockClusterScopeClient) ReconcileApiServerLB(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReconcileApiServerLB", ctx)
+	ret := m.ctrl.Call(m, "ReconcileApiServerLB", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ReconcileApiServerLB indicates an expected call of ReconcileApiServerLB.
-func (mr *MockClusterScopeClientMockRecorder) ReconcileApiServerLB(ctx interface{}) *gomock.Call {
+func (mr *MockClusterScopeClientMockRecorder) ReconcileApiServerLB(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileApiServerLB", reflect.TypeOf((*MockClusterScopeClient)(nil).ReconcileApiServerLB), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileApiServerLB", reflect.TypeOf((*MockClusterScopeClient)(nil).ReconcileApiServerLB), arg0)
+}
+
+// ReconcileApiServerNLB mocks base method.
+func (m *MockClusterScopeClient) ReconcileApiServerNLB(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReconcileApiServerNLB", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ReconcileApiServerNLB indicates an expected call of ReconcileApiServerNLB.
+func (mr *MockClusterScopeClientMockRecorder) ReconcileApiServerNLB(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileApiServerNLB", reflect.TypeOf((*MockClusterScopeClient)(nil).ReconcileApiServerNLB), arg0)
 }
 
 // ReconcileDRG mocks base method.
-func (m *MockClusterScopeClient) ReconcileDRG(ctx context.Context) error {
+func (m *MockClusterScopeClient) ReconcileDRG(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReconcileDRG", ctx)
+	ret := m.ctrl.Call(m, "ReconcileDRG", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ReconcileDRG indicates an expected call of ReconcileDRG.
-func (mr *MockClusterScopeClientMockRecorder) ReconcileDRG(ctx interface{}) *gomock.Call {
+func (mr *MockClusterScopeClientMockRecorder) ReconcileDRG(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileDRG", reflect.TypeOf((*MockClusterScopeClient)(nil).ReconcileDRG), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileDRG", reflect.TypeOf((*MockClusterScopeClient)(nil).ReconcileDRG), arg0)
 }
 
 // ReconcileDRGRPCAttachment mocks base method.
-func (m *MockClusterScopeClient) ReconcileDRGRPCAttachment(ctx context.Context) error {
+func (m *MockClusterScopeClient) ReconcileDRGRPCAttachment(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReconcileDRGRPCAttachment", ctx)
+	ret := m.ctrl.Call(m, "ReconcileDRGRPCAttachment", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ReconcileDRGRPCAttachment indicates an expected call of ReconcileDRGRPCAttachment.
-func (mr *MockClusterScopeClientMockRecorder) ReconcileDRGRPCAttachment(ctx interface{}) *gomock.Call {
+func (mr *MockClusterScopeClientMockRecorder) ReconcileDRGRPCAttachment(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileDRGRPCAttachment", reflect.TypeOf((*MockClusterScopeClient)(nil).ReconcileDRGRPCAttachment), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileDRGRPCAttachment", reflect.TypeOf((*MockClusterScopeClient)(nil).ReconcileDRGRPCAttachment), arg0)
 }
 
 // ReconcileDRGVCNAttachment mocks base method.
-func (m *MockClusterScopeClient) ReconcileDRGVCNAttachment(ctx context.Context) error {
+func (m *MockClusterScopeClient) ReconcileDRGVCNAttachment(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReconcileDRGVCNAttachment", ctx)
+	ret := m.ctrl.Call(m, "ReconcileDRGVCNAttachment", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ReconcileDRGVCNAttachment indicates an expected call of ReconcileDRGVCNAttachment.
-func (mr *MockClusterScopeClientMockRecorder) ReconcileDRGVCNAttachment(ctx interface{}) *gomock.Call {
+func (mr *MockClusterScopeClientMockRecorder) ReconcileDRGVCNAttachment(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileDRGVCNAttachment", reflect.TypeOf((*MockClusterScopeClient)(nil).ReconcileDRGVCNAttachment), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileDRGVCNAttachment", reflect.TypeOf((*MockClusterScopeClient)(nil).ReconcileDRGVCNAttachment), arg0)
 }
 
 // ReconcileFailureDomains mocks base method.
-func (m *MockClusterScopeClient) ReconcileFailureDomains(ctx context.Context) error {
+func (m *MockClusterScopeClient) ReconcileFailureDomains(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReconcileFailureDomains", ctx)
+	ret := m.ctrl.Call(m, "ReconcileFailureDomains", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ReconcileFailureDomains indicates an expected call of ReconcileFailureDomains.
-func (mr *MockClusterScopeClientMockRecorder) ReconcileFailureDomains(ctx interface{}) *gomock.Call {
+func (mr *MockClusterScopeClientMockRecorder) ReconcileFailureDomains(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileFailureDomains", reflect.TypeOf((*MockClusterScopeClient)(nil).ReconcileFailureDomains), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileFailureDomains", reflect.TypeOf((*MockClusterScopeClient)(nil).ReconcileFailureDomains), arg0)
 }
 
 // ReconcileInternetGateway mocks base method.
-func (m *MockClusterScopeClient) ReconcileInternetGateway(ctx context.Context) error {
+func (m *MockClusterScopeClient) ReconcileInternetGateway(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReconcileInternetGateway", ctx)
+	ret := m.ctrl.Call(m, "ReconcileInternetGateway", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ReconcileInternetGateway indicates an expected call of ReconcileInternetGateway.
-func (mr *MockClusterScopeClientMockRecorder) ReconcileInternetGateway(ctx interface{}) *gomock.Call {
+func (mr *MockClusterScopeClientMockRecorder) ReconcileInternetGateway(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileInternetGateway", reflect.TypeOf((*MockClusterScopeClient)(nil).ReconcileInternetGateway), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileInternetGateway", reflect.TypeOf((*MockClusterScopeClient)(nil).ReconcileInternetGateway), arg0)
 }
 
 // ReconcileNSG mocks base method.
-func (m *MockClusterScopeClient) ReconcileNSG(ctx context.Context) error {
+func (m *MockClusterScopeClient) ReconcileNSG(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReconcileNSG", ctx)
+	ret := m.ctrl.Call(m, "ReconcileNSG", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ReconcileNSG indicates an expected call of ReconcileNSG.
-func (mr *MockClusterScopeClientMockRecorder) ReconcileNSG(ctx interface{}) *gomock.Call {
+func (mr *MockClusterScopeClientMockRecorder) ReconcileNSG(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileNSG", reflect.TypeOf((*MockClusterScopeClient)(nil).ReconcileNSG), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileNSG", reflect.TypeOf((*MockClusterScopeClient)(nil).ReconcileNSG), arg0)
 }
 
 // ReconcileNatGateway mocks base method.
-func (m *MockClusterScopeClient) ReconcileNatGateway(ctx context.Context) error {
+func (m *MockClusterScopeClient) ReconcileNatGateway(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReconcileNatGateway", ctx)
+	ret := m.ctrl.Call(m, "ReconcileNatGateway", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ReconcileNatGateway indicates an expected call of ReconcileNatGateway.
-func (mr *MockClusterScopeClientMockRecorder) ReconcileNatGateway(ctx interface{}) *gomock.Call {
+func (mr *MockClusterScopeClientMockRecorder) ReconcileNatGateway(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileNatGateway", reflect.TypeOf((*MockClusterScopeClient)(nil).ReconcileNatGateway), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileNatGateway", reflect.TypeOf((*MockClusterScopeClient)(nil).ReconcileNatGateway), arg0)
 }
 
 // ReconcileRouteTable mocks base method.
-func (m *MockClusterScopeClient) ReconcileRouteTable(ctx context.Context) error {
+func (m *MockClusterScopeClient) ReconcileRouteTable(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReconcileRouteTable", ctx)
+	ret := m.ctrl.Call(m, "ReconcileRouteTable", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ReconcileRouteTable indicates an expected call of ReconcileRouteTable.
-func (mr *MockClusterScopeClientMockRecorder) ReconcileRouteTable(ctx interface{}) *gomock.Call {
+func (mr *MockClusterScopeClientMockRecorder) ReconcileRouteTable(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileRouteTable", reflect.TypeOf((*MockClusterScopeClient)(nil).ReconcileRouteTable), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileRouteTable", reflect.TypeOf((*MockClusterScopeClient)(nil).ReconcileRouteTable), arg0)
 }
 
 // ReconcileServiceGateway mocks base method.
-func (m *MockClusterScopeClient) ReconcileServiceGateway(ctx context.Context) error {
+func (m *MockClusterScopeClient) ReconcileServiceGateway(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReconcileServiceGateway", ctx)
+	ret := m.ctrl.Call(m, "ReconcileServiceGateway", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ReconcileServiceGateway indicates an expected call of ReconcileServiceGateway.
-func (mr *MockClusterScopeClientMockRecorder) ReconcileServiceGateway(ctx interface{}) *gomock.Call {
+func (mr *MockClusterScopeClientMockRecorder) ReconcileServiceGateway(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileServiceGateway", reflect.TypeOf((*MockClusterScopeClient)(nil).ReconcileServiceGateway), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileServiceGateway", reflect.TypeOf((*MockClusterScopeClient)(nil).ReconcileServiceGateway), arg0)
 }
 
 // ReconcileSubnet mocks base method.
-func (m *MockClusterScopeClient) ReconcileSubnet(ctx context.Context) error {
+func (m *MockClusterScopeClient) ReconcileSubnet(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReconcileSubnet", ctx)
+	ret := m.ctrl.Call(m, "ReconcileSubnet", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ReconcileSubnet indicates an expected call of ReconcileSubnet.
-func (mr *MockClusterScopeClientMockRecorder) ReconcileSubnet(ctx interface{}) *gomock.Call {
+func (mr *MockClusterScopeClientMockRecorder) ReconcileSubnet(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileSubnet", reflect.TypeOf((*MockClusterScopeClient)(nil).ReconcileSubnet), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileSubnet", reflect.TypeOf((*MockClusterScopeClient)(nil).ReconcileSubnet), arg0)
 }
 
 // ReconcileVCN mocks base method.
-func (m *MockClusterScopeClient) ReconcileVCN(ctx context.Context) error {
+func (m *MockClusterScopeClient) ReconcileVCN(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReconcileVCN", ctx)
+	ret := m.ctrl.Call(m, "ReconcileVCN", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ReconcileVCN indicates an expected call of ReconcileVCN.
-func (mr *MockClusterScopeClientMockRecorder) ReconcileVCN(ctx interface{}) *gomock.Call {
+func (mr *MockClusterScopeClientMockRecorder) ReconcileVCN(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileVCN", reflect.TypeOf((*MockClusterScopeClient)(nil).ReconcileVCN), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileVCN", reflect.TypeOf((*MockClusterScopeClient)(nil).ReconcileVCN), arg0)
 }
 
-// SetRegionCode mocks base method.
-func (m *MockClusterScopeClient) SetRegionKey(ctx context.Context) error {
+// SetRegionKey mocks base method.
+func (m *MockClusterScopeClient) SetRegionKey(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetRegionKey", ctx)
+	ret := m.ctrl.Call(m, "SetRegionKey", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
+}
+
+// SetRegionKey indicates an expected call of SetRegionKey.
+func (mr *MockClusterScopeClientMockRecorder) SetRegionKey(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetRegionKey", reflect.TypeOf((*MockClusterScopeClient)(nil).SetRegionKey), arg0)
 }
 
 // SetRegionCode indicates an expected call of SetRegionCode.

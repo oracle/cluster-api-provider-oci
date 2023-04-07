@@ -237,7 +237,7 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	computeClient = ociClients.ComputeClient
 	identityClient := ociClients.IdentityClient
 	vcnClient = ociClients.VCNClient
-	lbClient = ociClients.LoadBalancerClient
+	lbClient = ociClients.NetworkLoadBalancerClient
 	Expect(identityClient).NotTo(BeNil())
 	Expect(lbClient).NotTo(BeNil())
 

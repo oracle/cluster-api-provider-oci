@@ -1189,6 +1189,7 @@ func Convert_v1beta1_LoadBalancer_To_v1beta2_LoadBalancer(in *LoadBalancer, out 
 func autoConvert_v1beta2_LoadBalancer_To_v1beta1_LoadBalancer(in *v1beta2.LoadBalancer, out *LoadBalancer, s conversion.Scope) error {
 	out.Name = in.Name
 	out.LoadBalancerId = (*string)(unsafe.Pointer(in.LoadBalancerId))
+	// WARNING: in.LoadBalancerType requires manual conversion: does not exist in peer-type
 	return nil
 }
 
