@@ -58,7 +58,7 @@ var (
 	ociClusterConcurrency     int
 	ociMachineConcurrency     int
 	ociMachinePoolConcurrency int
-	initOciClientsOnBootstrap bool
+	initOciClientsOnStartup   bool
 )
 
 const (
@@ -117,8 +117,8 @@ func main() {
 		"Number of OciMachinePools to process simultaneously",
 	)
 	flag.BoolVar(
-		&initOciClientsOnBootstrap,
-		"init-oci-clients-on-bootstrap",
+		&initOciClientsOnStartup,
+		"init-oci-clients-on-startup",
 		true,
 		"Initialize OCI clients on startup",
 	)
@@ -159,7 +159,7 @@ func main() {
 
 	var clientProvider *scope.ClientProvider
 	var region string
-	if initOciClientsOnBootstrap {
+	if initOciClientsOnStartup {
 		authConfigDir := os.Getenv(AuthConfigDirectory)
 		if authConfigDir == "" {
 			setupLog.Error(err, "auth config directory environment variable is not set")
