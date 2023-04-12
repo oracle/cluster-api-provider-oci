@@ -80,6 +80,21 @@ func (mr *MockClientMockRecorder) CreateNodePool(ctx, request interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateNodePool", reflect.TypeOf((*MockClient)(nil).CreateNodePool), ctx, request)
 }
 
+// CreateVirtualNodePool mocks base method.
+func (m *MockClient) CreateVirtualNodePool(ctx context.Context, request containerengine.CreateVirtualNodePoolRequest) (containerengine.CreateVirtualNodePoolResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateVirtualNodePool", ctx, request)
+	ret0, _ := ret[0].(containerengine.CreateVirtualNodePoolResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateVirtualNodePool indicates an expected call of CreateVirtualNodePool.
+func (mr *MockClientMockRecorder) CreateVirtualNodePool(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateVirtualNodePool", reflect.TypeOf((*MockClient)(nil).CreateVirtualNodePool), ctx, request)
+}
+
 // DeleteCluster mocks base method.
 func (m *MockClient) DeleteCluster(ctx context.Context, request containerengine.DeleteClusterRequest) (containerengine.DeleteClusterResponse, error) {
 	m.ctrl.T.Helper()
@@ -108,6 +123,21 @@ func (m *MockClient) DeleteNodePool(ctx context.Context, request containerengine
 func (mr *MockClientMockRecorder) DeleteNodePool(ctx, request interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteNodePool", reflect.TypeOf((*MockClient)(nil).DeleteNodePool), ctx, request)
+}
+
+// DeleteVirtualNodePool mocks base method.
+func (m *MockClient) DeleteVirtualNodePool(ctx context.Context, request containerengine.DeleteVirtualNodePoolRequest) (containerengine.DeleteVirtualNodePoolResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteVirtualNodePool", ctx, request)
+	ret0, _ := ret[0].(containerengine.DeleteVirtualNodePoolResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteVirtualNodePool indicates an expected call of DeleteVirtualNodePool.
+func (mr *MockClientMockRecorder) DeleteVirtualNodePool(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteVirtualNodePool", reflect.TypeOf((*MockClient)(nil).DeleteVirtualNodePool), ctx, request)
 }
 
 // GetCluster mocks base method.
@@ -155,6 +185,21 @@ func (mr *MockClientMockRecorder) GetNodePoolOptions(ctx, request interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNodePoolOptions", reflect.TypeOf((*MockClient)(nil).GetNodePoolOptions), ctx, request)
 }
 
+// GetVirtualNodePool mocks base method.
+func (m *MockClient) GetVirtualNodePool(ctx context.Context, request containerengine.GetVirtualNodePoolRequest) (containerengine.GetVirtualNodePoolResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetVirtualNodePool", ctx, request)
+	ret0, _ := ret[0].(containerengine.GetVirtualNodePoolResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetVirtualNodePool indicates an expected call of GetVirtualNodePool.
+func (mr *MockClientMockRecorder) GetVirtualNodePool(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVirtualNodePool", reflect.TypeOf((*MockClient)(nil).GetVirtualNodePool), ctx, request)
+}
+
 // GetWorkRequest mocks base method.
 func (m *MockClient) GetWorkRequest(ctx context.Context, request containerengine.GetWorkRequestRequest) (containerengine.GetWorkRequestResponse, error) {
 	m.ctrl.T.Helper()
@@ -200,6 +245,36 @@ func (mr *MockClientMockRecorder) ListNodePools(ctx, request interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNodePools", reflect.TypeOf((*MockClient)(nil).ListNodePools), ctx, request)
 }
 
+// ListVirtualNodePools mocks base method.
+func (m *MockClient) ListVirtualNodePools(ctx context.Context, request containerengine.ListVirtualNodePoolsRequest) (containerengine.ListVirtualNodePoolsResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListVirtualNodePools", ctx, request)
+	ret0, _ := ret[0].(containerengine.ListVirtualNodePoolsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListVirtualNodePools indicates an expected call of ListVirtualNodePools.
+func (mr *MockClientMockRecorder) ListVirtualNodePools(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListVirtualNodePools", reflect.TypeOf((*MockClient)(nil).ListVirtualNodePools), ctx, request)
+}
+
+// ListVirtualNodes mocks base method.
+func (m *MockClient) ListVirtualNodes(ctx context.Context, request containerengine.ListVirtualNodesRequest) (containerengine.ListVirtualNodesResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListVirtualNodes", ctx, request)
+	ret0, _ := ret[0].(containerengine.ListVirtualNodesResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListVirtualNodes indicates an expected call of ListVirtualNodes.
+func (mr *MockClientMockRecorder) ListVirtualNodes(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListVirtualNodes", reflect.TypeOf((*MockClient)(nil).ListVirtualNodes), ctx, request)
+}
+
 // UpdateCluster mocks base method.
 func (m *MockClient) UpdateCluster(ctx context.Context, request containerengine.UpdateClusterRequest) (containerengine.UpdateClusterResponse, error) {
 	m.ctrl.T.Helper()
@@ -228,4 +303,19 @@ func (m *MockClient) UpdateNodePool(ctx context.Context, request containerengine
 func (mr *MockClientMockRecorder) UpdateNodePool(ctx, request interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateNodePool", reflect.TypeOf((*MockClient)(nil).UpdateNodePool), ctx, request)
+}
+
+// UpdateVirtualNodePool mocks base method.
+func (m *MockClient) UpdateVirtualNodePool(ctx context.Context, request containerengine.UpdateVirtualNodePoolRequest) (containerengine.UpdateVirtualNodePoolResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateVirtualNodePool", ctx, request)
+	ret0, _ := ret[0].(containerengine.UpdateVirtualNodePoolResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateVirtualNodePool indicates an expected call of UpdateVirtualNodePool.
+func (mr *MockClientMockRecorder) UpdateVirtualNodePool(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateVirtualNodePool", reflect.TypeOf((*MockClient)(nil).UpdateVirtualNodePool), ctx, request)
 }
