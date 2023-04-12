@@ -185,7 +185,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		clientProvider, err = scope.NewClientProvider(ociAuthConfigProvider)
+		clientProvider, err = scope.NewClientProvider(ociAuthConfigProvider, nil)
 		if err != nil {
 			setupLog.Error(err, "unable to create OCI ClientProvider")
 			os.Exit(1)

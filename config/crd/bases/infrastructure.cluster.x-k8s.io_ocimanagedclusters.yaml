@@ -1162,6 +1162,41 @@ spec:
                   type: string
                 description: Free-form tags for this resource.
                 type: object
+              hostUrl:
+                description: HostUrls allows the default client SDK URLs to be changed.
+                nullable: true
+                properties:
+                  computeClientHost:
+                    description: ComputeClientHost allows the default compute SDK
+                      client URL to be changed.
+                    nullable: true
+                    type: string
+                  computeManagementClientHost:
+                    description: ComputeManagementClientHost allows the default compute
+                      management SDK client URL to be changed.
+                    nullable: true
+                    type: string
+                  containerEngineClientHost:
+                    description: ContainerEngineClientHost allows the default container
+                      engine SDK client URL to be changed.
+                    nullable: true
+                    type: string
+                  identityClientHost:
+                    description: IdentityClientHost allows the default identity SDK
+                      client URL to be changed.
+                    nullable: true
+                    type: string
+                  loadBalancerClientHost:
+                    description: LoadBalancerClientHost allows the default load balancer
+                      SDK client URL to be changed.
+                    nullable: true
+                    type: string
+                  vCNClientHost:
+                    description: VCNClientHost allows the default vcn SDK client URL
+                      to be changed.
+                    nullable: true
+                    type: string
+                type: object
               identityRef:
                 description: IdentityRef is a reference to an identity(principal)
                   to be used when reconciling this cluster

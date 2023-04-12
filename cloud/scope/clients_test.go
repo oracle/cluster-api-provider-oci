@@ -37,7 +37,7 @@ func TestClients_NewClientProvider(t *testing.T) {
 
 	}
 
-	clientProvider, err := NewClientProvider(ociAuthConfigProvider)
+	clientProvider, err := NewClientProvider(ociAuthConfigProvider, nil)
 	if err != nil {
 		t.Errorf("Expected %v to equal nil", err)
 	}
@@ -49,7 +49,7 @@ func TestClients_NewClientProvider(t *testing.T) {
 
 func TestClients_NewClientProviderWithBadAuthConfig(t *testing.T) {
 
-	clientProvider, err := NewClientProvider(nil)
+	clientProvider, err := NewClientProvider(nil, nil)
 	if err == nil {
 		t.Errorf("Expected error:%v to not equal nil", err)
 	}

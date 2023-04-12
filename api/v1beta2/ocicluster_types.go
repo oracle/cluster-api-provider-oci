@@ -74,6 +74,12 @@ type OCIClusterSpec struct {
 	// where the map key is the AD name and the struct is details about the AD.
 	// +optional
 	AvailabilityDomains map[string]OCIAvailabilityDomain `json:"availabilityDomains,omitempty"`
+
+	// HostUrls allows the default client SDK URLs to be changed.
+	//
+	// +optional
+	// +nullable
+	ClientHostUrls *ClusterClientHostUrls `json:"clientHostUrls,omitempty"`
 }
 
 // OCIClusterStatus defines the observed state of OCICluster
@@ -118,6 +124,46 @@ type OCIAvailabilityDomain struct {
 
 	// FaultDomains a list of fault domain (FD) names. Example: ["FAULT-DOMAIN-1"]
 	FaultDomains []string `json:"faultDomains,omitempty"`
+}
+
+// ClusterClientHostUrls contains information about client host url overrides.
+type ClusterClientHostUrls struct {
+
+	// ComputeClientHost allows the default compute SDK client URL to be changed.
+	//
+	// +optional
+	// +nullable
+	ComputeClientHost *string `json:"computeClientHost,omitempty"`
+
+	// ComputeManagementClientHost allows the default compute management SDK client URL to be changed.
+	//
+	// +optional
+	// +nullable
+	ComputeManagementClientHost *string `json:"computeManagementClientHost,omitempty"`
+
+	// VCNClientHost allows the default vcn SDK client URL to be changed.
+	//
+	// +optional
+	// +nullable
+	VCNClientHost *string `json:"vCNClientHost,omitempty"`
+
+	// LoadBalancerClientHost allows the default load balancer SDK client URL to be changed.
+	//
+	// +optional
+	// +nullable
+	LoadBalancerClientHost *string `json:"loadBalancerClientHost,omitempty"`
+
+	// IdentityClientHost allows the default identity SDK client URL to be changed.
+	//
+	// +optional
+	// +nullable
+	IdentityClientHost *string `json:"identityClientHost,omitempty"`
+
+	// ContainerEngineClientHost allows the default container engine SDK client URL to be changed.
+	//
+	// +optional
+	// +nullable
+	ContainerEngineClientHost *string `json:"containerEngineClientHost,omitempty"`
 }
 
 // GetConditions returns the list of conditions for an OCICluster API object.

@@ -226,7 +226,7 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 		By("Using user principal as auth provider")
 	}
 
-	clientProvider, err := scope.NewClientProvider(ociAuthConfigProvider)
+	clientProvider, err := scope.NewClientProvider(ociAuthConfigProvider, nil)
 	Expect(err).NotTo(HaveOccurred())
 
 	region, err := ociAuthConfigProvider.Region()
