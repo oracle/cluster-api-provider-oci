@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"k8s.io/klog/v2"
 	"os"
 
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
@@ -38,7 +39,6 @@ import (
 	"k8s.io/component-base/logs"
 	logsV1 "k8s.io/component-base/logs/api/v1"
 	_ "k8s.io/component-base/logs/json/register"
-	"k8s.io/klog/v2"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	expclusterv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -58,6 +58,7 @@ var (
 	ociClusterConcurrency     int
 	ociMachineConcurrency     int
 	ociMachinePoolConcurrency int
+	initOciClientsOnBootstrap bool
 )
 
 const (
@@ -115,6 +116,12 @@ func main() {
 		5,
 		"Number of OciMachinePools to process simultaneously",
 	)
+	flag.BoolVar(
+		&initOciClientsOnBootstrap,
+		"init-oci-clients-on-bootstrap",
+		true,
+		"Initialize OCI clients on startup",
+	)
 
 	opts := zap.Options{
 		Development: true,
@@ -147,46 +154,48 @@ func main() {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
-
-	authConfigDir := os.Getenv(AuthConfigDirectory)
-	if authConfigDir == "" {
-		setupLog.Error(err, "auth config directory environment variable is not set")
-		os.Exit(1)
-	}
-
-	authConfig, err := config.FromDir(authConfigDir)
-	if err != nil {
-		setupLog.Error(err, "invalid auth config file")
-		os.Exit(1)
-	}
-
-	setupLog.Info("CAPOCI Version", "version", version.GitVersion)
-	ociAuthConfigProvider, err := config.NewConfigurationProvider(authConfig)
-	if err != nil {
-		setupLog.Error(err, "authentication provider could not be initialised")
-		os.Exit(1)
-	}
-
 	// Setup the context that's going to be used in controllers and for the manager.
 	ctx := ctrl.SetupSignalHandler()
 
-	region, err := ociAuthConfigProvider.Region()
-	if err != nil {
-		setupLog.Error(err, "unable to get OCI region from AuthConfigProvider")
-		os.Exit(1)
-	}
+	var clientProvider *scope.ClientProvider
+	var region string
+	if initOciClientsOnBootstrap {
+		authConfigDir := os.Getenv(AuthConfigDirectory)
+		if authConfigDir == "" {
+			setupLog.Error(err, "auth config directory environment variable is not set")
+			os.Exit(1)
+		}
 
-	clientProvider, err := scope.NewClientProvider(ociAuthConfigProvider)
-	if err != nil {
-		setupLog.Error(err, "unable to create OCI ClientProvider")
-		os.Exit(1)
-	}
-	_, err = clientProvider.GetOrBuildClient(region)
-	if err != nil {
-		setupLog.Error(err, "authentication provider could not be initialised")
-		os.Exit(1)
-	}
+		authConfig, err := config.FromDir(authConfigDir)
+		if err != nil {
+			setupLog.Error(err, "invalid auth config file")
+			os.Exit(1)
+		}
 
+		setupLog.Info("CAPOCI Version", "version", version.GitVersion)
+		ociAuthConfigProvider, err := config.NewConfigurationProvider(authConfig)
+		if err != nil {
+			setupLog.Error(err, "authentication provider could not be initialised")
+			os.Exit(1)
+		}
+
+		region, err = ociAuthConfigProvider.Region()
+		if err != nil {
+			setupLog.Error(err, "unable to get OCI region from AuthConfigProvider")
+			os.Exit(1)
+		}
+
+		clientProvider, err = scope.NewClientProvider(ociAuthConfigProvider)
+		if err != nil {
+			setupLog.Error(err, "unable to create OCI ClientProvider")
+			os.Exit(1)
+		}
+		_, err = clientProvider.GetOrBuildClient(region)
+		if err != nil {
+			setupLog.Error(err, "authentication provider could not be initialised")
+			os.Exit(1)
+		}
+	}
 	if err = (&controllers.OCIClusterReconciler{
 		Client:         mgr.GetClient(),
 		Scheme:         mgr.GetScheme(),

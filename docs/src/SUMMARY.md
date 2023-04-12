@@ -29,6 +29,7 @@
     - [Provision a PVC on the File Storage Service](./gs/pvc-fss.md)
   - [Customize worker nodes](./gs/customize-worker-node.md)
   - [Multi Tenancy](./gs/multi-tenancy.md)
+  - [Advanced Options](./gs/advanced.md)
 - [Networking Guide](./networking/networking.md)
   - [Default Network Infrastructure](./networking/infrastructure.md)
     - [Using Calico](./networking/calico.md)
