@@ -32,10 +32,10 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-infrastructure-cluster-x-k8s-io-v1beta2-ocimachinetemplate
+      path: /mutate-infrastructure-cluster-x-k8s-io-v1beta2-ocimachine
   failurePolicy: Fail
   matchPolicy: Equivalent
-  name: default.ocimachinetemplate.infrastructure.cluster.x-k8s.io
+  name: default.ocimachine.infrastructure.cluster.x-k8s.io
   rules:
   - apiGroups:
     - infrastructure.cluster.x-k8s.io
@@ -45,7 +45,7 @@ webhooks:
     - CREATE
     - UPDATE
     resources:
-    - ocimachinetemplates
+    - ocimachines
   sideEffects: None
 - admissionReviewVersions:
   - v1beta1
