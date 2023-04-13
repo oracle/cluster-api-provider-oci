@@ -82,7 +82,6 @@ spec:
       imageId: "${OCI_IMAGE_ID}"
       compartmentId: "${OCI_COMPARTMENT_ID}"
       shape: "${OCI_CONTROL_PLANE_MACHINE_TYPE}"
-      isPvEncryptionInTransitEnabled: true
       shapeConfig:
         ocpus: "1"
       metadata:

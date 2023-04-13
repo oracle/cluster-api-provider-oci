@@ -11,8 +11,8 @@ to install CAPOCI without providing any OCI credentials.
    ```
 
 If the above setting is used, and [Cluster Identity][cluster-identity] is not used, the OCICluster will
-go into error state, and the following error will show up in the CAPOCI pod logs as well as when a
-`kubectl describe` action is performed on the OCICluster object.
+go into error state, and the following error will show up in the CAPOCI pod logs.
 
+`OCI authentication credentials could not be retrieved from pod or cluster level,please install Cluster API Provider for OCI with OCI authentication credentials or set Cluster Identity in the OCICluster`
 
 [cluster-identity]: ./multi-tenancy.md
