@@ -18,7 +18,6 @@ package main
 
 import (
 	"flag"
-	"k8s.io/klog/v2"
 	"os"
 
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
@@ -39,6 +38,7 @@ import (
 	"k8s.io/component-base/logs"
 	logsV1 "k8s.io/component-base/logs/api/v1"
 	_ "k8s.io/component-base/logs/json/register"
+	"k8s.io/klog/v2"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	expclusterv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
