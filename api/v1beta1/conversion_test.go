@@ -34,8 +34,6 @@ func fuzzFuncs(_ runtimeserializer.CodecFactory) []interface{} {
 		OCIMachineTemplateFuzzer,
 		OCIClusterFuzzer,
 		OCIClusterTemplateFuzzer,
-		OCIMachineTemplateBeta2Fuzzer,
-		OCIMachineBeta2Fuzzer,
 	}
 }
 
