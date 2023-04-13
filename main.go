@@ -284,6 +284,11 @@ func main() {
 		setupLog.Error(err, "unable to create webhook", "webhook", "OCIManagedMachinePool")
 		os.Exit(1)
 	}
+
+	if err = (&expV1Beta2.OCIMachinePool{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "OCIMachinePool")
+		os.Exit(1)
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

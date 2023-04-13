@@ -96,9 +96,8 @@ type OCIMachineSpec struct {
 	ProviderID *string `json:"providerID,omitempty"`
 
 	// Is in transit encryption of volumes required.
-	// +kubebuilder:default=true
 	// +optional
-	IsPvEncryptionInTransitEnabled bool `json:"isPvEncryptionInTransitEnabled,omitempty"`
+	IsPvEncryptionInTransitEnabled *bool `json:"isPvEncryptionInTransitEnabled,omitempty"`
 
 	// The size of boot volume. Please see https://docs.oracle.com/en-us/iaas/Content/Block/Tasks/extendingbootpartition.htm
 	// to extend the boot volume size.

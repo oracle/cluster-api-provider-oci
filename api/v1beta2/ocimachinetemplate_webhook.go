@@ -18,6 +18,7 @@ package v1beta2
 
 import (
 	"fmt"
+	"github.com/oracle/oci-go-sdk/v65/common"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -36,6 +37,12 @@ func (m *OCIMachineTemplate) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(m).
 		Complete()
+}
+
+func (c *OCIMachineTemplate) Default() {
+	if c.Spec.Template.Spec.IsPvEncryptionInTransitEnabled == nil {
+		c.Spec.Template.Spec.IsPvEncryptionInTransitEnabled = common.Bool(true)
+	}
 }
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.

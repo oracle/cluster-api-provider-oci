@@ -956,7 +956,6 @@ spec:
                       ipxeScript:
                         type: string
                       isPvEncryptionInTransitEnabled:
-                        default: true
                         description: Is in transit encryption of volumes required.
                         type: boolean
                       launchOptions:
