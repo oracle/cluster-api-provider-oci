@@ -17,7 +17,6 @@
 package v1beta1
 
 import (
-	"github.com/oracle/oci-go-sdk/v65/common"
 	"k8s.io/apimachinery/pkg/api/apitesting/fuzzer"
 	"testing"
 
@@ -46,12 +45,6 @@ func OCIMachineFuzzer(obj *OCIMachine, c fuzz.Continue) {
 	obj.Spec.NetworkDetails.NSGId = nil
 	obj.Spec.NetworkDetails.SubnetId = nil
 	obj.Spec.NSGName = ""
-}
-
-func OCIMachineBeta2Fuzzer(obj *v1beta2.OCIMachine, c fuzz.Continue) {
-	c.FuzzNoCustom(obj)
-	// nil fields which have been removed so that tests dont fail
-	obj.Spec.IsPvEncryptionInTransitEnabled = common.Bool(true)
 }
 
 func OCIClusterFuzzer(obj *OCICluster, c fuzz.Continue) {
@@ -106,9 +99,6 @@ func OCIMachineTemplateFuzzer(obj *OCIMachineTemplate, c fuzz.Continue) {
 	obj.Spec.Template.Spec.NSGName = ""
 }
 
-func OCIMachineTemplateBeta2Fuzzer(obj *v1beta2.OCIMachineTemplate, c fuzz.Continue) {
-	obj.Spec.Template.Spec.IsPvEncryptionInTransitEnabled = common.Bool(true)
-}
 func TestFuzzyConversion(t *testing.T) {
 	g := NewWithT(t)
 	scheme := runtime.NewScheme()
