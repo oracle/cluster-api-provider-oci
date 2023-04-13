@@ -19,21 +19,16 @@ package v1beta1
 import (
 	"github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	utilconversion "sigs.k8s.io/cluster-api/util/conversion"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 )
-
-var machinelogger = ctrl.Log.WithName("ocimachine-conversion")
 
 // ConvertTo converts the v1beta1 OCIMachine receiver to a v1beta2 OCIMachine.
 func (src *OCIMachine) ConvertTo(dstRaw conversion.Hub) error {
 	dst := dstRaw.(*v1beta2.OCIMachine)
-	machinelogger.Info("src-beta1-beta2", "machine", src)
 	if err := Convert_v1beta1_OCIMachine_To_v1beta2_OCIMachine(src, dst, nil); err != nil {
 		return err
 	}
 
-	machinelogger.Info("dst-beta1-beta2", "machine", dst)
 	// Manually restore data.
 	restored := &v1beta2.OCIMachine{}
 	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
@@ -49,8 +44,6 @@ func (dst *OCIMachine) ConvertFrom(srcRaw conversion.Hub) error {
 	if err := Convert_v1beta2_OCIMachine_To_v1beta1_OCIMachine(src, dst, nil); err != nil {
 		return err
 	}
-	machinelogger.Info("dst-beta2-beta1", "machine", dst)
-	machinelogger.Info("src-beta2-beta1", "machine", src)
 	// Preserve Hub data on down-conversion except for metadata.
 	return utilconversion.MarshalData(src, dst)
 }
