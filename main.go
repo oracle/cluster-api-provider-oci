@@ -270,11 +270,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&infrastructurev1beta2.OCIMachine{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "OCIMachine")
-		os.Exit(1)
-	}
-
 	if err = (&expV1Beta2.OCIManagedCluster{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "OCIManagedCluster")
 		os.Exit(1)
@@ -289,12 +284,6 @@ func main() {
 		setupLog.Error(err, "unable to create webhook", "webhook", "OCIManagedMachinePool")
 		os.Exit(1)
 	}
-
-	if err = (&expV1Beta2.OCIMachinePool{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "OCIMachinePool")
-		os.Exit(1)
-	}
-
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
