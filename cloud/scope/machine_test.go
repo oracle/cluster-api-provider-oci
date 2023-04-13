@@ -2375,7 +2375,7 @@ func setupAllParams(ms *MachineScope) {
 	ms.OCIMachine.Spec.ShapeConfig.Ocpus = "2"
 	ms.OCIMachine.Spec.ShapeConfig.MemoryInGBs = "100"
 	ms.OCIMachine.Spec.ShapeConfig.BaselineOcpuUtilization = "BASELINE_1_8"
-	ms.OCIMachine.Spec.IsPvEncryptionInTransitEnabled = common.Bool(true)
+	ms.OCIMachine.Spec.IsPvEncryptionInTransitEnabled = true
 	ms.OCICluster.Status.FailureDomains = map[string]clusterv1.FailureDomainSpec{
 		"1": {
 			Attributes: map[string]string{

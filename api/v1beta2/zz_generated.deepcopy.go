@@ -1374,11 +1374,6 @@ func (in *OCIMachineSpec) DeepCopyInto(out *OCIMachineSpec) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.IsPvEncryptionInTransitEnabled != nil {
-		in, out := &in.IsPvEncryptionInTransitEnabled, &out.IsPvEncryptionInTransitEnabled
-		*out = new(bool)
-		**out = **in
-	}
 	if in.Metadata != nil {
 		in, out := &in.Metadata, &out.Metadata
 		*out = make(map[string]string, len(*in))

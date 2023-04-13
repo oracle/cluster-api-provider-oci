@@ -1785,9 +1785,7 @@ func autoConvert_v1beta1_OCIMachineSpec_To_v1beta2_OCIMachineSpec(in *OCIMachine
 	out.PlatformConfig = (*v1beta2.PlatformConfig)(unsafe.Pointer(in.PlatformConfig))
 	out.DedicatedVmHostId = (*string)(unsafe.Pointer(in.DedicatedVmHostId))
 	out.ProviderID = (*string)(unsafe.Pointer(in.ProviderID))
-	if err := v1.Convert_bool_To_Pointer_bool(&in.IsPvEncryptionInTransitEnabled, &out.IsPvEncryptionInTransitEnabled, s); err != nil {
-		return err
-	}
+	out.IsPvEncryptionInTransitEnabled = in.IsPvEncryptionInTransitEnabled
 	out.BootVolumeSizeInGBs = in.BootVolumeSizeInGBs
 	out.Metadata = *(*map[string]string)(unsafe.Pointer(&in.Metadata))
 	out.FreeformTags = *(*map[string]string)(unsafe.Pointer(&in.FreeformTags))
@@ -1820,9 +1818,7 @@ func autoConvert_v1beta2_OCIMachineSpec_To_v1beta1_OCIMachineSpec(in *v1beta2.OC
 	out.PlatformConfig = (*PlatformConfig)(unsafe.Pointer(in.PlatformConfig))
 	out.DedicatedVmHostId = (*string)(unsafe.Pointer(in.DedicatedVmHostId))
 	out.ProviderID = (*string)(unsafe.Pointer(in.ProviderID))
-	if err := v1.Convert_Pointer_bool_To_bool(&in.IsPvEncryptionInTransitEnabled, &out.IsPvEncryptionInTransitEnabled, s); err != nil {
-		return err
-	}
+	out.IsPvEncryptionInTransitEnabled = in.IsPvEncryptionInTransitEnabled
 	out.BootVolumeSizeInGBs = in.BootVolumeSizeInGBs
 	out.Metadata = *(*map[string]string)(unsafe.Pointer(&in.Metadata))
 	out.FreeformTags = *(*map[string]string)(unsafe.Pointer(&in.FreeformTags))
