@@ -158,6 +158,10 @@ func InitClientsAndRegion(ctx context.Context, client client.Client, defaultRegi
 	} else {
 		clientProvider = defaultClientProvider
 	}
+	if clientProvider == nil {
+		return nil, "", scope.OCIClients{}, errors.New("OCI authentication credentials could not be retrieved from pod or cluster level," +
+			"please install Cluster API Provider for OCI with OCI authentication credentials or set Cluster Identity in the OCICluster")
+	}
 	// Region set at cluster takes highest precedence
 	if len(clusterAccessor.GetRegion()) > 0 {
 		clusterRegion = clusterAccessor.GetRegion()

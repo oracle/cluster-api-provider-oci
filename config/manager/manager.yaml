@@ -30,6 +30,7 @@ spec:
         - "--feature-gates=MachinePool=${EXP_MACHINE_POOL:=false},OKE=${EXP_OKE:=false}"
         - "--metrics-bind-address=127.0.0.1:8080"
         - "--logging-format=${LOG_FORMAT:=text}"
+        - "--init-oci-clients-on-startup=${INIT_OCI_CLIENTS_ON_STARTUP:=true}"
         image: controller:latest
         name: manager
         securityContext:
