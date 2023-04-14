@@ -317,18 +317,27 @@ func (m *MachineScope) getMachineFromOCID(ctx context.Context, instanceID *strin
 // GetMachineByDisplayName returns the machine from the compartment if there is a matching DisplayName,
 // and it was created by the cluster
 func (m *MachineScope) GetMachineByDisplayName(ctx context.Context, name string) (*core.Instance, error) {
-	req := core.ListInstancesRequest{DisplayName: common.String(name),
-		CompartmentId: common.String(m.getCompartmentId())}
-	resp, err := m.ComputeClient.ListInstances(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-	if len(resp.Items) == 0 {
-		return nil, nil
-	}
-	for _, instance := range resp.Items {
-		if m.IsResourceCreatedByClusterAPI(instance.FreeformTags) {
-			return &instance, nil
+	var page *string;
+	for  {
+		req := core.ListInstancesRequest{DisplayName: common.String(name),
+			CompartmentId: common.String(m.getCompartmentId()), Page: page}
+		resp, err := m.ComputeClient.ListInstances(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+		if len(resp.Items) == 0 {
+			return nil, nil
+		}
+		for _, instance := range resp.Items {
+			if m.IsResourceCreatedByClusterAPI(instance.FreeformTags) {
+				return &instance, nil
+			}
+		}
+
+		if resp.OpcNextPage == nil {
+			break
+		} else {
+			page = resp.OpcNextPage
 		}
 	}
 	return nil, nil
