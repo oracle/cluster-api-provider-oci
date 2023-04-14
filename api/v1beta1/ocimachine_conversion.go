@@ -41,11 +41,9 @@ func (src *OCIMachine) ConvertTo(dstRaw conversion.Hub) error {
 // ConvertFrom converts the v1beta2 OCIMachine to a v1beta1 OCIMachine.
 func (dst *OCIMachine) ConvertFrom(srcRaw conversion.Hub) error {
 	src := srcRaw.(*v1beta2.OCIMachine)
-
 	if err := Convert_v1beta2_OCIMachine_To_v1beta1_OCIMachine(src, dst, nil); err != nil {
 		return err
 	}
-
 	// Preserve Hub data on down-conversion except for metadata.
 	return utilconversion.MarshalData(src, dst)
 }

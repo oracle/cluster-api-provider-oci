@@ -120,3 +120,9 @@ func Convert_v1beta1_OCIMachineSpec_To_v1beta2_OCIMachineSpec(in *OCIMachineSpec
 	}
 	return nil
 }
+
+// Convert_v1beta2_LoadBalancer_To_v1beta1_LoadBalancer converts v1beta2 LoadBalancer to v1beta1 LoadBalancer
+
+func Convert_v1beta2_LoadBalancer_To_v1beta1_LoadBalancer(in *v1beta2.LoadBalancer, out *LoadBalancer, s conversion.Scope) error {
+	return autoConvert_v1beta2_LoadBalancer_To_v1beta1_LoadBalancer(in, out, s)
+}
