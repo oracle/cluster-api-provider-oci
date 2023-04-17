@@ -494,16 +494,10 @@ func (m *VirtualMachinePoolScope) UpdateVirtualNodePool(ctx context.Context, poo
 			Size:                     common.Int(int(*m.MachinePool.Spec.Replicas)),
 			DisplayName:              common.String(m.getNodePoolName()),
 			PlacementConfigurations:  placementConfig,
-			FreeformTags:             m.getFreeFormTags(),
-			DefinedTags:              m.getDefinedTags(),
 			NsgIds:                   m.getWorkerMachineNSGs(),
 			InitialVirtualNodeLabels: m.getInitialNodeKeyValuePairs(),
 			PodConfiguration:         podConfiguration,
 			Taints:                   m.getTaints(),
-			VirtualNodeTags: &oke.VirtualNodeTags{
-				FreeformTags: m.getFreeFormTags(),
-				DefinedTags:  m.getDefinedTags(),
-			},
 		}
 
 		nodePoolDetails.InitialVirtualNodeLabels = m.getInitialNodeKeyValuePairs()
