@@ -21,8 +21,10 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	"github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/config"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn/mock_vcn"
+	"github.com/oracle/oci-go-sdk/v65/common"
 )
 
 func TestClients_NewClientProvider(t *testing.T) {
@@ -37,7 +39,9 @@ func TestClients_NewClientProvider(t *testing.T) {
 
 	}
 
-	clientProvider, err := NewClientProvider(ociAuthConfigProvider, nil)
+	clientProvider, err := NewClientProvider(ClientProviderParams{
+		ociAuthConfigProvider,
+		nil})
 	if err != nil {
 		t.Errorf("Expected %v to equal nil", err)
 	}
@@ -47,9 +51,83 @@ func TestClients_NewClientProvider(t *testing.T) {
 	}
 }
 
-func TestClients_NewClientProviderWithBadAuthConfig(t *testing.T) {
+func TestClients_NewClientProviderWithClientOverrides(t *testing.T) {
+	authConfig, err := MockAuthConfig()
+	if err != nil {
+		t.Errorf("Expected error:%v to not equal nil", err)
+	}
 
-	clientProvider, err := NewClientProvider(nil, nil)
+	ociAuthConfigProvider, err := config.NewConfigurationProvider(&authConfig)
+	if err != nil {
+		t.Errorf("Expected error:%v to not equal nil", err)
+	}
+
+	clientOverrides := &v1beta2.ClientOverrides{
+		ComputeClientUrl:           common.String("ComputeClientUrl"),
+		ComputeManagementClientUrl: common.String("ComputeManagementClientUrl"),
+		VCNClientUrl:               common.String("VCNClientUrl"),
+		LoadBalancerClientUrl:      common.String("LoadBalancerClientUrl"),
+		IdentityClientUrl:          common.String("IdentityClientUrl"),
+		ContainerEngineClientUrl:   common.String("ContainerEngineClientUrl"),
+	}
+
+	clientProvider, err := NewClientProvider(ClientProviderParams{
+		ociAuthConfigProvider,
+		clientOverrides})
+	if err != nil {
+		t.Errorf("Expected error:%v to not equal nil", err)
+	}
+
+	if clientProvider == nil {
+		t.Errorf("Expected clientProvider:%v to equal nil", clientProvider)
+	}
+
+	if !reflect.DeepEqual(clientProvider.ociClientOverrides, clientOverrides) {
+		t.Errorf("clientProvider.ociClientOverrides: %v doesn't equal clientOverrides: %v", clientProvider.ociClientOverrides, clientOverrides)
+	}
+}
+
+func TestClients_NewClientProviderWithMissingOverrides(t *testing.T) {
+	// Wanting to test that no errors are thrown with nil values for
+	// missing client overrides
+
+	authConfig, err := MockAuthConfig()
+	if err != nil {
+		t.Errorf("Expected error:%v to not equal nil", err)
+	}
+
+	ociAuthConfigProvider, err := config.NewConfigurationProvider(&authConfig)
+	if err != nil {
+		t.Errorf("Expected error:%v to not equal nil", err)
+	}
+
+	clientOverrides := &v1beta2.ClientOverrides{
+		ComputeClientUrl:           common.String("ComputeClientUrl"),
+		ComputeManagementClientUrl: common.String("ComputeManagementClientUrl"),
+		//VCNClientUrl is missing,
+		LoadBalancerClientUrl: common.String("LoadBalancerClientUrl"),
+		//IdentityClientUrl is missing,
+		ContainerEngineClientUrl: common.String("ContainerEngineClientUrl"),
+	}
+
+	clientProvider, err := NewClientProvider(ClientProviderParams{
+		ociAuthConfigProvider,
+		clientOverrides})
+	if err != nil {
+		t.Errorf("Expected error:%v to not equal nil", err)
+	}
+
+	if clientProvider == nil {
+		t.Errorf("Expected clientProvider:%v to equal nil", clientProvider)
+	}
+
+	if !reflect.DeepEqual(clientProvider.ociClientOverrides, clientOverrides) {
+		t.Errorf("clientProvider.ociClientOverrides: %v doesn't equal clientOverrides: %v", clientProvider.ociClientOverrides, clientOverrides)
+	}
+}
+
+func TestClients_NewClientProviderWithBadAuthConfig(t *testing.T) {
+	clientProvider, err := NewClientProvider(ClientProviderParams{nil, nil})
 	if err == nil {
 		t.Errorf("Expected error:%v to not equal nil", err)
 	}
@@ -116,5 +194,28 @@ func TestClients_ReuseClients(t *testing.T) {
 
 	if &secondClients.VCNClient == &firstClients.VCNClient {
 		t.Errorf("Expected %v to equal %v", secondClients.VCNClient, firstClients.VCNClient)
+	}
+}
+
+func TestClients_GetAuthProvider(t *testing.T) {
+	authConfig, err := MockAuthConfig()
+	if err != nil {
+		t.Errorf("Expected error:%v to not equal nil", err)
+	}
+
+	ociAuthConfigProvider, err := config.NewConfigurationProvider(&authConfig)
+	if err != nil {
+		t.Errorf("Expected error:%v to not equal nil", err)
+	}
+
+	clientProvider, err := NewClientProvider(ClientProviderParams{
+		ociAuthConfigProvider,
+		nil})
+	if err != nil {
+		t.Errorf("Expected %v to equal nil", err)
+	}
+
+	if clientProvider.GetAuthProvider() != ociAuthConfigProvider {
+		t.Errorf("returned authprovider %v doesn't equal: %v", clientProvider.GetAuthProvider(), ociAuthConfigProvider)
 	}
 }

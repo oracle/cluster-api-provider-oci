@@ -770,9 +770,9 @@ func (in *OCIManagedClusterSpec) DeepCopyInto(out *OCIManagedClusterSpec) {
 			(*out)[key] = *val.DeepCopy()
 		}
 	}
-	if in.ClientHostUrls != nil {
-		in, out := &in.ClientHostUrls, &out.ClientHostUrls
-		*out = new(apiv1beta2.ClusterClientHostUrls)
+	if in.ClientOverrides != nil {
+		in, out := &in.ClientOverrides, &out.ClientOverrides
+		*out = new(apiv1beta2.ClientOverrides)
 		(*in).DeepCopyInto(*out)
 	}
 }

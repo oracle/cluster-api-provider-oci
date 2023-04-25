@@ -72,11 +72,11 @@ type OCIManagedClusterSpec struct {
 	// +optional
 	AvailabilityDomains map[string]infrastructurev1beta2.OCIAvailabilityDomain `json:"availabilityDomains,omitempty"`
 
-	// HostUrls allows the default client SDK URLs to be changed.
+	// ClientOverrides allows the default client SDK URLs to be changed.
 	//
 	// +optional
 	// +nullable
-	ClientHostUrls *infrastructurev1beta2.ClusterClientHostUrls `json:"hostUrl,omitempty"`
+	ClientOverrides *infrastructurev1beta2.ClientOverrides `json:"hostUrl,omitempty"`
 }
 
 // OCIManagedClusterStatus defines the observed state of OCICluster

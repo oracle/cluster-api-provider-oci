@@ -1549,7 +1549,7 @@ func autoConvert_v1beta2_OCIClusterSpec_To_v1beta1_OCIClusterSpec(in *v1beta2.OC
 	out.Region = in.Region
 	out.ControlPlaneEndpoint = in.ControlPlaneEndpoint
 	// WARNING: in.AvailabilityDomains requires manual conversion: does not exist in peer-type
-	// WARNING: in.ClientHostUrls requires manual conversion: does not exist in peer-type
+	// WARNING: in.ClientOverrides requires manual conversion: does not exist in peer-type
 	return nil
 }
 

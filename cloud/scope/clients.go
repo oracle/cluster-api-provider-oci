@@ -59,23 +59,32 @@ type ClientProvider struct {
 	ociClients            map[string]OCIClients
 	ociClientsLock        *sync.RWMutex
 	ociAuthConfigProvider common.ConfigurationProvider
-	ociClientHostUrls     *v1beta2.ClusterClientHostUrls
+	ociClientOverrides    *v1beta2.ClientOverrides
+}
+
+// ClientProviderParams is the params struct for NewClientProvider
+type ClientProviderParams struct {
+	// OciAuthConfigProvider wraps information about the account owner
+	OciAuthConfigProvider common.ConfigurationProvider
+
+	// ClientOverrides contains information about client host url overrides.
+	ClientOverrides *v1beta2.ClientOverrides
 }
 
 // NewClientProvider builds the ClientProvider with a client for the given region
-func NewClientProvider(ociAuthConfigProvider common.ConfigurationProvider, clientHostUrlOverrides *v1beta2.ClusterClientHostUrls) (*ClientProvider, error) {
+func NewClientProvider(params ClientProviderParams) (*ClientProvider, error) {
 	log := klogr.New()
 
-	if ociAuthConfigProvider == nil {
+	if params.OciAuthConfigProvider == nil {
 		return nil, errors.New("ConfigurationProvider can not be nil")
 	}
 
 	provider := ClientProvider{
 		Logger:                &log,
-		ociAuthConfigProvider: ociAuthConfigProvider,
+		ociAuthConfigProvider: params.OciAuthConfigProvider,
 		ociClients:            map[string]OCIClients{},
 		ociClientsLock:        new(sync.RWMutex),
-		ociClientHostUrls:     clientHostUrlOverrides,
+		ociClientOverrides:    params.ClientOverrides,
 	}
 
 	return &provider, nil
@@ -173,8 +182,8 @@ func (c *ClientProvider) createVncClient(region string, ociAuthConfigProvider co
 		return nil, err
 	}
 	vcnClient.SetRegion(region)
-	if c.ociClientHostUrls != nil && c.ociClientHostUrls.VCNClientHost != nil {
-		vcnClient.Host = *c.ociClientHostUrls.VCNClientHost
+	if c.ociClientOverrides != nil && c.ociClientOverrides.VCNClientUrl != nil {
+		vcnClient.Host = *c.ociClientOverrides.VCNClientUrl
 	}
 	vcnClient.Interceptor = setVersionHeader()
 
@@ -200,8 +209,8 @@ func (c *ClientProvider) createLBClient(region string, ociAuthConfigProvider com
 		return nil, err
 	}
 	lbClient.SetRegion(region)
-	if c.ociClientHostUrls != nil && c.ociClientHostUrls.LoadBalancerClientHost != nil {
-		lbClient.Host = *c.ociClientHostUrls.LoadBalancerClientHost
+	if c.ociClientOverrides != nil && c.ociClientOverrides.LoadBalancerClientUrl != nil {
+		lbClient.Host = *c.ociClientOverrides.LoadBalancerClientUrl
 	}
 	lbClient.Interceptor = setVersionHeader()
 
@@ -216,8 +225,8 @@ func (c *ClientProvider) createIdentityClient(region string, ociAuthConfigProvid
 	}
 	identityClient.SetRegion(region)
 
-	if c.ociClientHostUrls != nil && c.ociClientHostUrls.IdentityClientHost != nil {
-		identityClient.Host = *c.ociClientHostUrls.IdentityClientHost
+	if c.ociClientOverrides != nil && c.ociClientOverrides.IdentityClientUrl != nil {
+		identityClient.Host = *c.ociClientOverrides.IdentityClientUrl
 	}
 	identityClient.Interceptor = setVersionHeader()
 
@@ -232,8 +241,8 @@ func (c *ClientProvider) createComputeClient(region string, ociAuthConfigProvide
 	}
 	computeClient.SetRegion(region)
 	//https://dyn.slack.com/archives/C7MS7QWC8/p1675719244230459?thread_ts=1675460644.801049&cid=C7MS7QWC8
-	if c.ociClientHostUrls != nil && c.ociClientHostUrls.ComputeClientHost != nil {
-		computeClient.Host = *c.ociClientHostUrls.ComputeClientHost
+	if c.ociClientOverrides != nil && c.ociClientOverrides.ComputeClientUrl != nil {
+		computeClient.Host = *c.ociClientOverrides.ComputeClientUrl
 	}
 	computeClient.Interceptor = setVersionHeader()
 
@@ -247,8 +256,8 @@ func (c *ClientProvider) createComputeManagementClient(region string, ociAuthCon
 		return nil, err
 	}
 	computeManagementClient.SetRegion(region)
-	if c.ociClientHostUrls != nil && c.ociClientHostUrls.ComputeManagementClientHost != nil {
-		computeManagementClient.Host = *c.ociClientHostUrls.ComputeManagementClientHost
+	if c.ociClientOverrides != nil && c.ociClientOverrides.ComputeManagementClientUrl != nil {
+		computeManagementClient.Host = *c.ociClientOverrides.ComputeManagementClientUrl
 	}
 	computeManagementClient.Interceptor = setVersionHeader()
 
@@ -262,8 +271,8 @@ func (c *ClientProvider) createContainerEngineClient(region string, ociAuthConfi
 		return nil, err
 	}
 	containerEngineClient.SetRegion(region)
-	if c.ociClientHostUrls != nil && c.ociClientHostUrls.ContainerEngineClientHost != nil {
-		containerEngineClient.Host = *c.ociClientHostUrls.ContainerEngineClientHost
+	if c.ociClientOverrides != nil && c.ociClientOverrides.ContainerEngineClientUrl != nil {
+		containerEngineClient.Host = *c.ociClientOverrides.ContainerEngineClientUrl
 	}
 	containerEngineClient.Interceptor = setVersionHeader()
 

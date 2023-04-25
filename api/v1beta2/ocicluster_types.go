@@ -75,11 +75,11 @@ type OCIClusterSpec struct {
 	// +optional
 	AvailabilityDomains map[string]OCIAvailabilityDomain `json:"availabilityDomains,omitempty"`
 
-	// HostUrls allows the default client SDK URLs to be changed.
+	// ClientOverrides allows the default client SDK URLs to be changed.
 	//
 	// +optional
 	// +nullable
-	ClientHostUrls *ClusterClientHostUrls `json:"clientHostUrls,omitempty"`
+	ClientOverrides *ClientOverrides `json:"clientOverrides,omitempty"`
 }
 
 // OCIClusterStatus defines the observed state of OCICluster
@@ -126,44 +126,44 @@ type OCIAvailabilityDomain struct {
 	FaultDomains []string `json:"faultDomains,omitempty"`
 }
 
-// ClusterClientHostUrls contains information about client host url overrides.
-type ClusterClientHostUrls struct {
+// ClientOverrides contains information about client host url overrides.
+type ClientOverrides struct {
 
-	// ComputeClientHost allows the default compute SDK client URL to be changed.
+	// ComputeClientUrl allows the default compute SDK client URL to be changed.
 	//
 	// +optional
 	// +nullable
-	ComputeClientHost *string `json:"computeClientHost,omitempty"`
+	ComputeClientUrl *string `json:"computeClientUrl,omitempty"`
 
-	// ComputeManagementClientHost allows the default compute management SDK client URL to be changed.
+	// ComputeManagementClientUrl allows the default compute management SDK client URL to be changed.
 	//
 	// +optional
 	// +nullable
-	ComputeManagementClientHost *string `json:"computeManagementClientHost,omitempty"`
+	ComputeManagementClientUrl *string `json:"computeManagementClientUrl,omitempty"`
 
-	// VCNClientHost allows the default vcn SDK client URL to be changed.
+	// VCNClientUrl allows the default vcn SDK client URL to be changed.
 	//
 	// +optional
 	// +nullable
-	VCNClientHost *string `json:"vCNClientHost,omitempty"`
+	VCNClientUrl *string `json:"vCNClientUrl,omitempty"`
 
-	// LoadBalancerClientHost allows the default load balancer SDK client URL to be changed.
+	// LoadBalancerClientUrl allows the default load balancer SDK client URL to be changed.
 	//
 	// +optional
 	// +nullable
-	LoadBalancerClientHost *string `json:"loadBalancerClientHost,omitempty"`
+	LoadBalancerClientUrl *string `json:"loadBalancerClientUrl,omitempty"`
 
-	// IdentityClientHost allows the default identity SDK client URL to be changed.
+	// IdentityClientUrl allows the default identity SDK client URL to be changed.
 	//
 	// +optional
 	// +nullable
-	IdentityClientHost *string `json:"identityClientHost,omitempty"`
+	IdentityClientUrl *string `json:"identityClientUrl,omitempty"`
 
-	// ContainerEngineClientHost allows the default container engine SDK client URL to be changed.
+	// ContainerEngineClientUrl allows the default container engine SDK client URL to be changed.
 	//
 	// +optional
 	// +nullable
-	ContainerEngineClientHost *string `json:"containerEngineClientHost,omitempty"`
+	ContainerEngineClientUrl *string `json:"containerEngineClientUrl,omitempty"`
 }
 
 // GetConditions returns the list of conditions for an OCICluster API object.

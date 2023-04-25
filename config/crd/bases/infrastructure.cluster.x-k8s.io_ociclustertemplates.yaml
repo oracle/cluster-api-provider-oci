@@ -1177,39 +1177,39 @@ spec:
                           map key is the AD name and the struct is details about the
                           AD.
                         type: object
-                      clientHostUrls:
-                        description: HostUrls allows the default client SDK URLs to
-                          be changed.
+                      clientOverrides:
+                        description: ClientOverrides allows the default client SDK
+                          URLs to be changed.
                         nullable: true
                         properties:
-                          computeClientHost:
-                            description: ComputeClientHost allows the default compute
+                          computeClientUrl:
+                            description: ComputeClientUrl allows the default compute
                               SDK client URL to be changed.
                             nullable: true
                             type: string
-                          computeManagementClientHost:
-                            description: ComputeManagementClientHost allows the default
+                          computeManagementClientUrl:
+                            description: ComputeManagementClientUrl allows the default
                               compute management SDK client URL to be changed.
                             nullable: true
                             type: string
-                          containerEngineClientHost:
-                            description: ContainerEngineClientHost allows the default
+                          containerEngineClientUrl:
+                            description: ContainerEngineClientUrl allows the default
                               container engine SDK client URL to be changed.
                             nullable: true
                             type: string
-                          identityClientHost:
-                            description: IdentityClientHost allows the default identity
+                          identityClientUrl:
+                            description: IdentityClientUrl allows the default identity
                               SDK client URL to be changed.
                             nullable: true
                             type: string
-                          loadBalancerClientHost:
-                            description: LoadBalancerClientHost allows the default
+                          loadBalancerClientUrl:
+                            description: LoadBalancerClientUrl allows the default
                               load balancer SDK client URL to be changed.
                             nullable: true
                             type: string
-                          vCNClientHost:
-                            description: VCNClientHost allows the default vcn SDK
-                              client URL to be changed.
+                          vCNClientUrl:
+                            description: VCNClientUrl allows the default vcn SDK client
+                              URL to be changed.
                             nullable: true
                             type: string
                         type: object

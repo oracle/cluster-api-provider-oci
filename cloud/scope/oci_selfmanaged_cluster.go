@@ -36,8 +36,8 @@ func (c OCISelfManagedCluster) GetRegion() string {
 	return c.OCICluster.Spec.Region
 }
 
-func (c OCISelfManagedCluster) GetClientHostUrls() *infrastructurev1beta2.ClusterClientHostUrls {
-	return c.OCICluster.Spec.ClientHostUrls
+func (c OCISelfManagedCluster) GetClientOverrides() *infrastructurev1beta2.ClientOverrides {
+	return c.OCICluster.Spec.ClientOverrides
 }
 
 func (c OCISelfManagedCluster) GetIdentityRef() *corev1.ObjectReference {

@@ -51,7 +51,7 @@ func GetClusterIdentityFromRef(ctx context.Context, c client.Client, ociClusterN
 }
 
 // GetOrBuildClientFromIdentity creates ClientProvider from OCIClusterIdentity object
-func GetOrBuildClientFromIdentity(ctx context.Context, c client.Client, identity *infrastructurev1beta2.OCIClusterIdentity, defaultRegion string, clientHostUrls *infrastructurev1beta2.ClusterClientHostUrls) (*scope.ClientProvider, error) {
+func GetOrBuildClientFromIdentity(ctx context.Context, c client.Client, identity *infrastructurev1beta2.OCIClusterIdentity, defaultRegion string, clientOverrides *infrastructurev1beta2.ClientOverrides) (*scope.ClientProvider, error) {
 	if identity.Spec.Type == infrastructurev1beta2.UserPrincipal {
 		secretRef := identity.Spec.PrincipalSecret
 		key := types.NamespacedName{
@@ -82,7 +82,9 @@ func GetOrBuildClientFromIdentity(ctx context.Context, c client.Client, identity
 			privatekey,
 			common.String(passphrase))
 
-		clientProvider, err := scope.NewClientProvider(conf, clientHostUrls)
+		clientProvider, err := scope.NewClientProvider(scope.ClientProviderParams{
+			OciAuthConfigProvider: conf,
+			ClientOverrides:       clientOverrides})
 		if err != nil {
 			return nil, err
 		}
@@ -155,10 +157,12 @@ func InitClientsAndRegion(ctx context.Context, client client.Client, defaultRegi
 			return nil, "", scope.OCIClients{}, err
 		}
 		clusterRegion = region
-	} else if clusterAccessor.GetClientHostUrls() != nil {
+	} else if clusterAccessor.GetClientOverrides() != nil {
 		// IdentityRef provider will be created with client host url overrides
 		// but if no identityRef we will want to create a new client provider with the overrides
-		clientProvider, err = scope.NewClientProvider(defaultClientProvider.GetAuthProvider(), clusterAccessor.GetClientHostUrls())
+		clientProvider, err = scope.NewClientProvider(scope.ClientProviderParams{
+			OciAuthConfigProvider: defaultClientProvider.GetAuthProvider(),
+			ClientOverrides:       clusterAccessor.GetClientOverrides()})
 		if err != nil {
 			return nil, "", scope.OCIClients{}, err
 		}
@@ -196,7 +200,7 @@ func CreateClientProviderFromClusterIdentity(ctx context.Context, client client.
 		return nil, errors.Errorf("OCIClusterIdentity list of allowed namespaces doesn't include current cluster namespace %s", namespace)
 	}
 
-	clientProvider, err := GetOrBuildClientFromIdentity(ctx, client, identity, defaultRegion, clusterAccessor.GetClientHostUrls())
+	clientProvider, err := GetOrBuildClientFromIdentity(ctx, client, identity, defaultRegion, clusterAccessor.GetClientOverrides())
 	if err != nil {
 		return nil, err
 	}
