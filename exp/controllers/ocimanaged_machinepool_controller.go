@@ -223,7 +223,7 @@ func managedClusterToManagedMachinePoolMapFunc(c client.Client, gvk schema.Group
 
 		managedPoolForClusterList := expclusterv1.MachinePoolList{}
 		if err := c.List(
-			ctx, &managedPoolForClusterList, client.InNamespace(cluster.Namespace), client.MatchingLabels{clusterv1.ClusterLabelName: cluster.Name},
+			ctx, &managedPoolForClusterList, client.InNamespace(cluster.Namespace), client.MatchingLabels{clusterv1.ClusterNameLabel: cluster.Name},
 		); err != nil {
 			log.Error(err, "couldn't list pools for cluster")
 			return nil

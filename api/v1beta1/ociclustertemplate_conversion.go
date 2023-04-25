@@ -41,6 +41,7 @@ func (src *OCIClusterTemplate) ConvertTo(dstRaw conversion.Hub) error {
 	dst.Spec.Template.Spec.NetworkSpec.Vcn.InternetGateway.Skip = restored.Spec.Template.Spec.NetworkSpec.Vcn.InternetGateway.Skip
 	dst.Spec.Template.Spec.NetworkSpec.Vcn.RouteTable.Skip = restored.Spec.Template.Spec.NetworkSpec.Vcn.RouteTable.Skip
 	dst.Spec.Template.Spec.AvailabilityDomains = restored.Spec.Template.Spec.AvailabilityDomains
+	dst.Spec.Template.Spec.NetworkSpec.APIServerLB.LoadBalancerType = restored.Spec.Template.Spec.NetworkSpec.APIServerLB.LoadBalancerType
 	return nil
 }
 

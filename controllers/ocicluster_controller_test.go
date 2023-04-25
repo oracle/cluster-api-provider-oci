@@ -163,7 +163,7 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 				cs.EXPECT().ReconcileDRGVCNAttachment(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileDRGRPCAttachment(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileFailureDomains(context.Background()).Return(nil)
-				cs.EXPECT().ReconcileApiServerLB(context.Background()).Return(nil)
+				cs.EXPECT().ReconcileApiServerNLB(context.Background()).Return(nil)
 			},
 		},
 		{
@@ -301,7 +301,7 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 				cs.EXPECT().ReconcileDRGVCNAttachment(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileDRGRPCAttachment(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileFailureDomains(context.Background()).Return(nil)
-				cs.EXPECT().ReconcileApiServerLB(context.Background()).Return(errors.New("some error"))
+				cs.EXPECT().ReconcileApiServerNLB(context.Background()).Return(errors.New("some error"))
 			},
 		},
 		{
@@ -371,7 +371,7 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
 				ociCluster.Spec.NetworkSpec.SkipNetworkManagement = true
 				cs.EXPECT().ReconcileFailureDomains(context.Background()).Return(nil)
-				cs.EXPECT().ReconcileApiServerLB(context.Background()).Return(nil)
+				cs.EXPECT().ReconcileApiServerNLB(context.Background()).Return(nil)
 			},
 		},
 	}
@@ -446,7 +446,7 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 		{
 			name: "all success",
 			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
-				cs.EXPECT().DeleteApiServerLB(context.Background()).Return(nil)
+				cs.EXPECT().DeleteApiServerNLB(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGRPCAttachment(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGVCNAttachment(context.Background()).Return(nil)
 				cs.EXPECT().DeleteNSGs(context.Background()).Return(nil)
@@ -466,7 +466,7 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 			errorExpected:      true,
 			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta2.DRGRPCAttachmentReconciliationFailedReason},
 			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
-				cs.EXPECT().DeleteApiServerLB(context.Background()).Return(nil)
+				cs.EXPECT().DeleteApiServerNLB(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGRPCAttachment(context.Background()).Return(errors.New("some error"))
 			},
 		},
@@ -476,7 +476,7 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 			errorExpected:      true,
 			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta2.DRGVCNAttachmentReconciliationFailedReason},
 			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
-				cs.EXPECT().DeleteApiServerLB(context.Background()).Return(nil)
+				cs.EXPECT().DeleteApiServerNLB(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGRPCAttachment(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGVCNAttachment(context.Background()).Return(errors.New("some error"))
 			},
@@ -487,7 +487,7 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 			errorExpected:      true,
 			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta2.APIServerLoadBalancerFailedReason},
 			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
-				cs.EXPECT().DeleteApiServerLB(context.Background()).Return(errors.New("some error"))
+				cs.EXPECT().DeleteApiServerNLB(context.Background()).Return(errors.New("some error"))
 			},
 		},
 		{
@@ -496,7 +496,7 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 			errorExpected:      true,
 			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta2.APIServerLoadBalancerFailedReason},
 			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
-				cs.EXPECT().DeleteApiServerLB(context.Background()).Return(errors.New("some error"))
+				cs.EXPECT().DeleteApiServerNLB(context.Background()).Return(errors.New("some error"))
 			},
 		},
 		{
@@ -505,7 +505,7 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 			errorExpected:      true,
 			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta2.NSGReconciliationFailedReason},
 			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
-				cs.EXPECT().DeleteApiServerLB(context.Background()).Return(nil)
+				cs.EXPECT().DeleteApiServerNLB(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGRPCAttachment(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGVCNAttachment(context.Background()).Return(nil)
 				cs.EXPECT().DeleteNSGs(context.Background()).Return(errors.New("some error"))
@@ -517,7 +517,7 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 			errorExpected:      true,
 			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta2.SubnetReconciliationFailedReason},
 			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
-				cs.EXPECT().DeleteApiServerLB(context.Background()).Return(nil)
+				cs.EXPECT().DeleteApiServerNLB(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGRPCAttachment(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGVCNAttachment(context.Background()).Return(nil)
 				cs.EXPECT().DeleteNSGs(context.Background()).Return(nil)
@@ -530,7 +530,7 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 			errorExpected:      true,
 			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta2.RouteTableReconciliationFailedReason},
 			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
-				cs.EXPECT().DeleteApiServerLB(context.Background()).Return(nil)
+				cs.EXPECT().DeleteApiServerNLB(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGRPCAttachment(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGVCNAttachment(context.Background()).Return(nil)
 				cs.EXPECT().DeleteNSGs(context.Background()).Return(nil)
@@ -544,7 +544,7 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 			errorExpected:      true,
 			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta2.SecurityListReconciliationFailedReason},
 			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
-				cs.EXPECT().DeleteApiServerLB(context.Background()).Return(nil)
+				cs.EXPECT().DeleteApiServerNLB(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGRPCAttachment(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGVCNAttachment(context.Background()).Return(nil)
 				cs.EXPECT().DeleteNSGs(context.Background()).Return(nil)
@@ -559,7 +559,7 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 			errorExpected:      true,
 			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta2.ServiceGatewayReconciliationFailedReason},
 			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
-				cs.EXPECT().DeleteApiServerLB(context.Background()).Return(nil)
+				cs.EXPECT().DeleteApiServerNLB(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGRPCAttachment(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGVCNAttachment(context.Background()).Return(nil)
 				cs.EXPECT().DeleteNSGs(context.Background()).Return(nil)
@@ -575,7 +575,7 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 			errorExpected:      true,
 			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta2.NatGatewayReconciliationFailedReason},
 			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
-				cs.EXPECT().DeleteApiServerLB(context.Background()).Return(nil)
+				cs.EXPECT().DeleteApiServerNLB(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGRPCAttachment(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGVCNAttachment(context.Background()).Return(nil)
 				cs.EXPECT().DeleteNSGs(context.Background()).Return(nil)
@@ -592,7 +592,7 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 			errorExpected:      true,
 			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta2.InternetGatewayReconciliationFailedReason},
 			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
-				cs.EXPECT().DeleteApiServerLB(context.Background()).Return(nil)
+				cs.EXPECT().DeleteApiServerNLB(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGRPCAttachment(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGVCNAttachment(context.Background()).Return(nil)
 				cs.EXPECT().DeleteNSGs(context.Background()).Return(nil)
@@ -610,7 +610,7 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 			errorExpected:      true,
 			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta2.VcnReconciliationFailedReason},
 			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
-				cs.EXPECT().DeleteApiServerLB(context.Background()).Return(nil)
+				cs.EXPECT().DeleteApiServerNLB(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGRPCAttachment(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGVCNAttachment(context.Background()).Return(nil)
 				cs.EXPECT().DeleteNSGs(context.Background()).Return(nil)
@@ -629,7 +629,7 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 			errorExpected:      true,
 			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta2.DrgReconciliationFailedReason},
 			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
-				cs.EXPECT().DeleteApiServerLB(context.Background()).Return(nil)
+				cs.EXPECT().DeleteApiServerNLB(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGRPCAttachment(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGVCNAttachment(context.Background()).Return(nil)
 				cs.EXPECT().DeleteNSGs(context.Background()).Return(nil)
@@ -647,7 +647,7 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 			name: "skip vcn deletion",
 			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
 				ociCluster.Spec.NetworkSpec.SkipNetworkManagement = true
-				cs.EXPECT().DeleteApiServerLB(context.Background()).Return(nil)
+				cs.EXPECT().DeleteApiServerNLB(context.Background()).Return(nil)
 			},
 		},
 	}

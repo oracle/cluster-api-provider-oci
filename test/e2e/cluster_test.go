@@ -632,9 +632,9 @@ func verifyMultipleNsgSubnet(ctx context.Context, namespace string, clusterName 
 		lister := bootstrapClusterProxy.GetClient()
 		inClustersNamespaceListOption := client.InNamespace(namespace)
 		matchClusterListOption := client.MatchingLabels{
-			clusterv1.ClusterLabelName: clusterName,
+			clusterv1.ClusterNameLabel: clusterName,
 		}
-		matchClusterListOption[clusterv1.MachineDeploymentLabelName] = mcDeployment.Name
+		matchClusterListOption[clusterv1.MachineDeploymentNameLabel] = mcDeployment.Name
 		machineList := &clusterv1.MachineList{}
 		Expect(lister.List(context.Background(), machineList, inClustersNamespaceListOption, matchClusterListOption)).
 			To(Succeed(), "Couldn't list machines for the cluster %q", clusterName)
@@ -763,13 +763,13 @@ func validateVnicNSG(ctx context.Context, clusterName string, nameSpace string, 
 	lister := bootstrapClusterProxy.GetClient()
 	inClustersNamespaceListOption := client.InNamespace(nameSpace)
 	matchClusterListOption := client.MatchingLabels{
-		clusterv1.ClusterLabelName: clusterName,
+		clusterv1.ClusterNameLabel: clusterName,
 	}
 	// its either a machine deployment or control plane
 	if machineDeployment != "" {
-		matchClusterListOption[clusterv1.MachineDeploymentLabelName] = machineDeployment
+		matchClusterListOption[clusterv1.MachineDeploymentNameLabel] = machineDeployment
 	} else {
-		matchClusterListOption[clusterv1.MachineControlPlaneLabelName] = ""
+		matchClusterListOption[clusterv1.MachineControlPlaneLabel] = ""
 	}
 
 	machineList := &clusterv1.MachineList{}
@@ -948,8 +948,8 @@ func validateFailureDomainSpread(nameSpace string, clusterName string) {
 	lister := bootstrapClusterProxy.GetClient()
 	inClustersNamespaceListOption := client.InNamespace(nameSpace)
 	matchClusterListOption := client.MatchingLabels{
-		clusterv1.ClusterLabelName:             clusterName,
-		clusterv1.MachineControlPlaneLabelName: "",
+		clusterv1.ClusterNameLabel:         clusterName,
+		clusterv1.MachineControlPlaneLabel: "",
 	}
 
 	machineList := &clusterv1.MachineList{}
@@ -985,7 +985,7 @@ func validateOLImage(nameSpace string, clusterName string) {
 	lister := bootstrapClusterProxy.GetClient()
 	inClustersNamespaceListOption := client.InNamespace(nameSpace)
 	matchClusterListOption := client.MatchingLabels{
-		clusterv1.ClusterLabelName: clusterName,
+		clusterv1.ClusterNameLabel: clusterName,
 	}
 
 	machineList := &clusterv1.MachineList{}
@@ -1010,7 +1010,7 @@ func validateWindowsImage(nameSpace string, clusterName string) {
 	lister := bootstrapClusterProxy.GetClient()
 	inClustersNamespaceListOption := client.InNamespace(nameSpace)
 	matchClusterListOption := client.MatchingLabels{
-		clusterv1.ClusterLabelName: clusterName,
+		clusterv1.ClusterNameLabel: clusterName,
 	}
 
 	machineList := &clusterv1.MachineList{}

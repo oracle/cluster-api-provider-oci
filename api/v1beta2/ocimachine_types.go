@@ -96,7 +96,6 @@ type OCIMachineSpec struct {
 	ProviderID *string `json:"providerID,omitempty"`
 
 	// Is in transit encryption of volumes required.
-	// +kubebuilder:default=true
 	// +optional
 	IsPvEncryptionInTransitEnabled bool `json:"isPvEncryptionInTransitEnabled,omitempty"`
 

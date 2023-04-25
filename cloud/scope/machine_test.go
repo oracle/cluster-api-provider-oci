@@ -23,7 +23,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/oracle/cluster-api-provider-oci/cloud/services/loadbalancer/mock_lb"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer/mock_nlb"
+	"github.com/oracle/oci-go-sdk/v65/loadbalancer"
 	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -1117,7 +1119,7 @@ func preemtibleConfigMatcher(actual interface{}, expected *core.PreemptibleInsta
 	return nil
 }
 
-func TestLBReconciliationCreation(t *testing.T) {
+func TestNLBReconciliationCreation(t *testing.T) {
 	var (
 		ms         *MachineScope
 		mockCtrl   *gomock.Controller
@@ -1439,7 +1441,7 @@ func TestLBReconciliationCreation(t *testing.T) {
 	}
 }
 
-func TestLBReconciliationDeletion(t *testing.T) {
+func TestNLBReconciliationDeletion(t *testing.T) {
 	var (
 		ms         *MachineScope
 		mockCtrl   *gomock.Controller
@@ -1677,6 +1679,604 @@ func TestLBReconciliationDeletion(t *testing.T) {
 		})
 	}
 }
+
+func TestLBReconciliationCreation(t *testing.T) {
+	var (
+		ms         *MachineScope
+		mockCtrl   *gomock.Controller
+		lbClient   *mock_lb.MockLoadBalancerClient
+		ociCluster infrastructurev1beta2.OCICluster
+	)
+	setup := func(t *testing.T, g *WithT) {
+		var err error
+		mockCtrl = gomock.NewController(t)
+		lbClient = mock_lb.NewMockLoadBalancerClient(mockCtrl)
+		client := fake.NewClientBuilder().WithObjects().Build()
+		ociCluster = infrastructurev1beta2.OCICluster{
+			ObjectMeta: metav1.ObjectMeta{
+				UID: "uid",
+			},
+		}
+		ociCluster.Spec.NetworkSpec.APIServerLB.LoadBalancerId = common.String("lbid")
+		ociCluster.Spec.ControlPlaneEndpoint.Port = 6443
+		ociCluster.Spec.NetworkSpec.APIServerLB.LoadBalancerType = infrastructurev1beta2.LoadBalancerTypeLB
+		ms, err = NewMachineScope(MachineScopeParams{
+			LoadBalancerClient: lbClient,
+			OCIMachine: &infrastructurev1beta2.OCIMachine{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+					UID:  "uid",
+				},
+				Spec: infrastructurev1beta2.OCIMachineSpec{
+					CompartmentId: "test",
+				},
+			},
+			Machine:    &clusterv1.Machine{},
+			Cluster:    &clusterv1.Cluster{},
+			OCICluster: &ociCluster,
+			Client:     client,
+		})
+		ms.Machine.Namespace = "default"
+		g.Expect(err).To(BeNil())
+	}
+	teardown := func(t *testing.T, g *WithT) {
+		mockCtrl.Finish()
+	}
+	tests := []struct {
+		name                string
+		errorExpected       bool
+		objects             []client.Object
+		expectedEvent       string
+		eventNotExpected    string
+		matchError          error
+		errorSubStringMatch bool
+		testSpecificSetup   func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient)
+	}{
+		{
+			name:          "ip doesnt exist",
+			errorExpected: true,
+			matchError:    errors.New("could not find machine IP Address in status object"),
+			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient) {
+			},
+		},
+		{
+			name:          "ip exists",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient) {
+				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+					{
+						Type:    clusterv1.MachineInternalIP,
+						Address: "1.1.1.1",
+					},
+				}
+				lbClient.EXPECT().GetLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.GetLoadBalancerRequest{
+					LoadBalancerId: common.String("lbid"),
+				})).Return(loadbalancer.GetLoadBalancerResponse{
+					LoadBalancer: loadbalancer.LoadBalancer{
+						BackendSets: map[string]loadbalancer.BackendSet{
+							APIServerLBBackendSetName: {
+								Name:     common.String(APIServerLBBackendSetName),
+								Backends: []loadbalancer.Backend{},
+							},
+						},
+					},
+				}, nil)
+
+				lbClient.EXPECT().CreateBackend(gomock.Any(), gomock.Eq(
+					loadbalancer.CreateBackendRequest{
+						LoadBalancerId: common.String("lbid"),
+						BackendSetName: common.String(APIServerLBBackendSetName),
+						CreateBackendDetails: loadbalancer.CreateBackendDetails{
+							IpAddress: common.String("1.1.1.1"),
+							Port:      common.Int(6443),
+						},
+						OpcRetryToken: ociutil.GetOPCRetryToken("%s-%s", "create-backend", "uid"),
+					})).Return(loadbalancer.CreateBackendResponse{
+					OpcWorkRequestId: common.String("wrid"),
+				}, nil)
+
+				lbClient.EXPECT().GetWorkRequest(gomock.Any(), gomock.Eq(
+					loadbalancer.GetWorkRequestRequest{
+						WorkRequestId: common.String("wrid"),
+					})).Return(loadbalancer.GetWorkRequestResponse{
+					WorkRequest: loadbalancer.WorkRequest{
+						LifecycleState: loadbalancer.WorkRequestLifecycleStateSucceeded,
+					}}, nil)
+			},
+		},
+		{
+			name:          "work request exists",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient) {
+				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+					{
+						Type:    clusterv1.MachineInternalIP,
+						Address: "1.1.1.1",
+					},
+				}
+				lbClient.EXPECT().GetLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.GetLoadBalancerRequest{
+					LoadBalancerId: common.String("lbid"),
+				})).Return(loadbalancer.GetLoadBalancerResponse{
+					LoadBalancer: loadbalancer.LoadBalancer{
+						BackendSets: map[string]loadbalancer.BackendSet{
+							APIServerLBBackendSetName: {
+								Name:     common.String(APIServerLBBackendSetName),
+								Backends: []loadbalancer.Backend{},
+							},
+						},
+					},
+				}, nil)
+				machineScope.OCIMachine.Status.CreateBackendWorkRequestId = "wrid"
+				lbClient.EXPECT().GetWorkRequest(gomock.Any(), gomock.Eq(
+					loadbalancer.GetWorkRequestRequest{
+						WorkRequestId: common.String("wrid"),
+					})).Return(loadbalancer.GetWorkRequestResponse{
+					WorkRequest: loadbalancer.WorkRequest{
+						LifecycleState: loadbalancer.WorkRequestLifecycleStateSucceeded,
+					}}, nil)
+			},
+		},
+		{
+			name:          "work request exists error",
+			errorExpected: true,
+			matchError:    errors.Errorf("WorkRequest %s failed", "wrid"),
+			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient) {
+				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+					{
+						Type:    clusterv1.MachineInternalIP,
+						Address: "1.1.1.1",
+					},
+				}
+				machineScope.OCIMachine.Status.CreateBackendWorkRequestId = "wrid"
+				lbClient.EXPECT().GetLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.GetLoadBalancerRequest{
+					LoadBalancerId: common.String("lbid"),
+				})).Return(loadbalancer.GetLoadBalancerResponse{
+					LoadBalancer: loadbalancer.LoadBalancer{
+						BackendSets: map[string]loadbalancer.BackendSet{
+							APIServerLBBackendSetName: {
+								Name:     common.String(APIServerLBBackendSetName),
+								Backends: []loadbalancer.Backend{},
+							},
+						},
+					},
+				}, nil)
+				lbClient.EXPECT().GetWorkRequest(gomock.Any(), gomock.Eq(
+					loadbalancer.GetWorkRequestRequest{
+						WorkRequestId: common.String("wrid"),
+					})).Return(loadbalancer.GetWorkRequestResponse{
+					WorkRequest: loadbalancer.WorkRequest{
+						LifecycleState: loadbalancer.WorkRequestLifecycleStateFailed,
+					}}, nil)
+			},
+		},
+		{
+			name:          "backend exists",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient) {
+				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+					{
+						Type:    clusterv1.MachineInternalIP,
+						Address: "1.1.1.1",
+					},
+				}
+				lbClient.EXPECT().GetLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.GetLoadBalancerRequest{
+					LoadBalancerId: common.String("lbid"),
+				})).Return(loadbalancer.GetLoadBalancerResponse{
+					LoadBalancer: loadbalancer.LoadBalancer{
+						BackendSets: map[string]loadbalancer.BackendSet{
+							APIServerLBBackendSetName: {
+								Name: common.String(APIServerLBBackendSetName),
+								Backends: []loadbalancer.Backend{
+									{
+										Name: common.String("1.1.1.1:6443"),
+									},
+								},
+							},
+						},
+					},
+				}, nil)
+			},
+		},
+		{
+			name:          "create backend error",
+			errorExpected: true,
+			matchError:    errors.New("could not create backend"),
+			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient) {
+				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+					{
+						Type:    clusterv1.MachineInternalIP,
+						Address: "1.1.1.1",
+					},
+				}
+				lbClient.EXPECT().GetLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.GetLoadBalancerRequest{
+					LoadBalancerId: common.String("lbid"),
+				})).Return(loadbalancer.GetLoadBalancerResponse{
+					LoadBalancer: loadbalancer.LoadBalancer{
+						BackendSets: map[string]loadbalancer.BackendSet{
+							APIServerLBBackendSetName: {
+								Name:     common.String(APIServerLBBackendSetName),
+								Backends: []loadbalancer.Backend{},
+							},
+						},
+					},
+				}, nil)
+
+				lbClient.EXPECT().CreateBackend(gomock.Any(), gomock.Eq(
+					loadbalancer.CreateBackendRequest{
+						LoadBalancerId: common.String("lbid"),
+						BackendSetName: common.String(APIServerLBBackendSetName),
+						CreateBackendDetails: loadbalancer.CreateBackendDetails{
+							IpAddress: common.String("1.1.1.1"),
+							Port:      common.Int(6443),
+						},
+						OpcRetryToken: ociutil.GetOPCRetryToken("%s-%s", "create-backend", "uid"),
+					})).Return(loadbalancer.CreateBackendResponse{
+					OpcWorkRequestId: common.String("wrid"),
+				}, errors.New("could not create backend"))
+			},
+		},
+		{
+			name:          "get lb error",
+			errorExpected: true,
+			matchError:    errors.New("could not get lb"),
+			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient) {
+				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+					{
+						Type:    clusterv1.MachineInternalIP,
+						Address: "1.1.1.1",
+					},
+				}
+				lbClient.EXPECT().GetLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.GetLoadBalancerRequest{
+					LoadBalancerId: common.String("lbid"),
+				})).Return(loadbalancer.GetLoadBalancerResponse{
+					LoadBalancer: loadbalancer.LoadBalancer{}}, errors.New("could not get lb"))
+			},
+		},
+		{
+			name:          "work request failed",
+			errorExpected: true,
+			matchError:    errors.Errorf("WorkRequest %s failed", "wrid"),
+			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient) {
+				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+					{
+						Type:    clusterv1.MachineInternalIP,
+						Address: "1.1.1.1",
+					},
+				}
+				lbClient.EXPECT().GetLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.GetLoadBalancerRequest{
+					LoadBalancerId: common.String("lbid"),
+				})).Return(loadbalancer.GetLoadBalancerResponse{
+					LoadBalancer: loadbalancer.LoadBalancer{
+						BackendSets: map[string]loadbalancer.BackendSet{
+							APIServerLBBackendSetName: {
+								Name:     common.String(APIServerLBBackendSetName),
+								Backends: []loadbalancer.Backend{},
+							},
+						},
+					},
+				}, nil)
+
+				lbClient.EXPECT().CreateBackend(gomock.Any(), gomock.Eq(
+					loadbalancer.CreateBackendRequest{
+						LoadBalancerId: common.String("lbid"),
+						BackendSetName: common.String(APIServerLBBackendSetName),
+						CreateBackendDetails: loadbalancer.CreateBackendDetails{
+							IpAddress: common.String("1.1.1.1"),
+							Port:      common.Int(6443),
+						},
+						OpcRetryToken: ociutil.GetOPCRetryToken("%s-%s", "create-backend", "uid"),
+					})).Return(loadbalancer.CreateBackendResponse{
+					OpcWorkRequestId: common.String("wrid"),
+				}, nil)
+
+				lbClient.EXPECT().GetWorkRequest(gomock.Any(), gomock.Eq(
+					loadbalancer.GetWorkRequestRequest{
+						WorkRequestId: common.String("wrid"),
+					})).Return(loadbalancer.GetWorkRequestResponse{
+					WorkRequest: loadbalancer.WorkRequest{
+						LifecycleState: loadbalancer.WorkRequestLifecycleStateFailed,
+					}}, nil)
+			},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+			defer teardown(t, g)
+			setup(t, g)
+			tc.testSpecificSetup(ms, lbClient)
+			err := ms.ReconcileCreateInstanceOnLB(context.Background())
+			if tc.errorExpected {
+				g.Expect(err).To(Not(BeNil()))
+				if tc.errorSubStringMatch {
+					g.Expect(err.Error()).To(ContainSubstring(tc.matchError.Error()))
+				} else {
+					g.Expect(err.Error()).To(Equal(tc.matchError.Error()))
+				}
+			} else {
+				g.Expect(err).To(BeNil())
+			}
+		})
+	}
+
+}
+
+func TestLBReconciliationDeletion(t *testing.T) {
+	var (
+		ms         *MachineScope
+		mockCtrl   *gomock.Controller
+		lbClient   *mock_lb.MockLoadBalancerClient
+		ociCluster infrastructurev1beta2.OCICluster
+	)
+	setup := func(t *testing.T, g *WithT) {
+		var err error
+		mockCtrl = gomock.NewController(t)
+		lbClient = mock_lb.NewMockLoadBalancerClient(mockCtrl)
+		client := fake.NewClientBuilder().WithObjects().Build()
+		ociCluster = infrastructurev1beta2.OCICluster{
+			ObjectMeta: metav1.ObjectMeta{
+				UID: "uid",
+			},
+		}
+		ociCluster.Spec.NetworkSpec.APIServerLB.LoadBalancerId = common.String("lbid")
+		ociCluster.Spec.ControlPlaneEndpoint.Port = 6443
+		ociCluster.Spec.NetworkSpec.APIServerLB.LoadBalancerType = infrastructurev1beta2.LoadBalancerTypeLB
+		ms, err = NewMachineScope(MachineScopeParams{
+			LoadBalancerClient: lbClient,
+			OCIMachine: &infrastructurev1beta2.OCIMachine{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+					UID:  "uid",
+				},
+				Spec: infrastructurev1beta2.OCIMachineSpec{
+					CompartmentId: "test",
+				},
+			},
+			Machine:    &clusterv1.Machine{},
+			Cluster:    &clusterv1.Cluster{},
+			OCICluster: &ociCluster,
+			Client:     client,
+		})
+		ms.Machine.Namespace = "default"
+		g.Expect(err).To(BeNil())
+	}
+	teardown := func(t *testing.T, g *WithT) {
+		mockCtrl.Finish()
+	}
+	tests := []struct {
+		name                string
+		errorExpected       bool
+		objects             []client.Object
+		expectedEvent       string
+		eventNotExpected    string
+		matchError          error
+		errorSubStringMatch bool
+		testSpecificSetup   func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient)
+	}{
+		{
+			name:          "get lb error",
+			errorExpected: true,
+			matchError:    errors.New("could not get lb"),
+			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_lb.MockLoadBalancerClient) {
+				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+					{
+						Type:    clusterv1.MachineInternalIP,
+						Address: "1.1.1.1",
+					},
+				}
+				nlbClient.EXPECT().GetLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.GetLoadBalancerRequest{
+					LoadBalancerId: common.String("lbid"),
+				})).Return(loadbalancer.GetLoadBalancerResponse{
+					LoadBalancer: loadbalancer.LoadBalancer{}}, errors.New("could not get lb"))
+			},
+		},
+		{
+			name:          "backend exists",
+			errorExpected: false,
+			matchError:    errors.New("could not get lb"),
+			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient) {
+				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+					{
+						Type:    clusterv1.MachineInternalIP,
+						Address: "1.1.1.1",
+					},
+				}
+				lbClient.EXPECT().GetLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.GetLoadBalancerRequest{
+					LoadBalancerId: common.String("lbid"),
+				})).Return(loadbalancer.GetLoadBalancerResponse{
+					LoadBalancer: loadbalancer.LoadBalancer{
+						BackendSets: map[string]loadbalancer.BackendSet{
+							APIServerLBBackendSetName: {
+								Name: common.String(APIServerLBBackendSetName),
+								Backends: []loadbalancer.Backend{
+									{
+										Name: common.String("1.1.1.1:6443"),
+									},
+								},
+							},
+						},
+					},
+				}, nil)
+				lbClient.EXPECT().DeleteBackend(gomock.Any(), gomock.Eq(loadbalancer.DeleteBackendRequest{
+					LoadBalancerId: common.String("lbid"),
+					BackendSetName: common.String(APIServerLBBackendSetName),
+					BackendName:    common.String("1.1.1.1%3A6443"),
+				})).Return(loadbalancer.DeleteBackendResponse{
+					OpcWorkRequestId: common.String("wrid"),
+				}, nil)
+
+				lbClient.EXPECT().GetWorkRequest(gomock.Any(), gomock.Eq(
+					loadbalancer.GetWorkRequestRequest{
+						WorkRequestId: common.String("wrid"),
+					})).Return(loadbalancer.GetWorkRequestResponse{
+					WorkRequest: loadbalancer.WorkRequest{
+						LifecycleState: loadbalancer.WorkRequestLifecycleStateSucceeded,
+					}}, nil)
+			},
+		},
+		{
+			name:          "backend does not exist",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient) {
+				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+					{
+						Type:    clusterv1.MachineInternalIP,
+						Address: "1.1.1.1",
+					},
+				}
+				lbClient.EXPECT().GetLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.GetLoadBalancerRequest{
+					LoadBalancerId: common.String("lbid"),
+				})).Return(loadbalancer.GetLoadBalancerResponse{
+					LoadBalancer: loadbalancer.LoadBalancer{
+						BackendSets: map[string]loadbalancer.BackendSet{
+							APIServerLBBackendSetName: {
+								Name:     common.String(APIServerLBBackendSetName),
+								Backends: []loadbalancer.Backend{},
+							},
+						},
+					},
+				}, nil)
+			},
+		},
+		{
+			name:          "work request exists",
+			errorExpected: false,
+			matchError:    errors.New("could not get lb"),
+			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient) {
+				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+					{
+						Type:    clusterv1.MachineInternalIP,
+						Address: "1.1.1.1",
+					},
+				}
+				machineScope.OCIMachine.Status.DeleteBackendWorkRequestId = "wrid"
+				lbClient.EXPECT().GetLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.GetLoadBalancerRequest{
+					LoadBalancerId: common.String("lbid"),
+				})).Return(loadbalancer.GetLoadBalancerResponse{
+					LoadBalancer: loadbalancer.LoadBalancer{
+						BackendSets: map[string]loadbalancer.BackendSet{
+							APIServerLBBackendSetName: {
+								Name: common.String(APIServerLBBackendSetName),
+								Backends: []loadbalancer.Backend{
+									{
+										Name: common.String("1.1.1.1:6443"),
+									},
+								},
+							},
+						},
+					},
+				}, nil)
+				lbClient.EXPECT().GetWorkRequest(gomock.Any(), gomock.Eq(
+					loadbalancer.GetWorkRequestRequest{
+						WorkRequestId: common.String("wrid"),
+					})).Return(loadbalancer.GetWorkRequestResponse{
+					WorkRequest: loadbalancer.WorkRequest{
+						LifecycleState: loadbalancer.WorkRequestLifecycleStateSucceeded,
+					}}, nil)
+			},
+		},
+		{
+			name:          "work request failed",
+			errorExpected: true,
+			matchError:    errors.Errorf("WorkRequest %s failed", "wrid"),
+			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient) {
+				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+					{
+						Type:    clusterv1.MachineInternalIP,
+						Address: "1.1.1.1",
+					},
+				}
+				lbClient.EXPECT().GetLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.GetLoadBalancerRequest{
+					LoadBalancerId: common.String("lbid"),
+				})).Return(loadbalancer.GetLoadBalancerResponse{
+					LoadBalancer: loadbalancer.LoadBalancer{
+						BackendSets: map[string]loadbalancer.BackendSet{
+							APIServerLBBackendSetName: {
+								Name: common.String(APIServerLBBackendSetName),
+								Backends: []loadbalancer.Backend{
+									{
+										Name: common.String("1.1.1.1:6443"),
+									},
+								},
+							},
+						},
+					},
+				}, nil)
+				lbClient.EXPECT().DeleteBackend(gomock.Any(), gomock.Eq(loadbalancer.DeleteBackendRequest{
+					LoadBalancerId: common.String("lbid"),
+					BackendSetName: common.String(APIServerLBBackendSetName),
+					BackendName:    common.String("1.1.1.1%3A6443"),
+				})).Return(loadbalancer.DeleteBackendResponse{
+					OpcWorkRequestId: common.String("wrid"),
+				}, nil)
+
+				lbClient.EXPECT().GetWorkRequest(gomock.Any(), gomock.Eq(
+					loadbalancer.GetWorkRequestRequest{
+						WorkRequestId: common.String("wrid"),
+					})).Return(loadbalancer.GetWorkRequestResponse{
+					WorkRequest: loadbalancer.WorkRequest{
+						LifecycleState: loadbalancer.WorkRequestLifecycleStateFailed,
+					}}, nil)
+			},
+		},
+		{
+			name:          "delete backend fails",
+			errorExpected: true,
+			matchError:    errors.New("backend request failed"),
+			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient) {
+				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+					{
+						Type:    clusterv1.MachineInternalIP,
+						Address: "1.1.1.1",
+					},
+				}
+				lbClient.EXPECT().GetLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.GetLoadBalancerRequest{
+					LoadBalancerId: common.String("lbid"),
+				})).Return(loadbalancer.GetLoadBalancerResponse{
+					LoadBalancer: loadbalancer.LoadBalancer{
+						BackendSets: map[string]loadbalancer.BackendSet{
+							APIServerLBBackendSetName: {
+								Name: common.String(APIServerLBBackendSetName),
+								Backends: []loadbalancer.Backend{
+									{
+										Name: common.String("1.1.1.1:6443"),
+									},
+								},
+							},
+						},
+					},
+				}, nil)
+				lbClient.EXPECT().DeleteBackend(gomock.Any(), gomock.Eq(loadbalancer.DeleteBackendRequest{
+					LoadBalancerId: common.String("lbid"),
+					BackendSetName: common.String(APIServerLBBackendSetName),
+					BackendName:    common.String("1.1.1.1%3A6443"),
+				})).Return(loadbalancer.DeleteBackendResponse{
+					OpcWorkRequestId: common.String("wrid"),
+				}, errors.New("backend request failed"))
+			},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+			defer teardown(t, g)
+			setup(t, g)
+			tc.testSpecificSetup(ms, lbClient)
+			err := ms.ReconcileDeleteInstanceOnLB(context.Background())
+			if tc.errorExpected {
+				g.Expect(err).To(Not(BeNil()))
+				if tc.errorSubStringMatch {
+					g.Expect(err.Error()).To(ContainSubstring(tc.matchError.Error()))
+				} else {
+					g.Expect(err.Error()).To(Equal(tc.matchError.Error()))
+				}
+			} else {
+				g.Expect(err).To(BeNil())
+			}
+		})
+	}
+}
+
 func TestInstanceDeletion(t *testing.T) {
 	var (
 		ms            *MachineScope

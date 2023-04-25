@@ -21,6 +21,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"math/rand"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -28,10 +29,12 @@ import (
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/compute"
+	lb "github.com/oracle/cluster-api-provider-oci/cloud/services/loadbalancer"
 	nlb "github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
+	"github.com/oracle/oci-go-sdk/v65/loadbalancer"
 	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -59,6 +62,7 @@ type MachineScopeParams struct {
 	OCIMachine                *infrastructurev1beta2.OCIMachine
 	VCNClient                 vcn.Client
 	NetworkLoadBalancerClient nlb.NetworkLoadBalancerClient
+	LoadBalancerClient        lb.LoadBalancerClient
 }
 
 type MachineScope struct {
@@ -72,6 +76,7 @@ type MachineScope struct {
 	OCIMachine                *infrastructurev1beta2.OCIMachine
 	VCNClient                 vcn.Client
 	NetworkLoadBalancerClient nlb.NetworkLoadBalancerClient
+	LoadBalancerClient        lb.LoadBalancerClient
 }
 
 // NewMachineScope creates a MachineScope given the MachineScopeParams
@@ -103,6 +108,7 @@ func NewMachineScope(params MachineScopeParams) (*MachineScope, error) {
 		OCIMachine:                params.OCIMachine,
 		VCNClient:                 params.VCNClient,
 		NetworkLoadBalancerClient: params.NetworkLoadBalancerClient,
+		LoadBalancerClient:        params.LoadBalancerClient,
 	}, nil
 }
 
@@ -378,6 +384,11 @@ func (m *MachineScope) Name() string {
 	return m.OCIMachine.Name
 }
 
+// IP returns the OCIMachine IP.
+func (m *MachineScope) IP() string {
+	return m.OCIMachine.Status.Addresses[0].Address
+}
+
 // GetInstanceId returns the OCIMachine instance id.
 func (m *MachineScope) GetInstanceId() *string {
 	return m.OCIMachine.Spec.InstanceId
@@ -486,45 +497,96 @@ func (m *MachineScope) ReconcileCreateInstanceOnLB(ctx context.Context) error {
 	loadbalancerId := m.OCICluster.Spec.NetworkSpec.APIServerLB.LoadBalancerId
 	m.Logger.Info("Private IP of the instance", "private-ip", instanceIp)
 	m.Logger.Info("Control Plane load balancer", "id", loadbalancerId)
-	lb, err := m.NetworkLoadBalancerClient.GetNetworkLoadBalancer(ctx, networkloadbalancer.GetNetworkLoadBalancerRequest{
-		NetworkLoadBalancerId: loadbalancerId,
-	})
-	if err != nil {
-		return err
-	}
-	backendSet := lb.BackendSets[APIServerLBBackendSetName]
-	if !m.containsBackend(backendSet, m.Name()) {
-		logger := m.Logger.WithValues("backend-set", *backendSet.Name)
-		logger.Info("Checking work request status for create backend")
-		workRequest := m.OCIMachine.Status.CreateBackendWorkRequestId
-		if workRequest != "" {
-			_, err = ociutil.AwaitLBWorkRequest(ctx, m.NetworkLoadBalancerClient, &workRequest)
-			if err != nil {
-				return err
-			}
-		} else {
-			resp, err := m.NetworkLoadBalancerClient.CreateBackend(ctx, networkloadbalancer.CreateBackendRequest{
-				NetworkLoadBalancerId: loadbalancerId,
-				BackendSetName:        backendSet.Name,
-				CreateBackendDetails: networkloadbalancer.CreateBackendDetails{
-					IpAddress: common.String(instanceIp),
-					Port:      common.Int(int(m.OCICluster.Spec.ControlPlaneEndpoint.Port)),
-					Name:      common.String(m.Name()),
-				},
-				OpcRetryToken: ociutil.GetOPCRetryToken("%s-%s", "create-backend", string(m.OCIMachine.UID)),
-			})
-			if err != nil {
-				return err
-			}
-			m.OCIMachine.Status.CreateBackendWorkRequestId = *resp.OpcWorkRequestId
-			logger.Info("Add instance to LB backend-set", "WorkRequestId", resp.OpcWorkRequestId)
-			logger.Info("Waiting for LB work request to be complete")
-			_, err = ociutil.AwaitLBWorkRequest(ctx, m.NetworkLoadBalancerClient, resp.OpcWorkRequestId)
-			if err != nil {
-				return err
-			}
-			logger.Info("LB Backend addition work request is complete")
+
+	// Check the load balancer type
+	loadbalancerType := m.OCICluster.Spec.NetworkSpec.APIServerLB.LoadBalancerType
+	// By default, the load balancer type is Network Load Balancer
+	// Unless user specifies the load balancer type to be LBaaS
+	if loadbalancerType == infrastructurev1beta2.LoadBalancerTypeLB {
+		lb, err := m.LoadBalancerClient.GetLoadBalancer(ctx, loadbalancer.GetLoadBalancerRequest{
+			LoadBalancerId: loadbalancerId,
+		})
+		if err != nil {
+			return err
 		}
+		backendSet := lb.BackendSets[APIServerLBBackendSetName]
+		// When creating a LB, there is no way to set the backend Name, default backend name is the instance IP and port
+		// So we use default backend name instead of machine name
+		backendName := m.IP() + ":" + strconv.Itoa(int(m.OCICluster.Spec.ControlPlaneEndpoint.Port))
+		if !m.containsLBBackend(backendSet, backendName) {
+			logger := m.Logger.WithValues("backend-set", *backendSet.Name)
+			workRequest := m.OCIMachine.Status.CreateBackendWorkRequestId
+			logger.Info("Checking work request status for create backend")
+			if workRequest != "" {
+				_, err = ociutil.AwaitLBWorkRequest(ctx, m.LoadBalancerClient, &workRequest)
+				if err != nil {
+					return err
+				}
+			} else {
+				resp, err := m.LoadBalancerClient.CreateBackend(ctx, loadbalancer.CreateBackendRequest{
+					LoadBalancerId: loadbalancerId,
+					BackendSetName: backendSet.Name,
+					CreateBackendDetails: loadbalancer.CreateBackendDetails{
+						IpAddress: common.String(instanceIp),
+						Port:      common.Int(int(m.OCICluster.Spec.ControlPlaneEndpoint.Port)),
+					},
+					OpcRetryToken: ociutil.GetOPCRetryToken("%s-%s", "create-backend", string(m.OCIMachine.UID)),
+				})
+				if err != nil {
+					return err
+				}
+				m.OCIMachine.Status.CreateBackendWorkRequestId = *resp.OpcWorkRequestId
+				logger.Info("Add instance to LB backend-set", "WorkRequestId", resp.OpcWorkRequestId)
+				logger.Info("Waiting for LB work request to be complete")
+				_, err = ociutil.AwaitLBWorkRequest(ctx, m.LoadBalancerClient, resp.OpcWorkRequestId)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+	} else {
+		lb, err := m.NetworkLoadBalancerClient.GetNetworkLoadBalancer(ctx, networkloadbalancer.GetNetworkLoadBalancerRequest{
+			NetworkLoadBalancerId: loadbalancerId,
+		})
+		if err != nil {
+			return err
+		}
+		backendSet := lb.BackendSets[APIServerLBBackendSetName]
+		if !m.containsNLBBackend(backendSet, m.Name()) {
+			logger := m.Logger.WithValues("backend-set", *backendSet.Name)
+			logger.Info("Checking work request status for create backend")
+			workRequest := m.OCIMachine.Status.CreateBackendWorkRequestId
+			if workRequest != "" {
+				_, err = ociutil.AwaitNLBWorkRequest(ctx, m.NetworkLoadBalancerClient, &workRequest)
+				if err != nil {
+					return err
+				}
+			} else {
+				resp, err := m.NetworkLoadBalancerClient.CreateBackend(ctx, networkloadbalancer.CreateBackendRequest{
+					NetworkLoadBalancerId: loadbalancerId,
+					BackendSetName:        backendSet.Name,
+					CreateBackendDetails: networkloadbalancer.CreateBackendDetails{
+						IpAddress: common.String(instanceIp),
+						Port:      common.Int(int(m.OCICluster.Spec.ControlPlaneEndpoint.Port)),
+						Name:      common.String(m.Name()),
+					},
+					OpcRetryToken: ociutil.GetOPCRetryToken("%s-%s", "create-backend", string(m.OCIMachine.UID)),
+				})
+				if err != nil {
+					return err
+				}
+				m.OCIMachine.Status.CreateBackendWorkRequestId = *resp.OpcWorkRequestId
+				logger.Info("Add instance to NLB backend-set", "WorkRequestId", resp.OpcWorkRequestId)
+				logger.Info("Waiting for NLB work request to be complete")
+				_, err = ociutil.AwaitNLBWorkRequest(ctx, m.NetworkLoadBalancerClient, resp.OpcWorkRequestId)
+				if err != nil {
+					return err
+				}
+				logger.Info("NLB Backend addition work request is complete")
+			}
+		}
+
 	}
 	return nil
 }
@@ -538,43 +600,101 @@ func (m *MachineScope) ReconcileCreateInstanceOnLB(ctx context.Context) error {
 // for more info on Backend Server Management
 func (m *MachineScope) ReconcileDeleteInstanceOnLB(ctx context.Context) error {
 	loadbalancerId := m.OCICluster.Spec.NetworkSpec.APIServerLB.LoadBalancerId
-	lb, err := m.NetworkLoadBalancerClient.GetNetworkLoadBalancer(ctx, networkloadbalancer.GetNetworkLoadBalancerRequest{
-		NetworkLoadBalancerId: loadbalancerId,
-	})
-	if err != nil {
-		return err
-	}
-	backendSet := lb.BackendSets[APIServerLBBackendSetName]
-	if m.containsBackend(backendSet, m.Name()) {
-		logger := m.Logger.WithValues("backend-set", *backendSet.Name)
-		workRequest := m.OCIMachine.Status.DeleteBackendWorkRequestId
-		if workRequest != "" {
-			_, err = ociutil.AwaitLBWorkRequest(ctx, m.NetworkLoadBalancerClient, &workRequest)
-			if err != nil {
-				return err
+	// Check the load balancer type
+	loadbalancerType := m.OCICluster.Spec.NetworkSpec.APIServerLB.LoadBalancerType
+	if loadbalancerType == infrastructurev1beta2.LoadBalancerTypeLB {
+		lb, err := m.LoadBalancerClient.GetLoadBalancer(ctx, loadbalancer.GetLoadBalancerRequest{
+			LoadBalancerId: loadbalancerId,
+		})
+		if err != nil {
+			return err
+		}
+		backendSet := lb.BackendSets[APIServerLBBackendSetName]
+		backendName := m.IP() + ":" + strconv.Itoa(int(m.OCICluster.Spec.ControlPlaneEndpoint.Port))
+		if m.containsLBBackend(backendSet, backendName) {
+			logger := m.Logger.WithValues("backend-set", *backendSet.Name)
+			workRequest := m.OCIMachine.Status.DeleteBackendWorkRequestId
+			if workRequest != "" {
+				_, err = ociutil.AwaitLBWorkRequest(ctx, m.LoadBalancerClient, &workRequest)
+				if err != nil {
+					return err
+				}
+			} else {
+				// in OCI CLI, the colon in the backend name is replaced by %3A
+				// replace the colon in the backend name by %3A to avoid the error in PCA
+				escapedBackendName := url.QueryEscape(backendName)
+
+				resp, err := m.LoadBalancerClient.DeleteBackend(ctx, loadbalancer.DeleteBackendRequest{
+					LoadBalancerId: loadbalancerId,
+					BackendSetName: backendSet.Name,
+					BackendName:    common.String(escapedBackendName),
+				})
+				if err != nil {
+					logger.Error(err, "Delete instance from LB backend-set failed",
+						"backendSetName", *backendSet.Name,
+						"backendName", escapedBackendName,
+					)
+					return err
+				}
+				m.OCIMachine.Status.DeleteBackendWorkRequestId = *resp.OpcWorkRequestId
+				logger.Info("Delete instance from LB backend-set", "WorkRequestId", resp.OpcWorkRequestId)
+				logger.Info("Waiting for LB work request to be complete")
+				_, err = ociutil.AwaitLBWorkRequest(ctx, m.LoadBalancerClient, resp.OpcWorkRequestId)
+				if err != nil {
+					return err
+				}
 			}
-		} else {
-			resp, err := m.NetworkLoadBalancerClient.DeleteBackend(ctx, networkloadbalancer.DeleteBackendRequest{
-				NetworkLoadBalancerId: loadbalancerId,
-				BackendSetName:        backendSet.Name,
-				BackendName:           common.String(m.Name()),
-			})
-			if err != nil {
-				return err
-			}
-			m.OCIMachine.Status.DeleteBackendWorkRequestId = *resp.OpcWorkRequestId
-			logger.Info("Delete instance from LB backend-set", "WorkRequestId", resp.OpcWorkRequestId)
-			logger.Info("Waiting for LB work request to be complete")
-			_, err = ociutil.AwaitLBWorkRequest(ctx, m.NetworkLoadBalancerClient, resp.OpcWorkRequestId)
-			if err != nil {
-				return err
+			logger.Info("LB Backend addition work request is complete")
+		}
+	} else {
+		lb, err := m.NetworkLoadBalancerClient.GetNetworkLoadBalancer(ctx, networkloadbalancer.GetNetworkLoadBalancerRequest{
+			NetworkLoadBalancerId: loadbalancerId,
+		})
+		if err != nil {
+			return err
+		}
+		backendSet := lb.BackendSets[APIServerLBBackendSetName]
+		if m.containsNLBBackend(backendSet, m.Name()) {
+			logger := m.Logger.WithValues("backend-set", *backendSet.Name)
+			workRequest := m.OCIMachine.Status.DeleteBackendWorkRequestId
+			if workRequest != "" {
+				_, err = ociutil.AwaitNLBWorkRequest(ctx, m.NetworkLoadBalancerClient, &workRequest)
+				if err != nil {
+					return err
+				}
+			} else {
+				resp, err := m.NetworkLoadBalancerClient.DeleteBackend(ctx, networkloadbalancer.DeleteBackendRequest{
+					NetworkLoadBalancerId: loadbalancerId,
+					BackendSetName:        backendSet.Name,
+					BackendName:           common.String(m.Name()),
+				})
+				if err != nil {
+					return err
+				}
+				m.OCIMachine.Status.DeleteBackendWorkRequestId = *resp.OpcWorkRequestId
+				logger.Info("Delete instance from LB backend-set", "WorkRequestId", resp.OpcWorkRequestId)
+				logger.Info("Waiting for LB work request to be complete")
+				_, err = ociutil.AwaitNLBWorkRequest(ctx, m.NetworkLoadBalancerClient, resp.OpcWorkRequestId)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
 	return nil
 }
 
-func (m *MachineScope) containsBackend(backendSet networkloadbalancer.BackendSet, backendName string) bool {
+func (m *MachineScope) containsNLBBackend(backendSet networkloadbalancer.BackendSet, backendName string) bool {
+	for _, backend := range backendSet.Backends {
+		if *backend.Name == backendName {
+			m.Logger.Info("Instance present in the backend")
+			return true
+		}
+	}
+	return false
+}
+
+func (m *MachineScope) containsLBBackend(backendSet loadbalancer.BackendSet, backendName string) bool {
 	for _, backend := range backendSet.Backends {
 		if *backend.Name == backendName {
 			m.Logger.Info("Instance present in the backend")
