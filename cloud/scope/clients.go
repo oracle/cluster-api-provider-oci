@@ -197,6 +197,9 @@ func (c *ClientProvider) createNLbClient(region string, ociAuthConfigProvider co
 		return nil, err
 	}
 	nlbClient.SetRegion(region)
+	if c.ociClientOverrides != nil && c.ociClientOverrides.NetworkLoadBalancerClientUrl != nil {
+		nlbClient.Host = *c.ociClientOverrides.NetworkLoadBalancerClientUrl
+	}
 	nlbClient.Interceptor = setVersionHeader()
 
 	return &nlbClient, nil
@@ -240,7 +243,6 @@ func (c *ClientProvider) createComputeClient(region string, ociAuthConfigProvide
 		return nil, err
 	}
 	computeClient.SetRegion(region)
-	//https://dyn.slack.com/archives/C7MS7QWC8/p1675719244230459?thread_ts=1675460644.801049&cid=C7MS7QWC8
 	if c.ociClientOverrides != nil && c.ociClientOverrides.ComputeClientUrl != nil {
 		computeClient.Host = *c.ociClientOverrides.ComputeClientUrl
 	}

@@ -1192,6 +1192,11 @@ spec:
                       SDK client URL to be changed.
                     nullable: true
                     type: string
+                  networkLoadBalancerClientUrl:
+                    description: NetworkLoadBalancerClientUrl allows the default NLB
+                      SDK client URL to be changed.
+                    nullable: true
+                    type: string
                   vCNClientUrl:
                     description: VCNClientUrl allows the default vcn SDK client URL
                       to be changed.

@@ -63,12 +63,13 @@ func TestClients_NewClientProviderWithClientOverrides(t *testing.T) {
 	}
 
 	clientOverrides := &v1beta2.ClientOverrides{
-		ComputeClientUrl:           common.String("ComputeClientUrl"),
-		ComputeManagementClientUrl: common.String("ComputeManagementClientUrl"),
-		VCNClientUrl:               common.String("VCNClientUrl"),
-		LoadBalancerClientUrl:      common.String("LoadBalancerClientUrl"),
-		IdentityClientUrl:          common.String("IdentityClientUrl"),
-		ContainerEngineClientUrl:   common.String("ContainerEngineClientUrl"),
+		ComputeClientUrl:             common.String("ComputeClientUrl"),
+		ComputeManagementClientUrl:   common.String("ComputeManagementClientUrl"),
+		VCNClientUrl:                 common.String("VCNClientUrl"),
+		LoadBalancerClientUrl:        common.String("LoadBalancerClientUrl"),
+		NetworkLoadBalancerClientUrl: common.String("NetworkLoadBalancerClientUrl"),
+		IdentityClientUrl:            common.String("IdentityClientUrl"),
+		ContainerEngineClientUrl:     common.String("ContainerEngineClientUrl"),
 	}
 
 	clientProvider, err := NewClientProvider(ClientProviderParams{
@@ -106,6 +107,7 @@ func TestClients_NewClientProviderWithMissingOverrides(t *testing.T) {
 		ComputeManagementClientUrl: common.String("ComputeManagementClientUrl"),
 		//VCNClientUrl is missing,
 		LoadBalancerClientUrl: common.String("LoadBalancerClientUrl"),
+		//NetworkLoadBalancerClientUrl is missing,
 		//IdentityClientUrl is missing,
 		ContainerEngineClientUrl: common.String("ContainerEngineClientUrl"),
 	}

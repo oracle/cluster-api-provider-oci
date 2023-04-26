@@ -287,6 +287,11 @@ func (in *ClientOverrides) DeepCopyInto(out *ClientOverrides) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.NetworkLoadBalancerClientUrl != nil {
+		in, out := &in.NetworkLoadBalancerClientUrl, &out.NetworkLoadBalancerClientUrl
+		*out = new(string)
+		**out = **in
+	}
 	if in.IdentityClientUrl != nil {
 		in, out := &in.IdentityClientUrl, &out.IdentityClientUrl
 		*out = new(string)

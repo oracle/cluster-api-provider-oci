@@ -153,6 +153,12 @@ type ClientOverrides struct {
 	// +nullable
 	LoadBalancerClientUrl *string `json:"loadBalancerClientUrl,omitempty"`
 
+	// NetworkLoadBalancerClientUrl allows the default NLB SDK client URL to be changed.
+	//
+	// +optional
+	// +nullable
+	NetworkLoadBalancerClientUrl *string `json:"networkLoadBalancerClientUrl,omitempty"`
+
 	// IdentityClientUrl allows the default identity SDK client URL to be changed.
 	//
 	// +optional
