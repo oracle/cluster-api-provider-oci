@@ -1219,6 +1219,47 @@ spec:
                           type: string
                         description: Free-form tags for this resource.
                         type: object
+                      hostUrl:
+                        description: ClientOverrides allows the default client SDK
+                          URLs to be changed.
+                        nullable: true
+                        properties:
+                          computeClientUrl:
+                            description: ComputeClientUrl allows the default compute
+                              SDK client URL to be changed.
+                            nullable: true
+                            type: string
+                          computeManagementClientUrl:
+                            description: ComputeManagementClientUrl allows the default
+                              compute management SDK client URL to be changed.
+                            nullable: true
+                            type: string
+                          containerEngineClientUrl:
+                            description: ContainerEngineClientUrl allows the default
+                              container engine SDK client URL to be changed.
+                            nullable: true
+                            type: string
+                          identityClientUrl:
+                            description: IdentityClientUrl allows the default identity
+                              SDK client URL to be changed.
+                            nullable: true
+                            type: string
+                          loadBalancerClientUrl:
+                            description: LoadBalancerClientUrl allows the default
+                              load balancer SDK client URL to be changed.
+                            nullable: true
+                            type: string
+                          networkLoadBalancerClientUrl:
+                            description: NetworkLoadBalancerClientUrl allows the default
+                              NLB SDK client URL to be changed.
+                            nullable: true
+                            type: string
+                          vCNClientUrl:
+                            description: VCNClientUrl allows the default vcn SDK client
+                              URL to be changed.
+                            nullable: true
+                            type: string
+                        type: object
                       identityRef:
                         description: IdentityRef is a reference to an identity(principal)
                           to be used when reconciling this cluster

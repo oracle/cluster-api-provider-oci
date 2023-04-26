@@ -1177,6 +1177,47 @@ spec:
                           map key is the AD name and the struct is details about the
                           AD.
                         type: object
+                      clientOverrides:
+                        description: ClientOverrides allows the default client SDK
+                          URLs to be changed.
+                        nullable: true
+                        properties:
+                          computeClientUrl:
+                            description: ComputeClientUrl allows the default compute
+                              SDK client URL to be changed.
+                            nullable: true
+                            type: string
+                          computeManagementClientUrl:
+                            description: ComputeManagementClientUrl allows the default
+                              compute management SDK client URL to be changed.
+                            nullable: true
+                            type: string
+                          containerEngineClientUrl:
+                            description: ContainerEngineClientUrl allows the default
+                              container engine SDK client URL to be changed.
+                            nullable: true
+                            type: string
+                          identityClientUrl:
+                            description: IdentityClientUrl allows the default identity
+                              SDK client URL to be changed.
+                            nullable: true
+                            type: string
+                          loadBalancerClientUrl:
+                            description: LoadBalancerClientUrl allows the default
+                              load balancer SDK client URL to be changed.
+                            nullable: true
+                            type: string
+                          networkLoadBalancerClientUrl:
+                            description: NetworkLoadBalancerClientUrl allows the default
+                              NLB SDK client URL to be changed.
+                            nullable: true
+                            type: string
+                          vCNClientUrl:
+                            description: VCNClientUrl allows the default vcn SDK client
+                              URL to be changed.
+                            nullable: true
+                            type: string
+                        type: object
                       compartmentId:
                         description: Compartment to create the cluster network.
                         type: string

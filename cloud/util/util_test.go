@@ -161,7 +161,7 @@ func TestGetOrBuildClientFromIdentity(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
 			client := fake.NewClientBuilder().WithObjects(tt.objects...).Build()
-			_, err := GetOrBuildClientFromIdentity(context.Background(), client, tt.clusterIdentity, tt.defaultRegion)
+			_, err := GetOrBuildClientFromIdentity(context.Background(), client, tt.clusterIdentity, tt.defaultRegion, nil)
 			if tt.errorExpected {
 				g.Expect(err).To(Not(BeNil()))
 			} else {

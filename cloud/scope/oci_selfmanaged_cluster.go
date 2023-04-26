@@ -36,6 +36,10 @@ func (c OCISelfManagedCluster) GetRegion() string {
 	return c.OCICluster.Spec.Region
 }
 
+func (c OCISelfManagedCluster) GetClientOverrides() *infrastructurev1beta2.ClientOverrides {
+	return c.OCICluster.Spec.ClientOverrides
+}
+
 func (c OCISelfManagedCluster) GetIdentityRef() *corev1.ObjectReference {
 	return c.OCICluster.Spec.IdentityRef
 }

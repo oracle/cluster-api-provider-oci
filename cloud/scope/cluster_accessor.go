@@ -42,6 +42,8 @@ type OCIClusterAccessor interface {
 	GetNameSpace() string
 	// GetRegion returns the region of the cluster, if specified in the spec.
 	GetRegion() string
+	// GetClientOverrides returns the client host url overrides for the cluster
+	GetClientOverrides() *infrastructurev1beta2.ClientOverrides
 	// GetNetworkSpec returns the NetworkSpec of the cluster.
 	GetNetworkSpec() *infrastructurev1beta2.NetworkSpec
 	// SetControlPlaneEndpoint sets the control plane endpoint of the cluster.

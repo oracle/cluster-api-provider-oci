@@ -74,6 +74,12 @@ type OCIClusterSpec struct {
 	// where the map key is the AD name and the struct is details about the AD.
 	// +optional
 	AvailabilityDomains map[string]OCIAvailabilityDomain `json:"availabilityDomains,omitempty"`
+
+	// ClientOverrides allows the default client SDK URLs to be changed.
+	//
+	// +optional
+	// +nullable
+	ClientOverrides *ClientOverrides `json:"clientOverrides,omitempty"`
 }
 
 // OCIClusterStatus defines the observed state of OCICluster
@@ -118,6 +124,52 @@ type OCIAvailabilityDomain struct {
 
 	// FaultDomains a list of fault domain (FD) names. Example: ["FAULT-DOMAIN-1"]
 	FaultDomains []string `json:"faultDomains,omitempty"`
+}
+
+// ClientOverrides contains information about client host url overrides.
+type ClientOverrides struct {
+
+	// ComputeClientUrl allows the default compute SDK client URL to be changed.
+	//
+	// +optional
+	// +nullable
+	ComputeClientUrl *string `json:"computeClientUrl,omitempty"`
+
+	// ComputeManagementClientUrl allows the default compute management SDK client URL to be changed.
+	//
+	// +optional
+	// +nullable
+	ComputeManagementClientUrl *string `json:"computeManagementClientUrl,omitempty"`
+
+	// VCNClientUrl allows the default vcn SDK client URL to be changed.
+	//
+	// +optional
+	// +nullable
+	VCNClientUrl *string `json:"vCNClientUrl,omitempty"`
+
+	// LoadBalancerClientUrl allows the default load balancer SDK client URL to be changed.
+	//
+	// +optional
+	// +nullable
+	LoadBalancerClientUrl *string `json:"loadBalancerClientUrl,omitempty"`
+
+	// NetworkLoadBalancerClientUrl allows the default NLB SDK client URL to be changed.
+	//
+	// +optional
+	// +nullable
+	NetworkLoadBalancerClientUrl *string `json:"networkLoadBalancerClientUrl,omitempty"`
+
+	// IdentityClientUrl allows the default identity SDK client URL to be changed.
+	//
+	// +optional
+	// +nullable
+	IdentityClientUrl *string `json:"identityClientUrl,omitempty"`
+
+	// ContainerEngineClientUrl allows the default container engine SDK client URL to be changed.
+	//
+	// +optional
+	// +nullable
+	ContainerEngineClientUrl *string `json:"containerEngineClientUrl,omitempty"`
 }
 
 // GetConditions returns the list of conditions for an OCICluster API object.

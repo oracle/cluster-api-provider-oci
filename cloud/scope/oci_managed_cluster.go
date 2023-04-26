@@ -37,6 +37,10 @@ func (c OCIManagedCluster) GetRegion() string {
 	return c.OCIManagedCluster.Spec.Region
 }
 
+func (c OCIManagedCluster) GetClientOverrides() *infrastructurev1beta2.ClientOverrides {
+	return c.OCIManagedCluster.Spec.ClientOverrides
+}
+
 func (c OCIManagedCluster) MarkConditionFalse(t clusterv1.ConditionType, reason string, severity clusterv1.ConditionSeverity, messageFormat string, messageArgs ...interface{}) {
 	conditions.MarkFalse(c.OCIManagedCluster, infrastructurev1beta2.ClusterReadyCondition, reason, severity, messageFormat, messageArgs...)
 

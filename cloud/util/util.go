@@ -51,7 +51,7 @@ func GetClusterIdentityFromRef(ctx context.Context, c client.Client, ociClusterN
 }
 
 // GetOrBuildClientFromIdentity creates ClientProvider from OCIClusterIdentity object
-func GetOrBuildClientFromIdentity(ctx context.Context, c client.Client, identity *infrastructurev1beta2.OCIClusterIdentity, defaultRegion string) (*scope.ClientProvider, error) {
+func GetOrBuildClientFromIdentity(ctx context.Context, c client.Client, identity *infrastructurev1beta2.OCIClusterIdentity, defaultRegion string, clientOverrides *infrastructurev1beta2.ClientOverrides) (*scope.ClientProvider, error) {
 	if identity.Spec.Type == infrastructurev1beta2.UserPrincipal {
 		secretRef := identity.Spec.PrincipalSecret
 		key := types.NamespacedName{
@@ -82,7 +82,9 @@ func GetOrBuildClientFromIdentity(ctx context.Context, c client.Client, identity
 			privatekey,
 			common.String(passphrase))
 
-		clientProvider, err := scope.NewClientProvider(conf)
+		clientProvider, err := scope.NewClientProvider(scope.ClientProviderParams{
+			OciAuthConfigProvider: conf,
+			ClientOverrides:       clientOverrides})
 		if err != nil {
 			return nil, err
 		}
@@ -155,13 +157,24 @@ func InitClientsAndRegion(ctx context.Context, client client.Client, defaultRegi
 			return nil, "", scope.OCIClients{}, err
 		}
 		clusterRegion = region
+	} else if clusterAccessor.GetClientOverrides() != nil {
+		// IdentityRef provider will be created with client host url overrides
+		// but if no identityRef we will want to create a new client provider with the overrides
+		clientProvider, err = scope.NewClientProvider(scope.ClientProviderParams{
+			OciAuthConfigProvider: defaultClientProvider.GetAuthProvider(),
+			ClientOverrides:       clusterAccessor.GetClientOverrides()})
+		if err != nil {
+			return nil, "", scope.OCIClients{}, err
+		}
 	} else {
 		clientProvider = defaultClientProvider
 	}
+
 	if clientProvider == nil {
 		return nil, "", scope.OCIClients{}, errors.New("OCI authentication credentials could not be retrieved from pod or cluster level," +
 			"please install Cluster API Provider for OCI with OCI authentication credentials or set Cluster Identity in the OCICluster")
 	}
+
 	// Region set at cluster takes highest precedence
 	if len(clusterAccessor.GetRegion()) > 0 {
 		clusterRegion = clusterAccessor.GetRegion()
@@ -186,7 +199,8 @@ func CreateClientProviderFromClusterIdentity(ctx context.Context, client client.
 		clusterAccessor.MarkConditionFalse(infrastructurev1beta2.ClusterReadyCondition, infrastructurev1beta2.NamespaceNotAllowedByIdentity, clusterv1.ConditionSeverityError, "")
 		return nil, errors.Errorf("OCIClusterIdentity list of allowed namespaces doesn't include current cluster namespace %s", namespace)
 	}
-	clientProvider, err := GetOrBuildClientFromIdentity(ctx, client, identity, defaultRegion)
+
+	clientProvider, err := GetOrBuildClientFromIdentity(ctx, client, identity, defaultRegion, clusterAccessor.GetClientOverrides())
 	if err != nil {
 		return nil, err
 	}

@@ -71,6 +71,12 @@ type OCIManagedClusterSpec struct {
 	// where the map key is the AD name and the struct is details about the AD.
 	// +optional
 	AvailabilityDomains map[string]infrastructurev1beta2.OCIAvailabilityDomain `json:"availabilityDomains,omitempty"`
+
+	// ClientOverrides allows the default client SDK URLs to be changed.
+	//
+	// +optional
+	// +nullable
+	ClientOverrides *infrastructurev1beta2.ClientOverrides `json:"hostUrl,omitempty"`
 }
 
 // OCIManagedClusterStatus defines the observed state of OCICluster

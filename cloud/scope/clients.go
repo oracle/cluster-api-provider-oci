@@ -21,6 +21,7 @@ import (
 	"sync"
 
 	"github.com/go-logr/logr"
+	"github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/base"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/compute"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/computemanagement"
@@ -58,24 +59,40 @@ type ClientProvider struct {
 	ociClients            map[string]OCIClients
 	ociClientsLock        *sync.RWMutex
 	ociAuthConfigProvider common.ConfigurationProvider
+	ociClientOverrides    *v1beta2.ClientOverrides
+}
+
+// ClientProviderParams is the params struct for NewClientProvider
+type ClientProviderParams struct {
+	// OciAuthConfigProvider wraps information about the account owner
+	OciAuthConfigProvider common.ConfigurationProvider
+
+	// ClientOverrides contains information about client host url overrides.
+	ClientOverrides *v1beta2.ClientOverrides
 }
 
 // NewClientProvider builds the ClientProvider with a client for the given region
-func NewClientProvider(ociAuthConfigProvider common.ConfigurationProvider) (*ClientProvider, error) {
+func NewClientProvider(params ClientProviderParams) (*ClientProvider, error) {
 	log := klogr.New()
 
-	if ociAuthConfigProvider == nil {
+	if params.OciAuthConfigProvider == nil {
 		return nil, errors.New("ConfigurationProvider can not be nil")
 	}
 
 	provider := ClientProvider{
 		Logger:                &log,
-		ociAuthConfigProvider: ociAuthConfigProvider,
+		ociAuthConfigProvider: params.OciAuthConfigProvider,
 		ociClients:            map[string]OCIClients{},
 		ociClientsLock:        new(sync.RWMutex),
+		ociClientOverrides:    params.ClientOverrides,
 	}
 
 	return &provider, nil
+}
+
+// GetAuthProvider returns the client provider auth config
+func (c *ClientProvider) GetAuthProvider() common.ConfigurationProvider {
+	return c.ociAuthConfigProvider
 }
 
 // GetOrBuildClient if the OCIClients exist for the region they are returned, if not clients will build them
@@ -94,7 +111,7 @@ func (c *ClientProvider) GetOrBuildClient(region string) (OCIClients, error) {
 
 	c.ociClientsLock.Lock()
 	defer c.ociClientsLock.Unlock()
-	regionalClient, err := createClients(region, c.ociAuthConfigProvider, c.Logger)
+	regionalClient, err := c.createClients(region)
 	if err != nil {
 		return regionalClient, err
 	}
@@ -108,36 +125,36 @@ func (c *ClientProvider) GetRegion() (string, error) {
 	return c.ociAuthConfigProvider.Region()
 }
 
-func createClients(region string, oCIAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (OCIClients, error) {
-	vcnClient, err := createVncClient(region, oCIAuthConfigProvider, logger)
+func (c *ClientProvider) createClients(region string) (OCIClients, error) {
+	vcnClient, err := c.createVncClient(region, c.ociAuthConfigProvider, c.Logger)
 	if err != nil {
 		return OCIClients{}, err
 	}
-	nlbClient, err := createNLbClient(region, oCIAuthConfigProvider, logger)
+	nlbClient, err := c.createNLbClient(region, c.ociAuthConfigProvider, c.Logger)
 	if err != nil {
 		return OCIClients{}, err
 	}
-	lbClient, err := createLBClient(region, oCIAuthConfigProvider, logger)
+	lbClient, err := c.createLBClient(region, c.ociAuthConfigProvider, c.Logger)
 	if err != nil {
 		return OCIClients{}, err
 	}
-	identityClient, err := createIdentityClient(region, oCIAuthConfigProvider, logger)
+	identityClient, err := c.createIdentityClient(region, c.ociAuthConfigProvider, c.Logger)
 	if err != nil {
 		return OCIClients{}, err
 	}
-	computeClient, err := createComputeClient(region, oCIAuthConfigProvider, logger)
+	computeClient, err := c.createComputeClient(region, c.ociAuthConfigProvider, c.Logger)
 	if err != nil {
 		return OCIClients{}, err
 	}
-	computeManagementClient, err := createComputeManagementClient(region, oCIAuthConfigProvider, logger)
+	computeManagementClient, err := c.createComputeManagementClient(region, c.ociAuthConfigProvider, c.Logger)
 	if err != nil {
 		return OCIClients{}, err
 	}
-	containerEngineClient, err := createContainerEngineClient(region, oCIAuthConfigProvider, logger)
+	containerEngineClient, err := c.createContainerEngineClient(region, c.ociAuthConfigProvider, c.Logger)
 	if err != nil {
 		return OCIClients{}, err
 	}
-	baseClient, err := createBaseClient(region, oCIAuthConfigProvider, logger)
+	baseClient, err := c.createBaseClient(region, c.ociAuthConfigProvider, c.Logger)
 	if err != nil {
 		return OCIClients{}, err
 	}
@@ -158,91 +175,113 @@ func createClients(region string, oCIAuthConfigProvider common.ConfigurationProv
 	}, err
 }
 
-func createVncClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (*core.VirtualNetworkClient, error) {
+func (c *ClientProvider) createVncClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (*core.VirtualNetworkClient, error) {
 	vcnClient, err := core.NewVirtualNetworkClientWithConfigurationProvider(ociAuthConfigProvider)
 	if err != nil {
 		logger.Error(err, "unable to create OCI VCN Client")
 		return nil, err
 	}
 	vcnClient.SetRegion(region)
+	if c.ociClientOverrides != nil && c.ociClientOverrides.VCNClientUrl != nil {
+		vcnClient.Host = *c.ociClientOverrides.VCNClientUrl
+	}
 	vcnClient.Interceptor = setVersionHeader()
 
 	return &vcnClient, nil
 }
 
-func createNLbClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (*networkloadbalancer.NetworkLoadBalancerClient, error) {
+func (c *ClientProvider) createNLbClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (*networkloadbalancer.NetworkLoadBalancerClient, error) {
 	nlbClient, err := networkloadbalancer.NewNetworkLoadBalancerClientWithConfigurationProvider(ociAuthConfigProvider)
 	if err != nil {
 		logger.Error(err, "unable to create OCI LB Client")
 		return nil, err
 	}
 	nlbClient.SetRegion(region)
+	if c.ociClientOverrides != nil && c.ociClientOverrides.NetworkLoadBalancerClientUrl != nil {
+		nlbClient.Host = *c.ociClientOverrides.NetworkLoadBalancerClientUrl
+	}
 	nlbClient.Interceptor = setVersionHeader()
 
 	return &nlbClient, nil
 }
 
-func createLBClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (*loadbalancer.LoadBalancerClient, error) {
+func (c *ClientProvider) createLBClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (*loadbalancer.LoadBalancerClient, error) {
 	lbClient, err := loadbalancer.NewLoadBalancerClientWithConfigurationProvider(ociAuthConfigProvider)
 	if err != nil {
 		logger.Error(err, "unable to create OCI LBaaS Client")
 		return nil, err
 	}
 	lbClient.SetRegion(region)
+	if c.ociClientOverrides != nil && c.ociClientOverrides.LoadBalancerClientUrl != nil {
+		lbClient.Host = *c.ociClientOverrides.LoadBalancerClientUrl
+	}
 	lbClient.Interceptor = setVersionHeader()
 
 	return &lbClient, nil
 }
 
-func createIdentityClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (*identity.IdentityClient, error) {
+func (c *ClientProvider) createIdentityClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (*identity.IdentityClient, error) {
 	identityClient, err := identity.NewIdentityClientWithConfigurationProvider(ociAuthConfigProvider)
 	if err != nil {
 		logger.Error(err, "unable to create OCI Identity Client")
 		return nil, err
 	}
 	identityClient.SetRegion(region)
+
+	if c.ociClientOverrides != nil && c.ociClientOverrides.IdentityClientUrl != nil {
+		identityClient.Host = *c.ociClientOverrides.IdentityClientUrl
+	}
 	identityClient.Interceptor = setVersionHeader()
 
 	return &identityClient, nil
 }
 
-func createComputeClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (*core.ComputeClient, error) {
+func (c *ClientProvider) createComputeClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (*core.ComputeClient, error) {
 	computeClient, err := core.NewComputeClientWithConfigurationProvider(ociAuthConfigProvider)
 	if err != nil {
 		logger.Error(err, "unable to create OCI Compute Client")
 		return nil, err
 	}
 	computeClient.SetRegion(region)
+	if c.ociClientOverrides != nil && c.ociClientOverrides.ComputeClientUrl != nil {
+		computeClient.Host = *c.ociClientOverrides.ComputeClientUrl
+	}
 	computeClient.Interceptor = setVersionHeader()
 
 	return &computeClient, nil
 }
 
-func createComputeManagementClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (*core.ComputeManagementClient, error) {
+func (c *ClientProvider) createComputeManagementClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (*core.ComputeManagementClient, error) {
 	computeManagementClient, err := core.NewComputeManagementClientWithConfigurationProvider(ociAuthConfigProvider)
 	if err != nil {
 		logger.Error(err, "unable to create OCI Compute Management Client")
 		return nil, err
 	}
 	computeManagementClient.SetRegion(region)
+	if c.ociClientOverrides != nil && c.ociClientOverrides.ComputeManagementClientUrl != nil {
+		computeManagementClient.Host = *c.ociClientOverrides.ComputeManagementClientUrl
+	}
 	computeManagementClient.Interceptor = setVersionHeader()
 
 	return &computeManagementClient, nil
 }
 
-func createContainerEngineClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (*containerengine.ContainerEngineClient, error) {
+func (c *ClientProvider) createContainerEngineClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (*containerengine.ContainerEngineClient, error) {
 	containerEngineClient, err := containerengine.NewContainerEngineClientWithConfigurationProvider(ociAuthConfigProvider)
 	if err != nil {
 		logger.Error(err, "unable to create OCI Container Engine Client")
 		return nil, err
 	}
 	containerEngineClient.SetRegion(region)
+	if c.ociClientOverrides != nil && c.ociClientOverrides.ContainerEngineClientUrl != nil {
+		containerEngineClient.Host = *c.ociClientOverrides.ContainerEngineClientUrl
+	}
 	containerEngineClient.Interceptor = setVersionHeader()
 
 	return &containerEngineClient, nil
 }
 
-func createBaseClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (base.BaseClient, error) {
+func (c *ClientProvider) createBaseClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (base.BaseClient, error) {
 	baseClient, err := base.NewBaseClient(ociAuthConfigProvider, logger)
 	if err != nil {
 		logger.Error(err, "unable to create OCI Base Client")
