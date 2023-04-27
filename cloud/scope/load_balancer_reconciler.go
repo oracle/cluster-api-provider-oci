@@ -273,24 +273,34 @@ func (s *ClusterScope) GetLoadBalancers(ctx context.Context) (*loadbalancer.Load
 			return nil, errors.New("cluster api tags have been modified out of context")
 		}
 	}
-	lbs, err := s.LoadBalancerClient.ListLoadBalancers(ctx, loadbalancer.ListLoadBalancersRequest{
-		CompartmentId: common.String(s.GetCompartmentId()),
-		DisplayName:   common.String(s.GetControlPlaneLoadBalancerName()),
-	})
-	if err != nil {
-		s.Logger.Error(err, "Failed to list lb by name")
-		return nil, errors.Wrap(err, "failed to list lb by name")
-	}
+	var page *string;
+	for {
+		lbs, err := s.LoadBalancerClient.ListLoadBalancers(ctx, loadbalancer.ListLoadBalancersRequest{
+			CompartmentId: common.String(s.GetCompartmentId()),
+			DisplayName:   common.String(s.GetControlPlaneLoadBalancerName()),
+			Page: page,
+		})
+		if err != nil {
+			s.Logger.Error(err, "Failed to list lb by name")
+			return nil, errors.Wrap(err, "failed to list lb by name")
+		}
 
-	for _, lb := range lbs.Items {
-		if s.IsResourceCreatedByClusterAPI(lb.FreeformTags) {
-			resp, err := s.LoadBalancerClient.GetLoadBalancer(ctx, loadbalancer.GetLoadBalancerRequest{
-				LoadBalancerId: lb.Id,
-			})
-			if err != nil {
-				return nil, err
+		for _, lb := range lbs.Items {
+			if s.IsResourceCreatedByClusterAPI(lb.FreeformTags) {
+				resp, err := s.LoadBalancerClient.GetLoadBalancer(ctx, loadbalancer.GetLoadBalancerRequest{
+					LoadBalancerId: lb.Id,
+				})
+				if err != nil {
+					return nil, err
+				}
+				return &resp.LoadBalancer, nil
 			}
-			return &resp.LoadBalancer, nil
+		}
+
+		if lbs.OpcNextPage == nil {
+			break
+		} else {
+			page = lbs.OpcNextPage
 		}
 	}
 	return nil, nil
