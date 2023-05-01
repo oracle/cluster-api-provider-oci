@@ -129,7 +129,8 @@ type OCIAvailabilityDomain struct {
 // ClientOverrides contains information about client host url overrides.
 type ClientOverrides struct {
 
-	// CertOverride sets the cert used for all the clients
+	// CertOverride is a secret that contains information about a cert override used by all the OCI SDK clients.
+	// The secret must contain data with a `cert`property.
 	//
 	// +optional
 	// +nullable

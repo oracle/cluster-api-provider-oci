@@ -60,7 +60,7 @@ func GetClusterCertFromSecret(ctx context.Context, c client.Client, ociClusterNa
 		if namespace == "" {
 			namespace = ociClusterNamespace
 		}
-		key := client.ObjectKey{Name: certSecretRef.Name, Namespace: namespace}
+		key := types.NamespacedName{Namespace: namespace, Name: certSecretRef.Name}
 		if err := c.Get(ctx, key, secret); err != nil {
 			return nil, err
 		}
