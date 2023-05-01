@@ -129,6 +129,12 @@ type OCIAvailabilityDomain struct {
 // ClientOverrides contains information about client host url overrides.
 type ClientOverrides struct {
 
+	// CertOverride sets the cert used for all the clients
+	//
+	// +optional
+	// +nullable
+	CertOverride *corev1.SecretReference `json:"certOverride,omitempty"`
+
 	// ComputeClientUrl allows the default compute SDK client URL to be changed.
 	//
 	// +optional

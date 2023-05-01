@@ -40,8 +40,7 @@ func TestClients_NewClientProvider(t *testing.T) {
 	}
 
 	clientProvider, err := NewClientProvider(ClientProviderParams{
-		ociAuthConfigProvider,
-		nil})
+		OciAuthConfigProvider: ociAuthConfigProvider})
 	if err != nil {
 		t.Errorf("Expected %v to equal nil", err)
 	}
@@ -73,8 +72,8 @@ func TestClients_NewClientProviderWithClientOverrides(t *testing.T) {
 	}
 
 	clientProvider, err := NewClientProvider(ClientProviderParams{
-		ociAuthConfigProvider,
-		clientOverrides})
+		OciAuthConfigProvider: ociAuthConfigProvider,
+		ClientOverrides:       clientOverrides})
 	if err != nil {
 		t.Errorf("Expected error:%v to not equal nil", err)
 	}
@@ -113,8 +112,8 @@ func TestClients_NewClientProviderWithMissingOverrides(t *testing.T) {
 	}
 
 	clientProvider, err := NewClientProvider(ClientProviderParams{
-		ociAuthConfigProvider,
-		clientOverrides})
+		OciAuthConfigProvider: ociAuthConfigProvider,
+		ClientOverrides:       clientOverrides})
 	if err != nil {
 		t.Errorf("Expected error:%v to not equal nil", err)
 	}
@@ -129,7 +128,7 @@ func TestClients_NewClientProviderWithMissingOverrides(t *testing.T) {
 }
 
 func TestClients_NewClientProviderWithBadAuthConfig(t *testing.T) {
-	clientProvider, err := NewClientProvider(ClientProviderParams{nil, nil})
+	clientProvider, err := NewClientProvider(ClientProviderParams{})
 	if err == nil {
 		t.Errorf("Expected error:%v to not equal nil", err)
 	}
@@ -211,8 +210,7 @@ func TestClients_GetAuthProvider(t *testing.T) {
 	}
 
 	clientProvider, err := NewClientProvider(ClientProviderParams{
-		ociAuthConfigProvider,
-		nil})
+		OciAuthConfigProvider: ociAuthConfigProvider})
 	if err != nil {
 		t.Errorf("Expected %v to equal nil", err)
 	}

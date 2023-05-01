@@ -1224,6 +1224,22 @@ spec:
                           URLs to be changed.
                         nullable: true
                         properties:
+                          certOverride:
+                            description: "CertOverride sets the cert used for all
+                              the clients \n TODO: make this a ref to some secret
+                              like identity CertOverride *string `json:\"certOverride,omitempty\"`"
+                            nullable: true
+                            properties:
+                              name:
+                                description: name is unique within a namespace to
+                                  reference a secret resource.
+                                type: string
+                              namespace:
+                                description: namespace defines the space within which
+                                  the secret name must be unique.
+                                type: string
+                            type: object
+                            x-kubernetes-map-type: atomic
                           computeClientUrl:
                             description: ComputeClientUrl allows the default compute
                               SDK client URL to be changed.
