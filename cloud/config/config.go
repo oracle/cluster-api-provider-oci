@@ -62,13 +62,18 @@ func FromDir(path string) (*AuthConfig, error) {
 	}
 }
 
-func getConfigFromFile(path string) (*AuthConfig, error) {
-	f, err := os.Open(path)
+func getConfigFromFile(path string) (authConfig *AuthConfig, err error) {
+	var f *os.File
+	f, err = os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 
-	defer f.Close()
+	defer func() {
+		if closeErr := f.Close(); closeErr != nil {
+			err = closeErr
+		}
+	}()
 
 	if err != nil {
 		return nil, err
