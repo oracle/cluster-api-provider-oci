@@ -661,6 +661,18 @@ func (s *ManagedControlPlaneScope) getSpecFromActual(cluster *oke.Cluster) *infr
 			}
 		}
 	}
+	if cluster.Type != "" {
+		switch cluster.Type {
+		case oke.ClusterTypeBasicCluster:
+			spec.ClusterType = infrav2exp.BasicClusterType
+			break
+		case oke.ClusterTypeEnhancedCluster:
+			spec.ClusterType = infrav2exp.EnhancedClusterType
+			break
+		default:
+			break
+		}
+	}
 	return &spec
 }
 
