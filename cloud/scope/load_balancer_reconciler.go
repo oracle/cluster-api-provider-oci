@@ -273,12 +273,12 @@ func (s *ClusterScope) GetLoadBalancers(ctx context.Context) (*loadbalancer.Load
 			return nil, errors.New("cluster api tags have been modified out of context")
 		}
 	}
-	var page *string;
+	var page *string
 	for {
 		lbs, err := s.LoadBalancerClient.ListLoadBalancers(ctx, loadbalancer.ListLoadBalancersRequest{
 			CompartmentId: common.String(s.GetCompartmentId()),
 			DisplayName:   common.String(s.GetControlPlaneLoadBalancerName()),
-			Page: page,
+			Page:          page,
 		})
 		if err != nil {
 			s.Logger.Error(err, "Failed to list lb by name")

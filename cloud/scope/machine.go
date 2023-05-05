@@ -323,8 +323,8 @@ func (m *MachineScope) getMachineFromOCID(ctx context.Context, instanceID *strin
 // GetMachineByDisplayName returns the machine from the compartment if there is a matching DisplayName,
 // and it was created by the cluster
 func (m *MachineScope) GetMachineByDisplayName(ctx context.Context, name string) (*core.Instance, error) {
-	var page *string;
-	for  {
+	var page *string
+	for {
 		req := core.ListInstancesRequest{DisplayName: common.String(name),
 			CompartmentId: common.String(m.getCompartmentId()), Page: page}
 		resp, err := m.ComputeClient.ListInstances(ctx, req)
