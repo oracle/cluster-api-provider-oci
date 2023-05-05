@@ -97,7 +97,7 @@ func MockAuthConfig() (config.AuthConfig, error) {
 }
 
 func generatePrivateKeyPEM() (string, error) {
-	privateKey, err := rsa.GenerateKey(rand.Reader, 1024)
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return "", err
 	}

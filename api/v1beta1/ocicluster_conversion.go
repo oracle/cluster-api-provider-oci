@@ -86,9 +86,10 @@ func convertv1beta2NSGListTov1beta1NSGList(in []*v1beta2.NSG) ([]*NSG, error) {
 
 func Convertv1beta1AdMapTov1beta2AdMap(in map[string]OCIAvailabilityDomain) (map[string]v1beta2.OCIAvailabilityDomain, error) {
 	out := make(map[string]v1beta2.OCIAvailabilityDomain)
-	for k, v := range in {
+	for k, _ := range in {
 		outV := &v1beta2.OCIAvailabilityDomain{}
-		err := Convert_v1beta1_OCIAvailabilityDomain_To_v1beta2_OCIAvailabilityDomain(&v, outV, nil)
+		inDomain := in[k]
+		err := Convert_v1beta1_OCIAvailabilityDomain_To_v1beta2_OCIAvailabilityDomain(&inDomain, outV, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -99,9 +100,10 @@ func Convertv1beta1AdMapTov1beta2AdMap(in map[string]OCIAvailabilityDomain) (map
 
 func Convertv1beta2AdMapTov1beta1AdMap(in map[string]v1beta2.OCIAvailabilityDomain) (map[string]OCIAvailabilityDomain, error) {
 	out := make(map[string]OCIAvailabilityDomain)
-	for k, v := range in {
+	for k, _ := range in {
 		outV := &OCIAvailabilityDomain{}
-		err := Convert_v1beta2_OCIAvailabilityDomain_To_v1beta1_OCIAvailabilityDomain(&v, outV, nil)
+		inDomain := in[k]
+		err := Convert_v1beta2_OCIAvailabilityDomain_To_v1beta1_OCIAvailabilityDomain(&inDomain, outV, nil)
 		if err != nil {
 			return nil, err
 		}

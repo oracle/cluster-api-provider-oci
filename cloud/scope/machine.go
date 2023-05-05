@@ -18,12 +18,12 @@ package scope
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/base64"
 	"fmt"
-	"math/rand"
+	"math/big"
 	"net/url"
 	"strconv"
-	"time"
 
 	"github.com/go-logr/logr"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
@@ -195,10 +195,13 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 	failureDomain := m.Machine.Spec.FailureDomain
 	if failureDomain == nil {
 		m.Logger.Info("Failure Domain is not set in the machine spec, setting it to a random value from 1 to 3")
-		rand.Seed(time.Now().UnixNano())
-		// rand.Intn(3) will produce a random number from 0(inclusive) to 3(exclusive)
-		// ee add one to get a number from 1 to 3
-		failureDomain = common.String(strconv.Itoa(rand.Intn(3) + 1))
+		randomFaultDomain, err := rand.Int(rand.Reader, big.NewInt(3))
+		if err != nil {
+			m.Logger.Error(err, "Failed to generate random fault domain")
+			return nil, err
+		}
+		// the random number generated is between zero and two, whereas we need a number between one and three
+		failureDomain = common.String(strconv.Itoa(int(randomFaultDomain.Int64()) + 1))
 	}
 	failureDomainIndex, err := strconv.Atoi(*failureDomain)
 	if err != nil {
