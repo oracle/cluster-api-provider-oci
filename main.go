@@ -18,7 +18,9 @@ package main
 
 import (
 	"flag"
+	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"os"
+	"time"
 
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
@@ -79,6 +81,11 @@ func init() {
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
+	var leaderElectionNamespace string
+	var leaderElectionLeaseDuration time.Duration
+	var leaderElectionRenewDeadline time.Duration
+	var leaderElectionRetryPeriod time.Duration
+	var watchNamespace string
 	var probeAddr string
 	var webhookPort int
 
@@ -91,6 +98,30 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.StringVar(
+		&leaderElectionNamespace,
+		"leader-election-namespace",
+		"",
+		"Namespace that the controller performs leader election in. If unspecified, the controller will discover which namespace it is running in.",
+	)
+	flag.DurationVar(
+		&leaderElectionLeaseDuration,
+		"leader-elect-lease-duration",
+		15*time.Second,
+		"Interval at which non-leader candidates will wait to force acquire leadership (duration string)",
+	)
+	flag.DurationVar(
+		&leaderElectionRenewDeadline,
+		"leader-elect-renew-deadline",
+		10*time.Second,
+		"Duration that the leading controller manager will retry refreshing leadership before giving up (duration string)",
+	)
+	flag.DurationVar(
+		&leaderElectionRetryPeriod,
+		"leader-elect-retry-period",
+		2*time.Second,
+		"Duration the LeaderElector clients should wait between tries of actions (duration string)",
+	)
 	flag.IntVar(&webhookPort,
 		"webhook-port",
 		9443,
@@ -122,6 +153,12 @@ func main() {
 		true,
 		"Initialize OCI clients on startup",
 	)
+	flag.StringVar(
+		&watchNamespace,
+		"namespace",
+		"",
+		"Namespace that the controller watches to reconcile cluster-api objects. If unspecified, the controller watches for cluster-api objects across all namespaces.",
+	)
 
 	opts := zap.Options{
 		Development: true,
@@ -142,13 +179,19 @@ func main() {
 	ctrl.SetLogger(klog.Background())
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
-		Port:                   webhookPort,
-		HealthProbeBindAddress: probeAddr,
-		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "controller-leader-elect-capoci",
-		CertDir:                webhookCertDir,
+		Scheme:                     scheme,
+		MetricsBindAddress:         metricsAddr,
+		Port:                       webhookPort,
+		HealthProbeBindAddress:     probeAddr,
+		LeaderElection:             enableLeaderElection,
+		LeaderElectionID:           "controller-leader-elect-capoci",
+		LeaderElectionResourceLock: resourcelock.LeasesResourceLock,
+		LeaderElectionNamespace:    leaderElectionNamespace,
+		LeaseDuration:              &leaderElectionLeaseDuration,
+		RenewDeadline:              &leaderElectionRenewDeadline,
+		RetryPeriod:                &leaderElectionRetryPeriod,
+		CertDir:                    webhookCertDir,
+		Namespace:                  watchNamespace,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
