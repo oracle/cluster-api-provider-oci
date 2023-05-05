@@ -24,7 +24,10 @@ import (
 
 // Convert_v1beta1_VCN_To_v1beta2_VCN converts v1beta1 VCN to v1beta2 VCN
 func Convert_v1beta1_VCN_To_v1beta2_VCN(in *VCN, out *v1beta2.VCN, s conversion.Scope) error {
-	autoConvert_v1beta1_VCN_To_v1beta2_VCN(in, out, s)
+	err := autoConvert_v1beta1_VCN_To_v1beta2_VCN(in, out, s)
+	if err != nil {
+		return err
+	}
 	if in.InternetGatewayId != nil {
 		out.InternetGateway.Id = in.InternetGatewayId
 	}
@@ -52,7 +55,10 @@ func Convert_v1beta1_VCN_To_v1beta2_VCN(in *VCN, out *v1beta2.VCN, s conversion.
 
 // Convert_v1beta2_VCN_To_v1beta1_VCN converts v1beta2 VCN to v1beta1 VCN
 func Convert_v1beta2_VCN_To_v1beta1_VCN(in *v1beta2.VCN, out *VCN, s conversion.Scope) error {
-	autoConvert_v1beta2_VCN_To_v1beta1_VCN(in, out, s)
+	err := autoConvert_v1beta2_VCN_To_v1beta1_VCN(in, out, s)
+	if err != nil {
+		return err
+	}
 	if in.InternetGateway.Id != nil {
 		out.InternetGatewayId = in.InternetGateway.Id
 	}
