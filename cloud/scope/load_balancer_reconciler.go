@@ -166,9 +166,6 @@ func (s *ClusterScope) CreateLB(ctx context.Context, lb infrastructurev1beta2.Lo
 		return nil, nil, errors.New("control plane endpoint subnet not provided")
 	}
 
-	if len(controlPlaneEndpointSubnets) > 1 {
-		return nil, nil, errors.New("cannot have more than 1 control plane endpoint subnet")
-	}
 	lbDetails := loadbalancer.CreateLoadBalancerDetails{
 		CompartmentId: common.String(s.GetCompartmentId()),
 		DisplayName:   common.String(lb.Name),
@@ -182,14 +179,15 @@ func (s *ClusterScope) CreateLB(ctx context.Context, lb infrastructurev1beta2.Lo
 		FreeformTags: s.GetFreeFormTags(),
 		DefinedTags:  s.GetDefinedTags(),
 	}
-
+	nsgs := make([]string, 0)
 	for _, nsg := range s.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List {
 		if nsg.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
 			if nsg.ID != nil {
-				lbDetails.NetworkSecurityGroupIds = []string{*nsg.ID}
+				nsgs = append(nsgs, *nsg.ID)
 			}
 		}
 	}
+	lbDetails.NetworkSecurityGroupIds = nsgs
 
 	s.Logger.Info("Creating load balancer...")
 	lbResponse, err := s.LoadBalancerClient.CreateLoadBalancer(ctx, loadbalancer.CreateLoadBalancerRequest{
