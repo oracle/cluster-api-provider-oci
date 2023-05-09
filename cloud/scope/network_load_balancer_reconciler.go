@@ -183,14 +183,15 @@ func (s *ClusterScope) CreateNLB(ctx context.Context, lb infrastructurev1beta2.L
 		FreeformTags:  s.GetFreeFormTags(),
 		DefinedTags:   s.GetDefinedTags(),
 	}
-
+	nsgs := make([]string, 0)
 	for _, nsg := range s.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List {
 		if nsg.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
 			if nsg.ID != nil {
-				nlbDetails.NetworkSecurityGroupIds = []string{*nsg.ID}
+				nsgs = append(nsgs, *nsg.ID)
 			}
 		}
 	}
+	nlbDetails.NetworkSecurityGroupIds = nsgs
 
 	s.Logger.Info("Creating network load balancer")
 	nlbResponse, err := s.NetworkLoadBalancerClient.CreateNetworkLoadBalancer(ctx, networkloadbalancer.CreateNetworkLoadBalancerRequest{

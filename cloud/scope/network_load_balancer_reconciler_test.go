@@ -250,6 +250,18 @@ func TestNLBReconciliation(t *testing.T) {
 						ID:   common.String("s1"),
 					},
 				}
+				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup = infrastructurev1beta2.NetworkSecurityGroup{
+					List: []*infrastructurev1beta2.NSG{
+						{
+							Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+							ID:   common.String("nsg1"),
+						},
+						{
+							Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+							ID:   common.String("nsg2"),
+						},
+					},
+				}
 				definedTags, definedTagsInterface := getDefinedTags()
 				ociClusterAccessor.OCICluster.Spec.DefinedTags = definedTags
 				nlbClient.EXPECT().ListNetworkLoadBalancers(gomock.Any(), gomock.Eq(networkloadbalancer.ListNetworkLoadBalancersRequest{
@@ -259,10 +271,11 @@ func TestNLBReconciliation(t *testing.T) {
 					Return(networkloadbalancer.ListNetworkLoadBalancersResponse{}, nil)
 				nlbClient.EXPECT().CreateNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.CreateNetworkLoadBalancerRequest{
 					CreateNetworkLoadBalancerDetails: networkloadbalancer.CreateNetworkLoadBalancerDetails{
-						CompartmentId: common.String("compartment-id"),
-						DisplayName:   common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
-						SubnetId:      common.String("s1"),
-						IsPrivate:     common.Bool(false),
+						CompartmentId:           common.String("compartment-id"),
+						DisplayName:             common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
+						SubnetId:                common.String("s1"),
+						IsPrivate:               common.Bool(false),
+						NetworkSecurityGroupIds: []string{"nsg1", "nsg2"},
 						Listeners: map[string]networkloadbalancer.ListenerDetails{
 							APIServerLBListener: {
 								Protocol:              networkloadbalancer.ListenerProtocolsTcp,
@@ -342,10 +355,11 @@ func TestNLBReconciliation(t *testing.T) {
 					Return(networkloadbalancer.ListNetworkLoadBalancersResponse{}, nil)
 				nlbClient.EXPECT().CreateNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.CreateNetworkLoadBalancerRequest{
 					CreateNetworkLoadBalancerDetails: networkloadbalancer.CreateNetworkLoadBalancerDetails{
-						CompartmentId: common.String("compartment-id"),
-						DisplayName:   common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
-						SubnetId:      common.String("s1"),
-						IsPrivate:     common.Bool(false),
+						CompartmentId:           common.String("compartment-id"),
+						DisplayName:             common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
+						SubnetId:                common.String("s1"),
+						IsPrivate:               common.Bool(false),
+						NetworkSecurityGroupIds: make([]string, 0),
 						Listeners: map[string]networkloadbalancer.ListenerDetails{
 							APIServerLBListener: {
 								Protocol:              networkloadbalancer.ListenerProtocolsTcp,
@@ -394,10 +408,11 @@ func TestNLBReconciliation(t *testing.T) {
 					Return(networkloadbalancer.ListNetworkLoadBalancersResponse{}, nil)
 				nlbClient.EXPECT().CreateNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.CreateNetworkLoadBalancerRequest{
 					CreateNetworkLoadBalancerDetails: networkloadbalancer.CreateNetworkLoadBalancerDetails{
-						CompartmentId: common.String("compartment-id"),
-						DisplayName:   common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
-						SubnetId:      common.String("s1"),
-						IsPrivate:     common.Bool(false),
+						CompartmentId:           common.String("compartment-id"),
+						DisplayName:             common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
+						SubnetId:                common.String("s1"),
+						NetworkSecurityGroupIds: make([]string, 0),
+						IsPrivate:               common.Bool(false),
 						Listeners: map[string]networkloadbalancer.ListenerDetails{
 							APIServerLBListener: {
 								Protocol:              networkloadbalancer.ListenerProtocolsTcp,
