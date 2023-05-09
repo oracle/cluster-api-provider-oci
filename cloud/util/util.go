@@ -51,8 +51,8 @@ func GetClusterIdentityFromRef(ctx context.Context, c client.Client, ociClusterN
 	return nil, nil
 }
 
-// GetOCIClientCertFromSecret returns the cert referenced by the OCICluster.
-func GetOCIClientCertFromSecret(ctx context.Context, c client.Client, ociClusterNamespace string, overrides *infrastructurev1beta2.ClientOverrides) (*corev1.Secret, error) {
+// getOCIClientCertFromSecret returns the cert referenced by the OCICluster.
+func getOCIClientCertFromSecret(ctx context.Context, c client.Client, ociClusterNamespace string, overrides *infrastructurev1beta2.ClientOverrides) (*corev1.Secret, error) {
 	secret := &corev1.Secret{}
 	if overrides != nil {
 		certSecretRef := overrides.CertOverride
@@ -72,7 +72,7 @@ func GetOCIClientCertFromSecret(ctx context.Context, c client.Client, ociCluster
 func getOCIClientCertPool(ctx context.Context, c client.Client, namespace string, clientOverrides *infrastructurev1beta2.ClientOverrides) (*x509.CertPool, error) {
 	var pool *x509.CertPool = nil
 	if clientOverrides != nil && clientOverrides.CertOverride != nil {
-		cert, err := GetOCIClientCertFromSecret(ctx, c, namespace, clientOverrides)
+		cert, err := getOCIClientCertFromSecret(ctx, c, namespace, clientOverrides)
 		if err != nil {
 			return nil, errors.Wrap(err, "Unable to fetch CertOverrideSecret")
 		}

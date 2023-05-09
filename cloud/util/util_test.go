@@ -298,3 +298,158 @@ func TestCreateClientProviderFromClusterIdentity(t *testing.T) {
 		})
 	}
 }
+
+func TestInitClientsAndRegion(t *testing.T) {
+	clientProvider, err := scope.MockNewClientProvider(scope.MockOCIClients{})
+	if err != nil {
+		t.Error(err)
+	}
+
+	testCases := []struct {
+		name            string
+		namespace       string
+		objects         []client.Object
+		clusterAccessor scope.OCIClusterAccessor
+		clientProvider  *scope.ClientProvider
+		errorExpected   bool
+		errorMessage    string
+		defaultRegion   string
+		secret          *corev1.Secret
+	}{
+		{
+			name:          "good - secret found",
+			namespace:     "default",
+			defaultRegion: "ashburn-1",
+			clusterAccessor: scope.OCISelfManagedCluster{
+				OCICluster: &infrastructurev1beta2.OCICluster{
+					Spec: infrastructurev1beta2.OCIClusterSpec{
+						ClientOverrides: &infrastructurev1beta2.ClientOverrides{
+							CertOverride: &corev1.SecretReference{
+								Name:      "certSecret",
+								Namespace: "default",
+							},
+						},
+					},
+				},
+			},
+			objects: []client.Object{&infrastructurev1beta2.OCIClusterIdentity{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-identity",
+					Namespace: "default",
+				},
+				Spec: infrastructurev1beta2.OCIClusterIdentitySpec{
+					Type: infrastructurev1beta2.UserPrincipal,
+					PrincipalSecret: corev1.SecretReference{
+						Name:      "test",
+						Namespace: "test",
+					},
+				},
+			}, &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "certSecret",
+					Namespace: "default",
+				},
+				Type: corev1.SecretTypeBootstrapToken,
+				Data: map[string][]byte{
+					"cert": []byte("TestPemCert"),
+				},
+			}},
+			clientProvider: clientProvider,
+			errorExpected:  false,
+		},
+		{
+			name:          "bad - secret not found - wrong namespace",
+			namespace:     "default",
+			defaultRegion: "ashburn-1",
+			clusterAccessor: scope.OCISelfManagedCluster{
+				OCICluster: &infrastructurev1beta2.OCICluster{
+					Spec: infrastructurev1beta2.OCIClusterSpec{
+						ClientOverrides: &infrastructurev1beta2.ClientOverrides{
+							CertOverride: &corev1.SecretReference{
+								Name:      "certSecret",
+								Namespace: "default",
+							},
+						},
+					},
+				},
+			},
+			objects: []client.Object{&infrastructurev1beta2.OCIClusterIdentity{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-identity",
+					Namespace: "default",
+				},
+				Spec: infrastructurev1beta2.OCIClusterIdentitySpec{
+					Type: infrastructurev1beta2.UserPrincipal,
+					PrincipalSecret: corev1.SecretReference{
+						Name:      "test",
+						Namespace: "test",
+					},
+				},
+			}, &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "certSecret",
+					Namespace: "badNamespace",
+				},
+				Type: corev1.SecretTypeBootstrapToken,
+				Data: map[string][]byte{
+					"cert": []byte("TestPemCert"),
+				},
+			}},
+			clientProvider: clientProvider,
+			errorExpected:  true,
+			errorMessage:   "Unable to fetch CertOverrideSecret: secrets \"certSecret\" not found",
+		},
+		{
+			name:          "bad - secret not found - missing cert data",
+			namespace:     "default",
+			defaultRegion: "ashburn-1",
+			clusterAccessor: scope.OCISelfManagedCluster{
+				OCICluster: &infrastructurev1beta2.OCICluster{
+					Spec: infrastructurev1beta2.OCIClusterSpec{
+						ClientOverrides: &infrastructurev1beta2.ClientOverrides{
+							CertOverride: &corev1.SecretReference{
+								Name:      "certSecret",
+								Namespace: "default",
+							},
+						},
+					},
+				},
+			},
+			objects: []client.Object{&infrastructurev1beta2.OCIClusterIdentity{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-identity",
+					Namespace: "default",
+				},
+				Spec: infrastructurev1beta2.OCIClusterIdentitySpec{
+					Type: infrastructurev1beta2.UserPrincipal,
+					PrincipalSecret: corev1.SecretReference{
+						Name:      "test",
+						Namespace: "test",
+					},
+				},
+			}, &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "certSecret",
+					Namespace: "default",
+				},
+				Type: corev1.SecretTypeBootstrapToken,
+			}},
+			clientProvider: clientProvider,
+			errorExpected:  true,
+			errorMessage:   "Cert Secret didn't contain 'cert' data",
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			client := fake.NewClientBuilder().WithObjects(tt.objects...).Build()
+			_, _, _, err := InitClientsAndRegion(context.Background(), client, tt.defaultRegion, tt.clusterAccessor, tt.clientProvider)
+			if tt.errorExpected {
+				g.Expect(err).To(Not(BeNil()))
+				g.Expect(err.Error()).To(Equal(tt.errorMessage))
+			} else {
+				g.Expect(err).To(BeNil())
+			}
+		})
+	}
+}
