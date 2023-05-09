@@ -51,8 +51,8 @@ func GetClusterIdentityFromRef(ctx context.Context, c client.Client, ociClusterN
 	return nil, nil
 }
 
-// GetClusterCertFromSecret returns the cert referenced by the OCICluster.
-func GetClusterCertFromSecret(ctx context.Context, c client.Client, ociClusterNamespace string, overrides *infrastructurev1beta2.ClientOverrides) (*corev1.Secret, error) {
+// GetOCIClientCertFromSecret returns the cert referenced by the OCICluster.
+func GetOCIClientCertFromSecret(ctx context.Context, c client.Client, ociClusterNamespace string, overrides *infrastructurev1beta2.ClientOverrides) (*corev1.Secret, error) {
 	secret := &corev1.Secret{}
 	if overrides != nil {
 		certSecretRef := overrides.CertOverride
@@ -67,6 +67,23 @@ func GetClusterCertFromSecret(ctx context.Context, c client.Client, ociClusterNa
 		return secret, nil
 	}
 	return nil, nil
+}
+
+func getOCIClientCertPool(ctx context.Context, c client.Client, namespace string, clientOverrides *infrastructurev1beta2.ClientOverrides) (*x509.CertPool, error) {
+	var pool *x509.CertPool = nil
+	if clientOverrides != nil && clientOverrides.CertOverride != nil {
+		cert, err := GetOCIClientCertFromSecret(ctx, c, namespace, clientOverrides)
+		if err != nil {
+			return nil, errors.Wrap(err, "Unable to fetch CertOverrideSecret")
+		}
+		pool = x509.NewCertPool()
+		if cert, ok := cert.Data["cert"]; ok {
+			pool.AppendCertsFromPEM(cert)
+		} else {
+			return nil, errors.New("Cert Secret didn't contain 'cert' data")
+		}
+	}
+	return pool, nil
 }
 
 // GetOrBuildClientFromIdentity creates ClientProvider from OCIClusterIdentity object
@@ -101,18 +118,9 @@ func GetOrBuildClientFromIdentity(ctx context.Context, c client.Client, identity
 			privatekey,
 			common.String(passphrase))
 
-		var pool *x509.CertPool = nil
-		if clientOverrides != nil && clientOverrides.CertOverride != nil {
-			cert, err := GetClusterCertFromSecret(ctx, c, namespace, clientOverrides)
-			if err != nil {
-				return nil, errors.Wrap(err, "Unable to fetch CertOverrideSecret")
-			}
-			pool = x509.NewCertPool()
-			if cert, ok := cert.Data["cert"]; ok {
-				pool.AppendCertsFromPEM(cert)
-			} else {
-				return nil, errors.New("Cert Secret didn't contain 'cert' data")
-			}
+		pool, err := getOCIClientCertPool(ctx, c, namespace, clientOverrides)
+		if err != nil {
+			return nil, err
 		}
 
 		clientProvider, err := scope.NewClientProvider(scope.ClientProviderParams{
@@ -193,18 +201,9 @@ func InitClientsAndRegion(ctx context.Context, client client.Client, defaultRegi
 		}
 		clusterRegion = region
 	} else if clusterAccessor.GetClientOverrides() != nil {
-		var pool *x509.CertPool = nil
-		if clusterAccessor.GetClientOverrides().CertOverride != nil {
-			cert, err := GetClusterCertFromSecret(ctx, client, clusterAccessor.GetNameSpace(), clusterAccessor.GetClientOverrides())
-			if err != nil {
-				return nil, "", scope.OCIClients{}, err
-			}
-			pool = x509.NewCertPool()
-			if cert, ok := cert.Data["cert"]; ok {
-				pool.AppendCertsFromPEM(cert)
-			} else {
-				return nil, "", scope.OCIClients{}, errors.New("Cert Secret didn't contain 'cert' data")
-			}
+		pool, err := getOCIClientCertPool(ctx, client, clusterAccessor.GetNameSpace(), clusterAccessor.GetClientOverrides())
+		if err != nil {
+			return nil, "", scope.OCIClients{}, err
 		}
 		// IdentityRef provider will be created with client host url overrides
 		// but if no identityRef we will want to create a new client provider with the overrides

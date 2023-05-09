@@ -363,11 +363,11 @@ func (c *ClientProvider) createContainerEngineClient(region string, ociAuthConfi
 		if client, ok := containerEngineClt.HTTPClient.(*http.Client); ok {
 			err = c.setCerts(client)
 			if err != nil {
-				logger.Error(err, "unable to create OCI Compute Engine Client")
+				logger.Error(err, "unable to create OCI Container Engine Client")
 				return nil, err
 			}
 		} else {
-			return nil, errors.New("The Compute Engine Client dispatcher is not of http.Client type. Can not patch the tls config.")
+			return nil, errors.New("The Container Engine Client dispatcher is not of http.Client type. Can not patch the tls config.")
 		}
 	}
 
