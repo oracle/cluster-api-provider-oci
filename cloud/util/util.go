@@ -18,6 +18,7 @@ package util
 
 import (
 	"context"
+	"crypto/x509"
 	"fmt"
 	"reflect"
 
@@ -50,8 +51,43 @@ func GetClusterIdentityFromRef(ctx context.Context, c client.Client, ociClusterN
 	return nil, nil
 }
 
+// getOCIClientCertFromSecret returns the cert referenced by the OCICluster.
+func getOCIClientCertFromSecret(ctx context.Context, c client.Client, ociClusterNamespace string, overrides *infrastructurev1beta2.ClientOverrides) (*corev1.Secret, error) {
+	secret := &corev1.Secret{}
+	if overrides != nil {
+		certSecretRef := overrides.CertOverride
+		namespace := certSecretRef.Namespace
+		if namespace == "" {
+			namespace = ociClusterNamespace
+		}
+		key := types.NamespacedName{Namespace: namespace, Name: certSecretRef.Name}
+		if err := c.Get(ctx, key, secret); err != nil {
+			return nil, err
+		}
+		return secret, nil
+	}
+	return nil, nil
+}
+
+func getOCIClientCertPool(ctx context.Context, c client.Client, namespace string, clientOverrides *infrastructurev1beta2.ClientOverrides) (*x509.CertPool, error) {
+	var pool *x509.CertPool = nil
+	if clientOverrides != nil && clientOverrides.CertOverride != nil {
+		cert, err := getOCIClientCertFromSecret(ctx, c, namespace, clientOverrides)
+		if err != nil {
+			return nil, errors.Wrap(err, "Unable to fetch CertOverrideSecret")
+		}
+		pool = x509.NewCertPool()
+		if cert, ok := cert.Data["cert"]; ok {
+			pool.AppendCertsFromPEM(cert)
+		} else {
+			return nil, errors.New("Cert Secret didn't contain 'cert' data")
+		}
+	}
+	return pool, nil
+}
+
 // GetOrBuildClientFromIdentity creates ClientProvider from OCIClusterIdentity object
-func GetOrBuildClientFromIdentity(ctx context.Context, c client.Client, identity *infrastructurev1beta2.OCIClusterIdentity, defaultRegion string, clientOverrides *infrastructurev1beta2.ClientOverrides) (*scope.ClientProvider, error) {
+func GetOrBuildClientFromIdentity(ctx context.Context, c client.Client, identity *infrastructurev1beta2.OCIClusterIdentity, defaultRegion string, clientOverrides *infrastructurev1beta2.ClientOverrides, namespace string) (*scope.ClientProvider, error) {
 	if identity.Spec.Type == infrastructurev1beta2.UserPrincipal {
 		secretRef := identity.Spec.PrincipalSecret
 		key := types.NamespacedName{
@@ -82,9 +118,16 @@ func GetOrBuildClientFromIdentity(ctx context.Context, c client.Client, identity
 			privatekey,
 			common.String(passphrase))
 
+		pool, err := getOCIClientCertPool(ctx, c, namespace, clientOverrides)
+		if err != nil {
+			return nil, err
+		}
+
 		clientProvider, err := scope.NewClientProvider(scope.ClientProviderParams{
+			CertOverride:          pool,
 			OciAuthConfigProvider: conf,
 			ClientOverrides:       clientOverrides})
+
 		if err != nil {
 			return nil, err
 		}
@@ -158,9 +201,14 @@ func InitClientsAndRegion(ctx context.Context, client client.Client, defaultRegi
 		}
 		clusterRegion = region
 	} else if clusterAccessor.GetClientOverrides() != nil {
+		pool, err := getOCIClientCertPool(ctx, client, clusterAccessor.GetNameSpace(), clusterAccessor.GetClientOverrides())
+		if err != nil {
+			return nil, "", scope.OCIClients{}, err
+		}
 		// IdentityRef provider will be created with client host url overrides
 		// but if no identityRef we will want to create a new client provider with the overrides
 		clientProvider, err = scope.NewClientProvider(scope.ClientProviderParams{
+			CertOverride:          pool,
 			OciAuthConfigProvider: defaultClientProvider.GetAuthProvider(),
 			ClientOverrides:       clusterAccessor.GetClientOverrides()})
 		if err != nil {
@@ -200,7 +248,7 @@ func CreateClientProviderFromClusterIdentity(ctx context.Context, client client.
 		return nil, errors.Errorf("OCIClusterIdentity list of allowed namespaces doesn't include current cluster namespace %s", namespace)
 	}
 
-	clientProvider, err := GetOrBuildClientFromIdentity(ctx, client, identity, defaultRegion, clusterAccessor.GetClientOverrides())
+	clientProvider, err := GetOrBuildClientFromIdentity(ctx, client, identity, defaultRegion, clusterAccessor.GetClientOverrides(), namespace)
 	if err != nil {
 		return nil, err
 	}

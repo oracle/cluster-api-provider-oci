@@ -1167,6 +1167,22 @@ spec:
                   be changed.
                 nullable: true
                 properties:
+                  certOverride:
+                    description: CertOverride is a secret that contains information
+                      about a cert override used by all the OCI SDK clients. The secret
+                      must contain data with a `cert`property.
+                    nullable: true
+                    properties:
+                      name:
+                        description: name is unique within a namespace to reference
+                          a secret resource.
+                        type: string
+                      namespace:
+                        description: namespace defines the space within which the
+                          secret name must be unique.
+                        type: string
+                    type: object
+                    x-kubernetes-map-type: atomic
                   computeClientUrl:
                     description: ComputeClientUrl allows the default compute SDK client
                       URL to be changed.
