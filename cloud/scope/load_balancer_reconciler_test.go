@@ -217,9 +217,8 @@ func TestLBReconciliation(t *testing.T) {
 			},
 		},
 		{
-			name:          "more than one cp subnet",
-			errorExpected: true,
-			matchError:    errors.New("cannot have more than 1 control plane endpoint subnet"),
+			name:          "create load balancer more than one subnet",
+			errorExpected: false,
 			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient) {
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta2.Subnet{
 					{
@@ -231,21 +230,16 @@ func TestLBReconciliation(t *testing.T) {
 						ID:   common.String("s2"),
 					},
 				}
-				lbClient.EXPECT().ListLoadBalancers(gomock.Any(), gomock.Eq(loadbalancer.ListLoadBalancersRequest{
-					CompartmentId: common.String("compartment-id"),
-					DisplayName:   common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
-				})).
-					Return(loadbalancer.ListLoadBalancersResponse{}, nil)
-			},
-		},
-		{
-			name:          "create load balancer",
-			errorExpected: false,
-			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient) {
-				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta2.Subnet{
-					{
-						Role: infrastructurev1beta2.ControlPlaneEndpointRole,
-						ID:   common.String("s1"),
+				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup = infrastructurev1beta2.NetworkSecurityGroup{
+					List: []*infrastructurev1beta2.NSG{
+						{
+							Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+							ID:   common.String("nsg1"),
+						},
+						{
+							Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+							ID:   common.String("nsg2"),
+						},
 					},
 				}
 				definedTags, definedTagsInterface := getDefinedTags()
@@ -258,11 +252,107 @@ func TestLBReconciliation(t *testing.T) {
 				}, nil)
 				lbClient.EXPECT().CreateLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.CreateLoadBalancerRequest{
 					CreateLoadBalancerDetails: loadbalancer.CreateLoadBalancerDetails{
-						CompartmentId: common.String("compartment-id"),
-						DisplayName:   common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
-						SubnetIds:     []string{"s1"},
-						IsPrivate:     common.Bool(false),
-						ShapeName:     common.String("flexible"),
+						CompartmentId:           common.String("compartment-id"),
+						DisplayName:             common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
+						SubnetIds:               []string{"s1", "s2"},
+						NetworkSecurityGroupIds: []string{"nsg1", "nsg2"},
+						IsPrivate:               common.Bool(false),
+						ShapeName:               common.String("flexible"),
+						ShapeDetails: &loadbalancer.ShapeDetails{MaximumBandwidthInMbps: common.Int(100),
+							MinimumBandwidthInMbps: common.Int(10)},
+						Listeners: map[string]loadbalancer.ListenerDetails{
+							APIServerLBListener: {
+								Protocol:              common.String("TCP"),
+								Port:                  common.Int(int(6443)),
+								DefaultBackendSetName: common.String(APIServerLBBackendSetName),
+							},
+						},
+						BackendSets: map[string]loadbalancer.BackendSetDetails{
+							APIServerLBBackendSetName: loadbalancer.BackendSetDetails{
+								Policy: common.String("ROUND_ROBIN"),
+
+								HealthChecker: &loadbalancer.HealthCheckerDetails{
+									Port:     common.Int(6443),
+									Protocol: common.String("TCP"),
+								},
+								Backends: []loadbalancer.BackendDetails{},
+							},
+						},
+						FreeformTags: tags,
+						DefinedTags:  definedTagsInterface,
+					},
+					OpcRetryToken: ociutil.GetOPCRetryToken("%s-%s", "create-lb", string("resource_uid")),
+				})).
+					Return(loadbalancer.CreateLoadBalancerResponse{
+						OpcWorkRequestId: common.String("opc-wr-id"),
+					}, nil)
+				lbClient.EXPECT().GetWorkRequest(gomock.Any(), gomock.Eq(loadbalancer.GetWorkRequestRequest{
+					WorkRequestId: common.String("opc-wr-id"),
+				})).Return(loadbalancer.GetWorkRequestResponse{
+					WorkRequest: loadbalancer.WorkRequest{
+						LoadBalancerId: common.String("lb-id"),
+						LifecycleState: loadbalancer.WorkRequestLifecycleStateSucceeded,
+					},
+				}, nil)
+
+				lbClient.EXPECT().GetLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.GetLoadBalancerRequest{
+					LoadBalancerId: common.String("lb-id"),
+				})).
+					Return(loadbalancer.GetLoadBalancerResponse{
+						LoadBalancer: loadbalancer.LoadBalancer{
+							Id:           common.String("lb-id"),
+							FreeformTags: tags,
+							IsPrivate:    common.Bool(false),
+							DisplayName:  common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
+							IpAddresses: []loadbalancer.IpAddress{
+								{
+									IpAddress: common.String("2.2.2.2"),
+									IsPublic:  common.Bool(true),
+								},
+							},
+						},
+					}, nil)
+
+			},
+		},
+		{
+			name:          "create load balancer",
+			errorExpected: false,
+			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient) {
+				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta2.Subnet{
+					{
+						Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+						ID:   common.String("s1"),
+					},
+				}
+				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup = infrastructurev1beta2.NetworkSecurityGroup{
+					List: []*infrastructurev1beta2.NSG{
+						{
+							Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+							ID:   common.String("nsg1"),
+						},
+						{
+							Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+							ID:   common.String("nsg2"),
+						},
+					},
+				}
+				definedTags, definedTagsInterface := getDefinedTags()
+				ociClusterAccessor.OCICluster.Spec.DefinedTags = definedTags
+				lbClient.EXPECT().ListLoadBalancers(gomock.Any(), gomock.Eq(loadbalancer.ListLoadBalancersRequest{
+					CompartmentId: common.String("compartment-id"),
+					DisplayName:   common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
+				})).Return(loadbalancer.ListLoadBalancersResponse{
+					Items: []loadbalancer.LoadBalancer{},
+				}, nil)
+				lbClient.EXPECT().CreateLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.CreateLoadBalancerRequest{
+					CreateLoadBalancerDetails: loadbalancer.CreateLoadBalancerDetails{
+						CompartmentId:           common.String("compartment-id"),
+						DisplayName:             common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
+						SubnetIds:               []string{"s1"},
+						NetworkSecurityGroupIds: []string{"nsg1", "nsg2"},
+						IsPrivate:               common.Bool(false),
+						ShapeName:               common.String("flexible"),
 						ShapeDetails: &loadbalancer.ShapeDetails{MaximumBandwidthInMbps: common.Int(100),
 							MinimumBandwidthInMbps: common.Int(10)},
 						Listeners: map[string]loadbalancer.ListenerDetails{
@@ -340,10 +430,11 @@ func TestLBReconciliation(t *testing.T) {
 				}, nil)
 				lbClient.EXPECT().CreateLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.CreateLoadBalancerRequest{
 					CreateLoadBalancerDetails: loadbalancer.CreateLoadBalancerDetails{
-						CompartmentId: common.String("compartment-id"),
-						DisplayName:   common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
-						SubnetIds:     []string{"s1"},
-						ShapeName:     common.String("flexible"),
+						CompartmentId:           common.String("compartment-id"),
+						DisplayName:             common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
+						SubnetIds:               []string{"s1"},
+						NetworkSecurityGroupIds: make([]string, 0),
+						ShapeName:               common.String("flexible"),
 						ShapeDetails: &loadbalancer.ShapeDetails{MaximumBandwidthInMbps: common.Int(100),
 							MinimumBandwidthInMbps: common.Int(10)},
 						IsPrivate: common.Bool(false),
@@ -391,10 +482,11 @@ func TestLBReconciliation(t *testing.T) {
 					Return(loadbalancer.ListLoadBalancersResponse{}, nil)
 				lbClient.EXPECT().CreateLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.CreateLoadBalancerRequest{
 					CreateLoadBalancerDetails: loadbalancer.CreateLoadBalancerDetails{
-						CompartmentId: common.String("compartment-id"),
-						DisplayName:   common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
-						SubnetIds:     []string{"s1"},
-						ShapeName:     common.String("flexible"),
+						CompartmentId:           common.String("compartment-id"),
+						DisplayName:             common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
+						SubnetIds:               []string{"s1"},
+						NetworkSecurityGroupIds: make([]string, 0),
+						ShapeName:               common.String("flexible"),
 						ShapeDetails: &loadbalancer.ShapeDetails{MaximumBandwidthInMbps: common.Int(100),
 							MinimumBandwidthInMbps: common.Int(10)},
 						IsPrivate: common.Bool(false),

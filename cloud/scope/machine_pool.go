@@ -530,9 +530,9 @@ func (m *MachinePoolScope) FindInstancePool(ctx context.Context) (*core.Instance
 	}
 
 	var instancePoolSummary *core.InstancePoolSummary
-	for _, i := range instancePoolSummaries {
-		if m.IsResourceCreatedByClusterAPI(i.FreeformTags) {
-			instancePoolSummary = &i
+	for i, summary := range instancePoolSummaries {
+		if m.IsResourceCreatedByClusterAPI(summary.FreeformTags) {
+			instancePoolSummary = &instancePoolSummaries[i]
 			break
 		}
 	}

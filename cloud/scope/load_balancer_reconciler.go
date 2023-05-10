@@ -166,9 +166,6 @@ func (s *ClusterScope) CreateLB(ctx context.Context, lb infrastructurev1beta2.Lo
 		return nil, nil, errors.New("control plane endpoint subnet not provided")
 	}
 
-	if len(controlPlaneEndpointSubnets) > 1 {
-		return nil, nil, errors.New("cannot have more than 1 control plane endpoint subnet")
-	}
 	lbDetails := loadbalancer.CreateLoadBalancerDetails{
 		CompartmentId: common.String(s.GetCompartmentId()),
 		DisplayName:   common.String(lb.Name),
@@ -182,14 +179,15 @@ func (s *ClusterScope) CreateLB(ctx context.Context, lb infrastructurev1beta2.Lo
 		FreeformTags: s.GetFreeFormTags(),
 		DefinedTags:  s.GetDefinedTags(),
 	}
-
+	nsgs := make([]string, 0)
 	for _, nsg := range s.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List {
 		if nsg.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
 			if nsg.ID != nil {
-				lbDetails.NetworkSecurityGroupIds = []string{*nsg.ID}
+				nsgs = append(nsgs, *nsg.ID)
 			}
 		}
 	}
+	lbDetails.NetworkSecurityGroupIds = nsgs
 
 	s.Logger.Info("Creating load balancer...")
 	lbResponse, err := s.LoadBalancerClient.CreateLoadBalancer(ctx, loadbalancer.CreateLoadBalancerRequest{
@@ -273,24 +271,34 @@ func (s *ClusterScope) GetLoadBalancers(ctx context.Context) (*loadbalancer.Load
 			return nil, errors.New("cluster api tags have been modified out of context")
 		}
 	}
-	lbs, err := s.LoadBalancerClient.ListLoadBalancers(ctx, loadbalancer.ListLoadBalancersRequest{
-		CompartmentId: common.String(s.GetCompartmentId()),
-		DisplayName:   common.String(s.GetControlPlaneLoadBalancerName()),
-	})
-	if err != nil {
-		s.Logger.Error(err, "Failed to list lb by name")
-		return nil, errors.Wrap(err, "failed to list lb by name")
-	}
+	var page *string
+	for {
+		lbs, err := s.LoadBalancerClient.ListLoadBalancers(ctx, loadbalancer.ListLoadBalancersRequest{
+			CompartmentId: common.String(s.GetCompartmentId()),
+			DisplayName:   common.String(s.GetControlPlaneLoadBalancerName()),
+			Page:          page,
+		})
+		if err != nil {
+			s.Logger.Error(err, "Failed to list lb by name")
+			return nil, errors.Wrap(err, "failed to list lb by name")
+		}
 
-	for _, lb := range lbs.Items {
-		if s.IsResourceCreatedByClusterAPI(lb.FreeformTags) {
-			resp, err := s.LoadBalancerClient.GetLoadBalancer(ctx, loadbalancer.GetLoadBalancerRequest{
-				LoadBalancerId: lb.Id,
-			})
-			if err != nil {
-				return nil, err
+		for _, lb := range lbs.Items {
+			if s.IsResourceCreatedByClusterAPI(lb.FreeformTags) {
+				resp, err := s.LoadBalancerClient.GetLoadBalancer(ctx, loadbalancer.GetLoadBalancerRequest{
+					LoadBalancerId: lb.Id,
+				})
+				if err != nil {
+					return nil, err
+				}
+				return &resp.LoadBalancer, nil
 			}
-			return &resp.LoadBalancer, nil
+		}
+
+		if lbs.OpcNextPage == nil {
+			break
+		} else {
+			page = lbs.OpcNextPage
 		}
 	}
 	return nil, nil
