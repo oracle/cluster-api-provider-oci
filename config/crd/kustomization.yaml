@@ -10,7 +10,6 @@ resources:
 - bases/infrastructure.cluster.x-k8s.io_ocimachines.yaml
 - bases/infrastructure.cluster.x-k8s.io_ocimachinepools.yaml
 - bases/infrastructure.cluster.x-k8s.io_ocimachinetemplates.yaml
-- bases/infrastructure.cluster.x-k8s.io_ocimanagedclustertemplates.yaml
 - bases/infrastructure.cluster.x-k8s.io_ociclustertemplates.yaml
 - bases/infrastructure.cluster.x-k8s.io_ocimanagedmachinepools.yaml
 - bases/infrastructure.cluster.x-k8s.io_ocimanagedcontrolplanes.yaml
