@@ -753,8 +753,7 @@ func (in *OCIManagedClusterSpec) DeepCopyInto(out *OCIManagedClusterSpec) {
 			if val == nil {
 				(*out)[key] = nil
 			} else {
-				inVal := (*in)[key]
-				in, out := &inVal, &outVal
+				in, out := &val, &outVal
 				*out = make(map[string]string, len(*in))
 				for key, val := range *in {
 					(*out)[key] = val
