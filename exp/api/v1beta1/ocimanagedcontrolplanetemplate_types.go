@@ -27,7 +27,6 @@ type OCIManagedControlPlaneTemplateSpec struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:path=ocimanagedcontrolplanetemplates,scope=Namespaced,categories=cluster-api
-// +kubebuilder:storageversion
 
 // OCIManagedControlPlaneTemplate is the Schema for the OCIManagedControlPlaneTemplates API.
 type OCIManagedControlPlaneTemplate struct {

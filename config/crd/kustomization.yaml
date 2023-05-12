@@ -12,8 +12,11 @@ resources:
 - bases/infrastructure.cluster.x-k8s.io_ocimachinetemplates.yaml
 - bases/infrastructure.cluster.x-k8s.io_ociclustertemplates.yaml
 - bases/infrastructure.cluster.x-k8s.io_ocimanagedmachinepools.yaml
+- bases/infrastructure.cluster.x-k8s.io_ocimanagedmachinepooltemplates.yaml
 - bases/infrastructure.cluster.x-k8s.io_ocimanagedcontrolplanes.yaml
+- bases/infrastructure.cluster.x-k8s.io_ocimanagedcontrolplanetemplates.yaml
 - bases/infrastructure.cluster.x-k8s.io_ocimanagedclusters.yaml
+- bases/infrastructure.cluster.x-k8s.io_ocimanagedclustertemplates.yaml
 - bases/infrastructure.cluster.x-k8s.io_ociclusteridentities.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 

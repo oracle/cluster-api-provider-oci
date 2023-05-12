@@ -105,6 +105,7 @@ type OCIManagedCluster struct {
 }
 
 //+kubebuilder:object:root=true
+// +kubebuilder:storageversion
 
 // OCIManagedClusterList contains a list of OCIManagedCluster.
 type OCIManagedClusterList struct {
