@@ -67,7 +67,7 @@ type DispatcherWrapper struct {
 }
 
 func (wrapper DispatcherWrapper) Do(req *http.Request) (*http.Response, error) {
-	service := strings.Split(req.URL.Path, "/")[1]
+	service := strings.Split(req.URL.Path, "/")[2]
 	resp, err := wrapper.dispatcher.Do(req)
 	IncRequestCounter(err, service, req.Method, wrapper.region, resp)
 	return resp, err
