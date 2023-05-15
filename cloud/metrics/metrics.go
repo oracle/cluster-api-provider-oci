@@ -57,7 +57,7 @@ var (
 		Subsystem: SubSystemOCI,
 		Name:      Duration,
 		Help:      "Duration/Latency of HTTP requests to OCI",
-	}, []string{Service, StatusCode, Operation, Region})
+	}, []string{Service, Operation, Region})
 )
 
 func IncRequestCounter(err error, service string, operation string, region string, response *http.Response) {
