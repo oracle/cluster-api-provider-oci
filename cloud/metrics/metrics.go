@@ -17,6 +17,7 @@ limitations under the License.
 package metrics
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -53,6 +54,7 @@ func IncRequestCounter(err error, service string, verb string, response *http.Re
 	} else {
 		statusCode = response.StatusCode
 	}
+	fmt.Println(fmt.Sprintf("status code is %d", statusCode))
 
 	ociRequestCounter.With(prometheus.Labels{
 		"service": service,
@@ -62,5 +64,6 @@ func IncRequestCounter(err error, service string, verb string, response *http.Re
 }
 
 func init() {
+	fmt.Println("in must register")
 	prometheus.MustRegister(ociRequestCounter)
 }
