@@ -19,10 +19,18 @@ package compute
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/oracle/cluster-api-provider-oci/cloud/metrics"
 	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/prometheus/client_golang/prometheus"
+)
+
+const (
+	Service             = "compute"
+	Launch              = "launch"
+	AttachVnic          = "attachvnic"
+	ListVnicAttachments = "listvnicattachments"
 )
 
 var (
@@ -37,74 +45,99 @@ var (
 
 type ClientWrapper struct {
 	client ComputeClient
+	region string
 }
 
-func NewClientWrapper(computeClient ComputeClient) ClientWrapper {
-	return ClientWrapper{client: computeClient}
+func NewClientWrapper(computeClient ComputeClient, region string) ClientWrapper {
+	return ClientWrapper{client: computeClient, region: region}
 }
 func (wrapper ClientWrapper) LaunchInstance(ctx context.Context, request core.LaunchInstanceRequest) (response core.LaunchInstanceResponse, err error) {
+	t := time.Now()
 	resp, err := wrapper.client.LaunchInstance(ctx, request)
 	defer func() {
 		var httpResponse *http.Response
 		if err == nil {
 			httpResponse = response.RawResponse
 		}
-		metrics.IncRequestCounter(err, "compute", "launch", httpResponse)
+		metrics.IncRequestCounter(err, Service, Launch, wrapper.region, httpResponse)
+	}()
+	defer func() {
+		metrics.ObserverRequestDuration(Service, Launch, wrapper.region, time.Since(t))
 	}()
 	return resp, err
 }
 func (wrapper ClientWrapper) TerminateInstance(ctx context.Context, request core.TerminateInstanceRequest) (response core.TerminateInstanceResponse, err error) {
+	t := time.Now()
 	resp, err := wrapper.client.TerminateInstance(ctx, request)
 	defer func() {
 		var httpResponse *http.Response
 		if err == nil {
 			httpResponse = response.RawResponse
 		}
-		metrics.IncRequestCounter(err, "compute", "delete", httpResponse)
+		metrics.IncRequestCounter(err, Service, metrics.Delete, wrapper.region, httpResponse)
+	}()
+	defer func() {
+		metrics.ObserverRequestDuration(Service, metrics.Delete, wrapper.region, time.Since(t))
 	}()
 	return resp, err
 }
 func (wrapper ClientWrapper) GetInstance(ctx context.Context, request core.GetInstanceRequest) (response core.GetInstanceResponse, err error) {
+	t := time.Now()
 	resp, err := wrapper.client.GetInstance(ctx, request)
 	defer func() {
 		var httpResponse *http.Response
 		if err == nil {
 			httpResponse = response.RawResponse
 		}
-		metrics.IncRequestCounter(err, "compute", "get", httpResponse)
+		metrics.IncRequestCounter(err, Service, metrics.Get, wrapper.region, httpResponse)
+	}()
+	defer func() {
+		metrics.ObserverRequestDuration(Service, metrics.Get, wrapper.region, time.Since(t))
 	}()
 	return resp, err
 }
 func (wrapper ClientWrapper) ListInstances(ctx context.Context, request core.ListInstancesRequest) (response core.ListInstancesResponse, err error) {
+	t := time.Now()
 	resp, err := wrapper.client.ListInstances(ctx, request)
 	defer func() {
 		var httpResponse *http.Response
 		if err == nil {
 			httpResponse = response.RawResponse
 		}
-		metrics.IncRequestCounter(err, "compute", "list", httpResponse)
+		metrics.IncRequestCounter(err, Service, metrics.List, wrapper.region, httpResponse)
+	}()
+	defer func() {
+		metrics.ObserverRequestDuration(Service, metrics.List, wrapper.region, time.Since(t))
 	}()
 	return resp, err
 }
 func (wrapper ClientWrapper) AttachVnic(ctx context.Context, request core.AttachVnicRequest) (response core.AttachVnicResponse, err error) {
+	t := time.Now()
 	resp, err := wrapper.client.AttachVnic(ctx, request)
 	defer func() {
 		var httpResponse *http.Response
 		if err == nil {
 			httpResponse = response.RawResponse
 		}
-		metrics.IncRequestCounter(err, "compute", "attachvnic", httpResponse)
+		metrics.IncRequestCounter(err, Service, AttachVnic, wrapper.region, httpResponse)
+	}()
+	defer func() {
+		metrics.ObserverRequestDuration(Service, AttachVnic, wrapper.region, time.Since(t))
 	}()
 	return resp, err
 }
 func (wrapper ClientWrapper) ListVnicAttachments(ctx context.Context, request core.ListVnicAttachmentsRequest) (response core.ListVnicAttachmentsResponse, err error) {
+	t := time.Now()
 	resp, err := wrapper.client.ListVnicAttachments(ctx, request)
 	defer func() {
 		var httpResponse *http.Response
 		if err == nil {
 			httpResponse = response.RawResponse
 		}
-		metrics.IncRequestCounter(err, "compute", "listvnicattachments", httpResponse)
+		metrics.IncRequestCounter(err, Service, ListVnicAttachments, wrapper.region, httpResponse)
+	}()
+	defer func() {
+		metrics.ObserverRequestDuration(Service, ListVnicAttachments, wrapper.region, time.Since(t))
 	}()
 	return resp, err
 }

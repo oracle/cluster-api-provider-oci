@@ -320,7 +320,7 @@ func (c *ClientProvider) createComputeClient(region string, ociAuthConfigProvide
 	}
 	computeClient.Interceptor = setVersionHeader()
 
-	wrapper := compute.NewClientWrapper(computeClient)
+	wrapper := compute.NewClientWrapper(computeClient, region)
 
 	return &wrapper, nil
 }

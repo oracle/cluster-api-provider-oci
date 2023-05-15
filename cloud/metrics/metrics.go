@@ -17,28 +17,26 @@ limitations under the License.
 package metrics
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/prometheus/client_golang/prometheus"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
-var (
-	ociRequestCounter = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "oci_requests_total",
-			Help: "OCI API requests total.",
-		},
-		[]string{"service", "code", "verb"},
-	)
-)
-
 type verb string
 
 const (
+	SubSystemOCI     = "oci"
+	OCIRequestsTotal = "oci_requests_total"
+	Duration         = "oci_request_duration"
+	Service          = "service"
+	StatusCode       = "status_code"
+	Operation        = "operation"
+
+	Region        = "region"
 	Get    string = "get"
 	List   string = "list"
 	Create string = "create"
@@ -46,7 +44,23 @@ const (
 	Delete string = "delete"
 )
 
-func IncRequestCounter(err error, service string, verb string, response *http.Response) {
+var (
+	ociRequestCounter = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Subsystem: SubSystemOCI,
+			Name:      OCIRequestsTotal,
+			Help:      "OCI API requests total.",
+		},
+		[]string{Service, StatusCode, Operation, Region},
+	)
+	ociRequestDurationSeconds = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Subsystem: SubSystemOCI,
+		Name:      Duration,
+		Help:      "Duration/Latency of HTTP requests to OCI",
+	}, []string{Service, StatusCode, Operation, Region})
+)
+
+func IncRequestCounter(err error, service string, operation string, region string, response *http.Response) {
 	statusCode := 999
 	if err != nil {
 		if serviceErr, ok := err.(common.ServiceError); ok {
@@ -55,16 +69,22 @@ func IncRequestCounter(err error, service string, verb string, response *http.Re
 	} else {
 		statusCode = response.StatusCode
 	}
-	fmt.Println(fmt.Sprintf("status code is %d", statusCode))
-
 	ociRequestCounter.With(prometheus.Labels{
-		"service": service,
-		"verb":    verb,
-		"code":    strconv.Itoa(statusCode),
+		Service:    service,
+		Operation:  operation,
+		StatusCode: strconv.Itoa(statusCode),
+		Region:     region,
 	}).Inc()
 }
 
+func ObserverRequestDuration(service string, operation string, region string, duration time.Duration) {
+	ociRequestDurationSeconds.With(prometheus.Labels{
+		Service:   service,
+		Operation: operation,
+		Region:    region,
+	}).Observe(duration.Seconds())
+}
+
 func init() {
-	fmt.Println("in must register")
 	metrics.Registry.MustRegister(ociRequestCounter)
 }
