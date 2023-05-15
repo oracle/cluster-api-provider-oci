@@ -295,7 +295,7 @@ func (c *ClientProvider) createIdentityClient(region string, ociAuthConfigProvid
 	return &identityClt, nil
 }
 
-func (c *ClientProvider) createComputeClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (*core.ComputeClient, error) {
+func (c *ClientProvider) createComputeClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (compute.ComputeClient, error) {
 	computeClient, err := core.NewComputeClientWithConfigurationProvider(ociAuthConfigProvider)
 	if err != nil {
 		logger.Error(err, "unable to create OCI Compute Client")
@@ -320,7 +320,9 @@ func (c *ClientProvider) createComputeClient(region string, ociAuthConfigProvide
 	}
 	computeClient.Interceptor = setVersionHeader()
 
-	return &computeClient, nil
+	wrapper := compute.NewClientWrapper(computeClient)
+
+	return &wrapper, nil
 }
 
 func (c *ClientProvider) createComputeManagementClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (*core.ComputeManagementClient, error) {
