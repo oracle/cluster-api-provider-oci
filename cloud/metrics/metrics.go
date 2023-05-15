@@ -30,7 +30,7 @@ var (
 			Name: "oci_requests_total",
 			Help: "OCI API requests total.",
 		},
-		[]string{"resource", "code", "verb"},
+		[]string{"service", "code", "verb"},
 	)
 )
 
