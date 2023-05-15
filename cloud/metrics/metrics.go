@@ -87,4 +87,5 @@ func ObserverRequestDuration(service string, operation string, region string, du
 
 func init() {
 	metrics.Registry.MustRegister(ociRequestCounter)
+	metrics.Registry.MustRegister(ociRequestDurationSeconds)
 }
