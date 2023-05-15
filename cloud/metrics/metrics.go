@@ -23,6 +23,7 @@ import (
 
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/prometheus/client_golang/prometheus"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
 var (
@@ -65,5 +66,5 @@ func IncRequestCounter(err error, service string, verb string, response *http.Re
 
 func init() {
 	fmt.Println("in must register")
-	prometheus.MustRegister(ociRequestCounter)
+	metrics.Registry.MustRegister(ociRequestCounter)
 }
