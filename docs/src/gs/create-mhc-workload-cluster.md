@@ -20,8 +20,15 @@ This will move the machines into a `Ready` state.
 Another approach is to install MHC after the cluster is up and healthy (aka Day-2 Operation). This can prevent
 machine remediation while setting up the cluster.
 
+Adding the MHC to either control-plane or machine is a multistep process. The steps are run on specific clusters
+(e.g. management cluster, workload cluster):
+1. Update the spec for future instances (management cluster)
+2. Add label to existing nodes (workload cluster)
+3. Add the MHC (management cluster)
+
 ### Add control-plane MHC
 
+#### Update control plane spec
 We need to add the `controlplane.remediation` label to the `KubeadmControlPlane`.
 
 Create a file named `control-plane-patch.yaml` that has this content:
@@ -33,13 +40,18 @@ spec:
         controlplane.remediation: ""
 ```
 
-Then run `kubectl patch KubeadmControlPlane <your-cluster-name>-control-plane --patch-file control-plane-patch.yaml --type=merge`.
+Then on the management cluster run
+`kubectl patch KubeadmControlPlane <your-cluster-name>-control-plane --patch-file control-plane-patch.yaml --type=merge`.
 
-Then add the new label to any existing control-plane node(s)
+#### Add label to existing nodes
+
+Then on the workload cluster add the new label to any existing control-plane node(s)
 `kubectl label node <control-plane-name> controlplane.remediation=""`. This will prevent the `KubeadmControlPlane` provisioning
 new nodes once the MHC is deployed.
 
-Create a file named `control-plane-mhc.yaml` that has this content: 
+#### Add the MHC
+
+Finally, create a file named `control-plane-mhc.yaml` that has this content: 
 ```yaml
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineHealthCheck
@@ -61,11 +73,13 @@ spec:
       timeout: 300s
 ```
 
-Then run `kubectl apply -f control-plane-mhc.yaml`.
+Then on the management cluster run `kubectl apply -f control-plane-mhc.yaml`.
 
 Then run `kubectl get machinehealthchecks` to check your MachineHealthCheck sees the expected machines.
 
 ### Add machine MHC
+
+#### Update machine spec
 
 We need to add the `machine.remediation` label to the `MachineDeployment`.
 
@@ -78,13 +92,18 @@ spec:
         machine.remediation: ""
 ```
 
-Then run `kubectl patch MachineDeployment oci-cluster-stage-md-0 --patch-file machine-patch.yaml --type=merge`.
+Then on the management cluster run
+`kubectl patch MachineDeployment oci-cluster-stage-md-0 --patch-file machine-patch.yaml --type=merge`.
 
-Then add the new label to any existing control-plane node(s)
+#### Add label to existing nodes
+
+Then on the workload cluster add the new label to any existing control-plane node(s)
 `kubectl label node <machine-name> machine.remediation=""`. This will prevent the `MachineDeployment` provisioning
 new nodes once the MHC is deployed.
 
-Create a file named `machine-mhc.yaml` that has this content:
+#### Add the MHC
+
+Finally, create a file named `machine-mhc.yaml` that has this content:
 ```yaml
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineHealthCheck
@@ -106,7 +125,7 @@ spec:
       timeout: 300s
 ```
 
-Then run `kubectl apply -f machine-mhc.yaml`.
+Then on the management cluster run `kubectl apply -f machine-mhc.yaml`.
 
 Then run `kubectl get machinehealthchecks` to check your MachineHealthCheck sees the expected machines.
 
