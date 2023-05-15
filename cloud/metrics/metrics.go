@@ -19,6 +19,7 @@ package metrics
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/oracle/oci-go-sdk/v65/common"
@@ -59,6 +60,25 @@ var (
 		Help:      "Duration/Latency of HTTP requests to OCI",
 	}, []string{Service, Operation, Region})
 )
+
+type DispatcherWrapper struct {
+	dispatcher common.HTTPRequestDispatcher
+	region     string
+}
+
+func (wrapper DispatcherWrapper) Do(req *http.Request) (*http.Response, error) {
+	service := strings.Split(req.URL.Path, "/")[1]
+	resp, err := wrapper.dispatcher.Do(req)
+	IncRequestCounter(err, service, req.Method, wrapper.region, resp)
+	return resp, err
+}
+
+func NewDispatcherWrapper(wrapper common.HTTPRequestDispatcher, region string) DispatcherWrapper {
+	return DispatcherWrapper{
+		dispatcher: wrapper,
+		region:     region,
+	}
+}
 
 func IncRequestCounter(err error, service string, operation string, region string, response *http.Response) {
 	statusCode := 999

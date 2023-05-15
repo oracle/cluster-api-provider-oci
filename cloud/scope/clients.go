@@ -19,6 +19,7 @@ package scope
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"github.com/oracle/cluster-api-provider-oci/cloud/metrics"
 	"net/http"
 	"sync"
 
@@ -133,7 +134,7 @@ func (c *ClientProvider) GetRegion() (string, error) {
 }
 
 func (c *ClientProvider) createClients(region string) (OCIClients, error) {
-	vcnClient, err := c.createVncClient(region, c.ociAuthConfigProvider, c.Logger)
+	vcnClient, err := c.createVcnClient(region, c.ociAuthConfigProvider, c.Logger)
 	if err != nil {
 		return OCIClients{}, err
 	}
@@ -182,8 +183,10 @@ func (c *ClientProvider) createClients(region string) (OCIClients, error) {
 	}, err
 }
 
-func (c *ClientProvider) createVncClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (*core.VirtualNetworkClient, error) {
+func (c *ClientProvider) createVcnClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (*core.VirtualNetworkClient, error) {
 	vcnClient, err := core.NewVirtualNetworkClientWithConfigurationProvider(ociAuthConfigProvider)
+	dispatcher := vcnClient.HTTPClient
+	vcnClient.HTTPClient = metrics.NewDispatcherWrapper(dispatcher, region)
 	if err != nil {
 		logger.Error(err, "unable to create OCI VCN Client")
 		return nil, err
