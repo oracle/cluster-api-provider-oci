@@ -68,8 +68,12 @@ type DispatcherWrapper struct {
 
 func (wrapper DispatcherWrapper) Do(req *http.Request) (*http.Response, error) {
 	service := strings.Split(req.URL.Path, "/")[2]
+	t := time.Now()
 	resp, err := wrapper.dispatcher.Do(req)
-	IncRequestCounter(err, service, req.Method, wrapper.region, resp)
+	defer func() {
+		IncRequestCounter(err, service, req.Method, wrapper.region, resp)
+		ObserverRequestDuration(service, req.Method, wrapper.region, time.Since(t))
+	}()
 	return resp, err
 }
 
