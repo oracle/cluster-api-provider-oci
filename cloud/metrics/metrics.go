@@ -30,8 +30,8 @@ type verb string
 
 const (
 	SubSystemOCI     = "oci"
-	OCIRequestsTotal = "oci_requests_total"
-	Duration         = "oci_request_duration"
+	OCIRequestsTotal = "requests_total"
+	Duration         = "request_duration"
 	Service          = "service"
 	StatusCode       = "status_code"
 	Operation        = "operation"
