@@ -78,7 +78,7 @@ type PodConfig struct {
 	// +optional
 	Shape *string `json:"shape,omitempty"`
 
-	// SubnetName described the dhe regional subnet where pods' VNIC will be placed.
+	// SubnetName described the regional subnet where pods' VNIC will be placed.
 	// +optional
 	SubnetName *string `json:"subnetName,omitempty"`
 }
@@ -107,8 +107,12 @@ type OCIVirtualMachinePoolStatus struct {
 	// +optional
 	Replicas int32 `json:"replicas"`
 
+	// FailureReason will contains the CAPI MachineStatusError if the virtual machine pool has hit an error condition.
+	// +optional
 	FailureReason *errors.MachineStatusError `json:"failureReason,omitempty"`
 
+	// FailureMessages contains the verbose erorr messages related to the virtual machine pool failures.
+	// +optional
 	FailureMessages []string `json:"failureMessages,omitempty"`
 }
 

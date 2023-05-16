@@ -160,7 +160,7 @@ func (r *OCIVirtualMachinePoolReconciler) Reconcile(ctx context.Context, req ctr
 		return ctrl.Result{}, errors.Errorf("failed to create scope: %+v", err)
 	}
 
-	// Always close the scope when exiting this function so we can persist any GCPMachine changes.
+	// Always close the scope when exiting this function so we can persist any virtual machine pool changes.
 	defer func() {
 		if err := machinePoolScope.Close(ctx); err != nil && reterr == nil {
 			reterr = err
@@ -244,7 +244,7 @@ func managedClusterToVirtualMachinePoolMapFunc(c client.Client, gvk schema.Group
 func (r *OCIVirtualMachinePoolReconciler) reconcileNormal(ctx context.Context, logger logr.Logger, machinePoolScope *scope.VirtualMachinePoolScope) (ctrl.Result, error) {
 	machinePoolScope.Info("Handling reconcile OCIVirtualMachinePool")
 	// If the OCIMachinePool doesn't have our finalizer, add it.
-	controllerutil.AddFinalizer(machinePoolScope.OCIVirtualMachinePool, infrav2exp.ManagedMachinePoolFinalizer)
+	controllerutil.AddFinalizer(machinePoolScope.OCIVirtualMachinePool, infrav2exp.VirtualMachinePoolFinalizer)
 
 	if !machinePoolScope.Cluster.Status.InfrastructureReady {
 		logger.Info("Cluster infrastructure is not ready yet")
@@ -323,7 +323,7 @@ func (r *OCIVirtualMachinePoolReconciler) reconcileDelete(ctx context.Context, m
 	nodePool, err := machinePoolScope.FindVirtualNodePool(ctx)
 	if err != nil {
 		if ociutil.IsNotFound(err) {
-			controllerutil.RemoveFinalizer(machinePoolScope.OCIVirtualMachinePool, infrav2exp.ManagedMachinePoolFinalizer)
+			controllerutil.RemoveFinalizer(machinePoolScope.OCIVirtualMachinePool, infrav2exp.VirtualMachinePoolFinalizer)
 			machinePoolScope.Info("Node pool not found, may have been deleted")
 			conditions.MarkTrue(machinePoolScope.OCIVirtualMachinePool, infrav2exp.VirtualNodePoolNotFoundReason)
 			machinePoolScope.OCIVirtualMachinePool.Status.Ready = false
@@ -335,7 +335,7 @@ func (r *OCIVirtualMachinePoolReconciler) reconcileDelete(ctx context.Context, m
 
 	if nodePool == nil {
 		machinePoolScope.Info("Node Pool is not found, may have been deleted")
-		controllerutil.RemoveFinalizer(machinePoolScope.OCIVirtualMachinePool, infrav2exp.ManagedMachinePoolFinalizer)
+		controllerutil.RemoveFinalizer(machinePoolScope.OCIVirtualMachinePool, infrav2exp.VirtualMachinePoolFinalizer)
 		conditions.MarkFalse(machinePool, infrav2exp.VirtualNodePoolReadyCondition, infrav2exp.VirtualNodePoolDeletedReason, clusterv1.ConditionSeverityWarning, "")
 		return reconcile.Result{}, nil
 	}
@@ -350,7 +350,7 @@ func (r *OCIVirtualMachinePoolReconciler) reconcileDelete(ctx context.Context, m
 		machinePoolScope.Info("Node Pool is deleting")
 		return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 	case oke.VirtualNodePoolLifecycleStateDeleted:
-		controllerutil.RemoveFinalizer(machinePoolScope.OCIVirtualMachinePool, infrav2exp.ManagedMachinePoolFinalizer)
+		controllerutil.RemoveFinalizer(machinePoolScope.OCIVirtualMachinePool, infrav2exp.VirtualMachinePoolFinalizer)
 		conditions.MarkFalse(machinePool, infrav2exp.VirtualNodePoolReadyCondition, infrav2exp.VirtualNodePoolDeletedReason, clusterv1.ConditionSeverityWarning, "")
 		machinePoolScope.Info("Virtual Node Pool is already deleted")
 		return reconcile.Result{}, nil

@@ -165,19 +165,8 @@ func (s *ManagedControlPlaneScope) GetOrCreateControlPlane(ctx context.Context) 
 			IsPodSecurityPolicyEnabled: controlPlaneSpec.ClusterOption.AdmissionControllerOptions.IsPodSecurityPolicyEnabled,
 		}
 	}
-	var clusterType oke.ClusterTypeEnum
-	if controlPlaneSpec.ClusterType != "" {
-		switch controlPlaneSpec.ClusterType {
-		case infrav2exp.BasicClusterType:
-			clusterType = oke.ClusterTypeBasicCluster
-			break
-		case infrav2exp.EnhancedClusterType:
-			clusterType = oke.ClusterTypeEnhancedCluster
-			break
-		default:
-			break
-		}
-	}
+
+	clusterType := getOKEClusterTypeFromSpecType(controlPlaneSpec)
 
 	details := oke.CreateClusterDetails{
 		Name:                     common.String(s.GetClusterName()),
@@ -228,6 +217,22 @@ func (s *ManagedControlPlaneScope) GetOrCreateControlPlane(ctx context.Context) 
 	}
 	s.OCIManagedControlPlane.Spec.ID = clusterId
 	return s.getOKEClusterFromOCID(ctx, clusterId)
+}
+
+func getOKEClusterTypeFromSpecType(controlPlaneSpec infrav2exp.OCIManagedControlPlaneSpec) oke.ClusterTypeEnum {
+	if controlPlaneSpec.ClusterType != "" {
+		switch controlPlaneSpec.ClusterType {
+		case infrav2exp.BasicClusterType:
+			return oke.ClusterTypeBasicCluster
+			break
+		case infrav2exp.EnhancedClusterType:
+			return oke.ClusterTypeEnhancedCluster
+			break
+		default:
+			break
+		}
+	}
+	return ""
 }
 
 // GetOKECluster tries to lookup a control plane(OKE cluster) based on ID/Name and returns the
@@ -560,19 +565,7 @@ func (s *ManagedControlPlaneScope) UpdateControlPlane(ctx context.Context, okeCl
 				KeyDetails:      s.getKeyDetails(),
 			}
 		}
-		var clusterType oke.ClusterTypeEnum
-		if controlPlaneSpec.ClusterType != "" {
-			switch controlPlaneSpec.ClusterType {
-			case infrav2exp.BasicClusterType:
-				clusterType = oke.ClusterTypeBasicCluster
-				break
-			case infrav2exp.EnhancedClusterType:
-				clusterType = oke.ClusterTypeEnhancedCluster
-				break
-			default:
-				break
-			}
-		}
+		clusterType := getOKEClusterTypeFromSpecType(controlPlaneSpec)
 		details.Type = clusterType
 		updateClusterRequest := oke.UpdateClusterRequest{
 			ClusterId:            okeCluster.Id,

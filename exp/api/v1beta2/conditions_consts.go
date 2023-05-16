@@ -44,7 +44,7 @@ const (
 	NodePoolDeletedReason = "NodePoolDeleted"
 
 	// VirtualNodePoolReadyCondition reports on current status of the Virtual Node Pool. Ready indicates the group is provisioned.
-	VirtualNodePoolReadyCondition clusterv1.ConditionType = "NodePoolReady"
+	VirtualNodePoolReadyCondition clusterv1.ConditionType = "VirtualNodePoolReady"
 	// VirtualNodePoolNotFoundReason used when the Virtual Node Pool couldn't be retrieved.
 	VirtualNodePoolNotFoundReason = "VirtualNodePoolNotFound"
 	// VirtualNodePoolProvisionFailedReason used for failures during Virtual Node Pool provisioning.
