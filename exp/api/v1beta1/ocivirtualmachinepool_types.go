@@ -62,7 +62,7 @@ type VirtualNodepoolPlacementConfig struct {
 	// +optional
 	FaultDomains []string `json:"faultDomains,omitempty"`
 
-	// SubnetName defines the name of the subnet which need ot be associated with the Nodepool.
+	// SubnetName defines the name of the subnet which need to be associated with the Virtual Node Pool.
 	// The subnets are defined in the OCiManagedCluster object.
 	// +optional
 	SubnetName *string `json:"subnetName,omitempty"`
@@ -78,7 +78,7 @@ type PodConfig struct {
 	// +optional
 	Shape *string `json:"shape,omitempty"`
 
-	// SubnetName described the dhe regional subnet where pods' VNIC will be placed.
+	// SubnetName described the regional subnet where pods' VNIC will be placed.
 	// +optional
 	SubnetName *string `json:"subnetName,omitempty"`
 }
@@ -107,8 +107,12 @@ type OCIVirtualMachinePoolStatus struct {
 	// +optional
 	Replicas int32 `json:"replicas"`
 
-	FailureReason *errors.MachineStatusError `json:"failureReason,omitempty"`
+	// FailureReason will contains the CAPI MachinePoolStatusFailure if the virtual machine pool has hit an error condition.
+	// +optional
+	FailureReason *errors.MachinePoolStatusFailure `json:"failureReason,omitempty"`
 
+	// FailureMessages contains the verbose erorr messages related to the virtual machine pool failures.
+	// +optional
 	FailureMessages []string `json:"failureMessages,omitempty"`
 }
 
