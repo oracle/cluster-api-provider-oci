@@ -251,7 +251,8 @@ spec:
                   type: object
                 type: array
               clusterType:
-                description: ClusterTypeEnum defines the type of cluster.
+                description: ClusterTypeEnum defines the type of cluster. Supported
+                  types are - BASIC_CLUSTER - ENHANCED_CLUSTER
                 type: string
               controlPlaneEndpoint:
                 description: ControlPlaneEndpoint represents the endpoint used to

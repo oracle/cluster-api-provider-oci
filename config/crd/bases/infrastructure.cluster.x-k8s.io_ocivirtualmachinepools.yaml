@@ -280,8 +280,8 @@ spec:
                     description: Shape described the shape of the pods.
                     type: string
                   subnetName:
-                    description: SubnetName described the dhe regional subnet where
-                      pods' VNIC will be placed.
+                    description: SubnetName described the regional subnet where pods'
+                      VNIC will be placed.
                     type: string
                 type: object
               providerID:
@@ -364,12 +364,14 @@ spec:
                   type: object
                 type: array
               failureMessages:
+                description: FailureMessages contains the verbose erorr messages related
+                  to the virtual machine pool failures.
                 items:
                   type: string
                 type: array
               failureReason:
-                description: MachineStatusError defines errors states for Machine
-                  objects.
+                description: FailureReason will contains the CAPI MachineStatusError
+                  if the virtual machine pool has hit an error condition.
                 type: string
               ready:
                 type: boolean
