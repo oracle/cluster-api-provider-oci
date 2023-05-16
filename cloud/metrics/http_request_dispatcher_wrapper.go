@@ -50,9 +50,9 @@ func (wrapper HttpRequestDispatcherWrapper) Do(req *http.Request) (*http.Respons
 }
 
 // NewHttpRequestDispatcherWrapper creates a new instance of HttpRequestDispatcherWrapper
-func NewHttpRequestDispatcherWrapper(wrapper common.HTTPRequestDispatcher, region string) HttpRequestDispatcherWrapper {
+func NewHttpRequestDispatcherWrapper(dispatcher common.HTTPRequestDispatcher, region string) HttpRequestDispatcherWrapper {
 	return HttpRequestDispatcherWrapper{
-		dispatcher: wrapper,
+		dispatcher: dispatcher,
 		region:     region,
 	}
 }

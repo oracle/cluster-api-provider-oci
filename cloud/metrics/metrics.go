@@ -59,9 +59,9 @@ var (
 	}, []string{Resource, Operation, Region})
 )
 
-// IncRequestCounter increments the request count metric for the given resource
+// IncRequestCounter increments the request count metric for the given resource.
+// Unknown errors from request dispatcher will have response code of 999
 func IncRequestCounter(err error, resource string, operation string, region string, response *http.Response) {
-	// unknown errors from request dispatcher will have response code of 999
 	statusCode := 999
 	if err == nil {
 		statusCode = response.StatusCode

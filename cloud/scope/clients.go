@@ -19,12 +19,12 @@ package scope
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"github.com/oracle/cluster-api-provider-oci/cloud/metrics"
 	"net/http"
 	"sync"
 
 	"github.com/go-logr/logr"
 	"github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	"github.com/oracle/cluster-api-provider-oci/cloud/metrics"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/base"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/compute"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/computemanagement"
