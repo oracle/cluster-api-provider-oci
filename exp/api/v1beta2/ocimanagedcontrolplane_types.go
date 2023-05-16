@@ -156,6 +156,7 @@ type OCIManagedControlPlaneStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+// +kubebuilder:storageversion
 
 // OCIManagedControlPlane is the Schema for the ocimanagedcontrolplane API.
 type OCIManagedControlPlane struct {
