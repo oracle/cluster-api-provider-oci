@@ -19,10 +19,8 @@ package metrics
 import (
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
-	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/prometheus/client_golang/prometheus"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
@@ -61,36 +59,10 @@ var (
 	}, []string{Service, Operation, Region})
 )
 
-type DispatcherWrapper struct {
-	dispatcher common.HTTPRequestDispatcher
-	region     string
-}
-
-func (wrapper DispatcherWrapper) Do(req *http.Request) (*http.Response, error) {
-	service := strings.Split(req.URL.Path, "/")[2]
-	t := time.Now()
-	resp, err := wrapper.dispatcher.Do(req)
-	defer func() {
-		IncRequestCounter(err, service, req.Method, wrapper.region, resp)
-		ObserverRequestDuration(service, req.Method, wrapper.region, time.Since(t))
-	}()
-	return resp, err
-}
-
-func NewDispatcherWrapper(wrapper common.HTTPRequestDispatcher, region string) DispatcherWrapper {
-	return DispatcherWrapper{
-		dispatcher: wrapper,
-		region:     region,
-	}
-}
-
 func IncRequestCounter(err error, service string, operation string, region string, response *http.Response) {
+	// unknown errors from request dispatcher will have response code of 999
 	statusCode := 999
-	if err != nil {
-		if serviceErr, ok := err.(common.ServiceError); ok {
-			statusCode = serviceErr.GetHTTPStatusCode()
-		}
-	} else {
+	if err == nil {
 		statusCode = response.StatusCode
 	}
 	ociRequestCounter.With(prometheus.Labels{

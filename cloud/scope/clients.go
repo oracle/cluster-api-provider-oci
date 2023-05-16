@@ -185,13 +185,13 @@ func (c *ClientProvider) createClients(region string) (OCIClients, error) {
 
 func (c *ClientProvider) createVcnClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (*core.VirtualNetworkClient, error) {
 	vcnClient, err := core.NewVirtualNetworkClientWithConfigurationProvider(ociAuthConfigProvider)
-	dispatcher := vcnClient.HTTPClient
-	vcnClient.HTTPClient = metrics.NewDispatcherWrapper(dispatcher, region)
 	if err != nil {
 		logger.Error(err, "unable to create OCI VCN Client")
 		return nil, err
 	}
 	vcnClient.SetRegion(region)
+	dispatcher := vcnClient.HTTPClient
+	vcnClient.HTTPClient = metrics.NewDispatcherWrapper(dispatcher, region)
 
 	if c.certOverride != nil {
 		if client, ok := vcnClient.HTTPClient.(*http.Client); ok {
@@ -249,6 +249,8 @@ func (c *ClientProvider) createLBClient(region string, ociAuthConfigProvider com
 		return nil, err
 	}
 	lbClient.SetRegion(region)
+	dispatcher := lbClient.HTTPClient
+	lbClient.HTTPClient = metrics.NewDispatcherWrapper(dispatcher, region)
 
 	if c.certOverride != nil {
 		if client, ok := lbClient.HTTPClient.(*http.Client); ok {
@@ -277,6 +279,8 @@ func (c *ClientProvider) createIdentityClient(region string, ociAuthConfigProvid
 		return nil, err
 	}
 	identityClt.SetRegion(region)
+	dispatcher := identityClt.HTTPClient
+	identityClt.HTTPClient = metrics.NewDispatcherWrapper(dispatcher, region)
 
 	if c.certOverride != nil {
 		if client, ok := identityClt.HTTPClient.(*http.Client); ok {
@@ -305,6 +309,8 @@ func (c *ClientProvider) createComputeClient(region string, ociAuthConfigProvide
 		return nil, err
 	}
 	computeClient.SetRegion(region)
+	dispatcher := computeClient.HTTPClient
+	computeClient.HTTPClient = metrics.NewDispatcherWrapper(dispatcher, region)
 
 	if c.certOverride != nil {
 		if client, ok := computeClient.HTTPClient.(*http.Client); ok {
@@ -323,9 +329,7 @@ func (c *ClientProvider) createComputeClient(region string, ociAuthConfigProvide
 	}
 	computeClient.Interceptor = setVersionHeader()
 
-	wrapper := compute.NewClientWrapper(computeClient, region)
-
-	return &wrapper, nil
+	return &computeClient, nil
 }
 
 func (c *ClientProvider) createComputeManagementClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (*core.ComputeManagementClient, error) {
@@ -335,6 +339,8 @@ func (c *ClientProvider) createComputeManagementClient(region string, ociAuthCon
 		return nil, err
 	}
 	computeManagementClient.SetRegion(region)
+	dispatcher := computeManagementClient.HTTPClient
+	computeManagementClient.HTTPClient = metrics.NewDispatcherWrapper(dispatcher, region)
 
 	if c.certOverride != nil {
 		if client, ok := computeManagementClient.HTTPClient.(*http.Client); ok {
@@ -363,6 +369,8 @@ func (c *ClientProvider) createContainerEngineClient(region string, ociAuthConfi
 		return nil, err
 	}
 	containerEngineClt.SetRegion(region)
+	dispatcher := containerEngineClt.HTTPClient
+	containerEngineClt.HTTPClient = metrics.NewDispatcherWrapper(dispatcher, region)
 
 	if c.certOverride != nil {
 		if client, ok := containerEngineClt.HTTPClient.(*http.Client); ok {
