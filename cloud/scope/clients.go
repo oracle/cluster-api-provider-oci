@@ -191,7 +191,7 @@ func (c *ClientProvider) createVcnClient(region string, ociAuthConfigProvider co
 	}
 	vcnClient.SetRegion(region)
 	dispatcher := vcnClient.HTTPClient
-	vcnClient.HTTPClient = metrics.NewDispatcherWrapper(dispatcher, region)
+	vcnClient.HTTPClient = metrics.NewHttpRequestDispatcherWrapper(dispatcher, region)
 
 	if c.certOverride != nil {
 		if client, ok := dispatcher.(*http.Client); ok {
@@ -222,7 +222,7 @@ func (c *ClientProvider) createNLbClient(region string, ociAuthConfigProvider co
 	}
 	nlbClient.SetRegion(region)
 	dispatcher := nlbClient.HTTPClient
-	nlbClient.HTTPClient = metrics.NewDispatcherWrapper(dispatcher, region)
+	nlbClient.HTTPClient = metrics.NewHttpRequestDispatcherWrapper(dispatcher, region)
 
 	if c.certOverride != nil {
 		if client, ok := dispatcher.(*http.Client); ok {
@@ -252,7 +252,7 @@ func (c *ClientProvider) createLBClient(region string, ociAuthConfigProvider com
 	}
 	lbClient.SetRegion(region)
 	dispatcher := lbClient.HTTPClient
-	lbClient.HTTPClient = metrics.NewDispatcherWrapper(dispatcher, region)
+	lbClient.HTTPClient = metrics.NewHttpRequestDispatcherWrapper(dispatcher, region)
 
 	if c.certOverride != nil {
 		if client, ok := dispatcher.(*http.Client); ok {
@@ -282,7 +282,7 @@ func (c *ClientProvider) createIdentityClient(region string, ociAuthConfigProvid
 	}
 	identityClt.SetRegion(region)
 	dispatcher := identityClt.HTTPClient
-	identityClt.HTTPClient = metrics.NewDispatcherWrapper(dispatcher, region)
+	identityClt.HTTPClient = metrics.NewHttpRequestDispatcherWrapper(dispatcher, region)
 
 	if c.certOverride != nil {
 		if client, ok := dispatcher.(*http.Client); ok {
@@ -312,7 +312,7 @@ func (c *ClientProvider) createComputeClient(region string, ociAuthConfigProvide
 	}
 	computeClient.SetRegion(region)
 	dispatcher := computeClient.HTTPClient
-	computeClient.HTTPClient = metrics.NewDispatcherWrapper(dispatcher, region)
+	computeClient.HTTPClient = metrics.NewHttpRequestDispatcherWrapper(dispatcher, region)
 
 	if c.certOverride != nil {
 		if client, ok := dispatcher.(*http.Client); ok {
@@ -342,7 +342,7 @@ func (c *ClientProvider) createComputeManagementClient(region string, ociAuthCon
 	}
 	computeManagementClient.SetRegion(region)
 	dispatcher := computeManagementClient.HTTPClient
-	computeManagementClient.HTTPClient = metrics.NewDispatcherWrapper(dispatcher, region)
+	computeManagementClient.HTTPClient = metrics.NewHttpRequestDispatcherWrapper(dispatcher, region)
 
 	if c.certOverride != nil {
 		if client, ok := dispatcher.(*http.Client); ok {
@@ -372,7 +372,7 @@ func (c *ClientProvider) createContainerEngineClient(region string, ociAuthConfi
 	}
 	containerEngineClt.SetRegion(region)
 	dispatcher := containerEngineClt.HTTPClient
-	containerEngineClt.HTTPClient = metrics.NewDispatcherWrapper(dispatcher, region)
+	containerEngineClt.HTTPClient = metrics.NewHttpRequestDispatcherWrapper(dispatcher, region)
 
 	if c.certOverride != nil {
 		if client, ok := dispatcher.(*http.Client); ok {

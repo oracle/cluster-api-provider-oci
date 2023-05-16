@@ -24,24 +24,34 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/common"
 )
 
-type DispatcherWrapper struct {
+// DispatcherWrapper is a wrapper around standard common.HTTPRequestDispatcher to handle
+// metrics
+type HttpRequestDispatcherWrapper struct {
 	dispatcher common.HTTPRequestDispatcher
 	region     string
 }
 
-func (wrapper DispatcherWrapper) Do(req *http.Request) (*http.Response, error) {
-	service := strings.Split(req.URL.Path, "/")[2]
+// Do is wrapper implementation of common.HTTPRequestDispatcher Do method
+func (wrapper HttpRequestDispatcherWrapper) Do(req *http.Request) (*http.Response, error) {
 	t := time.Now()
 	resp, err := wrapper.dispatcher.Do(req)
 	defer func() {
-		IncRequestCounter(err, service, req.Method, wrapper.region, resp)
-		ObserverRequestDuration(service, req.Method, wrapper.region, time.Since(t))
+		// taken from https://docs.oracle.com/en-us/iaas/Content/API/Concepts/usingapi.htm
+		// a URL consists of a version string and then a resource
+		urlSplit := strings.Split(req.URL.Path, "/")
+		if len(urlSplit) < 2 {
+			return
+		}
+		resource := urlSplit[2]
+		IncRequestCounter(err, resource, req.Method, wrapper.region, resp)
+		ObserverRequestDuration(resource, req.Method, wrapper.region, time.Since(t))
 	}()
 	return resp, err
 }
 
-func NewDispatcherWrapper(wrapper common.HTTPRequestDispatcher, region string) DispatcherWrapper {
-	return DispatcherWrapper{
+// NewHttpRequestDispatcherWrapper creates a new instance of HttpRequestDispatcherWrapper
+func NewHttpRequestDispatcherWrapper(wrapper common.HTTPRequestDispatcher, region string) HttpRequestDispatcherWrapper {
+	return HttpRequestDispatcherWrapper{
 		dispatcher: wrapper,
 		region:     region,
 	}

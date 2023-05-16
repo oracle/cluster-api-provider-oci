@@ -31,7 +31,7 @@ const (
 	SubSystemOCI     = "oci"
 	OCIRequestsTotal = "requests_total"
 	Duration         = "request_duration"
-	Service          = "service"
+	Resource         = "resource"
 	StatusCode       = "status_code"
 	Operation        = "operation"
 
@@ -50,32 +50,34 @@ var (
 			Name:      OCIRequestsTotal,
 			Help:      "OCI API requests total.",
 		},
-		[]string{Service, StatusCode, Operation, Region},
+		[]string{Resource, StatusCode, Operation, Region},
 	)
 	ociRequestDurationSeconds = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Subsystem: SubSystemOCI,
 		Name:      Duration,
 		Help:      "Duration/Latency of HTTP requests to OCI",
-	}, []string{Service, Operation, Region})
+	}, []string{Resource, Operation, Region})
 )
 
-func IncRequestCounter(err error, service string, operation string, region string, response *http.Response) {
+// IncRequestCounter increments the request count metric for the given resource
+func IncRequestCounter(err error, resource string, operation string, region string, response *http.Response) {
 	// unknown errors from request dispatcher will have response code of 999
 	statusCode := 999
 	if err == nil {
 		statusCode = response.StatusCode
 	}
 	ociRequestCounter.With(prometheus.Labels{
-		Service:    service,
+		Resource:   resource,
 		Operation:  operation,
 		StatusCode: strconv.Itoa(statusCode),
 		Region:     region,
 	}).Inc()
 }
 
-func ObserverRequestDuration(service string, operation string, region string, duration time.Duration) {
+// ObserverRequestDuration observes the request duration for the partcular OCI request
+func ObserverRequestDuration(resource string, operation string, region string, duration time.Duration) {
 	ociRequestDurationSeconds.With(prometheus.Labels{
-		Service:   service,
+		Resource:  resource,
 		Operation: operation,
 		Region:    region,
 	}).Observe(duration.Seconds())
