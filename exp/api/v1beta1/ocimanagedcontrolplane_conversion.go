@@ -44,7 +44,7 @@ func (r *OCIManagedControlPlane) ConvertFrom(srcRaw conversion.Hub) error {
 	if err := Convert_v1beta2_OCIManagedControlPlane_To_v1beta1_OCIManagedControlPlane(src, r, nil); err != nil {
 		return err
 	}
-	
+
 	// Preserve Hub data on down-conversion.
 	if err := utilconversion.MarshalData(src, r); err != nil {
 		return err

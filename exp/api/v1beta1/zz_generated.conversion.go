@@ -2028,7 +2028,7 @@ func autoConvert_v1beta1_OCIVirtualMachinePoolStatus_To_v1beta2_OCIVirtualMachin
 	out.Ready = in.Ready
 	out.Conditions = *(*clusterapiapiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
 	out.Replicas = in.Replicas
-	out.FailureReason = (*errors.MachineStatusError)(unsafe.Pointer(in.FailureReason))
+	out.FailureReason = (*errors.MachinePoolStatusFailure)(unsafe.Pointer(in.FailureReason))
 	out.FailureMessages = *(*[]string)(unsafe.Pointer(&in.FailureMessages))
 	return nil
 }
