@@ -24,7 +24,7 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/common"
 )
 
-// DispatcherWrapper is a wrapper around standard common.HTTPRequestDispatcher to handle
+// HttpRequestDispatcherWrapper is a wrapper around standard common.HTTPRequestDispatcher to handle
 // metrics
 type HttpRequestDispatcherWrapper struct {
 	dispatcher common.HTTPRequestDispatcher
