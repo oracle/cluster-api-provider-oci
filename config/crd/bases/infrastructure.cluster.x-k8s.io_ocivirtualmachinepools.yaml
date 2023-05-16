@@ -226,8 +226,8 @@ spec:
                 description: ID is the OCID of the associated NodePool
                 type: string
               initialVirtualNodeLabels:
-                description: InitialNodeLabels defines a list of key/value pairs to
-                  add to nodes after they join the Kubernetes cluster.
+                description: InitialVirtualNodeLabels defines a list of key/value
+                  pairs to add to nodes after they join the Kubernetes cluster.
                 items:
                   description: KeyValue The properties that define a key value pair.
                   properties:
@@ -262,8 +262,8 @@ spec:
                       type: array
                     subnetName:
                       description: SubnetName defines the name of the subnet which
-                        need ot be associated with the Nodepool. The subnets are defined
-                        in the OCiManagedCluster object.
+                        need to be associated with the Virtual Node Pool. The subnets
+                        are defined in the OCiManagedCluster object.
                       type: string
                   type: object
                 type: array
@@ -370,7 +370,7 @@ spec:
                   type: string
                 type: array
               failureReason:
-                description: FailureReason will contains the CAPI MachineStatusError
+                description: FailureReason will contains the CAPI MachinePoolStatusFailure
                   if the virtual machine pool has hit an error condition.
                 type: string
               ready:

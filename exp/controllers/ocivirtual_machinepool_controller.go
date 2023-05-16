@@ -71,10 +71,10 @@ type OCIVirtualMachinePoolReconciler struct {
 // move the current state of the machinepool closer to the desired state.
 //
 // For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
+// - https://pkg.go.dev/sigs.k8s.io/controller-runtime/pkg/reconcile
 func (r *OCIVirtualMachinePoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, reterr error) {
 	logger := log.FromContext(ctx)
-	logger.Info("Got reconciliation event for managedmachine pool")
+	logger.Info("Got reconciliation event for virtual machine pool")
 
 	// Fetch the OCIVirtualMachinePool.
 	ociVirtualMachinePool := &infrav2exp.OCIVirtualMachinePool{}
@@ -287,7 +287,7 @@ func (r *OCIVirtualMachinePoolReconciler) reconcileNormal(ctx context.Context, l
 		return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 	case oke.VirtualNodePoolLifecycleStateActive:
 		machinePoolScope.Info("Virtual Node pool is active")
-		instanceCount, err := machinePoolScope.SetListandSetMachinePoolInstances(ctx, nodePool)
+		instanceCount, err := machinePoolScope.ListandSetMachinePoolInstances(ctx, nodePool)
 		if err != nil {
 			return reconcile.Result{}, err
 		}

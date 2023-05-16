@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	"github.com/go-logr/logr"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
@@ -113,7 +114,7 @@ func (m *VirtualMachinePoolScope) Close(ctx context.Context) error {
 }
 
 // SetFailureReason sets the OCIMachine status error reason.
-func (m *VirtualMachinePoolScope) SetFailureReason(v capierrors.MachineStatusError) {
+func (m *VirtualMachinePoolScope) SetFailureReason(v capierrors.MachinePoolStatusFailure) {
 	m.OCIVirtualMachinePool.Status.FailureReason = &v
 }
 
@@ -131,8 +132,8 @@ func (m *VirtualMachinePoolScope) GetWorkerMachineSubnet() *string {
 	return nil
 }
 
-// SetListandSetMachinePoolInstances retrieves a machine pools instances and sets them in the ProviderIDList
-func (m *VirtualMachinePoolScope) SetListandSetMachinePoolInstances(ctx context.Context, nodePool *oke.VirtualNodePool) (int32, error) {
+// ListandSetMachinePoolInstances retrieves a virtual node pools instances and sets them in the ProviderIDList
+func (m *VirtualMachinePoolScope) ListandSetMachinePoolInstances(ctx context.Context, nodePool *oke.VirtualNodePool) (int32, error) {
 	providerIDList := make([]string, 0)
 	var page *string
 	for {
@@ -160,8 +161,8 @@ func (m *VirtualMachinePoolScope) SetListandSetMachinePoolInstances(ctx context.
 	return int32(len(providerIDList)), nil
 }
 
-// IsResourceCreatedByClusterAPI determines if the instance was created by the cluster using the
-// tags created at instance launch.
+// IsResourceCreatedByClusterAPI determines if the virtual node pool was created by the cluster using the
+// tags created at virtual node pool launch.
 func (m *VirtualMachinePoolScope) IsResourceCreatedByClusterAPI(resourceFreeFormTags map[string]string) bool {
 	tagsAddedByClusterAPI := ociutil.BuildClusterTags(m.OCIManagedCluster.Spec.OCIResourceIdentifier)
 	for k, v := range tagsAddedByClusterAPI {
@@ -519,7 +520,7 @@ func (m *VirtualMachinePoolScope) UpdateVirtualNodePool(ctx context.Context, poo
 	return false, nil
 }
 
-// setMachinePoolSpecDefaults sets the defaults in the spec as returned by OKE API. We need to set defaults here rather than webhook as
+// setVirtualMachinePoolSpecDefaults sets the defaults in the spec as returned by OKE API. We need to set defaults here rather than webhook as
 // there is a chance user will edit the cluster
 func setVirtualMachinePoolSpecDefaults(spec *infrav2exp.OCIVirtualMachinePoolSpec) {
 	spec.ProviderIDList = nil

@@ -42,7 +42,7 @@ type OCIVirtualMachinePoolSpec struct {
 	// +optional
 	Taints []Taint `json:"taints,omitempty"`
 
-	// InitialNodeLabels defines a list of key/value pairs to add to nodes after they join the Kubernetes cluster.
+	// InitialVirtualNodeLabels defines a list of key/value pairs to add to nodes after they join the Kubernetes cluster.
 	// +optional
 	InitialVirtualNodeLabels []KeyValue `json:"initialVirtualNodeLabels,omitempty"`
 
@@ -62,7 +62,7 @@ type VirtualNodepoolPlacementConfig struct {
 	// +optional
 	FaultDomains []string `json:"faultDomains,omitempty"`
 
-	// SubnetName defines the name of the subnet which need ot be associated with the Nodepool.
+	// SubnetName defines the name of the subnet which need to be associated with the Virtual Node Pool.
 	// The subnets are defined in the OCiManagedCluster object.
 	// +optional
 	SubnetName *string `json:"subnetName,omitempty"`
@@ -107,9 +107,9 @@ type OCIVirtualMachinePoolStatus struct {
 	// +optional
 	Replicas int32 `json:"replicas"`
 
-	// FailureReason will contains the CAPI MachineStatusError if the virtual machine pool has hit an error condition.
+	// FailureReason will contains the CAPI MachinePoolStatusFailure if the virtual machine pool has hit an error condition.
 	// +optional
-	FailureReason *errors.MachineStatusError `json:"failureReason,omitempty"`
+	FailureReason *errors.MachinePoolStatusFailure `json:"failureReason,omitempty"`
 
 	// FailureMessages contains the verbose erorr messages related to the virtual machine pool failures.
 	// +optional
