@@ -194,7 +194,7 @@ func (c *ClientProvider) createVcnClient(region string, ociAuthConfigProvider co
 	vcnClient.HTTPClient = metrics.NewDispatcherWrapper(dispatcher, region)
 
 	if c.certOverride != nil {
-		if client, ok := vcnClient.HTTPClient.(*http.Client); ok {
+		if client, ok := dispatcher.(*http.Client); ok {
 			err = c.setCerts(client)
 			if err != nil {
 				logger.Error(err, "unable to create OCI VCN Client")
@@ -221,9 +221,11 @@ func (c *ClientProvider) createNLbClient(region string, ociAuthConfigProvider co
 		return nil, err
 	}
 	nlbClient.SetRegion(region)
+	dispatcher := nlbClient.HTTPClient
+	nlbClient.HTTPClient = metrics.NewDispatcherWrapper(dispatcher, region)
 
 	if c.certOverride != nil {
-		if client, ok := nlbClient.HTTPClient.(*http.Client); ok {
+		if client, ok := dispatcher.(*http.Client); ok {
 			err = c.setCerts(client)
 			if err != nil {
 				logger.Error(err, "unable to create OCI NetworkLoadBalancer Client")
@@ -253,7 +255,7 @@ func (c *ClientProvider) createLBClient(region string, ociAuthConfigProvider com
 	lbClient.HTTPClient = metrics.NewDispatcherWrapper(dispatcher, region)
 
 	if c.certOverride != nil {
-		if client, ok := lbClient.HTTPClient.(*http.Client); ok {
+		if client, ok := dispatcher.(*http.Client); ok {
 			err = c.setCerts(client)
 			if err != nil {
 				logger.Error(err, "unable to create OCI Loadbalancer Client")
@@ -283,7 +285,7 @@ func (c *ClientProvider) createIdentityClient(region string, ociAuthConfigProvid
 	identityClt.HTTPClient = metrics.NewDispatcherWrapper(dispatcher, region)
 
 	if c.certOverride != nil {
-		if client, ok := identityClt.HTTPClient.(*http.Client); ok {
+		if client, ok := dispatcher.(*http.Client); ok {
 			err = c.setCerts(client)
 			if err != nil {
 				logger.Error(err, "unable to create OCI Identity Client")
@@ -313,7 +315,7 @@ func (c *ClientProvider) createComputeClient(region string, ociAuthConfigProvide
 	computeClient.HTTPClient = metrics.NewDispatcherWrapper(dispatcher, region)
 
 	if c.certOverride != nil {
-		if client, ok := computeClient.HTTPClient.(*http.Client); ok {
+		if client, ok := dispatcher.(*http.Client); ok {
 			err = c.setCerts(client)
 			if err != nil {
 				logger.Error(err, "unable to create OCI Compute Client")
@@ -343,7 +345,7 @@ func (c *ClientProvider) createComputeManagementClient(region string, ociAuthCon
 	computeManagementClient.HTTPClient = metrics.NewDispatcherWrapper(dispatcher, region)
 
 	if c.certOverride != nil {
-		if client, ok := computeManagementClient.HTTPClient.(*http.Client); ok {
+		if client, ok := dispatcher.(*http.Client); ok {
 			err = c.setCerts(client)
 			if err != nil {
 				logger.Error(err, "unable to create OCI Compute Management Client")
@@ -373,7 +375,7 @@ func (c *ClientProvider) createContainerEngineClient(region string, ociAuthConfi
 	containerEngineClt.HTTPClient = metrics.NewDispatcherWrapper(dispatcher, region)
 
 	if c.certOverride != nil {
-		if client, ok := containerEngineClt.HTTPClient.(*http.Client); ok {
+		if client, ok := dispatcher.(*http.Client); ok {
 			err = c.setCerts(client)
 			if err != nil {
 				logger.Error(err, "unable to create OCI Container Engine Client")
