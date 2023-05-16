@@ -54,8 +54,8 @@ type OCIManagedControlPlaneSpec struct {
 	ClusterOption ClusterOptions `json:"clusterOptions,omitempty"`
 
 	// ClusterTypeEnum defines the type of cluster. Supported types are
-	// - BASIC_CLUSTER
-	// - ENHANCED_CLUSTER
+	// * `BASIC_CLUSTER`
+	// * `ENHANCED_CLUSTER`
 	// +optional
 	ClusterType ClusterTypeEnum `json:"clusterType,omitempty"`
 
