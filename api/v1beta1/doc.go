@@ -15,5 +15,5 @@
 */
 
 // +k8s:conversion-gen=github.com/oracle/cluster-api-provider-oci/api/v1beta2
-
+// +groupName=infrastructure.cluster.x-k8s.io
 package v1beta1
