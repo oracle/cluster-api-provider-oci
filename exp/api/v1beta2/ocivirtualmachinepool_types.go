@@ -6,7 +6,6 @@ import (
 	"sigs.k8s.io/cluster-api/errors"
 )
 
-// Constants block.
 const (
 	// VirtualMachinePoolFinalizer is the finalizer for virtual machine pool.
 	VirtualMachinePoolFinalizer = "ocivirtualmachinepool.infrastructure.cluster.x-k8s.io"

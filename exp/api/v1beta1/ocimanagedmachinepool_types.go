@@ -6,7 +6,6 @@ import (
 	"sigs.k8s.io/cluster-api/errors"
 )
 
-// Constants block.
 const (
 	// ManagedMachinePoolFinalizer is the finalizer for managed machine pool.
 	ManagedMachinePoolFinalizer = "ocimanagedmachinepool.infrastructure.cluster.x-k8s.io"

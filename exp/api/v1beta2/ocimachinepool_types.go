@@ -26,7 +26,6 @@ import (
 // +kubebuilder:object:generate=true
 // +groupName=infrastructure.cluster.x-k8s.io
 
-// Constants block.
 const (
 	// MachinePoolFinalizer is the finalizer for the machine pool.
 	MachinePoolFinalizer = "ocimachinepool.infrastructure.cluster.x-k8s.io"
