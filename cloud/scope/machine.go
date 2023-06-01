@@ -608,10 +608,6 @@ func (m *MachineScope) ReconcileDeleteInstanceOnLB(ctx context.Context) error {
 			return err
 		}
 		backendSet := lb.BackendSets[APIServerLBBackendSetName]
-		if len(m.OCIMachine.Status.Addresses) <= 0 {
-			m.Logger.Info("Instance does not have IP Address, hence ignoring LBaaS reconciliation on delete")
-			return nil
-		}
 		instanceIp, err := m.GetMachineIPFromStatus()
 		if err != nil {
 			return err
