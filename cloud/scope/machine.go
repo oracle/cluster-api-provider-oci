@@ -387,11 +387,6 @@ func (m *MachineScope) Name() string {
 	return m.OCIMachine.Name
 }
 
-// IP returns the OCIMachine IP.
-func (m *MachineScope) IP() string {
-	return m.OCIMachine.Status.Addresses[0].Address
-}
-
 // GetInstanceId returns the OCIMachine instance id.
 func (m *MachineScope) GetInstanceId() *string {
 	return m.OCIMachine.Spec.InstanceId
@@ -515,7 +510,7 @@ func (m *MachineScope) ReconcileCreateInstanceOnLB(ctx context.Context) error {
 		backendSet := lb.BackendSets[APIServerLBBackendSetName]
 		// When creating a LB, there is no way to set the backend Name, default backend name is the instance IP and port
 		// So we use default backend name instead of machine name
-		backendName := m.IP() + ":" + strconv.Itoa(int(m.OCICluster.Spec.ControlPlaneEndpoint.Port))
+		backendName := instanceIp + ":" + strconv.Itoa(int(m.OCICluster.Spec.ControlPlaneEndpoint.Port))
 		if !m.containsLBBackend(backendSet, backendName) {
 			logger := m.Logger.WithValues("backend-set", *backendSet.Name)
 			workRequest := m.OCIMachine.Status.CreateBackendWorkRequestId
@@ -613,7 +608,17 @@ func (m *MachineScope) ReconcileDeleteInstanceOnLB(ctx context.Context) error {
 			return err
 		}
 		backendSet := lb.BackendSets[APIServerLBBackendSetName]
-		backendName := m.IP() + ":" + strconv.Itoa(int(m.OCICluster.Spec.ControlPlaneEndpoint.Port))
+		// in case of delete from LB backend, if the instance does not have an IP, we consider
+		// the instance to not have been added in first place and hence return nil
+		if len(m.OCIMachine.Status.Addresses) <= 0 {
+			m.Logger.Info("Instance does not have IP Address, hence ignoring LBaaS reconciliation on delete")
+			return nil
+		}
+		instanceIp, err := m.GetMachineIPFromStatus()
+		if err != nil {
+			return err
+		}
+		backendName := instanceIp + ":" + strconv.Itoa(int(m.OCICluster.Spec.ControlPlaneEndpoint.Port))
 		if m.containsLBBackend(backendSet, backendName) {
 			logger := m.Logger.WithValues("backend-set", *backendSet.Name)
 			workRequest := m.OCIMachine.Status.DeleteBackendWorkRequestId
