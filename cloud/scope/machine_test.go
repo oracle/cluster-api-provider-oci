@@ -2072,7 +2072,8 @@ func TestLBReconciliationDeletion(t *testing.T) {
 		},
 		{
 			name:          "no ip",
-			errorExpected: false,
+			errorExpected: true,
+			matchError:    errors.New("could not find machine IP Address in status object"),
 			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_lb.MockLoadBalancerClient) {
 				nlbClient.EXPECT().GetLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.GetLoadBalancerRequest{
 					LoadBalancerId: common.String("lbid"),
