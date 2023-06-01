@@ -2071,6 +2071,16 @@ func TestLBReconciliationDeletion(t *testing.T) {
 			},
 		},
 		{
+			name:          "no ip",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_lb.MockLoadBalancerClient) {
+				nlbClient.EXPECT().GetLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.GetLoadBalancerRequest{
+					LoadBalancerId: common.String("lbid"),
+				})).Return(loadbalancer.GetLoadBalancerResponse{
+					LoadBalancer: loadbalancer.LoadBalancer{}}, nil)
+			},
+		},
+		{
 			name:          "backend exists",
 			errorExpected: false,
 			matchError:    errors.New("could not get lb"),
