@@ -5,7 +5,7 @@ CAPOCI supports OKE [Enhanced Clusters][enhanced-cluster] and [Virtual Nodes][vi
 CAPOCI release artifacts which can be referred using  the flavor `managed-virtual-node` in `clusterctl generate` 
 command.
 
-> NOTE: Virtual Node Pool require Cluster API release 1.4.3 or later.
+> NOTE: Virtual Node Pool require Cluster API release 1.4.3 or later and CAPOCI release 0.10.0 or later.
 
 ## Create Enhanced Cluster
 The following `OCIManagedControlPlane` snippet can be used to create an enhanced OKE cluster.
