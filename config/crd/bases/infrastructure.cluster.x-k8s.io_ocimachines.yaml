@@ -188,6 +188,13 @@ spec:
                       default (minimum) VPUs/GB.'
                     format: int64
                     type: integer
+                  imageLookup:
+                    properties:
+                      operatingSystem:
+                        type: string
+                      operatingSystemVersion:
+                        type: string
+                    type: object
                   kmsKeyId:
                     description: KmsKeyId defines the OCID of the Key Management key
                       to assign as the master encryption key for the boot volume.

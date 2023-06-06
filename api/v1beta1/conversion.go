@@ -132,7 +132,3 @@ func Convert_v1beta1_OCIMachineSpec_To_v1beta2_OCIMachineSpec(in *OCIMachineSpec
 func Convert_v1beta2_LoadBalancer_To_v1beta1_LoadBalancer(in *v1beta2.LoadBalancer, out *LoadBalancer, s conversion.Scope) error {
 	return autoConvert_v1beta2_LoadBalancer_To_v1beta1_LoadBalancer(in, out, s)
 }
-
-func Convert_v1beta2_InstanceSourceViaImageConfig_To_v1beta1_InstanceSourceViaImageConfig(in *v1beta2.InstanceSourceViaImageConfig, out *InstanceSourceViaImageConfig, s conversion.Scope) error {
-	return autoConvert_v1beta2_InstanceSourceViaImageConfig_To_v1beta1_InstanceSourceViaImageConfig(in, out, s)
-}
