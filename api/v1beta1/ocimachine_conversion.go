@@ -76,7 +76,9 @@ func (r *OCIMachineTemplate) ConvertTo(dstRaw conversion.Hub) error {
 	if ok, err := utilconversion.UnmarshalData(r, restored); err != nil || !ok {
 		return err
 	}
-
+	if dst.Spec.Template.Spec.InstanceSourceViaImageDetails != nil && restored.Spec.Template.Spec.InstanceSourceViaImageDetails != nil {
+		dst.Spec.Template.Spec.InstanceSourceViaImageDetails.ImageLookup = restored.Spec.Template.Spec.InstanceSourceViaImageDetails.ImageLookup
+	}
 	return nil
 }
 
