@@ -160,24 +160,26 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 		}
 	}
 	imageId := m.OCIMachine.Spec.ImageId
-	if imageId == "" && m.OCIMachine.Spec.InstanceSourceViaImageDetails.ImageLookup != nil {
+	if imageId == "" {
 		lookupSpec := m.OCIMachine.Spec.InstanceSourceViaImageDetails.ImageLookup
-		response, err := m.ComputeClient.ListImages(ctx, core.ListImagesRequest{
-			CompartmentId:          common.String(m.getCompartmentId()),
-			OperatingSystem:        lookupSpec.OperatingSystem,
-			OperatingSystemVersion: lookupSpec.OperatingSystemVersion,
-			Limit:                  common.Int(1),
-			SortBy:                 core.ListImagesSortByTimecreated,
-		})
-		if err != nil {
-			return nil, err
+		if lookupSpec != nil {
+			response, err := m.ComputeClient.ListImages(ctx, core.ListImagesRequest{
+				CompartmentId:          common.String(m.getCompartmentId()),
+				OperatingSystem:        lookupSpec.OperatingSystem,
+				OperatingSystemVersion: lookupSpec.OperatingSystemVersion,
+				Limit:                  common.Int(1),
+				SortBy:                 core.ListImagesSortByTimecreated,
+			})
+			if err != nil {
+				return nil, err
+			}
+			if len(response.Items) == 0 {
+				return nil, errors.New(fmt.Sprintf("could not lookup image from lookup parameters"))
+			}
+			imageId = *response.Items[0].Id
+		} else {
+			return nil, errors.New(fmt.Sprintf("image id and image lookup not provided"))
 		}
-		if len(response.Items) == 0 {
-			return nil, errors.New(fmt.Sprintf("could not lookup image from lookup parameters"))
-		}
-		imageId = *response.Items[0].Id
-	} else {
-		return nil, errors.New(fmt.Sprintf("image id and image lookup not provided"))
 	}
 	sourceDetails := core.InstanceSourceViaImageDetails{
 		ImageId: common.String(imageId),
