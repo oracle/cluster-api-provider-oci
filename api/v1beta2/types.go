@@ -180,6 +180,13 @@ type InstanceSourceViaImageConfig struct {
 	//   * `30`-`120`: Represents the Ultra High Performance option.
 	// For volumes with the auto-tuned performance feature enabled, this is set to the default (minimum) VPUs/GB.
 	BootVolumeVpusPerGB *int64 `json:"bootVolumeVpusPerGB,omitempty"`
+
+	ImageLookup *ImageLookup `json:"imageLookup,omitempty"`
+}
+
+type ImageLookup struct {
+	OperatingSystem        *string `json:"operatingSystem,omitempty"`
+	OperatingSystemVersion *string `json:"operatingSystemVersion,omitempty"`
 }
 
 // LaunchInstanceAvailabilityConfigDetailsRecoveryActionEnum Enum with underlying type: string

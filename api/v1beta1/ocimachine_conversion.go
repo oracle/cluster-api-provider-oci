@@ -34,7 +34,7 @@ func (src *OCIMachine) ConvertTo(dstRaw conversion.Hub) error {
 	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
 		return err
 	}
-
+	dst.Spec.InstanceSourceViaImageDetails.ImageLookup = restored.Spec.InstanceSourceViaImageDetails.ImageLookup
 	return nil
 }
 
