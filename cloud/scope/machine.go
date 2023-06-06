@@ -167,6 +167,7 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 				CompartmentId:          common.String(m.getCompartmentId()),
 				OperatingSystem:        lookupSpec.OperatingSystem,
 				OperatingSystemVersion: lookupSpec.OperatingSystemVersion,
+				Shape:                  common.String(m.OCIMachine.Spec.Shape),
 				Limit:                  common.Int(1),
 				SortBy:                 core.ListImagesSortByTimecreated,
 			})
