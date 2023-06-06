@@ -88,7 +88,7 @@ func (s *ClusterScope) ReconcileSubnet(ctx context.Context) error {
 		}
 		s.Logger.Info("Created the subnet", "ocid", subnetId)
 		desiredSubnet.ID = subnetId
-		s.Logger.Info("subnet", "s", desiredSubnet)
+		//s.Logger.Info("subnet", "s", desiredSubnet)
 	}
 	return nil
 }
@@ -253,9 +253,9 @@ func (s *ClusterScope) IsSubnetsEqual(actual *core.Subnet, desired infrastructur
 		return false
 	}
 	if desired.SecurityList != nil {
-		//if *desired.SecurityList.ID != actual.SecurityListIds[0] {
-		//	return false
-		//}
+		if *desired.SecurityList.ID != actual.SecurityListIds[0] {
+			return false
+		}
 	}
 	return true
 }
