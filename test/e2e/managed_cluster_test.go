@@ -217,7 +217,7 @@ var _ = Describe("Managed Workload cluster creation", func() {
 		clusterctl.ApplyClusterTemplateAndWait(ctx, input, result)
 	})
 
-	It("Managed Cluster - Virtual Node Pool", func() {
+	It("Managed Cluster - Virtual Node Pool [PRBlocking]", func() {
 		clusterName = getClusterName(clusterNamePrefix, "virtual")
 		input := clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
