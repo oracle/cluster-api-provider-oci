@@ -160,7 +160,7 @@ func (r *OCIManagedMachinePoolReconciler) Reconcile(ctx context.Context, req ctr
 		return ctrl.Result{}, errors.Errorf("failed to create scope: %+v", err)
 	}
 
-	// Always close the scope when exiting this function so we can persist any GCPMachine changes.
+	// Always close the scope when exiting this function so we can persist any OCIManagedMachinePool changes.
 	defer func() {
 		if err := machinePoolScope.Close(ctx); err != nil && reterr == nil {
 			reterr = err
