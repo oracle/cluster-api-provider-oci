@@ -8,8 +8,8 @@ providers:
   - name: cluster-api
     type: CoreProvider
     versions:
-      - name: v1.4.1
-        value: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.4.1/core-components.yaml
+      - name: v1.4.3
+        value: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.4.3/core-components.yaml
         type: url
         files:
           - sourcePath: "../data/shared/v1beta1/metadata.yaml"
@@ -21,8 +21,8 @@ providers:
   - name: kubeadm
     type: BootstrapProvider
     versions:
-      - name: v1.4.1
-        value: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.4.1/bootstrap-components.yaml
+      - name: v1.4.3
+        value: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.4.3/bootstrap-components.yaml
         type: url
         files:
           - sourcePath: "../data/shared/v1beta1/metadata.yaml"
@@ -34,8 +34,8 @@ providers:
   - name: kubeadm
     type: ControlPlaneProvider
     versions:
-      - name: v1.4.1
-        value: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.4.1/control-plane-components.yaml
+      - name: v1.4.3
+        value: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.4.3/control-plane-components.yaml
         type: url
         files:
           - sourcePath: "../data/shared/v1beta1/metadata.yaml"
@@ -71,6 +71,7 @@ providers:
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-externally-managed-vcn.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-machine-pool.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-managed.yaml"
+          - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-managed-virtual.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-managed-cluster-identity.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-cluster-identity.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-windows-calico.yaml"
@@ -78,8 +79,8 @@ providers:
 
 variables:
   KUBERNETES_VERSION: "v1.25.6"
-  OCI_MANAGED_KUBERNETES_VERSION: "v1.24.1"
-  OCI_MANAGED_KUBERNETES_VERSION_UPGRADE: "v1.25.4"
+  OCI_MANAGED_KUBERNETES_VERSION: "v1.25.4"
+  OCI_MANAGED_KUBERNETES_VERSION_UPGRADE: "v1.26.2"
   EXP_MACHINE_POOL: "true"
   EXP_CLUSTER_RESOURCE_SET: "true"
   NODE_DRAIN_TIMEOUT: "60s"

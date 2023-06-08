@@ -362,9 +362,6 @@ spec:
   version: "${KUBERNETES_VERSION}"
   nodeShape: "${OCI_MANAGED_NODE_SHAPE=VM.Standard.E4.Flex}"
   sshPublicKey: "${OCI_SSH_KEY}"
-  nodeMetadata:
-    # The custom cloud int script generated from the script scripts.oke-custom-cloud-init.sh
-    user_data: "IyEvYmluL2Jhc2gKY3VybCAtLWZhaWwgLUggIkF1dGhvcml6YXRpb246IEJlYXJlciBPcmFjbGUiIC1MMCBodHRwOi8vMTY5LjI1NC4xNjkuMjU0L29wYy92Mi9pbnN0YW5jZS9tZXRhZGF0YS9va2VfaW5pdF9zY3JpcHQgfCBiYXNlNjQgLS1kZWNvZGUgPi92YXIvcnVuL29rZS1pbml0LnNoCnByb3ZpZGVyX2lkPSQoY3VybCAtLWZhaWwgLUggIkF1dGhvcml6YXRpb246IEJlYXJlciBPcmFjbGUiIC1MMCBodHRwOi8vMTY5LjI1NC4xNjkuMjU0L29wYy92Mi9pbnN0YW5jZS9pZCkKYmFzaCAvdmFyL3J1bi9va2UtaW5pdC5zaCAtLWt1YmVsZXQtZXh0cmEtYXJncyAiLS1wcm92aWRlci1pZD1vY2k6Ly8kcHJvdmlkZXJfaWQiCg=="
   nodeSourceViaImage:
     imageId: ${OCI_MANAGED_NODE_IMAGE_ID=""}
     bootVolumeSizeInGBs: ${OCI_MANAGED_NODE_BOOT_VOLUME_SIZE=50}

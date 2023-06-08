@@ -1,0 +1,5 @@
+bases:
+  - ./cluster.yaml
+  - ./machine-pool.yaml
+
+
