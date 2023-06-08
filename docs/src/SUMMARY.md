@@ -42,8 +42,4 @@
   - [Networking customizations](./managed/networking.md)
 - [Reference](./reference/reference.md)
   - [API Reference](./reference/api-reference.md)
-    - [v1beta2 API](./reference/v1beta2-api.md)
-    - [v1beta2 exp API](./reference/v1beta2-exp-api.md)
-    - [v1beta1 API](./reference/v1beta1-api.md)
-    - [v1beta1 exp API](./reference/v1beta1-exp-api.md)
   - [Glossary](./reference/glossary.md)
