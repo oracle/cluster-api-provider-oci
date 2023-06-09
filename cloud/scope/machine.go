@@ -161,8 +161,9 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 	}
 	imageId := m.OCIMachine.Spec.ImageId
 	if imageId == "" {
-		lookupSpec := m.OCIMachine.Spec.InstanceSourceViaImageDetails.ImageLookup
-		if lookupSpec != nil {
+		if m.OCIMachine.Spec.InstanceSourceViaImageDetails != nil &&
+			m.OCIMachine.Spec.InstanceSourceViaImageDetails.ImageLookup != nil {
+			lookupSpec := m.OCIMachine.Spec.InstanceSourceViaImageDetails.ImageLookup
 			response, err := m.ComputeClient.ListImages(ctx, core.ListImagesRequest{
 				CompartmentId:          common.String(m.getCompartmentId()),
 				OperatingSystem:        lookupSpec.OperatingSystem,

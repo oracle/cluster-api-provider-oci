@@ -12,18 +12,18 @@ import (
 	core "github.com/oracle/oci-go-sdk/v65/core"
 )
 
-// MockComputeClient is a mock_computemanagement of ComputeClient interface.
+// MockComputeClient is a mock of ComputeClient interface.
 type MockComputeClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockComputeClientMockRecorder
 }
 
-// MockComputeClientMockRecorder is the mock_computemanagement recorder for MockComputeClient.
+// MockComputeClientMockRecorder is the mock recorder for MockComputeClient.
 type MockComputeClientMockRecorder struct {
 	mock *MockComputeClient
 }
 
-// NewMockComputeClient creates a new mock_computemanagement instance.
+// NewMockComputeClient creates a new mock instance.
 func NewMockComputeClient(ctrl *gomock.Controller) *MockComputeClient {
 	mock := &MockComputeClient{ctrl: ctrl}
 	mock.recorder = &MockComputeClientMockRecorder{mock}
@@ -78,6 +78,21 @@ func (m *MockComputeClient) LaunchInstance(ctx context.Context, request core.Lau
 func (mr *MockComputeClientMockRecorder) LaunchInstance(ctx, request interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LaunchInstance", reflect.TypeOf((*MockComputeClient)(nil).LaunchInstance), ctx, request)
+}
+
+// ListImages mocks base method.
+func (m *MockComputeClient) ListImages(ctx context.Context, request core.ListImagesRequest) (core.ListImagesResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListImages", ctx, request)
+	ret0, _ := ret[0].(core.ListImagesResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListImages indicates an expected call of ListImages.
+func (mr *MockComputeClientMockRecorder) ListImages(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListImages", reflect.TypeOf((*MockComputeClient)(nil).ListImages), ctx, request)
 }
 
 // ListInstances mocks base method.

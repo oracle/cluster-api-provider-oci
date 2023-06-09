@@ -35,7 +35,7 @@ func (s *ClusterScope) ReconcileSubnet(ctx context.Context) error {
 		}
 		if subnet != nil {
 			subnetOCID := subnet.Id
-			//desiredSubnet.ID = subnetOCID
+			desiredSubnet.ID = subnetOCID
 			if desiredSubnet.SecurityList != nil {
 				securityList, err := s.GetSecurityList(ctx, *desiredSubnet.SecurityList)
 				if err != nil {
@@ -49,7 +49,7 @@ func (s *ClusterScope) ReconcileSubnet(ctx context.Context) error {
 					s.Logger.Info("Created the security list", "ocid", seclistId)
 					desiredSubnet.SecurityList.ID = seclistId
 				} else {
-					//desiredSubnet.SecurityList.ID = securityList.Id
+					desiredSubnet.SecurityList.ID = securityList.Id
 					if s.IsSecurityListEqual(*securityList, *desiredSubnet.SecurityList) {
 						s.Logger.Info("No Reconciliation Required for Security List", "securitylist", securityList.Id)
 					} else {
@@ -88,7 +88,6 @@ func (s *ClusterScope) ReconcileSubnet(ctx context.Context) error {
 		}
 		s.Logger.Info("Created the subnet", "ocid", subnetId)
 		desiredSubnet.ID = subnetId
-		//s.Logger.Info("subnet", "s", desiredSubnet)
 	}
 	return nil
 }

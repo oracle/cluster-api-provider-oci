@@ -188,11 +188,16 @@ type InstanceSourceViaImageConfig struct {
 	// For volumes with the auto-tuned performance feature enabled, this is set to the default (minimum) VPUs/GB.
 	BootVolumeVpusPerGB *int64 `json:"bootVolumeVpusPerGB,omitempty"`
 
+	// ImageLookup defines the parameters for looking up images as worker image.
 	ImageLookup *ImageLookup `json:"imageLookup,omitempty"`
 }
 
+// ImageLookup defines the parameters for looking up images as worker image.
 type ImageLookup struct {
-	OperatingSystem        *string `json:"operatingSystem,omitempty"`
+	// OperatingSystem defined the operating system of the image.
+	OperatingSystem *string `json:"operatingSystem,omitempty"`
+
+	// OperatingSystemVersion defined the version operating system.
 	OperatingSystemVersion *string `json:"operatingSystemVersion,omitempty"`
 }
 
