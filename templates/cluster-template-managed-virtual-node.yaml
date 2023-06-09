@@ -7,12 +7,12 @@ metadata:
   namespace: "${NAMESPACE}"
 spec:
   infrastructureRef:
-    apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
     kind: OCIManagedCluster
     name: "${CLUSTER_NAME}"
     namespace: "${NAMESPACE}"
   controlPlaneRef:
-    apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
     kind: OCIManagedControlPlane
     name: "${CLUSTER_NAME}"
     namespace: "${NAMESPACE}"
@@ -33,6 +33,7 @@ metadata:
   namespace: "${NAMESPACE}"
 spec:
   version: "${KUBERNETES_VERSION}"
+  clusterType: "ENHANCED_CLUSTER"
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachinePool
@@ -51,22 +52,14 @@ spec:
         dataSecretName: ""
       infrastructureRef:
         apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
-        kind: OCIManagedMachinePool
+        kind: OCIVirtualMachinePool
         name: ${CLUSTER_NAME}-mp-0
       version: ${KUBERNETES_VERSION}
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
-kind: OCIManagedMachinePool
+kind: OCIVirtualMachinePool
 metadata:
   name: ${CLUSTER_NAME}-mp-0
   namespace: default
 spec:
-  version: "${KUBERNETES_VERSION}"
-  nodeShape: "${OCI_MANAGED_NODE_SHAPE=VM.Standard.E4.Flex}"
-  sshPublicKey: "${OCI_SSH_KEY}"
-  nodeSourceViaImage:
-    imageId: ${OCI_MANAGED_NODE_IMAGE_ID:=""}
-    bootVolumeSizeInGBs: ${OCI_MANAGED_NODE_BOOT_VOLUME_SIZE=50}
-  nodeShapeConfig:
-    ocpus: "${OCI_MANAGED_NODE_MACHINE_TYPE_OCPUS=1}"
 ---

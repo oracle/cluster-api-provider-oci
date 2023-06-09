@@ -22,26 +22,27 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 )
 
-// ConvertTo converts the v1beta1 OCIManagedCluster receiver to a v1beta2 OCIManagedCluster.
-func (src *OCIManagedControlPlane) ConvertTo(dstRaw conversion.Hub) error {
-	dst := dstRaw.(*v1beta2.OCIManagedControlPlane)
-	if err := Convert_v1beta1_OCIManagedControlPlane_To_v1beta2_OCIManagedControlPlane(src, dst, nil); err != nil {
+// ConvertTo converts the v1beta1 OCIVirtualMachinePool receiver to a v1beta2 OCIVirtualMachinePool.
+func (src *OCIVirtualMachinePool) ConvertTo(dstRaw conversion.Hub) error {
+	dst := dstRaw.(*v1beta2.OCIVirtualMachinePool)
+
+	if err := Convert_v1beta1_OCIVirtualMachinePool_To_v1beta2_OCIVirtualMachinePool(src, dst, nil); err != nil {
 		return err
 	}
 
-	restored := &v1beta2.OCIManagedControlPlane{}
+	restored := &v1beta2.OCIVirtualMachinePool{}
 	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
 		return err
 	}
-	dst.Spec.ClusterType = restored.Spec.ClusterType
+
 	return nil
 }
 
-// ConvertFrom converts receiver to a v1beta2 OCIManagedControlPlane.
-func (r *OCIManagedControlPlane) ConvertFrom(srcRaw conversion.Hub) error {
-	src := srcRaw.(*v1beta2.OCIManagedControlPlane)
+// ConvertFrom converts receiver to a v1beta2 OCIVirtualMachinePool.
+func (r *OCIVirtualMachinePool) ConvertFrom(srcRaw conversion.Hub) error {
+	src := srcRaw.(*v1beta2.OCIVirtualMachinePool)
 
-	if err := Convert_v1beta2_OCIManagedControlPlane_To_v1beta1_OCIManagedControlPlane(src, r, nil); err != nil {
+	if err := Convert_v1beta2_OCIVirtualMachinePool_To_v1beta1_OCIVirtualMachinePool(src, r, nil); err != nil {
 		return err
 	}
 

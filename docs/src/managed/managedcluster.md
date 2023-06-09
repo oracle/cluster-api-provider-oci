@@ -9,9 +9,6 @@ custom resources:
 - `OCIManagedCluster`
 - `OCIManagedMachinePool`
 
-> NOTE: CAPOCI does not support flannel as the CNI provider in OKE clusters. This will be fixed in 
-> an upcoming release.
-
 ## Workload Cluster Parameters
 
 The following Oracle Cloud Infrastructure (OCI) configuration parameters are available

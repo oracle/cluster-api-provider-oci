@@ -37,6 +37,7 @@
   - [Custom Networking](./networking/custom-networking.md)
   - [Private Cluster](./networking/private-cluster.md)
 - [Managed Clusters (OKE)](./managed/managedcluster.md)
+  - [Virtual Nodes and Enhanced Clusters](./managed/virtual-nodes-and-enhanced-clusters.md)
   - [Boot volume expansion](./managed/boot-volume-expansion.md)
   - [Networking customizations](./managed/networking.md)
 - [Reference](./reference/reference.md)

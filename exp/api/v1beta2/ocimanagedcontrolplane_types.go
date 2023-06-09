@@ -27,6 +27,13 @@ const (
 	ControlPlaneFinalizer = "ocimanagedcontrolplane.infrastructure.cluster.x-k8s.io"
 )
 
+const (
+	BasicClusterType    ClusterTypeEnum = "BASIC_CLUSTER"
+	EnhancedClusterType ClusterTypeEnum = "ENHANCED_CLUSTER"
+)
+
+type ClusterTypeEnum string
+
 // OCIManagedControlPlaneSpec defines the desired state of OCIManagedControlPlane.
 // The properties are generated from https://docs.oracle.com/en-us/iaas/api/#/en/containerengine/20180222/datatypes/CreateClusterDetails
 type OCIManagedControlPlaneSpec struct {
@@ -45,6 +52,12 @@ type OCIManagedControlPlaneSpec struct {
 	// ClusterOptions defines Optional attributes for the cluster.
 	// +optional
 	ClusterOption ClusterOptions `json:"clusterOptions,omitempty"`
+
+	// ClusterTypeEnum defines the type of cluster. Supported types are
+	// * `BASIC_CLUSTER`
+	// * `ENHANCED_CLUSTER`
+	// +optional
+	ClusterType ClusterTypeEnum `json:"clusterType,omitempty"`
 
 	// KmsKeyId defines the OCID of the KMS key to be used as the master encryption key for Kubernetes secret encryption. When used,
 	// +optional

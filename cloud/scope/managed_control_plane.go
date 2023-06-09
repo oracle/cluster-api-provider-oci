@@ -166,6 +166,8 @@ func (s *ManagedControlPlaneScope) GetOrCreateControlPlane(ctx context.Context) 
 		}
 	}
 
+	clusterType := getOKEClusterTypeFromSpecType(controlPlaneSpec)
+
 	details := oke.CreateClusterDetails{
 		Name:                     common.String(s.GetClusterName()),
 		CompartmentId:            common.String(s.OCIClusterAccessor.GetCompartmentId()),
@@ -177,6 +179,7 @@ func (s *ManagedControlPlaneScope) GetOrCreateControlPlane(ctx context.Context) 
 		EndpointConfig:           endpointConfig,
 		ClusterPodNetworkOptions: podNetworks,
 		KmsKeyId:                 controlPlaneSpec.KmsKeyId,
+		Type:                     clusterType,
 	}
 
 	if controlPlaneSpec.ImagePolicyConfig != nil {
@@ -214,6 +217,22 @@ func (s *ManagedControlPlaneScope) GetOrCreateControlPlane(ctx context.Context) 
 	}
 	s.OCIManagedControlPlane.Spec.ID = clusterId
 	return s.getOKEClusterFromOCID(ctx, clusterId)
+}
+
+func getOKEClusterTypeFromSpecType(controlPlaneSpec infrav2exp.OCIManagedControlPlaneSpec) oke.ClusterTypeEnum {
+	if controlPlaneSpec.ClusterType != "" {
+		switch controlPlaneSpec.ClusterType {
+		case infrav2exp.BasicClusterType:
+			return oke.ClusterTypeBasicCluster
+			break
+		case infrav2exp.EnhancedClusterType:
+			return oke.ClusterTypeEnhancedCluster
+			break
+		default:
+			break
+		}
+	}
+	return ""
 }
 
 // GetOKECluster tries to lookup a control plane(OKE cluster) based on ID/Name and returns the
@@ -546,6 +565,8 @@ func (s *ManagedControlPlaneScope) UpdateControlPlane(ctx context.Context, okeCl
 				KeyDetails:      s.getKeyDetails(),
 			}
 		}
+		clusterType := getOKEClusterTypeFromSpecType(controlPlaneSpec)
+		details.Type = clusterType
 		updateClusterRequest := oke.UpdateClusterRequest{
 			ClusterId:            okeCluster.Id,
 			UpdateClusterDetails: details,
@@ -631,6 +652,18 @@ func (s *ManagedControlPlaneScope) getSpecFromActual(cluster *oke.Cluster) *infr
 				IsTillerEnabled:              cluster.Options.AddOns.IsTillerEnabled,
 				IsKubernetesDashboardEnabled: cluster.Options.AddOns.IsKubernetesDashboardEnabled,
 			}
+		}
+	}
+	if cluster.Type != "" {
+		switch cluster.Type {
+		case oke.ClusterTypeBasicCluster:
+			spec.ClusterType = infrav2exp.BasicClusterType
+			break
+		case oke.ClusterTypeEnhancedCluster:
+			spec.ClusterType = infrav2exp.EnhancedClusterType
+			break
+		default:
+			break
 		}
 	}
 	return &spec

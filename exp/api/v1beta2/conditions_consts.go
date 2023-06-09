@@ -43,6 +43,19 @@ const (
 	// NodePoolDeletedReason Node Pool is deleted.
 	NodePoolDeletedReason = "NodePoolDeleted"
 
+	// VirtualNodePoolReadyCondition reports on current status of the Virtual Node Pool. Ready indicates the group is provisioned.
+	VirtualNodePoolReadyCondition clusterv1.ConditionType = "VirtualNodePoolReady"
+	// VirtualNodePoolNotFoundReason used when the Virtual Node Pool couldn't be retrieved.
+	VirtualNodePoolNotFoundReason = "VirtualNodePoolNotFound"
+	// VirtualNodePoolProvisionFailedReason used for failures during Virtual Node Pool provisioning.
+	VirtualNodePoolProvisionFailedReason = "VirtualNodePoolProvisionFailed"
+	// VirtualNodePoolDeletionInProgress Virtual Node Pool is in a deletion in progress state.
+	VirtualNodePoolDeletionInProgress = "VirtualNodePoolDeletionInProgress"
+	// VirtualNodePoolNotReadyReason used when the virtual node pool is in a pending state.
+	VirtualNodePoolNotReadyReason = "VirtualNodePoolNotReady"
+	// VirtualNodePoolDeletedReason Virtual Node Pool is deleted.
+	VirtualNodePoolDeletedReason = "VirtualNodePoolDeleted"
+
 	// LaunchTemplateReadyCondition represents the status of an OCIachinePool's associated Instance Template.
 	LaunchTemplateReadyCondition clusterv1.ConditionType = "LaunchTemplateReady"
 	// LaunchTemplateNotFoundReason is used when an associated Launch Template can't be found.

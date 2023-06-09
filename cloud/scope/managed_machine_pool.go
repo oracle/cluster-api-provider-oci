@@ -140,7 +140,7 @@ func (m *ManagedMachinePoolScope) SetListandSetMachinePoolInstances(ctx context.
 	providerIDList := make([]string, 0)
 	for _, instance := range nodePool.Nodes {
 		if instance.LifecycleState == oke.NodeLifecycleStateActive {
-			providerIDList = append(providerIDList, fmt.Sprintf("oci://%s", *instance.Id))
+			providerIDList = append(providerIDList, *instance.Id)
 		}
 	}
 	m.OCIManagedMachinePool.Spec.ProviderIDList = providerIDList

@@ -311,6 +311,17 @@ func main() {
 			setupLog.Error(err, "unable to create controller", "controller", scope.OCIManagedClusterControlPlaneKind)
 			os.Exit(1)
 		}
+
+		if err = (&expcontrollers.OCIVirtualMachinePoolReconciler{
+			Client:         mgr.GetClient(),
+			Scheme:         mgr.GetScheme(),
+			Region:         region,
+			ClientProvider: clientProvider,
+			Recorder:       mgr.GetEventRecorderFor("ocivirtualmachinepool-controller"),
+		}).SetupWithManager(ctx, mgr, controller.Options{MaxConcurrentReconciles: ociClusterConcurrency}); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", scope.OCIVirtualMachinePoolKind)
+			os.Exit(1)
+		}
 	}
 
 	if err = (&infrastructurev1beta2.OCICluster{}).SetupWebhookWithManager(mgr); err != nil {
@@ -335,6 +346,11 @@ func main() {
 
 	if err = (&expV1Beta2.OCIManagedMachinePool{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "OCIManagedMachinePool")
+		os.Exit(1)
+	}
+
+	if err = (&expV1Beta2.OCIVirtualMachinePool{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "OCIVirtualMachinePool")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder
