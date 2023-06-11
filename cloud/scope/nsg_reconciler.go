@@ -108,18 +108,28 @@ func (s *ClusterScope) GetNSG(ctx context.Context, spec infrastructurev1beta2.NS
 			return nil, errors.New("cluster api tags have been modified out of context")
 		}
 	}
-	nsgs, err := s.VCNClient.ListNetworkSecurityGroups(ctx, core.ListNetworkSecurityGroupsRequest{
-		CompartmentId: common.String(s.GetCompartmentId()),
-		VcnId:         s.getVcnId(),
-		DisplayName:   common.String(spec.Name),
-	})
-	if err != nil {
-		s.Logger.Error(err, "failed to list network security groups")
-		return nil, errors.Wrap(err, "failed to list network security groups")
-	}
-	for _, nsg := range nsgs.Items {
-		if s.IsResourceCreatedByClusterAPI(nsg.FreeformTags) {
-			return &nsg, nil
+	var page *string
+	for {
+		nsgs, err := s.VCNClient.ListNetworkSecurityGroups(ctx, core.ListNetworkSecurityGroupsRequest{
+			CompartmentId: common.String(s.GetCompartmentId()),
+			VcnId:         s.getVcnId(),
+			DisplayName:   common.String(spec.Name),
+			Page: page,
+		})
+		if err != nil {
+			s.Logger.Error(err, "failed to list network security groups")
+			return nil, errors.Wrap(err, "failed to list network security groups")
+		}
+		for _, nsg := range nsgs.Items {
+			if s.IsResourceCreatedByClusterAPI(nsg.FreeformTags) {
+				return &nsg, nil
+			}
+		}
+
+		if nsgs.OpcNextPage == nil{
+			break
+		}else{
+			page = nsgs.OpcNextPage
 		}
 	}
 	return nil, nil
@@ -176,14 +186,29 @@ func (s *ClusterScope) UpdateNSGSecurityRulesIfNeeded(ctx context.Context, desir
 	var egressRulesToAdd []infrastructurev1beta2.EgressSecurityRuleForNSG
 	var securityRulesToRemove []string
 	var isNSGUpdated bool
-	listSecurityRulesResponse, err := s.VCNClient.ListNetworkSecurityGroupSecurityRules(ctx, core.ListNetworkSecurityGroupSecurityRulesRequest{
+
+	req := core.ListNetworkSecurityGroupSecurityRulesRequest{
 		NetworkSecurityGroupId: actual.Id,
-	})
-	if err != nil {
-		s.Logger.Error(err, "failed to reconcile the network security group, failed to list security rules")
-		return isNSGUpdated, errors.Wrap(err, "failed to reconcile the network security group, failed to list security rules")
 	}
-	ingressRules, egressRules := generateSpecFromSecurityRules(listSecurityRulesResponse.Items)
+
+	var listSecurityRules []core.SecurityRule
+	listNetworkSecurityGroupSecurityRules := func(ctx context.Context, request core.ListNetworkSecurityGroupSecurityRulesRequest) (core.ListNetworkSecurityGroupSecurityRulesResponse, error) {
+		return s.VCNClient.ListNetworkSecurityGroupSecurityRules(ctx, request)
+	}
+
+	for resp, err := listNetworkSecurityGroupSecurityRules(ctx, req); ; resp, err = listNetworkSecurityGroupSecurityRules(ctx, req) {
+		if err != nil {
+			s.Logger.Error(err, "failed to reconcile the network security group, failed to list security rules")
+			return isNSGUpdated, errors.Wrap(err, "failed to reconcile the network security group, failed to list security rules")
+		}
+		listSecurityRules = append(listSecurityRules, resp.Items...)
+		if resp.OpcNextPage == nil {
+			break
+		} else {
+			req.Page = resp.OpcNextPage
+		}
+	}
+	ingressRules, egressRules := generateSpecFromSecurityRules(listSecurityRules)
 
 	for i, ingressRule := range desired.IngressRules {
 		if ingressRule.IsStateless == nil {
@@ -259,7 +284,7 @@ func (s *ClusterScope) UpdateNSGSecurityRulesIfNeeded(ctx context.Context, desir
 	}
 	if len(securityRulesToRemove) > 0 {
 		isNSGUpdated = true
-		_, err = s.VCNClient.RemoveNetworkSecurityGroupSecurityRules(ctx, core.RemoveNetworkSecurityGroupSecurityRulesRequest{
+		_, err := s.VCNClient.RemoveNetworkSecurityGroupSecurityRules(ctx, core.RemoveNetworkSecurityGroupSecurityRulesRequest{
 			NetworkSecurityGroupId: desired.ID,
 			RemoveNetworkSecurityGroupSecurityRulesDetails: core.RemoveNetworkSecurityGroupSecurityRulesDetails{
 				SecurityRuleIds: securityRulesToRemove,

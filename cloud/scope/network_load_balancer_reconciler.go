@@ -274,24 +274,34 @@ func (s *ClusterScope) GetNetworkLoadBalancers(ctx context.Context) (*networkloa
 			return nil, errors.New("cluster api tags have been modified out of context")
 		}
 	}
-	nlbs, err := s.NetworkLoadBalancerClient.ListNetworkLoadBalancers(ctx, networkloadbalancer.ListNetworkLoadBalancersRequest{
-		CompartmentId: common.String(s.GetCompartmentId()),
-		DisplayName:   common.String(s.GetControlPlaneLoadBalancerName()),
-	})
-	if err != nil {
-		s.Logger.Error(err, "Failed to list nlb by name")
-		return nil, errors.Wrap(err, "failed to list nlb by name")
-	}
+	var page *string
+	for {
+		nlbs, err := s.NetworkLoadBalancerClient.ListNetworkLoadBalancers(ctx, networkloadbalancer.ListNetworkLoadBalancersRequest{
+			CompartmentId: common.String(s.GetCompartmentId()),
+			DisplayName:   common.String(s.GetControlPlaneLoadBalancerName()),
+			Page: page,
+		})
+		if err != nil {
+			s.Logger.Error(err, "Failed to list nlb by name")
+			return nil, errors.Wrap(err, "failed to list nlb by name")
+		}
 
-	for _, nlb := range nlbs.Items {
-		if s.IsResourceCreatedByClusterAPI(nlb.FreeformTags) {
-			resp, err := s.NetworkLoadBalancerClient.GetNetworkLoadBalancer(ctx, networkloadbalancer.GetNetworkLoadBalancerRequest{
-				NetworkLoadBalancerId: nlb.Id,
-			})
-			if err != nil {
-				return nil, err
+		for _, nlb := range nlbs.Items {
+			if s.IsResourceCreatedByClusterAPI(nlb.FreeformTags) {
+				resp, err := s.NetworkLoadBalancerClient.GetNetworkLoadBalancer(ctx, networkloadbalancer.GetNetworkLoadBalancerRequest{
+					NetworkLoadBalancerId: nlb.Id,
+				})
+				if err != nil {
+					return nil, err
+				}
+				return &resp.NetworkLoadBalancer, nil
 			}
-			return &resp.NetworkLoadBalancer, nil
+		}
+
+		if nlbs.OpcNextPage == nil{
+			break
+		}else{
+			page = nlbs.OpcNextPage
 		}
 	}
 	return nil, nil
