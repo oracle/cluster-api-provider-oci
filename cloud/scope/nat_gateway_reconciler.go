@@ -71,18 +71,28 @@ func (s *ClusterScope) GetNatGateway(ctx context.Context) (*core.NatGateway, err
 			return nil, errors.New("cluster api tags have been modified out of context")
 		}
 	}
-	ngws, err := s.VCNClient.ListNatGateways(ctx, core.ListNatGatewaysRequest{
-		CompartmentId: common.String(s.GetCompartmentId()),
-		VcnId:         s.getVcnId(),
-		DisplayName:   common.String(NatGatewayName),
-	})
-	if err != nil {
-		s.Logger.Error(err, "Failed to list NAT gateways")
-		return nil, errors.Wrap(err, "failed to list NAT gateways")
-	}
-	for _, ngw := range ngws.Items {
-		if s.IsResourceCreatedByClusterAPI(ngw.FreeformTags) {
-			return &ngw, nil
+	var page *string
+	for {
+		ngws, err := s.VCNClient.ListNatGateways(ctx, core.ListNatGatewaysRequest{
+			CompartmentId: common.String(s.GetCompartmentId()),
+			VcnId:         s.getVcnId(),
+			DisplayName:   common.String(NatGatewayName),
+			Page: page,
+		})
+		if err != nil {
+			s.Logger.Error(err, "Failed to list NAT gateways")
+			return nil, errors.Wrap(err, "failed to list NAT gateways")
+		}
+		for _, ngw := range ngws.Items {
+			if s.IsResourceCreatedByClusterAPI(ngw.FreeformTags) {
+				return &ngw, nil
+			}
+		}
+
+		if ngws.OpcNextPage == nil{
+			break
+		}else{
+			page = ngws.OpcNextPage
 		}
 	}
 	return nil, nil

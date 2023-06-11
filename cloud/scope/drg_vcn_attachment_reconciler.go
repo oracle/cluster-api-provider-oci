@@ -78,25 +78,38 @@ func (s *ClusterScope) GetDRGAttachment(ctx context.Context) (*core.DrgAttachmen
 		}
 	}
 
-	attachments, err := s.VCNClient.ListDrgAttachments(ctx, core.ListDrgAttachmentsRequest{
+	req := core.ListDrgAttachmentsRequest{
 		AttachmentType: core.ListDrgAttachmentsAttachmentTypeVcn,
 		DisplayName:    common.String(s.OCIClusterAccessor.GetName()),
 		DrgId:          s.getDrgID(),
 		NetworkId:      s.OCIClusterAccessor.GetNetworkSpec().Vcn.ID,
 		CompartmentId:  common.String(s.GetCompartmentId()),
-	})
-
-	if err != nil {
-		return nil, err
 	}
 
-	if len(attachments.Items) == 0 {
+	var attachments []core.DrgAttachment
+	listDrgAttachments := func(ctx context.Context, request core.ListDrgAttachmentsRequest) (core.ListDrgAttachmentsResponse, error) {
+		return s.VCNClient.ListDrgAttachments(ctx, request)
+	}
+
+	for resp, err := listDrgAttachments(ctx, req); ; resp, err = listDrgAttachments(ctx, req) {
+		if err != nil {
+			return nil, err
+		}
+		attachments = append(attachments, resp.Items...)
+		if resp.OpcNextPage == nil {
+			break
+		} else {
+			req.Page = resp.OpcNextPage
+		}
+	}
+
+	if len(attachments) == 0 {
 		return nil, nil
-	} else if len(attachments.Items) > 1 {
+	} else if len(attachments) > 1 {
 		return nil, errors.New("found more than one DRG VCN attachment to same VCN, please remove any " +
 			"DRG VCN attachments which has been created outside Cluster API for Oracle for the VCN")
 	} else {
-		attachment := attachments.Items[0]
+		attachment := attachments[0]
 		if s.IsResourceCreatedByClusterAPI(attachment.FreeformTags) {
 			return &attachment, nil
 		} else {

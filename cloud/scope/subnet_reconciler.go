@@ -185,18 +185,27 @@ func (s *ClusterScope) GetSubnet(ctx context.Context, spec infrastructurev1beta2
 			return nil, errors.New("cluster api tags have been modified out of context")
 		}
 	}
-	subnets, err := s.VCNClient.ListSubnets(ctx, core.ListSubnetsRequest{
-		CompartmentId: common.String(s.GetCompartmentId()),
-		VcnId:         s.getVcnId(),
-		DisplayName:   common.String(spec.Name),
-	})
-	if err != nil {
-		s.Logger.Error(err, "failed to list subnets")
-		return nil, errors.Wrap(err, "failed to list subnets")
-	}
-	for _, subnet := range subnets.Items {
-		if s.IsResourceCreatedByClusterAPI(subnet.FreeformTags) {
-			return &subnet, nil
+	var page *string
+	for {
+		subnets, err := s.VCNClient.ListSubnets(ctx, core.ListSubnetsRequest{
+			CompartmentId: common.String(s.GetCompartmentId()),
+			VcnId:         s.getVcnId(),
+			DisplayName:   common.String(spec.Name),
+			Page: page,
+		})
+		if err != nil {
+			s.Logger.Error(err, "failed to list subnets")
+			return nil, errors.Wrap(err, "failed to list subnets")
+		}
+		for _, subnet := range subnets.Items {
+			if s.IsResourceCreatedByClusterAPI(subnet.FreeformTags) {
+				return &subnet, nil
+			}
+		}
+		if subnets.OpcNextPage == nil{
+			break
+		}else{
+			page = subnets.OpcNextPage
 		}
 	}
 	return nil, nil
