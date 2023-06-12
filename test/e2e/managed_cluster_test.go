@@ -25,6 +25,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -35,6 +36,7 @@ import (
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	expv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
 	capi_e2e "sigs.k8s.io/cluster-api/test/e2e"
 	"sigs.k8s.io/cluster-api/test/framework"
 	"sigs.k8s.io/cluster-api/test/framework/clusterctl"
@@ -173,6 +175,9 @@ var _ = Describe("Managed Workload cluster creation", func() {
 		})
 		upgradeControlPlaneVersionSpec(ctx, bootstrapClusterProxy.GetClient(), clusterName, namespace.Name,
 			e2eConfig.GetIntervals(specName, "wait-control-plane"))
+
+		updateMachinePoolVersion(ctx, result.Cluster, bootstrapClusterProxy, result.MachinePools,
+			e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes"))
 	})
 
 	It("Managed Cluster - Cluster Identity", func() {
@@ -307,4 +312,44 @@ func upgradeControlPlaneVersionSpec(ctx context.Context, lister client.Client, c
 		return false, nil
 	}, WaitForControlPlaneIntervals...).Should(BeTrue())
 	Log("Upgrade test has completed")
+}
+
+func updateMachinePoolVersion(ctx context.Context, cluster *clusterv1.Cluster, clusterProxy framework.ClusterProxy, machinePools []*expv1.MachinePool, WaitForNodes []interface{}) {
+	var machinePool *expv1.MachinePool
+	for _, pool := range machinePools {
+		if strings.HasSuffix(pool.Name, "-1") {
+			machinePool = pool
+			break
+		}
+	}
+	lister := clusterProxy.GetClient()
+	Expect(machinePool).NotTo(BeNil())
+	managedKubernetesUpgradeVersion := e2eConfig.GetVariable(ManagedKubernetesUpgradeVersion)
+
+	patchHelper, err := patch.NewHelper(machinePool, lister)
+	Expect(err).ToNot(HaveOccurred())
+	Expect(e2eConfig.Variables).To(HaveKey(ManagedKubernetesUpgradeVersion), "Missing %s variable in the config", ManagedKubernetesUpgradeVersion)
+	Log(fmt.Sprintf("Upgrade test is starting, upgrade version is %s", managedKubernetesUpgradeVersion))
+	machinePool.Spec.Template.Spec.Version = &managedKubernetesUpgradeVersion
+	Expect(patchHelper.Patch(ctx, machinePool)).To(Succeed())
+
+	ociMachinePool := &infrav1exp.OCIManagedMachinePool{}
+	err = lister.Get(ctx, client.ObjectKey{Name: machinePool.Name, Namespace: cluster.Namespace}, ociMachinePool)
+	Expect(err).NotTo(BeNil())
+
+	ociMachinePool.Spec.Version = &managedKubernetesUpgradeVersion
+	patchHelper, err = patch.NewHelper(ociMachinePool, lister)
+	Expect(err).ToNot(HaveOccurred())
+	Expect(patchHelper.Patch(ctx, ociMachinePool)).To(Succeed())
+
+	Log("Upgrade test is starting")
+
+	framework.WaitForMachinePoolInstancesToBeUpgraded(ctx, framework.WaitForMachinePoolInstancesToBeUpgradedInput{
+		Getter:                   lister,
+		WorkloadClusterGetter:    clusterProxy.GetWorkloadCluster(ctx, cluster.Namespace, cluster.Name).GetClient(),
+		Cluster:                  cluster,
+		MachineCount:             1,
+		KubernetesUpgradeVersion: managedKubernetesUpgradeVersion,
+		MachinePool:              machinePool,
+	}, WaitForNodes...)
 }
