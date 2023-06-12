@@ -59,6 +59,10 @@ type OCIManagedMachinePoolSpec struct {
 	// +optional
 	InitialNodeLabels []KeyValue `json:"initialNodeLabels,omitempty"`
 
+	// NodePoolCyclingDetails defines the node pool recycling options.
+	// +optional
+	NodePoolCyclingDetails *NodePoolCyclingDetails `json:"nodePoolCyclingDetails,omitempty"`
+
 	// ProviderIDList are the identification IDs of machine instances provided by the provider.
 	// This field must match the provider IDs as seen on the node objects corresponding to a machine pool's machine instances.
 	// +optional
@@ -189,6 +193,25 @@ type KeyValue struct {
 
 	// The value of the pair.
 	Value *string `json:"value,omitempty"`
+}
+
+// NodePoolCyclingDetails defines the node pool recycling options
+type NodePoolCyclingDetails struct {
+
+	// IsNodeCyclingEnabled refers if nodes in the nodepool will be cycled to have new changes.
+	// +optional
+	IsNodeCyclingEnabled *bool `json:"isNodeCyclingEnabled,omitempty"`
+
+	// MaximumSurge refers to the maximum additional new compute instances that would be temporarily created and
+	// added to nodepool during the cycling nodepool process. OKE supports both integer and percentage input.
+	// Defaults to 1, Ranges from 0 to Nodepool size or 0% to 100%
+	// +optional
+	MaximumSurge *string `json:"maximumSurge,omitempty"`
+
+	// Maximum active nodes that would be terminated from nodepool during the cycling nodepool process.
+	// OKE supports both integer and percentage input. Defaults to 0, Ranges from 0 to Nodepool size or 0% to 100%
+	// +optional
+	MaximumUnavailable *string `json:"maximumUnavailable,omitempty"`
 }
 
 // OCIManagedMachinePoolStatus defines the observed state of OCIManagedMachinePool
