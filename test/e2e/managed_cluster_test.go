@@ -335,7 +335,7 @@ func updateMachinePoolVersion(ctx context.Context, cluster *clusterv1.Cluster, c
 
 	ociMachinePool := &infrav1exp.OCIManagedMachinePool{}
 	err = lister.Get(ctx, client.ObjectKey{Name: machinePool.Name, Namespace: cluster.Namespace}, ociMachinePool)
-	Expect(err).NotTo(BeNil())
+	Expect(err).To(BeNil())
 
 	ociMachinePool.Spec.Version = &managedKubernetesUpgradeVersion
 	patchHelper, err = patch.NewHelper(ociMachinePool, lister)
