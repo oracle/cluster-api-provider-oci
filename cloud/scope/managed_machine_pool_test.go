@@ -1129,15 +1129,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 						},
 						SshPublicKey: common.String("test-ssh-public-key"),
 						NodeConfigDetails: &oke.UpdateNodePoolNodeConfigDetails{
-							Size: common.Int(4),
-							PlacementConfigs: []oke.NodePoolPlacementConfigDetails{
-								{
-									AvailabilityDomain:    common.String("test-ad"),
-									CapacityReservationId: common.String("cap-id"),
-									SubnetId:              common.String("subnet-id"),
-									FaultDomains:          []string{"fd-1", "fd-2"},
-								},
-							},
+							Size:                           common.Int(4),
 							NsgIds:                         []string{"nsg-id"},
 							KmsKeyId:                       common.String("kms-key-id"),
 							IsPvEncryptionInTransitEnabled: common.Bool(true),
@@ -1376,14 +1368,6 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 						},
 						SshPublicKey: common.String("test-ssh-public-key"),
 						NodeConfigDetails: &oke.UpdateNodePoolNodeConfigDetails{
-							PlacementConfigs: []oke.NodePoolPlacementConfigDetails{
-								{
-									AvailabilityDomain:    common.String("test-ad"),
-									CapacityReservationId: common.String("cap-id"),
-									SubnetId:              common.String("subnet-id"),
-									FaultDomains:          []string{"fd-1", "fd-2"},
-								},
-							},
 							NsgIds:                         []string{"nsg-id"},
 							KmsKeyId:                       common.String("kms-key-id"),
 							IsPvEncryptionInTransitEnabled: common.Bool(true),
@@ -1623,8 +1607,6 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 						MaximumSurge:         common.String("20%"),
 						MaximumUnavailable:   common.String("10%"),
 					},
-					OverrideEvictionGraceDuration:             common.String("PT30M"),
-					IsForceDeletionAfterOverrideGraceDuration: common.Bool(true),
 					SshPublicKey: "test-ssh-public-key",
 					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
 						PlacementConfigs: []infrav2exp.PlacementConfig{
@@ -1653,9 +1635,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 					},
 				}
 				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Eq(oke.UpdateNodePoolRequest{
-					NodePoolId:                                common.String("node-pool-id"),
-					OverrideEvictionGraceDuration:             common.String("PT30M"),
-					IsForceDeletionAfterOverrideGraceDuration: common.Bool(true),
+					NodePoolId: common.String("node-pool-id"),
 					UpdateNodePoolDetails: oke.UpdateNodePoolDetails{
 						Name:              common.String("changed"),
 						KubernetesVersion: common.String("v1.24.5"),
@@ -1679,14 +1659,6 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 						},
 						SshPublicKey: common.String("test-ssh-public-key"),
 						NodeConfigDetails: &oke.UpdateNodePoolNodeConfigDetails{
-							PlacementConfigs: []oke.NodePoolPlacementConfigDetails{
-								{
-									AvailabilityDomain:    common.String("test-ad"),
-									CapacityReservationId: common.String("cap-id"),
-									SubnetId:              common.String("subnet-id"),
-									FaultDomains:          []string{"fd-1", "fd-2"},
-								},
-							},
 							NsgIds:                         []string{"nsg-id"},
 							KmsKeyId:                       common.String("kms-key-id"),
 							IsPvEncryptionInTransitEnabled: common.Bool(true),

@@ -473,6 +473,7 @@ func TestControlPlaneUpdation(t *testing.T) {
 				CompartmentId:     common.String("test-compartment"),
 				VcnId:             common.String("vcn-id"),
 				KubernetesVersion: common.String("v1.24.5"),
+				Type:              oke.ClusterTypeBasicCluster,
 				FreeformTags:      tags,
 				DefinedTags:       definedTagsInterface,
 				EndpointConfig: &oke.ClusterEndpointConfig{

@@ -313,6 +313,14 @@ func (m *ManagedMachinePoolScope) CreateNodePool(ctx context.Context) (*oke.Node
 			IsForceDeleteAfterGraceDuration: m.OCIManagedMachinePool.Spec.NodeEvictionNodePoolSettings.IsForceDeleteAfterGraceDuration,
 		}
 	}
+	recycleConfig := m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails
+	if recycleConfig != nil {
+		nodePoolDetails.NodePoolCyclingDetails = &oke.NodePoolCyclingDetails{
+			IsNodeCyclingEnabled: recycleConfig.IsNodeCyclingEnabled,
+			MaximumSurge:         recycleConfig.MaximumSurge,
+			MaximumUnavailable:   recycleConfig.MaximumUnavailable,
+		}
+	}
 	nodePoolDetails.InitialNodeLabels = m.getInitialNodeKeyValuePairs()
 
 	req := oke.CreateNodePoolRequest{
@@ -610,6 +618,8 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 			KmsKeyId:                       spec.NodePoolNodeConfig.KmsKeyId,
 		}
 		// send placement config only if there is an actual change in placement
+		// placement config and recycle config cannot be sent at the same time, and most use cases will
+		// be to update kubernetes version in which case, placement config is not required to be sent
 		if !reflect.DeepEqual(spec.NodePoolNodeConfig.PlacementConfigs, actual.NodePoolNodeConfig.PlacementConfigs) {
 			placementConfig, err := m.buildPlacementConfig(spec.NodePoolNodeConfig.PlacementConfigs)
 			if err != nil {
@@ -677,7 +687,8 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 			NodeMetadata:      spec.NodeMetadata,
 		}
 		recycleConfig := spec.NodePoolCyclingDetails
-		if recycleConfig != nil {
+		// cannot send recycle config and placement config together
+		if recycleConfig != nil && len(nodeConfigDetails.PlacementConfigs) == 0 {
 			nodePoolDetails.NodePoolCyclingDetails = &oke.NodePoolCyclingDetails{
 				IsNodeCyclingEnabled: recycleConfig.IsNodeCyclingEnabled,
 				MaximumSurge:         recycleConfig.MaximumSurge,
@@ -692,10 +703,8 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 		}
 		nodePoolDetails.InitialNodeLabels = m.getInitialNodeKeyValuePairs()
 		req := oke.UpdateNodePoolRequest{
-			NodePoolId:                                pool.Id,
-			UpdateNodePoolDetails:                     nodePoolDetails,
-			OverrideEvictionGraceDuration:             spec.OverrideEvictionGraceDuration,
-			IsForceDeletionAfterOverrideGraceDuration: spec.IsForceDeletionAfterOverrideGraceDuration,
+			NodePoolId:            pool.Id,
+			UpdateNodePoolDetails: nodePoolDetails,
 		}
 		_, err = m.ContainerEngineClient.UpdateNodePool(ctx, req)
 		if err != nil {
@@ -715,6 +724,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 func setMachinePoolSpecDefaults(spec *infrav2exp.OCIManagedMachinePoolSpec) {
 	spec.ProviderIDList = nil
 	spec.ProviderID = nil
+
 	if spec.NodePoolNodeConfig != nil {
 		if spec.NodePoolNodeConfig.PlacementConfigs != nil {
 			configs := spec.NodePoolNodeConfig.PlacementConfigs
@@ -795,6 +805,14 @@ func (m *ManagedMachinePoolScope) getSpecFromAPIObject(pool *oke.NodePool) *expi
 			nodeShapeConfig.Ocpus = &ocpu
 		}
 		spec.NodeShapeConfig = &nodeShapeConfig
+	}
+	if pool.NodePoolCyclingDetails != nil {
+		cyclingDetails := pool.NodePoolCyclingDetails
+		spec.NodePoolCyclingDetails = &expinfra1.NodePoolCyclingDetails{
+			IsNodeCyclingEnabled: cyclingDetails.IsNodeCyclingEnabled,
+			MaximumSurge:         cyclingDetails.MaximumSurge,
+			MaximumUnavailable:   cyclingDetails.MaximumUnavailable,
+		}
 	}
 	return &spec
 }
