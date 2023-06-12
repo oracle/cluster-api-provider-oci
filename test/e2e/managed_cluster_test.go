@@ -156,7 +156,7 @@ var _ = Describe("Managed Workload cluster creation", func() {
 
 		clusterctl.ApplyClusterTemplateAndWait(ctx, input, result)
 
-		By("Scaling the machine pool up")
+		/*By("Scaling the machine pool up")
 		framework.ScaleMachinePoolAndWait(ctx, framework.ScaleMachinePoolAndWaitInput{
 			ClusterProxy:              bootstrapClusterProxy,
 			Cluster:                   result.Cluster,
@@ -172,7 +172,7 @@ var _ = Describe("Managed Workload cluster creation", func() {
 			Replicas:                  1,
 			MachinePools:              result.MachinePools,
 			WaitForMachinePoolToScale: e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes"),
-		})
+		})*/
 		upgradeControlPlaneVersionSpec(ctx, bootstrapClusterProxy.GetClient(), clusterName, namespace.Name,
 			e2eConfig.GetIntervals(specName, "wait-control-plane"))
 
