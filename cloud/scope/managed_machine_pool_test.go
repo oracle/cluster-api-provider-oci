@@ -1618,6 +1618,13 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 					NodeSourceViaImage: &infrav2exp.NodeSourceViaImage{
 						ImageId: common.String("test-image-id"),
 					},
+					NodePoolCyclingDetails: &infrav2exp.NodePoolCyclingDetails{
+						IsNodeCyclingEnabled: common.Bool(true),
+						MaximumSurge:         common.String("20%"),
+						MaximumUnavailable:   common.String("10%"),
+					},
+					OverrideEvictionGraceDuration:             common.String("PT30M"),
+					IsForceDeletionAfterOverrideGraceDuration: common.Bool(true),
 					SshPublicKey: "test-ssh-public-key",
 					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
 						PlacementConfigs: []infrav2exp.PlacementConfig{
@@ -1646,7 +1653,9 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 					},
 				}
 				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Eq(oke.UpdateNodePoolRequest{
-					NodePoolId: common.String("node-pool-id"),
+					NodePoolId:                                common.String("node-pool-id"),
+					OverrideEvictionGraceDuration:             common.String("PT30M"),
+					IsForceDeletionAfterOverrideGraceDuration: common.Bool(true),
 					UpdateNodePoolDetails: oke.UpdateNodePoolDetails{
 						Name:              common.String("changed"),
 						KubernetesVersion: common.String("v1.24.5"),
@@ -1662,6 +1671,11 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 						},
 						NodeSourceDetails: &oke.NodeSourceViaImageDetails{
 							ImageId: common.String("test-image-id"),
+						},
+						NodePoolCyclingDetails: &oke.NodePoolCyclingDetails{
+							IsNodeCyclingEnabled: common.Bool(true),
+							MaximumSurge:         common.String("20%"),
+							MaximumUnavailable:   common.String("10%"),
 						},
 						SshPublicKey: common.String("test-ssh-public-key"),
 						NodeConfigDetails: &oke.UpdateNodePoolNodeConfigDetails{

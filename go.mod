@@ -8,7 +8,7 @@ require (
 	github.com/google/gofuzz v1.2.0
 	github.com/onsi/ginkgo/v2 v2.9.2
 	github.com/onsi/gomega v1.27.5
-	github.com/oracle/oci-go-sdk/v65 v65.33.1
+	github.com/oracle/oci-go-sdk/v65 v65.40.1
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.15.1
 	github.com/spf13/pflag v1.0.5

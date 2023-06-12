@@ -672,6 +672,14 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 			NodeConfigDetails: &nodeConfigDetails,
 			NodeMetadata:      spec.NodeMetadata,
 		}
+		recycleConfig := spec.NodePoolCyclingDetails
+		if recycleConfig != nil {
+			nodePoolDetails.NodePoolCyclingDetails = &oke.NodePoolCyclingDetails{
+				IsNodeCyclingEnabled: recycleConfig.IsNodeCyclingEnabled,
+				MaximumSurge:         recycleConfig.MaximumSurge,
+				MaximumUnavailable:   recycleConfig.MaximumUnavailable,
+			}
+		}
 		if spec.NodeEvictionNodePoolSettings != nil {
 			nodePoolDetails.NodeEvictionNodePoolSettings = &oke.NodeEvictionNodePoolSettings{
 				EvictionGraceDuration:           spec.NodeEvictionNodePoolSettings.EvictionGraceDuration,
@@ -680,8 +688,10 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 		}
 		nodePoolDetails.InitialNodeLabels = m.getInitialNodeKeyValuePairs()
 		req := oke.UpdateNodePoolRequest{
-			NodePoolId:            pool.Id,
-			UpdateNodePoolDetails: nodePoolDetails,
+			NodePoolId:                                pool.Id,
+			UpdateNodePoolDetails:                     nodePoolDetails,
+			OverrideEvictionGraceDuration:             spec.OverrideEvictionGraceDuration,
+			IsForceDeletionAfterOverrideGraceDuration: spec.IsForceDeletionAfterOverrideGraceDuration,
 		}
 		_, err = m.ContainerEngineClient.UpdateNodePool(ctx, req)
 		if err != nil {
