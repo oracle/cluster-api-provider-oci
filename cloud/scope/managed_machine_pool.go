@@ -603,15 +603,19 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 			return false, err
 		}
 		m.Logger.Info("Node pool", "spec", jsonSpec, "actual", jsonActual)
-		placementConfig, err := m.buildPlacementConfig(spec.NodePoolNodeConfig.PlacementConfigs)
-		if err != nil {
-			return false, err
-		}
+
 		nodeConfigDetails := oke.UpdateNodePoolNodeConfigDetails{
 			NsgIds:                         m.getWorkerMachineNSGs(),
-			PlacementConfigs:               placementConfig,
 			IsPvEncryptionInTransitEnabled: spec.NodePoolNodeConfig.IsPvEncryptionInTransitEnabled,
 			KmsKeyId:                       spec.NodePoolNodeConfig.KmsKeyId,
+		}
+		// send placement config only if there is an actual change in placement
+		if !reflect.DeepEqual(spec.NodePoolNodeConfig.PlacementConfigs, actual.NodePoolNodeConfig.PlacementConfigs) {
+			placementConfig, err := m.buildPlacementConfig(spec.NodePoolNodeConfig.PlacementConfigs)
+			if err != nil {
+				return false, err
+			}
+			nodeConfigDetails.PlacementConfigs = placementConfig
 		}
 		if nodePoolSizeUpdateRequired {
 			nodeConfigDetails.Size = common.Int(int(*m.MachinePool.Spec.Replicas))
