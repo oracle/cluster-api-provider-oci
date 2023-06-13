@@ -22,9 +22,11 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"os"
 	"path/filepath"
 	"reflect"
+	"sigs.k8s.io/kind/pkg/errors"
 	"strings"
 	"time"
 
@@ -314,7 +316,7 @@ func upgradeControlPlaneVersionSpec(ctx context.Context, lister client.Client, c
 	Log("Upgrade test has completed")
 }
 
-func updateMachinePoolVersion(ctx context.Context, cluster *clusterv1.Cluster, clusterProxy framework.ClusterProxy, machinePools []*expv1.MachinePool, WaitForNodes []interface{}) {
+func updateMachinePoolVersion(ctx context.Context, cluster *clusterv1.Cluster, clusterProxy framework.ClusterProxy, machinePools []*expv1.MachinePool, waitInterval []interface{}) {
 	var machinePool *expv1.MachinePool
 	for _, pool := range machinePools {
 		if strings.HasSuffix(pool.Name, "-1") {
@@ -344,12 +346,58 @@ func updateMachinePoolVersion(ctx context.Context, cluster *clusterv1.Cluster, c
 
 	Log("Upgrade test is starting")
 
-	framework.WaitForMachinePoolInstancesToBeUpgraded(ctx, framework.WaitForMachinePoolInstancesToBeUpgradedInput{
-		Getter:                   lister,
-		WorkloadClusterGetter:    clusterProxy.GetWorkloadCluster(ctx, cluster.Namespace, cluster.Name).GetClient(),
-		Cluster:                  cluster,
-		MachineCount:             1,
-		KubernetesUpgradeVersion: managedKubernetesUpgradeVersion,
-		MachinePool:              machinePool,
-	}, WaitForNodes...)
+	Eventually(func() (int, error) {
+		mpKey := client.ObjectKey{
+			Namespace: machinePool.Namespace,
+			Name:      machinePool.Name,
+		}
+		if err := lister.Get(ctx, mpKey, machinePool); err != nil {
+			return 0, err
+		}
+		versions := getMachinePoolInstanceVersions(ctx, clusterProxy, cluster, machinePool)
+		Logf("Versions detected are %v", versions)
+		matches := 0
+		for _, version := range versions {
+			if version == managedKubernetesUpgradeVersion {
+				matches++
+			}
+		}
+
+		if matches != len(versions) {
+			return 0, errors.Errorf("old version instances remain. Expected %d instances at version %v. Got version list: %v", len(versions), managedKubernetesUpgradeVersion, versions)
+		}
+
+		return matches, nil
+	}, waitInterval...).Should(Equal(1), "Timed out waiting for all MachinePool %s instances to be upgraded to Kubernetes version %s", klog.KObj(machinePool), managedKubernetesUpgradeVersion)
+}
+
+// getMachinePoolInstanceVersions returns the Kubernetes versions of the machine pool instances.
+func getMachinePoolInstanceVersions(ctx context.Context, clusterProxy framework.ClusterProxy, cluster *clusterv1.Cluster, machinePool *expv1.MachinePool) []string {
+	Expect(ctx).NotTo(BeNil(), "ctx is required for getMachinePoolInstanceVersions")
+
+	instances := machinePool.Status.NodeRefs
+	versions := make([]string, len(instances))
+	for i, instance := range instances {
+		node := &corev1.Node{}
+		var nodeGetError error
+		err := wait.PollImmediate(100*time.Millisecond, 10*time.Second, func() (bool, error) {
+			nodeGetError = clusterProxy.GetWorkloadCluster(ctx, cluster.Namespace, cluster.Name).
+				GetClient().Get(ctx, client.ObjectKey{Name: instance.Name}, node)
+			if nodeGetError != nil {
+				return false, nil //nolint:nilerr
+			}
+			return true, nil
+		})
+		if err != nil {
+			versions[i] = "unknown"
+			if nodeGetError != nil {
+				// Dump the instance name and error here so that we can log it as part of the version array later on.
+				versions[i] = fmt.Sprintf("%s error: %s", instance.Name, errors.Wrap(err, nodeGetError.Error()))
+			}
+		} else {
+			versions[i] = node.Status.NodeInfo.KubeletVersion
+		}
+	}
+
+	return versions
 }
