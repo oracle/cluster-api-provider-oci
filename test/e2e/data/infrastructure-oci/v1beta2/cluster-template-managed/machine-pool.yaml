@@ -68,6 +68,4 @@ spec:
   nodeShapeConfig:
     memoryInGBs: "16"
     ocpus: "1"
-  nodePoolCyclingDetails:
-    isNodeCyclingEnabled: true
 ---

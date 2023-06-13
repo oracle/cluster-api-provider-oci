@@ -22,7 +22,7 @@ package e2e
 import (
 	"context"
 	"fmt"
-
+	"github.com/oracle/oci-go-sdk/v65/common"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -345,6 +345,11 @@ func updateMachinePoolVersion(ctx context.Context, cluster *clusterv1.Cluster, c
 	// automatically lookup a new version
 	ociMachinePool.Spec.Version = &managedKubernetesUpgradeVersion
 	ociMachinePool.Spec.NodeSourceViaImage.ImageId = nil
+	// enable node pool cycling. This cannot be done at template because we do scale down tests
+	// which cannot be done with recycling
+	ociMachinePool.Spec.NodePoolCyclingDetails = &infrav2exp.NodePoolCyclingDetails{
+		IsNodeCyclingEnabled: common.Bool(true),
+	}
 	Expect(err).ToNot(HaveOccurred())
 	Expect(patchHelper.Patch(ctx, ociMachinePool)).To(Succeed())
 
