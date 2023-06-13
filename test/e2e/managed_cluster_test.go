@@ -338,8 +338,9 @@ func updateMachinePoolVersion(ctx context.Context, cluster *clusterv1.Cluster, c
 	ociMachinePool := &infrav1exp.OCIManagedMachinePool{}
 	err = lister.Get(ctx, client.ObjectKey{Name: machinePool.Name, Namespace: cluster.Namespace}, ociMachinePool)
 	Expect(err).To(BeNil())
-
+	Log(fmt.Sprintf("Managed machine pool is %v", ociMachinePool))
 	ociMachinePool.Spec.Version = &managedKubernetesUpgradeVersion
+	ociMachinePool.Spec.NodeSourceViaImage.ImageId = nil
 	patchHelper, err = patch.NewHelper(ociMachinePool, lister)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(patchHelper.Patch(ctx, ociMachinePool)).To(Succeed())
