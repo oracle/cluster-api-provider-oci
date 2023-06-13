@@ -333,15 +333,15 @@ func updateMachinePoolVersion(ctx context.Context, cluster *clusterv1.Cluster, c
 	Expect(err).ToNot(HaveOccurred())
 	Expect(e2eConfig.Variables).To(HaveKey(ManagedKubernetesUpgradeVersion), "Missing %s variable in the config", ManagedKubernetesUpgradeVersion)
 	Log(fmt.Sprintf("Upgrade test is starting, upgrade version is %s", managedKubernetesUpgradeVersion))
-	machinePool.Spec.Template.Spec.Version = &managedKubernetesUpgradeVersion
-	Expect(patchHelper.Patch(ctx, machinePool)).To(Succeed())
+	//machinePool.Spec.Template.Spec.Version = &managedKubernetesUpgradeVersion
+	//Expect(patchHelper.Patch(ctx, machinePool)).To(Succeed())
 
 	ociMachinePool := &infrav2exp.OCIManagedMachinePool{}
 	err = lister.Get(ctx, client.ObjectKey{Name: machinePool.Name, Namespace: cluster.Namespace}, ociMachinePool)
 	Expect(err).To(BeNil())
 	ociMachinePool.Spec.Version = &managedKubernetesUpgradeVersion
 	ociMachinePool.Spec.NodeSourceViaImage.ImageId = nil
-	Log(fmt.Sprintf("Managed machine pool is %v", ociMachinePool))
+	Log(fmt.Sprintf("Managed machine pool is %v", ociMachinePool.Spec.Version))
 	patchHelper, err = patch.NewHelper(ociMachinePool, lister)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(patchHelper.Patch(ctx, ociMachinePool)).To(Succeed())
