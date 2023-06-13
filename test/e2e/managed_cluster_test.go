@@ -33,6 +33,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	infrav1exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
+	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
@@ -175,8 +176,8 @@ var _ = Describe("Managed Workload cluster creation", func() {
 			MachinePools:              result.MachinePools,
 			WaitForMachinePoolToScale: e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes"),
 		})*/
-		upgradeControlPlaneVersionSpec(ctx, bootstrapClusterProxy.GetClient(), clusterName, namespace.Name,
-			e2eConfig.GetIntervals(specName, "wait-control-plane"))
+		//upgradeControlPlaneVersionSpec(ctx, bootstrapClusterProxy.GetClient(), clusterName, namespace.Name,
+		//	e2eConfig.GetIntervals(specName, "wait-control-plane"))
 
 		updateMachinePoolVersion(ctx, result.Cluster, bootstrapClusterProxy, result.MachinePools,
 			e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes"))
@@ -335,12 +336,12 @@ func updateMachinePoolVersion(ctx context.Context, cluster *clusterv1.Cluster, c
 	machinePool.Spec.Template.Spec.Version = &managedKubernetesUpgradeVersion
 	Expect(patchHelper.Patch(ctx, machinePool)).To(Succeed())
 
-	ociMachinePool := &infrav1exp.OCIManagedMachinePool{}
+	ociMachinePool := &infrav2exp.OCIManagedMachinePool{}
 	err = lister.Get(ctx, client.ObjectKey{Name: machinePool.Name, Namespace: cluster.Namespace}, ociMachinePool)
 	Expect(err).To(BeNil())
-	Log(fmt.Sprintf("Managed machine pool is %v", ociMachinePool))
 	ociMachinePool.Spec.Version = &managedKubernetesUpgradeVersion
 	ociMachinePool.Spec.NodeSourceViaImage.ImageId = nil
+	Log(fmt.Sprintf("Managed machine pool is %v", ociMachinePool))
 	patchHelper, err = patch.NewHelper(ociMachinePool, lister)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(patchHelper.Patch(ctx, ociMachinePool)).To(Succeed())

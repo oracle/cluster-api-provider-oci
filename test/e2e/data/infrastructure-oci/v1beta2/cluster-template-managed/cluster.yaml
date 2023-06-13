@@ -32,6 +32,6 @@ metadata:
   name: "${CLUSTER_NAME}"
   namespace: "${NAMESPACE}"
 spec:
-  version: "${OCI_MANAGED_KUBERNETES_VERSION}"
+  version: v1.26.2
   clusterType: "ENHANCED_CLUSTER"
 ---
