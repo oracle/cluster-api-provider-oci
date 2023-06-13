@@ -39,6 +39,7 @@ import (
 	nlb "github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
 	infrav1exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
+	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/identity"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -265,6 +266,7 @@ func initScheme() *runtime.Scheme {
 	framework.TryAddDefaultSchemes(scheme)
 	Expect(infrastructurev1beta1.AddToScheme(scheme)).To(Succeed())
 	Expect(infrav1exp.AddToScheme(scheme)).To(Succeed())
+	Expect(infrav2exp.AddToScheme(scheme)).To(Succeed())
 	Expect(clusterv1.AddToScheme(scheme)).To(Succeed())
 	Expect(clusterv1exp.AddToScheme(scheme)).To(Succeed())
 	return scheme
