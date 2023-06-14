@@ -220,9 +220,6 @@ var _ = Describe("Managed Workload cluster creation", func() {
 		}
 
 		clusterctl.ApplyClusterTemplateAndWait(ctx, input, result)
-
-		updateMachinePoolVersion(ctx, result.Cluster, bootstrapClusterProxy, result.MachinePools,
-			e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes"))
 	})
 
 	It("Managed Cluster - Node Recycling", func() {
@@ -265,6 +262,9 @@ var _ = Describe("Managed Workload cluster creation", func() {
 		}
 
 		clusterctl.ApplyClusterTemplateAndWait(ctx, input, result)
+
+		updateMachinePoolVersion(ctx, result.Cluster, bootstrapClusterProxy, result.MachinePools,
+			e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes"))
 	})
 
 	It("Managed Cluster - Virtual Node Pool [PRBlocking]", func() {
