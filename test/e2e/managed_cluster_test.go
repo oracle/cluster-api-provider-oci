@@ -22,7 +22,6 @@ package e2e
 import (
 	"context"
 	"fmt"
-	"github.com/oracle/oci-go-sdk/v65/common"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -179,9 +178,6 @@ var _ = Describe("Managed Workload cluster creation", func() {
 		})
 		upgradeControlPlaneVersionSpec(ctx, bootstrapClusterProxy.GetClient(), clusterName, namespace.Name,
 			e2eConfig.GetIntervals(specName, "wait-control-plane"))
-
-		updateMachinePoolVersion(ctx, result.Cluster, bootstrapClusterProxy, result.MachinePools,
-			e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes"))
 	})
 
 	It("Managed Cluster - Cluster Identity", func() {
@@ -194,6 +190,51 @@ var _ = Describe("Managed Workload cluster creation", func() {
 				KubeconfigPath:           bootstrapClusterProxy.GetKubeconfigPath(),
 				InfrastructureProvider:   clusterctl.DefaultInfrastructureProvider,
 				Flavor:                   "managed-cluster-identity",
+				Namespace:                namespace.Name,
+				ClusterName:              clusterName,
+				ControlPlaneMachineCount: pointer.Int64(1),
+				WorkerMachineCount:       pointer.Int64(1),
+				KubernetesVersion:        e2eConfig.GetVariable(capi_e2e.KubernetesVersion),
+			},
+			WaitForClusterIntervals:      e2eConfig.GetIntervals(specName, "wait-cluster"),
+			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),
+			WaitForMachinePools:          e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes"),
+			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
+		}
+		input.WaitForControlPlaneInitialized = func(ctx context.Context, input clusterctl.ApplyClusterTemplateAndWaitInput, result *clusterctl.ApplyClusterTemplateAndWaitResult) {
+			Expect(ctx).NotTo(BeNil(), "ctx is required for DiscoveryAndWaitForControlPlaneInitialized")
+			lister := input.ClusterProxy.GetClient()
+			Expect(lister).ToNot(BeNil(), "Invalid argument. input.Lister can't be nil when calling DiscoveryAndWaitForControlPlaneInitialized")
+			var controlPlane *infrav1exp.OCIManagedControlPlane
+			Eventually(func(g Gomega) {
+				controlPlane = GetOCIManagedControlPlaneByCluster(ctx, lister, result.Cluster.Name, result.Cluster.Namespace)
+				if controlPlane != nil {
+					Log(fmt.Sprintf("Control plane is not nil, status is %t", controlPlane.Status.Ready))
+				}
+				g.Expect(controlPlane).ToNot(BeNil())
+				g.Expect(controlPlane.Status.Ready).To(BeTrue())
+			}, input.WaitForControlPlaneIntervals...).Should(Succeed(), "Couldn't get the control plane ready status for the cluster %s", klog.KObj(result.Cluster))
+		}
+		input.WaitForControlPlaneMachinesReady = func(ctx context.Context, input clusterctl.ApplyClusterTemplateAndWaitInput, result *clusterctl.ApplyClusterTemplateAndWaitResult) {
+			// Not applicable
+		}
+
+		clusterctl.ApplyClusterTemplateAndWait(ctx, input, result)
+
+		updateMachinePoolVersion(ctx, result.Cluster, bootstrapClusterProxy, result.MachinePools,
+			e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes"))
+	})
+
+	It("Managed Cluster - Node Recycling", func() {
+		clusterName = getClusterName(clusterNamePrefix, "cls-iden")
+		input := clusterctl.ApplyClusterTemplateAndWaitInput{
+			ClusterProxy: bootstrapClusterProxy,
+			ConfigCluster: clusterctl.ConfigClusterInput{
+				LogFolder:                filepath.Join(artifactFolder, "clusters", bootstrapClusterProxy.GetName()),
+				ClusterctlConfigPath:     clusterctlConfigPath,
+				KubeconfigPath:           bootstrapClusterProxy.GetKubeconfigPath(),
+				InfrastructureProvider:   clusterctl.DefaultInfrastructureProvider,
+				Flavor:                   "managed-node-recycling",
 				Namespace:                namespace.Name,
 				ClusterName:              clusterName,
 				ControlPlaneMachineCount: pointer.Int64(1),
@@ -345,11 +386,6 @@ func updateMachinePoolVersion(ctx context.Context, cluster *clusterv1.Cluster, c
 	// automatically lookup a new version
 	ociMachinePool.Spec.Version = &managedKubernetesUpgradeVersion
 	ociMachinePool.Spec.NodeSourceViaImage.ImageId = nil
-	// enable node pool cycling. This cannot be done at template because we do scale down tests
-	// which cannot be done with recycling
-	ociMachinePool.Spec.NodePoolCyclingDetails = &infrav2exp.NodePoolCyclingDetails{
-		IsNodeCyclingEnabled: common.Bool(true),
-	}
 	Expect(err).ToNot(HaveOccurred())
 	Expect(patchHelper.Patch(ctx, ociMachinePool)).To(Succeed())
 
