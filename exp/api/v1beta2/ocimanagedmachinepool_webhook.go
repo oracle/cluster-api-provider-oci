@@ -17,9 +17,11 @@ limitations under the License.
 package v1beta2
 
 import (
+	"fmt"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"reflect"
 	"sigs.k8s.io/cluster-api/util/version"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -86,7 +88,28 @@ func (m *OCIManagedMachinePool) validateVersion(allErrs field.ErrorList) field.E
 
 func (m *OCIManagedMachinePool) ValidateUpdate(old runtime.Object) error {
 	var allErrs field.ErrorList
+	oldManagedMachinePool, ok := old.(*OCIManagedMachinePool)
+	if !ok {
+		return apierrors.NewBadRequest(fmt.Sprintf("expected an OCIManagedMachinePool but got a %T", old))
+	}
+
 	allErrs = m.validateVersion(allErrs)
+	if !reflect.DeepEqual(m.Spec.Version, oldManagedMachinePool.Spec.Version) {
+		newImage := m.getImageId()
+		oldImage := oldManagedMachinePool.getImageId()
+		// if an image has been provided in updated machine pool and it matches old image id,
+		// and if Kubernetes version has been updated, that means the image is not correct. If the version has
+		// been changed, the image should have been updated by the user, or set as nil in which case
+		// CAPOCI will lookup a correct image
+		if newImage != nil && reflect.DeepEqual(newImage, oldImage) {
+			allErrs = append(
+				allErrs,
+				field.Invalid(field.NewPath("spec", "nodeSourceViaImage", "imageId"),
+					m.getImageId(), "image id has not been updated for the newer version, "+
+						"either provide a newer image or set the field as nil"))
+
+		}
+	}
 	if len(allErrs) == 0 {
 		return nil
 	}
@@ -94,5 +117,12 @@ func (m *OCIManagedMachinePool) ValidateUpdate(old runtime.Object) error {
 }
 
 func (m *OCIManagedMachinePool) ValidateDelete() error {
+	return nil
+}
+
+func (m *OCIManagedMachinePool) getImageId() *string {
+	if m.Spec.NodeSourceViaImage != nil {
+		return m.Spec.NodeSourceViaImage.ImageId
+	}
 	return nil
 }

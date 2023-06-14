@@ -146,10 +146,12 @@ func TestOCIManagedMachinePool_ValidateCreate(t *testing.T) {
 
 func TestOCIManagedMachinePool_ValidateUpdate(t *testing.T) {
 	validVersion := common.String("v1.25.1")
+	oldVersion := common.String("v1.24.1")
 	inValidVersion := common.String("abcd")
 	tests := []struct {
 		name                  string
 		m                     *OCIManagedMachinePool
+		old                   *OCIManagedMachinePool
 		errorMgsShouldContain string
 		expectErr             bool
 	}{
@@ -163,11 +165,24 @@ func TestOCIManagedMachinePool_ValidateUpdate(t *testing.T) {
 					Version: validVersion,
 				},
 			},
+			old: &OCIManagedMachinePool{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "abcdefghijklmno",
+				},
+				Spec: OCIManagedMachinePoolSpec{
+					Version: validVersion,
+				},
+			},
 			expectErr: false,
 		},
 		{
 			name: "should not allow nil version",
 			m: &OCIManagedMachinePool{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "abcdefghijklmno",
+				},
+			},
+			old: &OCIManagedMachinePool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "abcdefghijklmno",
 				},
@@ -184,19 +199,95 @@ func TestOCIManagedMachinePool_ValidateUpdate(t *testing.T) {
 					Version: inValidVersion,
 				},
 			},
+			old: &OCIManagedMachinePool{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "abcdefghijklmno",
+				},
+			},
+			expectErr: true,
+		},
+		{
+			name: "should allow version update with different images",
+			m: &OCIManagedMachinePool{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "abcdefghijklmno",
+				},
+				Spec: OCIManagedMachinePoolSpec{
+					Version: validVersion,
+					NodeSourceViaImage: &NodeSourceViaImage{
+						ImageId: common.String("new"),
+					},
+				},
+			},
+			old: &OCIManagedMachinePool{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "abcdefghijklmno",
+				},
+				Spec: OCIManagedMachinePoolSpec{
+					Version: oldVersion,
+					NodeSourceViaImage: &NodeSourceViaImage{
+						ImageId: common.String("old"),
+					},
+				},
+			},
+			expectErr: false,
+		},
+		{
+			name: "should allow version update with both nil",
+			m: &OCIManagedMachinePool{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "abcdefghijklmno",
+				},
+				Spec: OCIManagedMachinePoolSpec{
+					Version: validVersion,
+				},
+			},
+			old: &OCIManagedMachinePool{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "abcdefghijklmno",
+				},
+				Spec: OCIManagedMachinePoolSpec{
+					Version: oldVersion,
+				},
+			},
+			expectErr: false,
+		},
+		{
+			name: "should not allow version update with same image",
+			m: &OCIManagedMachinePool{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "abcdefghijklmno",
+				},
+				Spec: OCIManagedMachinePoolSpec{
+					Version: validVersion,
+					NodeSourceViaImage: &NodeSourceViaImage{
+						ImageId: common.String("old"),
+					},
+				},
+			},
+			old: &OCIManagedMachinePool{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "abcdefghijklmno",
+				},
+				Spec: OCIManagedMachinePoolSpec{
+					Version: oldVersion,
+					NodeSourceViaImage: &NodeSourceViaImage{
+						ImageId: common.String("old"),
+					},
+				},
+			},
 			expectErr: true,
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := gomega.NewWithT(t)
-
+			err := test.m.ValidateUpdate(test.old)
 			if test.expectErr {
-				err := test.m.ValidateUpdate(nil)
 				g.Expect(err).NotTo(gomega.Succeed())
 				g.Expect(strings.Contains(err.Error(), test.errorMgsShouldContain)).To(gomega.BeTrue())
 			} else {
-				g.Expect(test.m.ValidateCreate()).To(gomega.Succeed())
+				g.Expect(err).To(gomega.Succeed())
 			}
 		})
 	}
