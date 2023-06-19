@@ -658,7 +658,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 		}
 		sourceDetails := oke.NodeSourceViaImageDetails{
 			// use image id from machinepool spec itself as the copy will not have the image set in the
-			// setNodepoolImageId methd above
+			// setNodepoolImageId method above
 			ImageId:             m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId,
 			BootVolumeSizeInGBs: spec.NodeSourceViaImage.BootVolumeSizeInGBs,
 		}
