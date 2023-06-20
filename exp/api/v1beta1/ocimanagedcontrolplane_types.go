@@ -164,6 +164,13 @@ type OCIManagedControlPlaneStatus struct {
 	Initialized bool `json:"initialized"`
 }
 
+type ClusterAddons struct {
+	// Flag to enable public endpoint address for the OKE cluster.
+	// If not set, will calculate this using endpoint subnet type.
+	// +optional
+	IsPublicIpEnabled bool `json:"isPublicIpEnabled,omitempty"`
+}
+
 // Addon defines the properties of an addon.
 type Addon struct {
 	// Name represents the name of the addon.
