@@ -69,7 +69,7 @@ spec:
                                 type: object
                               type: array
                             name:
-                              description: Version represents the version of the addon.
+                              description: Name represents the name of the addon.
                               type: string
                             version:
                               description: Version represents the version of the addon.
@@ -235,7 +235,7 @@ spec:
                                 type: object
                               type: array
                             name:
-                              description: Version represents the version of the addon.
+                              description: Name represents the name of the addon.
                               type: string
                             version:
                               description: Version represents the version of the addon.

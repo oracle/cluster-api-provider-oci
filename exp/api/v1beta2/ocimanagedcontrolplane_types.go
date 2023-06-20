@@ -179,8 +179,7 @@ type OCIManagedControlPlaneStatus struct {
 
 // Addon defines the properties of an addon.
 type Addon struct {
-	// Version represents the version of the addon.
-	// +optional
+	// Name represents the name of the addon.
 	Name *string `json:"name,omitempty"`
 
 	// Version represents the version of the addon.
