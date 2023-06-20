@@ -63,6 +63,8 @@ spec:
                     version:
                       description: Version represents the version of the addon.
                       type: string
+                  required:
+                  - name
                   type: object
                 type: array
                 x-kubernetes-list-map-keys:
@@ -300,6 +302,8 @@ spec:
                     version:
                       description: Version represents the version of the addon.
                       type: string
+                  required:
+                  - name
                   type: object
                 type: array
                 x-kubernetes-list-map-keys:
