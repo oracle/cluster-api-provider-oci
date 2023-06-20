@@ -48,4 +48,11 @@ type Client interface {
 
 	//Work Request
 	GetWorkRequest(ctx context.Context, request containerengine.GetWorkRequestRequest) (response containerengine.GetWorkRequestResponse, err error)
+
+	// Addons
+	ListAddons(ctx context.Context, request containerengine.ListAddonsRequest) (response containerengine.ListAddonsResponse, err error)
+	InstallAddon(ctx context.Context, request containerengine.InstallAddonRequest) (response containerengine.InstallAddonResponse, err error)
+	UpdateAddon(ctx context.Context, request containerengine.UpdateAddonRequest) (response containerengine.UpdateAddonResponse, err error)
+	DisableAddon(ctx context.Context, request containerengine.DisableAddonRequest) (response containerengine.DisableAddonResponse, err error)
+	GetAddon(ctx context.Context, request containerengine.GetAddonRequest) (response containerengine.GetAddonResponse, err error)
 }

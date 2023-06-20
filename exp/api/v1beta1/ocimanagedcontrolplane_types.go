@@ -54,6 +54,12 @@ type OCIManagedControlPlaneSpec struct {
 	// +optional
 	ControlPlaneEndpoint clusterv1.APIEndpoint `json:"controlPlaneEndpoint"`
 
+	// The list of addons to be applied to the OKE cluster.
+	// +optional
+	// +listType=map
+	// +listMapKey=name
+	Addons []Addon `json:"addons,omitempty"`
+
 	// Version represents the version of the Kubernetes Cluster Control Plane.
 	Version *string `json:"version,omitempty"`
 }
@@ -148,10 +154,67 @@ type OCIManagedControlPlaneStatus struct {
 	// +optional
 	Version *string `json:"version,omitempty"`
 
+	// AddonStatus represents the status of the addon.
+	// +optional
+	AddonStatus []AddonStatus `json:"addonStatus,omitempty"`
+
 	// Initialized denotes whether or not the control plane has the
 	// uploaded kubernetes config-map.
 	// +optional
 	Initialized bool `json:"initialized"`
+}
+
+// Addon defines the properties of an addon.
+type Addon struct {
+	// Version represents the version of the addon.
+	// +optional
+	Name *string `json:"name,omitempty"`
+
+	// Version represents the version of the addon.
+	// +optional
+	Version *string `json:"version,omitempty"`
+
+	// Configurations defines a list of configurations of the addon.
+	// +optional
+	Configurations []AddonConfiguration `json:"configurations,omitempty"`
+}
+
+// AddonConfiguration defines a configuration of an addon.
+type AddonConfiguration struct {
+	// The key of the configuration.
+	Key *string `json:"key,omitempty"`
+
+	// The value of the configuration.
+	Value *string `json:"value,omitempty"`
+}
+
+// AddonStatus defines the status of an Addon.
+type AddonStatus struct {
+	// Version represents the version of the addon.
+	// +optional
+	Name *string `json:"name,omitempty"`
+
+	// AddonError defines the error encountered by the Addon.
+	// +optional
+	AddonError *AddonError `json:"addonError,omitempty"`
+
+	// LifecycleState defines the lifecycle state of the addon.
+	// +optional
+	LifecycleState *string `json:"lifecycleState,omitempty"`
+}
+
+type AddonError struct {
+	// Code defines a  short error code that defines the upstream error, meant for programmatic parsing.
+	// +optional
+	Code *string `json:"code,omitempty"`
+
+	// Message defines a human-readable error string of the upstream error.
+	// +optional
+	Message *string `json:"message,omitempty"`
+
+	// Status defines the status of the HTTP response encountered in the upstream error.
+	// +optional
+	Status *string `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
