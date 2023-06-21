@@ -37,39 +37,6 @@ spec:
             description: OCIManagedControlPlaneSpec defines the desired state of OCIManagedControlPlane.
               The properties are generated from https://docs.oracle.com/en-us/iaas/api/#/en/containerengine/20180222/datatypes/CreateClusterDetails
             properties:
-              addons:
-                description: The list of addons to be applied to the OKE cluster.
-                items:
-                  description: Addon defines the properties of an addon.
-                  properties:
-                    configurations:
-                      description: Configurations defines a list of configurations
-                        of the addon.
-                      items:
-                        description: AddonConfiguration defines a configuration of
-                          an addon.
-                        properties:
-                          key:
-                            description: The key of the configuration.
-                            type: string
-                          value:
-                            description: The value of the configuration.
-                            type: string
-                        type: object
-                      type: array
-                    name:
-                      description: Name represents the name of the addon.
-                      type: string
-                    version:
-                      description: Version represents the version of the addon.
-                      type: string
-                  required:
-                  - name
-                  type: object
-                type: array
-                x-kubernetes-list-map-keys:
-                - name
-                x-kubernetes-list-type: map
               clusterOptions:
                 description: ClusterOptions defines Optional attributes for the cluster.
                 properties:
@@ -162,37 +129,6 @@ spec:
             description: OCIManagedControlPlaneStatus defines the observed state of
               OCIManagedControlPlane
             properties:
-              addonStatus:
-                additionalProperties:
-                  description: AddonStatus defines the status of an Addon.
-                  properties:
-                    addonError:
-                      description: AddonError defines the error encountered by the
-                        Addon.
-                      properties:
-                        code:
-                          description: Code defines a  short error code that defines
-                            the upstream error, meant for programmatic parsing.
-                          type: string
-                        message:
-                          description: Message defines a human-readable error string
-                            of the upstream error.
-                          type: string
-                        status:
-                          description: Status defines the status of the HTTP response
-                            encountered in the upstream error.
-                          type: string
-                      type: object
-                    currentlyInstalledVersion:
-                      description: Version represents the version of the addon.
-                      type: string
-                    lifecycleState:
-                      description: LifecycleState defines the lifecycle state of the
-                        addon.
-                      type: string
-                  type: object
-                description: AddonStatus represents the status of the addon.
-                type: object
               conditions:
                 description: NetworkSpec encapsulates all things related to OCI network.
                 items:
