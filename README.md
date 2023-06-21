@@ -81,5 +81,5 @@ Released under the Apache License License Version 2.0 as shown at http://www.apa
 [image_builder_book]: https://image-builder.sigs.k8s.io/capi/providers/oci.html
 [capoci_book]: https://oracle.github.io/cluster-api-provider-oci/
 [#cluster-api-oci slack]: https://kubernetes.slack.com/archives/C039CDHABFF
-[zoomMeeting]: https://oracle.zoom.us/j/99910180651
+[zoomMeeting]: https://oracle.zoom.us/j/97952312891?pwd=NlFnMWQzbGpMRmNyaityVHNWQWxSdz09
 [notes]: https://docs.google.com/document/d/1mgZxjDbnSv74Vut1aHtWplG6vsR9zu5sqXvQN8SPgCc
