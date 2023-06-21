@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/oracle/cluster-api-provider-oci/cloud/util"
 	"reflect"
 	"sort"
 	"strconv"
@@ -696,6 +697,10 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 				MaximumSurge:         recycleConfig.MaximumSurge,
 				MaximumUnavailable:   recycleConfig.MaximumUnavailable,
 			}
+		}
+		if recycleConfig != nil && len(nodeConfigDetails.PlacementConfigs) != 0 {
+			m.Logger.V(util.LogLevelWarn).Info("Placement configuration has been changed in the update, " +
+				"hence node pool recycling configuration will not be sent with the update request")
 		}
 		if spec.NodeEvictionNodePoolSettings != nil {
 			nodePoolDetails.NodeEvictionNodePoolSettings = &oke.NodeEvictionNodePoolSettings{

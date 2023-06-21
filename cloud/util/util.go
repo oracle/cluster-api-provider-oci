@@ -34,6 +34,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	LogLevelWarn = 3
+)
+
 // GetClusterIdentityFromRef returns the OCIClusterIdentity referenced by the OCICluster.
 func GetClusterIdentityFromRef(ctx context.Context, c client.Client, ociClusterNamespace string, ref *corev1.ObjectReference) (*infrastructurev1beta2.OCIClusterIdentity, error) {
 	identity := &infrastructurev1beta2.OCIClusterIdentity{}
