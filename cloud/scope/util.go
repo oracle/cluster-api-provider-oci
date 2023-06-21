@@ -20,6 +20,10 @@ import (
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 )
 
+const (
+	LogLevelWarn = 3
+)
+
 // GetNsgNamesFromId returns the names of the NSGs with the provided IDs
 func GetNsgNamesFromId(ids []string, nsgs []*infrastructurev1beta2.NSG) []string {
 	names := make([]string, 0)
