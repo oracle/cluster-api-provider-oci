@@ -591,6 +591,7 @@ func setControlPlaneSpecDefaults(spec *infrav2exp.OCIManagedControlPlaneSpec) {
 	if spec.ClusterType == "" {
 		spec.ClusterType = infrav2exp.BasicClusterType
 	}
+	spec.Addons = nil
 	if spec.ImagePolicyConfig == nil {
 		spec.ImagePolicyConfig = &infrav2exp.ImagePolicyConfig{
 			IsPolicyEnabled: common.Bool(false),
@@ -615,6 +616,7 @@ func (s *ManagedControlPlaneScope) getSpecFromActual(cluster *oke.Cluster) *infr
 		Version:  cluster.KubernetesVersion,
 		KmsKeyId: cluster.KmsKeyId,
 		ID:       cluster.Id,
+		Addons:   nil,
 	}
 	if cluster.ImagePolicyConfig != nil {
 		keys := make([]infrav2exp.KeyDetails, 0)
