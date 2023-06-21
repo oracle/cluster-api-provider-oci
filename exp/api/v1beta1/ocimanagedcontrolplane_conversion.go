@@ -34,6 +34,8 @@ func (src *OCIManagedControlPlane) ConvertTo(dstRaw conversion.Hub) error {
 		return err
 	}
 	dst.Spec.ClusterType = restored.Spec.ClusterType
+	dst.Spec.Addons = restored.Spec.Addons
+	dst.Status.AddonStatus = restored.Status.AddonStatus
 	return nil
 }
 
