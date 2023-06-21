@@ -163,8 +163,7 @@ spec:
               OCIManagedControlPlane
             properties:
               addonStatus:
-                description: AddonStatus represents the status of the addon.
-                items:
+                additionalProperties:
                   description: AddonStatus defines the status of an Addon.
                   properties:
                     addonError:
@@ -184,15 +183,16 @@ spec:
                             encountered in the upstream error.
                           type: string
                       type: object
+                    currentlyInstalledVersion:
+                      description: Version represents the version of the addon.
+                      type: string
                     lifecycleState:
                       description: LifecycleState defines the lifecycle state of the
                         addon.
                       type: string
-                    name:
-                      description: Version represents the version of the addon.
-                      type: string
                   type: object
-                type: array
+                description: AddonStatus represents the status of the addon.
+                type: object
               conditions:
                 description: NetworkSpec encapsulates all things related to OCI network.
                 items:
@@ -406,8 +406,7 @@ spec:
               OCIManagedControlPlane
             properties:
               addonStatus:
-                description: AddonStatus represents the status of the addon.
-                items:
+                additionalProperties:
                   description: AddonStatus defines the status of an Addon.
                   properties:
                     addonError:
@@ -427,15 +426,16 @@ spec:
                             encountered in the upstream error.
                           type: string
                       type: object
+                    currentlyInstalledVersion:
+                      description: Version represents the version of the addon.
+                      type: string
                     lifecycleState:
                       description: LifecycleState defines the lifecycle state of the
                         addon.
                       type: string
-                    name:
-                      description: Version represents the version of the addon.
-                      type: string
                   type: object
-                type: array
+                description: AddonStatus represents the status of the addon.
+                type: object
               conditions:
                 description: NetworkSpec encapsulates all things related to OCI network.
                 items:

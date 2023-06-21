@@ -156,7 +156,7 @@ type OCIManagedControlPlaneStatus struct {
 
 	// AddonStatus represents the status of the addon.
 	// +optional
-	AddonStatus []AddonStatus `json:"addonStatus,omitempty"`
+	AddonStatus map[string]AddonStatus `json:"addonStatus,omitempty"`
 
 	// Initialized denotes whether or not the control plane has the
 	// uploaded kubernetes config-map.
@@ -198,7 +198,7 @@ type AddonConfiguration struct {
 type AddonStatus struct {
 	// Version represents the version of the addon.
 	// +optional
-	Name *string `json:"name,omitempty"`
+	CurrentlyInstalledVersion *string `json:"currentlyInstalledVersion,omitempty"`
 
 	// AddonError defines the error encountered by the Addon.
 	// +optional

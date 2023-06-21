@@ -17,7 +17,6 @@ limitations under the License.
 package v1beta2
 
 import (
-	"github.com/oracle/oci-go-sdk/v65/common"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -42,26 +41,6 @@ func (c *OCIManagedControlPlane) Default() {
 				CniType: VCNNativeCNI,
 			},
 		}
-	}
-	if len(c.Spec.Addons) == 0 {
-		addons := make([]Addon, 3)
-		addons[0] = Addon{
-			Name: common.String("CoreDNS"),
-		}
-		addons[1] = Addon{
-			Name: common.String("KubeProxy"),
-		}
-		cni := c.Spec.ClusterPodNetworkOptions[0]
-		if cni.CniType == VCNNativeCNI {
-			addons[2] = Addon{
-				Name: common.String("OciVcnIpNative"),
-			}
-		} else {
-			addons[2] = Addon{
-				Name: common.String("Flannel"),
-			}
-		}
-		c.Spec.Addons = addons
 	}
 }
 

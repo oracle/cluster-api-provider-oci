@@ -169,7 +169,7 @@ type OCIManagedControlPlaneStatus struct {
 
 	// AddonStatus represents the status of the addon.
 	// +optional
-	AddonStatus []AddonStatus `json:"addonStatus,omitempty"`
+	AddonStatus map[string]AddonStatus `json:"addonStatus,omitempty"`
 
 	// Initialized denotes whether or not the control plane has the
 	// uploaded kubernetes config-map.
@@ -204,7 +204,7 @@ type AddonConfiguration struct {
 type AddonStatus struct {
 	// Version represents the version of the addon.
 	// +optional
-	Name *string `json:"name,omitempty"`
+	CurrentlyInstalledVersion *string `json:"currentlyInstalledVersion,omitempty"`
 
 	// AddonError defines the error encountered by the Addon.
 	// +optional
@@ -260,6 +260,22 @@ func (c *OCIManagedControlPlane) GetConditions() clusterv1.Conditions {
 // SetConditions will set the given conditions on an OCICluster object.
 func (c *OCIManagedControlPlane) SetConditions(conditions clusterv1.Conditions) {
 	c.Status.Conditions = conditions
+}
+
+// SetAddonStatus sets the addon status in the OCIManagedControlPlane
+func (c *OCIManagedControlPlane) SetAddonStatus(name string, status AddonStatus) {
+	if c.Status.AddonStatus == nil {
+		c.Status.AddonStatus = make(map[string]AddonStatus)
+	}
+	c.Status.AddonStatus[name] = status
+}
+
+// RemoveAddonStatus removes the addon status from OCIManagedControlPlane
+func (c *OCIManagedControlPlane) RemoveAddonStatus(name string) {
+	if c.Status.AddonStatus == nil {
+		c.Status.AddonStatus = make(map[string]AddonStatus)
+	}
+	delete(c.Status.AddonStatus, name)
 }
 
 func init() {

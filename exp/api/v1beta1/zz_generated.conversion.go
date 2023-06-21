@@ -762,7 +762,7 @@ func Convert_v1beta2_AddonError_To_v1beta1_AddonError(in *v1beta2.AddonError, ou
 }
 
 func autoConvert_v1beta1_AddonStatus_To_v1beta2_AddonStatus(in *AddonStatus, out *v1beta2.AddonStatus, s conversion.Scope) error {
-	out.Name = (*string)(unsafe.Pointer(in.Name))
+	out.CurrentlyInstalledVersion = (*string)(unsafe.Pointer(in.CurrentlyInstalledVersion))
 	out.AddonError = (*v1beta2.AddonError)(unsafe.Pointer(in.AddonError))
 	out.LifecycleState = (*string)(unsafe.Pointer(in.LifecycleState))
 	return nil
@@ -774,7 +774,7 @@ func Convert_v1beta1_AddonStatus_To_v1beta2_AddonStatus(in *AddonStatus, out *v1
 }
 
 func autoConvert_v1beta2_AddonStatus_To_v1beta1_AddonStatus(in *v1beta2.AddonStatus, out *AddonStatus, s conversion.Scope) error {
-	out.Name = (*string)(unsafe.Pointer(in.Name))
+	out.CurrentlyInstalledVersion = (*string)(unsafe.Pointer(in.CurrentlyInstalledVersion))
 	out.AddonError = (*AddonError)(unsafe.Pointer(in.AddonError))
 	out.LifecycleState = (*string)(unsafe.Pointer(in.LifecycleState))
 	return nil
@@ -1710,7 +1710,7 @@ func autoConvert_v1beta1_OCIManagedControlPlaneStatus_To_v1beta2_OCIManagedContr
 	out.Ready = in.Ready
 	out.Conditions = *(*clusterapiapiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
 	out.Version = (*string)(unsafe.Pointer(in.Version))
-	out.AddonStatus = *(*[]v1beta2.AddonStatus)(unsafe.Pointer(&in.AddonStatus))
+	out.AddonStatus = *(*map[string]v1beta2.AddonStatus)(unsafe.Pointer(&in.AddonStatus))
 	out.Initialized = in.Initialized
 	return nil
 }
@@ -1724,7 +1724,7 @@ func autoConvert_v1beta2_OCIManagedControlPlaneStatus_To_v1beta1_OCIManagedContr
 	out.Ready = in.Ready
 	out.Conditions = *(*clusterapiapiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
 	out.Version = (*string)(unsafe.Pointer(in.Version))
-	out.AddonStatus = *(*[]AddonStatus)(unsafe.Pointer(&in.AddonStatus))
+	out.AddonStatus = *(*map[string]AddonStatus)(unsafe.Pointer(&in.AddonStatus))
 	out.Initialized = in.Initialized
 	return nil
 }
