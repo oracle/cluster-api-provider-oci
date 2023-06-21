@@ -285,7 +285,8 @@ using existing VCN infrastructure.
 
 By default, CAPOCI uses [OCI Network Load Balancer][oci-nlb] as API Server load balancer. The load balancer front-ends
 control plane hosts to provide high availability access to Kubernetes API. The following spec can be used to 
-use [OCI Load Balancer][oci-lb] as the API Server load balancer.
+use [OCI Load Balancer][oci-lb] as the API Server load balancer. The change from the default spec is to set 
+`loadBalancerType` field to "lb" in the `OCICluster` resource.
 
 ```yaml
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
