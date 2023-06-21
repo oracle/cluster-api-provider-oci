@@ -707,12 +707,13 @@ func (s *ManagedControlPlaneScope) ReconcileAddons(ctx context.Context, okeClust
 			} else {
 				return err
 			}
-		}
-		s.OCIManagedControlPlane.SetAddonStatus(*addon.Name, s.getStatus(resp.Addon))
-		// addon present, update it
-		err = s.handleExistingAddon(ctx, okeCluster, resp.Addon, addon)
-		if err != nil {
-			return err
+		} else {
+			s.OCIManagedControlPlane.SetAddonStatus(*addon.Name, s.getStatus(resp.Addon))
+			// addon present, update it
+			err = s.handleExistingAddon(ctx, okeCluster, resp.Addon, addon)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	// for addons which are present in the status object but not in the spec, the possibility
@@ -752,7 +753,9 @@ func (s *ManagedControlPlaneScope) handleExistingAddon(ctx context.Context, okeC
 		addon.LifecycleState == oke.AddonLifecycleStateFailed) {
 		addonConfigurationsActual := getActualAddonConfigurations(addon.Configurations)
 		// if the version changed or the configuration changed, update the addon
-		if !reflect.DeepEqual(addonInSpec.Version, addon.Version) ||
+		// if the lifecycle state is needs attention, try to update
+		if addon.LifecycleState == oke.AddonLifecycleStateNeedsAttention ||
+			!reflect.DeepEqual(addonInSpec.Version, addon.Version) ||
 			!reflect.DeepEqual(addonConfigurationsActual, addonInSpec.Configurations) {
 			_, err := s.ContainerEngineClient.UpdateAddon(ctx, oke.UpdateAddonRequest{
 				ClusterId: okeCluster.Id,

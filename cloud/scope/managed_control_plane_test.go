@@ -794,3 +794,153 @@ func TestControlPlaneKubeconfigReconcile(t *testing.T) {
 		})
 	}
 }
+
+func TestAddonReconcile(t *testing.T) {
+	var (
+		cs         *ManagedControlPlaneScope
+		mockCtrl   *gomock.Controller
+		okeClient  *mock_containerengine.MockClient
+		baseClient *mock_base.MockBaseClient
+	)
+
+	setup := func(t *testing.T, g *WithT) {
+		var err error
+		mockCtrl = gomock.NewController(t)
+		okeClient = mock_containerengine.NewMockClient(mockCtrl)
+		baseClient = mock_base.NewMockBaseClient(mockCtrl)
+		ociClusterAccessor := OCIManagedCluster{
+			&infrav2exp.OCIManagedCluster{},
+		}
+		ociClusterAccessor.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
+		cs, err = NewManagedControlPlaneScope(ManagedControlPlaneScopeParams{
+			ContainerEngineClient: okeClient,
+			BaseClient:            baseClient,
+			OCIManagedControlPlane: &infrav2exp.OCIManagedControlPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+				},
+			},
+			OCIClusterAccessor: ociClusterAccessor,
+			Cluster: &clusterv1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "test",
+				},
+			},
+		})
+		g.Expect(err).To(BeNil())
+	}
+	teardown := func(t *testing.T, g *WithT) {
+		mockCtrl.Finish()
+	}
+
+	tests := []struct {
+		name                string
+		errorExpected       bool
+		objects             []client.Object
+		expectedEvent       string
+		eventNotExpected    string
+		matchError          error
+		errorSubStringMatch bool
+		okeCluster          oke.Cluster
+		testSpecificSetup   func(cs *ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient)
+	}{
+		{
+			name:          "install addon",
+			errorExpected: false,
+			testSpecificSetup: func(cs *ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
+				cs.OCIManagedControlPlane.Spec.Addons = []infrav2exp.Addon{
+					{
+						Name: common.String("dashboard"),
+					},
+				}
+				okeClient.EXPECT().GetAddon(gomock.Any(), gomock.Eq(oke.GetAddonRequest{
+					ClusterId: common.String("id"),
+					AddonName: common.String("dashboard"),
+				})).
+					Return(oke.GetAddonResponse{}, ociutil.ErrNotFound)
+				okeClient.EXPECT().InstallAddon(gomock.Any(), gomock.Eq(oke.InstallAddonRequest{
+					ClusterId: common.String("id"),
+					InstallAddonDetails: oke.InstallAddonDetails{
+						AddonName: common.String("dashboard"),
+					},
+				})).
+					Return(oke.InstallAddonResponse{}, nil)
+			},
+			okeCluster: oke.Cluster{
+				Id:   common.String("id"),
+				Name: common.String("test"),
+			},
+		},
+		{
+			name:          "install addon with config and version",
+			errorExpected: false,
+			testSpecificSetup: func(cs *ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
+				cs.OCIManagedControlPlane.Spec.Addons = []infrav2exp.Addon{
+					{
+						Name:    common.String("dashboard"),
+						Version: common.String("v0.1.0"),
+						Configurations: []infrav2exp.AddonConfiguration{
+							{
+								Key:   common.String("k1"),
+								Value: common.String("v1"),
+							},
+							{
+								Key:   common.String("k2"),
+								Value: common.String("v2"),
+							},
+						},
+					},
+				}
+				cs.OCIManagedControlPlane.Status.AddonStatus = nil
+				okeClient.EXPECT().GetAddon(gomock.Any(), gomock.Eq(oke.GetAddonRequest{
+					ClusterId: common.String("id"),
+					AddonName: common.String("dashboard"),
+				})).
+					Return(oke.GetAddonResponse{}, ociutil.ErrNotFound)
+				okeClient.EXPECT().InstallAddon(gomock.Any(), gomock.Eq(oke.InstallAddonRequest{
+					ClusterId: common.String("id"),
+					InstallAddonDetails: oke.InstallAddonDetails{
+						AddonName: common.String("dashboard"),
+						Version:   common.String("v0.1.0"),
+						Configurations: []oke.AddonConfiguration{
+							{
+								Key:   common.String("k1"),
+								Value: common.String("v1"),
+							},
+							{
+								Key:   common.String("k2"),
+								Value: common.String("v2"),
+							},
+						},
+					},
+				})).
+					Return(oke.InstallAddonResponse{}, nil)
+			},
+			okeCluster: oke.Cluster{
+				Id:   common.String("id"),
+				Name: common.String("test"),
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+			defer teardown(t, g)
+			setup(t, g)
+			tc.testSpecificSetup(cs, okeClient)
+			err := cs.ReconcileAddons(context.Background(), &tc.okeCluster)
+			if tc.errorExpected {
+				g.Expect(err).To(Not(BeNil()))
+				if tc.errorSubStringMatch {
+					g.Expect(err.Error()).To(ContainSubstring(tc.matchError.Error()))
+				} else {
+					g.Expect(err.Error()).To(Equal(tc.matchError.Error()))
+				}
+			} else {
+				g.Expect(err).To(BeNil())
+			}
+		})
+	}
+}
