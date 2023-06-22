@@ -25,22 +25,27 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	infrav1exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
+	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	expv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
 	capi_e2e "sigs.k8s.io/cluster-api/test/e2e"
 	"sigs.k8s.io/cluster-api/test/framework"
 	"sigs.k8s.io/cluster-api/test/framework/clusterctl"
 	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/kind/pkg/errors"
 )
 
 const (
@@ -217,6 +222,51 @@ var _ = Describe("Managed Workload cluster creation", func() {
 		clusterctl.ApplyClusterTemplateAndWait(ctx, input, result)
 	})
 
+	It("Managed Cluster - Node Recycling", func() {
+		clusterName = getClusterName(clusterNamePrefix, "cls-iden")
+		input := clusterctl.ApplyClusterTemplateAndWaitInput{
+			ClusterProxy: bootstrapClusterProxy,
+			ConfigCluster: clusterctl.ConfigClusterInput{
+				LogFolder:                filepath.Join(artifactFolder, "clusters", bootstrapClusterProxy.GetName()),
+				ClusterctlConfigPath:     clusterctlConfigPath,
+				KubeconfigPath:           bootstrapClusterProxy.GetKubeconfigPath(),
+				InfrastructureProvider:   clusterctl.DefaultInfrastructureProvider,
+				Flavor:                   "managed-node-recycling",
+				Namespace:                namespace.Name,
+				ClusterName:              clusterName,
+				ControlPlaneMachineCount: pointer.Int64(1),
+				WorkerMachineCount:       pointer.Int64(1),
+				KubernetesVersion:        e2eConfig.GetVariable(capi_e2e.KubernetesVersion),
+			},
+			WaitForClusterIntervals:      e2eConfig.GetIntervals(specName, "wait-cluster"),
+			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),
+			WaitForMachinePools:          e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes"),
+			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
+		}
+		input.WaitForControlPlaneInitialized = func(ctx context.Context, input clusterctl.ApplyClusterTemplateAndWaitInput, result *clusterctl.ApplyClusterTemplateAndWaitResult) {
+			Expect(ctx).NotTo(BeNil(), "ctx is required for DiscoveryAndWaitForControlPlaneInitialized")
+			lister := input.ClusterProxy.GetClient()
+			Expect(lister).ToNot(BeNil(), "Invalid argument. input.Lister can't be nil when calling DiscoveryAndWaitForControlPlaneInitialized")
+			var controlPlane *infrav1exp.OCIManagedControlPlane
+			Eventually(func(g Gomega) {
+				controlPlane = GetOCIManagedControlPlaneByCluster(ctx, lister, result.Cluster.Name, result.Cluster.Namespace)
+				if controlPlane != nil {
+					Log(fmt.Sprintf("Control plane is not nil, status is %t", controlPlane.Status.Ready))
+				}
+				g.Expect(controlPlane).ToNot(BeNil())
+				g.Expect(controlPlane.Status.Ready).To(BeTrue())
+			}, input.WaitForControlPlaneIntervals...).Should(Succeed(), "Couldn't get the control plane ready status for the cluster %s", klog.KObj(result.Cluster))
+		}
+		input.WaitForControlPlaneMachinesReady = func(ctx context.Context, input clusterctl.ApplyClusterTemplateAndWaitInput, result *clusterctl.ApplyClusterTemplateAndWaitResult) {
+			// Not applicable
+		}
+
+		clusterctl.ApplyClusterTemplateAndWait(ctx, input, result)
+
+		updateMachinePoolVersion(ctx, result.Cluster, bootstrapClusterProxy, result.MachinePools,
+			e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes"))
+	})
+
 	It("Managed Cluster - Virtual Node Pool [PRBlocking]", func() {
 		clusterName = getClusterName(clusterNamePrefix, "virtual")
 		input := clusterctl.ApplyClusterTemplateAndWaitInput{
@@ -307,4 +357,93 @@ func upgradeControlPlaneVersionSpec(ctx context.Context, lister client.Client, c
 		return false, nil
 	}, WaitForControlPlaneIntervals...).Should(BeTrue())
 	Log("Upgrade test has completed")
+}
+
+func updateMachinePoolVersion(ctx context.Context, cluster *clusterv1.Cluster, clusterProxy framework.ClusterProxy, machinePools []*expv1.MachinePool, waitInterval []interface{}) {
+	var machinePool *expv1.MachinePool
+	for _, pool := range machinePools {
+		if strings.HasSuffix(pool.Name, "-1") {
+			machinePool = pool
+			break
+		}
+	}
+	lister := clusterProxy.GetClient()
+	Expect(machinePool).NotTo(BeNil())
+	managedKubernetesUpgradeVersion := e2eConfig.GetVariable(ManagedKubernetesUpgradeVersion)
+
+	patchHelper, err := patch.NewHelper(machinePool, lister)
+	Expect(err).ToNot(HaveOccurred())
+	Expect(e2eConfig.Variables).To(HaveKey(ManagedKubernetesUpgradeVersion), "Missing %s variable in the config", ManagedKubernetesUpgradeVersion)
+	Log(fmt.Sprintf("Upgrade test is starting, upgrade version is %s", managedKubernetesUpgradeVersion))
+	machinePool.Spec.Template.Spec.Version = &managedKubernetesUpgradeVersion
+	Expect(patchHelper.Patch(ctx, machinePool)).To(Succeed())
+
+	ociMachinePool := &infrav2exp.OCIManagedMachinePool{}
+	err = lister.Get(ctx, client.ObjectKey{Name: machinePool.Name, Namespace: cluster.Namespace}, ociMachinePool)
+	Expect(err).To(BeNil())
+	patchHelper, err = patch.NewHelper(ociMachinePool, lister)
+	// to update a node pool, set the version and set the current image to nil so that CAPOCI will
+	// automatically lookup a new version
+	ociMachinePool.Spec.Version = &managedKubernetesUpgradeVersion
+	ociMachinePool.Spec.NodeSourceViaImage.ImageId = nil
+	Expect(err).ToNot(HaveOccurred())
+	Expect(patchHelper.Patch(ctx, ociMachinePool)).To(Succeed())
+
+	Log("Upgrade test is starting")
+
+	Eventually(func() (int, error) {
+		mpKey := client.ObjectKey{
+			Namespace: machinePool.Namespace,
+			Name:      machinePool.Name,
+		}
+		if err := lister.Get(ctx, mpKey, machinePool); err != nil {
+			return 0, err
+		}
+		versions := getMachinePoolInstanceVersions(ctx, clusterProxy, cluster, machinePool)
+		matches := 0
+		for _, version := range versions {
+			if version == managedKubernetesUpgradeVersion {
+				matches++
+			}
+		}
+
+		if matches != len(versions) {
+			return 0, errors.Errorf("old version instances remain. Expected %d instances at version %v. Got version list: %v", len(versions), managedKubernetesUpgradeVersion, versions)
+		}
+
+		return matches, nil
+	}, waitInterval...).Should(Equal(1), "Timed out waiting for all MachinePool %s instances to be upgraded to Kubernetes version %s", klog.KObj(machinePool), managedKubernetesUpgradeVersion)
+}
+
+// getMachinePoolInstanceVersions returns the Kubernetes versions of the machine pool instances.
+// This method was forked because we need to lookup the kubeconfig with each call
+// as the tokens are refreshed in case of OKE
+func getMachinePoolInstanceVersions(ctx context.Context, clusterProxy framework.ClusterProxy, cluster *clusterv1.Cluster, machinePool *expv1.MachinePool) []string {
+	Expect(ctx).NotTo(BeNil(), "ctx is required for getMachinePoolInstanceVersions")
+
+	instances := machinePool.Status.NodeRefs
+	versions := make([]string, len(instances))
+	for i, instance := range instances {
+		node := &corev1.Node{}
+		var nodeGetError error
+		err := wait.PollImmediate(100*time.Millisecond, 10*time.Second, func() (bool, error) {
+			nodeGetError = clusterProxy.GetWorkloadCluster(ctx, cluster.Namespace, cluster.Name).
+				GetClient().Get(ctx, client.ObjectKey{Name: instance.Name}, node)
+			if nodeGetError != nil {
+				return false, nil //nolint:nilerr
+			}
+			return true, nil
+		})
+		if err != nil {
+			versions[i] = "unknown"
+			if nodeGetError != nil {
+				// Dump the instance name and error here so that we can log it as part of the version array later on.
+				versions[i] = fmt.Sprintf("%s error: %s", instance.Name, errors.Wrap(err, nodeGetError.Error()))
+			}
+		} else {
+			versions[i] = node.Status.NodeInfo.KubeletVersion
+		}
+	}
+
+	return versions
 }

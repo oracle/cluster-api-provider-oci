@@ -289,6 +289,7 @@ generate-e2e-templates: $(KUSTOMIZE)
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-externally-managed-vcn --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-externally-managed-vcn.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-machine-pool --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-machine-pool.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-managed --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-managed.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-managed-node-recycling --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-managed-node-recycling.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-managed-cluster-identity --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-managed-cluster-identity.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-cluster-identity --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-cluster-identity.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-windows-calico --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-windows-calico.yaml

@@ -313,6 +313,14 @@ func (m *ManagedMachinePoolScope) CreateNodePool(ctx context.Context) (*oke.Node
 			IsForceDeleteAfterGraceDuration: m.OCIManagedMachinePool.Spec.NodeEvictionNodePoolSettings.IsForceDeleteAfterGraceDuration,
 		}
 	}
+	recycleConfig := m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails
+	if recycleConfig != nil {
+		nodePoolDetails.NodePoolCyclingDetails = &oke.NodePoolCyclingDetails{
+			IsNodeCyclingEnabled: recycleConfig.IsNodeCyclingEnabled,
+			MaximumSurge:         recycleConfig.MaximumSurge,
+			MaximumUnavailable:   recycleConfig.MaximumUnavailable,
+		}
+	}
 	nodePoolDetails.InitialNodeLabels = m.getInitialNodeKeyValuePairs()
 
 	req := oke.CreateNodePoolRequest{
@@ -603,15 +611,21 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 			return false, err
 		}
 		m.Logger.Info("Node pool", "spec", jsonSpec, "actual", jsonActual)
-		placementConfig, err := m.buildPlacementConfig(spec.NodePoolNodeConfig.PlacementConfigs)
-		if err != nil {
-			return false, err
-		}
+
 		nodeConfigDetails := oke.UpdateNodePoolNodeConfigDetails{
 			NsgIds:                         m.getWorkerMachineNSGs(),
-			PlacementConfigs:               placementConfig,
 			IsPvEncryptionInTransitEnabled: spec.NodePoolNodeConfig.IsPvEncryptionInTransitEnabled,
 			KmsKeyId:                       spec.NodePoolNodeConfig.KmsKeyId,
+		}
+		// send placement config only if there is an actual change in placement
+		// placement config and recycle config cannot be sent at the same time, and most use cases will
+		// be to update kubernetes version in which case, placement config is not required to be sent
+		if !reflect.DeepEqual(spec.NodePoolNodeConfig.PlacementConfigs, actual.NodePoolNodeConfig.PlacementConfigs) {
+			placementConfig, err := m.buildPlacementConfig(spec.NodePoolNodeConfig.PlacementConfigs)
+			if err != nil {
+				return false, err
+			}
+			nodeConfigDetails.PlacementConfigs = placementConfig
 		}
 		if nodePoolSizeUpdateRequired {
 			nodeConfigDetails.Size = common.Int(int(*m.MachinePool.Spec.Replicas))
@@ -643,7 +657,9 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 			return false, err
 		}
 		sourceDetails := oke.NodeSourceViaImageDetails{
-			ImageId:             spec.NodeSourceViaImage.ImageId,
+			// use image id from machinepool spec itself as the copy will not have the image set in the
+			// setNodepoolImageId method above
+			ImageId:             m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId,
 			BootVolumeSizeInGBs: spec.NodeSourceViaImage.BootVolumeSizeInGBs,
 		}
 
@@ -671,6 +687,19 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 			SshPublicKey:      common.String(m.OCIManagedMachinePool.Spec.SshPublicKey),
 			NodeConfigDetails: &nodeConfigDetails,
 			NodeMetadata:      spec.NodeMetadata,
+		}
+		recycleConfig := spec.NodePoolCyclingDetails
+		// cannot send recycle config and placement config together
+		if recycleConfig != nil && len(nodeConfigDetails.PlacementConfigs) == 0 {
+			nodePoolDetails.NodePoolCyclingDetails = &oke.NodePoolCyclingDetails{
+				IsNodeCyclingEnabled: recycleConfig.IsNodeCyclingEnabled,
+				MaximumSurge:         recycleConfig.MaximumSurge,
+				MaximumUnavailable:   recycleConfig.MaximumUnavailable,
+			}
+		}
+		if recycleConfig != nil && len(nodeConfigDetails.PlacementConfigs) != 0 {
+			m.Logger.V(LogLevelWarn).Info("Placement configuration has been changed in the update, " +
+				"hence node pool recycling configuration will not be sent with the update request")
 		}
 		if spec.NodeEvictionNodePoolSettings != nil {
 			nodePoolDetails.NodeEvictionNodePoolSettings = &oke.NodeEvictionNodePoolSettings{
@@ -701,6 +730,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 func setMachinePoolSpecDefaults(spec *infrav2exp.OCIManagedMachinePoolSpec) {
 	spec.ProviderIDList = nil
 	spec.ProviderID = nil
+
 	if spec.NodePoolNodeConfig != nil {
 		if spec.NodePoolNodeConfig.PlacementConfigs != nil {
 			configs := spec.NodePoolNodeConfig.PlacementConfigs
@@ -781,6 +811,14 @@ func (m *ManagedMachinePoolScope) getSpecFromAPIObject(pool *oke.NodePool) *expi
 			nodeShapeConfig.Ocpus = &ocpu
 		}
 		spec.NodeShapeConfig = &nodeShapeConfig
+	}
+	if pool.NodePoolCyclingDetails != nil {
+		cyclingDetails := pool.NodePoolCyclingDetails
+		spec.NodePoolCyclingDetails = &expinfra1.NodePoolCyclingDetails{
+			IsNodeCyclingEnabled: cyclingDetails.IsNodeCyclingEnabled,
+			MaximumSurge:         cyclingDetails.MaximumSurge,
+			MaximumUnavailable:   cyclingDetails.MaximumUnavailable,
+		}
 	}
 	return &spec
 }

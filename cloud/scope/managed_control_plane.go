@@ -588,6 +588,9 @@ func (s *ManagedControlPlaneScope) UpdateControlPlane(ctx context.Context, okeCl
 // there is a chance user will edit the cluster
 func setControlPlaneSpecDefaults(spec *infrav2exp.OCIManagedControlPlaneSpec) {
 	spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{}
+	if spec.ClusterType == "" {
+		spec.ClusterType = infrav2exp.BasicClusterType
+	}
 	if spec.ImagePolicyConfig == nil {
 		spec.ImagePolicyConfig = &infrav2exp.ImagePolicyConfig{
 			IsPolicyEnabled: common.Bool(false),
@@ -663,6 +666,7 @@ func (s *ManagedControlPlaneScope) getSpecFromActual(cluster *oke.Cluster) *infr
 			spec.ClusterType = infrav2exp.EnhancedClusterType
 			break
 		default:
+			spec.ClusterType = infrav2exp.BasicClusterType
 			break
 		}
 	}

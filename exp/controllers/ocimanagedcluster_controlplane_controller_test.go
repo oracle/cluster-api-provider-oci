@@ -284,6 +284,7 @@ func TestControlPlaneReconciliationFunction(t *testing.T) {
 						Cluster: oke.Cluster{
 							Id:                common.String("test"),
 							Name:              common.String("test"),
+							Type:              oke.ClusterTypeBasicCluster,
 							CompartmentId:     common.String("test-compartment"),
 							VcnId:             common.String("vcn-id"),
 							KubernetesVersion: common.String("v1.24.5"),
