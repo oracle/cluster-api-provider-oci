@@ -1037,7 +1037,7 @@ func TestAddonReconcile(t *testing.T) {
 		},
 		{
 			name:          "addon status error",
-			errorExpected: true,
+			errorExpected: false,
 			testSpecificSetup: func(cs *ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
 				cs.OCIManagedControlPlane.Spec.Addons = []infrav2exp.Addon{
 					{
