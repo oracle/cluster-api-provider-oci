@@ -772,8 +772,6 @@ func (s *ManagedControlPlaneScope) handleExistingAddon(ctx context.Context, okeC
 				return err
 			}
 		}
-	} else {
-		s.Info(fmt.Sprintf("Nothing to reconcile for addon %s", *addon.Name))
 	}
 	return nil
 }
