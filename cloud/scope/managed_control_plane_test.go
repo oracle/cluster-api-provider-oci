@@ -18,6 +18,7 @@ package scope
 
 import (
 	"context"
+	"errors"
 	"io"
 	"strings"
 	"testing"
@@ -843,6 +844,7 @@ func TestAddonReconcile(t *testing.T) {
 		matchError          error
 		errorSubStringMatch bool
 		okeCluster          oke.Cluster
+		matchStatus         map[string]infrav2exp.AddonStatus
 		testSpecificSetup   func(cs *ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient)
 	}{
 		{
@@ -922,6 +924,163 @@ func TestAddonReconcile(t *testing.T) {
 				Name: common.String("test"),
 			},
 		},
+		{
+			name:          "update addon",
+			errorExpected: false,
+			testSpecificSetup: func(cs *ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
+				cs.OCIManagedControlPlane.Spec.Addons = []infrav2exp.Addon{
+					{
+						Name: common.String("dashboard"),
+						Configurations: []infrav2exp.AddonConfiguration{
+							{
+								Key:   common.String("k1"),
+								Value: common.String("v1"),
+							},
+							{
+								Key:   common.String("k2"),
+								Value: common.String("v2"),
+							},
+						},
+					},
+				}
+				cs.OCIManagedControlPlane.Status.AddonStatus = nil
+				okeClient.EXPECT().GetAddon(gomock.Any(), gomock.Eq(oke.GetAddonRequest{
+					ClusterId: common.String("id"),
+					AddonName: common.String("dashboard"),
+				})).
+					Return(oke.GetAddonResponse{
+						Addon: oke.Addon{
+							Name: common.String("dashboard"),
+						},
+					}, nil)
+				okeClient.EXPECT().UpdateAddon(gomock.Any(), gomock.Eq(oke.UpdateAddonRequest{
+					ClusterId: common.String("id"),
+					AddonName: common.String("dashboard"),
+					UpdateAddonDetails: oke.UpdateAddonDetails{
+						Configurations: []oke.AddonConfiguration{
+							{
+								Key:   common.String("k1"),
+								Value: common.String("v1"),
+							},
+							{
+								Key:   common.String("k2"),
+								Value: common.String("v2"),
+							},
+						},
+					},
+				})).
+					Return(oke.UpdateAddonResponse{}, nil)
+			},
+			okeCluster: oke.Cluster{
+				Id:   common.String("id"),
+				Name: common.String("test"),
+			},
+		},
+		{
+			name:          "delete addon",
+			errorExpected: false,
+			testSpecificSetup: func(cs *ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
+				cs.OCIManagedControlPlane.Status.AddonStatus = map[string]infrav2exp.AddonStatus{
+					"dashboard": {
+						LifecycleState: common.String("ACTIVE"),
+					},
+				}
+				okeClient.EXPECT().GetAddon(gomock.Any(), gomock.Eq(oke.GetAddonRequest{
+					ClusterId: common.String("id"),
+					AddonName: common.String("dashboard"),
+				})).
+					Return(oke.GetAddonResponse{
+						Addon: oke.Addon{
+							Name:           common.String("dashboard"),
+							LifecycleState: oke.AddonLifecycleStateActive,
+						},
+					}, nil)
+				okeClient.EXPECT().DisableAddon(gomock.Any(), gomock.Eq(oke.DisableAddonRequest{
+					ClusterId:             common.String("id"),
+					AddonName:             common.String("dashboard"),
+					IsRemoveExistingAddOn: common.Bool(true),
+				})).
+					Return(oke.DisableAddonResponse{}, nil)
+			},
+			okeCluster: oke.Cluster{
+				Id:   common.String("id"),
+				Name: common.String("test"),
+			},
+		},
+		{
+			name:          "install addon error",
+			errorExpected: true,
+			matchError:    errors.New("install error"),
+			testSpecificSetup: func(cs *ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
+				cs.OCIManagedControlPlane.Spec.Addons = []infrav2exp.Addon{
+					{
+						Name: common.String("dashboard"),
+					},
+				}
+				okeClient.EXPECT().GetAddon(gomock.Any(), gomock.Eq(oke.GetAddonRequest{
+					ClusterId: common.String("id"),
+					AddonName: common.String("dashboard"),
+				})).
+					Return(oke.GetAddonResponse{}, ociutil.ErrNotFound)
+				okeClient.EXPECT().InstallAddon(gomock.Any(), gomock.Eq(oke.InstallAddonRequest{
+					ClusterId: common.String("id"),
+					InstallAddonDetails: oke.InstallAddonDetails{
+						AddonName: common.String("dashboard"),
+					},
+				})).
+					Return(oke.InstallAddonResponse{}, errors.New("install error"))
+			},
+			okeCluster: oke.Cluster{
+				Id:   common.String("id"),
+				Name: common.String("test"),
+			},
+		},
+		{
+			name:          "addon status error",
+			errorExpected: true,
+			testSpecificSetup: func(cs *ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
+				cs.OCIManagedControlPlane.Spec.Addons = []infrav2exp.Addon{
+					{
+						Name: common.String("dashboard"),
+					},
+				}
+				okeClient.EXPECT().GetAddon(gomock.Any(), gomock.Eq(oke.GetAddonRequest{
+					ClusterId: common.String("id"),
+					AddonName: common.String("dashboard"),
+				})).
+					Return(oke.GetAddonResponse{
+						Addon: oke.Addon{
+							Name:           common.String("dashboard"),
+							LifecycleState: oke.AddonLifecycleStateNeedsAttention,
+							AddonError: &oke.AddonError{
+								Code:    common.String("32"),
+								Message: common.String("error"),
+								Status:  common.String("status"),
+							},
+						},
+					}, nil)
+				okeClient.EXPECT().UpdateAddon(gomock.Any(), gomock.Eq(oke.UpdateAddonRequest{
+					ClusterId:          common.String("id"),
+					AddonName:          common.String("dashboard"),
+					UpdateAddonDetails: oke.UpdateAddonDetails{},
+				})).
+					Return(oke.UpdateAddonResponse{}, nil)
+			},
+			okeCluster: oke.Cluster{
+				Id:   common.String("id"),
+				Name: common.String("test"),
+			},
+			matchStatus: map[string]infrav2exp.AddonStatus{
+				"dashboard": {
+					LifecycleState: common.String("NEEDS_ATTENTION"),
+					AddonError: &infrav2exp.AddonError{
+						Code:    common.String("32"),
+						Message: common.String("error"),
+						Status:  common.String("status"),
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range tests {
@@ -940,6 +1099,9 @@ func TestAddonReconcile(t *testing.T) {
 				}
 			} else {
 				g.Expect(err).To(BeNil())
+			}
+			if tc.matchStatus != nil {
+				g.Expect(cs.OCIManagedControlPlane.Status.AddonStatus).To(Equal(tc.matchStatus))
 			}
 		})
 	}

@@ -32,6 +32,8 @@ import (
 	. "github.com/onsi/gomega"
 	infrav1exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
 	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
+	"github.com/oracle/oci-go-sdk/v65/common"
+	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -307,6 +309,17 @@ var _ = Describe("Managed Workload cluster creation", func() {
 		}
 
 		clusterctl.ApplyClusterTemplateAndWait(ctx, input, result)
+
+		controlPlane := GetOCIManagedControlPlaneByCluster(ctx, bootstrapClusterProxy.GetClient(), clusterName, namespace.Name)
+		Expect(controlPlane).To(Not(BeNil()))
+		clusterOcid := controlPlane.Spec.ID
+		Eventually(func() error {
+			_, err := okeClient.GetAddon(ctx, oke.GetAddonRequest{
+				ClusterId: clusterOcid,
+				AddonName: common.String("KubernetesDashboard"),
+			})
+			return err
+		}, retryableOperationTimeout, retryableOperationInterval).Should(Succeed(), "Failed to install Addon")
 	})
 })
 

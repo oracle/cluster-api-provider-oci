@@ -24,6 +24,7 @@ import (
 	"encoding/base64"
 	"flag"
 	"fmt"
+	"github.com/oracle/cluster-api-provider-oci/cloud/services/containerengine"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -105,6 +106,8 @@ var (
 	vcnClient vcn.Client
 
 	lbClient nlb.NetworkLoadBalancerClient
+
+	okeClient containerengine.Client
 
 	adCount int
 )
@@ -240,6 +243,7 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	identityClient := ociClients.IdentityClient
 	vcnClient = ociClients.VCNClient
 	lbClient = ociClients.NetworkLoadBalancerClient
+	okeClient = ociClients.ContainerEngineClient
 	Expect(identityClient).NotTo(BeNil())
 	Expect(lbClient).NotTo(BeNil())
 
