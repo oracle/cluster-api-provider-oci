@@ -688,6 +688,7 @@ func (s *ManagedControlPlaneScope) ReconcileAddons(ctx context.Context, okeClust
 		if err != nil {
 			// addon is not present, hence install it
 			if ociutil.IsNotFound(err) {
+				s.Info(fmt.Sprintf("Install addon %s", *addon.Name))
 				_, err = s.ContainerEngineClient.InstallAddon(ctx, oke.InstallAddonRequest{
 					ClusterId: okeCluster.Id,
 					InstallAddonDetails: oke.InstallAddonDetails{
@@ -749,6 +750,7 @@ func (s *ManagedControlPlaneScope) getStatus(addon oke.Addon) infrav2exp.AddonSt
 func (s *ManagedControlPlaneScope) handleExistingAddon(ctx context.Context, okeCluster *oke.Cluster, addon oke.Addon, addonInSpec infrav2exp.Addon) error {
 	// if the addon can be updated do so
 	// if the addon is already in updating state, or in failed state, do not update
+	s.Info(fmt.Sprintf("Reconciling addon %s with lifecycle state %s", *addon.Name, string(addon.LifecycleState)))
 	if !(addon.LifecycleState == oke.AddonLifecycleStateUpdating ||
 		addon.LifecycleState == oke.AddonLifecycleStateFailed) {
 		addonConfigurationsActual := getActualAddonConfigurations(addon.Configurations)
@@ -757,6 +759,7 @@ func (s *ManagedControlPlaneScope) handleExistingAddon(ctx context.Context, okeC
 		if addon.LifecycleState == oke.AddonLifecycleStateNeedsAttention ||
 			!reflect.DeepEqual(addonInSpec.Version, addon.Version) ||
 			!reflect.DeepEqual(addonConfigurationsActual, addonInSpec.Configurations) {
+			s.Info(fmt.Sprintf("Updating addon %s", *addon.Name))
 			_, err := s.ContainerEngineClient.UpdateAddon(ctx, oke.UpdateAddonRequest{
 				ClusterId: okeCluster.Id,
 				AddonName: addon.Name,
@@ -769,6 +772,8 @@ func (s *ManagedControlPlaneScope) handleExistingAddon(ctx context.Context, okeC
 				return err
 			}
 		}
+	} else {
+		s.Info(fmt.Sprintf("Nothing to reconcile for addon %s", *addon.Name))
 	}
 	return nil
 }
@@ -788,6 +793,7 @@ func (s *ManagedControlPlaneScope) handleDeletedAddon(ctx context.Context, okeCl
 	addonState := resp.LifecycleState
 	// if the addon is not in deleting state, call delete
 	if !(addonState == oke.AddonLifecycleStateDeleting) {
+		s.Info(fmt.Sprintf("Deleting addon %s", addonName))
 		_, err := s.ContainerEngineClient.DisableAddon(ctx, oke.DisableAddonRequest{
 			ClusterId:             okeCluster.Id,
 			AddonName:             common.String(addonName),
