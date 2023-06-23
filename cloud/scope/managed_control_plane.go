@@ -784,14 +784,15 @@ func (s *ManagedControlPlaneScope) handleDeletedAddon(ctx context.Context, okeCl
 	if err != nil {
 		if ociutil.IsNotFound(err) {
 			s.OCIManagedControlPlane.RemoveAddonStatus(addonName)
+			return nil
 		} else {
 			return err
 		}
 	}
 	addonState := resp.LifecycleState
-	// if the addon is not in deleting state, call delete
+	// if the addon is not in deleting state, call disable
 	if !(addonState == oke.AddonLifecycleStateDeleting) {
-		s.Info(fmt.Sprintf("Deleting addon %s", addonName))
+		s.Info(fmt.Sprintf("Disabling addon %s", addonName))
 		_, err := s.ContainerEngineClient.DisableAddon(ctx, oke.DisableAddonRequest{
 			ClusterId:             okeCluster.Id,
 			AddonName:             common.String(addonName),
@@ -835,9 +836,9 @@ func getActualAddonConfigurations(addonConfigurations []oke.AddonConfiguration) 
 }
 
 func getAddon(addons []infrav2exp.Addon, name string) *infrav2exp.Addon {
-	for _, addon := range addons {
+	for i, addon := range addons {
 		if *addon.Name == name {
-			return &addon
+			return &addons[i]
 		}
 	}
 	return nil
