@@ -1028,6 +1028,30 @@ func TestAddonReconcile(t *testing.T) {
 			},
 		},
 		{
+			name:          "addon in deleting state",
+			errorExpected: false,
+			testSpecificSetup: func(cs *ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
+				cs.OCIManagedControlPlane.Status.AddonStatus = map[string]infrav2exp.AddonStatus{
+					"dashboard": {
+						LifecycleState: common.String("ACTIVE"),
+					},
+				}
+				okeClient.EXPECT().GetAddon(gomock.Any(), gomock.Eq(oke.GetAddonRequest{
+					ClusterId: common.String("id"),
+					AddonName: common.String("dashboard"),
+				})).
+					Return(oke.GetAddonResponse{
+						Addon: oke.Addon{
+							LifecycleState: oke.AddonLifecycleStateDeleting,
+						},
+					}, nil)
+			},
+			okeCluster: oke.Cluster{
+				Id:   common.String("id"),
+				Name: common.String("test"),
+			},
+		},
+		{
 			name:          "install addon error",
 			errorExpected: true,
 			matchError:    errors.New("install error"),

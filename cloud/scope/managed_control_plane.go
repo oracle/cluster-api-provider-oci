@@ -790,9 +790,19 @@ func (s *ManagedControlPlaneScope) handleDeletedAddon(ctx context.Context, okeCl
 		}
 	}
 	addonState := resp.LifecycleState
-	// if the addon is not in deleting state, call disable
-	if !(addonState == oke.AddonLifecycleStateDeleting) {
-		s.Info(fmt.Sprintf("Disabling addon %s", addonName))
+	switch addonState {
+	// nothing to do if addon is in deleting state
+	case oke.AddonLifecycleStateDeleting:
+		s.Info(fmt.Sprintf("Addon %s is in deleting state", addonName))
+		break
+	case oke.AddonLifecycleStateDeleted:
+		// delete addon from status if addon has been deleted
+		s.Info(fmt.Sprintf("Addon %s is in deleted state", addonName))
+		s.OCIManagedControlPlane.RemoveAddonStatus(addonName)
+		break
+	default:
+		// else delete the addon
+		// delete addon is called disable addon with remove flag turned on
 		_, err := s.ContainerEngineClient.DisableAddon(ctx, oke.DisableAddonRequest{
 			ClusterId:             okeCluster.Id,
 			AddonName:             common.String(addonName),
@@ -801,8 +811,6 @@ func (s *ManagedControlPlaneScope) handleDeletedAddon(ctx context.Context, okeCl
 		if err != nil {
 			return err
 		}
-	} else if addonState == oke.AddonLifecycleStateDeleted {
-		s.OCIManagedControlPlane.RemoveAddonStatus(addonName)
 	}
 	return nil
 }
