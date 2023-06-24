@@ -140,6 +140,36 @@ func (mr *MockClientMockRecorder) DeleteVirtualNodePool(ctx, request interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteVirtualNodePool", reflect.TypeOf((*MockClient)(nil).DeleteVirtualNodePool), ctx, request)
 }
 
+// DisableAddon mocks base method.
+func (m *MockClient) DisableAddon(ctx context.Context, request containerengine.DisableAddonRequest) (containerengine.DisableAddonResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DisableAddon", ctx, request)
+	ret0, _ := ret[0].(containerengine.DisableAddonResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DisableAddon indicates an expected call of DisableAddon.
+func (mr *MockClientMockRecorder) DisableAddon(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisableAddon", reflect.TypeOf((*MockClient)(nil).DisableAddon), ctx, request)
+}
+
+// GetAddon mocks base method.
+func (m *MockClient) GetAddon(ctx context.Context, request containerengine.GetAddonRequest) (containerengine.GetAddonResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAddon", ctx, request)
+	ret0, _ := ret[0].(containerengine.GetAddonResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAddon indicates an expected call of GetAddon.
+func (mr *MockClientMockRecorder) GetAddon(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAddon", reflect.TypeOf((*MockClient)(nil).GetAddon), ctx, request)
+}
+
 // GetCluster mocks base method.
 func (m *MockClient) GetCluster(ctx context.Context, request containerengine.GetClusterRequest) (containerengine.GetClusterResponse, error) {
 	m.ctrl.T.Helper()
@@ -215,6 +245,36 @@ func (mr *MockClientMockRecorder) GetWorkRequest(ctx, request interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWorkRequest", reflect.TypeOf((*MockClient)(nil).GetWorkRequest), ctx, request)
 }
 
+// InstallAddon mocks base method.
+func (m *MockClient) InstallAddon(ctx context.Context, request containerengine.InstallAddonRequest) (containerengine.InstallAddonResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InstallAddon", ctx, request)
+	ret0, _ := ret[0].(containerengine.InstallAddonResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// InstallAddon indicates an expected call of InstallAddon.
+func (mr *MockClientMockRecorder) InstallAddon(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstallAddon", reflect.TypeOf((*MockClient)(nil).InstallAddon), ctx, request)
+}
+
+// ListAddons mocks base method.
+func (m *MockClient) ListAddons(ctx context.Context, request containerengine.ListAddonsRequest) (containerengine.ListAddonsResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAddons", ctx, request)
+	ret0, _ := ret[0].(containerengine.ListAddonsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListAddons indicates an expected call of ListAddons.
+func (mr *MockClientMockRecorder) ListAddons(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAddons", reflect.TypeOf((*MockClient)(nil).ListAddons), ctx, request)
+}
+
 // ListClusters mocks base method.
 func (m *MockClient) ListClusters(ctx context.Context, request containerengine.ListClustersRequest) (containerengine.ListClustersResponse, error) {
 	m.ctrl.T.Helper()
@@ -273,6 +333,21 @@ func (m *MockClient) ListVirtualNodes(ctx context.Context, request containerengi
 func (mr *MockClientMockRecorder) ListVirtualNodes(ctx, request interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListVirtualNodes", reflect.TypeOf((*MockClient)(nil).ListVirtualNodes), ctx, request)
+}
+
+// UpdateAddon mocks base method.
+func (m *MockClient) UpdateAddon(ctx context.Context, request containerengine.UpdateAddonRequest) (containerengine.UpdateAddonResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateAddon", ctx, request)
+	ret0, _ := ret[0].(containerengine.UpdateAddonResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateAddon indicates an expected call of UpdateAddon.
+func (mr *MockClientMockRecorder) UpdateAddon(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAddon", reflect.TypeOf((*MockClient)(nil).UpdateAddon), ctx, request)
 }
 
 // UpdateCluster mocks base method.

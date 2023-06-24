@@ -591,6 +591,7 @@ func setControlPlaneSpecDefaults(spec *infrav2exp.OCIManagedControlPlaneSpec) {
 	if spec.ClusterType == "" {
 		spec.ClusterType = infrav2exp.BasicClusterType
 	}
+	spec.Addons = nil
 	if spec.ImagePolicyConfig == nil {
 		spec.ImagePolicyConfig = &infrav2exp.ImagePolicyConfig{
 			IsPolicyEnabled: common.Bool(false),
@@ -615,6 +616,7 @@ func (s *ManagedControlPlaneScope) getSpecFromActual(cluster *oke.Cluster) *infr
 		Version:  cluster.KubernetesVersion,
 		KmsKeyId: cluster.KmsKeyId,
 		ID:       cluster.Id,
+		Addons:   nil,
 	}
 	if cluster.ImagePolicyConfig != nil {
 		keys := make([]infrav2exp.KeyDetails, 0)
@@ -671,6 +673,183 @@ func (s *ManagedControlPlaneScope) getSpecFromActual(cluster *oke.Cluster) *infr
 		}
 	}
 	return &spec
+}
+
+// ReconcileAddons reconciles addons which have been specified in the spec on the OKE cluster
+func (s *ManagedControlPlaneScope) ReconcileAddons(ctx context.Context, okeCluster *oke.Cluster) error {
+	addonSpec := s.OCIManagedControlPlane.Spec.Addons
+	// go through the list of addons present in the spec and reconcile them, reconcile can be 2 ways, either
+	// install the addon if it has not been installed till now, or update the addon
+	for _, addon := range addonSpec {
+		resp, err := s.ContainerEngineClient.GetAddon(ctx, oke.GetAddonRequest{
+			ClusterId: okeCluster.Id,
+			AddonName: addon.Name,
+		})
+		if err != nil {
+			// addon is not present, hence install it
+			if ociutil.IsNotFound(err) {
+				s.Info(fmt.Sprintf("Install addon %s", *addon.Name))
+				_, err = s.ContainerEngineClient.InstallAddon(ctx, oke.InstallAddonRequest{
+					ClusterId: okeCluster.Id,
+					InstallAddonDetails: oke.InstallAddonDetails{
+						Version:        addon.Version,
+						Configurations: getAddonConfigurations(addon.Configurations),
+						AddonName:      addon.Name,
+					},
+				})
+				if err != nil {
+					return err
+				}
+				// add it to status, details will be reconciled in next loop
+				status := infrav2exp.AddonStatus{
+					LifecycleState: common.String(string(oke.AddonLifecycleStateCreating)),
+				}
+				s.OCIManagedControlPlane.SetAddonStatus(*addon.Name, status)
+			} else {
+				return err
+			}
+		} else {
+			s.OCIManagedControlPlane.SetAddonStatus(*addon.Name, s.getStatus(resp.Addon))
+			// addon present, update it
+			err = s.handleExistingAddon(ctx, okeCluster, resp.Addon, addon)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	// for addons which are present in the status object but not in the spec, the possibility
+	// is that user deleted it from the spec. Hence disable the addon
+	for k, _ := range s.OCIManagedControlPlane.Status.AddonStatus {
+		// present in status but not in spec
+		if getAddon(addonSpec, k) == nil {
+			err := s.handleDeletedAddon(ctx, okeCluster, k)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (s *ManagedControlPlaneScope) getStatus(addon oke.Addon) infrav2exp.AddonStatus {
+	// update status of the addon
+	status := infrav2exp.AddonStatus{
+		LifecycleState:            common.String(string(addon.LifecycleState)),
+		CurrentlyInstalledVersion: addon.CurrentInstalledVersion,
+	}
+	if addon.AddonError != nil {
+		status.AddonError = &infrav2exp.AddonError{
+			Status:  addon.AddonError.Status,
+			Code:    addon.AddonError.Code,
+			Message: addon.AddonError.Message,
+		}
+	}
+	return status
+}
+
+func (s *ManagedControlPlaneScope) handleExistingAddon(ctx context.Context, okeCluster *oke.Cluster, addon oke.Addon, addonInSpec infrav2exp.Addon) error {
+	// if the addon can be updated do so
+	// if the addon is already in updating state, or in failed state, do not update
+	s.Info(fmt.Sprintf("Reconciling addon %s with lifecycle state %s", *addon.Name, string(addon.LifecycleState)))
+	if !(addon.LifecycleState == oke.AddonLifecycleStateUpdating ||
+		addon.LifecycleState == oke.AddonLifecycleStateFailed) {
+		addonConfigurationsActual := getActualAddonConfigurations(addon.Configurations)
+		// if the version changed or the configuration changed, update the addon
+		// if the lifecycle state is needs attention, try to update
+		if addon.LifecycleState == oke.AddonLifecycleStateNeedsAttention ||
+			!reflect.DeepEqual(addonInSpec.Version, addon.Version) ||
+			!reflect.DeepEqual(addonConfigurationsActual, addonInSpec.Configurations) {
+			s.Info(fmt.Sprintf("Updating addon %s", *addon.Name))
+			_, err := s.ContainerEngineClient.UpdateAddon(ctx, oke.UpdateAddonRequest{
+				ClusterId: okeCluster.Id,
+				AddonName: addon.Name,
+				UpdateAddonDetails: oke.UpdateAddonDetails{
+					Version:        addonInSpec.Version,
+					Configurations: getAddonConfigurations(addonInSpec.Configurations),
+				},
+			})
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (s *ManagedControlPlaneScope) handleDeletedAddon(ctx context.Context, okeCluster *oke.Cluster, addonName string) error {
+	resp, err := s.ContainerEngineClient.GetAddon(ctx, oke.GetAddonRequest{
+		ClusterId: okeCluster.Id,
+		AddonName: common.String(addonName),
+	})
+	if err != nil {
+		if ociutil.IsNotFound(err) {
+			s.OCIManagedControlPlane.RemoveAddonStatus(addonName)
+			return nil
+		} else {
+			return err
+		}
+	}
+	addonState := resp.LifecycleState
+	switch addonState {
+	// nothing to do if addon is in deleting state
+	case oke.AddonLifecycleStateDeleting:
+		s.Info(fmt.Sprintf("Addon %s is in deleting state", addonName))
+		break
+	case oke.AddonLifecycleStateDeleted:
+		// delete addon from status if addon has been deleted
+		s.Info(fmt.Sprintf("Addon %s is in deleted state", addonName))
+		s.OCIManagedControlPlane.RemoveAddonStatus(addonName)
+		break
+	default:
+		// else delete the addon
+		// delete addon is called disable addon with remove flag turned on
+		_, err := s.ContainerEngineClient.DisableAddon(ctx, oke.DisableAddonRequest{
+			ClusterId:             okeCluster.Id,
+			AddonName:             common.String(addonName),
+			IsRemoveExistingAddOn: common.Bool(true),
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func getAddonConfigurations(configurations []infrav2exp.AddonConfiguration) []oke.AddonConfiguration {
+	if len(configurations) == 0 {
+		return nil
+	}
+	config := make([]oke.AddonConfiguration, len(configurations))
+	for i, c := range configurations {
+		config[i] = oke.AddonConfiguration{
+			Key:   c.Key,
+			Value: c.Value,
+		}
+	}
+	return config
+}
+
+func getActualAddonConfigurations(addonConfigurations []oke.AddonConfiguration) []infrav2exp.AddonConfiguration {
+	if len(addonConfigurations) == 0 {
+		return nil
+	}
+	config := make([]infrav2exp.AddonConfiguration, len(addonConfigurations))
+	for i, c := range addonConfigurations {
+		config[i] = infrav2exp.AddonConfiguration{
+			Key:   c.Key,
+			Value: c.Value,
+		}
+	}
+	return config
+}
+
+func getAddon(addons []infrav2exp.Addon, name string) *infrav2exp.Addon {
+	for i, addon := range addons {
+		if *addon.Name == name {
+			return &addons[i]
+		}
+	}
+	return nil
 }
 
 func getKubeConfigUserName(clusterName string, isUser bool) string {

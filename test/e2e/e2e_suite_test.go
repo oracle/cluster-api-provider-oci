@@ -37,6 +37,7 @@ import (
 	oci_config "github.com/oracle/cluster-api-provider-oci/cloud/config"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/compute"
+	"github.com/oracle/cluster-api-provider-oci/cloud/services/containerengine"
 	nlb "github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
 	infrav1exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
@@ -105,6 +106,8 @@ var (
 	vcnClient vcn.Client
 
 	lbClient nlb.NetworkLoadBalancerClient
+
+	okeClient containerengine.Client
 
 	adCount int
 )
@@ -240,6 +243,7 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	identityClient := ociClients.IdentityClient
 	vcnClient = ociClients.VCNClient
 	lbClient = ociClients.NetworkLoadBalancerClient
+	okeClient = ociClients.ContainerEngineClient
 	Expect(identityClient).NotTo(BeNil())
 	Expect(lbClient).NotTo(BeNil())
 
