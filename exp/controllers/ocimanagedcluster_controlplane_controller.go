@@ -232,6 +232,10 @@ func (r *OCIManagedClusterControlPlaneReconciler) reconcile(ctx context.Context,
 		if isUpdated {
 			return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 		}
+		err = controlPlaneScope.ReconcileAddons(ctx, okeControlPlane)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 		return reconcile.Result{RequeueAfter: 180 * time.Second}, nil
 	default:
 		conditions.MarkFalse(controlPlane, infrav2exp.ControlPlaneReadyCondition, infrav2exp.ControlPlaneProvisionFailedReason, clusterv1.ConditionSeverityError, "")

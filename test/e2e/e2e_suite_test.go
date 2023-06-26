@@ -33,12 +33,15 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	oci_config "github.com/oracle/cluster-api-provider-oci/cloud/config"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/compute"
+	"github.com/oracle/cluster-api-provider-oci/cloud/services/containerengine"
 	nlb "github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
 	infrav1exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
+	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/identity"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -103,6 +106,8 @@ var (
 	vcnClient vcn.Client
 
 	lbClient nlb.NetworkLoadBalancerClient
+
+	okeClient containerengine.Client
 
 	adCount int
 )
@@ -238,6 +243,7 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	identityClient := ociClients.IdentityClient
 	vcnClient = ociClients.VCNClient
 	lbClient = ociClients.NetworkLoadBalancerClient
+	okeClient = ociClients.ContainerEngineClient
 	Expect(identityClient).NotTo(BeNil())
 	Expect(lbClient).NotTo(BeNil())
 
@@ -264,7 +270,9 @@ func initScheme() *runtime.Scheme {
 	scheme := runtime.NewScheme()
 	framework.TryAddDefaultSchemes(scheme)
 	Expect(infrastructurev1beta1.AddToScheme(scheme)).To(Succeed())
+	Expect(infrastructurev1beta2.AddToScheme(scheme)).To(Succeed())
 	Expect(infrav1exp.AddToScheme(scheme)).To(Succeed())
+	Expect(infrav2exp.AddToScheme(scheme)).To(Succeed())
 	Expect(clusterv1.AddToScheme(scheme)).To(Succeed())
 	Expect(clusterv1exp.AddToScheme(scheme)).To(Succeed())
 	return scheme

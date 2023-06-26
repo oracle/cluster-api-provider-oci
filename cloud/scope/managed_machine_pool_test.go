@@ -1129,15 +1129,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 						},
 						SshPublicKey: common.String("test-ssh-public-key"),
 						NodeConfigDetails: &oke.UpdateNodePoolNodeConfigDetails{
-							Size: common.Int(4),
-							PlacementConfigs: []oke.NodePoolPlacementConfigDetails{
-								{
-									AvailabilityDomain:    common.String("test-ad"),
-									CapacityReservationId: common.String("cap-id"),
-									SubnetId:              common.String("subnet-id"),
-									FaultDomains:          []string{"fd-1", "fd-2"},
-								},
-							},
+							Size:                           common.Int(4),
 							NsgIds:                         []string{"nsg-id"},
 							KmsKeyId:                       common.String("kms-key-id"),
 							IsPvEncryptionInTransitEnabled: common.Bool(true),
@@ -1376,14 +1368,6 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 						},
 						SshPublicKey: common.String("test-ssh-public-key"),
 						NodeConfigDetails: &oke.UpdateNodePoolNodeConfigDetails{
-							PlacementConfigs: []oke.NodePoolPlacementConfigDetails{
-								{
-									AvailabilityDomain:    common.String("test-ad"),
-									CapacityReservationId: common.String("cap-id"),
-									SubnetId:              common.String("subnet-id"),
-									FaultDomains:          []string{"fd-1", "fd-2"},
-								},
-							},
 							NsgIds:                         []string{"nsg-id"},
 							KmsKeyId:                       common.String("kms-key-id"),
 							IsPvEncryptionInTransitEnabled: common.Bool(true),
@@ -1618,6 +1602,11 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 					NodeSourceViaImage: &infrav2exp.NodeSourceViaImage{
 						ImageId: common.String("test-image-id"),
 					},
+					NodePoolCyclingDetails: &infrav2exp.NodePoolCyclingDetails{
+						IsNodeCyclingEnabled: common.Bool(true),
+						MaximumSurge:         common.String("20%"),
+						MaximumUnavailable:   common.String("10%"),
+					},
 					SshPublicKey: "test-ssh-public-key",
 					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
 						PlacementConfigs: []infrav2exp.PlacementConfig{
@@ -1663,16 +1652,13 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 						NodeSourceDetails: &oke.NodeSourceViaImageDetails{
 							ImageId: common.String("test-image-id"),
 						},
+						NodePoolCyclingDetails: &oke.NodePoolCyclingDetails{
+							IsNodeCyclingEnabled: common.Bool(true),
+							MaximumSurge:         common.String("20%"),
+							MaximumUnavailable:   common.String("10%"),
+						},
 						SshPublicKey: common.String("test-ssh-public-key"),
 						NodeConfigDetails: &oke.UpdateNodePoolNodeConfigDetails{
-							PlacementConfigs: []oke.NodePoolPlacementConfigDetails{
-								{
-									AvailabilityDomain:    common.String("test-ad"),
-									CapacityReservationId: common.String("cap-id"),
-									SubnetId:              common.String("subnet-id"),
-									FaultDomains:          []string{"fd-1", "fd-2"},
-								},
-							},
 							NsgIds:                         []string{"nsg-id"},
 							KmsKeyId:                       common.String("kms-key-id"),
 							IsPvEncryptionInTransitEnabled: common.Bool(true),

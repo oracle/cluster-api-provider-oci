@@ -34,6 +34,7 @@ func (src *OCIManagedMachinePool) ConvertTo(dstRaw conversion.Hub) error {
 	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
 		return err
 	}
+	dst.Spec.NodePoolCyclingDetails = restored.Spec.NodePoolCyclingDetails
 
 	return nil
 }

@@ -281,5 +281,26 @@ See [externally managed infrastructure][externally-managed-cluster-infrastructur
 using existing VCN infrastructure.
 ```
 
+## Example spec to use OCI Load Balancer as API Server load balancer
+
+By default, CAPOCI uses [OCI Network Load Balancer][oci-nlb] as API Server load balancer. The load balancer front-ends
+control plane hosts to provide high availability access to Kubernetes API. The following spec can be used to 
+use [OCI Load Balancer][oci-lb] as the API Server load balancer. The change from the default spec is to set 
+`loadBalancerType` field to "lb" in the `OCICluster` resource.
+
+```yaml
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: OCICluster
+metadata:
+  name: "${CLUSTER_NAME}"
+spec:
+  compartmentId: "${OCI_COMPARTMENT_ID}"
+  networkSpec:
+    apiServerLoadBalancer:
+      loadBalancerType: "lb"
+```
+
 [sl-vs-nsg]: https://docs.oracle.com/en-us/iaas/Content/Network/Concepts/securityrules.htm#comparison
 [externally-managed-cluster-infrastructure]: ../gs/externally-managed-cluster-infrastructure.md#example-spec-for-externally-managed-vcn-infrastructure
+[oci-nlb]: https://docs.oracle.com/en-us/iaas/Content/NetworkLoadBalancer/introducton.htm#Overview
+[oci-lb]: https://docs.oracle.com/en-us/iaas/Content/Balance/Concepts/balanceoverview.htm#Overview_of_Load_Balancing

@@ -1,0 +1,38 @@
+---
+# testing nodepool without image id set
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachinePool
+metadata:
+  name: ${CLUSTER_NAME}-mp-1
+  namespace: default
+spec:
+  clusterName: ${CLUSTER_NAME}
+  replicas: ${NODE_MACHINE_COUNT}
+  template:
+    spec:
+      clusterName: ${CLUSTER_NAME}
+      bootstrap:
+        dataSecretName: ""
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        kind: OCIManagedMachinePool
+        name: ${CLUSTER_NAME}-mp-1
+      version: ${KUBERNETES_VERSION}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: OCIManagedMachinePool
+metadata:
+  name: ${CLUSTER_NAME}-mp-1
+  namespace: default
+spec:
+  version: "${OCI_MANAGED_KUBERNETES_VERSION}"
+  nodeShape: "${OCI_MANAGED_NODE_SHAPE}"
+  sshPublicKey: "${OCI_SSH_KEY}"
+  nodeSourceViaImage:
+    bootVolumeSizeInGBs: 50
+  nodeShapeConfig:
+    memoryInGBs: "16"
+    ocpus: "1"
+  nodePoolCyclingDetails:
+    isNodeCyclingEnabled: true
+---
