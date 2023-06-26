@@ -35,6 +35,9 @@ func (src *OCIMachine) ConvertTo(dstRaw conversion.Hub) error {
 		return err
 	}
 
+	if dst.Spec.InstanceSourceViaImageDetails != nil && restored.Spec.InstanceSourceViaImageDetails != nil {
+		dst.Spec.InstanceSourceViaImageDetails.ImageLookup = restored.Spec.InstanceSourceViaImageDetails.ImageLookup
+	}
 	return nil
 }
 
@@ -73,6 +76,10 @@ func (r *OCIMachineTemplate) ConvertTo(dstRaw conversion.Hub) error {
 	restored := &v1beta2.OCIMachineTemplate{}
 	if ok, err := utilconversion.UnmarshalData(r, restored); err != nil || !ok {
 		return err
+	}
+
+	if dst.Spec.Template.Spec.InstanceSourceViaImageDetails != nil && restored.Spec.Template.Spec.InstanceSourceViaImageDetails != nil {
+		dst.Spec.Template.Spec.InstanceSourceViaImageDetails.ImageLookup = restored.Spec.Template.Spec.InstanceSourceViaImageDetails.ImageLookup
 	}
 	return nil
 }

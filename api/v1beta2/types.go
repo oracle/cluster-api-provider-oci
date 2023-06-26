@@ -181,15 +181,26 @@ type InstanceSourceViaImageConfig struct {
 	// For volumes with the auto-tuned performance feature enabled, this is set to the default (minimum) VPUs/GB.
 	BootVolumeVpusPerGB *int64 `json:"bootVolumeVpusPerGB,omitempty"`
 
+	// ImageLookup defines the image lookup parameters for the node image.
 	ImageLookup *ImageLookup `json:"imageLookup,omitempty"`
 }
 
+// ImageLookup defines the image lookup parameters for the node image.
 type ImageLookup struct {
-	OperatingSystem        *string `json:"operatingSystem,omitempty"`
+
+	// DisplayName defines display name of the image.
+	// +optional
+	DisplayName *string `json:"displayName,omitempty"`
+
+	// OperatingSystem defines operating system  of the image.
+	// +optional
+	OperatingSystem *string `json:"operatingSystem,omitempty"`
+
+	// OperatingSystemVersion defines operating system version of the image.
 	OperatingSystemVersion *string `json:"operatingSystemVersion,omitempty"`
 }
 
-// LaunchInstanceAvailabilityConfigDetailsRecoveryActionEnum Enum with underlying type: string
+// PlatformConfigTypeEnum Enum with underlying type: string
 type PlatformConfigTypeEnum string
 
 // Set of constants representing the allowable values for LaunchInstanceAvailabilityConfigDetailsRecoveryActionEnum
