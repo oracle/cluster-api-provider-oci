@@ -24,7 +24,7 @@ apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 spec:
   clusterType: "ENHANCED_CLUSTER"
   addons:
-  - name: KubernetesDashboard
+  - name: CertManager
 ```
 More details about the configuration parameters is available in [CAPOCI API Reference][api-reference].
 
