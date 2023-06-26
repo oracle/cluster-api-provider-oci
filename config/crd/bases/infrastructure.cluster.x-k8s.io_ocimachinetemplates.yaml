@@ -206,6 +206,19 @@ spec:
                               VPUs/GB.'
                             format: int64
                             type: integer
+                          imageLookup:
+                            description: ImageLookup defines the image lookup parameters
+                              for the node image.
+                            properties:
+                              operatingSystem:
+                                description: OperatingSystem defines operating system  of
+                                  the image.
+                                type: string
+                              operatingSystemVersion:
+                                description: OperatingSystemVersion defines operating
+                                  system version of the image.
+                                type: string
+                            type: object
                           kmsKeyId:
                             description: KmsKeyId defines the OCID of the Key Management
                               key to assign as the master encryption key for the boot
