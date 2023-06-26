@@ -953,9 +953,6 @@ spec:
                     description: ImageLookup defines the image lookup parameters for
                       the node image.
                     properties:
-                      displayName:
-                        description: DisplayName defines display name of the image.
-                        type: string
                       operatingSystem:
                         description: OperatingSystem defines operating system  of
                           the image.

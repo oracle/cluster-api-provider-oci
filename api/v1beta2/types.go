@@ -187,11 +187,6 @@ type InstanceSourceViaImageConfig struct {
 
 // ImageLookup defines the image lookup parameters for the node image.
 type ImageLookup struct {
-
-	// DisplayName defines display name of the image.
-	// +optional
-	DisplayName *string `json:"displayName,omitempty"`
-
 	// OperatingSystem defines operating system  of the image.
 	// +optional
 	OperatingSystem *string `json:"operatingSystem,omitempty"`

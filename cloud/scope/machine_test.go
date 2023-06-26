@@ -403,7 +403,6 @@ func TestInstanceReconciliation(t *testing.T) {
 					ImageLookup: &infrastructurev1beta2.ImageLookup{
 						OperatingSystem:        common.String("Oracle Linux"),
 						OperatingSystemVersion: common.String("8"),
-						DisplayName:            common.String("test-image"),
 					},
 				}
 				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
@@ -415,7 +414,6 @@ func TestInstanceReconciliation(t *testing.T) {
 					CompartmentId:          common.String("test"),
 					OperatingSystem:        common.String("Oracle Linux"),
 					OperatingSystemVersion: common.String("8"),
-					DisplayName:            common.String("test-image"),
 					Limit:                  common.Int(1),
 					Shape:                  common.String("shape"),
 					SortBy:                 core.ListImagesSortByTimecreated,
