@@ -40,6 +40,7 @@
   - [Virtual Nodes and Enhanced Clusters](./managed/virtual-nodes-and-enhanced-clusters.md)
   - [Boot volume expansion](./managed/boot-volume-expansion.md)
   - [Networking customizations](./managed/networking.md)
+  - [Features](./managed/features.md)
 - [Reference](./reference/reference.md)
   - [API Reference](./reference/api-reference.md)
     - [v1beta2 API](./reference/v1beta2-api.md)
