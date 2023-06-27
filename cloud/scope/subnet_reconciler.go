@@ -49,6 +49,7 @@ func (s *ClusterScope) ReconcileSubnet(ctx context.Context) error {
 					s.Logger.Info("Created the security list", "ocid", seclistId)
 					desiredSubnet.SecurityList.ID = seclistId
 				} else {
+					desiredSubnet.SecurityList.ID = securityList.Id
 					if s.IsSecurityListEqual(*securityList, *desiredSubnet.SecurityList) {
 						s.Logger.Info("No Reconciliation Required for Security List", "securitylist", securityList.Id)
 					} else {

@@ -218,9 +218,10 @@ func TestInstanceReconciliation(t *testing.T) {
 			matchError: errors.New(fmt.Sprintf("bootVolumeSizeInGBs provided %s is not a valid floating point",
 				"invalid")),
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				setupAllParams(ms)
 				ms.OCIMachine.Spec.BootVolumeSizeInGBs = "invalid"
 				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
-					DisplayName:   common.String("test"),
+					DisplayName:   common.String("name"),
 					CompartmentId: common.String("test"),
 				})).Return(core.ListInstancesResponse{}, nil)
 			},
@@ -231,6 +232,7 @@ func TestInstanceReconciliation(t *testing.T) {
 			matchError: errors.New(fmt.Sprintf("bootVolumeSizeInGBs provided %s is not a valid floating point",
 				"invalid")),
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				setupAllParams(ms)
 				ms.OCIMachine.Spec.InstanceId = nil
 				ms.OCIMachine.Name = "test"
 				ms.OCIMachine.Spec.BootVolumeSizeInGBs = "invalid"
@@ -246,9 +248,10 @@ func TestInstanceReconciliation(t *testing.T) {
 			errorSubStringMatch: true,
 			matchError:          errors.New("invalid failure domain parameter, must be a valid integer"),
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				setupAllParams(ms)
 				ms.Machine.Spec.FailureDomain = common.String("invalid")
 				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
-					DisplayName:   common.String("test"),
+					DisplayName:   common.String("name"),
 					CompartmentId: common.String("test"),
 				})).Return(core.ListInstancesResponse{}, nil)
 			},
@@ -258,9 +261,10 @@ func TestInstanceReconciliation(t *testing.T) {
 			errorExpected: true,
 			matchError:    errors.New("failure domain should be a value between 1 and 3"),
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				setupAllParams(ms)
 				ms.Machine.Spec.FailureDomain = common.String("4")
 				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
-					DisplayName:   common.String("test"),
+					DisplayName:   common.String("name"),
 					CompartmentId: common.String("test"),
 				})).Return(core.ListInstancesResponse{}, nil)
 			},
@@ -340,6 +344,92 @@ func TestInstanceReconciliation(t *testing.T) {
 					DedicatedVmHostId:     common.String("dedicated-host-id"),
 					SourceDetails: core.InstanceSourceViaImageDetails{
 						ImageId:             common.String("image"),
+						BootVolumeSizeInGBs: common.Int64(120),
+						KmsKeyId:            common.String("kms-key-id"),
+						BootVolumeVpusPerGB: common.Int64(32),
+					},
+					CreateVnicDetails: &core.CreateVnicDetails{
+						SubnetId:       common.String("nodesubnet"),
+						AssignPublicIp: common.Bool(false),
+						DefinedTags:    map[string]map[string]interface{}{},
+						FreeformTags: map[string]string{
+							ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,
+							ociutil.ClusterResourceIdentifier: "resource_uid",
+						},
+						NsgIds:                 make([]string, 0),
+						HostnameLabel:          common.String("hostname-label"),
+						SkipSourceDestCheck:    common.Bool(true),
+						AssignPrivateDnsRecord: common.Bool(true),
+						DisplayName:            common.String("display-name"),
+					},
+					Metadata: map[string]string{
+						"user_data": base64.StdEncoding.EncodeToString([]byte("test")),
+					},
+					Shape: common.String("shape"),
+					ShapeConfig: &core.LaunchInstanceShapeConfigDetails{
+						Ocpus:                   common.Float32(2),
+						MemoryInGBs:             common.Float32(100),
+						BaselineOcpuUtilization: core.LaunchInstanceShapeConfigDetailsBaselineOcpuUtilization8,
+					},
+					AvailabilityDomain:             common.String("ad2"),
+					CompartmentId:                  common.String("test"),
+					IsPvEncryptionInTransitEnabled: common.Bool(true),
+					DefinedTags:                    map[string]map[string]interface{}{},
+					FreeformTags: map[string]string{
+						ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,
+						ociutil.ClusterResourceIdentifier: "resource_uid",
+					},
+				}
+				computeClient.EXPECT().LaunchInstance(gomock.Any(), gomock.Eq(core.LaunchInstanceRequest{
+					LaunchInstanceDetails: launchDetails,
+					OpcRetryToken:         ociutil.GetOPCRetryToken("machineuid")})).Return(core.LaunchInstanceResponse{}, nil)
+			},
+		},
+		{
+			name:          "image lookup",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				setupAllParams(ms)
+				ms.OCIMachine.Spec.ImageId = ""
+				ms.OCIMachine.Spec.CapacityReservationId = common.String("cap-id")
+				ms.OCIMachine.Spec.DedicatedVmHostId = common.String("dedicated-host-id")
+				ms.OCIMachine.Spec.NetworkDetails.HostnameLabel = common.String("hostname-label")
+				ms.OCIMachine.Spec.NetworkDetails.SkipSourceDestCheck = common.Bool(true)
+				ms.OCIMachine.Spec.NetworkDetails.AssignPrivateDnsRecord = common.Bool(true)
+				ms.OCIMachine.Spec.NetworkDetails.DisplayName = common.String("display-name")
+				ms.OCIMachine.Spec.InstanceSourceViaImageDetails = &infrastructurev1beta2.InstanceSourceViaImageConfig{
+					KmsKeyId:            common.String("kms-key-id"),
+					BootVolumeVpusPerGB: common.Int64(32),
+					ImageLookup: &infrastructurev1beta2.ImageLookup{
+						OperatingSystem:        common.String("Oracle Linux"),
+						OperatingSystemVersion: common.String("8"),
+					},
+				}
+				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
+					DisplayName:   common.String("name"),
+					CompartmentId: common.String("test"),
+				})).Return(core.ListInstancesResponse{}, nil)
+
+				computeClient.EXPECT().ListImages(gomock.Any(), gomock.Eq(core.ListImagesRequest{
+					CompartmentId:          common.String("test"),
+					OperatingSystem:        common.String("Oracle Linux"),
+					OperatingSystemVersion: common.String("8"),
+					Limit:                  common.Int(1),
+					Shape:                  common.String("shape"),
+					SortBy:                 core.ListImagesSortByTimecreated,
+				})).Return(core.ListImagesResponse{
+					Items: []core.Image{
+						{
+							Id: common.String("test-lookup-image"),
+						},
+					},
+				}, nil)
+
+				launchDetails := core.LaunchInstanceDetails{DisplayName: common.String("name"),
+					CapacityReservationId: common.String("cap-id"),
+					DedicatedVmHostId:     common.String("dedicated-host-id"),
+					SourceDetails: core.InstanceSourceViaImageDetails{
+						ImageId:             common.String("test-lookup-image"),
 						BootVolumeSizeInGBs: common.Int64(120),
 						KmsKeyId:            common.String("kms-key-id"),
 						BootVolumeVpusPerGB: common.Int64(32),
