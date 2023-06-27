@@ -1,11 +1,12 @@
 # Features
 
-This page will cover configuration of various OKE features in CAPOCI.
+This page will cover configuration of various Oracle Cloud Infrastructure Container Engine for Kubernetes (OKE) 
+features in CAPOCI.
 
 ## Node Pool Cycling
 OKE [Node Pool Cycling][node-pool-cycling] can be used during Kubernetes version upgrades to cycle
 the nodes such that all the nodes of a Node Pool is running on the newer Kubernetes version. The following
-`OCIManagedMaachinePool` spec can be used to specify Node Pool cycling option.
+`OCIManagedMachinePool` spec can be used to specify Node Pool cycling option.
 ```yaml
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCIManagedMachinePool
@@ -15,7 +16,7 @@ spec:
 ```
 
 ## Addons
-The following `OCIManagedControlPlane` spec can be used to specify [Addons][addons] which has to be
+The following `OCIManagedControlPlane` spec should  be used to specify [Addons][addons] which has to be
 installed in the OKE cluster.
 
 ```yaml
@@ -26,7 +27,7 @@ spec:
   addons:
   - name: CertManager
 ```
-More details about the configuration parameters is available in [CAPOCI API Reference][api-reference].
+More details about the configuration parameters are available in [CAPOCI API Reference docs][api-reference].
 
 
 [node-pool-cycling]: https://docs.oracle.com/en-us/iaas/Content/ContEng/Tasks/contengupgradingk8sworkernode_topic-Performing_an_InPlace_Worker_Node_Upgrade_by_Cycling_an_Existing_Node_Pool.htm#contengupgradingk8sworkernode_topic-Performing_an_InPlace_Worker_Node_Upgrade_by_Cycling_an_Existing_Node_Pool
