@@ -295,9 +295,8 @@ spec:
                               VNIC's primary private IP. Used for DNS.
                             type: string
                           nsgId:
-                            description: "NSGId defines the ID of the NSG to use.
-                              This parameter takes priority over NsgNames. Deprecated,
-                              use \tNsgNames parameter to define the NSGs"
+                            description: NSGId defines the ID of the NSG to use. This
+                              parameter takes priority over NsgNames.
                             type: string
                           nsgNames:
                             description: NsgNames defines a list of the nsg names
@@ -1036,8 +1035,8 @@ spec:
                               VNIC's primary private IP. Used for DNS.
                             type: string
                           nsgId:
-                            description: "Deprecated, use \tNsgNames parameter to
-                              define the NSGs"
+                            description: NSGId defines the ID of the NSG to use. This
+                              parameter takes priority over NsgNames.
                             type: string
                           nsgNames:
                             description: NsgNames defines a list of the nsg names
@@ -1052,7 +1051,7 @@ spec:
                             type: boolean
                           subnetId:
                             description: SubnetId defines the ID of the subnet to
-                              use. Deprecated, use SubnetName parameter
+                              use. This parameter takes priority over SubnetName.
                             type: string
                           subnetName:
                             description: SubnetName defines the subnet name to use

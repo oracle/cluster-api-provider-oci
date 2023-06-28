@@ -270,9 +270,8 @@ spec:
                       primary private IP. Used for DNS.
                     type: string
                   nsgId:
-                    description: "NSGId defines the ID of the NSG to use. This parameter
-                      takes priority over NsgNames. Deprecated, use \tNsgNames parameter
-                      to define the NSGs"
+                    description: NSGId defines the ID of the NSG to use. This parameter
+                      takes priority over NsgNames.
                     type: string
                   nsgNames:
                     description: NsgNames defines a list of the nsg names of the network
@@ -1032,8 +1031,8 @@ spec:
                       primary private IP. Used for DNS.
                     type: string
                   nsgId:
-                    description: "Deprecated, use \tNsgNames parameter to define the
-                      NSGs"
+                    description: NSGId defines the ID of the NSG to use. This parameter
+                      takes priority over NsgNames.
                     type: string
                   nsgNames:
                     description: NsgNames defines a list of the nsg names of the network
@@ -1046,8 +1045,8 @@ spec:
                       check is disabled on the VNIC.
                     type: boolean
                   subnetId:
-                    description: SubnetId defines the ID of the subnet to use. Deprecated,
-                      use SubnetName parameter
+                    description: SubnetId defines the ID of the subnet to use. This
+                      parameter takes priority over SubnetName.
                     type: string
                   subnetName:
                     description: SubnetName defines the subnet name to use for the
