@@ -204,8 +204,8 @@ spec:
                           primary private IP. Used for DNS.
                         type: string
                       nsgId:
-                        description: "Deprecated, use \tNsgNames parameter to define
-                          the NSGs"
+                        description: NSGId defines the ID of the NSG to use. This
+                          parameter takes priority over NsgNames.
                         type: string
                       nsgNames:
                         description: NsgNames defines a list of the nsg names of the
@@ -219,7 +219,7 @@ spec:
                         type: boolean
                       subnetId:
                         description: SubnetId defines the ID of the subnet to use.
-                          Deprecated, use SubnetName parameter
+                          This parameter takes priority over SubnetName.
                         type: string
                       subnetName:
                         description: SubnetName defines the subnet name to use for
@@ -920,6 +920,10 @@ spec:
                         description: HostnameLabel defines the hostname for the VNIC's
                           primary private IP. Used for DNS.
                         type: string
+                      nsgId:
+                        description: NSGId defines the ID of the NSG to use. This
+                          parameter takes priority over NsgNames.
+                        type: string
                       nsgNames:
                         description: NsgNames defines a list of the nsg names of the
                           network security groups (NSGs) to add the VNIC to.
@@ -930,6 +934,10 @@ spec:
                         description: SkipSourceDestCheck defines whether the source/destination
                           check is disabled on the VNIC.
                         type: boolean
+                      subnetId:
+                        description: SubnetId defines the ID of the subnet to use.
+                          This parameter takes priority over SubnetName.
+                        type: string
                       subnetName:
                         description: SubnetName defines the subnet name to use for
                           the VNIC

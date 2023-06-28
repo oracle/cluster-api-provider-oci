@@ -17,7 +17,6 @@
 package v1beta1
 
 import (
-	"errors"
 	"github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"k8s.io/apimachinery/pkg/conversion"
 )
@@ -114,12 +113,6 @@ func Convert_v1beta1_OCIMachineSpec_To_v1beta2_OCIMachineSpec(in *OCIMachineSpec
 	err := autoConvert_v1beta1_OCIMachineSpec_To_v1beta2_OCIMachineSpec(in, out, s)
 	if err != nil {
 		return err
-	}
-	if in.NetworkDetails.SubnetId != nil {
-		return errors.New("deprecated field NetworkDetails.SubnetId is present in OCIMachineSpec")
-	}
-	if in.NetworkDetails.NSGId != nil {
-		return errors.New("deprecated field NetworkDetails.NSGId is present in OCIMachineSpec")
 	}
 	if in.NSGName != "" && len(in.NetworkDetails.NsgNames) == 0 {
 		out.NetworkDetails.NsgNames = []string{in.NSGName}

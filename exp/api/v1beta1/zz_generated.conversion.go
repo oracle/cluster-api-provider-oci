@@ -616,13 +616,13 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddConversionFunc((*v1beta2.OCIManagedMachinePoolSpec)(nil), (*OCIManagedMachinePoolSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta2_OCIManagedMachinePoolSpec_To_v1beta1_OCIManagedMachinePoolSpec(a.(*v1beta2.OCIManagedMachinePoolSpec), b.(*OCIManagedMachinePoolSpec), scope)
+	if err := s.AddConversionFunc((*v1beta2.OCIManagedControlPlaneStatus)(nil), (*OCIManagedControlPlaneStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta2_OCIManagedControlPlaneStatus_To_v1beta1_OCIManagedControlPlaneStatus(a.(*v1beta2.OCIManagedControlPlaneStatus), b.(*OCIManagedControlPlaneStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddConversionFunc((*v1beta2.OCIManagedControlPlaneStatus)(nil), (*OCIManagedControlPlaneStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta2_OCIManagedControlPlaneStatus_To_v1beta1_OCIManagedControlPlaneStatus(a.(*v1beta2.OCIManagedControlPlaneStatus), b.(*OCIManagedControlPlaneStatus), scope)
+	if err := s.AddConversionFunc((*v1beta2.OCIManagedMachinePoolSpec)(nil), (*OCIManagedMachinePoolSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta2_OCIManagedMachinePoolSpec_To_v1beta1_OCIManagedMachinePoolSpec(a.(*v1beta2.OCIManagedMachinePoolSpec), b.(*OCIManagedMachinePoolSpec), scope)
 	}); err != nil {
 		return err
 	}
