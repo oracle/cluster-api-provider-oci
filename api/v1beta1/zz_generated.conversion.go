@@ -1262,10 +1262,10 @@ func Convert_v1beta2_NSG_To_v1beta1_NSG(in *v1beta2.NSG, out *NSG, s conversion.
 }
 
 func autoConvert_v1beta1_NetworkDetails_To_v1beta2_NetworkDetails(in *NetworkDetails, out *v1beta2.NetworkDetails, s conversion.Scope) error {
-	// WARNING: in.SubnetId requires manual conversion: does not exist in peer-type
+	out.SubnetId = (*string)(unsafe.Pointer(in.SubnetId))
 	out.AssignPublicIp = in.AssignPublicIp
 	out.SubnetName = in.SubnetName
-	// WARNING: in.NSGId requires manual conversion: does not exist in peer-type
+	out.NSGId = (*string)(unsafe.Pointer(in.NSGId))
 	out.SkipSourceDestCheck = (*bool)(unsafe.Pointer(in.SkipSourceDestCheck))
 	out.NsgNames = *(*[]string)(unsafe.Pointer(&in.NsgNames))
 	out.HostnameLabel = (*string)(unsafe.Pointer(in.HostnameLabel))
@@ -1275,9 +1275,11 @@ func autoConvert_v1beta1_NetworkDetails_To_v1beta2_NetworkDetails(in *NetworkDet
 }
 
 func autoConvert_v1beta2_NetworkDetails_To_v1beta1_NetworkDetails(in *v1beta2.NetworkDetails, out *NetworkDetails, s conversion.Scope) error {
+	out.SubnetId = (*string)(unsafe.Pointer(in.SubnetId))
 	out.AssignPublicIp = in.AssignPublicIp
 	out.SubnetName = in.SubnetName
 	out.SkipSourceDestCheck = (*bool)(unsafe.Pointer(in.SkipSourceDestCheck))
+	out.NSGId = (*string)(unsafe.Pointer(in.NSGId))
 	out.NsgNames = *(*[]string)(unsafe.Pointer(&in.NsgNames))
 	out.HostnameLabel = (*string)(unsafe.Pointer(in.HostnameLabel))
 	out.DisplayName = (*string)(unsafe.Pointer(in.DisplayName))

@@ -40,8 +40,6 @@ func fuzzFuncs(_ runtimeserializer.CodecFactory) []interface{} {
 func OCIMachineFuzzer(obj *OCIMachine, c fuzz.Continue) {
 	c.FuzzNoCustom(obj)
 	// nil fields which have been removed so that tests dont fail
-	obj.Spec.NetworkDetails.NSGId = nil
-	obj.Spec.NetworkDetails.SubnetId = nil
 	obj.Spec.NSGName = ""
 }
 
@@ -92,8 +90,6 @@ func OCIClusterTemplateFuzzer(obj *OCIClusterTemplate, c fuzz.Continue) {
 func OCIMachineTemplateFuzzer(obj *OCIMachineTemplate, c fuzz.Continue) {
 	c.FuzzNoCustom(obj)
 	// nil fields which ave been removed so that tests dont fail
-	obj.Spec.Template.Spec.NetworkDetails.NSGId = nil
-	obj.Spec.Template.Spec.NetworkDetails.SubnetId = nil
 	obj.Spec.Template.Spec.NSGName = ""
 }
 

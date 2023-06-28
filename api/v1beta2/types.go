@@ -34,6 +34,9 @@ var OCIManagedClusterSubnetRoles = []Role{PodRole, ControlPlaneEndpointRole, Wor
 
 // NetworkDetails defines the configuration options for the network
 type NetworkDetails struct {
+	// SubnetId defines the ID of the subnet to use. This parameter takes priority over SubnetName.
+	SubnetId *string `json:"subnetId,omitempty"`
+
 	// AssignPublicIp defines whether the instance should have a public IP address
 	AssignPublicIp bool `json:"assignPublicIp,omitempty"`
 
@@ -42,6 +45,9 @@ type NetworkDetails struct {
 
 	// SkipSourceDestCheck defines whether the source/destination check is disabled on the VNIC.
 	SkipSourceDestCheck *bool `json:"skipSourceDestCheck,omitempty"`
+
+	// NSGId defines the ID of the NSG to use. This parameter takes priority over NsgNames.
+	NSGId *string `json:"nsgId,omitempty"`
 
 	// NsgNames defines a list of the nsg names of the network security groups (NSGs) to add the VNIC to.
 	NsgNames []string `json:"nsgNames,omitempty"`
