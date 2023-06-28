@@ -178,18 +178,25 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 		sourceDetails.BootVolumeVpusPerGB = m.OCIMachine.Spec.InstanceSourceViaImageDetails.BootVolumeVpusPerGB
 	}
 
-	var subnetId *string
-	if m.IsControlPlane() {
-		subnetId = m.getGetControlPlaneMachineSubnet()
-	} else {
-		subnetId = m.getWorkerMachineSubnet()
+	subnetId := m.OCIMachine.Spec.NetworkDetails.SubnetId
+	if subnetId == nil {
+		if m.IsControlPlane() {
+			subnetId = m.getGetControlPlaneMachineSubnet()
+		} else {
+			subnetId = m.getWorkerMachineSubnet()
+		}
 	}
 
 	var nsgIds []string
-	if m.IsControlPlane() {
-		nsgIds = m.getGetControlPlaneMachineNSGs()
+	nsgId := m.OCIMachine.Spec.NetworkDetails.NSGId
+	if nsgId != nil {
+		nsgIds = []string{*nsgId}
 	} else {
-		nsgIds = m.getWorkerMachineNSGs()
+		if m.IsControlPlane() {
+			nsgIds = m.getGetControlPlaneMachineNSGs()
+		} else {
+			nsgIds = m.getWorkerMachineNSGs()
+		}
 	}
 
 	failureDomain := m.Machine.Spec.FailureDomain

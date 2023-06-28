@@ -34,8 +34,7 @@ var OCIManagedClusterSubnetRoles = []Role{PodRole, ControlPlaneEndpointRole, Wor
 
 // NetworkDetails defines the configuration options for the network
 type NetworkDetails struct {
-	// SubnetId defines the ID of the subnet to use.
-	// Deprecated, use SubnetName parameter
+	// SubnetId defines the ID of the subnet to use. This parameter takes priority over SubnetName.
 	SubnetId *string `json:"subnetId,omitempty"`
 
 	// AssignPublicIp defines whether the instance should have a public IP address
@@ -44,6 +43,7 @@ type NetworkDetails struct {
 	// SubnetName defines the subnet name to use for the VNIC
 	SubnetName string `json:"subnetName,omitempty"`
 
+	// NSGId defines the ID of the NSG to use. This parameter takes priority over NsgNames.
 	// Deprecated, use 	NsgNames parameter to define the NSGs
 	NSGId *string `json:"nsgId,omitempty"`
 
