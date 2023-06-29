@@ -234,7 +234,7 @@ data:
                 path: /etc/kubernetes
           containers:
             - name: oci-cloud-controller-manager
-              image: ghcr.io/oracle/cloud-provider-oci:v1.25.0
+              image: ghcr.io/oracle/cloud-provider-oci:v1.26.0
               command: ["/usr/local/bin/oci-cloud-controller-manager"]
               args:
                 - --cloud-config=/etc/oci/cloud-provider.yaml
@@ -522,7 +522,7 @@ data:
                 - --fss-csi-endpoint=unix://var/run/shared-tmpfs/csi-fss.sock
               command:
                 - /usr/local/bin/oci-csi-controller-driver
-              image: ghcr.io/oracle/cloud-provider-oci:v1.25.0
+              image: ghcr.io/oracle/cloud-provider-oci:v1.26.0
               imagePullPolicy: IfNotPresent
               volumeMounts:
                 - name: config
