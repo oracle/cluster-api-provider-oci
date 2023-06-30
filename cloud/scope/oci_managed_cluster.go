@@ -86,6 +86,10 @@ func (c OCIManagedCluster) SetControlPlaneEndpoint(endpoint clusterv1.APIEndpoin
 	c.OCIManagedCluster.Spec.ControlPlaneEndpoint = endpoint
 }
 
+func (c OCIManagedCluster) GetControlPlaneEndpoint() clusterv1.APIEndpoint {
+	return c.OCIManagedCluster.Spec.ControlPlaneEndpoint
+}
+
 func (c OCIManagedCluster) GetFailureDomains() clusterv1.FailureDomains {
 	return c.OCIManagedCluster.Status.FailureDomains
 }
@@ -101,4 +105,8 @@ func (c OCIManagedCluster) GetAvailabilityDomains() map[string]infrastructurev1b
 }
 func (c OCIManagedCluster) SetAvailabilityDomains(ads map[string]infrastructurev1beta2.OCIAvailabilityDomain) {
 	c.OCIManagedCluster.Spec.AvailabilityDomains = ads
+}
+
+func (c OCIManagedCluster) GetProviderID(instanceId string) string {
+	return instanceId
 }

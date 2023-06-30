@@ -119,16 +119,28 @@ func (r *OCIMachinePoolReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		Name:      cluster.Name,
 	}
 
+	var clusterAccessor scope.OCIClusterAccessor
 	if err := r.Client.Get(ctx, ociClusterName, ociCluster); err != nil {
-		logger.Info("Cluster is not available yet")
-		r.Recorder.Eventf(ociMachinePool, corev1.EventTypeWarning, "ClusterNotAvailable", "Cluster is not available yet")
-		logger.V(2).Info("OCICluster is not available yet")
-		return ctrl.Result{}, nil
+		ociManagedCluster := &infrav2exp.OCIManagedCluster{}
+		ociManagedClusterName := client.ObjectKey{
+			Namespace: cluster.Namespace,
+			Name:      cluster.Spec.InfrastructureRef.Name,
+		}
+		if err := r.Client.Get(ctx, ociManagedClusterName, ociManagedCluster); err != nil {
+			logger.Info("Cluster is not available yet")
+			r.Recorder.Eventf(ociMachinePool, corev1.EventTypeWarning, "ClusterNotAvailable", "Cluster is not available yet")
+			logger.V(2).Info("OCICluster is not available yet")
+			return ctrl.Result{}, nil
+		}
+		clusterAccessor = scope.OCIManagedCluster{
+			OCIManagedCluster: ociManagedCluster,
+		}
+	} else {
+		clusterAccessor = scope.OCISelfManagedCluster{
+			OCICluster: ociCluster,
+		}
 	}
 
-	clusterAccessor := scope.OCISelfManagedCluster{
-		OCICluster: ociCluster,
-	}
 	_, _, clients, err := cloudutil.InitClientsAndRegion(ctx, r.Client, r.Region, clusterAccessor, r.ClientProvider)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -140,7 +152,7 @@ func (r *OCIMachinePoolReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		ComputeManagementClient: clients.ComputeManagementClient,
 		Logger:                  &logger,
 		Cluster:                 cluster,
-		OCICluster:              ociCluster,
+		OCIClusterAccessor:      clusterAccessor,
 		MachinePool:             machinePool,
 		OCIMachinePool:          ociMachinePool,
 	})

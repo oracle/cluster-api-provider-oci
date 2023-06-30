@@ -91,9 +91,11 @@ func TestReconcileVnicAttachment(t *testing.T) {
 					},
 				},
 			},
-			Cluster:    &clusterv1.Cluster{},
-			OCICluster: &ociCluster,
-			Client:     client,
+			Cluster: &clusterv1.Cluster{},
+			OCIClusterAccessor: OCISelfManagedCluster{
+				OCICluster: &ociCluster,
+			},
+			Client: client,
 		})
 		ms.Machine.Namespace = "default"
 		g.Expect(err).To(BeNil())

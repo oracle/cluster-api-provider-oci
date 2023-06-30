@@ -211,11 +211,13 @@ func TestReconciliationFunction(t *testing.T) {
 		ociCluster := getOCIClusterWithOwner()
 		ms, err = scope.NewMachinePoolScope(scope.MachinePoolScopeParams{
 			ComputeManagementClient: computeManagementClient,
-			OCICluster:              ociCluster,
-			Cluster:                 getCluster(),
-			Client:                  client,
-			OCIMachinePool:          ociMachinePool,
-			MachinePool:             machinePool,
+			OCIClusterAccessor: scope.OCISelfManagedCluster{
+				OCICluster: ociCluster,
+			},
+			Cluster:        getCluster(),
+			Client:         client,
+			OCIMachinePool: ociMachinePool,
+			MachinePool:    machinePool,
 		})
 
 		recorder = record.NewFakeRecorder(2)
@@ -460,11 +462,13 @@ func TestDeleteeconciliationFunction(t *testing.T) {
 		ociCluster := getOCIClusterWithOwner()
 		ms, err = scope.NewMachinePoolScope(scope.MachinePoolScopeParams{
 			ComputeManagementClient: computeManagementClient,
-			OCICluster:              ociCluster,
-			Cluster:                 getCluster(),
-			Client:                  client,
-			OCIMachinePool:          ociMachinePool,
-			MachinePool:             machinePool,
+			OCIClusterAccessor: scope.OCISelfManagedCluster{
+				OCICluster: ociCluster,
+			},
+			Cluster:        getCluster(),
+			Client:         client,
+			OCIMachinePool: ociMachinePool,
+			MachinePool:    machinePool,
 		})
 
 		recorder = record.NewFakeRecorder(2)

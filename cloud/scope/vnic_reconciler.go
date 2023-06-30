@@ -65,7 +65,7 @@ func (m *MachineScope) createVnicAttachment(ctx context.Context, spec infrastruc
 		}
 	}
 
-	tags := m.getFreeFormTags(*m.OCICluster)
+	tags := m.getFreeFormTags()
 
 	definedTags := ConvertMachineDefinedTags(m.OCIMachine.Spec.DefinedTags)
 

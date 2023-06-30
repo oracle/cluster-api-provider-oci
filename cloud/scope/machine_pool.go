@@ -54,7 +54,7 @@ type MachinePoolScopeParams struct {
 	MachinePool             *expclusterv1.MachinePool
 	Client                  client.Client
 	ComputeManagementClient computemanagement.Client
-	OCICluster              *infrastructurev1beta2.OCICluster
+	OCIClusterAccessor      OCIClusterAccessor
 	OCIMachinePool          *expinfra1.OCIMachinePool
 }
 
@@ -65,7 +65,7 @@ type MachinePoolScope struct {
 	Cluster                 *clusterv1.Cluster
 	MachinePool             *expclusterv1.MachinePool
 	ComputeManagementClient computemanagement.Client
-	OCICluster              *infrastructurev1beta2.OCICluster
+	OCIClusterAccesor       OCIClusterAccessor
 	OCIMachinePool          *expinfra1.OCIMachinePool
 }
 
@@ -74,7 +74,7 @@ func NewMachinePoolScope(params MachinePoolScopeParams) (*MachinePoolScope, erro
 	if params.MachinePool == nil {
 		return nil, errors.New("failed to generate new scope from nil MachinePool")
 	}
-	if params.OCICluster == nil {
+	if params.OCIClusterAccessor == nil {
 		return nil, errors.New("failed to generate new scope from nil OCICluster")
 	}
 
@@ -92,7 +92,7 @@ func NewMachinePoolScope(params MachinePoolScopeParams) (*MachinePoolScope, erro
 		Client:                  params.Client,
 		ComputeManagementClient: params.ComputeManagementClient,
 		Cluster:                 params.Cluster,
-		OCICluster:              params.OCICluster,
+		OCIClusterAccesor:       params.OCIClusterAccessor,
 		patchHelper:             helper,
 		MachinePool:             params.MachinePool,
 		OCIMachinePool:          params.OCIMachinePool,
@@ -145,7 +145,7 @@ func (m *MachinePoolScope) SetReplicaCount(count int32) {
 
 // GetWorkerMachineSubnet returns the WorkerRole core.Subnet id for the cluster
 func (m *MachinePoolScope) GetWorkerMachineSubnet() *string {
-	for _, subnet := range m.OCICluster.Spec.NetworkSpec.Vcn.Subnets {
+	for _, subnet := range m.OCIClusterAccesor.GetNetworkSpec().Vcn.Subnets {
 		if subnet.Role == infrastructurev1beta2.WorkerRole {
 			return subnet.ID
 		}
@@ -161,7 +161,7 @@ func (m *MachinePoolScope) ListMachinePoolInstances(ctx context.Context) ([]core
 	}
 
 	req := core.ListInstancePoolInstancesRequest{
-		CompartmentId:  common.String(m.OCICluster.Spec.CompartmentId),
+		CompartmentId:  common.String(m.OCIClusterAccesor.GetCompartmentId()),
 		InstancePoolId: poolOcid,
 	}
 
@@ -226,7 +226,7 @@ func (m *MachinePoolScope) GetBootstrapData() (string, error) {
 
 // GetWorkerMachineNSG returns the worker role core.NetworkSecurityGroup id for the cluster
 func (m *MachinePoolScope) GetWorkerMachineNSG() *string {
-	for _, nsg := range m.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
+	for _, nsg := range m.OCIClusterAccesor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List {
 		if nsg.Role == infrastructurev1beta2.WorkerRole {
 			return nsg.ID
 		}
@@ -272,7 +272,7 @@ func (m *MachinePoolScope) buildInstanceConfigurationShapeConfig() (core.Instanc
 func (s *MachinePoolScope) BuildInstancePoolPlacement() ([]core.CreateInstancePoolPlacementConfigurationDetails, error) {
 	var placements []core.CreateInstancePoolPlacementConfigurationDetails
 
-	ads := s.OCICluster.Spec.AvailabilityDomains
+	ads := s.OCIClusterAccesor.GetAvailabilityDomains()
 
 	specPlacementDetails := s.OCIMachinePool.Spec.PlacementDetails
 
@@ -315,7 +315,7 @@ func (s *MachinePoolScope) BuildInstancePoolPlacement() ([]core.CreateInstancePo
 // IsResourceCreatedByClusterAPI determines if the instance was created by the cluster using the
 // tags created at instance launch.
 func (s *MachinePoolScope) IsResourceCreatedByClusterAPI(resourceFreeFormTags map[string]string) bool {
-	tagsAddedByClusterAPI := ociutil.BuildClusterTags(string(s.OCICluster.GetOCIResourceIdentifier()))
+	tagsAddedByClusterAPI := ociutil.BuildClusterTags(string(s.OCIClusterAccesor.GetOCIResourceIdentifier()))
 	for k, v := range tagsAddedByClusterAPI {
 		if resourceFreeFormTags[k] != v {
 			return false
@@ -326,9 +326,9 @@ func (s *MachinePoolScope) IsResourceCreatedByClusterAPI(resourceFreeFormTags ma
 
 // GetFreeFormTags gets the free form tags for the MachinePoolScope cluster and returns them
 func (m *MachinePoolScope) GetFreeFormTags() map[string]string {
-	tags := ociutil.BuildClusterTags(m.OCICluster.GetOCIResourceIdentifier())
-	if m.OCICluster.Spec.FreeformTags != nil {
-		for k, v := range m.OCICluster.Spec.FreeformTags {
+	tags := ociutil.BuildClusterTags(m.OCIClusterAccesor.GetOCIResourceIdentifier())
+	if m.OCIClusterAccesor.GetFreeformTags() != nil {
+		for k, v := range m.OCIClusterAccesor.GetFreeformTags() {
 			tags[k] = v
 		}
 	}
@@ -345,8 +345,8 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context) e
 	}
 	freeFormTags := m.GetFreeFormTags()
 	definedTags := make(map[string]map[string]interface{})
-	if m.OCICluster.Spec.DefinedTags != nil {
-		for ns, mapNs := range m.OCICluster.Spec.DefinedTags {
+	if m.OCIClusterAccesor.GetDefinedTags() != nil {
+		for ns, mapNs := range m.OCIClusterAccesor.GetDefinedTags() {
 			mapValues := make(map[string]interface{})
 			for k, v := range mapNs {
 				mapValues[k] = v
@@ -415,7 +415,7 @@ func (m *MachinePoolScope) createInstanceConfiguration(ctx context.Context, laun
 	}
 	req := core.CreateInstanceConfigurationRequest{
 		CreateInstanceConfiguration: core.CreateInstanceConfigurationDetails{
-			CompartmentId:   common.String(m.OCICluster.Spec.CompartmentId),
+			CompartmentId:   common.String(m.OCIClusterAccesor.GetCompartmentId()),
 			DisplayName:     common.String(fmt.Sprintf("%s-%s", m.OCIMachinePool.GetName(), m.OCIMachinePool.ResourceVersion)),
 			FreeformTags:    freeFormTags,
 			DefinedTags:     definedTags,
@@ -446,7 +446,7 @@ func (m *MachinePoolScope) getLaunchInstanceDetails(instanceConfigurationSpec in
 	metadata["user_data"] = base64.StdEncoding.EncodeToString([]byte(cloudInitData))
 
 	launchDetails := &core.InstanceConfigurationLaunchInstanceDetails{
-		CompartmentId:     common.String(m.OCICluster.Spec.CompartmentId),
+		CompartmentId:     common.String(m.OCIClusterAccesor.GetCompartmentId()),
 		DisplayName:       common.String(m.OCIMachinePool.GetName()),
 		Shape:             common.String(*m.OCIMachinePool.Spec.InstanceConfiguration.Shape),
 		Metadata:          metadata,
@@ -520,7 +520,7 @@ func (m *MachinePoolScope) FindInstancePool(ctx context.Context) (*core.Instance
 	// We have to first list the pools to get the instance pool.
 	// List returns InstancePoolSummary which lacks some details of InstancePool
 	reqList := core.ListInstancePoolsRequest{
-		CompartmentId: common.String(m.OCICluster.Spec.CompartmentId),
+		CompartmentId: common.String(m.OCIClusterAccesor.GetCompartmentId()),
 		DisplayName:   common.String(m.OCIMachinePool.GetName()),
 	}
 
@@ -580,7 +580,7 @@ func (m *MachinePoolScope) CreateInstancePool(ctx context.Context) (*core.Instan
 	m.Info("Creating Instance Pool")
 	req := core.CreateInstancePoolRequest{
 		CreateInstancePoolDetails: core.CreateInstancePoolDetails{
-			CompartmentId:           common.String(m.OCICluster.Spec.CompartmentId),
+			CompartmentId:           common.String(m.OCIClusterAccesor.GetCompartmentId()),
 			InstanceConfigurationId: m.GetInstanceConfigurationId(),
 			Size:                    common.Int(replicas),
 			DisplayName:             common.String(m.OCIMachinePool.GetName()),
@@ -841,7 +841,7 @@ func (m *MachinePoolScope) getWorkerMachineNSGs() []string {
 	if instanceVnicConfiguration != nil && len(instanceVnicConfiguration.NsgNames) > 0 {
 		nsgs := make([]string, 0)
 		for _, nsgName := range instanceVnicConfiguration.NsgNames {
-			for _, nsg := range m.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
+			for _, nsg := range m.OCIClusterAccesor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List {
 				if nsg.Name == nsgName {
 					nsgs = append(nsgs, *nsg.ID)
 				}
@@ -850,7 +850,7 @@ func (m *MachinePoolScope) getWorkerMachineNSGs() []string {
 		return nsgs
 	} else {
 		nsgs := make([]string, 0)
-		for _, nsg := range m.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
+		for _, nsg := range m.OCIClusterAccesor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List {
 			if nsg.Role == infrastructurev1beta2.WorkerRole {
 				nsgs = append(nsgs, *nsg.ID)
 			}
@@ -912,7 +912,7 @@ func (m *MachinePoolScope) getInstanceConfigurationsFromDisplayNameSortedTimeCre
 	}
 
 	req := core.ListInstanceConfigurationsRequest{
-		CompartmentId: common.String(m.OCICluster.Spec.CompartmentId),
+		CompartmentId: common.String(m.OCIClusterAccesor.GetCompartmentId()),
 		SortBy:        core.ListInstanceConfigurationsSortByTimecreated,
 		SortOrder:     core.ListInstanceConfigurationsSortOrderDesc,
 	}

@@ -130,7 +130,9 @@ func TestInstanceConfigCreate(t *testing.T) {
 		ms, err = NewMachinePoolScope(MachinePoolScopeParams{
 			ComputeManagementClient: computeManagementClient,
 			OCIMachinePool:          machinePool,
-			OCICluster:              ociCluster,
+			OCIClusterAccessor: OCISelfManagedCluster{
+				OCICluster: ociCluster,
+			},
 			Cluster: &clusterv1.Cluster{
 				Spec: clusterv1.ClusterSpec{},
 			},
@@ -488,7 +490,9 @@ func TestInstancePoolCreate(t *testing.T) {
 		ms, err = NewMachinePoolScope(MachinePoolScopeParams{
 			ComputeManagementClient: computeManagementClient,
 			OCIMachinePool:          machinePool,
-			OCICluster:              ociCluster,
+			OCIClusterAccessor: OCISelfManagedCluster{
+				OCICluster: ociCluster,
+			},
 			Cluster: &clusterv1.Cluster{
 				Spec: clusterv1.ClusterSpec{},
 			},
@@ -669,7 +673,9 @@ func TestInstancePoolUpdate(t *testing.T) {
 		ms, err = NewMachinePoolScope(MachinePoolScopeParams{
 			ComputeManagementClient: computeManagementClient,
 			OCIMachinePool:          machinePool,
-			OCICluster:              ociCluster,
+			OCIClusterAccessor: OCISelfManagedCluster{
+				OCICluster: ociCluster,
+			},
 			Cluster: &clusterv1.Cluster{
 				Spec: clusterv1.ClusterSpec{},
 			},

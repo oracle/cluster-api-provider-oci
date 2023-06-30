@@ -189,7 +189,7 @@ func TestControlPlaneReconciliationFunction(t *testing.T) {
 	setup := func(t *testing.T, g *WithT) {
 		var err error
 		mockCtrl = gomock.NewController(t)
-		client := fake.NewClientBuilder().WithObjects(getSecret()).Build()
+		client := fake.NewClientBuilder().WithObjects(getSecret(), getBootstrapSecret()).Build()
 		okeClient = mock_containerengine.NewMockClient(mockCtrl)
 		baseClient = mock_base.NewMockBaseClient(mockCtrl)
 		ociManagedControlPlane = getOCIManagedControlPlane()
@@ -682,5 +682,17 @@ func expectControlPlaneConditions(g *WithT, m *infrav2exp.OCIManagedControlPlane
 		g.Expect(actual.Status).To(Equal(c.status))
 		g.Expect(actual.Severity).To(Equal(c.severity))
 		g.Expect(actual.Reason).To(Equal(c.reason))
+	}
+}
+
+func getBootstrapSecret() *corev1.Secret {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-cluster-self-managed",
+			Namespace: "test",
+		},
+		Data: map[string][]byte{
+			"value": []byte("test"),
+		},
 	}
 }

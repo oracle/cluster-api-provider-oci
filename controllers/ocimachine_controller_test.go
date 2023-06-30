@@ -178,9 +178,11 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			VCNClient:                 vcnClient,
 			OCIMachine:                ociMachine,
 			Machine:                   machine,
-			OCICluster:                ociCluster,
-			Cluster:                   getCluster(),
-			Client:                    client,
+			OCIClusterAccessor: scope.OCISelfManagedCluster{
+				OCICluster: ociCluster,
+			},
+			Cluster: getCluster(),
+			Client:  client,
 		})
 
 		recorder = record.NewFakeRecorder(2)
@@ -669,10 +671,12 @@ func TestMachineReconciliationDeletionNormal(t *testing.T) {
 		ociCluster.UID = "uid"
 		ociCluster.Spec.NetworkSpec.APIServerLB.LoadBalancerId = common.String("nlbid")
 		ms, err = scope.NewMachineScope(scope.MachineScopeParams{
-			ComputeClient:             computeClient,
-			OCIMachine:                ociMachine,
-			Machine:                   machine,
-			OCICluster:                ociCluster,
+			ComputeClient: computeClient,
+			OCIMachine:    ociMachine,
+			Machine:       machine,
+			OCIClusterAccessor: scope.OCISelfManagedCluster{
+				OCICluster: ociCluster,
+			},
 			Cluster:                   getCluster(),
 			Client:                    client,
 			NetworkLoadBalancerClient: nlbClient,

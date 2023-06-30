@@ -18,10 +18,12 @@ package scope
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"reflect"
+	"strings"
 
 	"github.com/go-logr/logr"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
@@ -44,6 +46,10 @@ import (
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/cluster-api/util/secret"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+const (
+	OKEInitScript = "#!/usr/bin/env bash\nbash /etc/oke/oke-install.sh \\\n  --apiserver-endpoint \"CLUSTER_ENDPOINT\" \\\n  --kubelet-ca-cert \"BASE_64_CA\""
 )
 
 // ManagedControlPlaneScopeParams defines the params need to create a new ManagedControlPlaneScope
@@ -384,7 +390,7 @@ func (s *ManagedControlPlaneScope) createCAPIKubeconfigSecret(ctx context.Contex
 	if err != nil {
 		return err
 	}
-	body, err := ioutil.ReadAll(response.Content)
+	body, err := io.ReadAll(response.Content)
 	if err != nil {
 		return err
 	}
@@ -475,6 +481,68 @@ func (s *ManagedControlPlaneScope) ReconcileKubeconfig(ctx context.Context, okeC
 
 	// Set initialized to true to indicate the kubconfig has been created
 	s.OCIManagedControlPlane.Status.Initialized = true
+
+	return nil
+}
+
+// ReconcileBootstrapSecret reconciles the bootsrap secret which will be used by self managed nodes
+func (s *ManagedControlPlaneScope) ReconcileBootstrapSecret(ctx context.Context, okeCluster *oke.Cluster) error {
+	controllerOwnerRef := *metav1.NewControllerRef(s.OCIManagedControlPlane, infrastructurev1beta2.GroupVersion.WithKind("OCIManagedControlPlane"))
+	secretName := fmt.Sprintf("%s-self-managed", s.Cluster.Name)
+	secretKey := client.ObjectKey{
+		Namespace: s.Cluster.Namespace,
+		Name:      secretName,
+	}
+	err := s.client.Get(ctx, secretKey, &corev1.Secret{})
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			return errors.Wrap(err, "failed to get kubeconfig secret")
+		}
+
+		req := oke.CreateKubeconfigRequest{ClusterId: okeCluster.Id}
+		response, err := s.ContainerEngineClient.CreateKubeconfig(ctx, req)
+		if err != nil {
+			return err
+		}
+		body, err := io.ReadAll(response.Content)
+		if err != nil {
+			return err
+		}
+		config, err := clientcmd.NewClientConfigFromBytes(body)
+
+		rawConfig, err := config.RawConfig()
+		if err != nil {
+			return err
+		}
+		currentContext := rawConfig.Contexts[rawConfig.CurrentContext]
+		currentCluster := rawConfig.Clusters[currentContext.Cluster]
+		certData := base64.StdEncoding.EncodeToString(currentCluster.CertificateAuthorityData)
+
+		endpoint := strings.Split(*okeCluster.Endpoints.PrivateEndpoint, ":")[0]
+		initStr := strings.Replace(OKEInitScript, "BASE_64_CA", certData, 1)
+		initStr = strings.Replace(initStr, "CLUSTER_ENDPOINT", endpoint, 1)
+
+		cluster := s.Cluster
+		secret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      secretName,
+				Namespace: cluster.Namespace,
+				Labels: map[string]string{
+					clusterv1.ClusterNameLabel: cluster.Name,
+				},
+				OwnerReferences: []metav1.OwnerReference{
+					controllerOwnerRef,
+				},
+			},
+			Data: map[string][]byte{
+				secret.KubeconfigDataName: []byte(initStr),
+			},
+		}
+
+		if err := s.client.Create(ctx, secret); err != nil {
+			return errors.Wrap(err, "failed to create kubeconfig secret")
+		}
+	}
 
 	return nil
 }

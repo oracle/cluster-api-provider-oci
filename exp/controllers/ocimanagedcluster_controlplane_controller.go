@@ -225,6 +225,10 @@ func (r *OCIManagedClusterControlPlaneReconciler) reconcile(ctx context.Context,
 		if err != nil {
 			return ctrl.Result{}, err
 		}
+		err = controlPlaneScope.ReconcileBootstrapSecret(ctx, okeControlPlane)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 		isUpdated, err := controlPlaneScope.UpdateControlPlane(ctx, okeControlPlane)
 		if err != nil {
 			return ctrl.Result{}, err
