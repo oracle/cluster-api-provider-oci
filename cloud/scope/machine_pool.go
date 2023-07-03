@@ -196,7 +196,7 @@ func (m *MachinePoolScope) SetListandSetMachinePoolInstances(ctx context.Context
 
 	for i, instance := range poolInstanceSummaries {
 		if *instance.State == "Running" {
-			providerIDList[i] = fmt.Sprintf("oci://%s", *instance.Id)
+			providerIDList[i] = m.OCIClusterAccesor.GetProviderID(*instance.Id)
 		}
 	}
 
