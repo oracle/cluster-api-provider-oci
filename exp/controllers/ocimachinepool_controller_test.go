@@ -673,7 +673,7 @@ func getSecret() *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "bootstrap",
-			Namespace: "default",
+			Namespace: "test",
 		},
 		Data: map[string][]byte{
 			"value": []byte("test"),
