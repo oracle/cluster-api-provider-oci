@@ -1,4 +1,4 @@
 resources:
   - ./cluster.yaml
   - ./md.yaml
-
+  - ./machinepool.yaml
