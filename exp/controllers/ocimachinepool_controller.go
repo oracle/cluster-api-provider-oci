@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	expV1Beta1 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -179,7 +180,7 @@ func (r *OCIMachinePoolReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 // SetupWithManager sets up the controller with the Manager.
 func (r *OCIMachinePoolReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
 	logger := log.FromContext(ctx)
-	return ctrl.NewControllerManagedBy(mgr).
+	c, err := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(options).
 		For(&infrav2exp.OCIMachinePool{}).
 		Watches(
@@ -188,7 +189,24 @@ func (r *OCIMachinePoolReconciler) SetupWithManager(ctx context.Context, mgr ctr
 				GroupVersion.WithKind(scope.OCIMachinePoolKind), logger)),
 		).
 		WithEventFilter(predicates.ResourceNotPaused(ctrl.LoggerFrom(ctx))).
-		Complete(r)
+		Build(r)
+
+	if err != nil {
+		return errors.Wrapf(err, "error creating controller")
+	}
+	clusterToObjectFunc, err := util.ClusterToObjectsMapper(r.Client, &expV1Beta1.OCIManagedMachinePoolList{}, mgr.GetScheme())
+	if err != nil {
+		return errors.Wrapf(err, "failed to create mapper for Cluster to OCIMachines")
+	}
+	// Add a watch on clusterv1.Cluster object for unpause & ready notifications.
+	if err := c.Watch(
+		&source.Kind{Type: &clusterv1.Cluster{}},
+		handler.EnqueueRequestsFromMapFunc(clusterToObjectFunc),
+		predicates.ClusterUnpausedAndInfrastructureReady(ctrl.LoggerFrom(ctx)),
+	); err != nil {
+		return errors.Wrapf(err, "failed adding a watch for ready clusters")
+	}
+	return nil
 }
 
 func machinePoolToInfrastructureMapFunc(gvk schema.GroupVersionKind, logger logr.Logger) handler.MapFunc {
