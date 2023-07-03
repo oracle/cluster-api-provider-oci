@@ -194,7 +194,7 @@ func (r *OCIMachinePoolReconciler) SetupWithManager(ctx context.Context, mgr ctr
 	if err != nil {
 		return errors.Wrapf(err, "error creating controller")
 	}
-	clusterToObjectFunc, err := util.ClusterToObjectsMapper(r.Client, &expV1Beta1.OCIManagedMachinePoolList{}, mgr.GetScheme())
+	clusterToObjectFunc, err := util.ClusterToObjectsMapper(r.Client, &expV1Beta1.OCIMachinePoolList{}, mgr.GetScheme())
 	if err != nil {
 		return errors.Wrapf(err, "failed to create mapper for Cluster to OCIMachines")
 	}
