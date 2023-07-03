@@ -16,21 +16,6 @@ limitations under the License.
 
 package v1beta2
 
-// Hub marks OCIManagedControlPlane as a conversion hub.
-func (*OCIManagedControlPlane) Hub() {}
-
-// Hub marks OCIManagedCluster as a conversion hub.
-func (*OCIManagedCluster) Hub() {}
-
-// Hub marks OCIManagedClusterTemplate as a conversion hub.
-func (*OCIManagedClusterTemplate) Hub() {}
-
-// Hub marks OCIManagedClusterTemplateList as a conversion hub.
-func (*OCIManagedClusterTemplateList) Hub() {}
-
-// Hub marks OCIManagedControlPlaneList as a conversion hub.
-func (*OCIManagedControlPlaneList) Hub() {}
-
 // Hub marks OCIManagedMachinePool as a conversion hub.
 func (*OCIManagedMachinePool) Hub() {}
 

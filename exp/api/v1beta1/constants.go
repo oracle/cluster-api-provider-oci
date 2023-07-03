@@ -16,7 +16,4 @@
 
 package v1beta1
 
-const (
-	PodDefaultName = "pod"
-	PodDefaultCIDR = "10.0.128.0/18"
-)
+const ()

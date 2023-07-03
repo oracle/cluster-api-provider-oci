@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	expV1Beta2 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -115,7 +114,7 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	var clusterAccessor scope.OCIClusterAccessor
 	if err := r.Client.Get(ctx, ociClusterName, ociCluster); err != nil {
 		// check for oci managed cluster
-		ociManagedCluster := &expV1Beta2.OCIManagedCluster{}
+		ociManagedCluster := &infrastructurev1beta2.OCIManagedCluster{}
 		ociManagedClusterName := client.ObjectKey{
 			Namespace: cluster.Namespace,
 			Name:      cluster.Spec.InfrastructureRef.Name,

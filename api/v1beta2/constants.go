@@ -28,4 +28,6 @@ const (
 	ControlPlaneDefaultName               = "control-plane"
 	WorkerDefaultName                     = "worker"
 	ServiceLBDefaultName                  = "service-lb"
+	PodDefaultName                        = "pod"
+	PodDefaultCIDR                        = "10.0.128.0/18"
 )

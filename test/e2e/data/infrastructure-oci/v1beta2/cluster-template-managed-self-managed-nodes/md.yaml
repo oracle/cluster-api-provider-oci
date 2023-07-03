@@ -1,0 +1,35 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: OCIMachineTemplate
+metadata:
+  name: "${CLUSTER_NAME}-md-0"
+spec:
+  template:
+    spec:
+      imageId: "${OCI_MANAGED_NODE_IMAGE_ID}"
+      compartmentId: "${OCI_COMPARTMENT_ID}"
+      shape: "${OCI_NODE_MACHINE_TYPE}"
+      isPvEncryptionInTransitEnabled: true
+      shapeConfig:
+        ocpus: "1"
+      metadata:
+        ssh_authorized_keys: "${OCI_SSH_KEY}"
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  name: "${CLUSTER_NAME}-md-0"
+spec:
+  clusterName: "${CLUSTER_NAME}"
+  replicas: ${WORKER_MACHINE_COUNT}
+  selector:
+    matchLabels:
+  template:
+    spec:
+      clusterName: "${CLUSTER_NAME}"
+      version: "${KUBERNETES_VERSION}"
+      bootstrap:
+        dataSecretName: "${CLUSTER_NAME}-self-managed"
+      infrastructureRef:
+        name: "${CLUSTER_NAME}-md-0"
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        kind: OCIMachineTemplate

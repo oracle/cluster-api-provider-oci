@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"reflect"
 
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -46,56 +45,56 @@ func (c *OCIManagedCluster) Default() {
 	}
 	if !c.Spec.NetworkSpec.SkipNetworkManagement {
 		if len(c.Spec.NetworkSpec.Vcn.Subnets) == 0 {
-			subnets := make([]*infrastructurev1beta2.Subnet, 4)
-			subnets[0] = &infrastructurev1beta2.Subnet{
-				Role: infrastructurev1beta2.ControlPlaneEndpointRole,
-				Name: infrastructurev1beta2.ControlPlaneEndpointDefaultName,
-				CIDR: infrastructurev1beta2.ControlPlaneEndpointSubnetDefaultCIDR,
-				Type: infrastructurev1beta2.Public,
+			subnets := make([]*Subnet, 4)
+			subnets[0] = &Subnet{
+				Role: ControlPlaneEndpointRole,
+				Name: ControlPlaneEndpointDefaultName,
+				CIDR: ControlPlaneEndpointSubnetDefaultCIDR,
+				Type: Public,
 			}
 
-			subnets[1] = &infrastructurev1beta2.Subnet{
-				Role: infrastructurev1beta2.ServiceLoadBalancerRole,
-				Name: infrastructurev1beta2.ServiceLBDefaultName,
-				CIDR: infrastructurev1beta2.ServiceLoadBalancerDefaultCIDR,
-				Type: infrastructurev1beta2.Public,
+			subnets[1] = &Subnet{
+				Role: ServiceLoadBalancerRole,
+				Name: ServiceLBDefaultName,
+				CIDR: ServiceLoadBalancerDefaultCIDR,
+				Type: Public,
 			}
-			subnets[2] = &infrastructurev1beta2.Subnet{
-				Role: infrastructurev1beta2.WorkerRole,
-				Name: infrastructurev1beta2.WorkerDefaultName,
-				CIDR: infrastructurev1beta2.WorkerSubnetDefaultCIDR,
-				Type: infrastructurev1beta2.Private,
+			subnets[2] = &Subnet{
+				Role: WorkerRole,
+				Name: WorkerDefaultName,
+				CIDR: WorkerSubnetDefaultCIDR,
+				Type: Private,
 			}
-			subnets[3] = &infrastructurev1beta2.Subnet{
-				Role: infrastructurev1beta2.PodRole,
+			subnets[3] = &Subnet{
+				Role: PodRole,
 				Name: PodDefaultName,
 				CIDR: PodDefaultCIDR,
-				Type: infrastructurev1beta2.Private,
+				Type: Private,
 			}
 			c.Spec.NetworkSpec.Vcn.Subnets = subnets
 		}
 		if len(c.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List) == 0 && !c.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.Skip {
-			nsgs := make([]*infrastructurev1beta2.NSG, 4)
-			nsgs[0] = &infrastructurev1beta2.NSG{
-				Role:         infrastructurev1beta2.ControlPlaneEndpointRole,
-				Name:         infrastructurev1beta2.ControlPlaneEndpointDefaultName,
+			nsgs := make([]*NSG, 4)
+			nsgs[0] = &NSG{
+				Role:         ControlPlaneEndpointRole,
+				Name:         ControlPlaneEndpointDefaultName,
 				IngressRules: c.GetControlPlaneEndpointDefaultIngressRules(),
 				EgressRules:  c.GetControlPlaneEndpointDefaultEgressRules(),
 			}
-			nsgs[1] = &infrastructurev1beta2.NSG{
-				Role:         infrastructurev1beta2.WorkerRole,
-				Name:         infrastructurev1beta2.WorkerDefaultName,
+			nsgs[1] = &NSG{
+				Role:         WorkerRole,
+				Name:         WorkerDefaultName,
 				IngressRules: c.GetWorkerDefaultIngressRules(),
 				EgressRules:  c.GetWorkerDefaultEgressRules(),
 			}
-			nsgs[2] = &infrastructurev1beta2.NSG{
-				Role:         infrastructurev1beta2.ServiceLoadBalancerRole,
-				Name:         infrastructurev1beta2.ServiceLBDefaultName,
+			nsgs[2] = &NSG{
+				Role:         ServiceLoadBalancerRole,
+				Name:         ServiceLBDefaultName,
 				IngressRules: c.GetLBServiceDefaultIngressRules(),
 				EgressRules:  c.GetLBServiceDefaultEgressRules(),
 			}
-			nsgs[3] = &infrastructurev1beta2.NSG{
-				Role:         infrastructurev1beta2.PodRole,
+			nsgs[3] = &NSG{
+				Role:         PodRole,
 				Name:         PodDefaultName,
 				IngressRules: c.GetPodDefaultIngressRules(),
 				EgressRules:  c.GetPodDefaultEgressRules(),
@@ -103,7 +102,7 @@ func (c *OCIManagedCluster) Default() {
 			c.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List = nsgs
 		}
 		if c.Spec.NetworkSpec.Vcn.CIDR == "" {
-			c.Spec.NetworkSpec.Vcn.CIDR = infrastructurev1beta2.VcnDefaultCidr
+			c.Spec.NetworkSpec.Vcn.CIDR = VcnDefaultCidr
 		}
 	}
 }
@@ -171,13 +170,13 @@ func (c *OCIManagedCluster) ValidateUpdate(old runtime.Object) error {
 func (c *OCIManagedCluster) validate(old *OCIManagedCluster) field.ErrorList {
 	var allErrs field.ErrorList
 
-	var oldNetworkSpec infrastructurev1beta2.NetworkSpec
+	var oldNetworkSpec NetworkSpec
 	if old != nil {
 		oldNetworkSpec = old.Spec.NetworkSpec
 	}
 
-	allErrs = append(allErrs, infrastructurev1beta2.ValidateNetworkSpec(infrastructurev1beta2.OCIManagedClusterSubnetRoles, c.Spec.NetworkSpec, oldNetworkSpec, field.NewPath("spec").Child("networkSpec"))...)
-	allErrs = append(allErrs, infrastructurev1beta2.ValidateClusterName(c.Name)...)
+	allErrs = append(allErrs, ValidateNetworkSpec(OCIManagedClusterSubnetRoles, c.Spec.NetworkSpec, oldNetworkSpec, field.NewPath("spec").Child("networkSpec"))...)
+	allErrs = append(allErrs, ValidateClusterName(c.Name)...)
 
 	if len(c.Spec.CompartmentId) <= 0 {
 		allErrs = append(
@@ -187,7 +186,7 @@ func (c *OCIManagedCluster) validate(old *OCIManagedCluster) field.ErrorList {
 
 	// Handle case where CompartmentId exists, but isn't valid
 	// the separate "blank" check above is a more clear error for the user
-	if len(c.Spec.CompartmentId) > 0 && !infrastructurev1beta2.ValidOcid(c.Spec.CompartmentId) {
+	if len(c.Spec.CompartmentId) > 0 && !ValidOcid(c.Spec.CompartmentId) {
 		allErrs = append(
 			allErrs,
 			field.Invalid(field.NewPath("spec", "compartmentId"), c.Spec.CompartmentId, "field is invalid"))
@@ -199,13 +198,13 @@ func (c *OCIManagedCluster) validate(old *OCIManagedCluster) field.ErrorList {
 			field.Invalid(field.NewPath("spec", "ociResourceIdentifier"), c.Spec.OCIResourceIdentifier, "field is required"))
 	}
 
-	if !infrastructurev1beta2.ValidRegion(c.Spec.Region) {
+	if !ValidRegion(c.Spec.Region) {
 		allErrs = append(
 			allErrs,
 			field.Invalid(field.NewPath("spec", "region"), c.Spec.Region, "field is invalid. See https://docs.oracle.com/en-us/iaas/Content/General/Concepts/regions.htm"))
 	}
 
-	if !reflect.DeepEqual(c.Spec.NetworkSpec.APIServerLB, infrastructurev1beta2.LoadBalancer{}) {
+	if !reflect.DeepEqual(c.Spec.NetworkSpec.APIServerLB, LoadBalancer{}) {
 		allErrs = append(
 			allErrs,
 			field.Invalid(field.NewPath("spec", "networkSpec", "apiServerLoadBalancer"), c.Spec.NetworkSpec.APIServerLB, "cannot set loadbalancer in managed cluster"))
@@ -218,391 +217,391 @@ func (c *OCIManagedCluster) validate(old *OCIManagedCluster) field.ErrorList {
 	return allErrs
 }
 
-func (c *OCIManagedCluster) GetControlPlaneEndpointDefaultIngressRules() []infrastructurev1beta2.IngressSecurityRuleForNSG {
-	return []infrastructurev1beta2.IngressSecurityRuleForNSG{
+func (c *OCIManagedCluster) GetControlPlaneEndpointDefaultIngressRules() []IngressSecurityRuleForNSG {
+	return []IngressSecurityRuleForNSG{
 		{
-			IngressSecurityRule: infrastructurev1beta2.IngressSecurityRule{
+			IngressSecurityRule: IngressSecurityRule{
 				Description: common.String("Kubernetes worker to Kubernetes API endpoint communication."),
 				Protocol:    common.String("6"),
-				TcpOptions: &infrastructurev1beta2.TcpOptions{
-					DestinationPortRange: &infrastructurev1beta2.PortRange{
+				TcpOptions: &TcpOptions{
+					DestinationPortRange: &PortRange{
 						Max: common.Int(6443),
 						Min: common.Int(6443),
 					},
 				},
-				SourceType: infrastructurev1beta2.IngressSecurityRuleSourceTypeCidrBlock,
-				Source:     common.String(infrastructurev1beta2.WorkerSubnetDefaultCIDR),
+				SourceType: IngressSecurityRuleSourceTypeCidrBlock,
+				Source:     common.String(WorkerSubnetDefaultCIDR),
 			},
 		},
 		{
-			IngressSecurityRule: infrastructurev1beta2.IngressSecurityRule{
+			IngressSecurityRule: IngressSecurityRule{
 				Description: common.String("Kubernetes worker to Kubernetes API endpoint communication."),
 				Protocol:    common.String("6"),
-				TcpOptions: &infrastructurev1beta2.TcpOptions{
-					DestinationPortRange: &infrastructurev1beta2.PortRange{
+				TcpOptions: &TcpOptions{
+					DestinationPortRange: &PortRange{
 						Max: common.Int(12250),
 						Min: common.Int(12250),
 					},
 				},
-				SourceType: infrastructurev1beta2.IngressSecurityRuleSourceTypeCidrBlock,
-				Source:     common.String(infrastructurev1beta2.WorkerSubnetDefaultCIDR),
+				SourceType: IngressSecurityRuleSourceTypeCidrBlock,
+				Source:     common.String(WorkerSubnetDefaultCIDR),
 			},
 		},
 		{
-			IngressSecurityRule: infrastructurev1beta2.IngressSecurityRule{
+			IngressSecurityRule: IngressSecurityRule{
 				Description: common.String("Path Discovery."),
 				Protocol:    common.String("1"),
-				IcmpOptions: &infrastructurev1beta2.IcmpOptions{
+				IcmpOptions: &IcmpOptions{
 					Type: common.Int(3),
 					Code: common.Int(4),
 				},
-				SourceType: infrastructurev1beta2.IngressSecurityRuleSourceTypeCidrBlock,
-				Source:     common.String(infrastructurev1beta2.WorkerSubnetDefaultCIDR),
+				SourceType: IngressSecurityRuleSourceTypeCidrBlock,
+				Source:     common.String(WorkerSubnetDefaultCIDR),
 			},
 		},
 		{
-			IngressSecurityRule: infrastructurev1beta2.IngressSecurityRule{
+			IngressSecurityRule: IngressSecurityRule{
 				Description: common.String("Pod to Kubernetes API endpoint communication (when using VCN-native pod networking)."),
 				Protocol:    common.String("6"),
-				TcpOptions: &infrastructurev1beta2.TcpOptions{
-					DestinationPortRange: &infrastructurev1beta2.PortRange{
+				TcpOptions: &TcpOptions{
+					DestinationPortRange: &PortRange{
 						Max: common.Int(6443),
 						Min: common.Int(6443),
 					},
 				},
-				SourceType: infrastructurev1beta2.IngressSecurityRuleSourceTypeCidrBlock,
+				SourceType: IngressSecurityRuleSourceTypeCidrBlock,
 				Source:     common.String(PodDefaultCIDR),
 			},
 		},
 		{
-			IngressSecurityRule: infrastructurev1beta2.IngressSecurityRule{
+			IngressSecurityRule: IngressSecurityRule{
 				Description: common.String("Pod to Kubernetes API endpoint communication (when using VCN-native pod networking)."),
 				Protocol:    common.String("6"),
-				TcpOptions: &infrastructurev1beta2.TcpOptions{
-					DestinationPortRange: &infrastructurev1beta2.PortRange{
+				TcpOptions: &TcpOptions{
+					DestinationPortRange: &PortRange{
 						Max: common.Int(12250),
 						Min: common.Int(12250),
 					},
 				},
-				SourceType: infrastructurev1beta2.IngressSecurityRuleSourceTypeCidrBlock,
+				SourceType: IngressSecurityRuleSourceTypeCidrBlock,
 				Source:     common.String(PodDefaultCIDR),
 			},
 		},
 		{
-			IngressSecurityRule: infrastructurev1beta2.IngressSecurityRule{
+			IngressSecurityRule: IngressSecurityRule{
 				Description: common.String("External access to Kubernetes API endpoint."),
 				Protocol:    common.String("6"),
-				TcpOptions: &infrastructurev1beta2.TcpOptions{
-					DestinationPortRange: &infrastructurev1beta2.PortRange{
+				TcpOptions: &TcpOptions{
+					DestinationPortRange: &PortRange{
 						Max: common.Int(6443),
 						Min: common.Int(6443),
 					},
 				},
-				SourceType: infrastructurev1beta2.IngressSecurityRuleSourceTypeCidrBlock,
+				SourceType: IngressSecurityRuleSourceTypeCidrBlock,
 				Source:     common.String("0.0.0.0/0"),
 			},
 		},
 	}
 }
 
-func (c *OCIManagedCluster) GetControlPlaneEndpointDefaultEgressRules() []infrastructurev1beta2.EgressSecurityRuleForNSG {
-	return []infrastructurev1beta2.EgressSecurityRuleForNSG{
+func (c *OCIManagedCluster) GetControlPlaneEndpointDefaultEgressRules() []EgressSecurityRuleForNSG {
+	return []EgressSecurityRuleForNSG{
 		{
-			EgressSecurityRule: infrastructurev1beta2.EgressSecurityRule{
+			EgressSecurityRule: EgressSecurityRule{
 				Description:     common.String("Allow Kubernetes API endpoint to communicate with OKE."),
 				Protocol:        common.String("6"),
-				DestinationType: infrastructurev1beta2.EgressSecurityRuleSourceTypeServiceCidrBlock,
+				DestinationType: EgressSecurityRuleSourceTypeServiceCidrBlock,
 			},
 		},
 		{
-			EgressSecurityRule: infrastructurev1beta2.EgressSecurityRule{
+			EgressSecurityRule: EgressSecurityRule{
 				Description: common.String("Path Discovery."),
 				Protocol:    common.String("1"),
-				IcmpOptions: &infrastructurev1beta2.IcmpOptions{
+				IcmpOptions: &IcmpOptions{
 					Type: common.Int(3),
 					Code: common.Int(4),
 				},
-				DestinationType: infrastructurev1beta2.EgressSecurityRuleSourceTypeServiceCidrBlock,
+				DestinationType: EgressSecurityRuleSourceTypeServiceCidrBlock,
 			},
 		},
 		{
-			EgressSecurityRule: infrastructurev1beta2.EgressSecurityRule{
+			EgressSecurityRule: EgressSecurityRule{
 				Description: common.String("Allow Kubernetes API endpoint to communicate with worker nodes."),
 				Protocol:    common.String("6"),
-				TcpOptions: &infrastructurev1beta2.TcpOptions{
-					DestinationPortRange: &infrastructurev1beta2.PortRange{
+				TcpOptions: &TcpOptions{
+					DestinationPortRange: &PortRange{
 						Max: common.Int(10250),
 						Min: common.Int(10250),
 					},
 				},
-				DestinationType: infrastructurev1beta2.EgressSecurityRuleDestinationTypeCidrBlock,
-				Destination:     common.String(infrastructurev1beta2.WorkerSubnetDefaultCIDR),
+				DestinationType: EgressSecurityRuleDestinationTypeCidrBlock,
+				Destination:     common.String(WorkerSubnetDefaultCIDR),
 			},
 		},
 		{
-			EgressSecurityRule: infrastructurev1beta2.EgressSecurityRule{
+			EgressSecurityRule: EgressSecurityRule{
 				Description: common.String("Path Discovery."),
 				Protocol:    common.String("1"),
-				IcmpOptions: &infrastructurev1beta2.IcmpOptions{
+				IcmpOptions: &IcmpOptions{
 					Type: common.Int(3),
 					Code: common.Int(4),
 				},
-				DestinationType: infrastructurev1beta2.EgressSecurityRuleDestinationTypeCidrBlock,
-				Destination:     common.String(infrastructurev1beta2.WorkerSubnetDefaultCIDR),
+				DestinationType: EgressSecurityRuleDestinationTypeCidrBlock,
+				Destination:     common.String(WorkerSubnetDefaultCIDR),
 			},
 		},
 		{
-			EgressSecurityRule: infrastructurev1beta2.EgressSecurityRule{
+			EgressSecurityRule: EgressSecurityRule{
 				Description:     common.String("Allow Kubernetes API endpoint to communicate with pods (when using VCN-native pod networking)."),
 				Protocol:        common.String("all"),
-				DestinationType: infrastructurev1beta2.EgressSecurityRuleDestinationTypeCidrBlock,
+				DestinationType: EgressSecurityRuleDestinationTypeCidrBlock,
 				Destination:     common.String(PodDefaultCIDR),
 			},
 		},
 	}
 }
 
-func (c *OCIManagedCluster) GetWorkerDefaultIngressRules() []infrastructurev1beta2.IngressSecurityRuleForNSG {
-	return []infrastructurev1beta2.IngressSecurityRuleForNSG{
+func (c *OCIManagedCluster) GetWorkerDefaultIngressRules() []IngressSecurityRuleForNSG {
+	return []IngressSecurityRuleForNSG{
 		{
-			IngressSecurityRule: infrastructurev1beta2.IngressSecurityRule{
+			IngressSecurityRule: IngressSecurityRule{
 				Description: common.String("Allow Kubernetes API endpoint to communicate with worker nodes."),
 				Protocol:    common.String("6"),
-				TcpOptions: &infrastructurev1beta2.TcpOptions{
-					DestinationPortRange: &infrastructurev1beta2.PortRange{
+				TcpOptions: &TcpOptions{
+					DestinationPortRange: &PortRange{
 						Max: common.Int(10250),
 						Min: common.Int(10250),
 					},
 				},
-				SourceType: infrastructurev1beta2.IngressSecurityRuleSourceTypeCidrBlock,
-				Source:     common.String(infrastructurev1beta2.ControlPlaneEndpointSubnetDefaultCIDR),
+				SourceType: IngressSecurityRuleSourceTypeCidrBlock,
+				Source:     common.String(ControlPlaneEndpointSubnetDefaultCIDR),
 			},
 		},
 		{
-			IngressSecurityRule: infrastructurev1beta2.IngressSecurityRule{
+			IngressSecurityRule: IngressSecurityRule{
 				Description: common.String("Path Discovery."),
 				Protocol:    common.String("1"),
-				IcmpOptions: &infrastructurev1beta2.IcmpOptions{
+				IcmpOptions: &IcmpOptions{
 					Type: common.Int(3),
 					Code: common.Int(4),
 				},
-				SourceType: infrastructurev1beta2.IngressSecurityRuleSourceTypeCidrBlock,
+				SourceType: IngressSecurityRuleSourceTypeCidrBlock,
 				Source:     common.String("0.0.0.0/0"),
 			},
 		},
 		{
-			IngressSecurityRule: infrastructurev1beta2.IngressSecurityRule{
+			IngressSecurityRule: IngressSecurityRule{
 				Description: common.String("Load Balancer to Worker nodes node ports."),
 				Protocol:    common.String("6"),
-				TcpOptions: &infrastructurev1beta2.TcpOptions{
-					DestinationPortRange: &infrastructurev1beta2.PortRange{
+				TcpOptions: &TcpOptions{
+					DestinationPortRange: &PortRange{
 						Max: common.Int(32767),
 						Min: common.Int(30000),
 					},
 				},
-				SourceType: infrastructurev1beta2.IngressSecurityRuleSourceTypeCidrBlock,
-				Source:     common.String(infrastructurev1beta2.ServiceLoadBalancerDefaultCIDR),
+				SourceType: IngressSecurityRuleSourceTypeCidrBlock,
+				Source:     common.String(ServiceLoadBalancerDefaultCIDR),
 			},
 		},
 	}
 }
 
-func (c *OCIManagedCluster) GetWorkerDefaultEgressRules() []infrastructurev1beta2.EgressSecurityRuleForNSG {
-	return []infrastructurev1beta2.EgressSecurityRuleForNSG{
+func (c *OCIManagedCluster) GetWorkerDefaultEgressRules() []EgressSecurityRuleForNSG {
+	return []EgressSecurityRuleForNSG{
 		{
-			EgressSecurityRule: infrastructurev1beta2.EgressSecurityRule{
+			EgressSecurityRule: EgressSecurityRule{
 				Description:     common.String("Allow worker nodes to communicate with OKE."),
 				Protocol:        common.String("6"),
-				DestinationType: infrastructurev1beta2.EgressSecurityRuleSourceTypeServiceCidrBlock,
+				DestinationType: EgressSecurityRuleSourceTypeServiceCidrBlock,
 			},
 		},
 		{
-			EgressSecurityRule: infrastructurev1beta2.EgressSecurityRule{
+			EgressSecurityRule: EgressSecurityRule{
 				Description:     common.String("Allow worker nodes to access pods."),
 				Protocol:        common.String("all"),
-				DestinationType: infrastructurev1beta2.EgressSecurityRuleDestinationTypeCidrBlock,
+				DestinationType: EgressSecurityRuleDestinationTypeCidrBlock,
 				Destination:     common.String(PodDefaultCIDR),
 			},
 		},
 		{
-			EgressSecurityRule: infrastructurev1beta2.EgressSecurityRule{
+			EgressSecurityRule: EgressSecurityRule{
 				Description: common.String("Path Discovery."),
 				Protocol:    common.String("1"),
-				IcmpOptions: &infrastructurev1beta2.IcmpOptions{
+				IcmpOptions: &IcmpOptions{
 					Type: common.Int(3),
 					Code: common.Int(4),
 				},
-				DestinationType: infrastructurev1beta2.EgressSecurityRuleDestinationTypeCidrBlock,
+				DestinationType: EgressSecurityRuleDestinationTypeCidrBlock,
 				Destination:     common.String("0.0.0.0/0"),
 			},
 		},
 		{
-			EgressSecurityRule: infrastructurev1beta2.EgressSecurityRule{
+			EgressSecurityRule: EgressSecurityRule{
 				Description: common.String("Kubernetes worker to Kubernetes API endpoint communication."),
 				Protocol:    common.String("6"),
-				TcpOptions: &infrastructurev1beta2.TcpOptions{
-					DestinationPortRange: &infrastructurev1beta2.PortRange{
+				TcpOptions: &TcpOptions{
+					DestinationPortRange: &PortRange{
 						Max: common.Int(6443),
 						Min: common.Int(6443),
 					},
 				},
-				DestinationType: infrastructurev1beta2.EgressSecurityRuleDestinationTypeCidrBlock,
-				Destination:     common.String(infrastructurev1beta2.ControlPlaneEndpointSubnetDefaultCIDR),
+				DestinationType: EgressSecurityRuleDestinationTypeCidrBlock,
+				Destination:     common.String(ControlPlaneEndpointSubnetDefaultCIDR),
 			},
 		},
 		{
-			EgressSecurityRule: infrastructurev1beta2.EgressSecurityRule{
+			EgressSecurityRule: EgressSecurityRule{
 				Description: common.String("Kubernetes worker to Kubernetes API endpoint communication."),
 				Protocol:    common.String("6"),
-				TcpOptions: &infrastructurev1beta2.TcpOptions{
-					DestinationPortRange: &infrastructurev1beta2.PortRange{
+				TcpOptions: &TcpOptions{
+					DestinationPortRange: &PortRange{
 						Max: common.Int(12250),
 						Min: common.Int(12250),
 					},
 				},
-				DestinationType: infrastructurev1beta2.EgressSecurityRuleDestinationTypeCidrBlock,
-				Destination:     common.String(infrastructurev1beta2.ControlPlaneEndpointSubnetDefaultCIDR),
+				DestinationType: EgressSecurityRuleDestinationTypeCidrBlock,
+				Destination:     common.String(ControlPlaneEndpointSubnetDefaultCIDR),
 			},
 		},
 	}
 }
 
-func (c *OCIManagedCluster) GetPodDefaultIngressRules() []infrastructurev1beta2.IngressSecurityRuleForNSG {
-	return []infrastructurev1beta2.IngressSecurityRuleForNSG{
+func (c *OCIManagedCluster) GetPodDefaultIngressRules() []IngressSecurityRuleForNSG {
+	return []IngressSecurityRuleForNSG{
 		{
-			IngressSecurityRule: infrastructurev1beta2.IngressSecurityRule{
+			IngressSecurityRule: IngressSecurityRule{
 				Description: common.String("Allow worker nodes to access pods."),
 				Protocol:    common.String("all"),
-				SourceType:  infrastructurev1beta2.IngressSecurityRuleSourceTypeCidrBlock,
-				Source:      common.String(infrastructurev1beta2.WorkerSubnetDefaultCIDR),
+				SourceType:  IngressSecurityRuleSourceTypeCidrBlock,
+				Source:      common.String(WorkerSubnetDefaultCIDR),
 			},
 		},
 		{
-			IngressSecurityRule: infrastructurev1beta2.IngressSecurityRule{
+			IngressSecurityRule: IngressSecurityRule{
 				Description: common.String("Allow Kubernetes API endpoint to communicate with pods."),
 				Protocol:    common.String("all"),
-				SourceType:  infrastructurev1beta2.IngressSecurityRuleSourceTypeCidrBlock,
-				Source:      common.String(infrastructurev1beta2.ControlPlaneEndpointSubnetDefaultCIDR),
+				SourceType:  IngressSecurityRuleSourceTypeCidrBlock,
+				Source:      common.String(ControlPlaneEndpointSubnetDefaultCIDR),
 			},
 		},
 		{
-			IngressSecurityRule: infrastructurev1beta2.IngressSecurityRule{
+			IngressSecurityRule: IngressSecurityRule{
 				Description: common.String("Allow pods to communicate with other pods."),
 				Protocol:    common.String("all"),
-				SourceType:  infrastructurev1beta2.IngressSecurityRuleSourceTypeCidrBlock,
+				SourceType:  IngressSecurityRuleSourceTypeCidrBlock,
 				Source:      common.String(PodDefaultCIDR),
 			},
 		},
 	}
 }
 
-func (c *OCIManagedCluster) GetPodDefaultEgressRules() []infrastructurev1beta2.EgressSecurityRuleForNSG {
-	return []infrastructurev1beta2.EgressSecurityRuleForNSG{
+func (c *OCIManagedCluster) GetPodDefaultEgressRules() []EgressSecurityRuleForNSG {
+	return []EgressSecurityRuleForNSG{
 		{
-			EgressSecurityRule: infrastructurev1beta2.EgressSecurityRule{
+			EgressSecurityRule: EgressSecurityRule{
 				Description:     common.String("Allow worker nodes to communicate with OCI Services."),
 				Protocol:        common.String("6"),
-				DestinationType: infrastructurev1beta2.EgressSecurityRuleSourceTypeServiceCidrBlock,
+				DestinationType: EgressSecurityRuleSourceTypeServiceCidrBlock,
 			},
 		},
 		{
-			EgressSecurityRule: infrastructurev1beta2.EgressSecurityRule{
+			EgressSecurityRule: EgressSecurityRule{
 				Description: common.String("Path Discovery."),
 				Protocol:    common.String("1"),
-				IcmpOptions: &infrastructurev1beta2.IcmpOptions{
+				IcmpOptions: &IcmpOptions{
 					Type: common.Int(3),
 					Code: common.Int(4),
 				},
-				DestinationType: infrastructurev1beta2.EgressSecurityRuleSourceTypeServiceCidrBlock,
+				DestinationType: EgressSecurityRuleSourceTypeServiceCidrBlock,
 			},
 		},
 		{
-			EgressSecurityRule: infrastructurev1beta2.EgressSecurityRule{
+			EgressSecurityRule: EgressSecurityRule{
 				Description:     common.String("Allow pods to communicate with other pods."),
 				Protocol:        common.String("all"),
-				DestinationType: infrastructurev1beta2.EgressSecurityRuleDestinationTypeCidrBlock,
+				DestinationType: EgressSecurityRuleDestinationTypeCidrBlock,
 				Destination:     common.String(PodDefaultCIDR),
 			},
 		},
 		{
-			EgressSecurityRule: infrastructurev1beta2.EgressSecurityRule{
+			EgressSecurityRule: EgressSecurityRule{
 				Description: common.String("Pod to Kubernetes API endpoint communication (when using VCN-native pod networking)."),
 				Protocol:    common.String("6"),
-				TcpOptions: &infrastructurev1beta2.TcpOptions{
-					DestinationPortRange: &infrastructurev1beta2.PortRange{
+				TcpOptions: &TcpOptions{
+					DestinationPortRange: &PortRange{
 						Max: common.Int(6443),
 						Min: common.Int(6443),
 					},
 				},
-				DestinationType: infrastructurev1beta2.EgressSecurityRuleDestinationTypeCidrBlock,
-				Destination:     common.String(infrastructurev1beta2.ControlPlaneEndpointSubnetDefaultCIDR),
+				DestinationType: EgressSecurityRuleDestinationTypeCidrBlock,
+				Destination:     common.String(ControlPlaneEndpointSubnetDefaultCIDR),
 			},
 		},
 		{
-			EgressSecurityRule: infrastructurev1beta2.EgressSecurityRule{
+			EgressSecurityRule: EgressSecurityRule{
 				Description: common.String("Pod to Kubernetes API endpoint communication (when using VCN-native pod networking)."),
 				Protocol:    common.String("6"),
-				TcpOptions: &infrastructurev1beta2.TcpOptions{
-					DestinationPortRange: &infrastructurev1beta2.PortRange{
+				TcpOptions: &TcpOptions{
+					DestinationPortRange: &PortRange{
 						Max: common.Int(12250),
 						Min: common.Int(12250),
 					},
 				},
-				DestinationType: infrastructurev1beta2.EgressSecurityRuleDestinationTypeCidrBlock,
-				Destination:     common.String(infrastructurev1beta2.ControlPlaneEndpointSubnetDefaultCIDR),
+				DestinationType: EgressSecurityRuleDestinationTypeCidrBlock,
+				Destination:     common.String(ControlPlaneEndpointSubnetDefaultCIDR),
 			},
 		},
 	}
 }
 
-func (c *OCIManagedCluster) GetLBServiceDefaultIngressRules() []infrastructurev1beta2.IngressSecurityRuleForNSG {
-	return []infrastructurev1beta2.IngressSecurityRuleForNSG{
+func (c *OCIManagedCluster) GetLBServiceDefaultIngressRules() []IngressSecurityRuleForNSG {
+	return []IngressSecurityRuleForNSG{
 		{
-			IngressSecurityRule: infrastructurev1beta2.IngressSecurityRule{
+			IngressSecurityRule: IngressSecurityRule{
 				Description: common.String("Accept http traffic on port 80"),
 				Protocol:    common.String("6"),
-				TcpOptions: &infrastructurev1beta2.TcpOptions{
-					DestinationPortRange: &infrastructurev1beta2.PortRange{
+				TcpOptions: &TcpOptions{
+					DestinationPortRange: &PortRange{
 						Max: common.Int(80),
 						Min: common.Int(80),
 					},
 				},
-				SourceType: infrastructurev1beta2.IngressSecurityRuleSourceTypeCidrBlock,
+				SourceType: IngressSecurityRuleSourceTypeCidrBlock,
 				Source:     common.String("0.0.0.0/0"),
 			},
 		},
 		{
-			IngressSecurityRule: infrastructurev1beta2.IngressSecurityRule{
+			IngressSecurityRule: IngressSecurityRule{
 				Description: common.String("Accept https traffic on port 443"),
 				Protocol:    common.String("6"),
-				TcpOptions: &infrastructurev1beta2.TcpOptions{
-					DestinationPortRange: &infrastructurev1beta2.PortRange{
+				TcpOptions: &TcpOptions{
+					DestinationPortRange: &PortRange{
 						Max: common.Int(443),
 						Min: common.Int(443),
 					},
 				},
-				SourceType: infrastructurev1beta2.IngressSecurityRuleSourceTypeCidrBlock,
+				SourceType: IngressSecurityRuleSourceTypeCidrBlock,
 				Source:     common.String("0.0.0.0/0"),
 			},
 		},
 	}
 }
 
-func (c *OCIManagedCluster) GetLBServiceDefaultEgressRules() []infrastructurev1beta2.EgressSecurityRuleForNSG {
+func (c *OCIManagedCluster) GetLBServiceDefaultEgressRules() []EgressSecurityRuleForNSG {
 	// TODO add service gateway rules
-	return []infrastructurev1beta2.EgressSecurityRuleForNSG{
+	return []EgressSecurityRuleForNSG{
 		{
-			EgressSecurityRule: infrastructurev1beta2.EgressSecurityRule{
+			EgressSecurityRule: EgressSecurityRule{
 				Description: common.String("Load Balancer to Worker nodes node ports."),
 				Protocol:    common.String("6"),
-				TcpOptions: &infrastructurev1beta2.TcpOptions{
-					DestinationPortRange: &infrastructurev1beta2.PortRange{
+				TcpOptions: &TcpOptions{
+					DestinationPortRange: &PortRange{
 						Max: common.Int(32767),
 						Min: common.Int(30000),
 					},
 				},
-				DestinationType: infrastructurev1beta2.EgressSecurityRuleDestinationTypeCidrBlock,
-				Destination:     common.String(infrastructurev1beta2.WorkerSubnetDefaultCIDR),
+				DestinationType: EgressSecurityRuleDestinationTypeCidrBlock,
+				Destination:     common.String(WorkerSubnetDefaultCIDR),
 			},
 		},
 	}

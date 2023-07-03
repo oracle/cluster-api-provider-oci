@@ -101,4 +101,17 @@ const (
 	FailureDomainEventReady = "FailureDomainsReady"
 	// NamespaceNotAllowedByIdentity used to indicate cluster in a namespace not allowed by identity.
 	NamespaceNotAllowedByIdentity = "NamespaceNotAllowedByIdentity"
+
+	// ControlPlaneReadyCondition Ready indicates the control plane is in a Running state.
+	ControlPlaneReadyCondition clusterv1.ConditionType = "ControlPlaneReady"
+	// ControlPlaneProvisionFailedReason used for failures during control plane provisioning.
+	ControlPlaneProvisionFailedReason = "ControlPlaneProvisionFailed"
+	// ControlPlaneNotReadyReason used when the control plane is in a pending state.
+	ControlPlaneNotReadyReason = "ControlPlaneNotReady"
+	// ControlPlaneDeletionInProgress Control Plane deletion is in progress state.
+	ControlPlaneDeletionInProgress = "ControlPlaneDeletionInProgress"
+	// ControlPlaneNotFoundReason used when the control plane couldn't be retrieved.
+	ControlPlaneNotFoundReason = "ControlPlaneNotFound"
+	// ControlPlaneDeletedReason used when the control plane has been deleted.
+	ControlPlaneDeletedReason = "ControlPlaneDeleted"
 )

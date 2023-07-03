@@ -121,7 +121,7 @@ func (r *OCIMachinePoolReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	var clusterAccessor scope.OCIClusterAccessor
 	if err := r.Client.Get(ctx, ociClusterName, ociCluster); err != nil {
-		ociManagedCluster := &infrav2exp.OCIManagedCluster{}
+		ociManagedCluster := &infrastructurev1beta2.OCIManagedCluster{}
 		ociManagedClusterName := client.ObjectKey{
 			Namespace: cluster.Namespace,
 			Name:      cluster.Spec.InfrastructureRef.Name,

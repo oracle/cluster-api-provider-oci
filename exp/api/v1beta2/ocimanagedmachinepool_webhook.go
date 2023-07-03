@@ -18,6 +18,7 @@ package v1beta2
 
 import (
 	"fmt"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"reflect"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -50,7 +51,7 @@ func (m *OCIManagedMachinePool) Default() {
 	}
 	if m.Spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails == nil {
 		m.Spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails = &NodePoolPodNetworkOptionDetails{
-			CniType: VCNNativeCNI,
+			CniType: infrastructurev1beta2.VCNNativeCNI,
 			VcnIpNativePodNetworkOptions: VcnIpNativePodNetworkOptions{
 				SubnetNames: []string{PodDefaultName},
 				NSGNames:    []string{PodDefaultName},

@@ -34,6 +34,7 @@ func fuzzFuncs(_ runtimeserializer.CodecFactory) []interface{} {
 		OCIMachineTemplateFuzzer,
 		OCIClusterFuzzer,
 		OCIClusterTemplateFuzzer,
+		OCIManagedClusterFuzzer,
 	}
 }
 
@@ -93,6 +94,28 @@ func OCIMachineTemplateFuzzer(obj *OCIMachineTemplate, c fuzz.Continue) {
 	obj.Spec.Template.Spec.NSGName = ""
 }
 
+func OCIManagedClusterFuzzer(obj *OCIManagedCluster, c fuzz.Continue) {
+	c.FuzzNoCustom(obj)
+	// nil fields which have been removed so that tests dont fail
+	for _, nsg := range obj.Spec.NetworkSpec.Vcn.NetworkSecurityGroups {
+		if nsg != nil {
+			ingressRules := make([]IngressSecurityRuleForNSG, len(nsg.IngressRules))
+			for _, rule := range nsg.IngressRules {
+				rule.ID = nil
+				ingressRules = append(ingressRules, rule)
+			}
+			nsg.IngressRules = ingressRules
+
+			egressRules := make([]EgressSecurityRuleForNSG, len(nsg.EgressRules))
+			for _, rule := range nsg.EgressRules {
+				(&rule).ID = nil
+				egressRules = append(egressRules, rule)
+			}
+			nsg.EgressRules = egressRules
+		}
+	}
+}
+
 func TestFuzzyConversion(t *testing.T) {
 	g := NewWithT(t)
 	scheme := runtime.NewScheme()
@@ -131,6 +154,20 @@ func TestFuzzyConversion(t *testing.T) {
 		Scheme:      scheme,
 		Hub:         &v1beta2.OCIClusterIdentity{},
 		Spoke:       &OCIClusterIdentity{},
+		FuzzerFuncs: []fuzzer.FuzzerFuncs{fuzzFuncs},
+	}))
+
+	t.Run("for OCIManagedControlPlane", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
+		Scheme:      scheme,
+		Hub:         &v1beta2.OCIManagedControlPlane{},
+		Spoke:       &OCIManagedControlPlane{},
+		FuzzerFuncs: []fuzzer.FuzzerFuncs{fuzzFuncs},
+	}))
+
+	t.Run("for OCIManagedCluster", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
+		Scheme:      scheme,
+		Hub:         &v1beta2.OCIManagedCluster{},
+		Spoke:       &OCIManagedCluster{},
 		FuzzerFuncs: []fuzzer.FuzzerFuncs{fuzzFuncs},
 	}))
 

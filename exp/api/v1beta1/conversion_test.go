@@ -21,7 +21,6 @@ import (
 
 	fuzz "github.com/google/gofuzz"
 	. "github.com/onsi/gomega"
-	infrav1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
 	"github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	"k8s.io/apimachinery/pkg/api/apitesting/fuzzer"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -32,7 +31,6 @@ import (
 func fuzzFuncs(_ runtimeserializer.CodecFactory) []interface{} {
 	return []interface{}{
 		OCIMachinePoolFuzzer,
-		OCIClusterFuzzer,
 	}
 }
 
@@ -45,40 +43,11 @@ func OCIMachinePoolFuzzer(obj *OCIMachinePool, c fuzz.Continue) {
 	}
 }
 
-func OCIClusterFuzzer(obj *OCIManagedCluster, c fuzz.Continue) {
-	c.FuzzNoCustom(obj)
-	// nil fields which have been removed so that tests dont fail
-	for _, nsg := range obj.Spec.NetworkSpec.Vcn.NetworkSecurityGroups {
-		if nsg != nil {
-			ingressRules := make([]infrav1beta1.IngressSecurityRuleForNSG, len(nsg.IngressRules))
-			for _, rule := range nsg.IngressRules {
-				rule.ID = nil
-				ingressRules = append(ingressRules, rule)
-			}
-			nsg.IngressRules = ingressRules
-
-			egressRules := make([]infrav1beta1.EgressSecurityRuleForNSG, len(nsg.EgressRules))
-			for _, rule := range nsg.EgressRules {
-				(&rule).ID = nil
-				egressRules = append(egressRules, rule)
-			}
-			nsg.EgressRules = egressRules
-		}
-	}
-}
-
 func TestFuzzyConversion(t *testing.T) {
 	g := NewWithT(t)
 	scheme := runtime.NewScheme()
 	g.Expect(AddToScheme(scheme)).To(Succeed())
 	g.Expect(v1beta2.AddToScheme(scheme)).To(Succeed())
-
-	t.Run("for OCIManagedCluster", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
-		Scheme:      scheme,
-		Hub:         &v1beta2.OCIManagedCluster{},
-		Spoke:       &OCIManagedCluster{},
-		FuzzerFuncs: []fuzzer.FuzzerFuncs{fuzzFuncs},
-	}))
 
 	t.Run("for OCIMachinePool", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
 		Scheme:      scheme,
@@ -91,13 +60,6 @@ func TestFuzzyConversion(t *testing.T) {
 		Scheme:      scheme,
 		Hub:         &v1beta2.OCIManagedMachinePool{},
 		Spoke:       &OCIManagedMachinePool{},
-		FuzzerFuncs: []fuzzer.FuzzerFuncs{fuzzFuncs},
-	}))
-
-	t.Run("for OCIManagedControlPlane", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
-		Scheme:      scheme,
-		Hub:         &v1beta2.OCIManagedControlPlane{},
-		Spoke:       &OCIManagedControlPlane{},
 		FuzzerFuncs: []fuzzer.FuzzerFuncs{fuzzFuncs},
 	}))
 

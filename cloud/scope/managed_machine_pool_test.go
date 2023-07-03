@@ -72,11 +72,11 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 		var err error
 		mockCtrl = gomock.NewController(t)
 		okeClient = mock_containerengine.NewMockClient(mockCtrl)
-		ociManagedCluster := &infrav2exp.OCIManagedCluster{
+		ociManagedCluster := &infrastructurev1beta2.OCIManagedCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				UID: "cluster_uid",
 			},
-			Spec: infrav2exp.OCIManagedClusterSpec{
+			Spec: infrastructurev1beta2.OCIManagedClusterSpec{
 				CompartmentId: "test-compartment",
 				DefinedTags:   definedTags,
 				NetworkSpec: infrastructurev1beta2.NetworkSpec{
@@ -125,11 +125,11 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 
 		ms, err = NewManagedMachinePoolScope(ManagedMachinePoolScopeParams{
 			ContainerEngineClient: okeClient,
-			OCIManagedControlPlane: &infrav2exp.OCIManagedControlPlane{
+			OCIManagedControlPlane: &infrastructurev1beta2.OCIManagedControlPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
-				Spec: infrav2exp.OCIManagedControlPlaneSpec{
+				Spec: infrastructurev1beta2.OCIManagedControlPlaneSpec{
 					ID: common.String("cluster-id"),
 				},
 			},
@@ -203,7 +203,7 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 						KmsKeyId:                       common.String("kms-key-id"),
 						IsPvEncryptionInTransitEnabled: common.Bool(true),
 						NodePoolPodNetworkOptionDetails: &infrav2exp.NodePoolPodNetworkOptionDetails{
-							CniType: infrav2exp.VCNNativeCNI,
+							CniType: infrastructurev1beta2.VCNNativeCNI,
 							VcnIpNativePodNetworkOptions: infrav2exp.VcnIpNativePodNetworkOptions{
 								SubnetNames:    []string{"pod-subnet"},
 								MaxPodsPerNode: common.Int(25),
@@ -328,7 +328,7 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 						KmsKeyId:                       common.String("kms-key-id"),
 						IsPvEncryptionInTransitEnabled: common.Bool(true),
 						NodePoolPodNetworkOptionDetails: &infrav2exp.NodePoolPodNetworkOptionDetails{
-							CniType: infrav2exp.VCNNativeCNI,
+							CniType: infrastructurev1beta2.VCNNativeCNI,
 							VcnIpNativePodNetworkOptions: infrav2exp.VcnIpNativePodNetworkOptions{
 								SubnetNames:    []string{"pod-subnet"},
 								MaxPodsPerNode: common.Int(25),
@@ -475,7 +475,7 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 						KmsKeyId:                       common.String("kms-key-id"),
 						IsPvEncryptionInTransitEnabled: common.Bool(true),
 						NodePoolPodNetworkOptionDetails: &infrav2exp.NodePoolPodNetworkOptionDetails{
-							CniType: infrav2exp.VCNNativeCNI,
+							CniType: infrastructurev1beta2.VCNNativeCNI,
 							VcnIpNativePodNetworkOptions: infrav2exp.VcnIpNativePodNetworkOptions{
 								SubnetNames:    []string{"pod-subnet"},
 								MaxPodsPerNode: common.Int(25),
@@ -624,7 +624,7 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 						KmsKeyId:                       common.String("kms-key-id"),
 						IsPvEncryptionInTransitEnabled: common.Bool(true),
 						NodePoolPodNetworkOptionDetails: &infrav2exp.NodePoolPodNetworkOptionDetails{
-							CniType: infrav2exp.VCNNativeCNI,
+							CniType: infrastructurev1beta2.VCNNativeCNI,
 							VcnIpNativePodNetworkOptions: infrav2exp.VcnIpNativePodNetworkOptions{
 								SubnetNames:    []string{"pod-subnet"},
 								MaxPodsPerNode: common.Int(25),
@@ -687,7 +687,7 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 						KmsKeyId:                       common.String("kms-key-id"),
 						IsPvEncryptionInTransitEnabled: common.Bool(true),
 						NodePoolPodNetworkOptionDetails: &infrav2exp.NodePoolPodNetworkOptionDetails{
-							CniType: infrav2exp.VCNNativeCNI,
+							CniType: infrastructurev1beta2.VCNNativeCNI,
 							VcnIpNativePodNetworkOptions: infrav2exp.VcnIpNativePodNetworkOptions{
 								SubnetNames:    []string{"pod-subnet"},
 								MaxPodsPerNode: common.Int(15),
@@ -866,11 +866,11 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 		var err error
 		mockCtrl = gomock.NewController(t)
 		okeClient = mock_containerengine.NewMockClient(mockCtrl)
-		ociManagedCluster := &infrav2exp.OCIManagedCluster{
+		ociManagedCluster := &infrastructurev1beta2.OCIManagedCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				UID: "cluster_uid",
 			},
-			Spec: infrav2exp.OCIManagedClusterSpec{
+			Spec: infrastructurev1beta2.OCIManagedClusterSpec{
 				CompartmentId: "test-compartment",
 				DefinedTags:   definedTags,
 				NetworkSpec: infrastructurev1beta2.NetworkSpec{
@@ -919,11 +919,11 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 
 		ms, err = NewManagedMachinePoolScope(ManagedMachinePoolScopeParams{
 			ContainerEngineClient: okeClient,
-			OCIManagedControlPlane: &infrav2exp.OCIManagedControlPlane{
+			OCIManagedControlPlane: &infrastructurev1beta2.OCIManagedControlPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
-				Spec: infrav2exp.OCIManagedControlPlaneSpec{
+				Spec: infrastructurev1beta2.OCIManagedControlPlaneSpec{
 					ID: common.String("cluster-id"),
 				},
 			},
@@ -998,7 +998,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 						KmsKeyId:                       common.String("kms-key-id"),
 						IsPvEncryptionInTransitEnabled: common.Bool(true),
 						NodePoolPodNetworkOptionDetails: &infrav2exp.NodePoolPodNetworkOptionDetails{
-							CniType: infrav2exp.VCNNativeCNI,
+							CniType: infrastructurev1beta2.VCNNativeCNI,
 							VcnIpNativePodNetworkOptions: infrav2exp.VcnIpNativePodNetworkOptions{
 								SubnetNames: []string{"pod-subnet"},
 								NSGNames:    []string{"pod-nsg"},
@@ -1096,7 +1096,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 						KmsKeyId:                       common.String("kms-key-id"),
 						IsPvEncryptionInTransitEnabled: common.Bool(true),
 						NodePoolPodNetworkOptionDetails: &infrav2exp.NodePoolPodNetworkOptionDetails{
-							CniType: infrav2exp.VCNNativeCNI,
+							CniType: infrastructurev1beta2.VCNNativeCNI,
 							VcnIpNativePodNetworkOptions: infrav2exp.VcnIpNativePodNetworkOptions{
 								SubnetNames:    []string{"pod-subnet"},
 								MaxPodsPerNode: common.Int(31),
@@ -1237,7 +1237,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 						KmsKeyId:                       common.String("kms-key-id"),
 						IsPvEncryptionInTransitEnabled: common.Bool(true),
 						NodePoolPodNetworkOptionDetails: &infrav2exp.NodePoolPodNetworkOptionDetails{
-							CniType: infrav2exp.VCNNativeCNI,
+							CniType: infrastructurev1beta2.VCNNativeCNI,
 							VcnIpNativePodNetworkOptions: infrav2exp.VcnIpNativePodNetworkOptions{
 								SubnetNames:    []string{"pod-subnet"},
 								MaxPodsPerNode: common.Int(31),
@@ -1335,7 +1335,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 						KmsKeyId:                       common.String("kms-key-id"),
 						IsPvEncryptionInTransitEnabled: common.Bool(true),
 						NodePoolPodNetworkOptionDetails: &infrav2exp.NodePoolPodNetworkOptionDetails{
-							CniType: infrav2exp.VCNNativeCNI,
+							CniType: infrastructurev1beta2.VCNNativeCNI,
 							VcnIpNativePodNetworkOptions: infrav2exp.VcnIpNativePodNetworkOptions{
 								SubnetNames:    []string{"pod-subnet"},
 								MaxPodsPerNode: common.Int(31),
@@ -1471,7 +1471,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 						KmsKeyId:                       common.String("kms-key-id"),
 						IsPvEncryptionInTransitEnabled: common.Bool(true),
 						NodePoolPodNetworkOptionDetails: &infrav2exp.NodePoolPodNetworkOptionDetails{
-							CniType: infrav2exp.VCNNativeCNI,
+							CniType: infrastructurev1beta2.VCNNativeCNI,
 							VcnIpNativePodNetworkOptions: infrav2exp.VcnIpNativePodNetworkOptions{
 								SubnetNames:    []string{"pod-subnet"},
 								MaxPodsPerNode: common.Int(31),
@@ -1621,7 +1621,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 						KmsKeyId:                       common.String("kms-key-id"),
 						IsPvEncryptionInTransitEnabled: common.Bool(true),
 						NodePoolPodNetworkOptionDetails: &infrav2exp.NodePoolPodNetworkOptionDetails{
-							CniType: infrav2exp.VCNNativeCNI,
+							CniType: infrastructurev1beta2.VCNNativeCNI,
 							VcnIpNativePodNetworkOptions: infrav2exp.VcnIpNativePodNetworkOptions{
 								SubnetNames:    []string{"pod-subnet"},
 								MaxPodsPerNode: common.Int(31),

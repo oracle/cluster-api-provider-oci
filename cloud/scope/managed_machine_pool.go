@@ -55,8 +55,8 @@ type ManagedMachinePoolScopeParams struct {
 	MachinePool             *expclusterv1.MachinePool
 	Client                  client.Client
 	ComputeManagementClient computemanagement.Client
-	OCIManagedCluster       *infrav2exp.OCIManagedCluster
-	OCIManagedControlPlane  *infrav2exp.OCIManagedControlPlane
+	OCIManagedCluster       *infrastructurev1beta2.OCIManagedCluster
+	OCIManagedControlPlane  *infrastructurev1beta2.OCIManagedControlPlane
 	OCIManagedMachinePool   *expinfra1.OCIManagedMachinePool
 	ContainerEngineClient   containerengine.Client
 }
@@ -68,10 +68,10 @@ type ManagedMachinePoolScope struct {
 	Cluster                 *clusterv1.Cluster
 	MachinePool             *expclusterv1.MachinePool
 	ComputeManagementClient computemanagement.Client
-	OCIManagedCluster       *infrav2exp.OCIManagedCluster
+	OCIManagedCluster       *infrastructurev1beta2.OCIManagedCluster
 	OCIManagedMachinePool   *expinfra1.OCIManagedMachinePool
 	ContainerEngineClient   containerengine.Client
-	OCIManagedControlPlane  *infrav2exp.OCIManagedControlPlane
+	OCIManagedControlPlane  *infrastructurev1beta2.OCIManagedControlPlane
 }
 
 // NewManagedMachinePoolScope creates a ManagedMachinePoolScope given the ManagedMachinePoolScopeParams
@@ -280,7 +280,7 @@ func (m *ManagedMachinePoolScope) CreateNodePool(ctx context.Context) (*oke.Node
 	}
 	podNetworkOptions := machinePool.Spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails
 	if podNetworkOptions != nil {
-		if podNetworkOptions.CniType == expinfra1.VCNNativeCNI {
+		if podNetworkOptions.CniType == infrastructurev1beta2.VCNNativeCNI {
 			npnDetails := oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
 				PodSubnetIds: m.getPodSubnets(podNetworkOptions.VcnIpNativePodNetworkOptions.SubnetNames),
 				PodNsgIds:    m.getPodNSGs(podNetworkOptions.VcnIpNativePodNetworkOptions.NSGNames),
@@ -289,7 +289,7 @@ func (m *ManagedMachinePoolScope) CreateNodePool(ctx context.Context) (*oke.Node
 				npnDetails.MaxPodsPerNode = podNetworkOptions.VcnIpNativePodNetworkOptions.MaxPodsPerNode
 			}
 			nodeConfigDetails.NodePoolPodNetworkOptionDetails = npnDetails
-		} else if podNetworkOptions.CniType == expinfra1.FlannelCNI {
+		} else if podNetworkOptions.CniType == infrastructurev1beta2.FlannelCNI {
 			nodeConfigDetails.NodePoolPodNetworkOptionDetails = oke.FlannelOverlayNodePoolPodNetworkOptionDetails{}
 		}
 	}
@@ -665,7 +665,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 
 		podNetworkOptions := spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails
 		if podNetworkOptions != nil {
-			if podNetworkOptions.CniType == expinfra1.VCNNativeCNI {
+			if podNetworkOptions.CniType == infrastructurev1beta2.VCNNativeCNI {
 				npnDetails := oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
 					PodSubnetIds: m.getPodSubnets(podNetworkOptions.VcnIpNativePodNetworkOptions.SubnetNames),
 					PodNsgIds:    m.getPodNSGs(podNetworkOptions.VcnIpNativePodNetworkOptions.NSGNames),
@@ -674,7 +674,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 					npnDetails.MaxPodsPerNode = podNetworkOptions.VcnIpNativePodNetworkOptions.MaxPodsPerNode
 				}
 				nodeConfigDetails.NodePoolPodNetworkOptionDetails = npnDetails
-			} else if podNetworkOptions.CniType == expinfra1.FlannelCNI {
+			} else if podNetworkOptions.CniType == infrastructurev1beta2.FlannelCNI {
 				nodeConfigDetails.NodePoolPodNetworkOptionDetails = oke.FlannelOverlayNodePoolPodNetworkOptionDetails{}
 			}
 		}
@@ -741,7 +741,7 @@ func setMachinePoolSpecDefaults(spec *infrav2exp.OCIManagedMachinePoolSpec) {
 	}
 	podNetworkOptions := spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails
 	if podNetworkOptions != nil {
-		if podNetworkOptions.CniType == expinfra1.VCNNativeCNI {
+		if podNetworkOptions.CniType == infrastructurev1beta2.VCNNativeCNI {
 			// 31 is the default max pods per node returned by OKE API
 			spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails.VcnIpNativePodNetworkOptions.MaxPodsPerNode = common.Int(31)
 		}
@@ -763,7 +763,7 @@ func (m *ManagedMachinePoolScope) getSpecFromAPIObject(pool *oke.NodePool) *expi
 		podDetails, ok := actualNodeConfigDetails.NodePoolPodNetworkOptionDetails.(oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails)
 		if ok {
 			nodePoolNodeConfig.NodePoolPodNetworkOptionDetails = &expinfra1.NodePoolPodNetworkOptionDetails{
-				CniType: expinfra1.VCNNativeCNI,
+				CniType: infrastructurev1beta2.VCNNativeCNI,
 				VcnIpNativePodNetworkOptions: expinfra1.VcnIpNativePodNetworkOptions{
 					MaxPodsPerNode: podDetails.MaxPodsPerNode,
 					NSGNames:       GetNsgNamesFromId(podDetails.PodNsgIds, m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List),
@@ -772,7 +772,7 @@ func (m *ManagedMachinePoolScope) getSpecFromAPIObject(pool *oke.NodePool) *expi
 			}
 		} else {
 			nodePoolNodeConfig.NodePoolPodNetworkOptionDetails = &expinfra1.NodePoolPodNetworkOptionDetails{
-				CniType: expinfra1.FlannelCNI,
+				CniType: infrastructurev1beta2.FlannelCNI,
 			}
 		}
 	}

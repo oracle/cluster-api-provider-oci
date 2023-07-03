@@ -1087,3 +1087,10 @@ type NetworkSecurityGroup struct {
 	// +listMapKey=name
 	List []*NSG `json:"list,omitempty"`
 }
+
+const (
+	VCNNativeCNI CNIOptionEnum = "OCI_VCN_IP_NATIVE"
+	FlannelCNI   CNIOptionEnum = "FLANNEL_OVERLAY"
+)
+
+type CNIOptionEnum string

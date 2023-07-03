@@ -14,10 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta2
+package v1beta1
 
 import (
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -43,7 +42,7 @@ type OCIManagedClusterSpec struct {
 
 	// NetworkSpec encapsulates all things related to OCI network.
 	// +optional
-	NetworkSpec infrastructurev1beta2.NetworkSpec `json:"networkSpec,omitempty"`
+	NetworkSpec NetworkSpec `json:"networkSpec,omitempty"`
 
 	// Free-form tags for this resource.
 	// +optional
@@ -66,23 +65,17 @@ type OCIManagedClusterSpec struct {
 	// ControlPlaneEndpoint represents the endpoint used to communicate with the control plane. This will not be set by the user, this will be updated by the Cluster Reconciler after OKe cluster has been created and the cluster has an endpoint address
 	// +optional
 	ControlPlaneEndpoint clusterv1.APIEndpoint `json:"controlPlaneEndpoint"`
-
-	// AvailabilityDomains encapsulates the clusters Availability Domain (AD) information in a map
-	// where the map key is the AD name and the struct is details about the AD.
-	// +optional
-	AvailabilityDomains map[string]infrastructurev1beta2.OCIAvailabilityDomain `json:"availabilityDomains,omitempty"`
-
-	// ClientOverrides allows the default client SDK URLs to be changed.
-	//
-	// +optional
-	// +nullable
-	ClientOverrides *infrastructurev1beta2.ClientOverrides `json:"hostUrl,omitempty"`
 }
 
 // OCIManagedClusterStatus defines the observed state of OCICluster
 type OCIManagedClusterStatus struct {
 	// +optional
 	FailureDomains clusterv1.FailureDomains `json:"failureDomains,omitempty"`
+
+	// AvailabilityDomains encapsulates the clusters Availability Domain (AD) information in a map
+	// where the map key is the AD name and the struct is details about the AD.
+	// +optional
+	AvailabilityDomains map[string]OCIAvailabilityDomain `json:"availabilityDomains,omitempty"`
 
 	// +optional
 	Ready bool `json:"ready"`
@@ -93,7 +86,6 @@ type OCIManagedClusterStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-// +kubebuilder:storageversion
 
 // OCIManagedCluster is the Schema for the ocimanagedclusters API.
 type OCIManagedCluster struct {
@@ -105,7 +97,6 @@ type OCIManagedCluster struct {
 }
 
 //+kubebuilder:object:root=true
-// +kubebuilder:storageversion
 
 // OCIManagedClusterList contains a list of OCIManagedCluster.
 type OCIManagedClusterList struct {

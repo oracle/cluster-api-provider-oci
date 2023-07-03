@@ -17,7 +17,7 @@ limitations under the License.
 package v1beta1
 
 import (
-	"github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
+	"github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	utilconversion "sigs.k8s.io/cluster-api/util/conversion"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 )

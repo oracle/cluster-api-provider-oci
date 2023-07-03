@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -159,11 +160,11 @@ func TestNormalReconciliationFunctionForVirtualMP(t *testing.T) {
 		machinePool := getMachinePool()
 		ociVirtualMachinePool = getOCIVirtualMachinePool()
 		ociCluster := getOCIManagedClusterWithOwner()
-		ociManagedControlPlane := infrav2exp.OCIManagedControlPlane{
-			Spec: infrav2exp.OCIManagedControlPlaneSpec{
+		ociManagedControlPlane := infrastructurev1beta2.OCIManagedControlPlane{
+			Spec: infrastructurev1beta2.OCIManagedControlPlaneSpec{
 				ID: common.String("cluster-id"),
 			},
-			Status: infrav2exp.OCIManagedControlPlaneStatus{
+			Status: infrastructurev1beta2.OCIManagedControlPlaneStatus{
 				Ready: true,
 			},
 		}
@@ -424,11 +425,11 @@ func TestVMPDeletionFunction(t *testing.T) {
 		machinePool := getMachinePool()
 		ociVirtualMachinePool = getOCIVirtualMachinePool()
 		ociCluster := getOCIManagedClusterWithOwner()
-		ociManagedControlPlane := infrav2exp.OCIManagedControlPlane{
-			Spec: infrav2exp.OCIManagedControlPlaneSpec{
+		ociManagedControlPlane := infrastructurev1beta2.OCIManagedControlPlane{
+			Spec: infrastructurev1beta2.OCIManagedControlPlaneSpec{
 				ID: common.String("cluster-id"),
 			},
-			Status: infrav2exp.OCIManagedControlPlaneStatus{
+			Status: infrastructurev1beta2.OCIManagedControlPlaneStatus{
 				Ready: true,
 			},
 		}
@@ -633,4 +634,73 @@ func expectVMPConditions(g *WithT, m *infrav2exp.OCIVirtualMachinePool, expected
 		g.Expect(actual.Severity).To(Equal(c.severity))
 		g.Expect(actual.Reason).To(Equal(c.reason))
 	}
+}
+
+func getOCIManagedClusterWithOwner() *infrastructurev1beta2.OCIManagedCluster {
+	ociCluster := getOCIManagedClusterWithNoOwner()
+	ociCluster.OwnerReferences = []metav1.OwnerReference{
+		{
+			Name:       "test-cluster",
+			Kind:       "Cluster",
+			APIVersion: clusterv1.GroupVersion.String(),
+		},
+	}
+	return ociCluster
+}
+
+func getOCIManagedClusterWithNoOwner() *infrastructurev1beta2.OCIManagedCluster {
+	ociCluster := &infrastructurev1beta2.OCIManagedCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-cluster",
+			Namespace: "test",
+		},
+		Spec: infrastructurev1beta2.OCIManagedClusterSpec{
+			CompartmentId: "test",
+			ControlPlaneEndpoint: clusterv1.APIEndpoint{
+				Port: 6443,
+			},
+			OCIResourceIdentifier: "resource_uid",
+			NetworkSpec: infrastructurev1beta2.NetworkSpec{
+				Vcn: infrastructurev1beta2.VCN{
+					ID: common.String("vcn-id"),
+					Subnets: []*infrastructurev1beta2.Subnet{
+						{
+							Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+							ID:   common.String("subnet-id"),
+							Type: infrastructurev1beta2.Private,
+							Name: "worker-subnet",
+						},
+						{
+							Role: infrastructurev1beta2.PodRole,
+							ID:   common.String("pod-subnet-id"),
+							Type: infrastructurev1beta2.Private,
+							Name: "pod-subnet",
+						},
+					},
+					NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
+						List: []*infrastructurev1beta2.NSG{
+							{
+								Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+								ID:   common.String("nsg-id"),
+								Name: "worker-nsg",
+							},
+							{
+								Role: infrastructurev1beta2.PodRole,
+								ID:   common.String("pod-nsg-id"),
+								Name: "pod-nsg",
+							},
+						},
+					},
+				},
+			},
+			AvailabilityDomains: map[string]infrastructurev1beta2.OCIAvailabilityDomain{
+				"ad-1": {
+					Name:         "ad-1",
+					FaultDomains: []string{"fd-5", "fd-6"},
+				},
+			},
+		},
+	}
+	ociCluster.OwnerReferences = []metav1.OwnerReference{}
+	return ociCluster
 }

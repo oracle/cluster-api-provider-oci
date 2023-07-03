@@ -113,7 +113,7 @@ func (r *OCIVirtualMachinePoolReconciler) Reconcile(ctx context.Context, req ctr
 		return ctrl.Result{}, nil
 	}
 
-	ociManagedCluster := &infrav2exp.OCIManagedCluster{}
+	ociManagedCluster := &infrastructurev1beta2.OCIManagedCluster{}
 	ociClusterName := client.ObjectKey{
 		Namespace: cluster.Namespace,
 		Name:      cluster.Name,
@@ -134,7 +134,7 @@ func (r *OCIVirtualMachinePoolReconciler) Reconcile(ctx context.Context, req ctr
 		return ctrl.Result{}, err
 	}
 
-	controlPlane := &infrav2exp.OCIManagedControlPlane{}
+	controlPlane := &infrastructurev1beta2.OCIManagedControlPlane{}
 	controlPlaneRef := types.NamespacedName{
 		Name:      cluster.Spec.ControlPlaneRef.Name,
 		Namespace: cluster.Namespace,
@@ -193,7 +193,7 @@ func (r *OCIVirtualMachinePoolReconciler) SetupWithManager(ctx context.Context, 
 				GroupVersion.WithKind(scope.OCIVirtualMachinePoolKind), logger)),
 		).
 		Watches(
-			&source.Kind{Type: &infrav2exp.OCIManagedCluster{}},
+			&source.Kind{Type: &infrastructurev1beta2.OCIManagedCluster{}},
 			handler.EnqueueRequestsFromMapFunc(managedClusterToVirtualMachinePoolMapFunc),
 		).
 		WithEventFilter(predicates.ResourceNotPaused(ctrl.LoggerFrom(ctx))).
@@ -203,7 +203,7 @@ func (r *OCIVirtualMachinePoolReconciler) SetupWithManager(ctx context.Context, 
 func managedClusterToVirtualMachinePoolMapFunc(c client.Client, gvk schema.GroupVersionKind, log logr.Logger) handler.MapFunc {
 	return func(o client.Object) []reconcile.Request {
 		ctx := context.Background()
-		ociCluster, ok := o.(*infrav2exp.OCIManagedCluster)
+		ociCluster, ok := o.(*infrastructurev1beta2.OCIManagedCluster)
 		if !ok {
 			panic(fmt.Sprintf("Expected a OCIManagedControlPlane but got a %T", o))
 		}

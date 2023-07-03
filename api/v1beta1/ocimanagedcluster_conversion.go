@@ -17,8 +17,7 @@ limitations under the License.
 package v1beta1
 
 import (
-	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
-	"github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
+	"github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	utilconversion "sigs.k8s.io/cluster-api/util/conversion"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 )
@@ -31,7 +30,7 @@ func (src *OCIManagedCluster) ConvertTo(dstRaw conversion.Hub) error {
 		return err
 	}
 
-	ad, err := infrastructurev1beta1.Convertv1beta1AdMapTov1beta2AdMap(src.Status.AvailabilityDomains)
+	ad, err := Convertv1beta1AdMapTov1beta2AdMap(src.Status.AvailabilityDomains)
 	if err != nil {
 		return err
 	}
@@ -61,7 +60,7 @@ func (r *OCIManagedCluster) ConvertFrom(srcRaw conversion.Hub) error {
 		return err
 	}
 
-	ad, err := infrastructurev1beta1.Convertv1beta2AdMapTov1beta1AdMap(src.Spec.AvailabilityDomains)
+	ad, err := Convertv1beta2AdMapTov1beta1AdMap(src.Spec.AvailabilityDomains)
 	if err != nil {
 		return err
 	}

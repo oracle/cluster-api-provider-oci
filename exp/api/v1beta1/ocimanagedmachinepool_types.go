@@ -1,6 +1,7 @@
 package v1beta1
 
 import (
+	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/errors"
@@ -89,19 +90,12 @@ type NodePoolNodeConfig struct {
 	NodePoolPodNetworkOptionDetails *NodePoolPodNetworkOptionDetails `json:"nodePoolPodNetworkOptionDetails,omitempty"`
 }
 
-const (
-	VCNNativeCNI CNIOptionEnum = "OCI_VCN_IP_NATIVE"
-	FlannelCNI   CNIOptionEnum = "FLANNEL_OVERLAY"
-)
-
-type CNIOptionEnum string
-
 // NodePoolPodNetworkOptionDetails describes the CNI related configuration of pods in the node pool.
 type NodePoolPodNetworkOptionDetails struct {
 
 	// CniType describes the CNI plugin used by this node pool. Allowed values are OCI_VCN_IP_NATIVE and FLANNEL_OVERLAY.
 	// +optional
-	CniType CNIOptionEnum `json:"cniType,omitempty"`
+	CniType infrastructurev1beta1.CNIOptionEnum `json:"cniType,omitempty"`
 
 	// VcnIpNativePodNetworkOptions describes the network options specific to using the OCI VCN Native CNI
 	// +optional
