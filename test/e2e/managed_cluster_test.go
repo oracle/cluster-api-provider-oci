@@ -323,7 +323,7 @@ var _ = Describe("Managed Workload cluster creation", func() {
 	})
 
 	It("Managed Cluster - Self managed nodes", func() {
-		clusterName = getClusterName(clusterNamePrefix, "virtual")
+		clusterName = getClusterName(clusterNamePrefix, "self")
 		input := clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
 			ConfigCluster: clusterctl.ConfigClusterInput{
