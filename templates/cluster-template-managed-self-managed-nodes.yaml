@@ -241,6 +241,7 @@ metadata:
   namespace: "${NAMESPACE}"
 spec:
   version: "${KUBERNETES_VERSION}"
+  clusterType: "ENHANCED_CLUSTER"
   clusterPodNetworkOptions:
     - cniType: "FLANNEL_OVERLAY"
 ---
