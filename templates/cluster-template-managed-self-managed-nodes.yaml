@@ -240,7 +240,43 @@ metadata:
   name: "${CLUSTER_NAME}"
   namespace: "${NAMESPACE}"
 spec:
-  version: "${OCI_MANAGED_KUBERNETES_VERSION}"
+  version: "${KUBERNETES_VERSION}"
   clusterPodNetworkOptions:
     - cniType: "FLANNEL_OVERLAY"
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: OCIMachineTemplate
+metadata:
+  name: "${CLUSTER_NAME}-md-0"
+spec:
+  template:
+    spec:
+      imageId: "${OCI_MANAGED_NODE_IMAGE_ID}"
+      compartmentId: "${OCI_COMPARTMENT_ID}"
+      shape: "${OCI_NODE_MACHINE_TYPE=VM.Standard.E4.Flex}"
+      shapeConfig:
+        ocpus: "${OCI_NODE_MACHINE_TYPE_OCPUS=1}"
+      metadata:
+        ssh_authorized_keys: "${OCI_SSH_KEY}"
+      isPvEncryptionInTransitEnabled: ${OCI_NODE_PV_TRANSIT_ENCRYPTION=true}
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  name: "${CLUSTER_NAME}-md-0"
+spec:
+  clusterName: "${CLUSTER_NAME}"
+  replicas: ${WORKER_MACHINE_COUNT}
+  selector:
+    matchLabels:
+  template:
+    spec:
+      clusterName: "${CLUSTER_NAME}"
+      version: "${KUBERNETES_VERSION}"
+      bootstrap:
+        dataSecretName: "${CLUSTER_NAME}-self-managed"
+      infrastructureRef:
+        name: "${CLUSTER_NAME}-md-0"
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        kind: OCIMachineTemplate
 ---
