@@ -48,6 +48,8 @@ import (
 )
 
 const (
+	// OKEInitScript is the cloud init script of OKE slef managed node:
+	// Reference : https://docs.oracle.com/en-us/iaas/Content/ContEng/Tasks/contengcloudinitforselfmanagednodes.htm
 	OKEInitScript = "#!/usr/bin/env bash\nbash /etc/oke/oke-install.sh \\\n  --apiserver-endpoint \"CLUSTER_ENDPOINT\" \\\n  --kubelet-ca-cert \"BASE_64_CA\""
 )
 

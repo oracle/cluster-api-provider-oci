@@ -17,12 +17,12 @@ limitations under the License.
 package v1beta2
 
 import (
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"strings"
 	"testing"
 
 	"github.com/onsi/gomega"
 	. "github.com/onsi/gomega"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

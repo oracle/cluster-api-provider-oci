@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	expV1Beta1 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -27,6 +26,7 @@ import (
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	cloudutil "github.com/oracle/cluster-api-provider-oci/cloud/util"
+	expV1Beta1 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
 	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"

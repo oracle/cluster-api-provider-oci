@@ -1,5 +1,5 @@
 # Self managed nodes
-CAPOCI supports OKE self managed nodes. With this feature, CAPI features such as [rolling update][capi-upgrade],
+CAPOCI supports [OKE self managed nodes][self-managed-nodes]. With this feature, CAPI features such as [rolling update][capi-upgrade],
 [health checks][health-check] can be used to make management of self managed nodes easier. CAPOCI supports two
 flavours fo self managed nodes. It also allows full range of [OCI Compute API][oci-compute-api] to be used while 
 creating worker nodes.
