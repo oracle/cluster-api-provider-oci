@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -159,11 +160,11 @@ func TestNormalReconciliationFunction(t *testing.T) {
 		machinePool := getMachinePool()
 		ociManagedMachinePool = getOCIManagedMachinePool()
 		ociCluster := getOCIManagedClusterWithOwner()
-		ociManagedControlPlane := infrav2exp.OCIManagedControlPlane{
-			Spec: infrav2exp.OCIManagedControlPlaneSpec{
+		ociManagedControlPlane := infrastructurev1beta2.OCIManagedControlPlane{
+			Spec: infrastructurev1beta2.OCIManagedControlPlaneSpec{
 				ID: common.String("cluster-id"),
 			},
-			Status: infrav2exp.OCIManagedControlPlaneStatus{
+			Status: infrastructurev1beta2.OCIManagedControlPlaneStatus{
 				Ready: true,
 			},
 		}
@@ -455,11 +456,11 @@ func TestDeletionFunction(t *testing.T) {
 		machinePool := getMachinePool()
 		ociManagedMachinePool = getOCIManagedMachinePool()
 		ociCluster := getOCIManagedClusterWithOwner()
-		ociManagedControlPlane := infrav2exp.OCIManagedControlPlane{
-			Spec: infrav2exp.OCIManagedControlPlaneSpec{
+		ociManagedControlPlane := infrastructurev1beta2.OCIManagedControlPlane{
+			Spec: infrastructurev1beta2.OCIManagedControlPlaneSpec{
 				ID: common.String("cluster-id"),
 			},
-			Status: infrav2exp.OCIManagedControlPlaneStatus{
+			Status: infrastructurev1beta2.OCIManagedControlPlaneStatus{
 				Ready: true,
 			},
 		}
@@ -656,7 +657,7 @@ func getOCIManagedMachinePool() *infrav2exp.OCIManagedMachinePool {
 				KmsKeyId:                       common.String("kms-key-id"),
 				IsPvEncryptionInTransitEnabled: common.Bool(true),
 				NodePoolPodNetworkOptionDetails: &infrav2exp.NodePoolPodNetworkOptionDetails{
-					CniType: infrav2exp.VCNNativeCNI,
+					CniType: infrastructurev1beta2.VCNNativeCNI,
 					VcnIpNativePodNetworkOptions: infrav2exp.VcnIpNativePodNetworkOptions{
 						SubnetNames:    []string{"pod-subnet"},
 						MaxPodsPerNode: common.Int(31),

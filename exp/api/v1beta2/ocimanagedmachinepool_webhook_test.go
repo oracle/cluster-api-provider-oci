@@ -22,6 +22,7 @@ import (
 
 	"github.com/onsi/gomega"
 	. "github.com/onsi/gomega"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -37,7 +38,7 @@ func TestOCIManagedMachinePool_CreateDefault(t *testing.T) {
 			m:    &OCIManagedMachinePool{},
 			expect: func(g *gomega.WithT, c *OCIManagedMachinePool) {
 				g.Expect(c.Spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails).To(Equal(&NodePoolPodNetworkOptionDetails{
-					CniType: VCNNativeCNI,
+					CniType: infrastructurev1beta2.VCNNativeCNI,
 					VcnIpNativePodNetworkOptions: VcnIpNativePodNetworkOptions{
 						SubnetNames: []string{PodDefaultName},
 						NSGNames:    []string{PodDefaultName},
@@ -51,14 +52,14 @@ func TestOCIManagedMachinePool_CreateDefault(t *testing.T) {
 				Spec: OCIManagedMachinePoolSpec{
 					NodePoolNodeConfig: &NodePoolNodeConfig{
 						NodePoolPodNetworkOptionDetails: &NodePoolPodNetworkOptionDetails{
-							CniType: FlannelCNI,
+							CniType: infrastructurev1beta2.FlannelCNI,
 						},
 					},
 				},
 			},
 			expect: func(g *gomega.WithT, c *OCIManagedMachinePool) {
 				g.Expect(c.Spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails).To(Equal(&NodePoolPodNetworkOptionDetails{
-					CniType: FlannelCNI,
+					CniType: infrastructurev1beta2.FlannelCNI,
 				}))
 			},
 		},

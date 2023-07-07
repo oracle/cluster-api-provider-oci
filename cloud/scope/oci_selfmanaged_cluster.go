@@ -17,6 +17,7 @@ limitations under the License.
 package scope
 
 import (
+	"fmt"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	corev1 "k8s.io/api/core/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -100,4 +101,12 @@ func (c OCISelfManagedCluster) GetAvailabilityDomains() map[string]infrastructur
 }
 func (c OCISelfManagedCluster) SetAvailabilityDomains(ads map[string]infrastructurev1beta2.OCIAvailabilityDomain) {
 	c.OCICluster.Spec.AvailabilityDomains = ads
+}
+
+func (c OCISelfManagedCluster) GetControlPlaneEndpoint() clusterv1.APIEndpoint {
+	return c.OCICluster.Spec.ControlPlaneEndpoint
+}
+
+func (c OCISelfManagedCluster) GetProviderID(instanceId string) string {
+	return fmt.Sprintf("oci://%s", instanceId)
 }

@@ -1,0 +1,4 @@
+resources:
+  - ./cluster.yaml
+  - ./md.yaml
+  - machine-pool.yaml

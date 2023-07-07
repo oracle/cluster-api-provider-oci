@@ -26,6 +26,7 @@ import (
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	cloudutil "github.com/oracle/cluster-api-provider-oci/cloud/util"
+	expV1Beta1 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
 	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
@@ -119,16 +120,28 @@ func (r *OCIMachinePoolReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		Name:      cluster.Name,
 	}
 
+	var clusterAccessor scope.OCIClusterAccessor
 	if err := r.Client.Get(ctx, ociClusterName, ociCluster); err != nil {
-		logger.Info("Cluster is not available yet")
-		r.Recorder.Eventf(ociMachinePool, corev1.EventTypeWarning, "ClusterNotAvailable", "Cluster is not available yet")
-		logger.V(2).Info("OCICluster is not available yet")
-		return ctrl.Result{}, nil
+		ociManagedCluster := &infrastructurev1beta2.OCIManagedCluster{}
+		ociManagedClusterName := client.ObjectKey{
+			Namespace: cluster.Namespace,
+			Name:      cluster.Spec.InfrastructureRef.Name,
+		}
+		if err := r.Client.Get(ctx, ociManagedClusterName, ociManagedCluster); err != nil {
+			logger.Info("Cluster is not available yet")
+			r.Recorder.Eventf(ociMachinePool, corev1.EventTypeWarning, "ClusterNotAvailable", "Cluster is not available yet")
+			logger.V(2).Info("OCICluster is not available yet")
+			return ctrl.Result{}, nil
+		}
+		clusterAccessor = scope.OCIManagedCluster{
+			OCIManagedCluster: ociManagedCluster,
+		}
+	} else {
+		clusterAccessor = scope.OCISelfManagedCluster{
+			OCICluster: ociCluster,
+		}
 	}
 
-	clusterAccessor := scope.OCISelfManagedCluster{
-		OCICluster: ociCluster,
-	}
 	_, _, clients, err := cloudutil.InitClientsAndRegion(ctx, r.Client, r.Region, clusterAccessor, r.ClientProvider)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -140,7 +153,7 @@ func (r *OCIMachinePoolReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		ComputeManagementClient: clients.ComputeManagementClient,
 		Logger:                  &logger,
 		Cluster:                 cluster,
-		OCICluster:              ociCluster,
+		OCIClusterAccessor:      clusterAccessor,
 		MachinePool:             machinePool,
 		OCIMachinePool:          ociMachinePool,
 	})
@@ -167,7 +180,7 @@ func (r *OCIMachinePoolReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 // SetupWithManager sets up the controller with the Manager.
 func (r *OCIMachinePoolReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
 	logger := log.FromContext(ctx)
-	return ctrl.NewControllerManagedBy(mgr).
+	c, err := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(options).
 		For(&infrav2exp.OCIMachinePool{}).
 		Watches(
@@ -176,7 +189,24 @@ func (r *OCIMachinePoolReconciler) SetupWithManager(ctx context.Context, mgr ctr
 				GroupVersion.WithKind(scope.OCIMachinePoolKind), logger)),
 		).
 		WithEventFilter(predicates.ResourceNotPaused(ctrl.LoggerFrom(ctx))).
-		Complete(r)
+		Build(r)
+
+	if err != nil {
+		return errors.Wrapf(err, "error creating controller")
+	}
+	clusterToObjectFunc, err := util.ClusterToObjectsMapper(r.Client, &expV1Beta1.OCIMachinePoolList{}, mgr.GetScheme())
+	if err != nil {
+		return errors.Wrapf(err, "failed to create mapper for Cluster to OCIMachines")
+	}
+	// Add a watch on clusterv1.Cluster object for unpause & ready notifications.
+	if err := c.Watch(
+		&source.Kind{Type: &clusterv1.Cluster{}},
+		handler.EnqueueRequestsFromMapFunc(clusterToObjectFunc),
+		predicates.ClusterUnpausedAndInfrastructureReady(ctrl.LoggerFrom(ctx)),
+	); err != nil {
+		return errors.Wrapf(err, "failed adding a watch for ready clusters")
+	}
+	return nil
 }
 
 func machinePoolToInfrastructureMapFunc(gvk schema.GroupVersionKind, logger logr.Logger) handler.MapFunc {
@@ -285,7 +315,7 @@ func (r *OCIMachinePoolReconciler) reconcileNormal(ctx context.Context, logger l
 			conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav2exp.InstancePoolReadyCondition, infrav2exp.InstancePoolProvisionFailedReason, clusterv1.ConditionSeverityError, err.Error())
 			return ctrl.Result{}, err
 		}
-		r.Recorder.Eventf(machinePoolScope.OCIMachinePool, "SuccessfulCreate", "Created new Instance Pool: %s", machinePoolScope.OCIMachinePool.GetName())
+		r.Recorder.Eventf(machinePoolScope.OCIMachinePool, corev1.EventTypeNormal, "InstancePoolCreated", "Created new Instance Pool: %s", machinePoolScope.OCIMachinePool.GetName())
 		return ctrl.Result{}, nil
 	}
 

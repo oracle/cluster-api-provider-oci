@@ -25,7 +25,6 @@ import (
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	cloudutil "github.com/oracle/cluster-api-provider-oci/cloud/util"
-	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -73,7 +72,7 @@ func (r *OCIManagedClusterReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	logger.Info("Inside cluster reconciler")
 
 	// Fetch the OCIManagedCluster instance
-	ociCluster := &infrav2exp.OCIManagedCluster{}
+	ociCluster := &infrastructurev1beta2.OCIManagedCluster{}
 	err := r.Get(ctx, req.NamespacedName, ociCluster)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -163,7 +162,7 @@ func (r *OCIManagedClusterReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 }
 
-func (r *OCIManagedClusterReconciler) reconcileComponent(ctx context.Context, cluster *infrav2exp.OCIManagedCluster,
+func (r *OCIManagedClusterReconciler) reconcileComponent(ctx context.Context, cluster *infrastructurev1beta2.OCIManagedCluster,
 	reconciler func(context.Context) error,
 	componentName string, failReason string, readyEventtype string) error {
 
@@ -183,11 +182,11 @@ func (r *OCIManagedClusterReconciler) reconcileComponent(ctx context.Context, cl
 	return nil
 }
 
-func (r *OCIManagedClusterReconciler) reconcile(ctx context.Context, logger logr.Logger, clusterScope scope.ClusterScopeClient, ociManagedCluster *infrav2exp.OCIManagedCluster, cluster *clusterv1.Cluster) (ctrl.Result, error) {
+func (r *OCIManagedClusterReconciler) reconcile(ctx context.Context, logger logr.Logger, clusterScope scope.ClusterScopeClient, ociManagedCluster *infrastructurev1beta2.OCIManagedCluster, cluster *clusterv1.Cluster) (ctrl.Result, error) {
 	// If the OCIManagedCluster doesn't have our finalizer, add it.
-	controllerutil.AddFinalizer(ociManagedCluster, infrav2exp.ManagedClusterFinalizer)
+	controllerutil.AddFinalizer(ociManagedCluster, infrastructurev1beta2.ManagedClusterFinalizer)
 
-	controlPlane := &infrav2exp.OCIManagedControlPlane{}
+	controlPlane := &infrastructurev1beta2.OCIManagedControlPlane{}
 	controlPlaneRef := types.NamespacedName{
 		Name:      cluster.Spec.ControlPlaneRef.Name,
 		Namespace: cluster.Namespace,
@@ -279,11 +278,11 @@ func (r *OCIManagedClusterReconciler) SetupWithManager(ctx context.Context, mgr 
 	ociManagedControlPlaneMapper, err := OCIManagedControlPlaneToOCIManagedClusterMapper(ctx, r.Client, log)
 	c, err := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(options).
-		For(&infrav2exp.OCIManagedCluster{}).
+		For(&infrastructurev1beta2.OCIManagedCluster{}).
 		WithEventFilter(predicates.ResourceNotPaused(log)). // don't queue reconcile if resource is paused
 		// watch OCIManagedControlPlane resources
 		Watches(
-			&source.Kind{Type: &infrav2exp.OCIManagedControlPlane{}},
+			&source.Kind{Type: &infrastructurev1beta2.OCIManagedControlPlane{}},
 			handler.EnqueueRequestsFromMapFunc(ociManagedControlPlaneMapper),
 		).
 		Build(r)
@@ -324,7 +323,7 @@ func (r *OCIManagedClusterReconciler) clusterToInfrastructureMapFunc(ctx context
 			return nil
 		}
 
-		ociCluster := &infrav2exp.OCIManagedCluster{}
+		ociCluster := &infrastructurev1beta2.OCIManagedCluster{}
 		key := types.NamespacedName{Namespace: c.Spec.InfrastructureRef.Namespace, Name: c.Spec.InfrastructureRef.Name}
 
 		if err := r.Get(ctx, key, ociCluster); err != nil {
@@ -350,7 +349,7 @@ func (r *OCIManagedClusterReconciler) clusterToInfrastructureMapFunc(ctx context
 	}
 }
 
-func (r *OCIManagedClusterReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, clusterScope scope.ClusterScopeClient, cluster *infrav2exp.OCIManagedCluster) (ctrl.Result, error) {
+func (r *OCIManagedClusterReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, clusterScope scope.ClusterScopeClient, cluster *infrastructurev1beta2.OCIManagedCluster) (ctrl.Result, error) {
 	// This below if condition specifies if the network related infrastructure needs to be reconciled. Any new
 	// network related reconcilication should happen in this if condition
 	if !cluster.Spec.NetworkSpec.SkipNetworkManagement {
@@ -434,14 +433,14 @@ func (r *OCIManagedClusterReconciler) reconcileDelete(ctx context.Context, logge
 	} else {
 		logger.Info("VCN Reconciliation is skipped, none of the VCN related resources will be deleted")
 	}
-	controllerutil.RemoveFinalizer(cluster, infrav2exp.ManagedClusterFinalizer)
+	controllerutil.RemoveFinalizer(cluster, infrastructurev1beta2.ManagedClusterFinalizer)
 
 	return reconcile.Result{}, nil
 }
 
 func OCIManagedControlPlaneToOCIManagedClusterMapper(ctx context.Context, c client.Client, log logr.Logger) (handler.MapFunc, error) {
 	return func(o client.Object) []ctrl.Request {
-		ociManagedControlPlane, ok := o.(*infrav2exp.OCIManagedControlPlane)
+		ociManagedControlPlane, ok := o.(*infrastructurev1beta2.OCIManagedControlPlane)
 		if !ok {
 			log.Error(errors.Errorf("expected an OCIManagedControlPlane, got %T instead", o), "failed to map OCIManagedControlPlane")
 			return nil

@@ -30,7 +30,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	infrav1exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
@@ -145,7 +145,7 @@ var _ = Describe("Managed Workload cluster creation", func() {
 			Expect(ctx).NotTo(BeNil(), "ctx is required for DiscoveryAndWaitForControlPlaneInitialized")
 			lister := input.ClusterProxy.GetClient()
 			Expect(lister).ToNot(BeNil(), "Invalid argument. input.Lister can't be nil when calling DiscoveryAndWaitForControlPlaneInitialized")
-			var controlPlane *infrav1exp.OCIManagedControlPlane
+			var controlPlane *infrastructurev1beta2.OCIManagedControlPlane
 			Eventually(func(g Gomega) {
 				controlPlane = GetOCIManagedControlPlaneByCluster(ctx, lister, result.Cluster.Name, result.Cluster.Namespace)
 				if controlPlane != nil {
@@ -207,7 +207,7 @@ var _ = Describe("Managed Workload cluster creation", func() {
 			Expect(ctx).NotTo(BeNil(), "ctx is required for DiscoveryAndWaitForControlPlaneInitialized")
 			lister := input.ClusterProxy.GetClient()
 			Expect(lister).ToNot(BeNil(), "Invalid argument. input.Lister can't be nil when calling DiscoveryAndWaitForControlPlaneInitialized")
-			var controlPlane *infrav1exp.OCIManagedControlPlane
+			var controlPlane *infrastructurev1beta2.OCIManagedControlPlane
 			Eventually(func(g Gomega) {
 				controlPlane = GetOCIManagedControlPlaneByCluster(ctx, lister, result.Cluster.Name, result.Cluster.Namespace)
 				if controlPlane != nil {
@@ -249,7 +249,7 @@ var _ = Describe("Managed Workload cluster creation", func() {
 			Expect(ctx).NotTo(BeNil(), "ctx is required for DiscoveryAndWaitForControlPlaneInitialized")
 			lister := input.ClusterProxy.GetClient()
 			Expect(lister).ToNot(BeNil(), "Invalid argument. input.Lister can't be nil when calling DiscoveryAndWaitForControlPlaneInitialized")
-			var controlPlane *infrav1exp.OCIManagedControlPlane
+			var controlPlane *infrastructurev1beta2.OCIManagedControlPlane
 			Eventually(func(g Gomega) {
 				controlPlane = GetOCIManagedControlPlaneByCluster(ctx, lister, result.Cluster.Name, result.Cluster.Namespace)
 				if controlPlane != nil {
@@ -294,7 +294,7 @@ var _ = Describe("Managed Workload cluster creation", func() {
 			Expect(ctx).NotTo(BeNil(), "ctx is required for DiscoveryAndWaitForControlPlaneInitialized")
 			lister := input.ClusterProxy.GetClient()
 			Expect(lister).ToNot(BeNil(), "Invalid argument. input.Lister can't be nil when calling DiscoveryAndWaitForControlPlaneInitialized")
-			var controlPlane *infrav1exp.OCIManagedControlPlane
+			var controlPlane *infrastructurev1beta2.OCIManagedControlPlane
 			Eventually(func(g Gomega) {
 				controlPlane = GetOCIManagedControlPlaneByCluster(ctx, lister, result.Cluster.Name, result.Cluster.Namespace)
 				if controlPlane != nil {
@@ -321,13 +321,55 @@ var _ = Describe("Managed Workload cluster creation", func() {
 			return err
 		}, retryableOperationTimeout, retryableOperationInterval).Should(Succeed(), "Failed to install Addon")
 	})
+
+	It("Managed Cluster - Self managed nodes", func() {
+		clusterName = getClusterName(clusterNamePrefix, "self")
+		input := clusterctl.ApplyClusterTemplateAndWaitInput{
+			ClusterProxy: bootstrapClusterProxy,
+			ConfigCluster: clusterctl.ConfigClusterInput{
+				LogFolder:                filepath.Join(artifactFolder, "clusters", bootstrapClusterProxy.GetName()),
+				ClusterctlConfigPath:     clusterctlConfigPath,
+				KubeconfigPath:           bootstrapClusterProxy.GetKubeconfigPath(),
+				InfrastructureProvider:   clusterctl.DefaultInfrastructureProvider,
+				Flavor:                   "managed-self-managed-nodes",
+				Namespace:                namespace.Name,
+				ClusterName:              clusterName,
+				ControlPlaneMachineCount: pointer.Int64(1),
+				WorkerMachineCount:       pointer.Int64(1),
+				KubernetesVersion:        e2eConfig.GetVariable(capi_e2e.KubernetesVersion),
+			},
+			WaitForClusterIntervals:      e2eConfig.GetIntervals(specName, "wait-cluster"),
+			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),
+			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
+			WaitForMachinePools:          e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes"),
+		}
+		input.WaitForControlPlaneInitialized = func(ctx context.Context, input clusterctl.ApplyClusterTemplateAndWaitInput, result *clusterctl.ApplyClusterTemplateAndWaitResult) {
+			Expect(ctx).NotTo(BeNil(), "ctx is required for DiscoveryAndWaitForControlPlaneInitialized")
+			lister := input.ClusterProxy.GetClient()
+			Expect(lister).ToNot(BeNil(), "Invalid argument. input.Lister can't be nil when calling DiscoveryAndWaitForControlPlaneInitialized")
+			var controlPlane *infrastructurev1beta2.OCIManagedControlPlane
+			Eventually(func(g Gomega) {
+				controlPlane = GetOCIManagedControlPlaneByCluster(ctx, lister, result.Cluster.Name, result.Cluster.Namespace)
+				if controlPlane != nil {
+					Log(fmt.Sprintf("Control plane is not nil, status is %t", controlPlane.Status.Ready))
+				}
+				g.Expect(controlPlane).ToNot(BeNil())
+				g.Expect(controlPlane.Status.Ready).To(BeTrue())
+			}, input.WaitForControlPlaneIntervals...).Should(Succeed(), "Couldn't get the control plane ready status for the cluster %s", klog.KObj(result.Cluster))
+		}
+		input.WaitForControlPlaneMachinesReady = func(ctx context.Context, input clusterctl.ApplyClusterTemplateAndWaitInput, result *clusterctl.ApplyClusterTemplateAndWaitResult) {
+			// Not applicable
+		}
+
+		clusterctl.ApplyClusterTemplateAndWait(ctx, input, result)
+	})
 })
 
 // GetKubeadmControlPlaneByCluster returns the KubeadmControlPlane objects for a cluster.
 // Important! this method relies on labels that are created by the CAPI controllers during the first reconciliation, so
 // it is necessary to ensure this is already happened before calling it.
-func GetOCIManagedControlPlaneByCluster(ctx context.Context, lister client.Client, clusterName string, namespaceName string) *infrav1exp.OCIManagedControlPlane {
-	controlPlaneList := &infrav1exp.OCIManagedControlPlaneList{}
+func GetOCIManagedControlPlaneByCluster(ctx context.Context, lister client.Client, clusterName string, namespaceName string) *infrastructurev1beta2.OCIManagedControlPlane {
+	controlPlaneList := &infrastructurev1beta2.OCIManagedControlPlaneList{}
 	Eventually(func() error {
 		return lister.List(ctx, controlPlaneList, byClusterOptions(clusterName, namespaceName)...)
 	}, retryableOperationTimeout, retryableOperationInterval).Should(Succeed(), "Failed to list OCIManagedControlPlane object for Cluster %s", klog.KRef(namespaceName, clusterName))

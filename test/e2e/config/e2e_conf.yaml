@@ -72,6 +72,7 @@ providers:
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-machine-pool.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-managed.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-managed-node-recycling.yaml"
+          - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-managed-self-managed-nodes.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-managed-virtual.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-managed-cluster-identity.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-cluster-identity.yaml"

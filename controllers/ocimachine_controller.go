@@ -111,14 +111,28 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		Name:      cluster.Spec.InfrastructureRef.Name,
 	}
 
+	var clusterAccessor scope.OCIClusterAccessor
 	if err := r.Client.Get(ctx, ociClusterName, ociCluster); err != nil {
-		logger.Info("Cluster is not available yet")
-		r.Recorder.Eventf(ociMachine, corev1.EventTypeWarning, "ClusterNotAvailable", "Cluster is not available yet")
-		return ctrl.Result{}, nil
+		// check for oci managed cluster
+		ociManagedCluster := &infrastructurev1beta2.OCIManagedCluster{}
+		ociManagedClusterName := client.ObjectKey{
+			Namespace: cluster.Namespace,
+			Name:      cluster.Spec.InfrastructureRef.Name,
+		}
+		if err := r.Client.Get(ctx, ociManagedClusterName, ociManagedCluster); err != nil {
+			logger.Info("Cluster is not available yet")
+			r.Recorder.Eventf(ociMachine, corev1.EventTypeWarning, "ClusterNotAvailable", "Cluster is not available yet")
+			return ctrl.Result{}, nil
+		}
+		clusterAccessor = scope.OCIManagedCluster{
+			OCIManagedCluster: ociManagedCluster,
+		}
+	} else {
+		clusterAccessor = scope.OCISelfManagedCluster{
+			OCICluster: ociCluster,
+		}
 	}
-	clusterAccessor := scope.OCISelfManagedCluster{
-		OCICluster: ociCluster,
-	}
+
 	_, _, clients, err := cloudutil.InitClientsAndRegion(ctx, r.Client, r.Region, clusterAccessor, r.ClientProvider)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -130,7 +144,7 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		ComputeClient:             clients.ComputeClient,
 		Logger:                    &logger,
 		Cluster:                   cluster,
-		OCICluster:                ociCluster,
+		OCIClusterAccessor:        clusterAccessor,
 		Machine:                   machine,
 		OCIMachine:                ociMachine,
 		VCNClient:                 clients.VCNClient,
@@ -251,7 +265,8 @@ func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.
 
 	machineScope.Info("OCI Compute Instance found", "InstanceID", *instance.Id)
 	machine.Spec.InstanceId = instance.Id
-	machine.Spec.ProviderID = common.String(fmt.Sprintf("oci://%s", *instance.Id))
+
+	machine.Spec.ProviderID = common.String(machineScope.OCIClusterAccessor.GetProviderID(*instance.Id))
 
 	// Proceed to reconcile the DOMachine state.
 	switch instance.LifecycleState {

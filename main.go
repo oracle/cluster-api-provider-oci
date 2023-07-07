@@ -262,6 +262,28 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err = (&controllers.OCIManagedClusterReconciler{
+		Client:         mgr.GetClient(),
+		Scheme:         mgr.GetScheme(),
+		Region:         region,
+		ClientProvider: clientProvider,
+		Recorder:       mgr.GetEventRecorderFor("ocimanagedcluster-controller"),
+	}).SetupWithManager(ctx, mgr, controller.Options{MaxConcurrentReconciles: ociClusterConcurrency}); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", scope.OCIManagedClusterKind)
+		os.Exit(1)
+	}
+
+	if err = (&controllers.OCIManagedClusterControlPlaneReconciler{
+		Client:         mgr.GetClient(),
+		Scheme:         mgr.GetScheme(),
+		Region:         region,
+		ClientProvider: clientProvider,
+		Recorder:       mgr.GetEventRecorderFor("ocimanagedclustercontrolplane-controller"),
+	}).SetupWithManager(ctx, mgr, controller.Options{MaxConcurrentReconciles: ociClusterConcurrency}); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", scope.OCIManagedClusterControlPlaneKind)
+		os.Exit(1)
+	}
+
 	if feature.Gates.Enabled(feature.MachinePool) {
 		setupLog.Info("MACHINE POOL experimental feature enabled")
 		setupLog.V(1).Info("enabling machine pool controller")
@@ -275,8 +297,7 @@ func main() {
 			setupLog.Error(err, "unable to create controller", "controller", scope.OCIMachinePoolKind)
 			os.Exit(1)
 		}
-	}
-	if feature.Gates.Enabled(feature.OKE) {
+
 		setupLog.Info("OKE experimental feature enabled")
 		setupLog.V(1).Info("enabling managed machine pool controller")
 		if err = (&expcontrollers.OCIManagedMachinePoolReconciler{
@@ -287,28 +308,6 @@ func main() {
 			Recorder:       mgr.GetEventRecorderFor("ocimanagedmachinepool-controller"),
 		}).SetupWithManager(ctx, mgr, controller.Options{MaxConcurrentReconciles: ociMachinePoolConcurrency}); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", scope.OCIManagedMachinePoolKind)
-			os.Exit(1)
-		}
-
-		if err = (&expcontrollers.OCIManagedClusterReconciler{
-			Client:         mgr.GetClient(),
-			Scheme:         mgr.GetScheme(),
-			Region:         region,
-			ClientProvider: clientProvider,
-			Recorder:       mgr.GetEventRecorderFor("ocimanagedcluster-controller"),
-		}).SetupWithManager(ctx, mgr, controller.Options{MaxConcurrentReconciles: ociClusterConcurrency}); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", scope.OCIManagedClusterKind)
-			os.Exit(1)
-		}
-
-		if err = (&expcontrollers.OCIManagedClusterControlPlaneReconciler{
-			Client:         mgr.GetClient(),
-			Scheme:         mgr.GetScheme(),
-			Region:         region,
-			ClientProvider: clientProvider,
-			Recorder:       mgr.GetEventRecorderFor("ocimanagedclustercontrolplane-controller"),
-		}).SetupWithManager(ctx, mgr, controller.Options{MaxConcurrentReconciles: ociClusterConcurrency}); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", scope.OCIManagedClusterControlPlaneKind)
 			os.Exit(1)
 		}
 
@@ -334,12 +333,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&expV1Beta2.OCIManagedCluster{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = (&infrastructurev1beta2.OCIManagedCluster{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "OCIManagedCluster")
 		os.Exit(1)
 	}
 
-	if err = (&expV1Beta2.OCIManagedControlPlane{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = (&infrastructurev1beta2.OCIManagedControlPlane{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "OCIManagedControlPlane")
 		os.Exit(1)
 	}

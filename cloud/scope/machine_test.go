@@ -92,9 +92,11 @@ func TestInstanceReconciliation(t *testing.T) {
 					},
 				},
 			},
-			Cluster:    &clusterv1.Cluster{},
-			OCICluster: &ociCluster,
-			Client:     client,
+			Cluster: &clusterv1.Cluster{},
+			OCIClusterAccessor: OCISelfManagedCluster{
+				OCICluster: &ociCluster,
+			},
+			Client: client,
 		})
 		ms.Machine.Namespace = "default"
 		g.Expect(err).To(BeNil())
@@ -285,7 +287,8 @@ func TestInstanceReconciliation(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				setupAllParams(ms)
-				ms.OCICluster.Spec.CompartmentId = "clustercompartment"
+				ociCluster := ms.OCIClusterAccessor.(OCISelfManagedCluster).OCICluster
+				ociCluster.Spec.CompartmentId = "clustercompartment"
 				ms.OCIMachine.Spec.CompartmentId = ""
 
 				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
@@ -303,7 +306,8 @@ func TestInstanceReconciliation(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				setupAllParams(ms)
-				ms.OCICluster.Spec.CompartmentId = "clustercompartment"
+				ociCluster := ms.OCIClusterAccessor.(OCISelfManagedCluster).OCICluster
+				ociCluster.Spec.CompartmentId = "clustercompartment"
 
 				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
 					DisplayName:   common.String("name"),
@@ -498,7 +502,8 @@ func TestInstanceReconciliation(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				setupAllParams(ms)
-				ms.OCICluster.Spec.NetworkSpec.Vcn.Subnets = append(ms.OCICluster.Spec.NetworkSpec.Vcn.Subnets, &infrastructurev1beta2.Subnet{
+				ociCluster := ms.OCIClusterAccessor.(OCISelfManagedCluster).OCICluster
+				ociCluster.Spec.NetworkSpec.Vcn.Subnets = append(ociCluster.Spec.NetworkSpec.Vcn.Subnets, &infrastructurev1beta2.Subnet{
 					Role: infrastructurev1beta2.WorkerRole,
 					ID:   common.String("test-subnet-1"),
 				})
@@ -550,7 +555,8 @@ func TestInstanceReconciliation(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				setupAllParams(ms)
-				ms.OCICluster.Spec.NetworkSpec.Vcn.Subnets = append(ms.OCICluster.Spec.NetworkSpec.Vcn.Subnets, &infrastructurev1beta2.Subnet{
+				ociCluster := ms.OCIClusterAccessor.(OCISelfManagedCluster).OCICluster
+				ociCluster.Spec.NetworkSpec.Vcn.Subnets = append(ociCluster.Spec.NetworkSpec.Vcn.Subnets, &infrastructurev1beta2.Subnet{
 					Role: infrastructurev1beta2.WorkerRole,
 					Name: "test-subnet-name",
 					ID:   common.String("test-subnet-1"),
@@ -604,7 +610,8 @@ func TestInstanceReconciliation(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				setupAllParams(ms)
-				ms.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List = append(ms.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List, &infrastructurev1beta2.NSG{
+				ociCluster := ms.OCIClusterAccessor.(OCISelfManagedCluster).OCICluster
+				ociCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List = append(ociCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List, &infrastructurev1beta2.NSG{
 					Role: infrastructurev1beta2.WorkerRole,
 					ID:   common.String("test-nsg-1"),
 					Name: "test-nsg",
@@ -661,7 +668,8 @@ func TestInstanceReconciliation(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				setupAllParams(ms)
-				ms.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List = append(ms.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List, &infrastructurev1beta2.NSG{
+				ociCluster := ms.OCIClusterAccessor.(OCISelfManagedCluster).OCICluster
+				ociCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List = append(ociCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List, &infrastructurev1beta2.NSG{
 					Role: infrastructurev1beta2.WorkerRole,
 					ID:   common.String("test-nsg-1"),
 					Name: "test-nsg",
@@ -1217,10 +1225,12 @@ func TestNLBReconciliationCreation(t *testing.T) {
 					CompartmentId: "test",
 				},
 			},
-			Machine:    &clusterv1.Machine{},
-			Cluster:    &clusterv1.Cluster{},
-			OCICluster: &ociCluster,
-			Client:     client,
+			Machine: &clusterv1.Machine{},
+			Cluster: &clusterv1.Cluster{},
+			OCIClusterAccessor: OCISelfManagedCluster{
+				OCICluster: &ociCluster,
+			},
+			Client: client,
 		})
 		ms.Machine.Namespace = "default"
 		g.Expect(err).To(BeNil())
@@ -1539,10 +1549,12 @@ func TestNLBReconciliationDeletion(t *testing.T) {
 					CompartmentId: "test",
 				},
 			},
-			Machine:    &clusterv1.Machine{},
-			Cluster:    &clusterv1.Cluster{},
-			OCICluster: &ociCluster,
-			Client:     client,
+			Machine: &clusterv1.Machine{},
+			Cluster: &clusterv1.Cluster{},
+			OCIClusterAccessor: OCISelfManagedCluster{
+				OCICluster: &ociCluster,
+			},
+			Client: client,
 		})
 		ms.Machine.Namespace = "default"
 		g.Expect(err).To(BeNil())
@@ -1779,10 +1791,12 @@ func TestLBReconciliationCreation(t *testing.T) {
 					CompartmentId: "test",
 				},
 			},
-			Machine:    &clusterv1.Machine{},
-			Cluster:    &clusterv1.Cluster{},
-			OCICluster: &ociCluster,
-			Client:     client,
+			Machine: &clusterv1.Machine{},
+			Cluster: &clusterv1.Cluster{},
+			OCIClusterAccessor: OCISelfManagedCluster{
+				OCICluster: &ociCluster,
+			},
+			Client: client,
 		})
 		ms.Machine.Namespace = "default"
 		g.Expect(err).To(BeNil())
@@ -2100,10 +2114,12 @@ func TestLBReconciliationDeletion(t *testing.T) {
 					CompartmentId: "test",
 				},
 			},
-			Machine:    &clusterv1.Machine{},
-			Cluster:    &clusterv1.Cluster{},
-			OCICluster: &ociCluster,
-			Client:     client,
+			Machine: &clusterv1.Machine{},
+			Cluster: &clusterv1.Cluster{},
+			OCIClusterAccessor: OCISelfManagedCluster{
+				OCICluster: &ociCluster,
+			},
+			Client: client,
 		})
 		ms.Machine.Namespace = "default"
 		g.Expect(err).To(BeNil())
@@ -2377,10 +2393,12 @@ func TestInstanceDeletion(t *testing.T) {
 					InstanceId:    common.String("test"),
 				},
 			},
-			Machine:    &clusterv1.Machine{},
-			Cluster:    &clusterv1.Cluster{},
-			OCICluster: &ociCluster,
-			Client:     client,
+			Machine: &clusterv1.Machine{},
+			Cluster: &clusterv1.Cluster{},
+			OCIClusterAccessor: OCISelfManagedCluster{
+				OCICluster: &ociCluster,
+			},
+			Client: client,
 		})
 		ms.Machine.Namespace = "default"
 		g.Expect(err).To(BeNil())
@@ -2454,7 +2472,8 @@ func setupAllParams(ms *MachineScope) {
 	ms.OCIMachine.Spec.ShapeConfig.MemoryInGBs = "100"
 	ms.OCIMachine.Spec.ShapeConfig.BaselineOcpuUtilization = "BASELINE_1_8"
 	ms.OCIMachine.Spec.IsPvEncryptionInTransitEnabled = true
-	ms.OCICluster.Status.FailureDomains = map[string]clusterv1.FailureDomainSpec{
+	ociCluster := ms.OCIClusterAccessor.(OCISelfManagedCluster).OCICluster
+	ociCluster.Status.FailureDomains = map[string]clusterv1.FailureDomainSpec{
 		"1": {
 			Attributes: map[string]string{
 				"AvailabilityDomain": "ad1",
@@ -2472,13 +2491,13 @@ func setupAllParams(ms *MachineScope) {
 		},
 	}
 	ms.Machine.Spec.FailureDomain = common.String("2")
-	ms.OCICluster.Spec.NetworkSpec.Vcn.Subnets = []*infrastructurev1beta2.Subnet{
+	ociCluster.Spec.NetworkSpec.Vcn.Subnets = []*infrastructurev1beta2.Subnet{
 		{
 			Role: infrastructurev1beta2.WorkerRole,
 			ID:   common.String("nodesubnet"),
 		},
 	}
-	ms.OCICluster.UID = "uid"
-	ms.OCICluster.Spec.OCIResourceIdentifier = "resource_uid"
+	ociCluster.UID = "uid"
+	ociCluster.Spec.OCIResourceIdentifier = "resource_uid"
 	ms.OCIMachine.UID = "machineuid"
 }

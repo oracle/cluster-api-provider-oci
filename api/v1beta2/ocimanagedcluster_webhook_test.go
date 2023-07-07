@@ -25,56 +25,55 @@ import (
 
 	"github.com/onsi/gomega"
 	. "github.com/onsi/gomega"
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestOCIManagedCluster_ValidateCreate(t *testing.T) {
-	goodSubnets := []*infrastructurev1beta2.Subnet{
-		&infrastructurev1beta2.Subnet{
-			Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+	goodSubnets := []*Subnet{
+		&Subnet{
+			Role: ControlPlaneEndpointRole,
 			Name: "test-subnet",
 			CIDR: "10.0.0.0/16",
 		},
 	}
-	badSubnetCidr := []*infrastructurev1beta2.Subnet{
-		&infrastructurev1beta2.Subnet{
+	badSubnetCidr := []*Subnet{
+		&Subnet{
 			Name: "test-subnet",
 			CIDR: "10.1.0.0/16",
 		},
 	}
-	emptySubnetCidr := []*infrastructurev1beta2.Subnet{
-		&infrastructurev1beta2.Subnet{
-			Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+	emptySubnetCidr := []*Subnet{
+		&Subnet{
+			Role: ControlPlaneEndpointRole,
 			Name: "test-subnet",
 		},
 	}
-	badSubnetCidrFormat := []*infrastructurev1beta2.Subnet{
-		&infrastructurev1beta2.Subnet{
+	badSubnetCidrFormat := []*Subnet{
+		&Subnet{
 			Name: "test-subnet",
 			CIDR: "no-a-cidr",
 		},
 	}
-	dupSubnetNames := []*infrastructurev1beta2.Subnet{
-		&infrastructurev1beta2.Subnet{
+	dupSubnetNames := []*Subnet{
+		&Subnet{
 			Name: "dup-name",
 			CIDR: "10.0.0.0/16",
 		},
-		&infrastructurev1beta2.Subnet{
+		&Subnet{
 			Name: "dup-name",
 			CIDR: "10.0.0.0/16",
 		},
 	}
-	emptySubnetName := []*infrastructurev1beta2.Subnet{
-		&infrastructurev1beta2.Subnet{
+	emptySubnetName := []*Subnet{
+		&Subnet{
 			Name: "",
 			CIDR: "10.0.0.0/16",
-			Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+			Role: ControlPlaneEndpointRole,
 		},
 	}
-	badSubnetRole := []*infrastructurev1beta2.Subnet{
-		&infrastructurev1beta2.Subnet{
+	badSubnetRole := []*Subnet{
+		&Subnet{
 			Role: "not-control-plane",
 		},
 	}
@@ -132,8 +131,8 @@ func TestOCIManagedCluster_ValidateCreate(t *testing.T) {
 					Name: goodClusterName,
 				},
 				Spec: OCIManagedClusterSpec{
-					NetworkSpec: infrastructurev1beta2.NetworkSpec{
-						Vcn: infrastructurev1beta2.VCN{
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
 							CIDR: "not-a-cidr",
 						},
 					},
@@ -162,8 +161,8 @@ func TestOCIManagedCluster_ValidateCreate(t *testing.T) {
 					Name: goodClusterName,
 				},
 				Spec: OCIManagedClusterSpec{
-					NetworkSpec: infrastructurev1beta2.NetworkSpec{
-						Vcn: infrastructurev1beta2.VCN{
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
 							CIDR:    "10.0.0.0/16",
 							Subnets: badSubnetCidr,
 						},
@@ -182,8 +181,8 @@ func TestOCIManagedCluster_ValidateCreate(t *testing.T) {
 				Spec: OCIManagedClusterSpec{
 					CompartmentId:         "ocid",
 					OCIResourceIdentifier: "uuid",
-					NetworkSpec: infrastructurev1beta2.NetworkSpec{
-						Vcn: infrastructurev1beta2.VCN{
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
 							CIDR:    "10.0.0.0/16",
 							Subnets: emptySubnetCidr,
 						},
@@ -199,8 +198,8 @@ func TestOCIManagedCluster_ValidateCreate(t *testing.T) {
 					Name: goodClusterName,
 				},
 				Spec: OCIManagedClusterSpec{
-					NetworkSpec: infrastructurev1beta2.NetworkSpec{
-						Vcn: infrastructurev1beta2.VCN{
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
 							CIDR:    "10.0.0.0/16",
 							Subnets: badSubnetCidrFormat,
 						},
@@ -217,8 +216,8 @@ func TestOCIManagedCluster_ValidateCreate(t *testing.T) {
 					Name: goodClusterName,
 				},
 				Spec: OCIManagedClusterSpec{
-					NetworkSpec: infrastructurev1beta2.NetworkSpec{
-						Vcn: infrastructurev1beta2.VCN{
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
 							CIDR:    "10.0.0.0/16",
 							Subnets: dupSubnetNames,
 						},
@@ -235,8 +234,8 @@ func TestOCIManagedCluster_ValidateCreate(t *testing.T) {
 					Name: goodClusterName,
 				},
 				Spec: OCIManagedClusterSpec{
-					NetworkSpec: infrastructurev1beta2.NetworkSpec{
-						Vcn: infrastructurev1beta2.VCN{
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
 							CIDR:    "10.0.0.0/16",
 							Subnets: badSubnetRole,
 						},
@@ -253,12 +252,12 @@ func TestOCIManagedCluster_ValidateCreate(t *testing.T) {
 					Name: goodClusterName,
 				},
 				Spec: OCIManagedClusterSpec{
-					NetworkSpec: infrastructurev1beta2.NetworkSpec{
-						Vcn: infrastructurev1beta2.VCN{
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
 							CIDR: "10.0.0.0/16",
-							Subnets: []*infrastructurev1beta2.Subnet{
-								&infrastructurev1beta2.Subnet{
-									Role: infrastructurev1beta2.ControlPlaneRole,
+							Subnets: []*Subnet{
+								&Subnet{
+									Role: ControlPlaneRole,
 								},
 							},
 						},
@@ -277,8 +276,8 @@ func TestOCIManagedCluster_ValidateCreate(t *testing.T) {
 				Spec: OCIManagedClusterSpec{
 					CompartmentId:         "ocid",
 					OCIResourceIdentifier: "uuid",
-					NetworkSpec: infrastructurev1beta2.NetworkSpec{
-						Vcn: infrastructurev1beta2.VCN{
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
 							CIDR:    "10.0.0.0/16",
 							Subnets: emptySubnetName,
 						},
@@ -294,14 +293,14 @@ func TestOCIManagedCluster_ValidateCreate(t *testing.T) {
 					Name: goodClusterName,
 				},
 				Spec: OCIManagedClusterSpec{
-					NetworkSpec: infrastructurev1beta2.NetworkSpec{
-						Vcn: infrastructurev1beta2.VCN{
-							NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
-								List: []*infrastructurev1beta2.NSG{{
-									EgressRules: []infrastructurev1beta2.EgressSecurityRuleForNSG{{
-										EgressSecurityRule: infrastructurev1beta2.EgressSecurityRule{
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							NetworkSecurityGroup: NetworkSecurityGroup{
+								List: []*NSG{{
+									EgressRules: []EgressSecurityRuleForNSG{{
+										EgressSecurityRule: EgressSecurityRule{
 											Destination:     common.String("bad/15"),
-											DestinationType: infrastructurev1beta2.EgressSecurityRuleDestinationTypeCidrBlock,
+											DestinationType: EgressSecurityRuleDestinationTypeCidrBlock,
 										},
 									}},
 								}},
@@ -320,14 +319,14 @@ func TestOCIManagedCluster_ValidateCreate(t *testing.T) {
 					Name: goodClusterName,
 				},
 				Spec: OCIManagedClusterSpec{
-					NetworkSpec: infrastructurev1beta2.NetworkSpec{
-						Vcn: infrastructurev1beta2.VCN{
-							NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
-								List: []*infrastructurev1beta2.NSG{{
-									IngressRules: []infrastructurev1beta2.IngressSecurityRuleForNSG{{
-										IngressSecurityRule: infrastructurev1beta2.IngressSecurityRule{
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							NetworkSecurityGroup: NetworkSecurityGroup{
+								List: []*NSG{{
+									IngressRules: []IngressSecurityRuleForNSG{{
+										IngressSecurityRule: IngressSecurityRule{
 											Source:     common.String("bad/15"),
-											SourceType: infrastructurev1beta2.IngressSecurityRuleSourceTypeCidrBlock,
+											SourceType: IngressSecurityRuleSourceTypeCidrBlock,
 										},
 									}},
 								}},
@@ -346,10 +345,10 @@ func TestOCIManagedCluster_ValidateCreate(t *testing.T) {
 					Name: goodClusterName,
 				},
 				Spec: OCIManagedClusterSpec{
-					NetworkSpec: infrastructurev1beta2.NetworkSpec{
-						Vcn: infrastructurev1beta2.VCN{
-							NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
-								List: []*infrastructurev1beta2.NSG{{
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							NetworkSecurityGroup: NetworkSecurityGroup{
+								List: []*NSG{{
 									Role: "bad-role",
 								}},
 							},
@@ -367,11 +366,11 @@ func TestOCIManagedCluster_ValidateCreate(t *testing.T) {
 					Name: goodClusterName,
 				},
 				Spec: OCIManagedClusterSpec{
-					NetworkSpec: infrastructurev1beta2.NetworkSpec{
-						Vcn: infrastructurev1beta2.VCN{
-							NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
-								List: []*infrastructurev1beta2.NSG{{
-									Role: infrastructurev1beta2.ControlPlaneRole,
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							NetworkSecurityGroup: NetworkSecurityGroup{
+								List: []*NSG{{
+									Role: ControlPlaneRole,
 								}},
 							},
 						},
@@ -391,8 +390,8 @@ func TestOCIManagedCluster_ValidateCreate(t *testing.T) {
 					Region:                "",
 					CompartmentId:         "ocid",
 					OCIResourceIdentifier: "uuid",
-					NetworkSpec: infrastructurev1beta2.NetworkSpec{
-						Vcn: infrastructurev1beta2.VCN{
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
 							CIDR:    "10.0.0.0/16",
 							Subnets: goodSubnets,
 						},
@@ -409,8 +408,8 @@ func TestOCIManagedCluster_ValidateCreate(t *testing.T) {
 				},
 				Spec: OCIManagedClusterSpec{
 					CompartmentId: "ocid",
-					NetworkSpec: infrastructurev1beta2.NetworkSpec{
-						APIServerLB: infrastructurev1beta2.LoadBalancer{
+					NetworkSpec: NetworkSpec{
+						APIServerLB: LoadBalancer{
 							Name: "test",
 						},
 					},
@@ -429,8 +428,8 @@ func TestOCIManagedCluster_ValidateCreate(t *testing.T) {
 					Region:                "us-lexington-1",
 					CompartmentId:         "ocid",
 					OCIResourceIdentifier: "uuid",
-					NetworkSpec: infrastructurev1beta2.NetworkSpec{
-						Vcn: infrastructurev1beta2.VCN{
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
 							CIDR:    "10.0.0.0/16",
 							Subnets: goodSubnets,
 						},
@@ -448,8 +447,8 @@ func TestOCIManagedCluster_ValidateCreate(t *testing.T) {
 				Spec: OCIManagedClusterSpec{
 					CompartmentId:         "ocid",
 					OCIResourceIdentifier: "uuid",
-					NetworkSpec: infrastructurev1beta2.NetworkSpec{
-						Vcn: infrastructurev1beta2.VCN{
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
 							CIDR:    "10.0.0.0/16",
 							Subnets: emptySubnetName,
 						},
@@ -476,9 +475,9 @@ func TestOCIManagedCluster_ValidateCreate(t *testing.T) {
 }
 
 func TestOCIManagedCluster_ValidateUpdate(t *testing.T) {
-	goodSubnets := []*infrastructurev1beta2.Subnet{
-		&infrastructurev1beta2.Subnet{
-			Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+	goodSubnets := []*Subnet{
+		&Subnet{
+			Role: ControlPlaneEndpointRole,
 			Name: "test-subnet",
 			CIDR: "10.0.0.0/16",
 		},
@@ -555,8 +554,8 @@ func TestOCIManagedCluster_ValidateUpdate(t *testing.T) {
 					CompartmentId:         "ocid",
 					Region:                "old-region",
 					OCIResourceIdentifier: "uuid",
-					NetworkSpec: infrastructurev1beta2.NetworkSpec{
-						Vcn: infrastructurev1beta2.VCN{
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
 							CIDR:    "10.0.0.0/16",
 							Subnets: goodSubnets,
 						},
@@ -571,8 +570,8 @@ func TestOCIManagedCluster_ValidateUpdate(t *testing.T) {
 					Region:                "old-region",
 					CompartmentId:         "ocid",
 					OCIResourceIdentifier: "uuid",
-					NetworkSpec: infrastructurev1beta2.NetworkSpec{
-						Vcn: infrastructurev1beta2.VCN{
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
 							CIDR:    "10.0.0.0/16",
 							Subnets: goodSubnets,
 						},
@@ -626,31 +625,31 @@ func TestOCIManagedCluster_CreateDefault(t *testing.T) {
 				},
 			},
 			expect: func(g *gomega.WithT, c *OCIManagedCluster) {
-				subnets := make([]*infrastructurev1beta2.Subnet, 0)
-				subnets = append(subnets, &infrastructurev1beta2.Subnet{
-					Role: infrastructurev1beta2.ControlPlaneEndpointRole,
-					Name: infrastructurev1beta2.ControlPlaneEndpointDefaultName,
-					CIDR: infrastructurev1beta2.ControlPlaneEndpointSubnetDefaultCIDR,
-					Type: infrastructurev1beta2.Public,
+				subnets := make([]*Subnet, 0)
+				subnets = append(subnets, &Subnet{
+					Role: ControlPlaneEndpointRole,
+					Name: ControlPlaneEndpointDefaultName,
+					CIDR: ControlPlaneEndpointSubnetDefaultCIDR,
+					Type: Public,
 				})
 
-				subnets = append(subnets, &infrastructurev1beta2.Subnet{
-					Role: infrastructurev1beta2.ServiceLoadBalancerRole,
-					Name: infrastructurev1beta2.ServiceLBDefaultName,
-					CIDR: infrastructurev1beta2.ServiceLoadBalancerDefaultCIDR,
-					Type: infrastructurev1beta2.Public,
+				subnets = append(subnets, &Subnet{
+					Role: ServiceLoadBalancerRole,
+					Name: ServiceLBDefaultName,
+					CIDR: ServiceLoadBalancerDefaultCIDR,
+					Type: Public,
 				})
-				subnets = append(subnets, &infrastructurev1beta2.Subnet{
-					Role: infrastructurev1beta2.WorkerRole,
-					Name: infrastructurev1beta2.WorkerDefaultName,
-					CIDR: infrastructurev1beta2.WorkerSubnetDefaultCIDR,
-					Type: infrastructurev1beta2.Private,
+				subnets = append(subnets, &Subnet{
+					Role: WorkerRole,
+					Name: WorkerDefaultName,
+					CIDR: WorkerSubnetDefaultCIDR,
+					Type: Private,
 				})
-				subnets = append(subnets, &infrastructurev1beta2.Subnet{
-					Role: infrastructurev1beta2.PodRole,
+				subnets = append(subnets, &Subnet{
+					Role: PodRole,
 					Name: PodDefaultName,
 					CIDR: PodDefaultCIDR,
-					Type: infrastructurev1beta2.Private,
+					Type: Private,
 				})
 				g.Expect(c.Spec.NetworkSpec.Vcn.Subnets).To(Equal(subnets))
 			},
@@ -664,27 +663,27 @@ func TestOCIManagedCluster_CreateDefault(t *testing.T) {
 				},
 			},
 			expect: func(g *gomega.WithT, c *OCIManagedCluster) {
-				nsgs := make([]*infrastructurev1beta2.NSG, 4)
-				nsgs[0] = &infrastructurev1beta2.NSG{
-					Role:         infrastructurev1beta2.ControlPlaneEndpointRole,
-					Name:         infrastructurev1beta2.ControlPlaneEndpointDefaultName,
+				nsgs := make([]*NSG, 4)
+				nsgs[0] = &NSG{
+					Role:         ControlPlaneEndpointRole,
+					Name:         ControlPlaneEndpointDefaultName,
 					IngressRules: c.GetControlPlaneEndpointDefaultIngressRules(),
 					EgressRules:  c.GetControlPlaneEndpointDefaultEgressRules(),
 				}
-				nsgs[1] = &infrastructurev1beta2.NSG{
-					Role:         infrastructurev1beta2.WorkerRole,
-					Name:         infrastructurev1beta2.WorkerDefaultName,
+				nsgs[1] = &NSG{
+					Role:         WorkerRole,
+					Name:         WorkerDefaultName,
 					IngressRules: c.GetWorkerDefaultIngressRules(),
 					EgressRules:  c.GetWorkerDefaultEgressRules(),
 				}
-				nsgs[2] = &infrastructurev1beta2.NSG{
-					Role:         infrastructurev1beta2.ServiceLoadBalancerRole,
-					Name:         infrastructurev1beta2.ServiceLBDefaultName,
+				nsgs[2] = &NSG{
+					Role:         ServiceLoadBalancerRole,
+					Name:         ServiceLBDefaultName,
 					IngressRules: c.GetLBServiceDefaultIngressRules(),
 					EgressRules:  c.GetLBServiceDefaultEgressRules(),
 				}
-				nsgs[3] = &infrastructurev1beta2.NSG{
-					Role:         infrastructurev1beta2.PodRole,
+				nsgs[3] = &NSG{
+					Role:         PodRole,
 					Name:         PodDefaultName,
 					IngressRules: c.GetPodDefaultIngressRules(),
 					EgressRules:  c.GetPodDefaultEgressRules(),
@@ -698,9 +697,9 @@ func TestOCIManagedCluster_CreateDefault(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{},
 				Spec: OCIManagedClusterSpec{
 					CompartmentId: "ocid",
-					NetworkSpec: infrastructurev1beta2.NetworkSpec{
-						Vcn: infrastructurev1beta2.VCN{
-							NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							NetworkSecurityGroup: NetworkSecurityGroup{
 								Skip: true,
 							},
 						},

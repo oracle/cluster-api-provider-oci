@@ -52,8 +52,8 @@ type VirtualMachinePoolScopeParams struct {
 	MachinePool             *expclusterv1.MachinePool
 	Client                  client.Client
 	ComputeManagementClient computemanagement.Client
-	OCIManagedCluster       *infrav2exp.OCIManagedCluster
-	OCIManagedControlPlane  *infrav2exp.OCIManagedControlPlane
+	OCIManagedCluster       *infrastructurev1beta2.OCIManagedCluster
+	OCIManagedControlPlane  *infrastructurev1beta2.OCIManagedControlPlane
 	OCIVirtualMachinePool   *expinfra1.OCIVirtualMachinePool
 	ContainerEngineClient   containerengine.Client
 }
@@ -65,10 +65,10 @@ type VirtualMachinePoolScope struct {
 	Cluster                 *clusterv1.Cluster
 	MachinePool             *expclusterv1.MachinePool
 	ComputeManagementClient computemanagement.Client
-	OCIManagedCluster       *infrav2exp.OCIManagedCluster
+	OCIManagedCluster       *infrastructurev1beta2.OCIManagedCluster
 	OCIVirtualMachinePool   *expinfra1.OCIVirtualMachinePool
 	ContainerEngineClient   containerengine.Client
-	OCIManagedControlPlane  *infrav2exp.OCIManagedControlPlane
+	OCIManagedControlPlane  *infrastructurev1beta2.OCIManagedControlPlane
 }
 
 // NewVirtualMachinePoolScope creates a VirtualMachinePoolScope given the VirtualMachinePoolScopeParams

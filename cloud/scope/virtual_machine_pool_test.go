@@ -72,11 +72,11 @@ func TestVirtualMachinePoolCreate(t *testing.T) {
 		var err error
 		mockCtrl = gomock.NewController(t)
 		okeClient = mock_containerengine.NewMockClient(mockCtrl)
-		ociManagedCluster := &infrav2exp.OCIManagedCluster{
+		ociManagedCluster := &infrastructurev1beta2.OCIManagedCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				UID: "cluster_uid",
 			},
-			Spec: infrav2exp.OCIManagedClusterSpec{
+			Spec: infrastructurev1beta2.OCIManagedClusterSpec{
 				CompartmentId: "test-compartment",
 				DefinedTags:   definedTags,
 				NetworkSpec: infrastructurev1beta2.NetworkSpec{
@@ -125,11 +125,11 @@ func TestVirtualMachinePoolCreate(t *testing.T) {
 
 		ms, err = NewVirtualMachinePoolScope(VirtualMachinePoolScopeParams{
 			ContainerEngineClient: okeClient,
-			OCIManagedControlPlane: &infrav2exp.OCIManagedControlPlane{
+			OCIManagedControlPlane: &infrastructurev1beta2.OCIManagedControlPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
-				Spec: infrav2exp.OCIManagedControlPlaneSpec{
+				Spec: infrastructurev1beta2.OCIManagedControlPlaneSpec{
 					ID: common.String("cluster-id"),
 				},
 			},
@@ -427,11 +427,11 @@ func TestVirtualMachinePoolUpdate(t *testing.T) {
 		var err error
 		mockCtrl = gomock.NewController(t)
 		okeClient = mock_containerengine.NewMockClient(mockCtrl)
-		ociManagedCluster := &infrav2exp.OCIManagedCluster{
+		ociManagedCluster := &infrastructurev1beta2.OCIManagedCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				UID: "cluster_uid",
 			},
-			Spec: infrav2exp.OCIManagedClusterSpec{
+			Spec: infrastructurev1beta2.OCIManagedClusterSpec{
 				CompartmentId: "test-compartment",
 				DefinedTags:   definedTags,
 				NetworkSpec: infrastructurev1beta2.NetworkSpec{
@@ -480,11 +480,11 @@ func TestVirtualMachinePoolUpdate(t *testing.T) {
 
 		ms, err = NewVirtualMachinePoolScope(VirtualMachinePoolScopeParams{
 			ContainerEngineClient: okeClient,
-			OCIManagedControlPlane: &infrav2exp.OCIManagedControlPlane{
+			OCIManagedControlPlane: &infrastructurev1beta2.OCIManagedControlPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
-				Spec: infrav2exp.OCIManagedControlPlaneSpec{
+				Spec: infrastructurev1beta2.OCIManagedControlPlaneSpec{
 					ID: common.String("cluster-id"),
 				},
 			},

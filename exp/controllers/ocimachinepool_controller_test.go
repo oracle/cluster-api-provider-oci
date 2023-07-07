@@ -43,6 +43,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+var (
+	MockTestRegion = "us-austin-1"
+)
+
 func TestMachinePoolReconciliation(t *testing.T) {
 	var (
 		r        OCIMachinePoolReconciler
@@ -211,11 +215,13 @@ func TestReconciliationFunction(t *testing.T) {
 		ociCluster := getOCIClusterWithOwner()
 		ms, err = scope.NewMachinePoolScope(scope.MachinePoolScopeParams{
 			ComputeManagementClient: computeManagementClient,
-			OCICluster:              ociCluster,
-			Cluster:                 getCluster(),
-			Client:                  client,
-			OCIMachinePool:          ociMachinePool,
-			MachinePool:             machinePool,
+			OCIClusterAccessor: scope.OCISelfManagedCluster{
+				OCICluster: ociCluster,
+			},
+			Cluster:        getCluster(),
+			Client:         client,
+			OCIMachinePool: ociMachinePool,
+			MachinePool:    machinePool,
 		})
 
 		recorder = record.NewFakeRecorder(2)
@@ -460,11 +466,13 @@ func TestDeleteeconciliationFunction(t *testing.T) {
 		ociCluster := getOCIClusterWithOwner()
 		ms, err = scope.NewMachinePoolScope(scope.MachinePoolScopeParams{
 			ComputeManagementClient: computeManagementClient,
-			OCICluster:              ociCluster,
-			Cluster:                 getCluster(),
-			Client:                  client,
-			OCIMachinePool:          ociMachinePool,
-			MachinePool:             machinePool,
+			OCIClusterAccessor: scope.OCISelfManagedCluster{
+				OCICluster: ociCluster,
+			},
+			Cluster:        getCluster(),
+			Client:         client,
+			OCIMachinePool: ociMachinePool,
+			MachinePool:    machinePool,
 		})
 
 		recorder = record.NewFakeRecorder(2)
@@ -651,5 +659,24 @@ func expectMachinePoolConditions(g *WithT, m *infrav2exp.OCIMachinePool, expecte
 		g.Expect(actual.Status).To(Equal(c.status))
 		g.Expect(actual.Severity).To(Equal(c.severity))
 		g.Expect(actual.Reason).To(Equal(c.reason))
+	}
+}
+
+type conditionAssertion struct {
+	conditionType clusterv1.ConditionType
+	status        corev1.ConditionStatus
+	severity      clusterv1.ConditionSeverity
+	reason        string
+}
+
+func getSecret() *corev1.Secret {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "bootstrap",
+			Namespace: "test",
+		},
+		Data: map[string][]byte{
+			"value": []byte("test"),
+		},
 	}
 }

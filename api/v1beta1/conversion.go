@@ -121,7 +121,24 @@ func Convert_v1beta1_OCIMachineSpec_To_v1beta2_OCIMachineSpec(in *OCIMachineSpec
 }
 
 // Convert_v1beta2_LoadBalancer_To_v1beta1_LoadBalancer converts v1beta2 LoadBalancer to v1beta1 LoadBalancer
-
 func Convert_v1beta2_LoadBalancer_To_v1beta1_LoadBalancer(in *v1beta2.LoadBalancer, out *LoadBalancer, s conversion.Scope) error {
 	return autoConvert_v1beta2_LoadBalancer_To_v1beta1_LoadBalancer(in, out, s)
+}
+
+func Convert_v1beta2_OCIManagedControlPlaneStatus_To_v1beta1_OCIManagedControlPlaneStatus(in *v1beta2.OCIManagedControlPlaneStatus, out *OCIManagedControlPlaneStatus, s conversion.Scope) error {
+	return autoConvert_v1beta2_OCIManagedControlPlaneStatus_To_v1beta1_OCIManagedControlPlaneStatus(in, out, s)
+}
+
+func Convert_v1beta2_OCIManagedControlPlaneSpec_To_v1beta1_OCIManagedControlPlaneSpec(in *v1beta2.OCIManagedControlPlaneSpec, out *OCIManagedControlPlaneSpec, s conversion.Scope) error {
+	return autoConvert_v1beta2_OCIManagedControlPlaneSpec_To_v1beta1_OCIManagedControlPlaneSpec(in, out, s)
+}
+
+// Convert_v1beta1_OCIManagedClusterStatus_To_v1beta2_OCIManagedClusterStatus converts v1beta1 OCIManagedClusterStatus to v1beta2 OCIManagedClusterStatus
+func Convert_v1beta1_OCIManagedClusterStatus_To_v1beta2_OCIManagedClusterStatus(in *OCIManagedClusterStatus, out *v1beta2.OCIManagedClusterStatus, s conversion.Scope) error {
+	return autoConvert_v1beta1_OCIManagedClusterStatus_To_v1beta2_OCIManagedClusterStatus(in, out, s)
+}
+
+// Convert_v1beta2_OCIManagedClusterSpec_To_v1beta1_OCIManagedClusterSpec converts v1beta1 OCIManagedClusterSpec to v1beta2 OCIManagedClusterSpec
+func Convert_v1beta2_OCIManagedClusterSpec_To_v1beta1_OCIManagedClusterSpec(in *v1beta2.OCIManagedClusterSpec, out *OCIManagedClusterSpec, s conversion.Scope) error {
+	return autoConvert_v1beta2_OCIManagedClusterSpec_To_v1beta1_OCIManagedClusterSpec(in, out, s)
 }

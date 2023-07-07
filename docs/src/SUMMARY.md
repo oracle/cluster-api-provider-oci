@@ -38,6 +38,7 @@
   - [Private Cluster](./networking/private-cluster.md)
 - [Managed Clusters (OKE)](./managed/managedcluster.md)
   - [Virtual Nodes and Enhanced Clusters](./managed/virtual-nodes-and-enhanced-clusters.md)
+  - [Self managed nodes](./managed/self-managed-nodes.md)
   - [Boot volume expansion](./managed/boot-volume-expansion.md)
   - [Networking customizations](./managed/networking.md)
   - [Features](./managed/features.md)

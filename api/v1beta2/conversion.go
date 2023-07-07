@@ -45,3 +45,18 @@ func (*OCIClusterIdentity) Hub() {}
 
 // Hub marks OCIClusterIdentityList as a conversion hub.
 func (*OCIClusterIdentityList) Hub() {}
+
+// Hub marks OCIManagedControlPlane as a conversion hub.
+func (*OCIManagedControlPlane) Hub() {}
+
+// Hub marks OCIManagedCluster as a conversion hub.
+func (*OCIManagedCluster) Hub() {}
+
+// Hub marks OCIManagedClusterTemplate as a conversion hub.
+func (*OCIManagedClusterTemplate) Hub() {}
+
+// Hub marks OCIManagedClusterTemplateList as a conversion hub.
+func (*OCIManagedClusterTemplateList) Hub() {}
+
+// Hub marks OCIManagedControlPlaneList as a conversion hub.
+func (*OCIManagedControlPlaneList) Hub() {}

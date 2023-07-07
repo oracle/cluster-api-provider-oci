@@ -46,6 +46,8 @@ type OCIClusterAccessor interface {
 	GetClientOverrides() *infrastructurev1beta2.ClientOverrides
 	// GetNetworkSpec returns the NetworkSpec of the cluster.
 	GetNetworkSpec() *infrastructurev1beta2.NetworkSpec
+	// GetControlPlaneEndpoint returns the control plane endpoint of the cluster.
+	GetControlPlaneEndpoint() clusterv1.APIEndpoint
 	// SetControlPlaneEndpoint sets the control plane endpoint of the cluster.
 	SetControlPlaneEndpoint(endpoint clusterv1.APIEndpoint)
 	// GetFailureDomains returns the failure domains of the cluster.
@@ -60,4 +62,6 @@ type OCIClusterAccessor interface {
 	MarkConditionFalse(t clusterv1.ConditionType, reason string, severity clusterv1.ConditionSeverity, messageFormat string, messageArgs ...interface{})
 	// GetIdentityRef returns the Identity reference of the cluster
 	GetIdentityRef() *corev1.ObjectReference
+	// GetProviderID returns the provider id for the instance
+	GetProviderID(instanceId string) string
 }

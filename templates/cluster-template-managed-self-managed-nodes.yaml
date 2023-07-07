@@ -1,0 +1,283 @@
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Cluster
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: "${CLUSTER_NAME}"
+  name: "${CLUSTER_NAME}"
+  namespace: "${NAMESPACE}"
+spec:
+  infrastructureRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+    kind: OCIManagedCluster
+    name: "${CLUSTER_NAME}"
+    namespace: "${NAMESPACE}"
+  controlPlaneRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+    kind: OCIManagedControlPlane
+    name: "${CLUSTER_NAME}"
+    namespace: "${NAMESPACE}"
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: OCIManagedCluster
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: "${CLUSTER_NAME}"
+  name: "${CLUSTER_NAME}"
+spec:
+  compartmentId: "${OCI_COMPARTMENT_ID}"
+  networkSpec:
+    apiServerLoadBalancer:
+      name: ""
+    vcn:
+      cidr: 10.0.0.0/16
+      networkSecurityGroup:
+        list:
+          - egressRules:
+              - egressRule:
+                  description: Allow Kubernetes API endpoint to communicate with OKE.
+                  destination: all-iad-services-in-oracle-services-network
+                  destinationType: SERVICE_CIDR_BLOCK
+                  isStateless: false
+                  protocol: "6"
+              - egressRule:
+                  description: Path Discovery.
+                  destination: all-iad-services-in-oracle-services-network
+                  destinationType: SERVICE_CIDR_BLOCK
+                  icmpOptions:
+                    code: 4
+                    type: 3
+                  isStateless: false
+                  protocol: "1"
+              - egressRule:
+                  description: Allow Kubernetes API endpoint to communicate with worker
+                    nodes.
+                  destination: 10.0.64.0/20
+                  destinationType: CIDR_BLOCK
+                  isStateless: false
+                  protocol: "6"
+                  tcpOptions:
+                    destinationPortRange:
+                      max: 10250
+                      min: 10250
+              - egressRule:
+                  description: Path Discovery.
+                  destination: 10.0.64.0/20
+                  destinationType: CIDR_BLOCK
+                  icmpOptions:
+                    code: 4
+                    type: 3
+                  isStateless: false
+                  protocol: "1"
+            ingressRules:
+              - ingressRule:
+                  description: Kubernetes worker to Kubernetes API endpoint communication.
+                  isStateless: false
+                  protocol: "6"
+                  source: 10.0.64.0/20
+                  sourceType: CIDR_BLOCK
+                  tcpOptions:
+                    destinationPortRange:
+                      max: 6443
+                      min: 6443
+              - ingressRule:
+                  description: Kubernetes worker to Kubernetes API endpoint communication.
+                  isStateless: false
+                  protocol: "6"
+                  source: 10.0.64.0/20
+                  sourceType: CIDR_BLOCK
+                  tcpOptions:
+                    destinationPortRange:
+                      max: 12250
+                      min: 12250
+              - ingressRule:
+                  description: Path Discovery.
+                  icmpOptions:
+                    code: 4
+                    type: 3
+                  isStateless: false
+                  protocol: "1"
+                  source: 10.0.64.0/20
+                  sourceType: CIDR_BLOCK
+              - ingressRule:
+                  description: External access to Kubernetes API endpoint.
+                  isStateless: false
+                  protocol: "6"
+                  source: 0.0.0.0/0
+                  sourceType: CIDR_BLOCK
+                  tcpOptions:
+                    destinationPortRange:
+                      max: 6443
+                      min: 6443
+            name: control-plane-endpoint
+            role: control-plane-endpoint
+          - egressRules:
+              - egressRule:
+                  description: Allow pods on one worker node to communicate with pods on other worker nodes.
+                  destination: "10.0.64.0/20"
+                  destinationType: CIDR_BLOCK
+                  isStateless: false
+                  protocol: "all"
+              - egressRule:
+                  description: Allow worker nodes to communicate with OKE.
+                  destination: all-iad-services-in-oracle-services-network
+                  destinationType: SERVICE_CIDR_BLOCK
+                  isStateless: false
+                  protocol: "6"
+              - egressRule:
+                  description: Path Discovery.
+                  destination: 0.0.0.0/0
+                  destinationType: CIDR_BLOCK
+                  icmpOptions:
+                    code: 4
+                    type: 3
+                  isStateless: false
+                  protocol: "1"
+              - egressRule:
+                  description: Kubernetes worker to Kubernetes API endpoint communication.
+                  destination: 10.0.0.8/29
+                  destinationType: CIDR_BLOCK
+                  isStateless: false
+                  protocol: "6"
+                  tcpOptions:
+                    destinationPortRange:
+                      max: 6443
+                      min: 6443
+              - egressRule:
+                  description: Kubernetes worker to Kubernetes API endpoint communication.
+                  destination: 10.0.0.8/29
+                  destinationType: CIDR_BLOCK
+                  isStateless: false
+                  protocol: "6"
+                  tcpOptions:
+                    destinationPortRange:
+                      max: 12250
+                      min: 12250
+            ingressRules:
+              - ingressRule:
+                  description: Allow pods on one worker node to communicate with pods on other worker nodes.
+                  isStateless: false
+                  protocol: "all"
+                  source: 10.0.64.0/20
+                  sourceType: CIDR_BLOCK
+              - ingressRule:
+                  description: Allow Kubernetes API endpoint to communicate with worker nodes.
+                  isStateless: false
+                  protocol: "6"
+                  source: 10.0.0.8/29
+                  sourceType: CIDR_BLOCK
+              - ingressRule:
+                  description: Path Discovery.
+                  icmpOptions:
+                    code: 4
+                    type: 3
+                  isStateless: false
+                  protocol: "1"
+                  source: 0.0.0.0/0
+                  sourceType: CIDR_BLOCK
+              - ingressRule:
+                  description: Load Balancer to Worker nodes node ports.
+                  isStateless: false
+                  protocol: "6"
+                  source: 10.0.0.32/27
+                  sourceType: CIDR_BLOCK
+                  tcpOptions:
+                    destinationPortRange:
+                      max: 32767
+                      min: 30000
+            name: worker
+            role: worker
+          - egressRules:
+              - egressRule:
+                  description: Load Balancer to Worker nodes node ports.
+                  destination: 10.0.64.0/20
+                  destinationType: CIDR_BLOCK
+                  isStateless: false
+                  protocol: "6"
+                  tcpOptions:
+                    destinationPortRange:
+                      max: 32767
+                      min: 30000
+            ingressRules:
+              - ingressRule:
+                  description: Accept http traffic on port 80
+                  isStateless: false
+                  protocol: "6"
+                  source: 0.0.0.0/0
+                  sourceType: CIDR_BLOCK
+                  tcpOptions:
+                    destinationPortRange:
+                      max: 80
+                      min: 80
+              - ingressRule:
+                  description: Accept https traffic on port 443
+                  isStateless: false
+                  protocol: "6"
+                  source: 0.0.0.0/0
+                  sourceType: CIDR_BLOCK
+                  tcpOptions:
+                    destinationPortRange:
+                      max: 443
+                      min: 443
+            name: service-lb
+            role: service-lb
+      subnets:
+        - cidr: 10.0.0.8/29
+          name: control-plane-endpoint
+          role: control-plane-endpoint
+          type: public
+        - cidr: 10.0.0.32/27
+          name: service-lb
+          role: service-lb
+          type: public
+        - cidr: 10.0.64.0/20
+          name: worker
+          role: worker
+          type: private
+---
+kind: OCIManagedControlPlane
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+metadata:
+  name: "${CLUSTER_NAME}"
+  namespace: "${NAMESPACE}"
+spec:
+  version: "${KUBERNETES_VERSION}"
+  clusterType: "ENHANCED_CLUSTER"
+  clusterPodNetworkOptions:
+    - cniType: "FLANNEL_OVERLAY"
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: OCIMachineTemplate
+metadata:
+  name: "${CLUSTER_NAME}-md-0"
+spec:
+  template:
+    spec:
+      imageId: "${OCI_MANAGED_NODE_IMAGE_ID}"
+      compartmentId: "${OCI_COMPARTMENT_ID}"
+      shape: "${OCI_NODE_MACHINE_TYPE=VM.Standard.E4.Flex}"
+      shapeConfig:
+        ocpus: "${OCI_NODE_MACHINE_TYPE_OCPUS=1}"
+      metadata:
+        ssh_authorized_keys: "${OCI_SSH_KEY}"
+      isPvEncryptionInTransitEnabled: ${OCI_NODE_PV_TRANSIT_ENCRYPTION=true}
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  name: "${CLUSTER_NAME}-md-0"
+spec:
+  clusterName: "${CLUSTER_NAME}"
+  replicas: ${WORKER_MACHINE_COUNT}
+  selector:
+    matchLabels:
+  template:
+    spec:
+      clusterName: "${CLUSTER_NAME}"
+      version: "${KUBERNETES_VERSION}"
+      bootstrap:
+        dataSecretName: "${CLUSTER_NAME}-self-managed"
+      infrastructureRef:
+        name: "${CLUSTER_NAME}-md-0"
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        kind: OCIMachineTemplate
+---

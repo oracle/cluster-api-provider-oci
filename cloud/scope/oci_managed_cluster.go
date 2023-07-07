@@ -18,7 +18,6 @@ package scope
 
 import (
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
-	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	corev1 "k8s.io/api/core/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -26,7 +25,7 @@ import (
 
 // OCIManagedCluster is the ClusterAccessor implementation for managed clusters(OKE)
 type OCIManagedCluster struct {
-	OCIManagedCluster *infrav2exp.OCIManagedCluster
+	OCIManagedCluster *infrastructurev1beta2.OCIManagedCluster
 }
 
 func (c OCIManagedCluster) GetNameSpace() string {
@@ -86,6 +85,10 @@ func (c OCIManagedCluster) SetControlPlaneEndpoint(endpoint clusterv1.APIEndpoin
 	c.OCIManagedCluster.Spec.ControlPlaneEndpoint = endpoint
 }
 
+func (c OCIManagedCluster) GetControlPlaneEndpoint() clusterv1.APIEndpoint {
+	return c.OCIManagedCluster.Spec.ControlPlaneEndpoint
+}
+
 func (c OCIManagedCluster) GetFailureDomains() clusterv1.FailureDomains {
 	return c.OCIManagedCluster.Status.FailureDomains
 }
@@ -101,4 +104,8 @@ func (c OCIManagedCluster) GetAvailabilityDomains() map[string]infrastructurev1b
 }
 func (c OCIManagedCluster) SetAvailabilityDomains(ads map[string]infrastructurev1beta2.OCIAvailabilityDomain) {
 	c.OCIManagedCluster.Spec.AvailabilityDomains = ads
+}
+
+func (c OCIManagedCluster) GetProviderID(instanceId string) string {
+	return instanceId
 }

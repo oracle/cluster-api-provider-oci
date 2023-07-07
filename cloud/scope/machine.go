@@ -58,7 +58,7 @@ type MachineScopeParams struct {
 	Machine                   *clusterv1.Machine
 	Client                    client.Client
 	ComputeClient             compute.ComputeClient
-	OCICluster                *infrastructurev1beta2.OCICluster
+	OCIClusterAccessor        OCIClusterAccessor
 	OCIMachine                *infrastructurev1beta2.OCIMachine
 	VCNClient                 vcn.Client
 	NetworkLoadBalancerClient nlb.NetworkLoadBalancerClient
@@ -72,7 +72,7 @@ type MachineScope struct {
 	Cluster                   *clusterv1.Cluster
 	Machine                   *clusterv1.Machine
 	ComputeClient             compute.ComputeClient
-	OCICluster                *infrastructurev1beta2.OCICluster
+	OCIClusterAccessor        OCIClusterAccessor
 	OCIMachine                *infrastructurev1beta2.OCIMachine
 	VCNClient                 vcn.Client
 	NetworkLoadBalancerClient nlb.NetworkLoadBalancerClient
@@ -84,7 +84,7 @@ func NewMachineScope(params MachineScopeParams) (*MachineScope, error) {
 	if params.Machine == nil {
 		return nil, errors.New("failed to generate new scope from nil Machine")
 	}
-	if params.OCICluster == nil {
+	if params.OCIClusterAccessor == nil {
 		return nil, errors.New("failed to generate new scope from nil OCICluster")
 	}
 
@@ -102,7 +102,7 @@ func NewMachineScope(params MachineScopeParams) (*MachineScope, error) {
 		Client:                    params.Client,
 		ComputeClient:             params.ComputeClient,
 		Cluster:                   params.Cluster,
-		OCICluster:                params.OCICluster,
+		OCIClusterAccessor:        params.OCIClusterAccessor,
 		patchHelper:               helper,
 		Machine:                   params.Machine,
 		OCIMachine:                params.OCIMachine,
@@ -227,12 +227,12 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 	}
 	metadata["user_data"] = base64.StdEncoding.EncodeToString([]byte(cloudInitData))
 
-	tags := m.getFreeFormTags(*m.OCICluster)
+	tags := m.getFreeFormTags()
 
 	definedTags := ConvertMachineDefinedTags(m.OCIMachine.Spec.DefinedTags)
 
-	availabilityDomain := m.OCICluster.Status.FailureDomains[*failureDomain].Attributes[AvailabilityDomain]
-	faultDomain := m.OCICluster.Status.FailureDomains[*failureDomain].Attributes[FaultDomain]
+	availabilityDomain := m.OCIClusterAccessor.GetFailureDomains()[*failureDomain].Attributes[AvailabilityDomain]
+	faultDomain := m.OCIClusterAccessor.GetFailureDomains()[*failureDomain].Attributes[FaultDomain]
 	launchDetails := core.LaunchInstanceDetails{DisplayName: common.String(m.OCIMachine.Name),
 		SourceDetails: sourceDetails,
 		CreateVnicDetails: &core.CreateVnicDetails{
@@ -283,11 +283,11 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 	}
 }
 
-func (m *MachineScope) getFreeFormTags(ociCluster infrastructurev1beta2.OCICluster) map[string]string {
-	tags := ociutil.BuildClusterTags(ociCluster.GetOCIResourceIdentifier())
+func (m *MachineScope) getFreeFormTags() map[string]string {
+	tags := ociutil.BuildClusterTags(m.OCIClusterAccessor.GetOCIResourceIdentifier())
 	// first use cluster level tags, then override with machine level tags
-	if ociCluster.Spec.FreeformTags != nil {
-		for k, v := range ociCluster.Spec.FreeformTags {
+	if m.OCIClusterAccessor.GetFreeformTags() != nil {
+		for k, v := range m.OCIClusterAccessor.GetFreeformTags() {
 			tags[k] = v
 		}
 	}
@@ -310,7 +310,7 @@ func (m *MachineScope) DeleteMachine(ctx context.Context) error {
 // IsResourceCreatedByClusterAPI determines if the instance was created by the cluster using the
 // tags created at instance launch.
 func (m *MachineScope) IsResourceCreatedByClusterAPI(resourceFreeFormTags map[string]string) bool {
-	tagsAddedByClusterAPI := ociutil.BuildClusterTags(string(m.OCICluster.GetOCIResourceIdentifier()))
+	tagsAddedByClusterAPI := ociutil.BuildClusterTags(string(m.OCIClusterAccessor.GetOCIResourceIdentifier()))
 	for k, v := range tagsAddedByClusterAPI {
 		if resourceFreeFormTags[k] != v {
 			return false
@@ -499,12 +499,12 @@ func (m *MachineScope) ReconcileCreateInstanceOnLB(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	loadbalancerId := m.OCICluster.Spec.NetworkSpec.APIServerLB.LoadBalancerId
+	loadbalancerId := m.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerId
 	m.Logger.Info("Private IP of the instance", "private-ip", instanceIp)
 	m.Logger.Info("Control Plane load balancer", "id", loadbalancerId)
 
 	// Check the load balancer type
-	loadbalancerType := m.OCICluster.Spec.NetworkSpec.APIServerLB.LoadBalancerType
+	loadbalancerType := m.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerType
 	// By default, the load balancer type is Network Load Balancer
 	// Unless user specifies the load balancer type to be LBaaS
 	if loadbalancerType == infrastructurev1beta2.LoadBalancerTypeLB {
@@ -517,7 +517,7 @@ func (m *MachineScope) ReconcileCreateInstanceOnLB(ctx context.Context) error {
 		backendSet := lb.BackendSets[APIServerLBBackendSetName]
 		// When creating a LB, there is no way to set the backend Name, default backend name is the instance IP and port
 		// So we use default backend name instead of machine name
-		backendName := instanceIp + ":" + strconv.Itoa(int(m.OCICluster.Spec.ControlPlaneEndpoint.Port))
+		backendName := instanceIp + ":" + strconv.Itoa(int(m.OCIClusterAccessor.GetControlPlaneEndpoint().Port))
 		if !m.containsLBBackend(backendSet, backendName) {
 			logger := m.Logger.WithValues("backend-set", *backendSet.Name)
 			workRequest := m.OCIMachine.Status.CreateBackendWorkRequestId
@@ -533,7 +533,7 @@ func (m *MachineScope) ReconcileCreateInstanceOnLB(ctx context.Context) error {
 					BackendSetName: backendSet.Name,
 					CreateBackendDetails: loadbalancer.CreateBackendDetails{
 						IpAddress: common.String(instanceIp),
-						Port:      common.Int(int(m.OCICluster.Spec.ControlPlaneEndpoint.Port)),
+						Port:      common.Int(int(m.OCIClusterAccessor.GetControlPlaneEndpoint().Port)),
 					},
 					OpcRetryToken: ociutil.GetOPCRetryToken("%s-%s", "create-backend", string(m.OCIMachine.UID)),
 				})
@@ -573,7 +573,7 @@ func (m *MachineScope) ReconcileCreateInstanceOnLB(ctx context.Context) error {
 					BackendSetName:        backendSet.Name,
 					CreateBackendDetails: networkloadbalancer.CreateBackendDetails{
 						IpAddress: common.String(instanceIp),
-						Port:      common.Int(int(m.OCICluster.Spec.ControlPlaneEndpoint.Port)),
+						Port:      common.Int(int(m.OCIClusterAccessor.GetControlPlaneEndpoint().Port)),
 						Name:      common.String(m.Name()),
 					},
 					OpcRetryToken: ociutil.GetOPCRetryToken("%s-%s", "create-backend", string(m.OCIMachine.UID)),
@@ -604,9 +604,9 @@ func (m *MachineScope) ReconcileCreateInstanceOnLB(ctx context.Context) error {
 // See https://docs.oracle.com/en-us/iaas/Content/NetworkLoadBalancer/BackendServers/backend_server_management.htm#BackendServerManagement
 // for more info on Backend Server Management
 func (m *MachineScope) ReconcileDeleteInstanceOnLB(ctx context.Context) error {
-	loadbalancerId := m.OCICluster.Spec.NetworkSpec.APIServerLB.LoadBalancerId
+	loadbalancerId := m.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerId
 	// Check the load balancer type
-	loadbalancerType := m.OCICluster.Spec.NetworkSpec.APIServerLB.LoadBalancerType
+	loadbalancerType := m.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerType
 	if loadbalancerType == infrastructurev1beta2.LoadBalancerTypeLB {
 		lb, err := m.LoadBalancerClient.GetLoadBalancer(ctx, loadbalancer.GetLoadBalancerRequest{
 			LoadBalancerId: loadbalancerId,
@@ -625,7 +625,7 @@ func (m *MachineScope) ReconcileDeleteInstanceOnLB(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		backendName := instanceIp + ":" + strconv.Itoa(int(m.OCICluster.Spec.ControlPlaneEndpoint.Port))
+		backendName := instanceIp + ":" + strconv.Itoa(int(m.OCIClusterAccessor.GetControlPlaneEndpoint().Port))
 		if m.containsLBBackend(backendSet, backendName) {
 			logger := m.Logger.WithValues("backend-set", *backendSet.Name)
 			workRequest := m.OCIMachine.Status.DeleteBackendWorkRequestId
@@ -728,11 +728,11 @@ func (m *MachineScope) getCompartmentId() string {
 	if m.OCIMachine.Spec.CompartmentId != "" {
 		return m.OCIMachine.Spec.CompartmentId
 	}
-	return m.OCICluster.Spec.CompartmentId
+	return m.OCIClusterAccessor.GetCompartmentId()
 }
 
 func (m *MachineScope) getGetControlPlaneMachineSubnet() *string {
-	for _, subnet := range m.OCICluster.Spec.NetworkSpec.Vcn.Subnets {
+	for _, subnet := range m.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets {
 		if subnet.Role == infrastructurev1beta2.ControlPlaneRole {
 			return subnet.ID
 		}
@@ -742,7 +742,7 @@ func (m *MachineScope) getGetControlPlaneMachineSubnet() *string {
 
 func (m *MachineScope) getGetControlPlaneMachineNSGs() []string {
 	nsgs := make([]string, 0)
-	for _, nsg := range m.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
+	for _, nsg := range m.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List {
 		if nsg.Role == infrastructurev1beta2.ControlPlaneRole {
 			nsgs = append(nsgs, *nsg.ID)
 		}
@@ -753,16 +753,16 @@ func (m *MachineScope) getGetControlPlaneMachineNSGs() []string {
 // getMachineSubnet iterates through the OCICluster Vcn subnets
 // and returns the subnet ID if the name matches
 func (m *MachineScope) getMachineSubnet(name string) (*string, error) {
-	for _, subnet := range m.OCICluster.Spec.NetworkSpec.Vcn.Subnets {
+	for _, subnet := range m.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets {
 		if subnet.Name == name {
 			return subnet.ID, nil
 		}
 	}
-	return nil, errors.New(fmt.Sprintf("Subnet with name %s not found for cluster %s", name, m.OCICluster.Name))
+	return nil, errors.New(fmt.Sprintf("Subnet with name %s not found for cluster %s", name, m.OCIClusterAccessor.GetName()))
 }
 
 func (m *MachineScope) getWorkerMachineSubnet() *string {
-	for _, subnet := range m.OCICluster.Spec.NetworkSpec.Vcn.Subnets {
+	for _, subnet := range m.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets {
 		if subnet.Role == infrastructurev1beta2.WorkerRole {
 			// if a subnet name is defined, use the correct subnet
 			if m.OCIMachine.Spec.SubnetName != "" {
@@ -781,7 +781,7 @@ func (m *MachineScope) getWorkerMachineNSGs() []string {
 	if len(m.OCIMachine.Spec.NetworkDetails.NsgNames) > 0 {
 		nsgs := make([]string, 0)
 		for _, nsgName := range m.OCIMachine.Spec.NetworkDetails.NsgNames {
-			for _, nsg := range m.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
+			for _, nsg := range m.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List {
 				if nsg.Name == nsgName {
 					nsgs = append(nsgs, *nsg.ID)
 				}
@@ -790,7 +790,7 @@ func (m *MachineScope) getWorkerMachineNSGs() []string {
 		return nsgs
 	} else {
 		nsgs := make([]string, 0)
-		for _, nsg := range m.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
+		for _, nsg := range m.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List {
 			if nsg.Role == infrastructurev1beta2.WorkerRole {
 				nsgs = append(nsgs, *nsg.ID)
 			}
