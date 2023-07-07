@@ -132,8 +132,6 @@ rules:
       - "extension-apiserver-authentication"
     verbs:
       - get
-      - list
-      - watch
 
   - apiGroups:
       - ""
@@ -374,6 +372,14 @@ spec:
       terminationGracePeriodSeconds: 30
       tolerations:
         - operator: Exists
+---
+apiVersion: storage.k8s.io/v1
+kind: CSIDriver
+metadata:
+  name: fss.csi.oraclecloud.com
+spec:
+  attachRequired: false
+  podInfoOnMount: false
 ---
 apiVersion: storage.k8s.io/v1
 kind: CSIDriver
@@ -655,6 +661,21 @@ rules:
   - apiGroups: [""]
     resources: ["persistentvolumeclaims/status"]
     verbs: ["patch"]
+  - apiGroups: [ "snapshot.storage.k8s.io" ]
+    resources: [ "volumesnapshotclasses" ]
+    verbs: [ "get", "list", "watch" ]
+  - apiGroups: [ "snapshot.storage.k8s.io" ]
+    resources: [ "volumesnapshotcontents" ]
+    verbs: [ "create", "get", "list", "watch", "update", "delete", "patch" ]
+  - apiGroups: [ "snapshot.storage.k8s.io" ]
+    resources: [ "volumesnapshotcontents/status" ]
+    verbs: [ "update", "patch" ]
+  - apiGroups: [ "snapshot.storage.k8s.io" ]
+    resources: [ "volumesnapshots" ]
+    verbs: [ "get", "list", "watch", "update", "patch" ]
+  - apiGroups: [ "snapshot.storage.k8s.io" ]
+    resources: [ "volumesnapshots/status" ]
+    verbs: [ "update", "patch" ]
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
