@@ -465,7 +465,7 @@ data:
             node-role.kubernetes.io/control-plane: ""
           containers:
             - name: csi-volume-provisioner
-              image: k8s.gcr.io/sig-storage/csi-provisioner:v3.2.1
+              image: registry.k8s.io/sig-storage/csi-provisioner:v3.5.0
               args:
                 - --csi-address=/var/run/shared-tmpfs/csi.sock
                 - --volume-name-prefix=csi
@@ -480,7 +480,7 @@ data:
                 - mountPath: /var/run/shared-tmpfs
                   name: shared-tmpfs
             - name: csi-fss-volume-provisioner
-              image: k8s.gcr.io/sig-storage/csi-provisioner:v3.2.1
+              image: registry.k8s.io/sig-storage/csi-provisioner:v3.5.0
               args:
                 - --csi-address=/var/run/shared-tmpfs/csi-fss.sock
                 - --volume-name-prefix=csi-fss
@@ -509,6 +509,23 @@ data:
                   name: shared-tmpfs
             - name: csi-resizer
               image: k8s.gcr.io/sig-storage/csi-resizer:v1.7.0
+              args:
+                - --csi-address=/var/run/shared-tmpfs/csi.sock
+                - --leader-election
+              imagePullPolicy: "IfNotPresent"
+              volumeMounts:
+                - mountPath: /var/run/shared-tmpfs
+                  name: shared-tmpfs
+            - name: snapshot-controller
+              image: registry.k8s.io/sig-storage/snapshot-controller:v6.2.0
+              args:
+                - --leader-election
+              imagePullPolicy: "IfNotPresent"
+              volumeMounts:
+                - mountPath: /var/run/shared-tmpfs
+                  name: shared-tmpfs
+            - name: csi-snapshotter
+              image: registry.k8s.io/sig-storage/csi-snapshotter:v6.2.0
               args:
                 - --csi-address=/var/run/shared-tmpfs/csi.sock
                 - --leader-election
@@ -673,7 +690,7 @@ data:
                       fieldPath: spec.nodeName
                 - name: PATH
                   value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/host/usr/bin:/host/sbin
-              image: ghcr.io/oracle/cloud-provider-oci:v1.25.0
+              image: ghcr.io/oracle/cloud-provider-oci:v1.26.0
               securityContext:
                 privileged: true
               volumeMounts:
@@ -835,8 +852,23 @@ data:
       - apiGroups: [""]
         resources: ["persistentvolumeclaims/status"]
         verbs: ["patch"]
+      - apiGroups: [ "snapshot.storage.k8s.io" ]
+        resources: [ "volumesnapshotclasses" ]
+        verbs: [ "get", "list", "watch" ]
+      - apiGroups: [ "snapshot.storage.k8s.io" ]
+        resources: [ "volumesnapshotcontents" ]
+        verbs: [ "create", "get", "list", "watch", "update", "delete", "patch" ]
+      - apiGroups: [ "snapshot.storage.k8s.io" ]
+        resources: [ "volumesnapshotcontents/status" ]
+        verbs: [ "update", "patch" ]
+      - apiGroups: [ "snapshot.storage.k8s.io" ]
+        resources: [ "volumesnapshots" ]
+        verbs: [ "get", "list", "watch", "update", "patch" ]
+      - apiGroups: [ "snapshot.storage.k8s.io" ]
+        resources: [ "volumesnapshots/status" ]
+        verbs: [ "update", "patch" ]
     ---
-    
+
     kind: ClusterRoleBinding
     apiVersion: rbac.authorization.k8s.io/v1
     metadata:
