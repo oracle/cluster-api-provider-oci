@@ -29,6 +29,7 @@ import (
 
 const (
 	UseInstancePrincipal = "useInstancePrincipal"
+	UseWorkloadIdentity  = "useWorkloadIdentity"
 	Tenancy              = "tenancy"
 	User                 = "user"
 	Passphrase           = "passphrase"
@@ -47,6 +48,7 @@ type AuthConfig struct {
 	Fingerprint           string `yaml:"fingerprint"`
 	Passphrase            string `yaml:"passphrase"`
 	UseInstancePrincipals bool   `yaml:"useInstancePrincipals"`
+	UseWorkloadIdentity   bool   `yaml:"useWorkloadIdentity"`
 }
 
 // FromDir will load a cloud provider configuration file from a given directory.
@@ -106,6 +108,18 @@ func getConfigFromDir(path string) (*AuthConfig, error) {
 		cfg.UseInstancePrincipals = useInstancePrincipal
 		return cfg, nil
 	}
+	useWorkloadIdentityString, err := ReadFile(path, UseWorkloadIdentity)
+	if err != nil {
+		return nil, err
+	}
+	useWorkloadIdentity, err := strconv.ParseBool(useWorkloadIdentityString)
+	if err != nil {
+		return nil, err
+	}
+	if useWorkloadIdentity {
+		cfg.UseWorkloadIdentity = useWorkloadIdentity
+		return cfg, nil
+	}
 	region, err := ReadFile(path, Region)
 	if err != nil {
 		return nil, err
@@ -148,6 +162,8 @@ func getConfigFromDir(path string) (*AuthConfig, error) {
 func NewConfigurationProvider(cfg *AuthConfig) (common.ConfigurationProvider, error) {
 	if cfg.UseInstancePrincipals {
 		return auth.InstancePrincipalConfigurationProvider()
+	} else if cfg.UseWorkloadIdentity {
+		return auth.OkeWorkloadIdentityConfigurationProvider()
 	} else {
 		return NewConfigurationProviderWithUserPrincipal(cfg)
 	}
