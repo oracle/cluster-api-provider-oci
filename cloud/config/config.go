@@ -163,6 +163,7 @@ func NewConfigurationProvider(cfg *AuthConfig) (common.ConfigurationProvider, er
 	if cfg.UseInstancePrincipals {
 		return auth.InstancePrincipalConfigurationProvider()
 	} else if cfg.UseWorkloadIdentity {
+		os.Setenv(auth.ResourcePrincipalVersionEnvVar, auth.ResourcePrincipalVersion2_2)
 		return auth.OkeWorkloadIdentityConfigurationProvider()
 	} else {
 		return NewConfigurationProviderWithUserPrincipal(cfg)
