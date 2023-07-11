@@ -516,23 +516,6 @@ data:
               volumeMounts:
                 - mountPath: /var/run/shared-tmpfs
                   name: shared-tmpfs
-            - name: snapshot-controller
-              image: registry.k8s.io/sig-storage/snapshot-controller:v6.2.0
-              args:
-                - --leader-election
-              imagePullPolicy: "IfNotPresent"
-              volumeMounts:
-                - mountPath: /var/run/shared-tmpfs
-                  name: shared-tmpfs
-            - name: csi-snapshotter
-              image: registry.k8s.io/sig-storage/csi-snapshotter:v6.2.0
-              args:
-                - --csi-address=/var/run/shared-tmpfs/csi.sock
-                - --leader-election
-              imagePullPolicy: "IfNotPresent"
-              volumeMounts:
-                - mountPath: /var/run/shared-tmpfs
-                  name: shared-tmpfs
             - name: oci-csi-controller-driver
               args:
                 - --endpoint=unix://var/run/shared-tmpfs/csi.sock
