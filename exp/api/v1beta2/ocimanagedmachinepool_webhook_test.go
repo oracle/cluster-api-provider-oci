@@ -135,7 +135,7 @@ func TestOCIManagedMachinePool_ValidateCreate(t *testing.T) {
 			g := gomega.NewWithT(t)
 
 			if test.expectErr {
-				err := test.m.ValidateCreate()
+				_, err := test.m.ValidateCreate()
 				g.Expect(err).NotTo(gomega.Succeed())
 				g.Expect(strings.Contains(err.Error(), test.errorMgsShouldContain)).To(gomega.BeTrue())
 			} else {
@@ -283,7 +283,7 @@ func TestOCIManagedMachinePool_ValidateUpdate(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := gomega.NewWithT(t)
-			err := test.m.ValidateUpdate(test.old)
+			_, err := test.m.ValidateUpdate(test.old)
 			if test.expectErr {
 				g.Expect(err).NotTo(gomega.Succeed())
 				g.Expect(strings.Contains(err.Error(), test.errorMgsShouldContain)).To(gomega.BeTrue())

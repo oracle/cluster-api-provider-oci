@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 var virtualMpLogger = ctrl.Log.WithName("ocivirtualmachinepool-resource")
@@ -51,14 +52,14 @@ func (m *OCIVirtualMachinePool) Default() {
 	}
 }
 
-func (m *OCIVirtualMachinePool) ValidateCreate() error {
-	return nil
+func (m *OCIVirtualMachinePool) ValidateCreate() (admission.Warnings, error) {
+	return nil, nil
 }
 
-func (m *OCIVirtualMachinePool) ValidateUpdate(old runtime.Object) error {
-	return nil
+func (m *OCIVirtualMachinePool) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
+	return nil, nil
 }
 
-func (m *OCIVirtualMachinePool) ValidateDelete() error {
-	return nil
+func (m *OCIVirtualMachinePool) ValidateDelete() (admission.Warnings, error) {
+	return nil, nil
 }

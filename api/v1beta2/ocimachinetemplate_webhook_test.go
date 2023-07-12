@@ -99,7 +99,7 @@ func TestOCIMachineTemplate_ValidateCreate(t *testing.T) {
 			g := gomega.NewWithT(t)
 
 			if test.expectErr {
-				err := test.inputTemplate.ValidateCreate()
+				_, err := test.inputTemplate.ValidateCreate()
 				g.Expect(err).NotTo(gomega.Succeed())
 				g.Expect(strings.Contains(err.Error(), test.errorField)).To(gomega.BeTrue())
 			} else {
@@ -115,7 +115,7 @@ func TestOCIMachineTemplate_ValidateUpdate(t *testing.T) {
 			g := gomega.NewWithT(t)
 
 			if test.expectErr {
-				err := test.inputTemplate.ValidateUpdate(nil)
+				_, err := test.inputTemplate.ValidateUpdate(nil)
 				g.Expect(err).NotTo(gomega.Succeed())
 				g.Expect(strings.Contains(err.Error(), test.errorField)).To(gomega.BeTrue())
 			} else {

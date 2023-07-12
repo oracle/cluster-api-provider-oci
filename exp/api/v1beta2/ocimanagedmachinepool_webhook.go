@@ -19,6 +19,7 @@ package v1beta2
 import (
 	"fmt"
 	"reflect"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -60,16 +61,16 @@ func (m *OCIManagedMachinePool) Default() {
 	}
 }
 
-func (m *OCIManagedMachinePool) ValidateCreate() error {
+func (m *OCIManagedMachinePool) ValidateCreate() (admission.Warnings, error) {
 	var allErrs field.ErrorList
 	if len(m.Name) > 31 {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("Name"), m.Name, "Name cannot be more than 31 characters"))
 	}
 	allErrs = m.validateVersion(allErrs)
 	if len(allErrs) == 0 {
-		return nil
+		return nil, nil
 	}
-	return apierrors.NewInvalid(m.GroupVersionKind().GroupKind(), m.Name, allErrs)
+	return nil, apierrors.NewInvalid(m.GroupVersionKind().GroupKind(), m.Name, allErrs)
 }
 
 func (m *OCIManagedMachinePool) validateVersion(allErrs field.ErrorList) field.ErrorList {
@@ -88,11 +89,11 @@ func (m *OCIManagedMachinePool) validateVersion(allErrs field.ErrorList) field.E
 	return allErrs
 }
 
-func (m *OCIManagedMachinePool) ValidateUpdate(old runtime.Object) error {
+func (m *OCIManagedMachinePool) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	var allErrs field.ErrorList
 	oldManagedMachinePool, ok := old.(*OCIManagedMachinePool)
 	if !ok {
-		return apierrors.NewBadRequest(fmt.Sprintf("expected an OCIManagedMachinePool but got a %T", old))
+		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected an OCIManagedMachinePool but got a %T", old))
 	}
 
 	allErrs = m.validateVersion(allErrs)
@@ -113,13 +114,13 @@ func (m *OCIManagedMachinePool) ValidateUpdate(old runtime.Object) error {
 		}
 	}
 	if len(allErrs) == 0 {
-		return nil
+		return nil, nil
 	}
-	return apierrors.NewInvalid(m.GroupVersionKind().GroupKind(), m.Name, allErrs)
+	return nil, apierrors.NewInvalid(m.GroupVersionKind().GroupKind(), m.Name, allErrs)
 }
 
-func (m *OCIManagedMachinePool) ValidateDelete() error {
-	return nil
+func (m *OCIManagedMachinePool) ValidateDelete() (admission.Warnings, error) {
+	return nil, nil
 }
 
 func (m *OCIManagedMachinePool) getImageId() *string {

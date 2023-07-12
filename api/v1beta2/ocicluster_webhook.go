@@ -21,6 +21,7 @@ package v1beta2
 
 import (
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/oracle/oci-go-sdk/v65/common"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -58,7 +59,7 @@ func (c *OCICluster) SetupWebhookWithManager(mgr ctrl.Manager) error {
 }
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
-func (c *OCICluster) ValidateCreate() error {
+func (c *OCICluster) ValidateCreate() (admission.Warnings, error) {
 	clusterlogger.Info("validate update cluster", "name", c.Name)
 
 	var allErrs field.ErrorList
@@ -66,28 +67,28 @@ func (c *OCICluster) ValidateCreate() error {
 	allErrs = append(allErrs, c.validate(nil)...)
 
 	if len(allErrs) == 0 {
-		return nil
+		return nil, nil
 	}
 
-	return apierrors.NewInvalid(c.GroupVersionKind().GroupKind(), c.Name, allErrs)
+	return nil, apierrors.NewInvalid(c.GroupVersionKind().GroupKind(), c.Name, allErrs)
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
-func (c *OCICluster) ValidateDelete() error {
+func (c *OCICluster) ValidateDelete() (admission.Warnings, error) {
 	clusterlogger.Info("validate delete cluster", "name", c.Name)
 
-	return nil
+	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (c *OCICluster) ValidateUpdate(old runtime.Object) error {
+func (c *OCICluster) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	clusterlogger.Info("validate update cluster", "name", c.Name)
 
 	var allErrs field.ErrorList
 
 	oldCluster, ok := old.(*OCICluster)
 	if !ok {
-		return apierrors.NewBadRequest(fmt.Sprintf("expected an OCICluster but got a %T", old))
+		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected an OCICluster but got a %T", old))
 	}
 
 	if c.Spec.Region != oldCluster.Spec.Region {
@@ -105,10 +106,10 @@ func (c *OCICluster) ValidateUpdate(old runtime.Object) error {
 	allErrs = append(allErrs, c.validate(oldCluster)...)
 
 	if len(allErrs) == 0 {
-		return nil
+		return nil, nil
 	}
 
-	return apierrors.NewInvalid(c.GroupVersionKind().GroupKind(), c.Name, allErrs)
+	return nil, apierrors.NewInvalid(c.GroupVersionKind().GroupKind(), c.Name, allErrs)
 }
 
 func (c *OCICluster) validate(old *OCICluster) field.ErrorList {

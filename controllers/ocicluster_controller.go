@@ -280,8 +280,8 @@ func (r *OCIClusterReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Ma
 
 	// Add a watch on clusterv1.Cluster object for unpause notifications.
 	if err = c.Watch(
-		&source.Kind{Type: &clusterv1.Cluster{}},
-		handler.EnqueueRequestsFromMapFunc(r.clusterToInfrastructureMapFunc(ctx, log)),
+		source.Kind(mgr.GetCache(), &clusterv1.Cluster{}),
+		handler.EnqueueRequestsFromMapFunc(r.clusterToInfrastructureMapFunc(log)),
 		predicates.ClusterUnpaused(log),
 		predicates.ResourceNotPausedAndHasFilterLabel(log, ""),
 	); err != nil {
@@ -293,8 +293,8 @@ func (r *OCIClusterReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Ma
 
 // ClusterToInfrastructureMapFunc returns a handler.ToRequestsFunc that watches for
 // Cluster events and returns reconciliation requests for an infrastructure provider object.
-func (r *OCIClusterReconciler) clusterToInfrastructureMapFunc(ctx context.Context, log logr.Logger) handler.MapFunc {
-	return func(o client.Object) []reconcile.Request {
+func (r *OCIClusterReconciler) clusterToInfrastructureMapFunc(log logr.Logger) handler.MapFunc {
+	return func(ctx context.Context, o client.Object) []reconcile.Request {
 		c, ok := o.(*clusterv1.Cluster)
 		if !ok {
 			return nil

@@ -275,14 +275,14 @@ func (r *OCIManagedClusterReconciler) reconcile(ctx context.Context, logger logr
 // SetupWithManager sets up the controller with the Manager.
 func (r *OCIManagedClusterReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
 	log := ctrl.LoggerFrom(ctx)
-	ociManagedControlPlaneMapper, err := OCIManagedControlPlaneToOCIManagedClusterMapper(ctx, r.Client, log)
+	ociManagedControlPlaneMapper, err := OCIManagedControlPlaneToOCIManagedClusterMapper(r.Client, log)
 	c, err := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(options).
 		For(&infrastructurev1beta2.OCIManagedCluster{}).
 		WithEventFilter(predicates.ResourceNotPaused(log)). // don't queue reconcile if resource is paused
 		// watch OCIManagedControlPlane resources
 		Watches(
-			&source.Kind{Type: &infrastructurev1beta2.OCIManagedControlPlane{}},
+			&infrastructurev1beta2.OCIManagedControlPlane{},
 			handler.EnqueueRequestsFromMapFunc(ociManagedControlPlaneMapper),
 		).
 		Build(r)
@@ -292,8 +292,8 @@ func (r *OCIManagedClusterReconciler) SetupWithManager(ctx context.Context, mgr 
 
 	// Add a watch on clusterv1.Cluster object for unpause notifications.
 	if err = c.Watch(
-		&source.Kind{Type: &clusterv1.Cluster{}},
-		handler.EnqueueRequestsFromMapFunc(r.clusterToInfrastructureMapFunc(ctx, log)),
+		source.Kind(mgr.GetCache(), &clusterv1.Cluster{}),
+		handler.EnqueueRequestsFromMapFunc(r.clusterToInfrastructureMapFunc(log)),
 		predicates.ClusterUnpaused(log),
 		predicates.ResourceNotPausedAndHasFilterLabel(log, ""),
 	); err != nil {
@@ -305,8 +305,8 @@ func (r *OCIManagedClusterReconciler) SetupWithManager(ctx context.Context, mgr 
 
 // ClusterToInfrastructureMapFunc returns a handler.ToRequestsFunc that watches for
 // Cluster events and returns reconciliation requests for an infrastructure provider object.
-func (r *OCIManagedClusterReconciler) clusterToInfrastructureMapFunc(ctx context.Context, log logr.Logger) handler.MapFunc {
-	return func(o client.Object) []reconcile.Request {
+func (r *OCIManagedClusterReconciler) clusterToInfrastructureMapFunc(log logr.Logger) handler.MapFunc {
+	return func(ctx context.Context, o client.Object) []reconcile.Request {
 		c, ok := o.(*clusterv1.Cluster)
 		if !ok {
 			return nil
@@ -438,8 +438,8 @@ func (r *OCIManagedClusterReconciler) reconcileDelete(ctx context.Context, logge
 	return reconcile.Result{}, nil
 }
 
-func OCIManagedControlPlaneToOCIManagedClusterMapper(ctx context.Context, c client.Client, log logr.Logger) (handler.MapFunc, error) {
-	return func(o client.Object) []ctrl.Request {
+func OCIManagedControlPlaneToOCIManagedClusterMapper(c client.Client, log logr.Logger) (handler.MapFunc, error) {
+	return func(ctx context.Context, o client.Object) []ctrl.Request {
 		ociManagedControlPlane, ok := o.(*infrastructurev1beta2.OCIManagedControlPlane)
 		if !ok {
 			log.Error(errors.Errorf("expected an OCIManagedControlPlane, got %T instead", o), "failed to map OCIManagedControlPlane")

@@ -18,6 +18,7 @@ package v1beta2
 
 import (
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -39,7 +40,7 @@ func (m *OCIMachineTemplate) SetupWebhookWithManager(mgr ctrl.Manager) error {
 }
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
-func (m *OCIMachineTemplate) ValidateCreate() error {
+func (m *OCIMachineTemplate) ValidateCreate() (admission.Warnings, error) {
 	clusterlogger.Info("validate create machinetemplate", "name", m.Name)
 
 	var allErrs field.ErrorList
@@ -47,21 +48,21 @@ func (m *OCIMachineTemplate) ValidateCreate() error {
 	allErrs = append(allErrs, m.validate()...)
 
 	if len(allErrs) == 0 {
-		return nil
+		return nil, nil
 	}
 
-	return apierrors.NewInvalid(m.GroupVersionKind().GroupKind(), m.Name, allErrs)
+	return nil, apierrors.NewInvalid(m.GroupVersionKind().GroupKind(), m.Name, allErrs)
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
-func (m *OCIMachineTemplate) ValidateDelete() error {
+func (m *OCIMachineTemplate) ValidateDelete() (admission.Warnings, error) {
 	clusterlogger.Info("validate delete machinetemplate", "name", m.Name)
 
-	return nil
+	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (m *OCIMachineTemplate) ValidateUpdate(old runtime.Object) error {
+func (m *OCIMachineTemplate) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	clusterlogger.Info("validate update machinetemplate", "name", m.Name)
 
 	var allErrs field.ErrorList
@@ -69,10 +70,10 @@ func (m *OCIMachineTemplate) ValidateUpdate(old runtime.Object) error {
 	allErrs = append(allErrs, m.validate()...)
 
 	if len(allErrs) == 0 {
-		return nil
+		return nil, nil
 	}
 
-	return apierrors.NewInvalid(m.GroupVersionKind().GroupKind(), m.Name, allErrs)
+	return nil, apierrors.NewInvalid(m.GroupVersionKind().GroupKind(), m.Name, allErrs)
 }
 
 func (m *OCIMachineTemplate) validate() field.ErrorList {

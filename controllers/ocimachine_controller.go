@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -46,7 +47,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // OCIMachineReconciler reconciles a OciMachine object
@@ -176,13 +176,13 @@ func (r *OCIMachineReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Ma
 		WithOptions(options).
 		For(&infrastructurev1beta2.OCIMachine{}).
 		Watches(
-			&source.Kind{Type: &clusterv1.Machine{}},
+			&clusterv1.Machine{},
 			handler.EnqueueRequestsFromMapFunc(util.MachineToInfrastructureMapFunc(infrastructurev1beta2.
 				GroupVersion.WithKind(scope.OCIMachineKind))),
 		).
 		Watches(
-			&source.Kind{Type: &infrastructurev1beta2.OCICluster{}},
-			handler.EnqueueRequestsFromMapFunc(r.OCIClusterToOCIMachines(ctx)),
+			&infrastructurev1beta2.OCICluster{},
+			handler.EnqueueRequestsFromMapFunc(r.OCIClusterToOCIMachines()),
 		).
 		WithEventFilter(predicates.ResourceNotPaused(ctrl.LoggerFrom(ctx))). // don't queue reconcile if resource is paused
 		Build(r)
@@ -190,14 +190,14 @@ func (r *OCIMachineReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Ma
 		return errors.Wrapf(err, "error creating controller")
 	}
 
-	clusterToObjectFunc, err := util.ClusterToObjectsMapper(r.Client, &infrastructurev1beta2.OCIMachineList{}, mgr.GetScheme())
+	clusterToObjectFunc, err := util.ClusterToTypedObjectsMapper(r.Client, &infrastructurev1beta2.OCIMachineList{}, mgr.GetScheme())
 	if err != nil {
 		return errors.Wrapf(err, "failed to create mapper for Cluster to OCIMachines")
 	}
 
 	// Add a watch on clusterv1.Cluster object for unpause & ready notifications.
 	if err := c.Watch(
-		&source.Kind{Type: &clusterv1.Cluster{}},
+		source.Kind(mgr.GetCache(), &clusterv1.Cluster{}),
 		handler.EnqueueRequestsFromMapFunc(clusterToObjectFunc),
 		predicates.ClusterUnpausedAndInfrastructureReady(ctrl.LoggerFrom(ctx)),
 	); err != nil {
@@ -207,9 +207,9 @@ func (r *OCIMachineReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Ma
 	return nil
 }
 
-func (r *OCIMachineReconciler) OCIClusterToOCIMachines(ctx context.Context) handler.MapFunc {
-	log := ctrl.LoggerFrom(ctx)
-	return func(o client.Object) []ctrl.Request {
+func (r *OCIMachineReconciler) OCIClusterToOCIMachines() handler.MapFunc {
+	return func(ctx context.Context, o client.Object) []ctrl.Request {
+		log := ctrl.LoggerFrom(ctx)
 		result := []ctrl.Request{}
 
 		c, ok := o.(*infrastructurev1beta2.OCICluster)
