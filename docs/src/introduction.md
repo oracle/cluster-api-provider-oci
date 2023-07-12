@@ -55,7 +55,7 @@ Cluster API (CAPI)](https://cluster-api.sigs.k8s.io/reference/versions.html#supp
 [image_builder_book]: https://image-builder.sigs.k8s.io/capi/providers/oci.html
 [deployment]: ./gs/overview.md
 [install_cluster_api]: ./gs/install-cluster-api.md
-[create_workload_cluster]: ./managed/managedcluster.md
-[create_oke_cluster]: ./gs/create-workload-cluster.md
+[create_workload_cluster]: ./gs/create-workload-cluster.md
+[create_oke_cluster]: ./managed/managedcluster.md
 [networking]: ./networking/networking.md
 [prerequisites]: ./prerequisites.md
