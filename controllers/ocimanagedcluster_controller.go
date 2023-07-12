@@ -38,13 +38,13 @@ import (
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // OCIManagedClusterReconciler reconciles a OciCluster object
@@ -276,7 +276,10 @@ func (r *OCIManagedClusterReconciler) reconcile(ctx context.Context, logger logr
 func (r *OCIManagedClusterReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
 	log := ctrl.LoggerFrom(ctx)
 	ociManagedControlPlaneMapper, err := OCIManagedControlPlaneToOCIManagedClusterMapper(r.Client, log)
-	c, err := ctrl.NewControllerManagedBy(mgr).
+	if err != nil {
+		return err
+	}
+	err = ctrl.NewControllerManagedBy(mgr).
 		WithOptions(options).
 		For(&infrastructurev1beta2.OCIManagedCluster{}).
 		WithEventFilter(predicates.ResourceNotPaused(log)). // don't queue reconcile if resource is paused
@@ -285,19 +288,17 @@ func (r *OCIManagedClusterReconciler) SetupWithManager(ctx context.Context, mgr 
 			&infrastructurev1beta2.OCIManagedControlPlane{},
 			handler.EnqueueRequestsFromMapFunc(ociManagedControlPlaneMapper),
 		).
-		Build(r)
+		Watches(
+			&clusterv1.Cluster{},
+			handler.EnqueueRequestsFromMapFunc(r.clusterToInfrastructureMapFunc(log)),
+			builder.WithPredicates(
+				predicates.ClusterUnpaused(log),
+				predicates.ResourceNotPausedAndHasFilterLabel(log, ""),
+			),
+		).
+		Complete(r)
 	if err != nil {
 		return errors.Wrapf(err, "error creating controller")
-	}
-
-	// Add a watch on clusterv1.Cluster object for unpause notifications.
-	if err = c.Watch(
-		source.Kind(mgr.GetCache(), &clusterv1.Cluster{}),
-		handler.EnqueueRequestsFromMapFunc(r.clusterToInfrastructureMapFunc(log)),
-		predicates.ClusterUnpaused(log),
-		predicates.ResourceNotPausedAndHasFilterLabel(log, ""),
-	); err != nil {
-		return errors.Wrapf(err, "failed adding a watch for ready clusters")
 	}
 
 	return nil

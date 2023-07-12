@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -46,7 +47,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // OCIManagedClusterControlPlaneReconciler reconciles a OCIManagedControlPlane object
@@ -253,24 +253,27 @@ func (r *OCIManagedClusterControlPlaneReconciler) reconcile(ctx context.Context,
 func (r *OCIManagedClusterControlPlaneReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
 	log := ctrl.LoggerFrom(ctx)
 	ociManagedClusterMapper, err := OCIManagedClusterToOCIManagedControlPlaneMapper(r.Client, log)
-	c, err := ctrl.NewControllerManagedBy(mgr).
+	if err != nil {
+		return err
+	}
+	err = ctrl.NewControllerManagedBy(mgr).
 		WithOptions(options).
 		For(&infrastructurev1beta2.OCIManagedControlPlane{}).
 		Watches(
 			&infrastructurev1beta2.OCIManagedCluster{},
 			handler.EnqueueRequestsFromMapFunc(ociManagedClusterMapper),
 		).
-		Build(r)
+		Watches(
+			&clusterv1.Cluster{},
+			handler.EnqueueRequestsFromMapFunc(ClusterToOCIManagedControlPlaneMapper()),
+			builder.WithPredicates(
+				predicates.ClusterUnpaused(log),
+				predicates.ResourceNotPausedAndHasFilterLabel(log, ""),
+			),
+		).
+		Complete(r)
 	if err != nil {
 		return errors.Wrapf(err, "error creating controller")
-	}
-
-	if err = c.Watch(
-		source.Kind(mgr.GetCache(), &clusterv1.Cluster{}),
-		handler.EnqueueRequestsFromMapFunc(ClusterToOCIManagedControlPlaneMapper()),
-		predicates.ResourceNotPausedAndHasFilterLabel(log, ""),
-	); err != nil {
-		return errors.Wrapf(err, "failed adding a watch for ready clusters")
 	}
 
 	return nil

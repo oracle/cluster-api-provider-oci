@@ -19,6 +19,8 @@ package controllers
 import (
 	"context"
 	"fmt"
+	expV1Beta1 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -183,6 +185,10 @@ func (r *OCIManagedMachinePoolReconciler) SetupWithManager(ctx context.Context, 
 		return errors.Wrapf(err, "failed to find GVK for OCIManagedMachinePool")
 	}
 	managedControlPlaneToManagedMachinePoolMap := managedClusterToManagedMachinePoolMapFunc(r.Client, gvk, logger)
+	clusterToObjectFunc, err := util.ClusterToTypedObjectsMapper(r.Client, &expV1Beta1.OCIManagedMachinePoolList{}, mgr.GetScheme())
+	if err != nil {
+		return errors.Wrapf(err, "failed to create mapper for Cluster to OCIManagedMachinePool")
+	}
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(options).
 		For(&infrav2exp.OCIManagedMachinePool{}).
@@ -194,6 +200,13 @@ func (r *OCIManagedMachinePoolReconciler) SetupWithManager(ctx context.Context, 
 		Watches(
 			&infrastructurev1beta2.OCIManagedCluster{},
 			handler.EnqueueRequestsFromMapFunc(managedControlPlaneToManagedMachinePoolMap),
+		).
+		Watches(
+			&clusterv1.Cluster{},
+			handler.EnqueueRequestsFromMapFunc(clusterToObjectFunc),
+			builder.WithPredicates(
+				predicates.ClusterUnpausedAndInfrastructureReady(ctrl.LoggerFrom(ctx)),
+			),
 		).
 		WithEventFilter(predicates.ResourceNotPaused(ctrl.LoggerFrom(ctx))).
 		Complete(r)
