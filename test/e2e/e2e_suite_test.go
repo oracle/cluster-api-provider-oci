@@ -24,6 +24,7 @@ import (
 	"encoding/base64"
 	"flag"
 	"fmt"
+	"k8s.io/klog/v2/klogr"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -51,6 +52,7 @@ import (
 	"sigs.k8s.io/cluster-api/test/framework"
 	"sigs.k8s.io/cluster-api/test/framework/bootstrap"
 	"sigs.k8s.io/cluster-api/test/framework/clusterctl"
+	runtimelogr "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 const (
@@ -148,6 +150,7 @@ func TestE2E(t *testing.T) {
 var _ = SynchronizedBeforeSuite(func() []byte {
 	// Before all ParallelNodes.
 
+	runtimelogr.SetLogger(klogr.New())
 	Expect(configPath).To(BeAnExistingFile(), "Invalid test suite argument. e2e.config should be an existing file.")
 	Expect(os.MkdirAll(artifactFolder, 0755)).To(Succeed(), "Invalid test suite argument. Can't create e2e.artifacts-folder %q", artifactFolder)
 
