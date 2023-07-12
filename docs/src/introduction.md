@@ -17,9 +17,8 @@ The API itself is shared across multiple cloud providers allowing for true hybri
 
 ## Features
 
-- Manages the bootstrapping of VCNs, gateways, subnets, network security groups and instances
-- Deploy either Oracle Linux or Ubuntu based instances using custom images built with the [Image Builder][image_builder_book] tool
-- Deploys Kubernetes control plane into private subnets front-ended by a public load balancer
+- Self-managed and OCI Container Engine for Kubernetes(OKE) cluster support
+- Manages the bootstrapping of VCNs, gateways, subnets, network security groups
 - Provides secure and sensible defaults
 
 ## Getting Started
@@ -30,6 +29,7 @@ The API itself is shared across multiple cloud providers allowing for true hybri
 - Installation:
   - [Install Cluster API for OCI][install_cluster_api]
   - [Create Workload Cluster][create_workload_cluster]
+  - [Create OKE Cluster][create_oke_cluster]
 
 ## Support Policy
 
@@ -56,5 +56,6 @@ Cluster API (CAPI)](https://cluster-api.sigs.k8s.io/reference/versions.html#supp
 [deployment]: ./gs/overview.md
 [install_cluster_api]: ./gs/install-cluster-api.md
 [create_workload_cluster]: ./gs/create-workload-cluster.md
+[create_oke_cluster]: ./managed/managedcluster.md
 [networking]: ./networking/networking.md
 [prerequisites]: ./prerequisites.md
