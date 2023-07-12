@@ -17,7 +17,7 @@ The API itself is shared across multiple cloud providers allowing for true hybri
 
 ## Features
 
-- Self-managed and OKE cluster support
+- Self-managed and Container Engine for Kubernetes(OKE) cluster support
 - Manages the bootstrapping of VCNs, gateways, subnets, network security groups
 - Provides secure and sensible defaults
 

@@ -16,7 +16,7 @@ The Cluster API itself is shared across multiple cloud providers allowing for tr
 
 ### Features
 
-- Self-managed and OKE clusters
+- Self-managed and Container Engine for Kubernetes(OKE) clusters
 - Manages the bootstrapping of VCNs, gateways, subnets, network security groups
 - Provide secure and sensible defaults
 
