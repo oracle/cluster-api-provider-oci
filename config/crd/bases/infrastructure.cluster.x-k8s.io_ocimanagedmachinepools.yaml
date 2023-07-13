@@ -265,6 +265,10 @@ spec:
                 description: MachineStatusError defines errors states for Machine
                   objects.
                 type: string
+              infrastructureMachineKind:
+                description: InfrastructureMachineKind is the kind of the infrastructure
+                  resources behind MachinePool Machines.
+                type: string
               ready:
                 type: boolean
               replicas:
@@ -548,6 +552,10 @@ spec:
               failureReason:
                 description: MachineStatusError defines errors states for Machine
                   objects.
+                type: string
+              infrastructureMachineKind:
+                description: InfrastructureMachineKind is the kind of the infrastructure
+                  resources behind MachinePool Machines.
                 type: string
               ready:
                 type: boolean
