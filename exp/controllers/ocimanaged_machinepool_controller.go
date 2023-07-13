@@ -87,7 +87,6 @@ func (r *OCIManagedMachinePoolReconciler) Reconcile(ctx context.Context, req ctr
 		}
 		return ctrl.Result{}, err
 	}
-	ociManagedMachinePool.Status.InfrastructureMachineKind = "OCIManagedMachinePoolMachine"
 	// Fetch the CAPI MachinePool
 	machinePool, err := getOwnerMachinePool(ctx, r.Client, ociManagedMachinePool.ObjectMeta)
 	if err != nil {
