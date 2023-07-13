@@ -430,6 +430,7 @@ func (r *OCIManagedMachinePoolReconciler) createManagedMachinesIfNotExists(ctx c
 					return err
 				}
 			}
+			continue
 		}
 
 		labels := map[string]string{
