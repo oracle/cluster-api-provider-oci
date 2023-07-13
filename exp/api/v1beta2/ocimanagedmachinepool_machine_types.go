@@ -37,6 +37,10 @@ type OCIManagedMachinePoolMachineSpec struct {
 
 // OCIManagedMachinePoolMachineStatus defines the observed state of OCIManagedMachinePoolMachine
 type OCIManagedMachinePoolMachineStatus struct {
+	// Flag set to true when machine is ready.
+	// +optional
+	Ready bool `json:"ready,omitempty"`
+
 	// Conditions defines current service state of the OCIMachinePool.
 	// +optional
 	Conditions clusterv1.Conditions `json:"conditions,omitempty"`

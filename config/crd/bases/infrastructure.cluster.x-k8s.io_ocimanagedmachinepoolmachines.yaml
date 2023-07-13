@@ -92,6 +92,9 @@ spec:
                   - type
                   type: object
                 type: array
+              ready:
+                description: Flag set to true when machine is ready.
+                type: boolean
             type: object
         type: object
     served: true
@@ -175,6 +178,9 @@ spec:
                   - type
                   type: object
                 type: array
+              ready:
+                description: Flag set to true when machine is ready.
+                type: boolean
             type: object
         type: object
     served: true

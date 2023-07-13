@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"sigs.k8s.io/cluster-api/util/patch"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -415,8 +416,20 @@ func (r *OCIManagedMachinePoolReconciler) createManagedMachinesIfNotExists(ctx c
 	}
 
 	for _, instance := range nodepool.Nodes {
-		if _, exists := instanceNameToDockerMachine[*instance.Id]; exists {
-			continue
+		if machine, exists := instanceNameToDockerMachine[*instance.Id]; exists {
+			if !machine.Status.Ready && instance.LifecycleState == oke.NodeLifecycleStateActive {
+				machinePoolScope.Info("Setting status of machine to active", "machine", machine.Name)
+
+				helper, err := patch.NewHelper(&machine, machinePoolScope.Client)
+				if err != nil {
+					return err
+				}
+				machine.Status.Ready = true
+				err = helper.Patch(ctx, &machine)
+				if err != nil {
+					return err
+				}
+			}
 		}
 
 		labels := map[string]string{
@@ -436,6 +449,9 @@ func (r *OCIManagedMachinePoolReconciler) createManagedMachinesIfNotExists(ctx c
 				OCID:       instance.Id,
 				ProviderID: instance.Id,
 			},
+		}
+		if instance.LifecycleState == oke.NodeLifecycleStateActive {
+			infraMachine.Status.Ready = true
 		}
 
 		machinePoolScope.Info("Instance name for infra machine is", "instanceName", instance.Name, "dockerMachine", infraMachine.Name)

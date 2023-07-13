@@ -1001,6 +1001,7 @@ func Convert_v1beta2_OCIManagedMachinePoolMachineSpec_To_v1beta1_OCIManagedMachi
 }
 
 func autoConvert_v1beta1_OCIManagedMachinePoolMachineStatus_To_v1beta2_OCIManagedMachinePoolMachineStatus(in *OCIManagedMachinePoolMachineStatus, out *v1beta2.OCIManagedMachinePoolMachineStatus, s conversion.Scope) error {
+	out.Ready = in.Ready
 	out.Conditions = *(*clusterapiapiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
 	return nil
 }
@@ -1011,6 +1012,7 @@ func Convert_v1beta1_OCIManagedMachinePoolMachineStatus_To_v1beta2_OCIManagedMac
 }
 
 func autoConvert_v1beta2_OCIManagedMachinePoolMachineStatus_To_v1beta1_OCIManagedMachinePoolMachineStatus(in *v1beta2.OCIManagedMachinePoolMachineStatus, out *OCIManagedMachinePoolMachineStatus, s conversion.Scope) error {
+	out.Ready = in.Ready
 	out.Conditions = *(*clusterapiapiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
 	return nil
 }
