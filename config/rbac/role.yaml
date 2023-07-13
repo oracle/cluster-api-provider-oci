@@ -269,3 +269,11 @@ rules:
     - patch
     - update
     - watch
+- apiGroups:
+    - infrastructure.cluster.x-k8s.io
+  resources:
+    - ocimanagedmachinepoolmachines/status
+  verbs:
+    - get
+    - patch
+    - update
