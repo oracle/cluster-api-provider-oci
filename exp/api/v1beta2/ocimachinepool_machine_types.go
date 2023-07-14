@@ -24,19 +24,34 @@ import (
 // +kubebuilder:object:generate=true
 // +groupName=infrastructure.cluster.x-k8s.io
 
-// OCIManagedMachinePoolMachineSpec defines the desired state of OCIManagedMachinePoolMachine
-type OCIManagedMachinePoolMachineSpec struct {
-	// ProviderID is the OCID of the associated InstancePool in a provider format
+const (
+	Managed     MachineTypeEnum = "MANAGED_TYPE"
+	Virtual     MachineTypeEnum = "VIRTUAL_TYPE"
+	SelfManaged MachineTypeEnum = "SELF_MANAGED_TYPE"
+)
+
+type MachineTypeEnum string
+
+// OCIMachinePoolMachineSpec defines the desired state of OCIMachinePoolMachine
+type OCIMachinePoolMachineSpec struct {
+	// ProviderID is the OCID of the associated machine..
 	// +optional
 	ProviderID *string `json:"providerID,omitempty"`
 
-	// OCID is the OCID of the associated InstancePool
+	// OCID is the OCID of the associated instance.
 	// +optional
 	OCID *string `json:"ocid,omitempty"`
+
+	// InstanceName is the name of the instance.
+	// +optional
+	InstanceName *string `json:"instanceName,omitempty"`
+
+	// MachineType is the type of the machine.
+	MachineType MachineTypeEnum `json:"machineType,omitempty"`
 }
 
-// OCIManagedMachinePoolMachineStatus defines the observed state of OCIManagedMachinePoolMachine
-type OCIManagedMachinePoolMachineStatus struct {
+// OCIMachinePoolMachineStatus defines the observed state of OCIMachinePoolMachine
+type OCIMachinePoolMachineStatus struct {
 	// Flag set to true when machine is ready.
 	// +optional
 	Ready bool `json:"ready,omitempty"`
@@ -50,24 +65,24 @@ type OCIManagedMachinePoolMachineStatus struct {
 //+kubebuilder:subresource:status
 // +kubebuilder:storageversion
 
-type OCIManagedMachinePoolMachine struct {
+type OCIMachinePoolMachine struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   OCIManagedMachinePoolMachineSpec   `json:"spec,omitempty"`
-	Status OCIManagedMachinePoolMachineStatus `json:"status,omitempty"`
+	Spec   OCIMachinePoolMachineSpec   `json:"spec,omitempty"`
+	Status OCIMachinePoolMachineStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:storageversion
 
-// OCIManagedMachinePoolMachineList contains a list of OCIManagedMachinePoolMachine.
-type OCIManagedMachinePoolMachineList struct {
+// OCIMachinePoolMachineList contains a list of OCIMachinePoolMachine.
+type OCIMachinePoolMachineList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []OCIManagedMachinePoolMachine `json:"items"`
+	Items           []OCIMachinePoolMachine `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&OCIManagedMachinePoolMachine{}, &OCIManagedMachinePoolMachineList{})
+	SchemeBuilder.Register(&OCIMachinePoolMachine{}, &OCIMachinePoolMachineList{})
 }

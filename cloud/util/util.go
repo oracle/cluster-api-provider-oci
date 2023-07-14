@@ -20,17 +20,23 @@ import (
 	"context"
 	"crypto/x509"
 	"fmt"
+	"github.com/go-logr/logr"
 	"reflect"
 
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/config"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
+	expV1Beta2 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
+	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	expclusterv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
+	"sigs.k8s.io/cluster-api/util"
+	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -253,4 +259,109 @@ func CreateClientProviderFromClusterIdentity(ctx context.Context, client client.
 		return nil, err
 	}
 	return clientProvider, nil
+}
+
+func CreateManagedMachinesIfNotExists(ctx context.Context, client client.Client, machinePool *expclusterv1.MachinePool, cluster *clusterv1.Cluster, infraMachinePoolName string, namespace string, specInfraMachines []infrav2exp.OCIMachinePoolMachine, machinetype expV1Beta2.MachineTypeEnum, log *logr.Logger) error {
+	machineList, err := getManagedMachines(ctx, client, machinePool, cluster, namespace)
+	if err != nil {
+		return err
+	}
+
+	instanceNameToDockerMachine := make(map[string]infrav2exp.OCIMachinePoolMachine)
+	for _, machine := range machineList.Items {
+		instanceNameToDockerMachine[*machine.Spec.OCID] = machine
+	}
+
+	for _, specMachine := range specInfraMachines {
+		if actualMachine, exists := instanceNameToDockerMachine[*specMachine.Spec.OCID]; exists {
+			if reflect.DeepEqual(specMachine.Status.Ready, actualMachine.Status.Ready) {
+				log.Info("Setting status of machine to active", "machine", actualMachine.Name)
+
+				helper, err := patch.NewHelper(&actualMachine, client)
+				if err != nil {
+					return err
+				}
+				actualMachine.Status.Ready = true
+				err = helper.Patch(ctx, &actualMachine)
+				if err != nil {
+					return err
+				}
+			}
+			continue
+		}
+
+		labels := map[string]string{
+			clusterv1.ClusterNameLabel:     cluster.Name,
+			clusterv1.MachinePoolNameLabel: machinePool.Name,
+		}
+		infraMachine := &infrav2exp.OCIMachinePoolMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace:    namespace,
+				GenerateName: fmt.Sprintf("%s-", infraMachinePoolName),
+				Labels:       labels,
+				Annotations:  make(map[string]string),
+				// Note: This OCIManagedMachinePoolMachine will be owned by the OCIManagedMachinePool until the MachinePool controller creates its parent Machine.
+			},
+			Spec: infrav2exp.OCIMachinePoolMachineSpec{
+				OCID:         specMachine.Spec.OCID,
+				ProviderID:   specMachine.Spec.ProviderID,
+				InstanceName: specMachine.Spec.InstanceName,
+				MachineType:  machinetype,
+			},
+		}
+		infraMachine.Status.Ready = specMachine.Status.Ready
+		log.Info("Creating managed machine", "machine", infraMachine.Name, "instanceName", specMachine.Name)
+
+		if err := client.Create(ctx, infraMachine); err != nil {
+			return errors.Wrap(err, "failed to create dockerMachine")
+		}
+	}
+
+	return nil
+}
+
+func getManagedMachines(ctx context.Context, c client.Client, machinePool *expclusterv1.MachinePool, cluster *clusterv1.Cluster, namespace string) (*infrav2exp.OCIMachinePoolMachineList, error) {
+	machineList := &infrav2exp.OCIMachinePoolMachineList{}
+	labels := map[string]string{
+		clusterv1.ClusterNameLabel:     cluster.Name,
+		clusterv1.MachinePoolNameLabel: machinePool.Name,
+	}
+	if err := c.List(ctx, machineList, client.InNamespace(namespace), client.MatchingLabels(labels)); err != nil {
+		return nil, err
+	}
+
+	return machineList, nil
+}
+
+func DeleteOrphanedManagedMachines(ctx context.Context, client client.Client, machinePool *expclusterv1.MachinePool, cluster *clusterv1.Cluster, namespace string, specInfraMachines []infrav2exp.OCIMachinePoolMachine, log *logr.Logger) error {
+	machineList, err := getManagedMachines(ctx, client, machinePool, cluster, namespace)
+	if err != nil {
+		return err
+	}
+
+	instanceNameSet := map[string]struct{}{}
+	for _, specMachine := range specInfraMachines {
+		instanceNameSet[*specMachine.Spec.OCID] = struct{}{}
+	}
+
+	for i := range machineList.Items {
+		managedMachine := &machineList.Items[i]
+		if _, ok := instanceNameSet[*managedMachine.Spec.OCID]; !ok {
+			machine, err := util.GetOwnerMachine(ctx, client, managedMachine.ObjectMeta)
+			if err != nil {
+				return errors.Wrapf(err, "failed to get owner Machine for ManagedMachine %s/%s", machine.Namespace, machine.Name)
+			}
+			if machine == nil {
+				return errors.Errorf("ManagedMachine %s/%s has no parent Machine, will reattempt deletion once parent Machine is present", machine.Namespace, machine.Name)
+			}
+			log.Info("Deleting orphaned machine", "machine", machine.Name)
+			if err := client.Delete(ctx, machine); err != nil {
+				return errors.Wrapf(err, "failed to delete orphaned ManagedMachine %s/%s", machine.Namespace, machine.Name)
+			}
+		} else {
+			log.Info("Keeping ManagedMachine, nothing to do", "machine", managedMachine.Name, "namespace", managedMachine.Namespace)
+		}
+	}
+
+	return nil
 }

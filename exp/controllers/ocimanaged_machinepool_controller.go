@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"sigs.k8s.io/cluster-api/util/patch"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -34,7 +33,6 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -302,10 +300,18 @@ func (r *OCIManagedMachinePoolReconciler) reconcileNormal(ctx context.Context, l
 	switch nodePool.LifecycleState {
 	case oke.NodePoolLifecycleStateCreating:
 		machinePoolScope.Info("Node Pool is creating")
+		err = r.reconcileManagedMachines(ctx, err, machinePoolScope, nodePool)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 		conditions.MarkFalse(machinePoolScope.OCIManagedMachinePool, infrav2exp.NodePoolReadyCondition, infrav2exp.NodePoolNotReadyReason, clusterv1.ConditionSeverityInfo, "")
 		return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 	case oke.NodePoolLifecycleStateUpdating:
 		machinePoolScope.Info("Node Pool is updating")
+		err = r.reconcileManagedMachines(ctx, err, machinePoolScope, nodePool)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 		return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 	case oke.NodePoolLifecycleStateActive:
 		machinePoolScope.Info("Node pool is active")
@@ -326,16 +332,9 @@ func (r *OCIManagedMachinePoolReconciler) reconcileNormal(ctx context.Context, l
 		if isUpdated {
 			return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 		}
-		err = r.createManagedMachinesIfNotExists(ctx, machinePoolScope, nodePool)
+		err = r.reconcileManagedMachines(ctx, err, machinePoolScope, nodePool)
 		if err != nil {
-			conditions.MarkFalse(machinePoolScope.OCIManagedMachinePool, clusterv1.ReadyCondition, "FailedToDeleteOrphanedMachines", clusterv1.ConditionSeverityWarning, err.Error())
-			return reconcile.Result{}, errors.Wrap(err, "failed to create missing machines")
-		}
-
-		err = r.deleteOrphanedManagedMachines(ctx, machinePoolScope, nodePool)
-		if err != nil {
-			conditions.MarkFalse(machinePoolScope.OCIManagedMachinePool, clusterv1.ReadyCondition, "FailedToDeleteOrphanedMachines", clusterv1.ConditionSeverityWarning, err.Error())
-			return ctrl.Result{}, errors.Wrap(err, "failed to delete orphaned machines")
+			return reconcile.Result{}, err
 		}
 
 		return reconcile.Result{}, nil
@@ -347,6 +346,38 @@ func (r *OCIManagedMachinePoolReconciler) reconcileNormal(ctx context.Context, l
 			"Node pool has invalid lifecycle state %s, lifecycle details is %s", nodePool.LifecycleState, nodePool.LifecycleDetails)
 		return reconcile.Result{}, err
 	}
+}
+
+func (r *OCIManagedMachinePoolReconciler) reconcileManagedMachines(ctx context.Context, err error, machinePoolScope *scope.ManagedMachinePoolScope, nodePool *oke.NodePool) error {
+	specInfraMachines := make([]infrav2exp.OCIMachinePoolMachine, len(nodePool.Nodes))
+	for i, node := range nodePool.Nodes {
+		ready := false
+		if node.LifecycleState == oke.NodeLifecycleStateActive {
+			ready = true
+		}
+		specInfraMachines[i] = infrav2exp.OCIMachinePoolMachine{
+			Spec: infrav2exp.OCIMachinePoolMachineSpec{
+				OCID:         node.Id,
+				ProviderID:   node.Id,
+				InstanceName: node.Name,
+			},
+			Status: infrav2exp.OCIMachinePoolMachineStatus{
+				Ready: ready,
+			},
+		}
+	}
+	err = cloudutil.CreateManagedMachinesIfNotExists(ctx, r.Client, machinePoolScope.MachinePool, machinePoolScope.Cluster, machinePoolScope.OCIManagedMachinePool.Name, machinePoolScope.OCIManagedMachinePool.Namespace, specInfraMachines, infrav2exp.Managed, machinePoolScope.Logger)
+	if err != nil {
+		conditions.MarkFalse(machinePoolScope.OCIManagedMachinePool, clusterv1.ReadyCondition, "FailedToDeleteOrphanedMachines", clusterv1.ConditionSeverityWarning, err.Error())
+		return errors.Wrap(err, "failed to create missing machines")
+	}
+
+	err = cloudutil.DeleteOrphanedManagedMachines(ctx, r.Client, machinePoolScope.MachinePool, machinePoolScope.Cluster, machinePoolScope.OCIManagedMachinePool.Name, specInfraMachines, machinePoolScope.Logger)
+	if err != nil {
+		conditions.MarkFalse(machinePoolScope.OCIManagedMachinePool, clusterv1.ReadyCondition, "FailedToDeleteOrphanedMachines", clusterv1.ConditionSeverityWarning, err.Error())
+		return errors.Wrap(err, "failed to delete orphaned machines")
+	}
+	return nil
 }
 
 func (r *OCIManagedMachinePoolReconciler) reconcileDelete(ctx context.Context, machinePoolScope *scope.ManagedMachinePoolScope) (_ ctrl.Result, reterr error) {
@@ -398,116 +429,4 @@ func (r *OCIManagedMachinePoolReconciler) reconcileDelete(ctx context.Context, m
 			return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 		}
 	}
-}
-
-func (r *OCIManagedMachinePoolReconciler) createManagedMachinesIfNotExists(ctx context.Context, machinePoolScope *scope.ManagedMachinePoolScope, nodepool *oke.NodePool) error {
-	machinePool := machinePoolScope.MachinePool
-	managedMachinePool := machinePoolScope.OCIManagedMachinePool
-	machinePoolScope.Info("Creating missing machines")
-
-	machineList, err := getManagedMachines(ctx, r.Client, machinePoolScope)
-	if err != nil {
-		return err
-	}
-
-	instanceNameToDockerMachine := make(map[string]infrav2exp.OCIManagedMachinePoolMachine)
-	for _, machine := range machineList.Items {
-		instanceNameToDockerMachine[*machine.Spec.OCID] = machine
-	}
-
-	for _, instance := range nodepool.Nodes {
-		if machine, exists := instanceNameToDockerMachine[*instance.Id]; exists {
-			if !machine.Status.Ready && instance.LifecycleState == oke.NodeLifecycleStateActive {
-				machinePoolScope.Info("Setting status of machine to active", "machine", machine.Name)
-
-				helper, err := patch.NewHelper(&machine, machinePoolScope.Client)
-				if err != nil {
-					return err
-				}
-				machine.Status.Ready = true
-				err = helper.Patch(ctx, &machine)
-				if err != nil {
-					return err
-				}
-			}
-			continue
-		}
-
-		labels := map[string]string{
-			clusterv1.ClusterNameLabel:     machinePoolScope.Cluster.Name,
-			clusterv1.MachinePoolNameLabel: machinePool.Name,
-		}
-		labels[clusterv1.MachinePoolNameLabel] = machinePool.Name
-		infraMachine := &infrav2exp.OCIManagedMachinePoolMachine{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace:    managedMachinePool.Namespace,
-				GenerateName: fmt.Sprintf("%s-", managedMachinePool.Name),
-				Labels:       labels,
-				Annotations:  make(map[string]string),
-				// Note: This DockerMachine will be owned by the DockerMachinePool until the MachinePool controller creates its parent Machine.
-			},
-			Spec: infrav2exp.OCIManagedMachinePoolMachineSpec{
-				OCID:       instance.Id,
-				ProviderID: instance.Id,
-			},
-		}
-		if instance.LifecycleState == oke.NodeLifecycleStateActive {
-			infraMachine.Status.Ready = true
-		}
-
-		machinePoolScope.Info("Instance name for infra machine is", "instanceName", instance.Name, "dockerMachine", infraMachine.Name)
-
-		if err := r.Client.Create(ctx, infraMachine); err != nil {
-			return errors.Wrap(err, "failed to create dockerMachine")
-		}
-	}
-
-	return nil
-}
-
-func getManagedMachines(ctx context.Context, c client.Client, machinePoolScope *scope.ManagedMachinePoolScope) (*infrav2exp.OCIManagedMachinePoolMachineList, error) {
-	machineList := &infrav2exp.OCIManagedMachinePoolMachineList{}
-	labels := map[string]string{
-		clusterv1.ClusterNameLabel:     machinePoolScope.Cluster.Name,
-		clusterv1.MachinePoolNameLabel: machinePoolScope.MachinePool.Name,
-	}
-	if err := c.List(ctx, machineList, client.InNamespace(machinePoolScope.OCIManagedMachinePool.Namespace), client.MatchingLabels(labels)); err != nil {
-		return nil, err
-	}
-
-	return machineList, nil
-}
-
-func (r *OCIManagedMachinePoolReconciler) deleteOrphanedManagedMachines(ctx context.Context, machinePoolScope *scope.ManagedMachinePoolScope, nodepool *oke.NodePool) error {
-	machinePoolScope.Info("Deleting orphaned machines", "managedMachinePool")
-	machineList, err := getManagedMachines(ctx, r.Client, machinePoolScope)
-	if err != nil {
-		return err
-	}
-
-	instanceNameSet := map[string]struct{}{}
-	for _, instance := range nodepool.Nodes {
-		instanceNameSet[*instance.Id] = struct{}{}
-	}
-
-	for i := range machineList.Items {
-		machine := &machineList.Items[i]
-		if _, ok := instanceNameSet[*machine.Spec.OCID]; !ok {
-			machine, err := util.GetOwnerMachine(ctx, r.Client, machine.ObjectMeta)
-			if err != nil {
-				return errors.Wrapf(err, "failed to get owner Machine for ManagedMachine %s/%s", machine.Namespace, machine.Name)
-			}
-			if machine == nil {
-				return errors.Errorf("ManagedMachine %s/%s has no parent Machine, will reattempt deletion once parent Machine is present", machine.Namespace, machine.Name)
-			}
-
-			if err := r.Client.Delete(ctx, machine); err != nil {
-				return errors.Wrapf(err, "failed to delete orphaned ManagedMachine %s/%s", machine.Namespace, machine.Name)
-			}
-		} else {
-			machinePoolScope.Info("Keeping ManagedMachine, nothing to do", "machine", machine.Name, "namespace", machine.Namespace)
-		}
-	}
-
-	return nil
 }

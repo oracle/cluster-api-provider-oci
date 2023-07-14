@@ -153,7 +153,7 @@ func (m *MachinePoolScope) GetWorkerMachineSubnet() *string {
 	return nil
 }
 
-// ListMachinePoolInstances returns the WorkerRole core.Subnet id for the cluster
+// ListMachinePoolInstances returns the list of instances belonging to an instance pool
 func (m *MachinePoolScope) ListMachinePoolInstances(ctx context.Context) ([]core.InstanceSummary, error) {
 	poolOcid := m.OCIMachinePool.Spec.OCID
 	if poolOcid == nil {
@@ -187,22 +187,30 @@ func (m *MachinePoolScope) ListMachinePoolInstances(ctx context.Context) ([]core
 }
 
 // SetListandSetMachinePoolInstances retrieves a machine pools instances and sets them in the ProviderIDList
-func (m *MachinePoolScope) SetListandSetMachinePoolInstances(ctx context.Context) (int32, error) {
+func (m *MachinePoolScope) SetListandSetMachinePoolInstances(ctx context.Context) ([]infrav2exp.OCIMachinePoolMachine, error) {
 	poolInstanceSummaries, err := m.ListMachinePoolInstances(ctx)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	providerIDList := make([]string, len(poolInstanceSummaries))
+	machines := make([]infrav2exp.OCIMachinePoolMachine, len(poolInstanceSummaries))
 
 	for i, instance := range poolInstanceSummaries {
+		ready := false
 		if *instance.State == "Running" {
-			providerIDList[i] = m.OCIClusterAccesor.GetProviderID(*instance.Id)
+			ready = true
+		}
+		machines[i] = infrav2exp.OCIMachinePoolMachine{
+			Spec: infrav2exp.OCIMachinePoolMachineSpec{
+				OCID:         instance.Id,
+				ProviderID:   common.String(m.OCIClusterAccesor.GetProviderID(*instance.Id)),
+				InstanceName: instance.DisplayName,
+			},
+			Status: infrav2exp.OCIMachinePoolMachineStatus{
+				Ready: ready,
+			},
 		}
 	}
-
-	m.OCIMachinePool.Spec.ProviderIDList = providerIDList
-
-	return int32(len(providerIDList)), nil
+	return machines, nil
 }
 
 // GetBootstrapData returns the bootstrap data from the secret in the Machine's bootstrap.dataSecretName.

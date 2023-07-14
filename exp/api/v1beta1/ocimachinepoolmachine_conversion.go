@@ -22,15 +22,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 )
 
-// ConvertTo converts the v1beta1 OCIManagedMachinePoolMachine receiver to a v1beta2 OCIManagedMachinePoolMachine.
-func (src *OCIManagedMachinePoolMachine) ConvertTo(dstRaw conversion.Hub) error {
-	dst := dstRaw.(*v1beta2.OCIManagedMachinePoolMachine)
+// ConvertTo converts the v1beta1 OCIMachinePoolMachine receiver to a v1beta2 OCIMachinePoolMachine.
+func (src *OCIMachinePoolMachine) ConvertTo(dstRaw conversion.Hub) error {
+	dst := dstRaw.(*v1beta2.OCIMachinePoolMachine)
 
-	if err := Convert_v1beta1_OCIManagedMachinePoolMachine_To_v1beta2_OCIManagedMachinePoolMachine(src, dst, nil); err != nil {
+	if err := Convert_v1beta1_OCIMachinePoolMachine_To_v1beta2_OCIMachinePoolMachine(src, dst, nil); err != nil {
 		return err
 	}
 
-	restored := &v1beta2.OCIManagedMachinePoolMachine{}
+	restored := &v1beta2.OCIMachinePoolMachine{}
 	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
 		return err
 	}
@@ -38,11 +38,11 @@ func (src *OCIManagedMachinePoolMachine) ConvertTo(dstRaw conversion.Hub) error 
 	return nil
 }
 
-// ConvertFrom converts receiver to a v1beta2 OCIManagedMachinePoolMachine.
-func (r *OCIManagedMachinePoolMachine) ConvertFrom(srcRaw conversion.Hub) error {
-	src := srcRaw.(*v1beta2.OCIManagedMachinePoolMachine)
+// ConvertFrom converts receiver to a v1beta2 OCIMachinePoolMachine.
+func (r *OCIMachinePoolMachine) ConvertFrom(srcRaw conversion.Hub) error {
+	src := srcRaw.(*v1beta2.OCIMachinePoolMachine)
 
-	if err := Convert_v1beta2_OCIManagedMachinePoolMachine_To_v1beta1_OCIManagedMachinePoolMachine(src, r, nil); err != nil {
+	if err := Convert_v1beta2_OCIMachinePoolMachine_To_v1beta1_OCIMachinePoolMachine(src, r, nil); err != nil {
 		return err
 	}
 

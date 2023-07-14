@@ -160,6 +160,46 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*OCIMachinePoolMachine)(nil), (*v1beta2.OCIMachinePoolMachine)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_OCIMachinePoolMachine_To_v1beta2_OCIMachinePoolMachine(a.(*OCIMachinePoolMachine), b.(*v1beta2.OCIMachinePoolMachine), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*v1beta2.OCIMachinePoolMachine)(nil), (*OCIMachinePoolMachine)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta2_OCIMachinePoolMachine_To_v1beta1_OCIMachinePoolMachine(a.(*v1beta2.OCIMachinePoolMachine), b.(*OCIMachinePoolMachine), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*OCIMachinePoolMachineList)(nil), (*v1beta2.OCIMachinePoolMachineList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_OCIMachinePoolMachineList_To_v1beta2_OCIMachinePoolMachineList(a.(*OCIMachinePoolMachineList), b.(*v1beta2.OCIMachinePoolMachineList), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*v1beta2.OCIMachinePoolMachineList)(nil), (*OCIMachinePoolMachineList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta2_OCIMachinePoolMachineList_To_v1beta1_OCIMachinePoolMachineList(a.(*v1beta2.OCIMachinePoolMachineList), b.(*OCIMachinePoolMachineList), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*OCIMachinePoolMachineSpec)(nil), (*v1beta2.OCIMachinePoolMachineSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_OCIMachinePoolMachineSpec_To_v1beta2_OCIMachinePoolMachineSpec(a.(*OCIMachinePoolMachineSpec), b.(*v1beta2.OCIMachinePoolMachineSpec), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*v1beta2.OCIMachinePoolMachineSpec)(nil), (*OCIMachinePoolMachineSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta2_OCIMachinePoolMachineSpec_To_v1beta1_OCIMachinePoolMachineSpec(a.(*v1beta2.OCIMachinePoolMachineSpec), b.(*OCIMachinePoolMachineSpec), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*OCIMachinePoolMachineStatus)(nil), (*v1beta2.OCIMachinePoolMachineStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_OCIMachinePoolMachineStatus_To_v1beta2_OCIMachinePoolMachineStatus(a.(*OCIMachinePoolMachineStatus), b.(*v1beta2.OCIMachinePoolMachineStatus), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*v1beta2.OCIMachinePoolMachineStatus)(nil), (*OCIMachinePoolMachineStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta2_OCIMachinePoolMachineStatus_To_v1beta1_OCIMachinePoolMachineStatus(a.(*v1beta2.OCIMachinePoolMachineStatus), b.(*OCIMachinePoolMachineStatus), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*OCIMachinePoolSpec)(nil), (*v1beta2.OCIMachinePoolSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta1_OCIMachinePoolSpec_To_v1beta2_OCIMachinePoolSpec(a.(*OCIMachinePoolSpec), b.(*v1beta2.OCIMachinePoolSpec), scope)
 	}); err != nil {
@@ -197,46 +237,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*v1beta2.OCIManagedMachinePoolList)(nil), (*OCIManagedMachinePoolList)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta2_OCIManagedMachinePoolList_To_v1beta1_OCIManagedMachinePoolList(a.(*v1beta2.OCIManagedMachinePoolList), b.(*OCIManagedMachinePoolList), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*OCIManagedMachinePoolMachine)(nil), (*v1beta2.OCIManagedMachinePoolMachine)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_OCIManagedMachinePoolMachine_To_v1beta2_OCIManagedMachinePoolMachine(a.(*OCIManagedMachinePoolMachine), b.(*v1beta2.OCIManagedMachinePoolMachine), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*v1beta2.OCIManagedMachinePoolMachine)(nil), (*OCIManagedMachinePoolMachine)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta2_OCIManagedMachinePoolMachine_To_v1beta1_OCIManagedMachinePoolMachine(a.(*v1beta2.OCIManagedMachinePoolMachine), b.(*OCIManagedMachinePoolMachine), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*OCIManagedMachinePoolMachineList)(nil), (*v1beta2.OCIManagedMachinePoolMachineList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_OCIManagedMachinePoolMachineList_To_v1beta2_OCIManagedMachinePoolMachineList(a.(*OCIManagedMachinePoolMachineList), b.(*v1beta2.OCIManagedMachinePoolMachineList), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*v1beta2.OCIManagedMachinePoolMachineList)(nil), (*OCIManagedMachinePoolMachineList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta2_OCIManagedMachinePoolMachineList_To_v1beta1_OCIManagedMachinePoolMachineList(a.(*v1beta2.OCIManagedMachinePoolMachineList), b.(*OCIManagedMachinePoolMachineList), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*OCIManagedMachinePoolMachineSpec)(nil), (*v1beta2.OCIManagedMachinePoolMachineSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_OCIManagedMachinePoolMachineSpec_To_v1beta2_OCIManagedMachinePoolMachineSpec(a.(*OCIManagedMachinePoolMachineSpec), b.(*v1beta2.OCIManagedMachinePoolMachineSpec), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*v1beta2.OCIManagedMachinePoolMachineSpec)(nil), (*OCIManagedMachinePoolMachineSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta2_OCIManagedMachinePoolMachineSpec_To_v1beta1_OCIManagedMachinePoolMachineSpec(a.(*v1beta2.OCIManagedMachinePoolMachineSpec), b.(*OCIManagedMachinePoolMachineSpec), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*OCIManagedMachinePoolMachineStatus)(nil), (*v1beta2.OCIManagedMachinePoolMachineStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_OCIManagedMachinePoolMachineStatus_To_v1beta2_OCIManagedMachinePoolMachineStatus(a.(*OCIManagedMachinePoolMachineStatus), b.(*v1beta2.OCIManagedMachinePoolMachineStatus), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*v1beta2.OCIManagedMachinePoolMachineStatus)(nil), (*OCIManagedMachinePoolMachineStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta2_OCIManagedMachinePoolMachineStatus_To_v1beta1_OCIManagedMachinePoolMachineStatus(a.(*v1beta2.OCIManagedMachinePoolMachineStatus), b.(*OCIManagedMachinePoolMachineStatus), scope)
 	}); err != nil {
 		return err
 	}
@@ -790,6 +790,108 @@ func Convert_v1beta2_OCIMachinePoolList_To_v1beta1_OCIMachinePoolList(in *v1beta
 	return autoConvert_v1beta2_OCIMachinePoolList_To_v1beta1_OCIMachinePoolList(in, out, s)
 }
 
+func autoConvert_v1beta1_OCIMachinePoolMachine_To_v1beta2_OCIMachinePoolMachine(in *OCIMachinePoolMachine, out *v1beta2.OCIMachinePoolMachine, s conversion.Scope) error {
+	out.ObjectMeta = in.ObjectMeta
+	if err := Convert_v1beta1_OCIMachinePoolMachineSpec_To_v1beta2_OCIMachinePoolMachineSpec(&in.Spec, &out.Spec, s); err != nil {
+		return err
+	}
+	if err := Convert_v1beta1_OCIMachinePoolMachineStatus_To_v1beta2_OCIMachinePoolMachineStatus(&in.Status, &out.Status, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_v1beta1_OCIMachinePoolMachine_To_v1beta2_OCIMachinePoolMachine is an autogenerated conversion function.
+func Convert_v1beta1_OCIMachinePoolMachine_To_v1beta2_OCIMachinePoolMachine(in *OCIMachinePoolMachine, out *v1beta2.OCIMachinePoolMachine, s conversion.Scope) error {
+	return autoConvert_v1beta1_OCIMachinePoolMachine_To_v1beta2_OCIMachinePoolMachine(in, out, s)
+}
+
+func autoConvert_v1beta2_OCIMachinePoolMachine_To_v1beta1_OCIMachinePoolMachine(in *v1beta2.OCIMachinePoolMachine, out *OCIMachinePoolMachine, s conversion.Scope) error {
+	out.ObjectMeta = in.ObjectMeta
+	if err := Convert_v1beta2_OCIMachinePoolMachineSpec_To_v1beta1_OCIMachinePoolMachineSpec(&in.Spec, &out.Spec, s); err != nil {
+		return err
+	}
+	if err := Convert_v1beta2_OCIMachinePoolMachineStatus_To_v1beta1_OCIMachinePoolMachineStatus(&in.Status, &out.Status, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_v1beta2_OCIMachinePoolMachine_To_v1beta1_OCIMachinePoolMachine is an autogenerated conversion function.
+func Convert_v1beta2_OCIMachinePoolMachine_To_v1beta1_OCIMachinePoolMachine(in *v1beta2.OCIMachinePoolMachine, out *OCIMachinePoolMachine, s conversion.Scope) error {
+	return autoConvert_v1beta2_OCIMachinePoolMachine_To_v1beta1_OCIMachinePoolMachine(in, out, s)
+}
+
+func autoConvert_v1beta1_OCIMachinePoolMachineList_To_v1beta2_OCIMachinePoolMachineList(in *OCIMachinePoolMachineList, out *v1beta2.OCIMachinePoolMachineList, s conversion.Scope) error {
+	out.ListMeta = in.ListMeta
+	out.Items = *(*[]v1beta2.OCIMachinePoolMachine)(unsafe.Pointer(&in.Items))
+	return nil
+}
+
+// Convert_v1beta1_OCIMachinePoolMachineList_To_v1beta2_OCIMachinePoolMachineList is an autogenerated conversion function.
+func Convert_v1beta1_OCIMachinePoolMachineList_To_v1beta2_OCIMachinePoolMachineList(in *OCIMachinePoolMachineList, out *v1beta2.OCIMachinePoolMachineList, s conversion.Scope) error {
+	return autoConvert_v1beta1_OCIMachinePoolMachineList_To_v1beta2_OCIMachinePoolMachineList(in, out, s)
+}
+
+func autoConvert_v1beta2_OCIMachinePoolMachineList_To_v1beta1_OCIMachinePoolMachineList(in *v1beta2.OCIMachinePoolMachineList, out *OCIMachinePoolMachineList, s conversion.Scope) error {
+	out.ListMeta = in.ListMeta
+	out.Items = *(*[]OCIMachinePoolMachine)(unsafe.Pointer(&in.Items))
+	return nil
+}
+
+// Convert_v1beta2_OCIMachinePoolMachineList_To_v1beta1_OCIMachinePoolMachineList is an autogenerated conversion function.
+func Convert_v1beta2_OCIMachinePoolMachineList_To_v1beta1_OCIMachinePoolMachineList(in *v1beta2.OCIMachinePoolMachineList, out *OCIMachinePoolMachineList, s conversion.Scope) error {
+	return autoConvert_v1beta2_OCIMachinePoolMachineList_To_v1beta1_OCIMachinePoolMachineList(in, out, s)
+}
+
+func autoConvert_v1beta1_OCIMachinePoolMachineSpec_To_v1beta2_OCIMachinePoolMachineSpec(in *OCIMachinePoolMachineSpec, out *v1beta2.OCIMachinePoolMachineSpec, s conversion.Scope) error {
+	out.ProviderID = (*string)(unsafe.Pointer(in.ProviderID))
+	out.OCID = (*string)(unsafe.Pointer(in.OCID))
+	out.InstanceName = (*string)(unsafe.Pointer(in.InstanceName))
+	out.MachineType = v1beta2.MachineTypeEnum(in.MachineType)
+	return nil
+}
+
+// Convert_v1beta1_OCIMachinePoolMachineSpec_To_v1beta2_OCIMachinePoolMachineSpec is an autogenerated conversion function.
+func Convert_v1beta1_OCIMachinePoolMachineSpec_To_v1beta2_OCIMachinePoolMachineSpec(in *OCIMachinePoolMachineSpec, out *v1beta2.OCIMachinePoolMachineSpec, s conversion.Scope) error {
+	return autoConvert_v1beta1_OCIMachinePoolMachineSpec_To_v1beta2_OCIMachinePoolMachineSpec(in, out, s)
+}
+
+func autoConvert_v1beta2_OCIMachinePoolMachineSpec_To_v1beta1_OCIMachinePoolMachineSpec(in *v1beta2.OCIMachinePoolMachineSpec, out *OCIMachinePoolMachineSpec, s conversion.Scope) error {
+	out.ProviderID = (*string)(unsafe.Pointer(in.ProviderID))
+	out.OCID = (*string)(unsafe.Pointer(in.OCID))
+	out.InstanceName = (*string)(unsafe.Pointer(in.InstanceName))
+	out.MachineType = MachineTypeEnum(in.MachineType)
+	return nil
+}
+
+// Convert_v1beta2_OCIMachinePoolMachineSpec_To_v1beta1_OCIMachinePoolMachineSpec is an autogenerated conversion function.
+func Convert_v1beta2_OCIMachinePoolMachineSpec_To_v1beta1_OCIMachinePoolMachineSpec(in *v1beta2.OCIMachinePoolMachineSpec, out *OCIMachinePoolMachineSpec, s conversion.Scope) error {
+	return autoConvert_v1beta2_OCIMachinePoolMachineSpec_To_v1beta1_OCIMachinePoolMachineSpec(in, out, s)
+}
+
+func autoConvert_v1beta1_OCIMachinePoolMachineStatus_To_v1beta2_OCIMachinePoolMachineStatus(in *OCIMachinePoolMachineStatus, out *v1beta2.OCIMachinePoolMachineStatus, s conversion.Scope) error {
+	out.Ready = in.Ready
+	out.Conditions = *(*clusterapiapiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
+	return nil
+}
+
+// Convert_v1beta1_OCIMachinePoolMachineStatus_To_v1beta2_OCIMachinePoolMachineStatus is an autogenerated conversion function.
+func Convert_v1beta1_OCIMachinePoolMachineStatus_To_v1beta2_OCIMachinePoolMachineStatus(in *OCIMachinePoolMachineStatus, out *v1beta2.OCIMachinePoolMachineStatus, s conversion.Scope) error {
+	return autoConvert_v1beta1_OCIMachinePoolMachineStatus_To_v1beta2_OCIMachinePoolMachineStatus(in, out, s)
+}
+
+func autoConvert_v1beta2_OCIMachinePoolMachineStatus_To_v1beta1_OCIMachinePoolMachineStatus(in *v1beta2.OCIMachinePoolMachineStatus, out *OCIMachinePoolMachineStatus, s conversion.Scope) error {
+	out.Ready = in.Ready
+	out.Conditions = *(*clusterapiapiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
+	return nil
+}
+
+// Convert_v1beta2_OCIMachinePoolMachineStatus_To_v1beta1_OCIMachinePoolMachineStatus is an autogenerated conversion function.
+func Convert_v1beta2_OCIMachinePoolMachineStatus_To_v1beta1_OCIMachinePoolMachineStatus(in *v1beta2.OCIMachinePoolMachineStatus, out *OCIMachinePoolMachineStatus, s conversion.Scope) error {
+	return autoConvert_v1beta2_OCIMachinePoolMachineStatus_To_v1beta1_OCIMachinePoolMachineStatus(in, out, s)
+}
+
 func autoConvert_v1beta1_OCIMachinePoolSpec_To_v1beta2_OCIMachinePoolSpec(in *OCIMachinePoolSpec, out *v1beta2.OCIMachinePoolSpec, s conversion.Scope) error {
 	out.ProviderID = (*string)(unsafe.Pointer(in.ProviderID))
 	out.OCID = (*string)(unsafe.Pointer(in.OCID))
@@ -922,104 +1024,6 @@ func autoConvert_v1beta2_OCIManagedMachinePoolList_To_v1beta1_OCIManagedMachineP
 // Convert_v1beta2_OCIManagedMachinePoolList_To_v1beta1_OCIManagedMachinePoolList is an autogenerated conversion function.
 func Convert_v1beta2_OCIManagedMachinePoolList_To_v1beta1_OCIManagedMachinePoolList(in *v1beta2.OCIManagedMachinePoolList, out *OCIManagedMachinePoolList, s conversion.Scope) error {
 	return autoConvert_v1beta2_OCIManagedMachinePoolList_To_v1beta1_OCIManagedMachinePoolList(in, out, s)
-}
-
-func autoConvert_v1beta1_OCIManagedMachinePoolMachine_To_v1beta2_OCIManagedMachinePoolMachine(in *OCIManagedMachinePoolMachine, out *v1beta2.OCIManagedMachinePoolMachine, s conversion.Scope) error {
-	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1beta1_OCIManagedMachinePoolMachineSpec_To_v1beta2_OCIManagedMachinePoolMachineSpec(&in.Spec, &out.Spec, s); err != nil {
-		return err
-	}
-	if err := Convert_v1beta1_OCIManagedMachinePoolMachineStatus_To_v1beta2_OCIManagedMachinePoolMachineStatus(&in.Status, &out.Status, s); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Convert_v1beta1_OCIManagedMachinePoolMachine_To_v1beta2_OCIManagedMachinePoolMachine is an autogenerated conversion function.
-func Convert_v1beta1_OCIManagedMachinePoolMachine_To_v1beta2_OCIManagedMachinePoolMachine(in *OCIManagedMachinePoolMachine, out *v1beta2.OCIManagedMachinePoolMachine, s conversion.Scope) error {
-	return autoConvert_v1beta1_OCIManagedMachinePoolMachine_To_v1beta2_OCIManagedMachinePoolMachine(in, out, s)
-}
-
-func autoConvert_v1beta2_OCIManagedMachinePoolMachine_To_v1beta1_OCIManagedMachinePoolMachine(in *v1beta2.OCIManagedMachinePoolMachine, out *OCIManagedMachinePoolMachine, s conversion.Scope) error {
-	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1beta2_OCIManagedMachinePoolMachineSpec_To_v1beta1_OCIManagedMachinePoolMachineSpec(&in.Spec, &out.Spec, s); err != nil {
-		return err
-	}
-	if err := Convert_v1beta2_OCIManagedMachinePoolMachineStatus_To_v1beta1_OCIManagedMachinePoolMachineStatus(&in.Status, &out.Status, s); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Convert_v1beta2_OCIManagedMachinePoolMachine_To_v1beta1_OCIManagedMachinePoolMachine is an autogenerated conversion function.
-func Convert_v1beta2_OCIManagedMachinePoolMachine_To_v1beta1_OCIManagedMachinePoolMachine(in *v1beta2.OCIManagedMachinePoolMachine, out *OCIManagedMachinePoolMachine, s conversion.Scope) error {
-	return autoConvert_v1beta2_OCIManagedMachinePoolMachine_To_v1beta1_OCIManagedMachinePoolMachine(in, out, s)
-}
-
-func autoConvert_v1beta1_OCIManagedMachinePoolMachineList_To_v1beta2_OCIManagedMachinePoolMachineList(in *OCIManagedMachinePoolMachineList, out *v1beta2.OCIManagedMachinePoolMachineList, s conversion.Scope) error {
-	out.ListMeta = in.ListMeta
-	out.Items = *(*[]v1beta2.OCIManagedMachinePoolMachine)(unsafe.Pointer(&in.Items))
-	return nil
-}
-
-// Convert_v1beta1_OCIManagedMachinePoolMachineList_To_v1beta2_OCIManagedMachinePoolMachineList is an autogenerated conversion function.
-func Convert_v1beta1_OCIManagedMachinePoolMachineList_To_v1beta2_OCIManagedMachinePoolMachineList(in *OCIManagedMachinePoolMachineList, out *v1beta2.OCIManagedMachinePoolMachineList, s conversion.Scope) error {
-	return autoConvert_v1beta1_OCIManagedMachinePoolMachineList_To_v1beta2_OCIManagedMachinePoolMachineList(in, out, s)
-}
-
-func autoConvert_v1beta2_OCIManagedMachinePoolMachineList_To_v1beta1_OCIManagedMachinePoolMachineList(in *v1beta2.OCIManagedMachinePoolMachineList, out *OCIManagedMachinePoolMachineList, s conversion.Scope) error {
-	out.ListMeta = in.ListMeta
-	out.Items = *(*[]OCIManagedMachinePoolMachine)(unsafe.Pointer(&in.Items))
-	return nil
-}
-
-// Convert_v1beta2_OCIManagedMachinePoolMachineList_To_v1beta1_OCIManagedMachinePoolMachineList is an autogenerated conversion function.
-func Convert_v1beta2_OCIManagedMachinePoolMachineList_To_v1beta1_OCIManagedMachinePoolMachineList(in *v1beta2.OCIManagedMachinePoolMachineList, out *OCIManagedMachinePoolMachineList, s conversion.Scope) error {
-	return autoConvert_v1beta2_OCIManagedMachinePoolMachineList_To_v1beta1_OCIManagedMachinePoolMachineList(in, out, s)
-}
-
-func autoConvert_v1beta1_OCIManagedMachinePoolMachineSpec_To_v1beta2_OCIManagedMachinePoolMachineSpec(in *OCIManagedMachinePoolMachineSpec, out *v1beta2.OCIManagedMachinePoolMachineSpec, s conversion.Scope) error {
-	out.ProviderID = (*string)(unsafe.Pointer(in.ProviderID))
-	out.OCID = (*string)(unsafe.Pointer(in.OCID))
-	return nil
-}
-
-// Convert_v1beta1_OCIManagedMachinePoolMachineSpec_To_v1beta2_OCIManagedMachinePoolMachineSpec is an autogenerated conversion function.
-func Convert_v1beta1_OCIManagedMachinePoolMachineSpec_To_v1beta2_OCIManagedMachinePoolMachineSpec(in *OCIManagedMachinePoolMachineSpec, out *v1beta2.OCIManagedMachinePoolMachineSpec, s conversion.Scope) error {
-	return autoConvert_v1beta1_OCIManagedMachinePoolMachineSpec_To_v1beta2_OCIManagedMachinePoolMachineSpec(in, out, s)
-}
-
-func autoConvert_v1beta2_OCIManagedMachinePoolMachineSpec_To_v1beta1_OCIManagedMachinePoolMachineSpec(in *v1beta2.OCIManagedMachinePoolMachineSpec, out *OCIManagedMachinePoolMachineSpec, s conversion.Scope) error {
-	out.ProviderID = (*string)(unsafe.Pointer(in.ProviderID))
-	out.OCID = (*string)(unsafe.Pointer(in.OCID))
-	return nil
-}
-
-// Convert_v1beta2_OCIManagedMachinePoolMachineSpec_To_v1beta1_OCIManagedMachinePoolMachineSpec is an autogenerated conversion function.
-func Convert_v1beta2_OCIManagedMachinePoolMachineSpec_To_v1beta1_OCIManagedMachinePoolMachineSpec(in *v1beta2.OCIManagedMachinePoolMachineSpec, out *OCIManagedMachinePoolMachineSpec, s conversion.Scope) error {
-	return autoConvert_v1beta2_OCIManagedMachinePoolMachineSpec_To_v1beta1_OCIManagedMachinePoolMachineSpec(in, out, s)
-}
-
-func autoConvert_v1beta1_OCIManagedMachinePoolMachineStatus_To_v1beta2_OCIManagedMachinePoolMachineStatus(in *OCIManagedMachinePoolMachineStatus, out *v1beta2.OCIManagedMachinePoolMachineStatus, s conversion.Scope) error {
-	out.Ready = in.Ready
-	out.Conditions = *(*clusterapiapiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
-	return nil
-}
-
-// Convert_v1beta1_OCIManagedMachinePoolMachineStatus_To_v1beta2_OCIManagedMachinePoolMachineStatus is an autogenerated conversion function.
-func Convert_v1beta1_OCIManagedMachinePoolMachineStatus_To_v1beta2_OCIManagedMachinePoolMachineStatus(in *OCIManagedMachinePoolMachineStatus, out *v1beta2.OCIManagedMachinePoolMachineStatus, s conversion.Scope) error {
-	return autoConvert_v1beta1_OCIManagedMachinePoolMachineStatus_To_v1beta2_OCIManagedMachinePoolMachineStatus(in, out, s)
-}
-
-func autoConvert_v1beta2_OCIManagedMachinePoolMachineStatus_To_v1beta1_OCIManagedMachinePoolMachineStatus(in *v1beta2.OCIManagedMachinePoolMachineStatus, out *OCIManagedMachinePoolMachineStatus, s conversion.Scope) error {
-	out.Ready = in.Ready
-	out.Conditions = *(*clusterapiapiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
-	return nil
-}
-
-// Convert_v1beta2_OCIManagedMachinePoolMachineStatus_To_v1beta1_OCIManagedMachinePoolMachineStatus is an autogenerated conversion function.
-func Convert_v1beta2_OCIManagedMachinePoolMachineStatus_To_v1beta1_OCIManagedMachinePoolMachineStatus(in *v1beta2.OCIManagedMachinePoolMachineStatus, out *OCIManagedMachinePoolMachineStatus, s conversion.Scope) error {
-	return autoConvert_v1beta2_OCIManagedMachinePoolMachineStatus_To_v1beta1_OCIManagedMachinePoolMachineStatus(in, out, s)
 }
 
 func autoConvert_v1beta1_OCIManagedMachinePoolSpec_To_v1beta2_OCIManagedMachinePoolSpec(in *OCIManagedMachinePoolSpec, out *v1beta2.OCIManagedMachinePoolSpec, s conversion.Scope) error {

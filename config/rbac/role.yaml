@@ -260,7 +260,7 @@ rules:
 - apiGroups:
     - infrastructure.cluster.x-k8s.io
   resources:
-    - ocimanagedmachinepoolmachines
+    - ocimachinepoolmachines
   verbs:
     - create
     - delete
@@ -272,7 +272,7 @@ rules:
 - apiGroups:
     - infrastructure.cluster.x-k8s.io
   resources:
-    - ocimanagedmachinepoolmachines/status
+    - ocimachinepoolmachines/status
   verbs:
     - get
     - patch

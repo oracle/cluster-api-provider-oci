@@ -35,7 +35,7 @@ func (*OCIVirtualMachinePool) Hub() {}
 func (*OCIVirtualMachinePoolList) Hub() {}
 
 // Hub marks OCIManagedMachinePoolMachine as a conversion hub.
-func (*OCIManagedMachinePoolMachine) Hub() {}
+func (*OCIMachinePoolMachine) Hub() {}
 
 // Hub marks OCIManagedMachinePoolMachineList as a conversion hub.
-func (*OCIManagedMachinePoolMachineList) Hub() {}
+func (*OCIMachinePoolMachineList) Hub() {}

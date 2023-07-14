@@ -5,14 +5,14 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.10.0
   creationTimestamp: null
-  name: ocimanagedmachinepoolmachines.infrastructure.cluster.x-k8s.io
+  name: ocimachinepoolmachines.infrastructure.cluster.x-k8s.io
 spec:
   group: infrastructure.cluster.x-k8s.io
   names:
-    kind: OCIManagedMachinePoolMachine
-    listKind: OCIManagedMachinePoolMachineList
-    plural: ocimanagedmachinepoolmachines
-    singular: ocimanagedmachinepoolmachine
+    kind: OCIMachinePoolMachine
+    listKind: OCIMachinePoolMachineList
+    plural: ocimachinepoolmachines
+    singular: ocimachinepoolmachine
   scope: Namespaced
   versions:
   - name: v1beta1
@@ -32,20 +32,24 @@ spec:
           metadata:
             type: object
           spec:
-            description: OCIManagedMachinePoolMachineSpec defines the desired state
-              of OCIManagedMachinePoolMachine
+            description: OCIMachinePoolMachineSpec defines the desired state of OCIMachinePoolMachine
             properties:
+              instanceName:
+                description: InstanceName is the name of the instance.
+                type: string
+              machineType:
+                description: MachineType is the type of the machine.
+                type: string
               ocid:
-                description: OCID is the OCID of the associated InstancePool
+                description: OCID is the OCID of the associated instance.
                 type: string
               providerID:
-                description: ProviderID is the OCID of the associated InstancePool
-                  in a provider format
+                description: ProviderID is the OCID of the associated machine..
                 type: string
             type: object
           status:
-            description: OCIManagedMachinePoolMachineStatus defines the observed state
-              of OCIManagedMachinePoolMachine
+            description: OCIMachinePoolMachineStatus defines the observed state of
+              OCIMachinePoolMachine
             properties:
               conditions:
                 description: Conditions defines current service state of the OCIMachinePool.
@@ -118,20 +122,24 @@ spec:
           metadata:
             type: object
           spec:
-            description: OCIManagedMachinePoolMachineSpec defines the desired state
-              of OCIManagedMachinePoolMachine
+            description: OCIMachinePoolMachineSpec defines the desired state of OCIMachinePoolMachine
             properties:
+              instanceName:
+                description: InstanceName is the name of the instance.
+                type: string
+              machineType:
+                description: MachineType is the type of the machine.
+                type: string
               ocid:
-                description: OCID is the OCID of the associated InstancePool
+                description: OCID is the OCID of the associated instance.
                 type: string
               providerID:
-                description: ProviderID is the OCID of the associated InstancePool
-                  in a provider format
+                description: ProviderID is the OCID of the associated machine..
                 type: string
             type: object
           status:
-            description: OCIManagedMachinePoolMachineStatus defines the observed state
-              of OCIManagedMachinePoolMachine
+            description: OCIMachinePoolMachineStatus defines the observed state of
+              OCIMachinePoolMachine
             properties:
               conditions:
                 description: Conditions defines current service state of the OCIMachinePool.
