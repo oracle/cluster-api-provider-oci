@@ -206,6 +206,10 @@ type OCIMachinePoolStatus struct {
 	FailureReason *errors.MachineStatusError `json:"failureReason,omitempty"`
 
 	FailureMessage *string `json:"failureMessage,omitempty"`
+
+	// InfrastructureMachineKind is the kind of the infrastructure resources behind MachinePool Machines.
+	// +optional
+	InfrastructureMachineKind string `json:"infrastructureMachineKind,omitempty"`
 }
 
 //+kubebuilder:object:root=true

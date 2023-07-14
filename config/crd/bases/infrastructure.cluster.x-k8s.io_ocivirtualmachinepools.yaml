@@ -189,6 +189,10 @@ spec:
                 description: FailureReason will contains the CAPI MachinePoolStatusFailure
                   if the virtual machine pool has hit an error condition.
                 type: string
+              infrastructureMachineKind:
+                description: InfrastructureMachineKind is the kind of the infrastructure
+                  resources behind MachinePool Machines.
+                type: string
               ready:
                 type: boolean
               replicas:
@@ -374,6 +378,10 @@ spec:
               failureReason:
                 description: FailureReason will contains the CAPI MachinePoolStatusFailure
                   if the virtual machine pool has hit an error condition.
+                type: string
+              infrastructureMachineKind:
+                description: InfrastructureMachineKind is the kind of the infrastructure
+                  resources behind MachinePool Machines.
                 type: string
               ready:
                 type: boolean

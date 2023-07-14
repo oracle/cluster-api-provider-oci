@@ -88,7 +88,7 @@ func NewVirtualMachinePoolScope(params VirtualMachinePoolScopeParams) (*VirtualM
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init patch helper")
 	}
-
+	params.OCIVirtualMachinePool.Status.InfrastructureMachineKind = "OCIMachinePoolMachine"
 	return &VirtualMachinePoolScope{
 		Logger:                  params.Logger,
 		Client:                  params.Client,

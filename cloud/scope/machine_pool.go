@@ -86,7 +86,7 @@ func NewMachinePoolScope(params MachinePoolScopeParams) (*MachinePoolScope, erro
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init patch helper")
 	}
-
+	params.OCIMachinePool.Status.InfrastructureMachineKind = "OCIMachinePoolMachine"
 	return &MachinePoolScope{
 		Logger:                  params.Logger,
 		Client:                  params.Client,

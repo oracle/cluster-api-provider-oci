@@ -113,6 +113,10 @@ type OCIVirtualMachinePoolStatus struct {
 	// FailureMessages contains the verbose erorr messages related to the virtual machine pool failures.
 	// +optional
 	FailureMessages []string `json:"failureMessages,omitempty"`
+
+	// InfrastructureMachineKind is the kind of the infrastructure resources behind MachinePool Machines.
+	// +optional
+	InfrastructureMachineKind string `json:"infrastructureMachineKind,omitempty"`
 }
 
 //+kubebuilder:object:root=true

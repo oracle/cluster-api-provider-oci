@@ -274,7 +274,7 @@ func CreateManagedMachinesIfNotExists(ctx context.Context, client client.Client,
 
 	for _, specMachine := range specInfraMachines {
 		if actualMachine, exists := instanceNameToDockerMachine[*specMachine.Spec.OCID]; exists {
-			if reflect.DeepEqual(specMachine.Status.Ready, actualMachine.Status.Ready) {
+			if !reflect.DeepEqual(specMachine.Status.Ready, actualMachine.Status.Ready) {
 				log.Info("Setting status of machine to active", "machine", actualMachine.Name)
 
 				helper, err := patch.NewHelper(&actualMachine, client)
