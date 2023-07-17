@@ -161,6 +161,8 @@ var _ = Describe("Managed Workload cluster creation", func() {
 
 		clusterctl.ApplyClusterTemplateAndWait(ctx, input, result)
 
+		validateMachinePoolMachines(ctx, result.Cluster, bootstrapClusterProxy, result.MachinePools)
+
 		By("Scaling the machine pool up")
 		framework.ScaleMachinePoolAndWait(ctx, framework.ScaleMachinePoolAndWaitInput{
 			ClusterProxy:              bootstrapClusterProxy,
@@ -169,6 +171,7 @@ var _ = Describe("Managed Workload cluster creation", func() {
 			MachinePools:              result.MachinePools,
 			WaitForMachinePoolToScale: e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes"),
 		})
+		validateMachinePoolMachines(ctx, result.Cluster, bootstrapClusterProxy, result.MachinePools)
 
 		By("Scaling the machine pool down")
 		framework.ScaleMachinePoolAndWait(ctx, framework.ScaleMachinePoolAndWaitInput{
@@ -178,6 +181,7 @@ var _ = Describe("Managed Workload cluster creation", func() {
 			MachinePools:              result.MachinePools,
 			WaitForMachinePoolToScale: e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes"),
 		})
+		validateMachinePoolMachines(ctx, result.Cluster, bootstrapClusterProxy, result.MachinePools)
 		upgradeControlPlaneVersionSpec(ctx, bootstrapClusterProxy.GetClient(), clusterName, namespace.Name,
 			e2eConfig.GetIntervals(specName, "wait-control-plane"))
 	})
@@ -310,6 +314,7 @@ var _ = Describe("Managed Workload cluster creation", func() {
 
 		clusterctl.ApplyClusterTemplateAndWait(ctx, input, result)
 
+		validateMachinePoolMachines(ctx, result.Cluster, bootstrapClusterProxy, result.MachinePools)
 		controlPlane := GetOCIManagedControlPlaneByCluster(ctx, bootstrapClusterProxy.GetClient(), clusterName, namespace.Name)
 		Expect(controlPlane).To(Not(BeNil()))
 		clusterOcid := controlPlane.Spec.ID
@@ -362,6 +367,7 @@ var _ = Describe("Managed Workload cluster creation", func() {
 		}
 
 		clusterctl.ApplyClusterTemplateAndWait(ctx, input, result)
+		validateMachinePoolMachines(ctx, result.Cluster, bootstrapClusterProxy, result.MachinePools)
 	})
 })
 
@@ -468,6 +474,33 @@ func updateMachinePoolVersion(ctx context.Context, cluster *clusterv1.Cluster, c
 
 		return matches, nil
 	}, waitInterval...).Should(Equal(1), "Timed out waiting for all MachinePool %s instances to be upgraded to Kubernetes version %s", klog.KObj(machinePool), managedKubernetesUpgradeVersion)
+}
+
+func validateMachinePoolMachines(ctx context.Context, cluster *clusterv1.Cluster, clusterProxy framework.ClusterProxy, machinePools []*expv1.MachinePool) {
+	Eventually(func() error {
+		lister := clusterProxy.GetClient()
+		for _, pool := range machinePools {
+			machineList := &infrav2exp.OCIMachinePoolMachineList{}
+			labels := map[string]string{
+				clusterv1.ClusterNameLabel:     cluster.Name,
+				clusterv1.MachinePoolNameLabel: pool.Name,
+			}
+			if err := lister.List(ctx, machineList, client.InNamespace(cluster.Namespace), client.MatchingLabels(labels)); err != nil {
+				return err
+			}
+
+			if len(machineList.Items) != int(*pool.Spec.Replicas) {
+				return errors.New(fmt.Sprintf("Infra machines does not equal machine pool replicas for machinepool %s", pool.Name))
+			}
+			for _, managedMachine := range machineList.Items {
+				_, err := util.GetOwnerMachine(ctx, lister, managedMachine.ObjectMeta)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}, retryableOperationTimeout, retryableOperationInterval).Should(Succeed(), "Machinepool machines were not created properly")
 }
 
 // getMachinePoolInstanceVersions returns the Kubernetes versions of the machine pool instances.
