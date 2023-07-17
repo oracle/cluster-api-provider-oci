@@ -338,6 +338,7 @@ func DeleteOrphanedManagedMachines(ctx context.Context, client client.Client, ma
 	if err != nil {
 		return err
 	}
+	log.Info("machinelist", "list", machineList, "len", len(machineList.Items))
 
 	instanceNameSet := map[string]struct{}{}
 	for _, specMachine := range specInfraMachines {
