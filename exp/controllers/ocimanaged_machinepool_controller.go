@@ -356,7 +356,6 @@ func (r *OCIManagedMachinePoolReconciler) reconcileManagedMachines(ctx context.C
 		// deleted/failing nodes should not be added to spec
 		machinePoolScope.Info(string(node.LifecycleState))
 		if node.LifecycleState == oke.NodeLifecycleStateDeleted || node.LifecycleState == oke.NodeLifecycleStateFailing {
-			machinePoolScope.Info("in ignore loop")
 			continue
 		}
 		ready := false
