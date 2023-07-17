@@ -351,19 +351,17 @@ func (r *OCIManagedMachinePoolReconciler) reconcileNormal(ctx context.Context, l
 }
 
 func (r *OCIManagedMachinePoolReconciler) reconcileManagedMachines(ctx context.Context, err error, machinePoolScope *scope.ManagedMachinePoolScope, nodePool *oke.NodePool) error {
-	specInfraMachines := make([]infrav2exp.OCIMachinePoolMachine, len(nodePool.Nodes))
-	for i, node := range nodePool.Nodes {
+	specInfraMachines := make([]infrav2exp.OCIMachinePoolMachine, 0)
+	for _, node := range nodePool.Nodes {
 		// deleted/failing nodes should not be added to spec
-		machinePoolScope.Info(string(node.LifecycleState))
 		if node.LifecycleState == oke.NodeLifecycleStateDeleted || node.LifecycleState == oke.NodeLifecycleStateFailing {
-			machinePoolScope.Info("in continue loop")
 			continue
 		}
 		ready := false
 		if node.LifecycleState == oke.NodeLifecycleStateActive {
 			ready = true
 		}
-		specInfraMachines[i] = infrav2exp.OCIMachinePoolMachine{
+		specInfraMachines = append(specInfraMachines, infrav2exp.OCIMachinePoolMachine{
 			Spec: infrav2exp.OCIMachinePoolMachineSpec{
 				OCID:         node.Id,
 				ProviderID:   node.Id,
@@ -372,7 +370,7 @@ func (r *OCIManagedMachinePoolReconciler) reconcileManagedMachines(ctx context.C
 			Status: infrav2exp.OCIMachinePoolMachineStatus{
 				Ready: ready,
 			},
-		}
+		})
 	}
 	err = cloudutil.CreateManagedMachinesIfNotExists(ctx, r.Client, machinePoolScope.MachinePool, machinePoolScope.Cluster, machinePoolScope.OCIManagedMachinePool.Name, machinePoolScope.OCIManagedMachinePool.Namespace, specInfraMachines, infrav2exp.Managed, machinePoolScope.Logger)
 	if err != nil {

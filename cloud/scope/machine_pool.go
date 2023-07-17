@@ -192,9 +192,9 @@ func (m *MachinePoolScope) SetListandSetMachinePoolInstances(ctx context.Context
 	if err != nil {
 		return nil, err
 	}
-	machines := make([]infrav2exp.OCIMachinePoolMachine, len(poolInstanceSummaries))
+	machines := make([]infrav2exp.OCIMachinePoolMachine, 0)
 
-	for i, instance := range poolInstanceSummaries {
+	for _, instance := range poolInstanceSummaries {
 		// deleted nodes should not be considered
 		if strings.EqualFold(*instance.State, "TERMINATED") {
 			continue
@@ -203,7 +203,7 @@ func (m *MachinePoolScope) SetListandSetMachinePoolInstances(ctx context.Context
 		if strings.EqualFold(*instance.State, "RUNNING") {
 			ready = true
 		}
-		machines[i] = infrav2exp.OCIMachinePoolMachine{
+		machines = append(machines, infrav2exp.OCIMachinePoolMachine{
 			Spec: infrav2exp.OCIMachinePoolMachineSpec{
 				OCID:         instance.Id,
 				ProviderID:   common.String(m.OCIClusterAccesor.GetProviderID(*instance.Id)),
@@ -212,7 +212,7 @@ func (m *MachinePoolScope) SetListandSetMachinePoolInstances(ctx context.Context
 			Status: infrav2exp.OCIMachinePoolMachineStatus{
 				Ready: ready,
 			},
-		}
+		})
 	}
 	return machines, nil
 }
