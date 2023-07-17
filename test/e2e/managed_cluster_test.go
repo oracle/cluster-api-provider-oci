@@ -498,6 +498,7 @@ func validateMachinePoolMachines(ctx context.Context, cluster *clusterv1.Cluster
 					return err
 				}
 			}
+			Logf("Machinepool machines created successfully for machinepool %s", pool.Name)
 		}
 		return nil
 	}, retryableOperationTimeout, retryableOperationInterval).Should(Succeed(), "Machinepool machines were not created properly")
@@ -514,7 +515,7 @@ func getMachinePoolInstanceVersions(ctx context.Context, clusterProxy framework.
 	for i, instance := range instances {
 		node := &corev1.Node{}
 		var nodeGetError error
-		err := wait.PollImmediate(100*time.Millisecond, 10*time.Second, func() (bool, error) {
+		err := wait.PollUntilContextTimeout(ctx, 100*time.Millisecond, 10*time.Second, true, func(ctx context.Context) (bool, error) {
 			nodeGetError = clusterProxy.GetWorkloadCluster(ctx, cluster.Namespace, cluster.Name).
 				GetClient().Get(ctx, client.ObjectKey{Name: instance.Name}, node)
 			if nodeGetError != nil {

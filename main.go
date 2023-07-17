@@ -19,6 +19,8 @@ package main
 import (
 	"flag"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"time"
 
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
@@ -50,17 +52,9 @@ import (
 )
 
 var (
-	scheme         = runtime.NewScheme()
-	setupLog       = ctrl.Log.WithName("setup")
-	logOptions     = logs.NewOptions()
-	webhookPort    int
-	webhookCertDir string
-
-	// Flags for reconciler concurrency
-	ociClusterConcurrency     int
-	ociMachineConcurrency     int
-	ociMachinePoolConcurrency int
-	initOciClientsOnStartup   bool
+	scheme     = runtime.NewScheme()
+	setupLog   = ctrl.Log.WithName("setup")
+	logOptions = logs.NewOptions()
 )
 
 const (
@@ -88,6 +82,12 @@ func main() {
 	var watchNamespace string
 	var probeAddr string
 	var webhookPort int
+	var webhookCertDir string
+	// Flags for reconciler concurrency
+	var ociClusterConcurrency int
+	var ociMachineConcurrency int
+	var ociMachinePoolConcurrency int
+	var initOciClientsOnStartup bool
 
 	fs := pflag.CommandLine
 	logs.AddFlags(fs, logs.SkipLoggingConfigurationFlags())
@@ -179,9 +179,12 @@ func main() {
 	ctrl.SetLogger(klog.Background())
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                     scheme,
-		MetricsBindAddress:         metricsAddr,
-		Port:                       webhookPort,
+		Scheme:             scheme,
+		MetricsBindAddress: metricsAddr,
+		WebhookServer: webhook.NewServer(webhook.Options{
+			Port:    webhookPort,
+			CertDir: webhookCertDir,
+		}),
 		HealthProbeBindAddress:     probeAddr,
 		LeaderElection:             enableLeaderElection,
 		LeaderElectionID:           "controller-leader-elect-capoci",
@@ -190,8 +193,9 @@ func main() {
 		LeaseDuration:              &leaderElectionLeaseDuration,
 		RenewDeadline:              &leaderElectionRenewDeadline,
 		RetryPeriod:                &leaderElectionRetryPeriod,
-		CertDir:                    webhookCertDir,
-		Namespace:                  watchNamespace,
+		Cache: cache.Options{
+			Namespaces: []string{watchNamespace},
+		},
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
