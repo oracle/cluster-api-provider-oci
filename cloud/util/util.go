@@ -341,6 +341,7 @@ func DeleteOrphanedManagedMachines(ctx context.Context, client client.Client, ma
 
 	instanceNameSet := map[string]struct{}{}
 	for _, specMachine := range specInfraMachines {
+		log.Info(*specMachine.Spec.OCID)
 		instanceNameSet[*specMachine.Spec.OCID] = struct{}{}
 	}
 

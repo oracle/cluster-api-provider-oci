@@ -354,7 +354,9 @@ func (r *OCIManagedMachinePoolReconciler) reconcileManagedMachines(ctx context.C
 	specInfraMachines := make([]infrav2exp.OCIMachinePoolMachine, len(nodePool.Nodes))
 	for i, node := range nodePool.Nodes {
 		// deleted/failing nodes should not be added to spec
+		machinePoolScope.Info(string(node.LifecycleState))
 		if node.LifecycleState == oke.NodeLifecycleStateDeleted || node.LifecycleState == oke.NodeLifecycleStateFailing {
+			machinePoolScope.Info("in continue loop")
 			continue
 		}
 		ready := false
