@@ -262,7 +262,7 @@ func CreateClientProviderFromClusterIdentity(ctx context.Context, client client.
 }
 
 func CreateManagedMachinesIfNotExists(ctx context.Context, client client.Client, machinePool *expclusterv1.MachinePool, cluster *clusterv1.Cluster, infraMachinePoolName string, namespace string, specInfraMachines []infrav2exp.OCIMachinePoolMachine, machinetype expV1Beta2.MachineTypeEnum, log *logr.Logger) error {
-	machineList, err := getManagedMachines(ctx, client, machinePool, cluster, namespace)
+	machineList, err := getManagedMachines(ctx, client, machinePool, cluster, namespace, log)
 	if err != nil {
 		return err
 	}
@@ -320,12 +320,13 @@ func CreateManagedMachinesIfNotExists(ctx context.Context, client client.Client,
 	return nil
 }
 
-func getManagedMachines(ctx context.Context, c client.Client, machinePool *expclusterv1.MachinePool, cluster *clusterv1.Cluster, namespace string) (*infrav2exp.OCIMachinePoolMachineList, error) {
+func getManagedMachines(ctx context.Context, c client.Client, machinePool *expclusterv1.MachinePool, cluster *clusterv1.Cluster, namespace string, log *logr.Logger) (*infrav2exp.OCIMachinePoolMachineList, error) {
 	machineList := &infrav2exp.OCIMachinePoolMachineList{}
 	labels := map[string]string{
 		clusterv1.ClusterNameLabel:     cluster.Name,
 		clusterv1.MachinePoolNameLabel: machinePool.Name,
 	}
+	log.Info("labels are", "labels", labels)
 	if err := c.List(ctx, machineList, client.InNamespace(namespace), client.MatchingLabels(labels)); err != nil {
 		return nil, err
 	}
@@ -334,7 +335,7 @@ func getManagedMachines(ctx context.Context, c client.Client, machinePool *expcl
 }
 
 func DeleteOrphanedManagedMachines(ctx context.Context, client client.Client, machinePool *expclusterv1.MachinePool, cluster *clusterv1.Cluster, namespace string, specInfraMachines []infrav2exp.OCIMachinePoolMachine, log *logr.Logger) error {
-	machineList, err := getManagedMachines(ctx, client, machinePool, cluster, namespace)
+	machineList, err := getManagedMachines(ctx, client, machinePool, cluster, namespace, log)
 	if err != nil {
 		return err
 	}

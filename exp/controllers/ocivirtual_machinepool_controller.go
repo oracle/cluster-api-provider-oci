@@ -399,7 +399,7 @@ func (r *OCIVirtualMachinePoolReconciler) reconcileVirtualMachines(ctx context.C
 		return errors.Wrap(err, "failed to create missing machines")
 	}
 
-	err = cloudutil.DeleteOrphanedManagedMachines(ctx, r.Client, machinePoolScope.MachinePool, machinePoolScope.Cluster, machinePoolScope.OCIVirtualMachinePool.Name, specInfraMachines, machinePoolScope.Logger)
+	err = cloudutil.DeleteOrphanedManagedMachines(ctx, r.Client, machinePoolScope.MachinePool, machinePoolScope.Cluster, machinePoolScope.OCIVirtualMachinePool.Namespace, specInfraMachines, machinePoolScope.Logger)
 	if err != nil {
 		conditions.MarkFalse(machinePoolScope.OCIVirtualMachinePool, clusterv1.ReadyCondition, "FailedToDeleteOrphanedMachines", clusterv1.ConditionSeverityWarning, err.Error())
 		return errors.Wrap(err, "failed to delete orphaned machines")
