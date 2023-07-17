@@ -379,8 +379,9 @@ func (r *OCIMachinePoolReconciler) reconcileNormal(ctx context.Context, logger l
 			"Instance pool has invalid lifecycle state %s", instancePool.LifecycleState)
 		return reconcile.Result{}, errors.New(fmt.Sprintf("instance pool has invalid lifecycle state %s", instancePool.LifecycleState))
 	}
-
-	return ctrl.Result{}, nil
+	// we reconcile every 5 minutes in case any reconciliation have happened behind the scenes by Instancepool service on
+	// the instance pool(removing unhealthy nodes etc) which has to be percolated to machinepool machines
+	return reconcile.Result{RequeueAfter: 300 * time.Second}, nil
 }
 
 func (r *OCIMachinePoolReconciler) reconcileDelete(ctx context.Context, machinePoolScope *scope.MachinePoolScope) (_ ctrl.Result, reterr error) {

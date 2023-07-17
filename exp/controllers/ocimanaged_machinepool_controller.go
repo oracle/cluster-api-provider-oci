@@ -337,7 +337,9 @@ func (r *OCIManagedMachinePoolReconciler) reconcileNormal(ctx context.Context, l
 			return reconcile.Result{}, err
 		}
 
-		return reconcile.Result{}, nil
+		// we reconcile every 5 minutes in case any reconciliation have happened behind the scenes by OKE service on
+		// the node pool(removing unhealthy nodes etc) which has to be percolated to machinepool machines
+		return reconcile.Result{RequeueAfter: 300 * time.Second}, nil
 	default:
 		err := errors.Errorf("Node Pool status %s is unexpected", nodePool.LifecycleState)
 		machinePoolScope.OCIManagedMachinePool.Status.FailureMessages = append(machinePoolScope.OCIManagedMachinePool.Status.FailureMessages, err.Error())
@@ -351,6 +353,10 @@ func (r *OCIManagedMachinePoolReconciler) reconcileNormal(ctx context.Context, l
 func (r *OCIManagedMachinePoolReconciler) reconcileManagedMachines(ctx context.Context, err error, machinePoolScope *scope.ManagedMachinePoolScope, nodePool *oke.NodePool) error {
 	specInfraMachines := make([]infrav2exp.OCIMachinePoolMachine, len(nodePool.Nodes))
 	for i, node := range nodePool.Nodes {
+		// deleted/failing nodes should not be added to spec
+		if node.LifecycleState == oke.NodeLifecycleStateDeleted || node.LifecycleState == oke.NodeLifecycleStateFailing {
+			continue
+		}
 		ready := false
 		if node.LifecycleState == oke.NodeLifecycleStateActive {
 			ready = true

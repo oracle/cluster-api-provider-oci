@@ -147,6 +147,11 @@ func (m *VirtualMachinePoolScope) ListandSetMachinePoolInstances(ctx context.Con
 			return machines, err
 		}
 		for _, node := range response.Items {
+			// deleted nodes should not be considered
+			if node.LifecycleState == oke.VirtualNodeLifecycleStateDeleted ||
+				node.LifecycleState == oke.VirtualNodeLifecycleStateFailed {
+				continue
+			}
 			ready := false
 			if node.LifecycleState == oke.VirtualNodeLifecycleStateActive {
 				ready = true

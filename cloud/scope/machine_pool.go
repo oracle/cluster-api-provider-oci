@@ -195,8 +195,12 @@ func (m *MachinePoolScope) SetListandSetMachinePoolInstances(ctx context.Context
 	machines := make([]infrav2exp.OCIMachinePoolMachine, len(poolInstanceSummaries))
 
 	for i, instance := range poolInstanceSummaries {
+		// deleted nodes should not be considered
+		if strings.EqualFold(*instance.State, "TERMINATED") {
+			continue
+		}
 		ready := false
-		if *instance.State == "Running" {
+		if strings.EqualFold(*instance.State, "RUNNING") {
 			ready = true
 		}
 		machines[i] = infrav2exp.OCIMachinePoolMachine{

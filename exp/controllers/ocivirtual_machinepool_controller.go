@@ -328,7 +328,9 @@ func (r *OCIVirtualMachinePoolReconciler) reconcileNormal(ctx context.Context, l
 			return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 		}
 
-		return reconcile.Result{}, nil
+		// we reconcile every 5 minutes in case any reconciliation have happened behind the scenes by OKE service on
+		// the virtual node pool(removing unhealthy nodes etc) which has to be percolated to machinepool machines
+		return reconcile.Result{RequeueAfter: 300 * time.Second}, nil
 	default:
 		err := errors.Errorf("Virtual Node Pool status %s is unexpected", nodePool.LifecycleState)
 		machinePoolScope.OCIVirtualMachinePool.Status.FailureMessages = append(machinePoolScope.OCIVirtualMachinePool.Status.FailureMessages, err.Error())
