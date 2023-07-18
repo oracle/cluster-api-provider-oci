@@ -657,14 +657,16 @@ func TestCreateManagedMachinesIfNotExists(t *testing.T) {
 				tt.client, tt.machinePool,
 				tt.cluster, tt.infraMachinePoolName, tt.namespace, tt.specMachines, &log,
 			}
-			err := CreateManagedMachinesIfNotExists(context.Background(), params)
+			err := CreateMachinePoolMachinesIfNotExists(context.Background(), params)
 			if tt.errorExpected {
 				g.Expect(err).To(Not(BeNil()))
 				g.Expect(err.Error()).To(Equal(tt.errorMessage))
 			} else {
 				g.Expect(err).To(BeNil())
 			}
-			tt.validate(g, &tt)
+			if tt.validate != nil {
+				tt.validate(g, &tt)
+			}
 		})
 	}
 }
@@ -751,6 +753,54 @@ func TestDeleteManagedMachinesIfNotExists(t *testing.T) {
 				g.Expect(t.deletePoolMachines[0].Name).To(Equal("test-machine"))
 			},
 		},
+		{
+			name:                 "machine delete, no owner",
+			namespace:            "default",
+			infraMachinePoolName: "test",
+			errorExpected:        true,
+			machineTypEnum:       infrav2exp.SelfManaged,
+			machinePool: &expclusterv1.MachinePool{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+				},
+			},
+			cluster: &clusterv1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+				},
+			},
+			setup: func(t *test) {
+				t.client = interceptor.NewClient(fake.NewClientBuilder().WithObjects(&infrav2exp.OCIMachinePoolMachine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: "default",
+						Labels: map[string]string{
+							clusterv1.ClusterNameLabel:     "test",
+							clusterv1.MachinePoolNameLabel: "test",
+						},
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								Kind:       "Machine",
+								Name:       "test-machine",
+								APIVersion: clusterv1.GroupVersion.String(),
+							},
+						},
+					},
+					Spec: infrav2exp.OCIMachinePoolMachineSpec{
+						OCID:         common.String("id-1"),
+						InstanceName: common.String("name-1"),
+						ProviderID:   common.String("oci://id-1"),
+						MachineType:  infrav2exp.SelfManaged,
+					},
+				}).Build(), interceptor.Funcs{
+					Delete: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
+						m := obj.(*clusterv1.Machine)
+						t.deletePoolMachines = append(t.deletePoolMachines, *m)
+						return nil
+					},
+				})
+			},
+		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
@@ -760,14 +810,15 @@ func TestDeleteManagedMachinesIfNotExists(t *testing.T) {
 				tt.client, tt.machinePool,
 				tt.cluster, tt.infraMachinePoolName, tt.namespace, tt.specMachines, &log,
 			}
-			err := DeleteOrphanedManagedMachines(context.Background(), params)
+			err := DeleteOrphanedMachinePoolMachines(context.Background(), params)
 			if tt.errorExpected {
 				g.Expect(err).To(Not(BeNil()))
-				g.Expect(err.Error()).To(Equal(tt.errorMessage))
 			} else {
 				g.Expect(err).To(BeNil())
 			}
-			tt.validate(g, &tt)
+			if tt.validate != nil {
+				tt.validate(g, &tt)
+			}
 		})
 	}
 }

@@ -383,13 +383,13 @@ func (r *OCIManagedMachinePoolReconciler) reconcileManagedMachines(ctx context.C
 		Client:               r.Client,
 		Logger:               machinePoolScope.Logger,
 	}
-	err = cloudutil.CreateManagedMachinesIfNotExists(ctx, params)
+	err = cloudutil.CreateMachinePoolMachinesIfNotExists(ctx, params)
 	if err != nil {
 		conditions.MarkFalse(machinePoolScope.OCIManagedMachinePool, clusterv1.ReadyCondition, "FailedToDeleteOrphanedMachines", clusterv1.ConditionSeverityWarning, err.Error())
 		return errors.Wrap(err, "failed to create missing machines")
 	}
 
-	err = cloudutil.DeleteOrphanedManagedMachines(ctx, params)
+	err = cloudutil.DeleteOrphanedMachinePoolMachines(ctx, params)
 	if err != nil {
 		conditions.MarkFalse(machinePoolScope.OCIManagedMachinePool, clusterv1.ReadyCondition, "FailedToDeleteOrphanedMachines", clusterv1.ConditionSeverityWarning, err.Error())
 		return errors.Wrap(err, "failed to delete orphaned machines")

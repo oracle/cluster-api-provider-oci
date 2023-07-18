@@ -259,20 +259,20 @@ func CreateClientProviderFromClusterIdentity(ctx context.Context, client client.
 	return clientProvider, nil
 }
 
-func CreateManagedMachinesIfNotExists(ctx context.Context, params MachineParams) error {
+func CreateMachinePoolMachinesIfNotExists(ctx context.Context, params MachineParams) error {
 
-	machineList, err := getManagedMachines(ctx, params.Client, params.MachinePool, params.Cluster, params.Namespace)
+	machineList, err := getMachinepoolMachines(ctx, params.Client, params.MachinePool, params.Cluster, params.Namespace)
 	if err != nil {
 		return err
 	}
 
-	instanceNameToDockerMachine := make(map[string]infrav2exp.OCIMachinePoolMachine)
+	instanceNameToMachinePoolMachine := make(map[string]infrav2exp.OCIMachinePoolMachine)
 	for _, machine := range machineList.Items {
-		instanceNameToDockerMachine[*machine.Spec.OCID] = machine
+		instanceNameToMachinePoolMachine[*machine.Spec.OCID] = machine
 	}
 
 	for _, specMachine := range params.SpecInfraMachines {
-		if actualMachine, exists := instanceNameToDockerMachine[*specMachine.Spec.OCID]; exists {
+		if actualMachine, exists := instanceNameToMachinePoolMachine[*specMachine.Spec.OCID]; exists {
 			if !reflect.DeepEqual(specMachine.Status.Ready, actualMachine.Status.Ready) {
 				params.Logger.Info("Setting status of machine to active", "machine", actualMachine.Name)
 
@@ -299,7 +299,13 @@ func CreateManagedMachinesIfNotExists(ctx context.Context, params MachineParams)
 				GenerateName: fmt.Sprintf("%s-", params.InfraMachinePoolName),
 				Labels:       labels,
 				Annotations:  make(map[string]string),
-				// Note: This OCIManagedMachinePoolMachine will be owned by the OCIManagedMachinePool until the MachinePool controller creates its parent Machine.
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						Kind:       params.MachinePool.Kind,
+						Name:       params.MachinePool.Name,
+						APIVersion: expclusterv1.GroupVersion.String(),
+					},
+				},
 			},
 			Spec: infrav2exp.OCIMachinePoolMachineSpec{
 				OCID:         specMachine.Spec.OCID,
@@ -309,17 +315,17 @@ func CreateManagedMachinesIfNotExists(ctx context.Context, params MachineParams)
 			},
 		}
 		infraMachine.Status.Ready = specMachine.Status.Ready
-		params.Logger.Info("Creating managed machine", "machine", infraMachine.Name, "instanceName", specMachine.Name)
+		params.Logger.Info("Creating machinepool  machine", "machine", infraMachine.Name, "instanceName", specMachine.Name)
 
 		if err := params.Client.Create(ctx, infraMachine); err != nil {
-			return errors.Wrap(err, "failed to create dockerMachine")
+			return errors.Wrap(err, "failed to create machine")
 		}
 	}
 
 	return nil
 }
 
-func getManagedMachines(ctx context.Context, c client.Client, machinePool *expclusterv1.MachinePool, cluster *clusterv1.Cluster, namespace string) (*infrav2exp.OCIMachinePoolMachineList, error) {
+func getMachinepoolMachines(ctx context.Context, c client.Client, machinePool *expclusterv1.MachinePool, cluster *clusterv1.Cluster, namespace string) (*infrav2exp.OCIMachinePoolMachineList, error) {
 	machineList := &infrav2exp.OCIMachinePoolMachineList{}
 	labels := map[string]string{
 		clusterv1.ClusterNameLabel:     cluster.Name,
@@ -332,8 +338,8 @@ func getManagedMachines(ctx context.Context, c client.Client, machinePool *expcl
 	return machineList, nil
 }
 
-func DeleteOrphanedManagedMachines(ctx context.Context, params MachineParams) error {
-	machineList, err := getManagedMachines(ctx, params.Client, params.MachinePool, params.Cluster, params.Namespace)
+func DeleteOrphanedMachinePoolMachines(ctx context.Context, params MachineParams) error {
+	machineList, err := getMachinepoolMachines(ctx, params.Client, params.MachinePool, params.Cluster, params.Namespace)
 	if err != nil {
 		return err
 	}
@@ -344,21 +350,21 @@ func DeleteOrphanedManagedMachines(ctx context.Context, params MachineParams) er
 	}
 
 	for i := range machineList.Items {
-		managedMachine := &machineList.Items[i]
-		if _, ok := instanceNameSet[*managedMachine.Spec.OCID]; !ok {
-			machine, err := util.GetOwnerMachine(ctx, params.Client, managedMachine.ObjectMeta)
+		machinePoolMachine := &machineList.Items[i]
+		if _, ok := instanceNameSet[*machinePoolMachine.Spec.OCID]; !ok {
+			machine, err := util.GetOwnerMachine(ctx, params.Client, machinePoolMachine.ObjectMeta)
 			if err != nil {
-				return errors.Wrapf(err, "failed to get owner Machine for ManagedMachine %s/%s", managedMachine.Namespace, managedMachine.Name)
+				return errors.Wrapf(err, "failed to get owner Machine for machinepool machine %s/%s", machinePoolMachine.Namespace, machinePoolMachine.Name)
 			}
 			if machine == nil {
-				return errors.Errorf("ManagedMachine %s/%s has no parent Machine, will reattempt deletion once parent Machine is present", machine.Namespace, machine.Name)
+				return errors.Errorf("Machinepool %s/%s has no parent Machine, will reattempt deletion once parent Machine is present", machinePoolMachine.Namespace, machinePoolMachine.Name)
 			}
-			params.Logger.Info("Deleting orphaned machine", "machine", machine.Name)
+			params.Logger.Info("Deleting machinepool machine", "machine", machine.Name)
 			if err := params.Client.Delete(ctx, machine); err != nil {
-				return errors.Wrapf(err, "failed to delete orphaned ManagedMachine %s/%s", machine.Namespace, machine.Name)
+				return errors.Wrapf(err, "failed to delete machinepool machine %s/%s", machine.Namespace, machine.Name)
 			}
 		} else {
-			params.Logger.Info("Keeping ManagedMachine, nothing to do", "machine", managedMachine.Name, "namespace", managedMachine.Namespace)
+			params.Logger.Info("Keeping machinepool, nothing to do", "machine", machinePoolMachine.Name, "namespace", machinePoolMachine.Namespace)
 		}
 	}
 
