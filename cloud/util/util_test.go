@@ -17,15 +17,21 @@ package util
 
 import (
 	"context"
+	"github.com/oracle/oci-go-sdk/v65/common"
+	"k8s.io/klog/v2/klogr"
 	"reflect"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"testing"
 
 	. "github.com/onsi/gomega"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/config"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
+	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	expclusterv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -304,7 +310,6 @@ func TestInitClientsAndRegion(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-
 	testCases := []struct {
 		name            string
 		namespace       string
@@ -450,6 +455,319 @@ func TestInitClientsAndRegion(t *testing.T) {
 			} else {
 				g.Expect(err).To(BeNil())
 			}
+		})
+	}
+}
+
+func TestCreateManagedMachinesIfNotExists(t *testing.T) {
+	log := klogr.New()
+	type test struct {
+		name                 string
+		errorExpected        bool
+		namespace            string
+		client               client.Client
+		machinePool          *expclusterv1.MachinePool
+		cluster              *clusterv1.Cluster
+		clusterAccessor      scope.OCIClusterAccessor
+		clientProvider       *scope.ClientProvider
+		specMachines         []infrav2exp.OCIMachinePoolMachine
+		machineTypEnum       infrav2exp.MachineTypeEnum
+		infraMachinePoolName string
+		errorMessage         string
+		setup                func(t *test)
+		validate             func(g *WithT, t *test)
+		createPoolMachines   []infrav2exp.OCIMachinePoolMachine
+	}
+	testCases := []test{
+		{
+			name:                 "create machine",
+			namespace:            "default",
+			infraMachinePoolName: "test",
+			errorExpected:        false,
+			machineTypEnum:       infrav2exp.SelfManaged,
+			machinePool: &expclusterv1.MachinePool{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+				},
+			},
+			cluster: &clusterv1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+				},
+			},
+			specMachines: []infrav2exp.OCIMachinePoolMachine{
+				{
+					Spec: infrav2exp.OCIMachinePoolMachineSpec{
+						OCID:         common.String("id-1"),
+						InstanceName: common.String("name-1"),
+						ProviderID:   common.String("oci://id-1"),
+						MachineType:  infrav2exp.SelfManaged,
+					},
+				},
+				{
+					Spec: infrav2exp.OCIMachinePoolMachineSpec{
+						OCID:         common.String("id-2"),
+						InstanceName: common.String("name-2"),
+						ProviderID:   common.String("oci://id-2"),
+						MachineType:  infrav2exp.SelfManaged,
+					},
+				},
+			},
+			setup: func(t *test) {
+				t.client = interceptor.NewClient(fake.NewClientBuilder().WithObjects().Build(), interceptor.Funcs{
+					Create: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+						m := obj.(*infrav2exp.OCIMachinePoolMachine)
+						t.createPoolMachines = append(t.createPoolMachines, *m)
+						return nil
+					},
+				})
+			},
+			validate: func(g *WithT, t *test) {
+				g.Expect(len(t.createPoolMachines)).To(Equal(2))
+				machine := t.createPoolMachines[0]
+				g.Expect(machine.Spec.MachineType).To(Equal(infrav2exp.SelfManaged))
+				g.Expect(*machine.Spec.InstanceName).To(Equal("name-1"))
+				g.Expect(*machine.Spec.ProviderID).To(Equal("oci://id-1"))
+				g.Expect(*machine.Spec.OCID).To(Equal("id-1"))
+				machine = t.createPoolMachines[1]
+				g.Expect(machine.Spec.MachineType).To(Equal(infrav2exp.SelfManaged))
+				g.Expect(*machine.Spec.InstanceName).To(Equal("name-2"))
+				g.Expect(*machine.Spec.ProviderID).To(Equal("oci://id-2"))
+				g.Expect(*machine.Spec.OCID).To(Equal("id-2"))
+			},
+		},
+		{
+			name:                 "machine exists",
+			namespace:            "default",
+			infraMachinePoolName: "test",
+			errorExpected:        false,
+			machineTypEnum:       infrav2exp.SelfManaged,
+			machinePool: &expclusterv1.MachinePool{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+				},
+			},
+			cluster: &clusterv1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+				},
+			},
+			specMachines: []infrav2exp.OCIMachinePoolMachine{
+				{
+					Spec: infrav2exp.OCIMachinePoolMachineSpec{
+						OCID:         common.String("id-1"),
+						InstanceName: common.String("name-1"),
+						ProviderID:   common.String("oci://id-1"),
+						MachineType:  infrav2exp.SelfManaged,
+					},
+				},
+			},
+			setup: func(t *test) {
+				t.client = interceptor.NewClient(fake.NewClientBuilder().WithObjects(&infrav2exp.OCIMachinePoolMachine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: "default",
+						Labels: map[string]string{
+							clusterv1.ClusterNameLabel:     "test",
+							clusterv1.MachinePoolNameLabel: "test",
+						},
+					},
+					Spec: infrav2exp.OCIMachinePoolMachineSpec{
+						OCID:         common.String("id-1"),
+						InstanceName: common.String("name-1"),
+						ProviderID:   common.String("oci://id-1"),
+						MachineType:  infrav2exp.SelfManaged,
+					},
+				}).Build(), interceptor.Funcs{
+					Create: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+						m := obj.(*infrav2exp.OCIMachinePoolMachine)
+						t.createPoolMachines = append(t.createPoolMachines, *m)
+						return nil
+					},
+				})
+			},
+			validate: func(g *WithT, t *test) {
+				g.Expect(len(t.createPoolMachines)).To(Equal(0))
+			},
+		},
+		{
+			name:                 "ready status patch",
+			namespace:            "default",
+			infraMachinePoolName: "test",
+			errorExpected:        false,
+			machineTypEnum:       infrav2exp.SelfManaged,
+			machinePool: &expclusterv1.MachinePool{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+				},
+			},
+			cluster: &clusterv1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+				},
+			},
+			specMachines: []infrav2exp.OCIMachinePoolMachine{
+				{
+					Spec: infrav2exp.OCIMachinePoolMachineSpec{
+						OCID:         common.String("id-1"),
+						InstanceName: common.String("name-1"),
+						ProviderID:   common.String("oci://id-1"),
+						MachineType:  infrav2exp.SelfManaged,
+					},
+					Status: infrav2exp.OCIMachinePoolMachineStatus{
+						Ready: true,
+					},
+				},
+			},
+			setup: func(t *test) {
+				m := &infrav2exp.OCIMachinePoolMachine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: "default",
+						Labels: map[string]string{
+							clusterv1.ClusterNameLabel:     "test",
+							clusterv1.MachinePoolNameLabel: "test",
+						},
+					},
+					Spec: infrav2exp.OCIMachinePoolMachineSpec{
+						OCID:         common.String("id-1"),
+						InstanceName: common.String("name-1"),
+						ProviderID:   common.String("oci://id-1"),
+						MachineType:  infrav2exp.SelfManaged,
+					},
+				}
+				t.client = interceptor.NewClient(fake.NewClientBuilder().WithStatusSubresource(m).WithObjects(m).Build(), interceptor.Funcs{
+					SubResourcePatch: func(ctx context.Context, client client.Client, subResourceName string, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption) error {
+						m := obj.(*infrav2exp.OCIMachinePoolMachine)
+						t.createPoolMachines = append(t.createPoolMachines, *m)
+						return nil
+					},
+				})
+			},
+			validate: func(g *WithT, t *test) {
+				g.Expect(len(t.createPoolMachines)).To(Equal(1))
+			},
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			tt.setup(&tt)
+			params := MachineParams{
+				tt.client, tt.machinePool,
+				tt.cluster, tt.infraMachinePoolName, tt.namespace, tt.specMachines, &log,
+			}
+			err := CreateManagedMachinesIfNotExists(context.Background(), params)
+			if tt.errorExpected {
+				g.Expect(err).To(Not(BeNil()))
+				g.Expect(err.Error()).To(Equal(tt.errorMessage))
+			} else {
+				g.Expect(err).To(BeNil())
+			}
+			tt.validate(g, &tt)
+		})
+	}
+}
+
+func TestDeleteManagedMachinesIfNotExists(t *testing.T) {
+	log := klogr.New()
+	type test struct {
+		name                 string
+		errorExpected        bool
+		namespace            string
+		client               client.Client
+		machinePool          *expclusterv1.MachinePool
+		cluster              *clusterv1.Cluster
+		clusterAccessor      scope.OCIClusterAccessor
+		clientProvider       *scope.ClientProvider
+		specMachines         []infrav2exp.OCIMachinePoolMachine
+		machineTypEnum       infrav2exp.MachineTypeEnum
+		infraMachinePoolName string
+		errorMessage         string
+		setup                func(t *test)
+		validate             func(g *WithT, t *test)
+		deletePoolMachines   []clusterv1.Machine
+	}
+	testCases := []test{
+		{
+			name:                 "machine delete",
+			namespace:            "default",
+			infraMachinePoolName: "test",
+			errorExpected:        false,
+			machineTypEnum:       infrav2exp.SelfManaged,
+			machinePool: &expclusterv1.MachinePool{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+				},
+			},
+			cluster: &clusterv1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+				},
+			},
+			setup: func(t *test) {
+				t.client = interceptor.NewClient(fake.NewClientBuilder().WithObjects(&infrav2exp.OCIMachinePoolMachine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: "default",
+						Labels: map[string]string{
+							clusterv1.ClusterNameLabel:     "test",
+							clusterv1.MachinePoolNameLabel: "test",
+						},
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								Kind:       "Machine",
+								Name:       "test-machine",
+								APIVersion: clusterv1.GroupVersion.String(),
+							},
+						},
+					},
+					Spec: infrav2exp.OCIMachinePoolMachineSpec{
+						OCID:         common.String("id-1"),
+						InstanceName: common.String("name-1"),
+						ProviderID:   common.String("oci://id-1"),
+						MachineType:  infrav2exp.SelfManaged,
+					},
+				}, &clusterv1.Machine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-machine",
+						Namespace: "default",
+						Labels: map[string]string{
+							clusterv1.ClusterNameLabel:     "test",
+							clusterv1.MachinePoolNameLabel: "test",
+						},
+					},
+					Spec: clusterv1.MachineSpec{},
+				}).Build(), interceptor.Funcs{
+					Delete: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
+						m := obj.(*clusterv1.Machine)
+						t.deletePoolMachines = append(t.deletePoolMachines, *m)
+						return nil
+					},
+				})
+			},
+			validate: func(g *WithT, t *test) {
+				g.Expect(len(t.deletePoolMachines)).To(Equal(1))
+				g.Expect(t.deletePoolMachines[0].Name).To(Equal("test-machine"))
+			},
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			tt.setup(&tt)
+			params := MachineParams{
+				tt.client, tt.machinePool,
+				tt.cluster, tt.infraMachinePoolName, tt.namespace, tt.specMachines, &log,
+			}
+			err := DeleteOrphanedManagedMachines(context.Background(), params)
+			if tt.errorExpected {
+				g.Expect(err).To(Not(BeNil()))
+				g.Expect(err.Error()).To(Equal(tt.errorMessage))
+			} else {
+				g.Expect(err).To(BeNil())
+			}
+			tt.validate(g, &tt)
 		})
 	}
 }

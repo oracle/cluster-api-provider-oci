@@ -393,13 +393,22 @@ func (r *OCIVirtualMachinePoolReconciler) reconcileDelete(ctx context.Context, m
 }
 
 func (r *OCIVirtualMachinePoolReconciler) reconcileVirtualMachines(ctx context.Context, err error, machinePoolScope *scope.VirtualMachinePoolScope, specInfraMachines []infrav2exp.OCIMachinePoolMachine) error {
-	err = cloudutil.CreateManagedMachinesIfNotExists(ctx, r.Client, machinePoolScope.MachinePool, machinePoolScope.Cluster, machinePoolScope.OCIVirtualMachinePool.Name, machinePoolScope.OCIVirtualMachinePool.Namespace, specInfraMachines, infrav2exp.Virtual, machinePoolScope.Logger)
+	params := cloudutil.MachineParams{
+		Cluster:              machinePoolScope.Cluster,
+		MachinePool:          machinePoolScope.MachinePool,
+		InfraMachinePoolName: machinePoolScope.OCIVirtualMachinePool.Name,
+		Namespace:            machinePoolScope.OCIVirtualMachinePool.Namespace,
+		SpecInfraMachines:    specInfraMachines,
+		Client:               r.Client,
+		Logger:               machinePoolScope.Logger,
+	}
+	err = cloudutil.CreateManagedMachinesIfNotExists(ctx, params)
 	if err != nil {
 		conditions.MarkFalse(machinePoolScope.OCIVirtualMachinePool, clusterv1.ReadyCondition, "FailedToDeleteOrphanedMachines", clusterv1.ConditionSeverityWarning, err.Error())
 		return errors.Wrap(err, "failed to create missing machines")
 	}
 
-	err = cloudutil.DeleteOrphanedManagedMachines(ctx, r.Client, machinePoolScope.MachinePool, machinePoolScope.Cluster, machinePoolScope.OCIVirtualMachinePool.Namespace, specInfraMachines, machinePoolScope.Logger)
+	err = cloudutil.DeleteOrphanedManagedMachines(ctx, params)
 	if err != nil {
 		conditions.MarkFalse(machinePoolScope.OCIVirtualMachinePool, clusterv1.ReadyCondition, "FailedToDeleteOrphanedMachines", clusterv1.ConditionSeverityWarning, err.Error())
 		return errors.Wrap(err, "failed to delete orphaned machines")

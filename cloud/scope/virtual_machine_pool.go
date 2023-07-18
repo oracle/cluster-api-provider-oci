@@ -161,6 +161,7 @@ func (m *VirtualMachinePoolScope) ListandSetMachinePoolInstances(ctx context.Con
 					OCID:         node.Id,
 					ProviderID:   node.Id,
 					InstanceName: node.DisplayName,
+					MachineType:  infrav2exp.Virtual,
 				},
 				Status: infrav2exp.OCIMachinePoolMachineStatus{
 					Ready: ready,

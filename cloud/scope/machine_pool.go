@@ -208,6 +208,7 @@ func (m *MachinePoolScope) SetListandSetMachinePoolInstances(ctx context.Context
 				OCID:         instance.Id,
 				ProviderID:   common.String(m.OCIClusterAccesor.GetProviderID(*instance.Id)),
 				InstanceName: instance.DisplayName,
+				MachineType:  infrav2exp.SelfManaged,
 			},
 			Status: infrav2exp.OCIMachinePoolMachineStatus{
 				Ready: ready,
