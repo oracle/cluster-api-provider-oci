@@ -18,11 +18,11 @@ package controllers
 
 import (
 	"context"
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/containerengine/mock_containerengine"
@@ -39,6 +39,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -146,6 +147,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 		ociManagedMachinePool *infrav2exp.OCIManagedMachinePool
 		okeClient             *mock_containerengine.MockClient
 		ms                    *scope.ManagedMachinePoolScope
+		k8sClient             client.WithWatch
 	)
 
 	tags := make(map[string]string)
@@ -155,7 +157,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 	setup := func(t *testing.T, g *WithT) {
 		var err error
 		mockCtrl = gomock.NewController(t)
-		client := fake.NewClientBuilder().WithObjects(getSecret()).Build()
+		k8sClient = interceptor.NewClient(fake.NewClientBuilder().WithObjects(getSecret()).Build(), interceptor.Funcs{})
 		okeClient = mock_containerengine.NewMockClient(mockCtrl)
 		machinePool := getMachinePool()
 		ociManagedMachinePool = getOCIManagedMachinePool()
@@ -172,7 +174,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			ContainerEngineClient:  okeClient,
 			OCIManagedCluster:      ociCluster,
 			Cluster:                getCluster(),
-			Client:                 client,
+			Client:                 k8sClient,
 			OCIManagedMachinePool:  ociManagedMachinePool,
 			MachinePool:            machinePool,
 			OCIManagedControlPlane: &ociManagedControlPlane,
@@ -180,7 +182,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 
 		recorder = record.NewFakeRecorder(2)
 		r = OCIManagedMachinePoolReconciler{
-			Client:   client,
+			Client:   k8sClient,
 			Scheme:   runtime.NewScheme(),
 			Recorder: recorder,
 		}
@@ -189,20 +191,32 @@ func TestNormalReconciliationFunction(t *testing.T) {
 	teardown := func(t *testing.T, g *WithT) {
 		mockCtrl.Finish()
 	}
-	tests := []struct {
+	type test struct {
 		name                    string
 		errorExpected           bool
 		expectedEvent           string
 		eventNotExpected        string
 		conditionAssertion      []conditionAssertion
-		testSpecificSetup       func(machinePoolScope *scope.ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient)
+		testSpecificSetup       func(t *test, machinePoolScope *scope.ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient)
+		validate                func(g *WithT, t *test)
 		expectedFailureMessages []string
-	}{
+		createPoolMachines      []infrav2exp.OCIMachinePoolMachine
+		deletePoolMachines      []clusterv1.Machine
+	}
+	tests := []test{
 		{
 			name:               "node pool in creating state",
 			errorExpected:      false,
 			conditionAssertion: []conditionAssertion{{infrav2exp.NodePoolReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityInfo, infrav2exp.NodePoolNotReadyReason}},
-			testSpecificSetup: func(machinePoolScope *scope.ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
+			testSpecificSetup: func(t *test, machinePoolScope *scope.ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
+				t.createPoolMachines = make([]infrav2exp.OCIMachinePoolMachine, 0)
+				r.Client = interceptor.NewClient(fake.NewClientBuilder().WithObjects(getSecret()).Build(), interceptor.Funcs{
+					Create: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+						m := obj.(*infrav2exp.OCIMachinePoolMachine)
+						t.createPoolMachines = append(t.createPoolMachines, *m)
+						return nil
+					},
+				})
 				okeClient.EXPECT().GetNodePool(gomock.Any(), gomock.Eq(oke.GetNodePoolRequest{
 					NodePoolId: common.String("test"),
 				})).
@@ -211,8 +225,102 @@ func TestNormalReconciliationFunction(t *testing.T) {
 							Id:             common.String("test"),
 							LifecycleState: oke.NodePoolLifecycleStateCreating,
 							FreeformTags:   tags,
+							Nodes: []oke.Node{{
+								Id:             common.String("id-1"),
+								Name:           common.String("name-1"),
+								LifecycleState: oke.NodeLifecycleStateCreating,
+							}},
 						},
 					}, nil)
+			},
+			validate: func(g *WithT, t *test) {
+				g.Expect(len(t.createPoolMachines)).To(Equal(1))
+				machine := t.createPoolMachines[0]
+				g.Expect(machine.Spec.MachineType).To(Equal(infrav2exp.Managed))
+				g.Expect(*machine.Spec.InstanceName).To(Equal("name-1"))
+				g.Expect(*machine.Spec.ProviderID).To(Equal("id-1"))
+				g.Expect(*machine.Spec.OCID).To(Equal("id-1"))
+			},
+		},
+		{
+			name:               "delete unwanted machinepool machine",
+			errorExpected:      false,
+			conditionAssertion: []conditionAssertion{{infrav2exp.NodePoolReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityInfo, infrav2exp.NodePoolNotReadyReason}},
+			testSpecificSetup: func(t *test, machinePoolScope *scope.ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
+				t.createPoolMachines = make([]infrav2exp.OCIMachinePoolMachine, 0)
+				fakeClient := fake.NewClientBuilder().WithObjects(&infrav2exp.OCIMachinePoolMachine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: "test",
+						Labels: map[string]string{
+							clusterv1.ClusterNameLabel:     "test-cluster",
+							clusterv1.MachinePoolNameLabel: "test",
+						},
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								Kind:       "Machine",
+								Name:       "test",
+								APIVersion: clusterv1.GroupVersion.String(),
+							},
+						},
+					},
+					Spec: infrav2exp.OCIMachinePoolMachineSpec{
+						OCID:         common.String("id-2"),
+						InstanceName: common.String("name-2"),
+						ProviderID:   common.String("id-2"),
+						MachineType:  infrav2exp.Managed,
+					},
+				}, &clusterv1.Machine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: "test",
+						Labels: map[string]string{
+							clusterv1.ClusterNameLabel:     "oci-cluster",
+							clusterv1.MachinePoolNameLabel: "test",
+						},
+					},
+					Spec: clusterv1.MachineSpec{},
+				}).Build()
+				t.deletePoolMachines = make([]clusterv1.Machine, 0)
+				r.Client = interceptor.NewClient(fakeClient, interceptor.Funcs{
+					Create: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+						m := obj.(*infrav2exp.OCIMachinePoolMachine)
+						t.createPoolMachines = append(t.createPoolMachines, *m)
+						return nil
+					},
+					Delete: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
+						m := obj.(*clusterv1.Machine)
+						t.deletePoolMachines = append(t.deletePoolMachines, *m)
+						return nil
+					},
+				})
+				okeClient.EXPECT().GetNodePool(gomock.Any(), gomock.Eq(oke.GetNodePoolRequest{
+					NodePoolId: common.String("test"),
+				})).
+					Return(oke.GetNodePoolResponse{
+						NodePool: oke.NodePool{
+							Id:             common.String("test"),
+							LifecycleState: oke.NodePoolLifecycleStateCreating,
+							FreeformTags:   tags,
+							Nodes: []oke.Node{{
+								Id:             common.String("id-1"),
+								Name:           common.String("name-1"),
+								LifecycleState: oke.NodeLifecycleStateCreating,
+							}},
+						},
+					}, nil)
+			},
+			validate: func(g *WithT, t *test) {
+				g.Expect(len(t.createPoolMachines)).To(Equal(1))
+				createMachine := t.createPoolMachines[0]
+				g.Expect(createMachine.Spec.MachineType).To(Equal(infrav2exp.Managed))
+				g.Expect(*createMachine.Spec.InstanceName).To(Equal("name-1"))
+				g.Expect(*createMachine.Spec.ProviderID).To(Equal("id-1"))
+				g.Expect(*createMachine.Spec.OCID).To(Equal("id-1"))
+
+				g.Expect(len(t.deletePoolMachines)).To(Equal(1))
+				deleteMachine := t.deletePoolMachines[0]
+				g.Expect(deleteMachine.Name).To(Equal("test"))
 			},
 		},
 		{
@@ -220,7 +328,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			errorExpected:      false,
 			expectedEvent:      "Created new Node Pool: test",
 			conditionAssertion: []conditionAssertion{{infrav2exp.NodePoolReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityInfo, infrav2exp.NodePoolNotReadyReason}},
-			testSpecificSetup: func(machinePoolScope *scope.ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
+			testSpecificSetup: func(t *test, machinePoolScope *scope.ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				ociManagedMachinePool.Spec.ID = nil
 				okeClient.EXPECT().ListNodePools(gomock.Any(), gomock.Any()).
 					Return(oke.ListNodePoolsResponse{}, nil)
@@ -249,7 +357,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			name:               "node pool is created, no update",
 			errorExpected:      false,
 			conditionAssertion: []conditionAssertion{{infrav2exp.NodePoolReadyCondition, corev1.ConditionTrue, "", ""}},
-			testSpecificSetup: func(machinePoolScope *scope.ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
+			testSpecificSetup: func(t *test, machinePoolScope *scope.ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				okeClient.EXPECT().GetNodePool(gomock.Any(), gomock.Eq(oke.GetNodePoolRequest{
 					NodePoolId: common.String("test"),
 				})).
@@ -305,10 +413,10 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			},
 		},
 		{
-			name:               "node pool in created, pdate",
+			name:               "node pool in created, update",
 			errorExpected:      false,
 			conditionAssertion: []conditionAssertion{{infrav2exp.NodePoolReadyCondition, corev1.ConditionTrue, "", ""}},
-			testSpecificSetup: func(machinePoolScope *scope.ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
+			testSpecificSetup: func(t *test, machinePoolScope *scope.ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				okeClient.EXPECT().GetNodePool(gomock.Any(), gomock.Eq(oke.GetNodePoolRequest{
 					NodePoolId: common.String("test"),
 				})).
@@ -370,7 +478,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			errorExpected:           true,
 			expectedFailureMessages: []string{"test error!", "Node Pool status FAILED is unexpected"},
 			conditionAssertion:      []conditionAssertion{{infrav2exp.NodePoolReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrav2exp.NodePoolProvisionFailedReason}},
-			testSpecificSetup: func(machinePoolScope *scope.ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
+			testSpecificSetup: func(t *test, machinePoolScope *scope.ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				okeClient.EXPECT().GetNodePool(gomock.Any(), gomock.Eq(oke.GetNodePoolRequest{
 					NodePoolId: common.String("test"),
 				})).
@@ -393,7 +501,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 		{
 			name:          "node pool in update state",
 			errorExpected: false,
-			testSpecificSetup: func(machinePoolScope *scope.ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
+			testSpecificSetup: func(t *test, machinePoolScope *scope.ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				okeClient.EXPECT().GetNodePool(gomock.Any(), gomock.Eq(oke.GetNodePoolRequest{
 					NodePoolId: common.String("test"),
 				})).
@@ -413,7 +521,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			g := NewWithT(t)
 			defer teardown(t, g)
 			setup(t, g)
-			tc.testSpecificSetup(ms, okeClient)
+			tc.testSpecificSetup(&tc, ms, okeClient)
 			ctx := context.Background()
 			_, err := r.reconcileNormal(ctx, log.FromContext(ctx), ms)
 			if len(tc.conditionAssertion) > 0 {
@@ -429,6 +537,9 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			}
 			if len(tc.expectedFailureMessages) > 0 {
 				g.Expect(tc.expectedFailureMessages).To(Equal(ms.OCIManagedMachinePool.Status.FailureMessages))
+			}
+			if tc.validate != nil {
+				tc.validate(g, &tc)
 			}
 		})
 	}

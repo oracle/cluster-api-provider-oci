@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"errors"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"testing"
 	"time"
 
@@ -117,7 +118,7 @@ func TestMachineReconciliation(t *testing.T) {
 			defer teardown(t, g)
 			setup(t, g)
 
-			client := fake.NewClientBuilder().WithObjects(tc.objects...).Build()
+			client := fake.NewClientBuilder().WithStatusSubresource(tc.objects...).WithObjects(tc.objects...).Build()
 			r = OCIMachineReconciler{
 				Client:         client,
 				Scheme:         runtime.NewScheme(),
@@ -592,6 +593,7 @@ func TestMachineReconciliationDelete(t *testing.T) {
 		ociMachine = getOciMachine()
 		now := metav1.NewTime(time.Now())
 		ociMachine.DeletionTimestamp = &now
+		controllerutil.AddFinalizer(ociMachine, infrastructurev1beta2.MachineFinalizer)
 		client := fake.NewClientBuilder().WithObjects(getSecret(), getMachine(), ociMachine, getCluster(), getOCICluster()).Build()
 		clientProvider, err := scope.MockNewClientProvider(scope.MockOCIClients{
 			ComputeClient: computeClient,
@@ -660,6 +662,7 @@ func TestMachineReconciliationDeletionNormal(t *testing.T) {
 		now := metav1.NewTime(time.Now())
 		ociMachine = getOciMachine()
 		ociMachine.DeletionTimestamp = &now
+		controllerutil.AddFinalizer(ociMachine, infrastructurev1beta2.MachineFinalizer)
 		machine := getMachine()
 		machine.Spec.Bootstrap.DataSecretName = common.String("bootstrap")
 		mockCtrl = gomock.NewController(t)

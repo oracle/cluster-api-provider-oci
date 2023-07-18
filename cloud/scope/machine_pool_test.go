@@ -126,7 +126,7 @@ func TestInstanceConfigCreate(t *testing.T) {
 			},
 			Spec: infrav2exp.OCIMachinePoolSpec{},
 		}
-		client := fake.NewClientBuilder().WithObjects(secret, machinePool).Build()
+		client := fake.NewClientBuilder().WithStatusSubresource(machinePool).WithObjects(secret, machinePool).Build()
 		ms, err = NewMachinePoolScope(MachinePoolScopeParams{
 			ComputeManagementClient: computeManagementClient,
 			OCIMachinePool:          machinePool,
@@ -486,7 +486,7 @@ func TestInstancePoolCreate(t *testing.T) {
 			},
 			Spec: infrav2exp.OCIMachinePoolSpec{},
 		}
-		client := fake.NewClientBuilder().WithObjects(secret, machinePool).Build()
+		client := fake.NewClientBuilder().WithStatusSubresource(machinePool).WithObjects(secret, machinePool).Build()
 		ms, err = NewMachinePoolScope(MachinePoolScopeParams{
 			ComputeManagementClient: computeManagementClient,
 			OCIMachinePool:          machinePool,

@@ -139,7 +139,8 @@ func TestOCIManagedMachinePool_ValidateCreate(t *testing.T) {
 				g.Expect(err).NotTo(gomega.Succeed())
 				g.Expect(strings.Contains(err.Error(), test.errorMgsShouldContain)).To(gomega.BeTrue())
 			} else {
-				g.Expect(test.m.ValidateCreate()).To(gomega.Succeed())
+				_, err := test.m.ValidateCreate()
+				g.Expect(err).To(gomega.Succeed())
 			}
 		})
 	}
