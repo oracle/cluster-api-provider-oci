@@ -304,6 +304,7 @@ func CreateMachinePoolMachinesIfNotExists(ctx context.Context, params MachinePar
 						Kind:       params.MachinePool.Kind,
 						Name:       params.MachinePool.Name,
 						APIVersion: expclusterv1.GroupVersion.String(),
+						UID:        params.MachinePool.UID,
 					},
 				},
 			},
