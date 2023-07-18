@@ -299,12 +299,13 @@ func CreateMachinePoolMachinesIfNotExists(ctx context.Context, params MachinePar
 				GenerateName: fmt.Sprintf("%s-", params.InfraMachinePoolName),
 				Labels:       labels,
 				Annotations:  make(map[string]string),
+				// set the parent to infra machinepool till the capi machine reconciler changes it to capi machinepool machine
 				OwnerReferences: []metav1.OwnerReference{
 					{
-						Kind:       params.MachinePool.Kind,
-						Name:       params.MachinePool.Name,
-						APIVersion: expclusterv1.GroupVersion.String(),
-						UID:        params.MachinePool.UID,
+						Kind:       params.InfraMachinePoolKind,
+						Name:       params.InfraMachinePoolName,
+						APIVersion: infrav2exp.GroupVersion.String(),
+						UID:        params.InfraMachinePoolUID,
 					},
 				},
 			},
@@ -377,6 +378,8 @@ type MachineParams struct {
 	MachinePool          *expclusterv1.MachinePool
 	Cluster              *clusterv1.Cluster
 	InfraMachinePoolName string
+	InfraMachinePoolKind string
+	InfraMachinePoolUID  types.UID
 	Namespace            string
 	SpecInfraMachines    []infrav2exp.OCIMachinePoolMachine
 	Logger               *logr.Logger

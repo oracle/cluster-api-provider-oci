@@ -401,6 +401,8 @@ func (r *OCIVirtualMachinePoolReconciler) reconcileVirtualMachines(ctx context.C
 		SpecInfraMachines:    specInfraMachines,
 		Client:               r.Client,
 		Logger:               machinePoolScope.Logger,
+		InfraMachinePoolKind: machinePoolScope.OCIVirtualMachinePool.Kind,
+		InfraMachinePoolUID:  machinePoolScope.OCIVirtualMachinePool.UID,
 	}
 	err = cloudutil.CreateMachinePoolMachinesIfNotExists(ctx, params)
 	if err != nil {

@@ -382,6 +382,8 @@ func (r *OCIManagedMachinePoolReconciler) reconcileManagedMachines(ctx context.C
 		SpecInfraMachines:    specInfraMachines,
 		Client:               r.Client,
 		Logger:               machinePoolScope.Logger,
+		InfraMachinePoolKind: machinePoolScope.OCIManagedMachinePool.Kind,
+		InfraMachinePoolUID:  machinePoolScope.OCIManagedMachinePool.UID,
 	}
 	err = cloudutil.CreateMachinePoolMachinesIfNotExists(ctx, params)
 	if err != nil {
