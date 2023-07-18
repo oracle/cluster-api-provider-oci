@@ -120,7 +120,8 @@ func TestOCIMachineTemplate_ValidateUpdate(t *testing.T) {
 				g.Expect(err).NotTo(gomega.Succeed())
 				g.Expect(strings.Contains(err.Error(), test.errorField)).To(gomega.BeTrue())
 			} else {
-				g.Expect(test.inputTemplate.ValidateUpdate(nil)).To(gomega.Succeed())
+				_, err := test.inputTemplate.ValidateUpdate(nil)
+				g.Expect(err).To(gomega.Succeed())
 			}
 		})
 	}
