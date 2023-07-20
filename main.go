@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"github.com/oracle/oci-go-sdk/v65/common"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -88,6 +89,7 @@ func main() {
 	var ociMachineConcurrency int
 	var ociMachinePoolConcurrency int
 	var initOciClientsOnStartup bool
+	var enableInstanceMetadataServiceLookup bool
 
 	fs := pflag.CommandLine
 	logs.AddFlags(fs, logs.SkipLoggingConfigurationFlags())
@@ -158,6 +160,12 @@ func main() {
 		"namespace",
 		"",
 		"Namespace that the controller watches to reconcile cluster-api objects. If unspecified, the controller watches for cluster-api objects across all namespaces.",
+	)
+	flag.BoolVar(
+		&enableInstanceMetadataServiceLookup,
+		"enable-instance-metadata-service-lookup",
+		false,
+		"Initialize OCI clients on startup",
 	)
 
 	opts := zap.Options{
@@ -243,6 +251,9 @@ func main() {
 			setupLog.Error(err, "authentication provider could not be initialised")
 			os.Exit(1)
 		}
+	}
+	if enableInstanceMetadataServiceLookup {
+		common.EnableInstanceMetadataServiceLookup()
 	}
 	if err = (&controllers.OCIClusterReconciler{
 		Client:         mgr.GetClient(),
