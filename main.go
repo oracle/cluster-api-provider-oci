@@ -18,10 +18,7 @@ package main
 
 import (
 	"flag"
-	"github.com/oracle/oci-go-sdk/v65/common"
 	"os"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"time"
 
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
@@ -34,6 +31,7 @@ import (
 	expcontrollers "github.com/oracle/cluster-api-provider-oci/exp/controllers"
 	"github.com/oracle/cluster-api-provider-oci/feature"
 	"github.com/oracle/cluster-api-provider-oci/version"
+	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -47,9 +45,11 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	expclusterv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 var (
