@@ -17,10 +17,7 @@ package util
 
 import (
 	"context"
-	"github.com/oracle/oci-go-sdk/v65/common"
-	"k8s.io/klog/v2/klogr"
 	"reflect"
-	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -28,12 +25,16 @@ import (
 	"github.com/oracle/cluster-api-provider-oci/cloud/config"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
+	"github.com/oracle/oci-go-sdk/v65/common"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog/v2/klogr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	expclusterv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 )
 
 func TestGetClusterIdentityFromRef(t *testing.T) {
@@ -473,6 +474,8 @@ func TestCreateManagedMachinesIfNotExists(t *testing.T) {
 		specMachines         []infrav2exp.OCIMachinePoolMachine
 		machineTypEnum       infrav2exp.MachineTypeEnum
 		infraMachinePoolName string
+		infraMachinePoolKind string
+		infraMachinePoolUid  types.UID
 		errorMessage         string
 		setup                func(t *test)
 		validate             func(g *WithT, t *test)
@@ -655,7 +658,7 @@ func TestCreateManagedMachinesIfNotExists(t *testing.T) {
 			tt.setup(&tt)
 			params := MachineParams{
 				tt.client, tt.machinePool,
-				tt.cluster, tt.infraMachinePoolName, tt.namespace, tt.specMachines, &log,
+				tt.cluster, tt.infraMachinePoolName, tt.infraMachinePoolKind, tt.infraMachinePoolUid, tt.namespace, tt.specMachines, &log,
 			}
 			err := CreateMachinePoolMachinesIfNotExists(context.Background(), params)
 			if tt.errorExpected {
@@ -685,6 +688,8 @@ func TestDeleteManagedMachinesIfNotExists(t *testing.T) {
 		specMachines         []infrav2exp.OCIMachinePoolMachine
 		machineTypEnum       infrav2exp.MachineTypeEnum
 		infraMachinePoolName string
+		infraMachinePoolKind string
+		infraMachinePoolUid  types.UID
 		errorMessage         string
 		setup                func(t *test)
 		validate             func(g *WithT, t *test)
@@ -808,7 +813,7 @@ func TestDeleteManagedMachinesIfNotExists(t *testing.T) {
 			tt.setup(&tt)
 			params := MachineParams{
 				tt.client, tt.machinePool,
-				tt.cluster, tt.infraMachinePoolName, tt.namespace, tt.specMachines, &log,
+				tt.cluster, tt.infraMachinePoolName, tt.infraMachinePoolKind, tt.infraMachinePoolUid, tt.namespace, tt.specMachines, &log,
 			}
 			err := DeleteOrphanedMachinePoolMachines(context.Background(), params)
 			if tt.errorExpected {

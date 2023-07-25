@@ -28,6 +28,8 @@ const (
 	Managed     MachineTypeEnum = "MANAGED_TYPE"
 	Virtual     MachineTypeEnum = "VIRTUAL_TYPE"
 	SelfManaged MachineTypeEnum = "SELF_MANAGED_TYPE"
+	// MachinePoolMachineFinalizer is the finalizer for managed machine pool.
+	MachinePoolMachineFinalizer = "ocimachinepoolmachine.infrastructure.cluster.x-k8s.io"
 )
 
 type MachineTypeEnum string

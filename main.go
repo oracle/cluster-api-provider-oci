@@ -336,6 +336,17 @@ func main() {
 			setupLog.Error(err, "unable to create controller", "controller", scope.OCIVirtualMachinePoolKind)
 			os.Exit(1)
 		}
+
+		if err = (&expcontrollers.OCIMachinePoolMachineReconciler{
+			Client:         mgr.GetClient(),
+			Scheme:         mgr.GetScheme(),
+			Region:         region,
+			ClientProvider: clientProvider,
+			Recorder:       mgr.GetEventRecorderFor("ocimachinepoolmachine-controller"),
+		}).SetupWithManager(ctx, mgr, controller.Options{MaxConcurrentReconciles: ociClusterConcurrency}); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "OCIMachinePoolMachine")
+			os.Exit(1)
+		}
 	}
 
 	if err = (&infrastructurev1beta2.OCICluster{}).SetupWebhookWithManager(mgr); err != nil {

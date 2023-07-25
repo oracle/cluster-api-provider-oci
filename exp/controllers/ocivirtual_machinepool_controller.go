@@ -19,8 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	expV1Beta1 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -45,6 +43,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -184,7 +183,7 @@ func (r *OCIVirtualMachinePoolReconciler) SetupWithManager(ctx context.Context, 
 	if err != nil {
 		return errors.Wrapf(err, "failed to find GVK for OCIVirtualMachinePool")
 	}
-	clusterToObjectFunc, err := util.ClusterToTypedObjectsMapper(r.Client, &expV1Beta1.OCIVirtualMachinePoolList{}, mgr.GetScheme())
+	clusterToObjectFunc, err := util.ClusterToTypedObjectsMapper(r.Client, &infrav2exp.OCIVirtualMachinePoolList{}, mgr.GetScheme())
 	if err != nil {
 		return errors.Wrapf(err, "failed to create mapper for Cluster to OCIVirtualMachinePool")
 	}

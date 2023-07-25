@@ -20,6 +20,8 @@ import (
 	"context"
 	"crypto/x509"
 	"fmt"
+	"reflect"
+
 	"github.com/go-logr/logr"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/config"
@@ -30,12 +32,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"reflect"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	expclusterv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // GetClusterIdentityFromRef returns the OCIClusterIdentity referenced by the OCICluster.
@@ -259,6 +261,8 @@ func CreateClientProviderFromClusterIdentity(ctx context.Context, client client.
 	return clientProvider, nil
 }
 
+// CreateMachinePoolMachinesIfNotExists creates the machine pool machines if not exists. This method lists the existing
+// machines in the clusters and does a diff, and creates any missing machines based ont he spec provided.
 func CreateMachinePoolMachinesIfNotExists(ctx context.Context, params MachineParams) error {
 
 	machineList, err := getMachinepoolMachines(ctx, params.Client, params.MachinePool, params.Cluster, params.Namespace)
@@ -317,6 +321,7 @@ func CreateMachinePoolMachinesIfNotExists(ctx context.Context, params MachinePar
 			},
 		}
 		infraMachine.Status.Ready = specMachine.Status.Ready
+		controllerutil.AddFinalizer(infraMachine, infrav2exp.MachinePoolMachineFinalizer)
 		params.Logger.Info("Creating machinepool  machine", "machine", infraMachine.Name, "instanceName", specMachine.Name)
 
 		if err := params.Client.Create(ctx, infraMachine); err != nil {
@@ -340,6 +345,8 @@ func getMachinepoolMachines(ctx context.Context, c client.Client, machinePool *e
 	return machineList, nil
 }
 
+// DeleteOrphanedMachinePoolMachines deletes the machine pool machines which are not required. This method lists the
+// existing machines in the clusters and does a diff with the spec and deletes any machines which are missing from the spec.
 func DeleteOrphanedMachinePoolMachines(ctx context.Context, params MachineParams) error {
 	machineList, err := getMachinepoolMachines(ctx, params.Client, params.MachinePool, params.Cluster, params.Namespace)
 	if err != nil {
@@ -373,14 +380,16 @@ func DeleteOrphanedMachinePoolMachines(ctx context.Context, params MachineParams
 	return nil
 }
 
+// MachineParams specifies the params required to create or delete machinepool machines.
+// Infra machine pool specifed below refers to OCIManagedMachinePool/OCIMachinePool/OCIVirtualMachinePool
 type MachineParams struct {
-	Client               client.Client
-	MachinePool          *expclusterv1.MachinePool
-	Cluster              *clusterv1.Cluster
-	InfraMachinePoolName string
-	InfraMachinePoolKind string
-	InfraMachinePoolUID  types.UID
-	Namespace            string
-	SpecInfraMachines    []infrav2exp.OCIMachinePoolMachine
-	Logger               *logr.Logger
+	Client               client.Client                      // the kubernetes client
+	MachinePool          *expclusterv1.MachinePool          // the corresponding machinepool
+	Cluster              *clusterv1.Cluster                 // the corresponding cluster
+	InfraMachinePoolName string                             // the name of the infra machinepool corresponding(can be managed/self managed/virtual)
+	InfraMachinePoolKind string                             // the kind of infra machinepool(can be managed/self managed/virtual)
+	InfraMachinePoolUID  types.UID                          // the UID of the infra machinepool
+	Namespace            string                             // the namespace in which machinepool machine has to be created
+	SpecInfraMachines    []infrav2exp.OCIMachinePoolMachine // the spec of actual machines in the pool
+	Logger               *logr.Logger                       // the logger which has to be used
 }
