@@ -35,6 +35,7 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	expclusterv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util"
+	"sigs.k8s.io/cluster-api/util/labels/format"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -295,7 +296,7 @@ func CreateMachinePoolMachinesIfNotExists(ctx context.Context, params MachinePar
 
 		labels := map[string]string{
 			clusterv1.ClusterNameLabel:     params.Cluster.Name,
-			clusterv1.MachinePoolNameLabel: params.MachinePool.Name,
+			clusterv1.MachinePoolNameLabel: format.MustFormatValue(params.MachinePool.Name),
 		}
 		infraMachine := &infrav2exp.OCIMachinePoolMachine{
 			ObjectMeta: metav1.ObjectMeta{
@@ -336,7 +337,7 @@ func getMachinepoolMachines(ctx context.Context, c client.Client, machinePool *e
 	machineList := &infrav2exp.OCIMachinePoolMachineList{}
 	labels := map[string]string{
 		clusterv1.ClusterNameLabel:     cluster.Name,
-		clusterv1.MachinePoolNameLabel: machinePool.Name,
+		clusterv1.MachinePoolNameLabel: format.MustFormatValue(machinePool.Name),
 	}
 	if err := c.List(ctx, machineList, client.InNamespace(namespace), client.MatchingLabels(labels)); err != nil {
 		return nil, err
