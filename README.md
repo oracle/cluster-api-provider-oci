@@ -16,9 +16,8 @@ The Cluster API itself is shared across multiple cloud providers allowing for tr
 
 ### Features
 
-- Manages the bootstrapping of VCNs, gateways, subnets, network security groups and instances
-- Deploy either Oracle Linux or Ubuntu based instances using custom images built with the [Image Builder][image_builder_book] tool
-- Deploys Kubernetes Control plane into private subnets front-ended by a public load balancer
+- Self-managed and OCI Container Engine for Kubernetes(OKE) clusters
+- Manages the bootstrapping of VCNs, gateways, subnets, network security groups
 - Provide secure and sensible defaults
 
 ### Getting Started
