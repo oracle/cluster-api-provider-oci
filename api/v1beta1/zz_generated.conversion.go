@@ -2178,6 +2178,8 @@ func autoConvert_v1beta1_OCIMachineSpec_To_v1beta2_OCIMachineSpec(in *OCIMachine
 	out.ImageId = in.ImageId
 	out.CompartmentId = in.CompartmentId
 	out.Shape = in.Shape
+	out.ComputeClusterId = (*string)(unsafe.Pointer(in.ComputeClusterId))
+	out.LaunchMode = (*v1beta2.LaunchMode)(unsafe.Pointer(in.LaunchMode))
 	out.IpxeScript = (*string)(unsafe.Pointer(in.IpxeScript))
 	out.CapacityReservationId = (*string)(unsafe.Pointer(in.CapacityReservationId))
 	if err := Convert_v1beta1_ShapeConfig_To_v1beta2_ShapeConfig(&in.ShapeConfig, &out.ShapeConfig, s); err != nil {
@@ -2211,6 +2213,8 @@ func autoConvert_v1beta2_OCIMachineSpec_To_v1beta1_OCIMachineSpec(in *v1beta2.OC
 	out.ImageId = in.ImageId
 	out.CompartmentId = in.CompartmentId
 	out.Shape = in.Shape
+	out.ComputeClusterId = (*string)(unsafe.Pointer(in.ComputeClusterId))
+	out.LaunchMode = (*LaunchMode)(unsafe.Pointer(in.LaunchMode))
 	out.IpxeScript = (*string)(unsafe.Pointer(in.IpxeScript))
 	out.CapacityReservationId = (*string)(unsafe.Pointer(in.CapacityReservationId))
 	if err := Convert_v1beta2_ShapeConfig_To_v1beta1_ShapeConfig(&in.ShapeConfig, &out.ShapeConfig, s); err != nil {

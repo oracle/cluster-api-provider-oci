@@ -153,6 +153,12 @@ spec:
                       compartmentId:
                         description: Compartment to launch the instance in.
                         type: string
+                      computeClusterId:
+                        description: ComputeClusterId refers to OCID of the compute
+                          cluster that the instance will be created in. Please refer
+                          https://docs.oracle.com/en-us/iaas/Content/Compute/Tasks/compute-clusters.htm
+                          for more details
+                        type: string
                       dedicatedVmHostId:
                         description: DedicatedVmHostId defines the OCID of the dedicated
                           VM host.
@@ -213,10 +219,16 @@ spec:
                             type: string
                         type: object
                       ipxeScript:
+                        description: IpxeScript is the  custom iPXE script that will
+                          run when the instance boots.
                         type: string
                       isPvEncryptionInTransitEnabled:
                         description: Is in transit encryption of volumes required.
                         type: boolean
+                      launchMode:
+                        description: LaunchMode specifies the configuration mode for
+                          launching virtual machine (VM) instances.
+                        type: string
                       launchOptions:
                         description: LaunchOptions defines the options for tuning
                           the compatibility and performance of VM shapes
@@ -893,6 +905,12 @@ spec:
                       compartmentId:
                         description: Compartment to launch the instance in.
                         type: string
+                      computeClusterId:
+                        description: ComputeClusterId refers to OCID of the compute
+                          cluster that the instance will be created in. Please refer
+                          https://docs.oracle.com/en-us/iaas/Content/Compute/Tasks/compute-clusters.htm
+                          for more details
+                        type: string
                       dedicatedVmHostId:
                         description: DedicatedVmHostId defines the OCID of the dedicated
                           VM host.
@@ -953,10 +971,16 @@ spec:
                             type: string
                         type: object
                       ipxeScript:
+                        description: IpxeScript is the  custom iPXE script that will
+                          run when the instance boots.
                         type: string
                       isPvEncryptionInTransitEnabled:
                         description: Is in transit encryption of volumes required.
                         type: boolean
+                      launchMode:
+                        description: LaunchMode specifies the configuration mode for
+                          launching virtual machine (VM) instances.
+                        type: string
                       launchOptions:
                         description: LaunchOptions defines the options for tuning
                           the compatibility and performance of VM shapes
