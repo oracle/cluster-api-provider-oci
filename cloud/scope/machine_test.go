@@ -325,6 +325,7 @@ func TestInstanceReconciliation(t *testing.T) {
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				setupAllParams(ms)
 				ms.OCIMachine.Spec.CapacityReservationId = common.String("cap-id")
+				ms.OCIMachine.Spec.ComputeClusterId = common.String("cluster-id")
 				ms.OCIMachine.Spec.DedicatedVmHostId = common.String("dedicated-host-id")
 				ms.OCIMachine.Spec.NetworkDetails.HostnameLabel = common.String("hostname-label")
 				ms.OCIMachine.Spec.NetworkDetails.SkipSourceDestCheck = common.Bool(true)
@@ -342,6 +343,7 @@ func TestInstanceReconciliation(t *testing.T) {
 				launchDetails := core.LaunchInstanceDetails{DisplayName: common.String("name"),
 					CapacityReservationId: common.String("cap-id"),
 					DedicatedVmHostId:     common.String("dedicated-host-id"),
+					ComputeClusterId:      common.String("cluster-id"),
 					SourceDetails: core.InstanceSourceViaImageDetails{
 						ImageId:             common.String("image"),
 						BootVolumeSizeInGBs: common.Int64(120),
