@@ -17,6 +17,7 @@ package util
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"testing"
 
@@ -762,6 +763,54 @@ func TestDeleteManagedMachinesIfNotExists(t *testing.T) {
 			name:                 "machine delete, no owner",
 			namespace:            "default",
 			infraMachinePoolName: "test",
+			errorExpected:        false,
+			machineTypEnum:       infrav2exp.SelfManaged,
+			machinePool: &expclusterv1.MachinePool{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+				},
+			},
+			cluster: &clusterv1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+				},
+			},
+			setup: func(t *test) {
+				t.client = interceptor.NewClient(fake.NewClientBuilder().WithObjects(&infrav2exp.OCIMachinePoolMachine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: "default",
+						Labels: map[string]string{
+							clusterv1.ClusterNameLabel:     "test",
+							clusterv1.MachinePoolNameLabel: "test",
+						},
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								Kind:       "Machine",
+								Name:       "test-machine",
+								APIVersion: clusterv1.GroupVersion.String(),
+							},
+						},
+					},
+					Spec: infrav2exp.OCIMachinePoolMachineSpec{
+						OCID:         common.String("id-1"),
+						InstanceName: common.String("name-1"),
+						ProviderID:   common.String("oci://id-1"),
+						MachineType:  infrav2exp.SelfManaged,
+					},
+				}).Build(), interceptor.Funcs{
+					Delete: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
+						m := obj.(*clusterv1.Machine)
+						t.deletePoolMachines = append(t.deletePoolMachines, *m)
+						return nil
+					},
+				})
+			},
+		},
+		{
+			name:                 "machine delete, other error",
+			namespace:            "default",
+			infraMachinePoolName: "test",
 			errorExpected:        true,
 			machineTypEnum:       infrav2exp.SelfManaged,
 			machinePool: &expclusterv1.MachinePool{
@@ -802,6 +851,9 @@ func TestDeleteManagedMachinesIfNotExists(t *testing.T) {
 						m := obj.(*clusterv1.Machine)
 						t.deletePoolMachines = append(t.deletePoolMachines, *m)
 						return nil
+					},
+					Get: func(ctx context.Context, client client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+						return errors.New("another error")
 					},
 				})
 			},
