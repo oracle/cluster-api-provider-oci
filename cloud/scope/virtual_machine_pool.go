@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/go-logr/logr"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
@@ -157,6 +158,9 @@ func (m *VirtualMachinePoolScope) ListandSetMachinePoolInstances(ctx context.Con
 				ready = true
 			}
 			machines = append(machines, infrav2exp.OCIMachinePoolMachine{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: *node.DisplayName,
+				},
 				Spec: infrav2exp.OCIMachinePoolMachineSpec{
 					OCID:         node.Id,
 					ProviderID:   node.Id,

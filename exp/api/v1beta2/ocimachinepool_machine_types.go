@@ -36,7 +36,7 @@ type MachineTypeEnum string
 
 // OCIMachinePoolMachineSpec defines the desired state of OCIMachinePoolMachine
 type OCIMachinePoolMachineSpec struct {
-	// ProviderID is the OCID of the associated machine..
+	// ProviderID is Oracle Cloud Identifier of the associated instance.
 	// +optional
 	ProviderID *string `json:"providerID,omitempty"`
 

@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -363,6 +364,9 @@ func (r *OCIManagedMachinePoolReconciler) reconcileManagedMachines(ctx context.C
 			ready = true
 		}
 		specInfraMachines = append(specInfraMachines, infrav2exp.OCIMachinePoolMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: *node.Name,
+			},
 			Spec: infrav2exp.OCIMachinePoolMachineSpec{
 				OCID:         node.Id,
 				ProviderID:   node.Id,

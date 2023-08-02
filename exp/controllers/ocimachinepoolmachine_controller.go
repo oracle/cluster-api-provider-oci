@@ -48,7 +48,7 @@ type OCIMachinePoolMachineReconciler struct {
 func (r *OCIMachinePoolMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, reterr error) {
 	// currently, we only remove the finalizer on delete
 	// at a later point, when machine pool machine feature improves with integration with autoscaler and deployment
-	// orchestration etc, we should imrpve the below logic to actually delete the machine pool machine from the underlying
+	// orchestration etc, we should improve the below logic to actually delete the machine pool machine from the underlying
 	// infra object such as OKE nodepool or instance pool etc
 	ociMachinePoolMachine := &infrav2exp.OCIMachinePoolMachine{}
 	err := r.Get(ctx, req.NamespacedName, ociMachinePoolMachine)

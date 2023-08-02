@@ -44,7 +44,8 @@ spec:
                 description: OCID is the OCID of the associated instance.
                 type: string
               providerID:
-                description: ProviderID is the OCID of the associated machine..
+                description: ProviderID is the Oracle Cloud Identifier of the associated
+                  instance.
                 type: string
             type: object
           status:
@@ -134,7 +135,8 @@ spec:
                 description: OCID is the OCID of the associated instance.
                 type: string
               providerID:
-                description: ProviderID is the OCID of the associated machine..
+                description: ProviderID is Oracle Cloud Identifier of the associated
+                  instance.
                 type: string
             type: object
           status:

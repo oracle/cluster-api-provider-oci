@@ -30,6 +30,7 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -300,10 +301,10 @@ func CreateMachinePoolMachinesIfNotExists(ctx context.Context, params MachinePar
 		}
 		infraMachine := &infrav2exp.OCIMachinePoolMachine{
 			ObjectMeta: metav1.ObjectMeta{
-				Namespace:    params.Namespace,
-				GenerateName: fmt.Sprintf("%s-", params.InfraMachinePoolName),
-				Labels:       labels,
-				Annotations:  make(map[string]string),
+				Namespace:   params.Namespace,
+				Name:        specMachine.Name,
+				Labels:      labels,
+				Annotations: make(map[string]string),
 				// set the parent to infra machinepool till the capi machine reconciler changes it to capi machinepool machine
 				OwnerReferences: []metav1.OwnerReference{
 					{
@@ -354,16 +355,22 @@ func DeleteOrphanedMachinePoolMachines(ctx context.Context, params MachineParams
 		return err
 	}
 
-	instanceNameSet := map[string]struct{}{}
+	// create a set of instances in the spec, which will be used for lookup later
+	instanceSpecSet := map[string]struct{}{}
 	for _, specMachine := range params.SpecInfraMachines {
-		instanceNameSet[*specMachine.Spec.OCID] = struct{}{}
+		instanceSpecSet[*specMachine.Spec.OCID] = struct{}{}
 	}
 
 	for i := range machineList.Items {
 		machinePoolMachine := &machineList.Items[i]
-		if _, ok := instanceNameSet[*machinePoolMachine.Spec.OCID]; !ok {
+		// lookup if the machinepool machine is not in the spec, if not delete the underlying machine
+		if _, ok := instanceSpecSet[*machinePoolMachine.Spec.OCID]; !ok {
 			machine, err := util.GetOwnerMachine(ctx, params.Client, machinePoolMachine.ObjectMeta)
 			if err != nil {
+				if apierrors.IsNotFound(err) {
+					params.Logger.Info("Machinepool machine has not been created", "machine", machinePoolMachine.Name)
+					continue
+				}
 				return errors.Wrapf(err, "failed to get owner Machine for machinepool machine %s/%s", machinePoolMachine.Namespace, machinePoolMachine.Name)
 			}
 			if machine == nil {

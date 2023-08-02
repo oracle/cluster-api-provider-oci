@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"reflect"
 	"strconv"
 	"strings"
@@ -204,6 +205,9 @@ func (m *MachinePoolScope) SetListandSetMachinePoolInstances(ctx context.Context
 			ready = true
 		}
 		machines = append(machines, infrav2exp.OCIMachinePoolMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: *instance.DisplayName,
+			},
 			Spec: infrav2exp.OCIMachinePoolMachineSpec{
 				OCID:         instance.Id,
 				ProviderID:   common.String(m.OCIClusterAccesor.GetProviderID(*instance.Id)),
