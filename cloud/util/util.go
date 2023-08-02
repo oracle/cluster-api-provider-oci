@@ -302,7 +302,7 @@ func CreateMachinePoolMachinesIfNotExists(ctx context.Context, params MachinePar
 		infraMachine := &infrav2exp.OCIMachinePoolMachine{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace:   params.Namespace,
-				Name:        fmt.Sprintf("%s-%s", params.MachinePool.Name, specMachine.Name),
+				Name:        specMachine.Name,
 				Labels:      labels,
 				Annotations: make(map[string]string),
 				// set the parent to infra machinepool till the capi machine reconciler changes it to capi machinepool machine
