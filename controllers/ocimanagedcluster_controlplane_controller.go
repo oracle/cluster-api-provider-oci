@@ -40,13 +40,13 @@ import (
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // OCIManagedClusterControlPlaneReconciler reconciles a OCIManagedControlPlane object
@@ -252,25 +252,28 @@ func (r *OCIManagedClusterControlPlaneReconciler) reconcile(ctx context.Context,
 // SetupWithManager sets up the controller with the Manager.
 func (r *OCIManagedClusterControlPlaneReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
 	log := ctrl.LoggerFrom(ctx)
-	ociManagedClusterMapper, err := OCIManagedClusterToOCIManagedControlPlaneMapper(ctx, r.Client, log)
-	c, err := ctrl.NewControllerManagedBy(mgr).
+	ociManagedClusterMapper, err := OCIManagedClusterToOCIManagedControlPlaneMapper(r.Client, log)
+	if err != nil {
+		return err
+	}
+	err = ctrl.NewControllerManagedBy(mgr).
 		WithOptions(options).
 		For(&infrastructurev1beta2.OCIManagedControlPlane{}).
 		Watches(
-			&source.Kind{Type: &infrastructurev1beta2.OCIManagedCluster{}},
+			&infrastructurev1beta2.OCIManagedCluster{},
 			handler.EnqueueRequestsFromMapFunc(ociManagedClusterMapper),
 		).
-		Build(r)
+		Watches(
+			&clusterv1.Cluster{},
+			handler.EnqueueRequestsFromMapFunc(ClusterToOCIManagedControlPlaneMapper()),
+			builder.WithPredicates(
+				predicates.ClusterUnpaused(log),
+				predicates.ResourceNotPausedAndHasFilterLabel(log, ""),
+			),
+		).
+		Complete(r)
 	if err != nil {
 		return errors.Wrapf(err, "error creating controller")
-	}
-
-	if err = c.Watch(
-		&source.Kind{Type: &clusterv1.Cluster{}},
-		handler.EnqueueRequestsFromMapFunc(ClusterToOCIManagedControlPlaneMapper()),
-		predicates.ResourceNotPausedAndHasFilterLabel(log, ""),
-	); err != nil {
-		return errors.Wrapf(err, "failed adding a watch for ready clusters")
 	}
 
 	return nil
@@ -278,8 +281,8 @@ func (r *OCIManagedClusterControlPlaneReconciler) SetupWithManager(ctx context.C
 
 // ClusterToInfrastructureMapFunc returns a handler.ToRequestsFunc that watches for
 // Cluster events and returns reconciliation requests for an infrastructure provider object.
-func (r *OCIManagedClusterControlPlaneReconciler) clusterToInfrastructureMapFunc(ctx context.Context, log logr.Logger) handler.MapFunc {
-	return func(o client.Object) []reconcile.Request {
+func (r *OCIManagedClusterControlPlaneReconciler) clusterToInfrastructureMapFunc(log logr.Logger) handler.MapFunc {
+	return func(ctx context.Context, o client.Object) []reconcile.Request {
 		c, ok := o.(*clusterv1.Cluster)
 		if !ok {
 			return nil
@@ -369,8 +372,8 @@ func (r *OCIManagedClusterControlPlaneReconciler) reconcileDelete(ctx context.Co
 	}
 }
 
-func OCIManagedClusterToOCIManagedControlPlaneMapper(ctx context.Context, c client.Client, log logr.Logger) (handler.MapFunc, error) {
-	return func(o client.Object) []ctrl.Request {
+func OCIManagedClusterToOCIManagedControlPlaneMapper(c client.Client, log logr.Logger) (handler.MapFunc, error) {
+	return func(ctx context.Context, o client.Object) []ctrl.Request {
 		ociCluster, ok := o.(*infrastructurev1beta2.OCIManagedCluster)
 		if !ok {
 			log.Error(errors.Errorf("expected an OCIManagedCluster, got %T instead", o), "failed to map OCIManagedCluster")
@@ -413,7 +416,7 @@ func OCIManagedClusterToOCIManagedControlPlaneMapper(ctx context.Context, c clie
 }
 
 func ClusterToOCIManagedControlPlaneMapper() handler.MapFunc {
-	return func(o client.Object) []ctrl.Request {
+	return func(ctx context.Context, o client.Object) []ctrl.Request {
 		cluster, ok := o.(*clusterv1.Cluster)
 		if !ok {
 			return nil

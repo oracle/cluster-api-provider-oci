@@ -40,13 +40,13 @@ import (
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // OCIMachineReconciler reconciles a OciMachine object
@@ -172,44 +172,41 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *OCIMachineReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
-	c, err := ctrl.NewControllerManagedBy(mgr).
+	clusterToObjectFunc, err := util.ClusterToTypedObjectsMapper(r.Client, &infrastructurev1beta2.OCIMachineList{}, mgr.GetScheme())
+	if err != nil {
+		return errors.Wrapf(err, "failed to create mapper for Cluster to OCIMachines")
+	}
+	err = ctrl.NewControllerManagedBy(mgr).
 		WithOptions(options).
 		For(&infrastructurev1beta2.OCIMachine{}).
+		WithEventFilter(predicates.ResourceNotPaused(ctrl.LoggerFrom(ctx))).
 		Watches(
-			&source.Kind{Type: &clusterv1.Machine{}},
+			&clusterv1.Machine{},
 			handler.EnqueueRequestsFromMapFunc(util.MachineToInfrastructureMapFunc(infrastructurev1beta2.
 				GroupVersion.WithKind(scope.OCIMachineKind))),
 		).
 		Watches(
-			&source.Kind{Type: &infrastructurev1beta2.OCICluster{}},
-			handler.EnqueueRequestsFromMapFunc(r.OCIClusterToOCIMachines(ctx)),
+			&infrastructurev1beta2.OCICluster{},
+			handler.EnqueueRequestsFromMapFunc(r.OCIClusterToOCIMachines()),
 		).
-		WithEventFilter(predicates.ResourceNotPaused(ctrl.LoggerFrom(ctx))). // don't queue reconcile if resource is paused
-		Build(r)
+		Watches(
+			&clusterv1.Cluster{},
+			handler.EnqueueRequestsFromMapFunc(clusterToObjectFunc),
+			builder.WithPredicates(
+				predicates.ClusterUnpausedAndInfrastructureReady(ctrl.LoggerFrom(ctx)),
+			),
+		).
+		// don't queue reconcile if resource is paused
+		Complete(r)
 	if err != nil {
 		return errors.Wrapf(err, "error creating controller")
 	}
-
-	clusterToObjectFunc, err := util.ClusterToObjectsMapper(r.Client, &infrastructurev1beta2.OCIMachineList{}, mgr.GetScheme())
-	if err != nil {
-		return errors.Wrapf(err, "failed to create mapper for Cluster to OCIMachines")
-	}
-
-	// Add a watch on clusterv1.Cluster object for unpause & ready notifications.
-	if err := c.Watch(
-		&source.Kind{Type: &clusterv1.Cluster{}},
-		handler.EnqueueRequestsFromMapFunc(clusterToObjectFunc),
-		predicates.ClusterUnpausedAndInfrastructureReady(ctrl.LoggerFrom(ctx)),
-	); err != nil {
-		return errors.Wrapf(err, "failed adding a watch for ready clusters")
-	}
-
 	return nil
 }
 
-func (r *OCIMachineReconciler) OCIClusterToOCIMachines(ctx context.Context) handler.MapFunc {
-	log := ctrl.LoggerFrom(ctx)
-	return func(o client.Object) []ctrl.Request {
+func (r *OCIMachineReconciler) OCIClusterToOCIMachines() handler.MapFunc {
+	return func(ctx context.Context, o client.Object) []ctrl.Request {
+		log := ctrl.LoggerFrom(ctx)
 		result := []ctrl.Request{}
 
 		c, ok := o.(*infrastructurev1beta2.OCICluster)

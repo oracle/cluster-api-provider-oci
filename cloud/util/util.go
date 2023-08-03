@@ -22,16 +22,24 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/go-logr/logr"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/config"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
+	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	expclusterv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
+	"sigs.k8s.io/cluster-api/util"
+	"sigs.k8s.io/cluster-api/util/labels/format"
+	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // GetClusterIdentityFromRef returns the OCIClusterIdentity referenced by the OCICluster.
@@ -253,4 +261,143 @@ func CreateClientProviderFromClusterIdentity(ctx context.Context, client client.
 		return nil, err
 	}
 	return clientProvider, nil
+}
+
+// CreateMachinePoolMachinesIfNotExists creates the machine pool machines if not exists. This method lists the existing
+// machines in the clusters and does a diff, and creates any missing machines based ont he spec provided.
+func CreateMachinePoolMachinesIfNotExists(ctx context.Context, params MachineParams) error {
+
+	machineList, err := getMachinepoolMachines(ctx, params.Client, params.MachinePool, params.Cluster, params.Namespace)
+	if err != nil {
+		return err
+	}
+
+	instanceNameToMachinePoolMachine := make(map[string]infrav2exp.OCIMachinePoolMachine)
+	for _, machine := range machineList.Items {
+		instanceNameToMachinePoolMachine[*machine.Spec.OCID] = machine
+	}
+
+	for _, specMachine := range params.SpecInfraMachines {
+		if actualMachine, exists := instanceNameToMachinePoolMachine[*specMachine.Spec.OCID]; exists {
+			if !reflect.DeepEqual(specMachine.Status.Ready, actualMachine.Status.Ready) {
+				params.Logger.Info("Setting status of machine to active", "machine", actualMachine.Name)
+
+				helper, err := patch.NewHelper(&actualMachine, params.Client)
+				if err != nil {
+					return err
+				}
+				actualMachine.Status.Ready = true
+				err = helper.Patch(ctx, &actualMachine)
+				if err != nil {
+					return err
+				}
+			}
+			continue
+		}
+
+		labels := map[string]string{
+			clusterv1.ClusterNameLabel:     params.Cluster.Name,
+			clusterv1.MachinePoolNameLabel: format.MustFormatValue(params.MachinePool.Name),
+		}
+		infraMachine := &infrav2exp.OCIMachinePoolMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace:   params.Namespace,
+				Name:        specMachine.Name,
+				Labels:      labels,
+				Annotations: make(map[string]string),
+				// set the parent to infra machinepool till the capi machine reconciler changes it to capi machinepool machine
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						Kind:       params.InfraMachinePoolKind,
+						Name:       params.InfraMachinePoolName,
+						APIVersion: infrav2exp.GroupVersion.String(),
+						UID:        params.InfraMachinePoolUID,
+					},
+				},
+			},
+			Spec: infrav2exp.OCIMachinePoolMachineSpec{
+				OCID:         specMachine.Spec.OCID,
+				ProviderID:   specMachine.Spec.ProviderID,
+				InstanceName: specMachine.Spec.InstanceName,
+				MachineType:  specMachine.Spec.MachineType,
+			},
+		}
+		infraMachine.Status.Ready = specMachine.Status.Ready
+		controllerutil.AddFinalizer(infraMachine, infrav2exp.MachinePoolMachineFinalizer)
+		params.Logger.Info("Creating machinepool  machine", "machine", infraMachine.Name, "instanceName", specMachine.Name)
+
+		if err := params.Client.Create(ctx, infraMachine); err != nil {
+			return errors.Wrap(err, "failed to create machine")
+		}
+	}
+
+	return nil
+}
+
+func getMachinepoolMachines(ctx context.Context, c client.Client, machinePool *expclusterv1.MachinePool, cluster *clusterv1.Cluster, namespace string) (*infrav2exp.OCIMachinePoolMachineList, error) {
+	machineList := &infrav2exp.OCIMachinePoolMachineList{}
+	labels := map[string]string{
+		clusterv1.ClusterNameLabel:     cluster.Name,
+		clusterv1.MachinePoolNameLabel: format.MustFormatValue(machinePool.Name),
+	}
+	if err := c.List(ctx, machineList, client.InNamespace(namespace), client.MatchingLabels(labels)); err != nil {
+		return nil, err
+	}
+
+	return machineList, nil
+}
+
+// DeleteOrphanedMachinePoolMachines deletes the machine pool machines which are not required. This method lists the
+// existing machines in the clusters and does a diff with the spec and deletes any machines which are missing from the spec.
+func DeleteOrphanedMachinePoolMachines(ctx context.Context, params MachineParams) error {
+	machineList, err := getMachinepoolMachines(ctx, params.Client, params.MachinePool, params.Cluster, params.Namespace)
+	if err != nil {
+		return err
+	}
+
+	// create a set of instances in the spec, which will be used for lookup later
+	instanceSpecSet := map[string]struct{}{}
+	for _, specMachine := range params.SpecInfraMachines {
+		instanceSpecSet[*specMachine.Spec.OCID] = struct{}{}
+	}
+
+	for i := range machineList.Items {
+		machinePoolMachine := &machineList.Items[i]
+		// lookup if the machinepool machine is not in the spec, if not delete the underlying machine
+		if _, ok := instanceSpecSet[*machinePoolMachine.Spec.OCID]; !ok {
+			machine, err := util.GetOwnerMachine(ctx, params.Client, machinePoolMachine.ObjectMeta)
+			if err != nil {
+				if apierrors.IsNotFound(err) {
+					params.Logger.Info("Machinepool machine has not been created", "machine", machinePoolMachine.Name)
+					continue
+				}
+				return errors.Wrapf(err, "failed to get owner Machine for machinepool machine %s/%s", machinePoolMachine.Namespace, machinePoolMachine.Name)
+			}
+			if machine == nil {
+				return errors.Errorf("Machinepool %s/%s has no parent Machine, will reattempt deletion once parent Machine is present", machinePoolMachine.Namespace, machinePoolMachine.Name)
+			}
+			params.Logger.Info("Deleting machinepool machine", "machine", machine.Name)
+			if err := params.Client.Delete(ctx, machine); err != nil {
+				return errors.Wrapf(err, "failed to delete machinepool machine %s/%s", machine.Namespace, machine.Name)
+			}
+		} else {
+			params.Logger.Info("Keeping machinepool, nothing to do", "machine", machinePoolMachine.Name, "namespace", machinePoolMachine.Namespace)
+		}
+	}
+
+	return nil
+}
+
+// MachineParams specifies the params required to create or delete machinepool machines.
+// Infra machine pool specifed below refers to OCIManagedMachinePool/OCIMachinePool/OCIVirtualMachinePool
+type MachineParams struct {
+	Client               client.Client                      // the kubernetes client
+	MachinePool          *expclusterv1.MachinePool          // the corresponding machinepool
+	Cluster              *clusterv1.Cluster                 // the corresponding cluster
+	InfraMachinePoolName string                             // the name of the infra machinepool corresponding(can be managed/self managed/virtual)
+	InfraMachinePoolKind string                             // the kind of infra machinepool(can be managed/self managed/virtual)
+	InfraMachinePoolUID  types.UID                          // the UID of the infra machinepool
+	Namespace            string                             // the namespace in which machinepool machine has to be created
+	SpecInfraMachines    []infrav2exp.OCIMachinePoolMachine // the spec of actual machines in the pool
+	Logger               *logr.Logger                       // the logger which has to be used
 }

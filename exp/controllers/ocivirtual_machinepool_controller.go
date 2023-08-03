@@ -43,6 +43,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -50,7 +51,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // OCIVirtualMachinePoolReconciler reconciles a OCIVirtualMachinePool object
@@ -183,26 +183,36 @@ func (r *OCIVirtualMachinePoolReconciler) SetupWithManager(ctx context.Context, 
 	if err != nil {
 		return errors.Wrapf(err, "failed to find GVK for OCIVirtualMachinePool")
 	}
+	clusterToObjectFunc, err := util.ClusterToTypedObjectsMapper(r.Client, &infrav2exp.OCIVirtualMachinePoolList{}, mgr.GetScheme())
+	if err != nil {
+		return errors.Wrapf(err, "failed to create mapper for Cluster to OCIVirtualMachinePool")
+	}
 	managedClusterToVirtualMachinePoolMapFunc := managedClusterToVirtualMachinePoolMapFunc(r.Client, gvk, logger)
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(options).
 		For(&infrav2exp.OCIVirtualMachinePool{}).
 		Watches(
-			&source.Kind{Type: &expclusterv1.MachinePool{}},
+			&expclusterv1.MachinePool{},
 			handler.EnqueueRequestsFromMapFunc(machinePoolToInfrastructureMapFunc(infrastructurev1beta2.
 				GroupVersion.WithKind(scope.OCIVirtualMachinePoolKind), logger)),
 		).
 		Watches(
-			&source.Kind{Type: &infrastructurev1beta2.OCIManagedCluster{}},
+			&infrastructurev1beta2.OCIManagedCluster{},
 			handler.EnqueueRequestsFromMapFunc(managedClusterToVirtualMachinePoolMapFunc),
+		).
+		Watches(
+			&clusterv1.Cluster{},
+			handler.EnqueueRequestsFromMapFunc(clusterToObjectFunc),
+			builder.WithPredicates(
+				predicates.ClusterUnpausedAndInfrastructureReady(ctrl.LoggerFrom(ctx)),
+			),
 		).
 		WithEventFilter(predicates.ResourceNotPaused(ctrl.LoggerFrom(ctx))).
 		Complete(r)
 }
 
 func managedClusterToVirtualMachinePoolMapFunc(c client.Client, gvk schema.GroupVersionKind, log logr.Logger) handler.MapFunc {
-	return func(o client.Object) []reconcile.Request {
-		ctx := context.Background()
+	return func(ctx context.Context, o client.Object) []reconcile.Request {
 		ociCluster, ok := o.(*infrastructurev1beta2.OCIManagedCluster)
 		if !ok {
 			panic(fmt.Sprintf("Expected a OCIManagedControlPlane but got a %T", o))
@@ -233,7 +243,7 @@ func managedClusterToVirtualMachinePoolMapFunc(c client.Client, gvk schema.Group
 
 		var results []ctrl.Request
 		for i := range managedPoolForClusterList.Items {
-			managedPool := mapFunc(&managedPoolForClusterList.Items[i])
+			managedPool := mapFunc(ctx, &managedPoolForClusterList.Items[i])
 			results = append(results, managedPool...)
 		}
 
@@ -287,11 +297,23 @@ func (r *OCIVirtualMachinePoolReconciler) reconcileNormal(ctx context.Context, l
 		return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 	case oke.VirtualNodePoolLifecycleStateActive:
 		machinePoolScope.Info("Virtual Node pool is active")
-		instanceCount, err := machinePoolScope.ListandSetMachinePoolInstances(ctx, nodePool)
+		machines, err := machinePoolScope.ListandSetMachinePoolInstances(ctx, nodePool)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
-		machinePoolScope.SetReplicaCount(instanceCount)
+		providerIDList := make([]string, 0)
+		for _, machine := range machines {
+			if machine.Status.Ready {
+				providerIDList = append(providerIDList, *machine.Spec.ProviderID)
+			}
+		}
+		machinePoolScope.OCIVirtualMachinePool.Spec.ProviderIDList = providerIDList
+		machinePoolScope.SetReplicaCount(int32(len(providerIDList)))
+
+		err = r.reconcileVirtualMachines(ctx, err, machinePoolScope, machines)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 		machinePoolScope.OCIVirtualMachinePool.Status.Ready = true
 		// record the event only when pool goes from not ready to ready state
 		r.Recorder.Eventf(machinePoolScope.OCIVirtualMachinePool, corev1.EventTypeNormal, "VirtualNodePoolReady",
@@ -305,7 +327,9 @@ func (r *OCIVirtualMachinePoolReconciler) reconcileNormal(ctx context.Context, l
 			return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 		}
 
-		return reconcile.Result{}, nil
+		// we reconcile every 5 minutes in case any reconciliation have happened behind the scenes by OKE service on
+		// the virtual node pool(removing unhealthy nodes etc) which has to be percolated to machinepool machines
+		return reconcile.Result{RequeueAfter: 300 * time.Second}, nil
 	default:
 		err := errors.Errorf("Virtual Node Pool status %s is unexpected", nodePool.LifecycleState)
 		machinePoolScope.OCIVirtualMachinePool.Status.FailureMessages = append(machinePoolScope.OCIVirtualMachinePool.Status.FailureMessages, err.Error())
@@ -365,4 +389,30 @@ func (r *OCIVirtualMachinePoolReconciler) reconcileDelete(ctx context.Context, m
 			return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 		}
 	}
+}
+
+func (r *OCIVirtualMachinePoolReconciler) reconcileVirtualMachines(ctx context.Context, err error, machinePoolScope *scope.VirtualMachinePoolScope, specInfraMachines []infrav2exp.OCIMachinePoolMachine) error {
+	params := cloudutil.MachineParams{
+		Cluster:              machinePoolScope.Cluster,
+		MachinePool:          machinePoolScope.MachinePool,
+		InfraMachinePoolName: machinePoolScope.OCIVirtualMachinePool.Name,
+		Namespace:            machinePoolScope.OCIVirtualMachinePool.Namespace,
+		SpecInfraMachines:    specInfraMachines,
+		Client:               r.Client,
+		Logger:               machinePoolScope.Logger,
+		InfraMachinePoolKind: machinePoolScope.OCIVirtualMachinePool.Kind,
+		InfraMachinePoolUID:  machinePoolScope.OCIVirtualMachinePool.UID,
+	}
+	err = cloudutil.CreateMachinePoolMachinesIfNotExists(ctx, params)
+	if err != nil {
+		conditions.MarkFalse(machinePoolScope.OCIVirtualMachinePool, clusterv1.ReadyCondition, "FailedToDeleteOrphanedMachines", clusterv1.ConditionSeverityWarning, err.Error())
+		return errors.Wrap(err, "failed to create missing machines")
+	}
+
+	err = cloudutil.DeleteOrphanedMachinePoolMachines(ctx, params)
+	if err != nil {
+		conditions.MarkFalse(machinePoolScope.OCIVirtualMachinePool, clusterv1.ReadyCondition, "FailedToDeleteOrphanedMachines", clusterv1.ConditionSeverityWarning, err.Error())
+		return errors.Wrap(err, "failed to delete orphaned machines")
+	}
+	return nil
 }

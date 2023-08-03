@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -26,6 +27,7 @@ import (
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	cloudutil "github.com/oracle/cluster-api-provider-oci/cloud/util"
+	expV1Beta1 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
 	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
@@ -43,6 +45,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -50,7 +53,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // OCIManagedMachinePoolReconciler reconciles a OCIManagedMachinePool object
@@ -85,7 +87,6 @@ func (r *OCIManagedMachinePoolReconciler) Reconcile(ctx context.Context, req ctr
 		}
 		return ctrl.Result{}, err
 	}
-
 	// Fetch the CAPI MachinePool
 	machinePool, err := getOwnerMachinePool(ctx, r.Client, ociManagedMachinePool.ObjectMeta)
 	if err != nil {
@@ -184,25 +185,35 @@ func (r *OCIManagedMachinePoolReconciler) SetupWithManager(ctx context.Context, 
 		return errors.Wrapf(err, "failed to find GVK for OCIManagedMachinePool")
 	}
 	managedControlPlaneToManagedMachinePoolMap := managedClusterToManagedMachinePoolMapFunc(r.Client, gvk, logger)
+	clusterToObjectFunc, err := util.ClusterToTypedObjectsMapper(r.Client, &expV1Beta1.OCIManagedMachinePoolList{}, mgr.GetScheme())
+	if err != nil {
+		return errors.Wrapf(err, "failed to create mapper for Cluster to OCIManagedMachinePool")
+	}
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(options).
 		For(&infrav2exp.OCIManagedMachinePool{}).
 		Watches(
-			&source.Kind{Type: &expclusterv1.MachinePool{}},
+			&expclusterv1.MachinePool{},
 			handler.EnqueueRequestsFromMapFunc(machinePoolToInfrastructureMapFunc(infrastructurev1beta2.
 				GroupVersion.WithKind(scope.OCIManagedMachinePoolKind), logger)),
 		).
 		Watches(
-			&source.Kind{Type: &infrastructurev1beta2.OCIManagedCluster{}},
+			&infrastructurev1beta2.OCIManagedCluster{},
 			handler.EnqueueRequestsFromMapFunc(managedControlPlaneToManagedMachinePoolMap),
+		).
+		Watches(
+			&clusterv1.Cluster{},
+			handler.EnqueueRequestsFromMapFunc(clusterToObjectFunc),
+			builder.WithPredicates(
+				predicates.ClusterUnpausedAndInfrastructureReady(ctrl.LoggerFrom(ctx)),
+			),
 		).
 		WithEventFilter(predicates.ResourceNotPaused(ctrl.LoggerFrom(ctx))).
 		Complete(r)
 }
 
 func managedClusterToManagedMachinePoolMapFunc(c client.Client, gvk schema.GroupVersionKind, log logr.Logger) handler.MapFunc {
-	return func(o client.Object) []reconcile.Request {
-		ctx := context.Background()
+	return func(ctx context.Context, o client.Object) []reconcile.Request {
 		ociCluster, ok := o.(*infrastructurev1beta2.OCIManagedCluster)
 		if !ok {
 			panic(fmt.Sprintf("Expected a OCIManagedControlPlane but got a %T", o))
@@ -233,7 +244,7 @@ func managedClusterToManagedMachinePoolMapFunc(c client.Client, gvk schema.Group
 
 		var results []ctrl.Request
 		for i := range managedPoolForClusterList.Items {
-			managedPool := mapFunc(&managedPoolForClusterList.Items[i])
+			managedPool := mapFunc(ctx, &managedPoolForClusterList.Items[i])
 			results = append(results, managedPool...)
 		}
 
@@ -290,10 +301,18 @@ func (r *OCIManagedMachinePoolReconciler) reconcileNormal(ctx context.Context, l
 	switch nodePool.LifecycleState {
 	case oke.NodePoolLifecycleStateCreating:
 		machinePoolScope.Info("Node Pool is creating")
+		err = r.reconcileManagedMachines(ctx, err, machinePoolScope, nodePool)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 		conditions.MarkFalse(machinePoolScope.OCIManagedMachinePool, infrav2exp.NodePoolReadyCondition, infrav2exp.NodePoolNotReadyReason, clusterv1.ConditionSeverityInfo, "")
 		return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 	case oke.NodePoolLifecycleStateUpdating:
 		machinePoolScope.Info("Node Pool is updating")
+		err = r.reconcileManagedMachines(ctx, err, machinePoolScope, nodePool)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 		return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 	case oke.NodePoolLifecycleStateActive:
 		machinePoolScope.Info("Node pool is active")
@@ -314,8 +333,14 @@ func (r *OCIManagedMachinePoolReconciler) reconcileNormal(ctx context.Context, l
 		if isUpdated {
 			return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 		}
+		err = r.reconcileManagedMachines(ctx, err, machinePoolScope, nodePool)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 
-		return reconcile.Result{}, nil
+		// we reconcile every 5 minutes in case any reconciliation have happened behind the scenes by OKE service on
+		// the node pool(removing unhealthy nodes etc) which has to be percolated to machinepool machines
+		return reconcile.Result{RequeueAfter: 300 * time.Second}, nil
 	default:
 		err := errors.Errorf("Node Pool status %s is unexpected", nodePool.LifecycleState)
 		machinePoolScope.OCIManagedMachinePool.Status.FailureMessages = append(machinePoolScope.OCIManagedMachinePool.Status.FailureMessages, err.Error())
@@ -324,6 +349,58 @@ func (r *OCIManagedMachinePoolReconciler) reconcileNormal(ctx context.Context, l
 			"Node pool has invalid lifecycle state %s, lifecycle details is %s", nodePool.LifecycleState, nodePool.LifecycleDetails)
 		return reconcile.Result{}, err
 	}
+}
+
+func (r *OCIManagedMachinePoolReconciler) reconcileManagedMachines(ctx context.Context, err error, machinePoolScope *scope.ManagedMachinePoolScope, nodePool *oke.NodePool) error {
+	specInfraMachines := make([]infrav2exp.OCIMachinePoolMachine, 0)
+	for _, node := range nodePool.Nodes {
+		// deleted/failing nodes should not be added to spec
+		machinePoolScope.Info(string(node.LifecycleState))
+		if node.LifecycleState == oke.NodeLifecycleStateDeleted || node.LifecycleState == oke.NodeLifecycleStateFailing {
+			continue
+		}
+		ready := false
+		if node.LifecycleState == oke.NodeLifecycleStateActive {
+			ready = true
+		}
+		specInfraMachines = append(specInfraMachines, infrav2exp.OCIMachinePoolMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: *node.Name,
+			},
+			Spec: infrav2exp.OCIMachinePoolMachineSpec{
+				OCID:         node.Id,
+				ProviderID:   node.Id,
+				InstanceName: node.Name,
+				MachineType:  infrav2exp.Managed,
+			},
+			Status: infrav2exp.OCIMachinePoolMachineStatus{
+				Ready: ready,
+			},
+		})
+	}
+	params := cloudutil.MachineParams{
+		Cluster:              machinePoolScope.Cluster,
+		MachinePool:          machinePoolScope.MachinePool,
+		InfraMachinePoolName: machinePoolScope.OCIManagedMachinePool.Name,
+		Namespace:            machinePoolScope.OCIManagedMachinePool.Namespace,
+		SpecInfraMachines:    specInfraMachines,
+		Client:               r.Client,
+		Logger:               machinePoolScope.Logger,
+		InfraMachinePoolKind: machinePoolScope.OCIManagedMachinePool.Kind,
+		InfraMachinePoolUID:  machinePoolScope.OCIManagedMachinePool.UID,
+	}
+	err = cloudutil.CreateMachinePoolMachinesIfNotExists(ctx, params)
+	if err != nil {
+		conditions.MarkFalse(machinePoolScope.OCIManagedMachinePool, clusterv1.ReadyCondition, "FailedToDeleteOrphanedMachines", clusterv1.ConditionSeverityWarning, err.Error())
+		return errors.Wrap(err, "failed to create missing machines")
+	}
+
+	err = cloudutil.DeleteOrphanedMachinePoolMachines(ctx, params)
+	if err != nil {
+		conditions.MarkFalse(machinePoolScope.OCIManagedMachinePool, clusterv1.ReadyCondition, "FailedToDeleteOrphanedMachines", clusterv1.ConditionSeverityWarning, err.Error())
+		return errors.Wrap(err, "failed to delete orphaned machines")
+	}
+	return nil
 }
 
 func (r *OCIManagedMachinePoolReconciler) reconcileDelete(ctx context.Context, machinePoolScope *scope.ManagedMachinePoolScope) (_ ctrl.Result, reterr error) {

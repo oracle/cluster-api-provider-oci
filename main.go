@@ -31,6 +31,7 @@ import (
 	expcontrollers "github.com/oracle/cluster-api-provider-oci/exp/controllers"
 	"github.com/oracle/cluster-api-provider-oci/feature"
 	"github.com/oracle/cluster-api-provider-oci/version"
+	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -44,23 +45,17 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	expclusterv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 var (
-	scheme         = runtime.NewScheme()
-	setupLog       = ctrl.Log.WithName("setup")
-	logOptions     = logs.NewOptions()
-	webhookPort    int
-	webhookCertDir string
-
-	// Flags for reconciler concurrency
-	ociClusterConcurrency     int
-	ociMachineConcurrency     int
-	ociMachinePoolConcurrency int
-	initOciClientsOnStartup   bool
+	scheme     = runtime.NewScheme()
+	setupLog   = ctrl.Log.WithName("setup")
+	logOptions = logs.NewOptions()
 )
 
 const (
@@ -88,6 +83,13 @@ func main() {
 	var watchNamespace string
 	var probeAddr string
 	var webhookPort int
+	var webhookCertDir string
+	// Flags for reconciler concurrency
+	var ociClusterConcurrency int
+	var ociMachineConcurrency int
+	var ociMachinePoolConcurrency int
+	var initOciClientsOnStartup bool
+	var enableInstanceMetadataServiceLookup bool
 
 	fs := pflag.CommandLine
 	logs.AddFlags(fs, logs.SkipLoggingConfigurationFlags())
@@ -159,6 +161,12 @@ func main() {
 		"",
 		"Namespace that the controller watches to reconcile cluster-api objects. If unspecified, the controller watches for cluster-api objects across all namespaces.",
 	)
+	flag.BoolVar(
+		&enableInstanceMetadataServiceLookup,
+		"enable-instance-metadata-service-lookup",
+		false,
+		"Initialize OCI clients on startup",
+	)
 
 	opts := zap.Options{
 		Development: true,
@@ -179,9 +187,12 @@ func main() {
 	ctrl.SetLogger(klog.Background())
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                     scheme,
-		MetricsBindAddress:         metricsAddr,
-		Port:                       webhookPort,
+		Scheme:             scheme,
+		MetricsBindAddress: metricsAddr,
+		WebhookServer: webhook.NewServer(webhook.Options{
+			Port:    webhookPort,
+			CertDir: webhookCertDir,
+		}),
 		HealthProbeBindAddress:     probeAddr,
 		LeaderElection:             enableLeaderElection,
 		LeaderElectionID:           "controller-leader-elect-capoci",
@@ -190,8 +201,9 @@ func main() {
 		LeaseDuration:              &leaderElectionLeaseDuration,
 		RenewDeadline:              &leaderElectionRenewDeadline,
 		RetryPeriod:                &leaderElectionRetryPeriod,
-		CertDir:                    webhookCertDir,
-		Namespace:                  watchNamespace,
+		Cache: cache.Options{
+			Namespaces: []string{watchNamespace},
+		},
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -239,6 +251,9 @@ func main() {
 			setupLog.Error(err, "authentication provider could not be initialised")
 			os.Exit(1)
 		}
+	}
+	if enableInstanceMetadataServiceLookup {
+		common.EnableInstanceMetadataServiceLookup()
 	}
 	if err = (&controllers.OCIClusterReconciler{
 		Client:         mgr.GetClient(),
@@ -319,6 +334,17 @@ func main() {
 			Recorder:       mgr.GetEventRecorderFor("ocivirtualmachinepool-controller"),
 		}).SetupWithManager(ctx, mgr, controller.Options{MaxConcurrentReconciles: ociClusterConcurrency}); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", scope.OCIVirtualMachinePoolKind)
+			os.Exit(1)
+		}
+
+		if err = (&expcontrollers.OCIMachinePoolMachineReconciler{
+			Client:         mgr.GetClient(),
+			Scheme:         mgr.GetScheme(),
+			Region:         region,
+			ClientProvider: clientProvider,
+			Recorder:       mgr.GetEventRecorderFor("ocimachinepoolmachine-controller"),
+		}).SetupWithManager(ctx, mgr, controller.Options{MaxConcurrentReconciles: ociClusterConcurrency}); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "OCIMachinePoolMachine")
 			os.Exit(1)
 		}
 	}

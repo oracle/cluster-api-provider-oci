@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 var managedcplanelogger = ctrl.Log.WithName("ocimanagedcontrolplane-resource")
@@ -50,21 +51,21 @@ func (c *OCIManagedControlPlane) SetupWebhookWithManager(mgr ctrl.Manager) error
 		Complete()
 }
 
-func (c *OCIManagedControlPlane) ValidateCreate() error {
+func (c *OCIManagedControlPlane) ValidateCreate() (admission.Warnings, error) {
 	var allErrs field.ErrorList
 	if len(c.Name) > 31 {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("Name"), c.Name, "Name cannot be more than 31 characters"))
 	}
 	if len(allErrs) == 0 {
-		return nil
+		return nil, nil
 	}
-	return apierrors.NewInvalid(c.GroupVersionKind().GroupKind(), c.Name, allErrs)
+	return nil, apierrors.NewInvalid(c.GroupVersionKind().GroupKind(), c.Name, allErrs)
 }
 
-func (c *OCIManagedControlPlane) ValidateUpdate(old runtime.Object) error {
-	return nil
+func (c *OCIManagedControlPlane) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
+	return nil, nil
 }
 
-func (c *OCIManagedControlPlane) ValidateDelete() error {
-	return nil
+func (c *OCIManagedControlPlane) ValidateDelete() (admission.Warnings, error) {
+	return nil, nil
 }

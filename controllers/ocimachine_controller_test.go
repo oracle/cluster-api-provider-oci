@@ -22,19 +22,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
-	"github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer/mock_nlb"
-	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn/mock_vcn"
-	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/compute/mock_compute"
+	"github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer/mock_nlb"
+	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn/mock_vcn"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
+	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -42,7 +40,9 @@ import (
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/conditions"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -117,7 +117,7 @@ func TestMachineReconciliation(t *testing.T) {
 			defer teardown(t, g)
 			setup(t, g)
 
-			client := fake.NewClientBuilder().WithObjects(tc.objects...).Build()
+			client := fake.NewClientBuilder().WithStatusSubresource(tc.objects...).WithObjects(tc.objects...).Build()
 			r = OCIMachineReconciler{
 				Client:         client,
 				Scheme:         runtime.NewScheme(),
@@ -592,6 +592,7 @@ func TestMachineReconciliationDelete(t *testing.T) {
 		ociMachine = getOciMachine()
 		now := metav1.NewTime(time.Now())
 		ociMachine.DeletionTimestamp = &now
+		controllerutil.AddFinalizer(ociMachine, infrastructurev1beta2.MachineFinalizer)
 		client := fake.NewClientBuilder().WithObjects(getSecret(), getMachine(), ociMachine, getCluster(), getOCICluster()).Build()
 		clientProvider, err := scope.MockNewClientProvider(scope.MockOCIClients{
 			ComputeClient: computeClient,
@@ -660,6 +661,7 @@ func TestMachineReconciliationDeletionNormal(t *testing.T) {
 		now := metav1.NewTime(time.Now())
 		ociMachine = getOciMachine()
 		ociMachine.DeletionTimestamp = &now
+		controllerutil.AddFinalizer(ociMachine, infrastructurev1beta2.MachineFinalizer)
 		machine := getMachine()
 		machine.Spec.Bootstrap.DataSecretName = common.String("bootstrap")
 		mockCtrl = gomock.NewController(t)

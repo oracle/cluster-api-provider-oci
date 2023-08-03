@@ -45,13 +45,13 @@ import (
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // OCIMachinePoolReconciler reconciles a OCIMachinePool object
@@ -180,37 +180,36 @@ func (r *OCIMachinePoolReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 // SetupWithManager sets up the controller with the Manager.
 func (r *OCIMachinePoolReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
 	logger := log.FromContext(ctx)
-	c, err := ctrl.NewControllerManagedBy(mgr).
+	clusterToObjectFunc, err := util.ClusterToTypedObjectsMapper(r.Client, &expV1Beta1.OCIMachinePoolList{}, mgr.GetScheme())
+	if err != nil {
+		return errors.Wrapf(err, "failed to create mapper for Cluster to OCIMachinePool")
+	}
+	err = ctrl.NewControllerManagedBy(mgr).
 		WithOptions(options).
 		For(&infrav2exp.OCIMachinePool{}).
+		WithEventFilter(predicates.ResourceNotPaused(ctrl.LoggerFrom(ctx))).
 		Watches(
-			&source.Kind{Type: &expclusterv1.MachinePool{}},
+			&expclusterv1.MachinePool{},
 			handler.EnqueueRequestsFromMapFunc(machinePoolToInfrastructureMapFunc(infrav2exp.
 				GroupVersion.WithKind(scope.OCIMachinePoolKind), logger)),
 		).
-		WithEventFilter(predicates.ResourceNotPaused(ctrl.LoggerFrom(ctx))).
-		Build(r)
+		Watches(
+			&clusterv1.Cluster{},
+			handler.EnqueueRequestsFromMapFunc(clusterToObjectFunc),
+			builder.WithPredicates(
+				predicates.ClusterUnpausedAndInfrastructureReady(ctrl.LoggerFrom(ctx)),
+			),
+		).
+		Complete(r)
 
 	if err != nil {
 		return errors.Wrapf(err, "error creating controller")
-	}
-	clusterToObjectFunc, err := util.ClusterToObjectsMapper(r.Client, &expV1Beta1.OCIMachinePoolList{}, mgr.GetScheme())
-	if err != nil {
-		return errors.Wrapf(err, "failed to create mapper for Cluster to OCIMachines")
-	}
-	// Add a watch on clusterv1.Cluster object for unpause & ready notifications.
-	if err := c.Watch(
-		&source.Kind{Type: &clusterv1.Cluster{}},
-		handler.EnqueueRequestsFromMapFunc(clusterToObjectFunc),
-		predicates.ClusterUnpausedAndInfrastructureReady(ctrl.LoggerFrom(ctx)),
-	); err != nil {
-		return errors.Wrapf(err, "failed adding a watch for ready clusters")
 	}
 	return nil
 }
 
 func machinePoolToInfrastructureMapFunc(gvk schema.GroupVersionKind, logger logr.Logger) handler.MapFunc {
-	return func(o client.Object) []reconcile.Request {
+	return func(ctx context.Context, o client.Object) []reconcile.Request {
 		m, ok := o.(*expclusterv1.MachinePool)
 		if !ok {
 			panic(fmt.Sprintf("Expected a MachinePool but got a %T", o))
@@ -340,10 +339,26 @@ func (r *OCIMachinePoolReconciler) reconcileNormal(ctx context.Context, logger l
 			"Instance pool is in ready state")
 		conditions.MarkTrue(machinePoolScope.OCIMachinePool, infrav2exp.InstancePoolReadyCondition)
 
-		instanceCount, err := machinePoolScope.SetListandSetMachinePoolInstances(ctx)
+		machines, err := machinePoolScope.SetListandSetMachinePoolInstances(ctx)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+		providerIDList := make([]string, 0)
+		for _, machine := range machines {
+			if machine.Status.Ready {
+				providerIDList = append(providerIDList, *machine.Spec.ProviderID)
+			}
+		}
+		machinePoolScope.OCIMachinePool.Spec.ProviderIDList = providerIDList
+
+		err = r.reconcileMachines(ctx, err, machinePoolScope, machines)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
 		instancePool, err = machinePoolScope.UpdatePool(ctx, instancePool)
 		if err != nil {
 			r.Recorder.Eventf(machinePoolScope.OCIMachinePool, corev1.EventTypeWarning, "FailedUpdate", "Failed to update instance pool: %v", err)
@@ -354,7 +369,7 @@ func (r *OCIMachinePoolReconciler) reconcileNormal(ctx context.Context, logger l
 		if err != nil {
 			return ctrl.Result{}, err
 		}
-		machinePoolScope.SetReplicaCount(instanceCount)
+		machinePoolScope.SetReplicaCount(int32(len(providerIDList)))
 		machinePoolScope.SetReady()
 	default:
 		conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav2exp.InstancePoolReadyCondition, infrav2exp.InstancePoolProvisionFailedReason, clusterv1.ConditionSeverityError, "")
@@ -364,8 +379,9 @@ func (r *OCIMachinePoolReconciler) reconcileNormal(ctx context.Context, logger l
 			"Instance pool has invalid lifecycle state %s", instancePool.LifecycleState)
 		return reconcile.Result{}, errors.New(fmt.Sprintf("instance pool has invalid lifecycle state %s", instancePool.LifecycleState))
 	}
-
-	return ctrl.Result{}, nil
+	// we reconcile every 5 minutes in case any reconciliation have happened behind the scenes by Instancepool service on
+	// the instance pool(removing unhealthy nodes etc) which has to be percolated to machinepool machines
+	return reconcile.Result{RequeueAfter: 300 * time.Second}, nil
 }
 
 func (r *OCIMachinePoolReconciler) reconcileDelete(ctx context.Context, machinePoolScope *scope.MachinePoolScope) (_ ctrl.Result, reterr error) {
@@ -430,4 +446,30 @@ func (r *OCIMachinePoolReconciler) reconcileDelete(ctx context.Context, machineP
 	// remove finalizer
 	controllerutil.RemoveFinalizer(machinePoolScope.OCIMachinePool, infrav2exp.MachinePoolFinalizer)
 	return ctrl.Result{}, nil
+}
+
+func (r *OCIMachinePoolReconciler) reconcileMachines(ctx context.Context, err error, machinePoolScope *scope.MachinePoolScope, specInfraMachines []infrav2exp.OCIMachinePoolMachine) error {
+	params := cloudutil.MachineParams{
+		Cluster:              machinePoolScope.Cluster,
+		MachinePool:          machinePoolScope.MachinePool,
+		InfraMachinePoolName: machinePoolScope.OCIMachinePool.Name,
+		Namespace:            machinePoolScope.OCIMachinePool.Namespace,
+		SpecInfraMachines:    specInfraMachines,
+		Client:               r.Client,
+		Logger:               machinePoolScope.Logger,
+		InfraMachinePoolKind: machinePoolScope.OCIMachinePool.Kind,
+		InfraMachinePoolUID:  machinePoolScope.OCIMachinePool.UID,
+	}
+	err = cloudutil.CreateMachinePoolMachinesIfNotExists(ctx, params)
+	if err != nil {
+		conditions.MarkFalse(machinePoolScope.OCIMachinePool, clusterv1.ReadyCondition, "FailedToDeleteOrphanedMachines", clusterv1.ConditionSeverityWarning, err.Error())
+		return errors.Wrap(err, "failed to create missing machines")
+	}
+
+	err = cloudutil.DeleteOrphanedMachinePoolMachines(ctx, params)
+	if err != nil {
+		conditions.MarkFalse(machinePoolScope.OCIMachinePool, clusterv1.ReadyCondition, "FailedToDeleteOrphanedMachines", clusterv1.ConditionSeverityWarning, err.Error())
+		return errors.Wrap(err, "failed to delete orphaned machines")
+	}
+	return nil
 }

@@ -115,6 +115,7 @@ rules:
     - get
     - list
     - watch
+    - delete
 - apiGroups:
     - cluster.x-k8s.io
   resources:
@@ -253,6 +254,26 @@ rules:
     - infrastructure.cluster.x-k8s.io
   resources:
     - ocivirtualmachinepools/status
+  verbs:
+    - get
+    - patch
+    - update
+- apiGroups:
+    - infrastructure.cluster.x-k8s.io
+  resources:
+    - ocimachinepoolmachines
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+- apiGroups:
+    - infrastructure.cluster.x-k8s.io
+  resources:
+    - ocimachinepoolmachines/status
   verbs:
     - get
     - patch

@@ -39,6 +39,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -211,7 +212,7 @@ func TestReconciliationFunction(t *testing.T) {
 		computeManagementClient = mock_computemanagement.NewMockClient(mockCtrl)
 		machinePool := getMachinePool()
 		ociMachinePool = getOCIMachinePool()
-		client := fake.NewClientBuilder().WithObjects(getSecret(), ociMachinePool).Build()
+		client := fake.NewClientBuilder().WithStatusSubresource(ociMachinePool).WithObjects(getSecret(), ociMachinePool).Build()
 		ociCluster := getOCIClusterWithOwner()
 		ms, err = scope.NewMachinePoolScope(scope.MachinePoolScopeParams{
 			ComputeManagementClient: computeManagementClient,
@@ -235,27 +236,31 @@ func TestReconciliationFunction(t *testing.T) {
 	teardown := func(t *testing.T, g *WithT) {
 		mockCtrl.Finish()
 	}
-	tests := []struct {
+	type test struct {
 		name                    string
 		errorExpected           bool
 		expectedEvent           string
 		eventNotExpected        string
 		conditionAssertion      []conditionAssertion
-		testSpecificSetup       func(machinePoolScope *scope.MachinePoolScope, computeManagementClient *mock_computemanagement.MockClient)
+		testSpecificSetup       func(t *test, machinePoolScope *scope.MachinePoolScope, computeManagementClient *mock_computemanagement.MockClient)
 		expectedFailureMessages []string
-	}{
+		createPoolMachines      []infrav2exp.OCIMachinePoolMachine
+		deletePoolMachines      []clusterv1.Machine
+		validate                func(g *WithT, t *test)
+	}
+	tests := []test{
 		{
 			name:               "bootstrap data not ready",
 			errorExpected:      false,
 			conditionAssertion: []conditionAssertion{{infrav2exp.InstancePoolReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityInfo, infrastructurev1beta2.WaitingForBootstrapDataReason}},
-			testSpecificSetup: func(machinePoolScope *scope.MachinePoolScope, computeManagementClient *mock_computemanagement.MockClient) {
+			testSpecificSetup: func(t *test, machinePoolScope *scope.MachinePoolScope, computeManagementClient *mock_computemanagement.MockClient) {
 			},
 		},
 		{
 			name:               "instance pool create",
 			errorExpected:      false,
 			conditionAssertion: []conditionAssertion{{infrav2exp.LaunchTemplateReadyCondition, corev1.ConditionTrue, "", ""}},
-			testSpecificSetup: func(machinePoolScope *scope.MachinePoolScope, computeManagementClient *mock_computemanagement.MockClient) {
+			testSpecificSetup: func(t *test, machinePoolScope *scope.MachinePoolScope, computeManagementClient *mock_computemanagement.MockClient) {
 				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
 					Shape:                   common.String("test-shape"),
 					InstanceConfigurationId: common.String("test"),
@@ -300,11 +305,18 @@ func TestReconciliationFunction(t *testing.T) {
 			name:               "instance pool running",
 			errorExpected:      false,
 			conditionAssertion: []conditionAssertion{{infrav2exp.LaunchTemplateReadyCondition, corev1.ConditionTrue, "", ""}, {infrav2exp.InstancePoolReadyCondition, corev1.ConditionTrue, "", ""}},
-			testSpecificSetup: func(machinePoolScope *scope.MachinePoolScope, computeManagementClient *mock_computemanagement.MockClient) {
+			testSpecificSetup: func(t *test, machinePoolScope *scope.MachinePoolScope, computeManagementClient *mock_computemanagement.MockClient) {
 				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
 					Shape:                   common.String("test-shape"),
 					InstanceConfigurationId: common.String("test"),
 				}
+				r.Client = interceptor.NewClient(fake.NewClientBuilder().WithObjects(getSecret(), ociMachinePool).Build(), interceptor.Funcs{
+					Create: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+						m := obj.(*infrav2exp.OCIMachinePoolMachine)
+						t.createPoolMachines = append(t.createPoolMachines, *m)
+						return nil
+					},
+				})
 				ms.MachinePool.Spec.Template.Spec.Bootstrap.DataSecretName = common.String("bootstrap")
 				ms.OCIMachinePool.Spec.OCID = common.String("pool-id")
 				computeManagementClient.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Eq(core.GetInstanceConfigurationRequest{
@@ -343,19 +355,142 @@ func TestReconciliationFunction(t *testing.T) {
 				computeManagementClient.EXPECT().ListInstancePoolInstances(gomock.Any(), gomock.Any()).
 					Return(core.ListInstancePoolInstancesResponse{
 						Items: []core.InstanceSummary{{
-							Id:    common.String("id-1"),
-							State: common.String("Running"),
+							Id:          common.String("id-1"),
+							State:       common.String("Running"),
+							DisplayName: common.String("name-1"),
 						}},
 					}, nil)
 				computeManagementClient.EXPECT().ListInstanceConfigurations(gomock.Any(), gomock.Any()).
 					Return(core.ListInstanceConfigurationsResponse{}, nil)
+			},
+			validate: func(g *WithT, t *test) {
+				g.Expect(len(t.createPoolMachines)).To(Equal(1))
+				machine := t.createPoolMachines[0]
+				g.Expect(machine.Spec.MachineType).To(Equal(infrav2exp.SelfManaged))
+				g.Expect(*machine.Spec.InstanceName).To(Equal("name-1"))
+				g.Expect(*machine.Spec.ProviderID).To(Equal("oci://id-1"))
+				g.Expect(*machine.Spec.OCID).To(Equal("id-1"))
+			},
+		},
+		{
+			name:               "delete unwanted machinepool machine",
+			errorExpected:      false,
+			conditionAssertion: []conditionAssertion{{infrav2exp.LaunchTemplateReadyCondition, corev1.ConditionTrue, "", ""}, {infrav2exp.InstancePoolReadyCondition, corev1.ConditionTrue, "", ""}},
+			testSpecificSetup: func(t *test, machinePoolScope *scope.MachinePoolScope, computeManagementClient *mock_computemanagement.MockClient) {
+				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+					Shape:                   common.String("test-shape"),
+					InstanceConfigurationId: common.String("test"),
+				}
+				fakeClient := fake.NewClientBuilder().WithObjects(&infrav2exp.OCIMachinePoolMachine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: "test",
+						Labels: map[string]string{
+							clusterv1.ClusterNameLabel:     "test-cluster",
+							clusterv1.MachinePoolNameLabel: "test",
+						},
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								Kind:       "Machine",
+								Name:       "test",
+								APIVersion: clusterv1.GroupVersion.String(),
+							},
+						},
+					},
+					Spec: infrav2exp.OCIMachinePoolMachineSpec{
+						OCID:         common.String("id-2"),
+						InstanceName: common.String("name-2"),
+						ProviderID:   common.String("id-2"),
+						MachineType:  infrav2exp.Managed,
+					},
+				}, &clusterv1.Machine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: "test",
+						Labels: map[string]string{
+							clusterv1.ClusterNameLabel:     "oci-cluster",
+							clusterv1.MachinePoolNameLabel: "test",
+						},
+					},
+					Spec: clusterv1.MachineSpec{},
+				}).Build()
+				t.deletePoolMachines = make([]clusterv1.Machine, 0)
+				r.Client = interceptor.NewClient(fakeClient, interceptor.Funcs{
+					Create: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+						m := obj.(*infrav2exp.OCIMachinePoolMachine)
+						t.createPoolMachines = append(t.createPoolMachines, *m)
+						return nil
+					},
+					Delete: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
+						m := obj.(*clusterv1.Machine)
+						t.deletePoolMachines = append(t.deletePoolMachines, *m)
+						return nil
+					},
+				})
+				ms.MachinePool.Spec.Template.Spec.Bootstrap.DataSecretName = common.String("bootstrap")
+				ms.OCIMachinePool.Spec.OCID = common.String("pool-id")
+				computeManagementClient.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Eq(core.GetInstanceConfigurationRequest{
+					InstanceConfigurationId: common.String("test"),
+				})).
+					Return(core.GetInstanceConfigurationResponse{
+						InstanceConfiguration: core.InstanceConfiguration{
+							Id: common.String("test"),
+							InstanceDetails: core.ComputeInstanceDetails{
+								LaunchDetails: &core.InstanceConfigurationLaunchInstanceDetails{
+									DefinedTags:   definedTagsInterface,
+									FreeformTags:  tags,
+									CompartmentId: common.String("test-compartment"),
+									Shape:         common.String("test-shape"),
+									CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+										FreeformTags: tags,
+										NsgIds:       []string{"worker-nsg-id"},
+										SubnetId:     common.String("worker-subnet-id"),
+									},
+									SourceDetails: core.InstanceConfigurationInstanceSourceViaImageDetails{},
+									Metadata:      map[string]string{"user_data": "dGVzdA=="},
+								},
+							},
+						},
+					}, nil)
+
+				computeManagementClient.EXPECT().GetInstancePool(gomock.Any(), gomock.Any()).
+					Return(core.GetInstancePoolResponse{
+						InstancePool: core.InstancePool{
+							LifecycleState:          core.InstancePoolLifecycleStateRunning,
+							Id:                      common.String("pool-id"),
+							InstanceConfigurationId: common.String("test"),
+							Size:                    common.Int(3),
+						},
+					}, nil)
+				computeManagementClient.EXPECT().ListInstancePoolInstances(gomock.Any(), gomock.Any()).
+					Return(core.ListInstancePoolInstancesResponse{
+						Items: []core.InstanceSummary{{
+							Id:          common.String("id-1"),
+							State:       common.String("Running"),
+							DisplayName: common.String("name-1"),
+						}},
+					}, nil)
+				computeManagementClient.EXPECT().ListInstanceConfigurations(gomock.Any(), gomock.Any()).
+					Return(core.ListInstanceConfigurationsResponse{}, nil)
+			},
+			validate: func(g *WithT, t *test) {
+				g.Expect(len(t.createPoolMachines)).To(Equal(1))
+				machine := t.createPoolMachines[0]
+				g.Expect(machine.Spec.MachineType).To(Equal(infrav2exp.SelfManaged))
+				g.Expect(*machine.Spec.InstanceName).To(Equal("name-1"))
+				g.Expect(*machine.Spec.ProviderID).To(Equal("oci://id-1"))
+				g.Expect(*machine.Spec.OCID).To(Equal("id-1"))
+
+				g.Expect(len(t.deletePoolMachines)).To(Equal(1))
+				deleteMachine := t.deletePoolMachines[0]
+				g.Expect(deleteMachine.Name).To(Equal("test"))
 			},
 		},
 		{
 			name:               "instance pool failed",
 			errorExpected:      true,
 			conditionAssertion: []conditionAssertion{{infrav2exp.LaunchTemplateReadyCondition, corev1.ConditionTrue, "", ""}, {infrav2exp.InstancePoolReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrav2exp.InstancePoolProvisionFailedReason}},
-			testSpecificSetup: func(machinePoolScope *scope.MachinePoolScope, computeManagementClient *mock_computemanagement.MockClient) {
+			testSpecificSetup: func(t *test, machinePoolScope *scope.MachinePoolScope, computeManagementClient *mock_computemanagement.MockClient) {
 				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
 					Shape:                   common.String("test-shape"),
 					InstanceConfigurationId: common.String("test"),
@@ -404,7 +539,7 @@ func TestReconciliationFunction(t *testing.T) {
 			g := NewWithT(t)
 			defer teardown(t, g)
 			setup(t, g)
-			tc.testSpecificSetup(ms, computeManagementClient)
+			tc.testSpecificSetup(&tc, ms, computeManagementClient)
 			ctx := context.Background()
 			_, err := r.reconcileNormal(ctx, log.FromContext(ctx), ms)
 			if len(tc.conditionAssertion) > 0 {
@@ -420,6 +555,9 @@ func TestReconciliationFunction(t *testing.T) {
 			}
 			if len(tc.expectedFailureMessages) > 0 {
 				g.Expect(tc.expectedFailureMessages).To(Equal(ms.OCIMachinePool.Status.FailureMessage))
+			}
+			if tc.validate != nil {
+				tc.validate(g, &tc)
 			}
 		})
 	}

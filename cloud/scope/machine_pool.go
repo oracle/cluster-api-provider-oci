@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"reflect"
 	"strconv"
 	"strings"
@@ -86,7 +87,7 @@ func NewMachinePoolScope(params MachinePoolScopeParams) (*MachinePoolScope, erro
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init patch helper")
 	}
-
+	params.OCIMachinePool.Status.InfrastructureMachineKind = "OCIMachinePoolMachine"
 	return &MachinePoolScope{
 		Logger:                  params.Logger,
 		Client:                  params.Client,
@@ -153,7 +154,7 @@ func (m *MachinePoolScope) GetWorkerMachineSubnet() *string {
 	return nil
 }
 
-// ListMachinePoolInstances returns the WorkerRole core.Subnet id for the cluster
+// ListMachinePoolInstances returns the list of instances belonging to an instance pool
 func (m *MachinePoolScope) ListMachinePoolInstances(ctx context.Context) ([]core.InstanceSummary, error) {
 	poolOcid := m.OCIMachinePool.Spec.OCID
 	if poolOcid == nil {
@@ -187,22 +188,38 @@ func (m *MachinePoolScope) ListMachinePoolInstances(ctx context.Context) ([]core
 }
 
 // SetListandSetMachinePoolInstances retrieves a machine pools instances and sets them in the ProviderIDList
-func (m *MachinePoolScope) SetListandSetMachinePoolInstances(ctx context.Context) (int32, error) {
+func (m *MachinePoolScope) SetListandSetMachinePoolInstances(ctx context.Context) ([]infrav2exp.OCIMachinePoolMachine, error) {
 	poolInstanceSummaries, err := m.ListMachinePoolInstances(ctx)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	providerIDList := make([]string, len(poolInstanceSummaries))
+	machines := make([]infrav2exp.OCIMachinePoolMachine, 0)
 
-	for i, instance := range poolInstanceSummaries {
-		if *instance.State == "Running" {
-			providerIDList[i] = m.OCIClusterAccesor.GetProviderID(*instance.Id)
+	for _, instance := range poolInstanceSummaries {
+		// deleted nodes should not be considered
+		if strings.EqualFold(*instance.State, "TERMINATED") {
+			continue
 		}
+		ready := false
+		if strings.EqualFold(*instance.State, "RUNNING") {
+			ready = true
+		}
+		machines = append(machines, infrav2exp.OCIMachinePoolMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: *instance.DisplayName,
+			},
+			Spec: infrav2exp.OCIMachinePoolMachineSpec{
+				OCID:         instance.Id,
+				ProviderID:   common.String(m.OCIClusterAccesor.GetProviderID(*instance.Id)),
+				InstanceName: instance.DisplayName,
+				MachineType:  infrav2exp.SelfManaged,
+			},
+			Status: infrav2exp.OCIMachinePoolMachineStatus{
+				Ready: ready,
+			},
+		})
 	}
-
-	m.OCIMachinePool.Spec.ProviderIDList = providerIDList
-
-	return int32(len(providerIDList)), nil
+	return machines, nil
 }
 
 // GetBootstrapData returns the bootstrap data from the secret in the Machine's bootstrap.dataSecretName.

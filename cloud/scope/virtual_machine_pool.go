@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/go-logr/logr"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
@@ -88,7 +89,7 @@ func NewVirtualMachinePoolScope(params VirtualMachinePoolScopeParams) (*VirtualM
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init patch helper")
 	}
-
+	params.OCIVirtualMachinePool.Status.InfrastructureMachineKind = "OCIMachinePoolMachine"
 	return &VirtualMachinePoolScope{
 		Logger:                  params.Logger,
 		Client:                  params.Client,
@@ -133,8 +134,8 @@ func (m *VirtualMachinePoolScope) GetWorkerMachineSubnet() *string {
 }
 
 // ListandSetMachinePoolInstances retrieves a virtual node pools instances and sets them in the ProviderIDList
-func (m *VirtualMachinePoolScope) ListandSetMachinePoolInstances(ctx context.Context, nodePool *oke.VirtualNodePool) (int32, error) {
-	providerIDList := make([]string, 0)
+func (m *VirtualMachinePoolScope) ListandSetMachinePoolInstances(ctx context.Context, nodePool *oke.VirtualNodePool) ([]infrav2exp.OCIMachinePoolMachine, error) {
+	machines := make([]infrav2exp.OCIMachinePoolMachine, 0)
 	var page *string
 	for {
 		reqList := oke.ListVirtualNodesRequest{
@@ -144,12 +145,32 @@ func (m *VirtualMachinePoolScope) ListandSetMachinePoolInstances(ctx context.Con
 
 		response, err := m.ContainerEngineClient.ListVirtualNodes(ctx, reqList)
 		if err != nil {
-			return 0, err
+			return machines, err
 		}
-		for _, i := range response.Items {
-			if i.LifecycleState == oke.VirtualNodeLifecycleStateActive {
-				providerIDList = append(providerIDList, *i.Id)
+		for _, node := range response.Items {
+			// deleted nodes should not be considered
+			if node.LifecycleState == oke.VirtualNodeLifecycleStateDeleted ||
+				node.LifecycleState == oke.VirtualNodeLifecycleStateFailed {
+				continue
 			}
+			ready := false
+			if node.LifecycleState == oke.VirtualNodeLifecycleStateActive {
+				ready = true
+			}
+			machines = append(machines, infrav2exp.OCIMachinePoolMachine{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: *node.DisplayName,
+				},
+				Spec: infrav2exp.OCIMachinePoolMachineSpec{
+					OCID:         node.Id,
+					ProviderID:   node.Id,
+					InstanceName: node.DisplayName,
+					MachineType:  infrav2exp.Virtual,
+				},
+				Status: infrav2exp.OCIMachinePoolMachineStatus{
+					Ready: ready,
+				},
+			})
 		}
 		if response.OpcNextPage == nil {
 			break
@@ -157,8 +178,7 @@ func (m *VirtualMachinePoolScope) ListandSetMachinePoolInstances(ctx context.Con
 			page = response.OpcNextPage
 		}
 	}
-	m.OCIVirtualMachinePool.Spec.ProviderIDList = providerIDList
-	return int32(len(providerIDList)), nil
+	return machines, nil
 }
 
 // IsResourceCreatedByClusterAPI determines if the virtual node pool was created by the cluster using the

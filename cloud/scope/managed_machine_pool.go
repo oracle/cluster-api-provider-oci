@@ -91,6 +91,7 @@ func NewManagedMachinePoolScope(params ManagedMachinePoolScopeParams) (*ManagedM
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init patch helper")
 	}
+	params.OCIManagedMachinePool.Status.InfrastructureMachineKind = "OCIMachinePoolMachine"
 
 	return &ManagedMachinePoolScope{
 		Logger:                  params.Logger,

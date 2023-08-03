@@ -141,7 +141,7 @@ var _ = Describe("Managed Workload cluster creation", func() {
 			WaitForMachinePools:          e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes"),
 			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
 		}
-		input.WaitForControlPlaneInitialized = func(ctx context.Context, input clusterctl.ApplyClusterTemplateAndWaitInput, result *clusterctl.ApplyClusterTemplateAndWaitResult) {
+		input.WaitForControlPlaneInitialized = func(ctx context.Context, input clusterctl.ApplyCustomClusterTemplateAndWaitInput, result *clusterctl.ApplyCustomClusterTemplateAndWaitResult) {
 			Expect(ctx).NotTo(BeNil(), "ctx is required for DiscoveryAndWaitForControlPlaneInitialized")
 			lister := input.ClusterProxy.GetClient()
 			Expect(lister).ToNot(BeNil(), "Invalid argument. input.Lister can't be nil when calling DiscoveryAndWaitForControlPlaneInitialized")
@@ -155,11 +155,13 @@ var _ = Describe("Managed Workload cluster creation", func() {
 				g.Expect(controlPlane.Status.Ready).To(BeTrue())
 			}, input.WaitForControlPlaneIntervals...).Should(Succeed(), "Couldn't get the control plane ready status for the cluster %s", klog.KObj(result.Cluster))
 		}
-		input.WaitForControlPlaneMachinesReady = func(ctx context.Context, input clusterctl.ApplyClusterTemplateAndWaitInput, result *clusterctl.ApplyClusterTemplateAndWaitResult) {
+		input.WaitForControlPlaneMachinesReady = func(ctx context.Context, input clusterctl.ApplyCustomClusterTemplateAndWaitInput, result *clusterctl.ApplyCustomClusterTemplateAndWaitResult) {
 			// Not applicable
 		}
 
 		clusterctl.ApplyClusterTemplateAndWait(ctx, input, result)
+
+		validateMachinePoolMachines(ctx, result.Cluster, bootstrapClusterProxy, result.MachinePools)
 
 		By("Scaling the machine pool up")
 		framework.ScaleMachinePoolAndWait(ctx, framework.ScaleMachinePoolAndWaitInput{
@@ -169,6 +171,7 @@ var _ = Describe("Managed Workload cluster creation", func() {
 			MachinePools:              result.MachinePools,
 			WaitForMachinePoolToScale: e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes"),
 		})
+		validateMachinePoolMachines(ctx, result.Cluster, bootstrapClusterProxy, result.MachinePools)
 
 		By("Scaling the machine pool down")
 		framework.ScaleMachinePoolAndWait(ctx, framework.ScaleMachinePoolAndWaitInput{
@@ -178,6 +181,7 @@ var _ = Describe("Managed Workload cluster creation", func() {
 			MachinePools:              result.MachinePools,
 			WaitForMachinePoolToScale: e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes"),
 		})
+		validateMachinePoolMachines(ctx, result.Cluster, bootstrapClusterProxy, result.MachinePools)
 		upgradeControlPlaneVersionSpec(ctx, bootstrapClusterProxy.GetClient(), clusterName, namespace.Name,
 			e2eConfig.GetIntervals(specName, "wait-control-plane"))
 	})
@@ -203,7 +207,7 @@ var _ = Describe("Managed Workload cluster creation", func() {
 			WaitForMachinePools:          e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes"),
 			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
 		}
-		input.WaitForControlPlaneInitialized = func(ctx context.Context, input clusterctl.ApplyClusterTemplateAndWaitInput, result *clusterctl.ApplyClusterTemplateAndWaitResult) {
+		input.WaitForControlPlaneInitialized = func(ctx context.Context, input clusterctl.ApplyCustomClusterTemplateAndWaitInput, result *clusterctl.ApplyCustomClusterTemplateAndWaitResult) {
 			Expect(ctx).NotTo(BeNil(), "ctx is required for DiscoveryAndWaitForControlPlaneInitialized")
 			lister := input.ClusterProxy.GetClient()
 			Expect(lister).ToNot(BeNil(), "Invalid argument. input.Lister can't be nil when calling DiscoveryAndWaitForControlPlaneInitialized")
@@ -217,7 +221,7 @@ var _ = Describe("Managed Workload cluster creation", func() {
 				g.Expect(controlPlane.Status.Ready).To(BeTrue())
 			}, input.WaitForControlPlaneIntervals...).Should(Succeed(), "Couldn't get the control plane ready status for the cluster %s", klog.KObj(result.Cluster))
 		}
-		input.WaitForControlPlaneMachinesReady = func(ctx context.Context, input clusterctl.ApplyClusterTemplateAndWaitInput, result *clusterctl.ApplyClusterTemplateAndWaitResult) {
+		input.WaitForControlPlaneMachinesReady = func(ctx context.Context, input clusterctl.ApplyCustomClusterTemplateAndWaitInput, result *clusterctl.ApplyCustomClusterTemplateAndWaitResult) {
 			// Not applicable
 		}
 
@@ -245,7 +249,7 @@ var _ = Describe("Managed Workload cluster creation", func() {
 			WaitForMachinePools:          e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes"),
 			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
 		}
-		input.WaitForControlPlaneInitialized = func(ctx context.Context, input clusterctl.ApplyClusterTemplateAndWaitInput, result *clusterctl.ApplyClusterTemplateAndWaitResult) {
+		input.WaitForControlPlaneInitialized = func(ctx context.Context, input clusterctl.ApplyCustomClusterTemplateAndWaitInput, result *clusterctl.ApplyCustomClusterTemplateAndWaitResult) {
 			Expect(ctx).NotTo(BeNil(), "ctx is required for DiscoveryAndWaitForControlPlaneInitialized")
 			lister := input.ClusterProxy.GetClient()
 			Expect(lister).ToNot(BeNil(), "Invalid argument. input.Lister can't be nil when calling DiscoveryAndWaitForControlPlaneInitialized")
@@ -259,7 +263,7 @@ var _ = Describe("Managed Workload cluster creation", func() {
 				g.Expect(controlPlane.Status.Ready).To(BeTrue())
 			}, input.WaitForControlPlaneIntervals...).Should(Succeed(), "Couldn't get the control plane ready status for the cluster %s", klog.KObj(result.Cluster))
 		}
-		input.WaitForControlPlaneMachinesReady = func(ctx context.Context, input clusterctl.ApplyClusterTemplateAndWaitInput, result *clusterctl.ApplyClusterTemplateAndWaitResult) {
+		input.WaitForControlPlaneMachinesReady = func(ctx context.Context, input clusterctl.ApplyCustomClusterTemplateAndWaitInput, result *clusterctl.ApplyCustomClusterTemplateAndWaitResult) {
 			// Not applicable
 		}
 
@@ -290,7 +294,7 @@ var _ = Describe("Managed Workload cluster creation", func() {
 			WaitForMachinePools:          e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes"),
 			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
 		}
-		input.WaitForControlPlaneInitialized = func(ctx context.Context, input clusterctl.ApplyClusterTemplateAndWaitInput, result *clusterctl.ApplyClusterTemplateAndWaitResult) {
+		input.WaitForControlPlaneInitialized = func(ctx context.Context, input clusterctl.ApplyCustomClusterTemplateAndWaitInput, result *clusterctl.ApplyCustomClusterTemplateAndWaitResult) {
 			Expect(ctx).NotTo(BeNil(), "ctx is required for DiscoveryAndWaitForControlPlaneInitialized")
 			lister := input.ClusterProxy.GetClient()
 			Expect(lister).ToNot(BeNil(), "Invalid argument. input.Lister can't be nil when calling DiscoveryAndWaitForControlPlaneInitialized")
@@ -304,12 +308,13 @@ var _ = Describe("Managed Workload cluster creation", func() {
 				g.Expect(controlPlane.Status.Ready).To(BeTrue())
 			}, input.WaitForControlPlaneIntervals...).Should(Succeed(), "Couldn't get the control plane ready status for the cluster %s", klog.KObj(result.Cluster))
 		}
-		input.WaitForControlPlaneMachinesReady = func(ctx context.Context, input clusterctl.ApplyClusterTemplateAndWaitInput, result *clusterctl.ApplyClusterTemplateAndWaitResult) {
+		input.WaitForControlPlaneMachinesReady = func(ctx context.Context, input clusterctl.ApplyCustomClusterTemplateAndWaitInput, result *clusterctl.ApplyCustomClusterTemplateAndWaitResult) {
 			// Not applicable
 		}
 
 		clusterctl.ApplyClusterTemplateAndWait(ctx, input, result)
 
+		validateMachinePoolMachines(ctx, result.Cluster, bootstrapClusterProxy, result.MachinePools)
 		controlPlane := GetOCIManagedControlPlaneByCluster(ctx, bootstrapClusterProxy.GetClient(), clusterName, namespace.Name)
 		Expect(controlPlane).To(Not(BeNil()))
 		clusterOcid := controlPlane.Spec.ID
@@ -343,7 +348,7 @@ var _ = Describe("Managed Workload cluster creation", func() {
 			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
 			WaitForMachinePools:          e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes"),
 		}
-		input.WaitForControlPlaneInitialized = func(ctx context.Context, input clusterctl.ApplyClusterTemplateAndWaitInput, result *clusterctl.ApplyClusterTemplateAndWaitResult) {
+		input.WaitForControlPlaneInitialized = func(ctx context.Context, input clusterctl.ApplyCustomClusterTemplateAndWaitInput, result *clusterctl.ApplyCustomClusterTemplateAndWaitResult) {
 			Expect(ctx).NotTo(BeNil(), "ctx is required for DiscoveryAndWaitForControlPlaneInitialized")
 			lister := input.ClusterProxy.GetClient()
 			Expect(lister).ToNot(BeNil(), "Invalid argument. input.Lister can't be nil when calling DiscoveryAndWaitForControlPlaneInitialized")
@@ -357,11 +362,12 @@ var _ = Describe("Managed Workload cluster creation", func() {
 				g.Expect(controlPlane.Status.Ready).To(BeTrue())
 			}, input.WaitForControlPlaneIntervals...).Should(Succeed(), "Couldn't get the control plane ready status for the cluster %s", klog.KObj(result.Cluster))
 		}
-		input.WaitForControlPlaneMachinesReady = func(ctx context.Context, input clusterctl.ApplyClusterTemplateAndWaitInput, result *clusterctl.ApplyClusterTemplateAndWaitResult) {
+		input.WaitForControlPlaneMachinesReady = func(ctx context.Context, input clusterctl.ApplyCustomClusterTemplateAndWaitInput, result *clusterctl.ApplyCustomClusterTemplateAndWaitResult) {
 			// Not applicable
 		}
 
 		clusterctl.ApplyClusterTemplateAndWait(ctx, input, result)
+		validateMachinePoolMachines(ctx, result.Cluster, bootstrapClusterProxy, result.MachinePools)
 	})
 })
 
@@ -470,6 +476,34 @@ func updateMachinePoolVersion(ctx context.Context, cluster *clusterv1.Cluster, c
 	}, waitInterval...).Should(Equal(1), "Timed out waiting for all MachinePool %s instances to be upgraded to Kubernetes version %s", klog.KObj(machinePool), managedKubernetesUpgradeVersion)
 }
 
+func validateMachinePoolMachines(ctx context.Context, cluster *clusterv1.Cluster, clusterProxy framework.ClusterProxy, machinePools []*expv1.MachinePool) {
+	Eventually(func() error {
+		lister := clusterProxy.GetClient()
+		for _, pool := range machinePools {
+			machineList := &infrav2exp.OCIMachinePoolMachineList{}
+			labels := map[string]string{
+				clusterv1.ClusterNameLabel:     cluster.Name,
+				clusterv1.MachinePoolNameLabel: pool.Name,
+			}
+			if err := lister.List(ctx, machineList, client.InNamespace(cluster.Namespace), client.MatchingLabels(labels)); err != nil {
+				return err
+			}
+
+			if len(machineList.Items) != int(*pool.Spec.Replicas) {
+				return errors.New(fmt.Sprintf("Infra machines does not equal machine pool replicas for machinepool %s", pool.Name))
+			}
+			for _, managedMachine := range machineList.Items {
+				_, err := util.GetOwnerMachine(ctx, lister, managedMachine.ObjectMeta)
+				if err != nil {
+					return err
+				}
+			}
+			Logf("Machinepool machines created successfully for machinepool %s", pool.Name)
+		}
+		return nil
+	}, retryableOperationTimeout, retryableOperationInterval).Should(Succeed(), "Machinepool machines were not created properly")
+}
+
 // getMachinePoolInstanceVersions returns the Kubernetes versions of the machine pool instances.
 // This method was forked because we need to lookup the kubeconfig with each call
 // as the tokens are refreshed in case of OKE
@@ -481,7 +515,7 @@ func getMachinePoolInstanceVersions(ctx context.Context, clusterProxy framework.
 	for i, instance := range instances {
 		node := &corev1.Node{}
 		var nodeGetError error
-		err := wait.PollImmediate(100*time.Millisecond, 10*time.Second, func() (bool, error) {
+		err := wait.PollUntilContextTimeout(ctx, 100*time.Millisecond, 10*time.Second, true, func(ctx context.Context) (bool, error) {
 			nodeGetError = clusterProxy.GetWorkloadCluster(ctx, cluster.Namespace, cluster.Name).
 				GetClient().Get(ctx, client.ObjectKey{Name: instance.Name}, node)
 			if nodeGetError != nil {

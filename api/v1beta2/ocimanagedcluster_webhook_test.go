@@ -464,11 +464,12 @@ func TestOCIManagedCluster_ValidateCreate(t *testing.T) {
 			g := gomega.NewWithT(t)
 
 			if test.expectErr {
-				err := test.c.ValidateCreate()
+				_, err := test.c.ValidateCreate()
 				g.Expect(err).NotTo(gomega.Succeed())
 				g.Expect(strings.Contains(err.Error(), test.errorMgsShouldContain)).To(gomega.BeTrue())
 			} else {
-				g.Expect(test.c.ValidateCreate()).To(gomega.Succeed())
+				_, err := test.c.ValidateCreate()
+				g.Expect(err).To(gomega.Succeed())
 			}
 		})
 	}
@@ -587,11 +588,12 @@ func TestOCIManagedCluster_ValidateUpdate(t *testing.T) {
 			g := gomega.NewWithT(t)
 
 			if test.expectErr {
-				err := test.c.ValidateUpdate(test.old)
+				_, err := test.c.ValidateUpdate(test.old)
 				g.Expect(err).NotTo(gomega.Succeed())
 				g.Expect(strings.Contains(err.Error(), test.errorMgsShouldContain)).To(gomega.BeTrue())
 			} else {
-				g.Expect(test.c.ValidateUpdate(test.old)).To(gomega.Succeed())
+				_, err := test.c.ValidateUpdate(test.old)
+				g.Expect(err).To(gomega.Succeed())
 			}
 		})
 	}

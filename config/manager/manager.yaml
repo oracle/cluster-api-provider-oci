@@ -31,6 +31,7 @@ spec:
         - "--metrics-bind-address=127.0.0.1:8080"
         - "--logging-format=${LOG_FORMAT:=text}"
         - "--init-oci-clients-on-startup=${INIT_OCI_CLIENTS_ON_STARTUP:=true}"
+        - "--enable-instance-metadata-service-lookup=${ENABLE_INSTANCE_METADATA_SERVICE_LOOKUP:=false}"
         image: controller:latest
         name: manager
         securityContext:

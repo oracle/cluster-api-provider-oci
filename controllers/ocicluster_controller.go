@@ -21,9 +21,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/oracle/cluster-api-provider-oci/api/v1beta2"
-
 	"github.com/go-logr/logr"
+	"github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	cloudutil "github.com/oracle/cluster-api-provider-oci/cloud/util"
@@ -40,13 +39,13 @@ import (
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // OCIClusterReconciler reconciles a OciCluster object
@@ -268,24 +267,22 @@ func (r *OCIClusterReconciler) reconcile(ctx context.Context, logger logr.Logger
 // SetupWithManager sets up the controller with the Manager.
 func (r *OCIClusterReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
 	log := ctrl.LoggerFrom(ctx)
-	c, err := ctrl.NewControllerManagedBy(mgr).
+	err := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(options).
 		For(&infrastructurev1beta2.OCICluster{}).
 		WithEventFilter(predicates.ResourceNotPaused(log)).              // don't queue reconcile if resource is paused
 		WithEventFilter(predicates.ResourceIsNotExternallyManaged(log)). //the externally managed cluster won't be reconciled
-		Build(r)
+		Watches(
+			&clusterv1.Cluster{},
+			handler.EnqueueRequestsFromMapFunc(r.clusterToInfrastructureMapFunc(log)),
+			builder.WithPredicates(
+				predicates.ClusterUnpaused(log),
+				predicates.ResourceNotPausedAndHasFilterLabel(log, ""),
+			),
+		).
+		Complete(r)
 	if err != nil {
 		return errors.Wrapf(err, "error creating controller")
-	}
-
-	// Add a watch on clusterv1.Cluster object for unpause notifications.
-	if err = c.Watch(
-		&source.Kind{Type: &clusterv1.Cluster{}},
-		handler.EnqueueRequestsFromMapFunc(r.clusterToInfrastructureMapFunc(ctx, log)),
-		predicates.ClusterUnpaused(log),
-		predicates.ResourceNotPausedAndHasFilterLabel(log, ""),
-	); err != nil {
-		return errors.Wrapf(err, "failed adding a watch for ready clusters")
 	}
 
 	return nil
@@ -293,8 +290,8 @@ func (r *OCIClusterReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Ma
 
 // ClusterToInfrastructureMapFunc returns a handler.ToRequestsFunc that watches for
 // Cluster events and returns reconciliation requests for an infrastructure provider object.
-func (r *OCIClusterReconciler) clusterToInfrastructureMapFunc(ctx context.Context, log logr.Logger) handler.MapFunc {
-	return func(o client.Object) []reconcile.Request {
+func (r *OCIClusterReconciler) clusterToInfrastructureMapFunc(log logr.Logger) handler.MapFunc {
+	return func(ctx context.Context, o client.Object) []reconcile.Request {
 		c, ok := o.(*clusterv1.Cluster)
 		if !ok {
 			return nil
