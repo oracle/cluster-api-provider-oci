@@ -52,9 +52,6 @@ type OCIMachineSpec struct {
 	// Please refer https://docs.oracle.com/en-us/iaas/Content/Compute/Tasks/compute-clusters.htm for more details
 	ComputeClusterId *string `json:"computeClusterId,omitempty"`
 
-	// LaunchMode specifies the configuration mode for launching virtual machine (VM) instances.
-	LaunchMode *LaunchMode `json:"launchMode,omitempty"`
-
 	// IpxeScript is the  custom iPXE script that will run when the instance boots.
 	IpxeScript *string `json:"ipxeScript,omitempty"`
 
@@ -167,15 +164,6 @@ type OCIMachineStatus struct {
 	// +optional
 	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
 }
-
-type LaunchMode string
-
-const (
-	LaunchModeNative          LaunchMode = "NATIVE"
-	LaunchModeEmulated        LaunchMode = "EMULATED"
-	LaunchModeParavirtualized LaunchMode = "PARAVIRTUALIZED"
-	LaunchModeCustom          LaunchMode = "CUSTOM"
-)
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status

@@ -1431,11 +1431,6 @@ func (in *OCIMachineSpec) DeepCopyInto(out *OCIMachineSpec) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.LaunchMode != nil {
-		in, out := &in.LaunchMode, &out.LaunchMode
-		*out = new(LaunchMode)
-		**out = **in
-	}
 	if in.IpxeScript != nil {
 		in, out := &in.IpxeScript, &out.IpxeScript
 		*out = new(string)

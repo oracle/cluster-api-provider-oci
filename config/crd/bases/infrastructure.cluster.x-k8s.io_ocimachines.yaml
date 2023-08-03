@@ -205,10 +205,6 @@ spec:
               isPvEncryptionInTransitEnabled:
                 description: Is in transit encryption of volumes required.
                 type: boolean
-              launchMode:
-                description: LaunchMode specifies the configuration mode for launching
-                  virtual machine (VM) instances.
-                type: string
               launchOptions:
                 description: LaunchOptions defines the options for tuning the compatibility
                   and performance of VM shapes
@@ -977,10 +973,6 @@ spec:
               isPvEncryptionInTransitEnabled:
                 description: Is in transit encryption of volumes required.
                 type: boolean
-              launchMode:
-                description: LaunchMode specifies the configuration mode for launching
-                  virtual machine (VM) instances.
-                type: string
               launchOptions:
                 description: LaunchOptions defines the options for tuning the compatibility
                   and performance of VM shapes
