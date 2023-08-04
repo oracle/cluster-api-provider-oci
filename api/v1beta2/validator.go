@@ -69,7 +69,7 @@ func ValidRegion(stringRegion string) bool {
 }
 
 // ValidateNetworkSpec validates the NetworkSpec
-func ValidateNetworkSpec(validRoles []Role, networkSpec NetworkSpec, old NetworkSpec, fldPath *field.Path) field.ErrorList {
+func ValidateNetworkSpec(networkSpec NetworkSpec, old NetworkSpec, fldPath *field.Path) field.ErrorList {
 	var allErrs field.ErrorList
 
 	if len(networkSpec.Vcn.CIDR) > 0 {
@@ -77,11 +77,11 @@ func ValidateNetworkSpec(validRoles []Role, networkSpec NetworkSpec, old Network
 	}
 
 	if networkSpec.Vcn.Subnets != nil {
-		allErrs = append(allErrs, validateSubnets(validRoles, networkSpec.Vcn.Subnets, networkSpec.Vcn, fldPath.Child("subnets"))...)
+		allErrs = append(allErrs, validateSubnets(networkSpec.Vcn.Subnets, networkSpec.Vcn, fldPath.Child("subnets"))...)
 	}
 
 	if networkSpec.Vcn.NetworkSecurityGroup.List != nil {
-		allErrs = append(allErrs, validateNSGs(validRoles, networkSpec.Vcn.NetworkSecurityGroup.List, fldPath.Child("networkSecurityGroups"))...)
+		allErrs = append(allErrs, validateNSGs(networkSpec.Vcn.NetworkSecurityGroup.List, fldPath.Child("networkSecurityGroups"))...)
 	}
 
 	if len(allErrs) == 0 {
@@ -146,13 +146,10 @@ func validateSubnetCIDR(subnetCidr string, vcnCidr string, fldPath *field.Path) 
 }
 
 // validateNSGs validates a list of Subnets.
-func validateNSGs(validRoles []Role, networkSecurityGroups []*NSG, fldPath *field.Path) field.ErrorList {
+func validateNSGs(networkSecurityGroups []*NSG, fldPath *field.Path) field.ErrorList {
 	var allErrs field.ErrorList
 
 	for i, nsg := range networkSecurityGroups {
-		if err := validateRole(validRoles, nsg.Role, fldPath.Index(i).Child("role"), "networkSecurityGroup role invalid"); err != nil {
-			allErrs = append(allErrs, err)
-		}
 		allErrs = append(allErrs, validateEgressSecurityRuleForNSG(nsg.EgressRules, fldPath.Index(i).Child("egressRules"))...)
 		allErrs = append(allErrs, validateIngressSecurityRuleForNSG(nsg.IngressRules, fldPath.Index(i).Child("ingressRules"))...)
 	}
@@ -195,7 +192,7 @@ func validateIngressSecurityRuleForNSG(egressRules []IngressSecurityRuleForNSG, 
 }
 
 // validateSubnets validates a list of Subnets.
-func validateSubnets(validRoles []Role, subnets []*Subnet, vcn VCN, fldPath *field.Path) field.ErrorList {
+func validateSubnets(subnets []*Subnet, vcn VCN, fldPath *field.Path) field.ErrorList {
 	var allErrs field.ErrorList
 	subnetNames := make(map[string]bool, len(subnets))
 
@@ -208,10 +205,6 @@ func validateSubnets(validRoles []Role, subnets []*Subnet, vcn VCN, fldPath *fie
 				allErrs = append(allErrs, field.Duplicate(fldPath, subnet.Name))
 			}
 			subnetNames[subnet.Name] = true
-		}
-
-		if err := validateRole(validRoles, subnet.Role, fldPath.Index(i).Child("role"), "subnet role invalid"); err != nil {
-			allErrs = append(allErrs, err)
 		}
 
 		allErrs = append(allErrs, validateSubnetCIDR(subnet.CIDR, vcn.CIDR, fldPath.Index(i).Child("cidr"))...)

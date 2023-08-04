@@ -72,11 +72,6 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 			Role: ControlPlaneEndpointRole,
 		},
 	}
-	badSubnetRole := []*Subnet{
-		&Subnet{
-			Role: "not-control-plane",
-		},
-	}
 	goodClusterName := "test-cluster"
 	badClusterName := "bad.cluster"
 
@@ -224,44 +219,6 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 				},
 			},
 			errorMgsShouldContain: "networkSpec.subnets: Duplicate value",
-			expectErr:             true,
-		},
-		{
-			name: "shouldn't allow subnet role outside of pre-defined roles",
-			c: &OCICluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: goodClusterName,
-				},
-				Spec: OCIClusterSpec{
-					NetworkSpec: NetworkSpec{
-						Vcn: VCN{
-							CIDR:    "10.0.0.0/16",
-							Subnets: badSubnetRole,
-						},
-					},
-				},
-			},
-			errorMgsShouldContain: "subnet role invalid",
-			expectErr:             true,
-		},
-		{
-			name: "shouldn't allow invalid role",
-			c: &OCICluster{
-				ObjectMeta: metav1.ObjectMeta{},
-				Spec: OCIClusterSpec{
-					NetworkSpec: NetworkSpec{
-						Vcn: VCN{
-							CIDR: "10.0.0.0/16",
-							Subnets: []*Subnet{
-								&Subnet{
-									Role: PodRole,
-								},
-							},
-						},
-					},
-				},
-			},
-			errorMgsShouldContain: "subnet role invalid",
 			expectErr:             true,
 		},
 		{
