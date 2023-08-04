@@ -419,7 +419,9 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 		{
 			name: "allow nsg custom role",
 			c: &OCICluster{
-				ObjectMeta: metav1.ObjectMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
 				Spec: OCIClusterSpec{
 					CompartmentId:         "ocid",
 					OCIResourceIdentifier: "uuid",
