@@ -74,18 +74,28 @@ func (s *ClusterScope) GetInternetGateway(ctx context.Context) (*core.InternetGa
 			return nil, errors.New("cluster api tags have been modified out of context")
 		}
 	}
-	igws, err := s.VCNClient.ListInternetGateways(ctx, core.ListInternetGatewaysRequest{
-		CompartmentId: common.String(s.GetCompartmentId()),
-		VcnId:         s.getVcnId(),
-		DisplayName:   common.String(InternetGatewayName),
-	})
-	if err != nil {
-		s.Logger.Error(err, "failed to list internet gateways")
-		return nil, errors.Wrap(err, "failed to list internet gateways")
-	}
-	for _, igw := range igws.Items {
-		if s.IsResourceCreatedByClusterAPI(igw.FreeformTags) {
-			return &igw, nil
+	var page *string
+	for {
+		igws, err := s.VCNClient.ListInternetGateways(ctx, core.ListInternetGatewaysRequest{
+			CompartmentId: common.String(s.GetCompartmentId()),
+			VcnId:         s.getVcnId(),
+			DisplayName:   common.String(InternetGatewayName),
+			Page: page,
+		})
+		if err != nil {
+			s.Logger.Error(err, "failed to list internet gateways")
+			return nil, errors.Wrap(err, "failed to list internet gateways")
+		}
+		for _, igw := range igws.Items {
+			if s.IsResourceCreatedByClusterAPI(igw.FreeformTags) {
+				return &igw, nil
+			}
+		}
+
+		if igws.OpcNextPage == nil{
+			break
+		}else{
+			page = igws.OpcNextPage
 		}
 	}
 	return nil, nil

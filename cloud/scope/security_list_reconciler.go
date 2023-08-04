@@ -271,18 +271,28 @@ func (s *ClusterScope) GetSecurityList(ctx context.Context, spec infrastructurev
 			return nil, errors.New("cluster api tags have been modified out of context")
 		}
 	}
-	securityLists, err := s.VCNClient.ListSecurityLists(ctx, core.ListSecurityListsRequest{
-		CompartmentId: common.String(s.GetCompartmentId()),
-		VcnId:         s.getVcnId(),
-		DisplayName:   common.String(spec.Name),
-	})
-	if err != nil {
-		s.Logger.Error(err, "failed to list security lists")
-		return nil, errors.Wrap(err, "failed to list security lists")
-	}
-	for _, securityList := range securityLists.Items {
-		if s.IsResourceCreatedByClusterAPI(securityList.FreeformTags) {
-			return &securityList, nil
+	var page *string
+	for {
+		securityLists, err := s.VCNClient.ListSecurityLists(ctx, core.ListSecurityListsRequest{
+			CompartmentId: common.String(s.GetCompartmentId()),
+			VcnId:         s.getVcnId(),
+			DisplayName:   common.String(spec.Name),
+			Page: page,
+		})
+		if err != nil {
+			s.Logger.Error(err, "failed to list security lists")
+			return nil, errors.Wrap(err, "failed to list security lists")
+		}
+		for _, securityList := range securityLists.Items {
+			if s.IsResourceCreatedByClusterAPI(securityList.FreeformTags) {
+				return &securityList, nil
+			}
+		}
+
+		if securityLists.OpcNextPage == nil{
+			break
+		}else{
+			page = securityLists.OpcNextPage
 		}
 	}
 	return nil, nil

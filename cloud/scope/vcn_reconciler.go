@@ -93,20 +93,31 @@ func (s *ClusterScope) GetVCN(ctx context.Context) (*core.Vcn, error) {
 			return nil, errors.New("cluster api tags have been modified out of context")
 		}
 	}
-	vcns, err := s.VCNClient.ListVcns(ctx, core.ListVcnsRequest{
-		CompartmentId: common.String(s.GetCompartmentId()),
-		DisplayName:   common.String(s.GetVcnName()),
-	})
-	if err != nil {
-		s.Logger.Error(err, "failed to list vcn by name")
-		return nil, errors.Wrap(err, "failed to list vcn by name")
-	}
+	var page *string
+	for{
+		vcns, err := s.VCNClient.ListVcns(ctx, core.ListVcnsRequest{
+			CompartmentId: common.String(s.GetCompartmentId()),
+			DisplayName:   common.String(s.GetVcnName()),
+			Page: page,
+		})
+		if err != nil {
+			s.Logger.Error(err, "failed to list vcn by name")
+			return nil, errors.Wrap(err, "failed to list vcn by name")
+		}
 
-	for _, vcn := range vcns.Items {
-		if s.IsResourceCreatedByClusterAPI(vcn.FreeformTags) {
-			return &vcn, nil
+		for _, vcn := range vcns.Items {
+			if s.IsResourceCreatedByClusterAPI(vcn.FreeformTags) {
+				return &vcn, nil
+			}
+		}
+
+		if vcns.OpcNextPage == nil{
+			break
+		}else{
+			page = vcns.OpcNextPage
 		}
 	}
+
 	return nil, nil
 }
 

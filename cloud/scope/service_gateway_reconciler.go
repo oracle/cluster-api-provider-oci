@@ -49,21 +49,32 @@ func (s *ClusterScope) ReconcileServiceGateway(ctx context.Context) error {
 func (s *ClusterScope) CreateServiceGateway(ctx context.Context) (*string, error) {
 	var serviceOcid string
 	var isServiceFound bool
-	listServicesResponse, err := s.VCNClient.ListServices(ctx, core.ListServicesRequest{})
-	if err != nil {
-		s.Logger.Error(err, "failed to get the list of services")
-		return nil, errors.Wrap(err, "failed to get the list of services")
-	}
-	for _, service := range listServicesResponse.Items {
-		if strings.HasSuffix(*service.CidrBlock, SGWServiceSuffix) {
-			serviceOcid = *service.Id
-			isServiceFound = true
-			break
+	var page *string
+	for {
+		listServicesResponse, err := s.VCNClient.ListServices(ctx, core.ListServicesRequest{
+			Page: page,
+		})
+		if err != nil {
+			s.Logger.Error(err, "failed to get the list of services")
+			return nil, errors.Wrap(err, "failed to get the list of services")
 		}
-	}
-	if !isServiceFound {
-		s.Logger.Error(err, "failed to get the services ocid")
-		return nil, errors.Wrap(err, "failed to get the services ocid")
+		for _, service := range listServicesResponse.Items {
+			if strings.HasSuffix(*service.CidrBlock, SGWServiceSuffix) {
+				serviceOcid = *service.Id
+				isServiceFound = true
+				break
+			}
+		}
+
+		if listServicesResponse.OpcNextPage == nil{
+			if !isServiceFound {
+				s.Logger.Error(err, "failed to get the services ocid")
+				return nil, errors.Wrap(err, "failed to get the services ocid")
+			}
+			break
+		}else{
+			page = listServicesResponse.OpcNextPage
+		}
 	}
 
 	sgwDetails := core.CreateServiceGatewayDetails{
@@ -121,19 +132,29 @@ func (s *ClusterScope) GetServiceGateway(ctx context.Context) (*core.ServiceGate
 			return nil, errors.New("cluster api tags have been modified out of context")
 		}
 	}
-	sgws, err := s.VCNClient.ListServiceGateways(ctx, core.ListServiceGatewaysRequest{
-		CompartmentId: common.String(s.GetCompartmentId()),
-		VcnId:         s.getVcnId(),
-	})
-	if err != nil {
-		s.Logger.Error(err, "failed to list Service gateways")
-		return nil, errors.Wrap(err, "failed to list Service gateways")
-	}
-	for _, sgw := range sgws.Items {
-		if *sgw.DisplayName == ServiceGatewayName {
-			if s.IsResourceCreatedByClusterAPI(sgw.FreeformTags) {
-				return &sgw, nil
+	var page *string
+	for {
+		sgws, err := s.VCNClient.ListServiceGateways(ctx, core.ListServiceGatewaysRequest{
+			CompartmentId: common.String(s.GetCompartmentId()),
+			VcnId:         s.getVcnId(),
+			Page: page,
+		})
+		if err != nil {
+			s.Logger.Error(err, "failed to list Service gateways")
+			return nil, errors.Wrap(err, "failed to list Service gateways")
+		}
+		for _, sgw := range sgws.Items {
+			if *sgw.DisplayName == ServiceGatewayName {
+				if s.IsResourceCreatedByClusterAPI(sgw.FreeformTags) {
+					return &sgw, nil
+				}
 			}
+		}
+
+		if sgws.OpcNextPage == nil{
+			break
+		}else{
+			page = sgws.OpcNextPage
 		}
 	}
 	return nil, nil
