@@ -44,7 +44,6 @@ CAPI and CAPOCI components using clusterctl][install-cluster-api].
 
 ```bash
 export EXP_MACHINE_POOL=true
-export EXP_OKE=true
 ```
 
 ### OCI Security Policies
