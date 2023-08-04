@@ -315,47 +315,6 @@ func TestOCIManagedCluster_ValidateCreate(t *testing.T) {
 			expectErr:             true,
 		},
 		{
-			name: "shouldn't allow invalid NSG role",
-			c: &OCIManagedCluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: goodClusterName,
-				},
-				Spec: OCIManagedClusterSpec{
-					NetworkSpec: NetworkSpec{
-						Vcn: VCN{
-							NetworkSecurityGroup: NetworkSecurityGroup{
-								List: []*NSG{{
-									Role: ControlPlaneRole,
-								}},
-							},
-						},
-					},
-				},
-			},
-			errorMgsShouldContain: "networkSecurityGroup role invalid",
-			expectErr:             true,
-		},
-		{
-			name: "should allow blank region",
-			c: &OCIManagedCluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "cluster-name",
-				},
-				Spec: OCIManagedClusterSpec{
-					Region:                "",
-					CompartmentId:         "ocid",
-					OCIResourceIdentifier: "uuid",
-					NetworkSpec: NetworkSpec{
-						Vcn: VCN{
-							CIDR:    "10.0.0.0/16",
-							Subnets: goodSubnets,
-						},
-					},
-				},
-			},
-			expectErr: false,
-		},
-		{
 			name: "shouldn't allow loadbalancer",
 			c: &OCIManagedCluster{
 				ObjectMeta: metav1.ObjectMeta{

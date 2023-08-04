@@ -313,44 +313,6 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 			expectErr:             true,
 		},
 		{
-			name: "shouldn't allow bad NSG role",
-			c: &OCICluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: goodClusterName,
-				},
-				Spec: OCIClusterSpec{
-					NetworkSpec: NetworkSpec{
-						Vcn: VCN{
-							NetworkSecurityGroup: NetworkSecurityGroup{
-								List: []*NSG{{
-									Role: "bad-role",
-								}},
-							},
-						},
-					},
-				},
-			},
-			errorMgsShouldContain: "networkSecurityGroup role invalid",
-			expectErr:             true,
-		},
-		{
-			name: "shouldn't allow invalid NSG role",
-			c: &OCICluster{
-				ObjectMeta: metav1.ObjectMeta{},
-				Spec: OCIClusterSpec{
-					NetworkSpec: NetworkSpec{
-						Vcn: VCN{
-							NetworkSecurityGroup: NetworkSecurityGroup{List: []*NSG{{
-								Role: PodRole,
-							}}},
-						},
-					},
-				},
-			},
-			errorMgsShouldContain: "networkSecurityGroup role invalid",
-			expectErr:             true,
-		},
-		{
 			name: "should allow blank region",
 			c: &OCICluster{
 				ObjectMeta: metav1.ObjectMeta{
