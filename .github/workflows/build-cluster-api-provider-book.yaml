@@ -18,7 +18,7 @@ jobs:
         mkdir mdbook
         curl -sSL https://github.com/rust-lang/mdBook/releases/download/v0.4.21/mdbook-v0.4.21-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=./mdbook
         echo `pwd`/mdbook >> $GITHUB_PATH
-        cargo install mdbook-admonish
+        cargo install --version 1.8.0 mdbook-admonish
     - name: Deploy Book to GitHub Pages
       run: |
         # Build the HTML content
