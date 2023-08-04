@@ -300,6 +300,45 @@ spec:
       loadBalancerType: "lb"
 ```
 
+## Example spec to use custom role
+
+CAPOCI can be used to create Subnet/NSG in the VCN for custom workloads such as private load balancers,
+dedicated subnet for DB connection etc. The roles for such custom subnest must be defined as `custom`.
+The following spec shows an example for this scenario.
+
+```yaml
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: OCICluster
+metadata:
+  name: "${CLUSTER_NAME}"
+spec:
+  compartmentId: "${OCI_COMPARTMENT_ID}"
+  networkSpec:
+    vcn:
+      name: ${CLUSTER_NAME}
+      subnets:
+        - name: db
+          role: custom
+          type: public
+          cidr: "172.16.5.0/28"
+      networkSecurityGroup:
+        list:
+          - name: db
+            role: custom
+            egressRules:
+              - egressRule:
+                  isStateless: false
+                  destination: "172.16.5.0/28"
+                  protocol: "6"
+                  destinationType: "CIDR_BLOCK"
+                  description: "All traffic to control plane nodes"
+                  tcpOptions:
+                    destinationPortRange:
+                      max: 6443
+                      min: 6443
+```
+
 [sl-vs-nsg]: https://docs.oracle.com/en-us/iaas/Content/Network/Concepts/securityrules.htm#comparison
 [externally-managed-cluster-infrastructure]: ../gs/externally-managed-cluster-infrastructure.md#example-spec-for-externally-managed-vcn-infrastructure
 [oci-nlb]: https://docs.oracle.com/en-us/iaas/Content/NetworkLoadBalancer/introducton.htm#Overview
