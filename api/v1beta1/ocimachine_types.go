@@ -48,6 +48,11 @@ type OCIMachineSpec struct {
 	// Shape of the instance.
 	Shape string `json:"shape,omitempty"`
 
+	// ComputeClusterId refers to OCID of the compute cluster that the instance will be created in.
+	// Please refer https://docs.oracle.com/en-us/iaas/Content/Compute/Tasks/compute-clusters.htm for more details
+	ComputeClusterId *string `json:"computeClusterId,omitempty"`
+
+	// IpxeScript is the  custom iPXE script that will run when the instance boots.
 	IpxeScript *string `json:"ipxeScript,omitempty"`
 
 	// CapacityReservationId defines the OCID of the compute capacity reservation this instance is launched under.
