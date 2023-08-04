@@ -24,13 +24,14 @@ const (
 	PodRole                  = "pod"
 	Private                  = "private"
 	Public                   = "public"
+	Custom                   = "custom"
 )
 
 // OCIClusterSubnetRoles a slice of all the subnet roles for self managed cluster
-var OCIClusterSubnetRoles = []Role{ControlPlaneRole, ControlPlaneEndpointRole, WorkerRole, ServiceLoadBalancerRole}
+var OCIClusterSubnetRoles = []Role{ControlPlaneRole, ControlPlaneEndpointRole, WorkerRole, ServiceLoadBalancerRole, Custom}
 
 // OCIManagedClusterSubnetRoles a slice of all the subnet roles for managed cluster
-var OCIManagedClusterSubnetRoles = []Role{PodRole, ControlPlaneEndpointRole, WorkerRole, ServiceLoadBalancerRole}
+var OCIManagedClusterSubnetRoles = []Role{PodRole, ControlPlaneEndpointRole, WorkerRole, ServiceLoadBalancerRole, Custom}
 
 // NetworkDetails defines the configuration options for the network
 type NetworkDetails struct {

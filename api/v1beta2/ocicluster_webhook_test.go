@@ -72,6 +72,11 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 			Role: ControlPlaneEndpointRole,
 		},
 	}
+	badSubnetRole := []*Subnet{
+		&Subnet{
+			Role: "not-control-plane",
+		},
+	}
 	goodClusterName := "test-cluster"
 	badClusterName := "bad.cluster"
 
@@ -222,6 +227,67 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 			expectErr:             true,
 		},
 		{
+			name: "shouldn't allow subnet role outside of pre-defined roles",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
+				Spec: OCIClusterSpec{
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							CIDR:    "10.0.0.0/16",
+							Subnets: badSubnetRole,
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "subnet role invalid",
+			expectErr:             true,
+		},
+		{
+			name: "allow subnet custom role",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
+				Spec: OCIClusterSpec{
+					CompartmentId:         "ocid",
+					OCIResourceIdentifier: "uuid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							CIDR: "10.0.0.0/16",
+							Subnets: []*Subnet{
+								&Subnet{
+									Role: Custom,
+								},
+							},
+						},
+					},
+				},
+			},
+			expectErr: false,
+		},
+		{
+			name: "shouldn't allow invalid role",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{},
+				Spec: OCIClusterSpec{
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							CIDR: "10.0.0.0/16",
+							Subnets: []*Subnet{
+								&Subnet{
+									Role: PodRole,
+								},
+							},
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "subnet role invalid",
+			expectErr:             true,
+		},
+		{
 			name: "shouldn't allow bad cluster names",
 			c: &OCICluster{
 				ObjectMeta: metav1.ObjectMeta{
@@ -311,6 +377,62 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 			},
 			errorMgsShouldContain: "invalid ingressRule CIDR format",
 			expectErr:             true,
+		},
+		{
+			name: "shouldn't allow bad NSG role",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
+				Spec: OCIClusterSpec{
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							NetworkSecurityGroup: NetworkSecurityGroup{
+								List: []*NSG{{
+									Role: "bad-role",
+								}},
+							},
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "networkSecurityGroup role invalid",
+			expectErr:             true,
+		},
+		{
+			name: "shouldn't allow invalid NSG role",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{},
+				Spec: OCIClusterSpec{
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							NetworkSecurityGroup: NetworkSecurityGroup{List: []*NSG{{
+								Role: PodRole,
+							}}},
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "networkSecurityGroup role invalid",
+			expectErr:             true,
+		},
+		{
+			name: "allow nsg custom role",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{},
+				Spec: OCIClusterSpec{
+					CompartmentId:         "ocid",
+					OCIResourceIdentifier: "uuid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							NetworkSecurityGroup: NetworkSecurityGroup{List: []*NSG{{
+								Role: Custom,
+							}}},
+						},
+					},
+				},
+			},
+			expectErr: false,
 		},
 		{
 			name: "should allow blank region",

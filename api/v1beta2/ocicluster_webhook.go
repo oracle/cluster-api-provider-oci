@@ -120,7 +120,7 @@ func (c *OCICluster) validate(old *OCICluster) field.ErrorList {
 		oldNetworkSpec = old.Spec.NetworkSpec
 	}
 
-	allErrs = append(allErrs, ValidateNetworkSpec(c.Spec.NetworkSpec, oldNetworkSpec, field.NewPath("spec").Child("networkSpec"))...)
+	allErrs = append(allErrs, ValidateNetworkSpec(OCIClusterSubnetRoles, c.Spec.NetworkSpec, oldNetworkSpec, field.NewPath("spec").Child("networkSpec"))...)
 	allErrs = append(allErrs, ValidateClusterName(c.Name)...)
 
 	if len(c.Spec.CompartmentId) <= 0 {
