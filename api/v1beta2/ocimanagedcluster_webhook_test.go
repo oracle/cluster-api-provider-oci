@@ -268,6 +268,30 @@ func TestOCIManagedCluster_ValidateCreate(t *testing.T) {
 			expectErr:             true,
 		},
 		{
+			name: "should allow custom subnet role",
+			c: &OCIManagedCluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
+				Spec: OCIManagedClusterSpec{
+					Region:                "",
+					CompartmentId:         "ocid",
+					OCIResourceIdentifier: "uuid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							CIDR: "10.0.0.0/16",
+							Subnets: []*Subnet{
+								&Subnet{
+									Role: Custom,
+								},
+							},
+						},
+					},
+				},
+			},
+			expectErr: false,
+		},
+		{
 			name: "should allow empty subnet name",
 			c: &OCIManagedCluster{
 				ObjectMeta: metav1.ObjectMeta{
@@ -379,6 +403,28 @@ func TestOCIManagedCluster_ValidateCreate(t *testing.T) {
 			},
 			errorMgsShouldContain: "networkSecurityGroup role invalid",
 			expectErr:             true,
+		},
+		{
+			name: "should allow custom NSG role",
+			c: &OCIManagedCluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
+				Spec: OCIManagedClusterSpec{
+					CompartmentId:         "ocid",
+					OCIResourceIdentifier: "uuid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							NetworkSecurityGroup: NetworkSecurityGroup{
+								List: []*NSG{{
+									Role: Custom,
+								}},
+							},
+						},
+					},
+				},
+			},
+			expectErr: false,
 		},
 		{
 			name: "should allow blank region",
