@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/x509"
 	"fmt"
+	"github.com/oracle/oci-go-sdk/v65/common/auth"
 	"reflect"
 
 	"github.com/go-logr/logr"
@@ -134,6 +135,24 @@ func GetOrBuildClientFromIdentity(ctx context.Context, c client.Client, identity
 		clientProvider, err := scope.NewClientProvider(scope.ClientProviderParams{
 			CertOverride:          pool,
 			OciAuthConfigProvider: conf,
+			ClientOverrides:       clientOverrides})
+
+		if err != nil {
+			return nil, err
+		}
+		return clientProvider, nil
+	} else if identity.Spec.Type == infrastructurev1beta2.InstancePrincipal {
+		provider, err := auth.InstancePrincipalConfigurationProvider()
+		if err != nil {
+			return nil, err
+		}
+		pool, err := getOCIClientCertPool(ctx, c, namespace, clientOverrides)
+		if err != nil {
+			return nil, err
+		}
+		clientProvider, err := scope.NewClientProvider(scope.ClientProviderParams{
+			CertOverride:          pool,
+			OciAuthConfigProvider: provider,
 			ClientOverrides:       clientOverrides})
 
 		if err != nil {

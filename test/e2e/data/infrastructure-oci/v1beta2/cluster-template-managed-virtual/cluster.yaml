@@ -25,6 +25,11 @@ metadata:
   name: "${CLUSTER_NAME}"
 spec:
   compartmentId: "${OCI_COMPARTMENT_ID}"
+  identityRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+    kind: OCIClusterIdentity
+    name: cluster-identity-instance-principal
+    namespace: "${NAMESPACE}"
 ---
 kind: OCIManagedControlPlane
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta2

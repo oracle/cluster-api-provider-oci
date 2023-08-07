@@ -27,6 +27,8 @@ type PrincipalType string
 const (
 	// UserPrincipal represents a user principal.
 	UserPrincipal PrincipalType = "UserPrincipal"
+	// InstancePrincipal represents a instabce principal.
+	InstancePrincipal PrincipalType = "InstancePrincipal"
 )
 
 // OCIClusterIdentitySpec defines the parameters that are used to create an OCIClusterIdentity.
