@@ -27,7 +27,7 @@ type PrincipalType string
 const (
 	// UserPrincipal represents a user principal.
 	UserPrincipal PrincipalType = "UserPrincipal"
-	// InstancePrincipal represents a instabce principal.
+	// InstancePrincipal represents a instance principal.
 	InstancePrincipal PrincipalType = "InstancePrincipal"
 )
 
