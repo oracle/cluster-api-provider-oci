@@ -20,7 +20,6 @@ import (
 	"context"
 	"crypto/x509"
 	"fmt"
-	"github.com/oracle/oci-go-sdk/v65/common/auth"
 	"reflect"
 
 	"github.com/go-logr/logr"
@@ -29,6 +28,7 @@ import (
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	"github.com/oracle/oci-go-sdk/v65/common"
+	"github.com/oracle/oci-go-sdk/v65/common/auth"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
