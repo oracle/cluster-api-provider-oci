@@ -270,13 +270,15 @@ func (r *OCIManagedMachinePoolReconciler) reconcileNormal(ctx context.Context, l
 	// Find existing Node Pool
 	nodePool, err := machinePoolScope.FindNodePool(ctx)
 	if err != nil {
-		conditions.MarkUnknown(machinePoolScope.OCIManagedMachinePool, infrav2exp.NodePoolReadyCondition, infrav2exp.NodePoolNotFoundReason, err.Error())
+		r.Recorder.Event(machinePoolScope.OCIManagedMachinePool, corev1.EventTypeWarning, "ReconcileError", err.Error())
+		conditions.MarkUnknown(machinePoolScope.OCIManagedMachinePool, infrav2exp.NodePoolReadyCondition, infrav2exp.NodePoolNotFoundReason, "")
 		return ctrl.Result{}, err
 	}
 
 	if nodePool == nil {
 		if nodePool, err = machinePoolScope.CreateNodePool(ctx); err != nil {
-			conditions.MarkFalse(machinePoolScope.OCIManagedMachinePool, infrav2exp.NodePoolReadyCondition, infrav2exp.NodePoolProvisionFailedReason, clusterv1.ConditionSeverityError, err.Error())
+			r.Recorder.Event(machinePoolScope.OCIManagedMachinePool, corev1.EventTypeWarning, "ReconcileError", err.Error())
+			conditions.MarkFalse(machinePoolScope.OCIManagedMachinePool, infrav2exp.NodePoolReadyCondition, infrav2exp.NodePoolProvisionFailedReason, clusterv1.ConditionSeverityError, "")
 			return ctrl.Result{}, err
 		}
 		// record the event only when node pool is created
@@ -391,13 +393,14 @@ func (r *OCIManagedMachinePoolReconciler) reconcileManagedMachines(ctx context.C
 	}
 	err = cloudutil.CreateMachinePoolMachinesIfNotExists(ctx, params)
 	if err != nil {
-		conditions.MarkFalse(machinePoolScope.OCIManagedMachinePool, clusterv1.ReadyCondition, "FailedToDeleteOrphanedMachines", clusterv1.ConditionSeverityWarning, err.Error())
+		r.Recorder.Event(machinePoolScope.OCIManagedMachinePool, corev1.EventTypeWarning, "FailedToCreateNewMachines", err.Error())
+		conditions.MarkFalse(machinePoolScope.OCIManagedMachinePool, clusterv1.ReadyCondition, "FailedToCreateNewMachines", clusterv1.ConditionSeverityWarning, "")
 		return errors.Wrap(err, "failed to create missing machines")
 	}
 
 	err = cloudutil.DeleteOrphanedMachinePoolMachines(ctx, params)
 	if err != nil {
-		conditions.MarkFalse(machinePoolScope.OCIManagedMachinePool, clusterv1.ReadyCondition, "FailedToDeleteOrphanedMachines", clusterv1.ConditionSeverityWarning, err.Error())
+		conditions.MarkFalse(machinePoolScope.OCIManagedMachinePool, clusterv1.ReadyCondition, "FailedToDeleteOrphanedMachines", clusterv1.ConditionSeverityWarning, "")
 		return errors.Wrap(err, "failed to delete orphaned machines")
 	}
 	return nil
