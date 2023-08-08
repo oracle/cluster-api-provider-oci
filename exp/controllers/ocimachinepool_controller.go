@@ -399,7 +399,7 @@ func (r *OCIMachinePoolReconciler) reconcileDelete(ctx context.Context, machineP
 	if instancePool == nil {
 		machinePoolScope.OCIMachinePool.Status.Ready = false
 		conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav2exp.InstancePoolReadyCondition, infrav2exp.InstancePoolNotFoundReason, clusterv1.ConditionSeverityWarning, "")
-		machinePoolScope.Info("Instance Pool may already be deleted", "displayName", instancePool.DisplayName, "id", instancePool.Id)
+		machinePoolScope.Info("Instance Pool may already be deleted")
 		r.Recorder.Eventf(machinePoolScope.OCIMachinePool, corev1.EventTypeNormal, infrav2exp.InstancePoolNotFoundReason, "Unable to find matching instance pool")
 	} else {
 		switch instancePool.LifecycleState {
