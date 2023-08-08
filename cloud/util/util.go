@@ -28,6 +28,7 @@ import (
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	"github.com/oracle/oci-go-sdk/v65/common"
+	"github.com/oracle/oci-go-sdk/v65/common/auth"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -134,6 +135,24 @@ func GetOrBuildClientFromIdentity(ctx context.Context, c client.Client, identity
 		clientProvider, err := scope.NewClientProvider(scope.ClientProviderParams{
 			CertOverride:          pool,
 			OciAuthConfigProvider: conf,
+			ClientOverrides:       clientOverrides})
+
+		if err != nil {
+			return nil, err
+		}
+		return clientProvider, nil
+	} else if identity.Spec.Type == infrastructurev1beta2.InstancePrincipal {
+		provider, err := auth.InstancePrincipalConfigurationProvider()
+		if err != nil {
+			return nil, err
+		}
+		pool, err := getOCIClientCertPool(ctx, c, namespace, clientOverrides)
+		if err != nil {
+			return nil, err
+		}
+		clientProvider, err := scope.NewClientProvider(scope.ClientProviderParams{
+			CertOverride:          pool,
+			OciAuthConfigProvider: provider,
 			ClientOverrides:       clientOverrides})
 
 		if err != nil {

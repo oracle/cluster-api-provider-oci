@@ -1,5 +1,6 @@
-bases:
+resources:
   - ./cluster.yaml
   - ./machine-pool.yaml
+  - ./cluster-identity.yaml
 
 

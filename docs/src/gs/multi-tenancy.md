@@ -67,4 +67,21 @@ An empty `allowedNamespaces` object indicates that `OCIClusters` can use this id
 If this object is `nil`, no namespaces will be allowed, which is the default behavior of the field if not specified.
 > Note: NamespaceList will take precedence over Selector if both are set.
 
+## Cluster Identity using Instance Principals
+
+Cluster Identity also supports [Instance Principals][instance-principals]. The example `OCIClusterIdentity`
+spec shown below uses Instance Principals.
+
+```yaml
+---
+kind: OCIClusterIdentity
+metadata:
+  name: cluster-identity
+  namespace: default
+spec:
+  type: InstancePrincipal
+  allowedNamespaces: {}
+```
+
 [iam-user]: https://docs.oracle.com/en-us/iaas/Content/API/Concepts/apisigningkey.htm#Required_Keys_and_OCIDs
+[instance-principals]: https://docs.oracle.com/en-us/iaas/Content/Identity/Tasks/callingservicesfrominstances.htm
