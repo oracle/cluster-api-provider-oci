@@ -295,7 +295,6 @@ func (r *OCIMachinePoolReconciler) reconcileNormal(ctx context.Context, logger l
 	// https://docs.oracle.com/en-us/iaas/api/#/en/iaas/20160918/InstanceConfiguration/
 	if err := machinePoolScope.ReconcileInstanceConfiguration(ctx); err != nil {
 		r.Recorder.Eventf(machinePoolScope.OCIMachinePool, corev1.EventTypeWarning, "FailedLaunchTemplateReconcile", "Failed to reconcile launch template: %v", err)
-		machinePoolScope.Error(err, "failed to reconcile launch template")
 		return ctrl.Result{}, err
 	}
 
