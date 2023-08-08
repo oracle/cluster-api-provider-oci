@@ -270,13 +270,15 @@ func (r *OCIManagedMachinePoolReconciler) reconcileNormal(ctx context.Context, l
 	// Find existing Node Pool
 	nodePool, err := machinePoolScope.FindNodePool(ctx)
 	if err != nil {
-		conditions.MarkUnknown(machinePoolScope.OCIManagedMachinePool, infrav2exp.NodePoolReadyCondition, infrav2exp.NodePoolNotFoundReason, err.Error())
+		r.Recorder.Event(machinePoolScope.OCIManagedMachinePool, corev1.EventTypeWarning, "ReconcileError", err.Error())
+		conditions.MarkUnknown(machinePoolScope.OCIManagedMachinePool, infrav2exp.NodePoolReadyCondition, infrav2exp.NodePoolNotFoundReason, "")
 		return ctrl.Result{}, err
 	}
 
 	if nodePool == nil {
 		if nodePool, err = machinePoolScope.CreateNodePool(ctx); err != nil {
-			conditions.MarkFalse(machinePoolScope.OCIManagedMachinePool, infrav2exp.NodePoolReadyCondition, infrav2exp.NodePoolProvisionFailedReason, clusterv1.ConditionSeverityError, err.Error())
+			r.Recorder.Event(machinePoolScope.OCIManagedMachinePool, corev1.EventTypeWarning, "ReconcileError", err.Error())
+			conditions.MarkFalse(machinePoolScope.OCIManagedMachinePool, infrav2exp.NodePoolReadyCondition, infrav2exp.NodePoolProvisionFailedReason, clusterv1.ConditionSeverityError, "")
 			return ctrl.Result{}, err
 		}
 		// record the event only when node pool is created

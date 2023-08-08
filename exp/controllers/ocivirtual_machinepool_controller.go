@@ -269,13 +269,15 @@ func (r *OCIVirtualMachinePoolReconciler) reconcileNormal(ctx context.Context, l
 	// Find existing Virtual Node Pool
 	nodePool, err := machinePoolScope.FindVirtualNodePool(ctx)
 	if err != nil {
-		conditions.MarkUnknown(machinePoolScope.OCIVirtualMachinePool, infrav2exp.VirtualNodePoolReadyCondition, infrav2exp.VirtualNodePoolNotFoundReason, err.Error())
+		r.Recorder.Event(machinePoolScope.OCIVirtualMachinePool, corev1.EventTypeWarning, "ReconcileError", err.Error())
+		conditions.MarkUnknown(machinePoolScope.OCIVirtualMachinePool, infrav2exp.VirtualNodePoolReadyCondition, infrav2exp.VirtualNodePoolNotFoundReason, "")
 		return ctrl.Result{}, err
 	}
 
 	if nodePool == nil {
 		if nodePool, err = machinePoolScope.CreateVirtualNodePool(ctx); err != nil {
-			conditions.MarkFalse(machinePoolScope.OCIVirtualMachinePool, infrav2exp.VirtualNodePoolReadyCondition, infrav2exp.VirtualNodePoolProvisionFailedReason, clusterv1.ConditionSeverityError, err.Error())
+			r.Recorder.Event(machinePoolScope.OCIVirtualMachinePool, corev1.EventTypeWarning, "ReconcileError", err.Error())
+			conditions.MarkFalse(machinePoolScope.OCIVirtualMachinePool, infrav2exp.VirtualNodePoolReadyCondition, infrav2exp.VirtualNodePoolProvisionFailedReason, clusterv1.ConditionSeverityError, "")
 			return ctrl.Result{}, err
 		}
 		// record the event only when node pool is created

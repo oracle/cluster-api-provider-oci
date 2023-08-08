@@ -311,7 +311,8 @@ func (r *OCIMachinePoolReconciler) reconcileNormal(ctx context.Context, logger l
 
 	if instancePool == nil {
 		if _, err := machinePoolScope.CreateInstancePool(ctx); err != nil {
-			conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav2exp.InstancePoolReadyCondition, infrav2exp.InstancePoolProvisionFailedReason, clusterv1.ConditionSeverityError, err.Error())
+			r.Recorder.Event(machinePoolScope.OCIMachinePool, corev1.EventTypeWarning, "ReconcileError", err.Error())
+			conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav2exp.InstancePoolReadyCondition, infrav2exp.InstancePoolProvisionFailedReason, clusterv1.ConditionSeverityError, "")
 			return ctrl.Result{}, err
 		}
 		r.Recorder.Eventf(machinePoolScope.OCIMachinePool, corev1.EventTypeNormal, "InstancePoolCreated", "Created new Instance Pool: %s", machinePoolScope.OCIMachinePool.GetName())
