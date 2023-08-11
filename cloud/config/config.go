@@ -165,7 +165,7 @@ func NewConfigurationProvider(cfg *AuthConfig) (common.ConfigurationProvider, er
 	} else if cfg.UseWorkloadIdentity {
 		_, contains := os.LookupEnv(auth.ResourcePrincipalVersionEnvVar)
 		if !contains {
-			os.Setenv(auth.ResourcePrincipalVersionEnvVar, auth.ResourcePrincipalVersion2_2)
+			os.Setenv(auth.ResourcePrincipalVersionEnvVar, auth.ResourcePrincipalVersion1_1)
 		}
 		return auth.OkeWorkloadIdentityConfigurationProvider()
 	} else {
