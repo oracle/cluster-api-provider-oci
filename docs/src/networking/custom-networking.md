@@ -339,6 +339,50 @@ spec:
                       min: 6443
 ```
 
+## Example spec to use Network Security Group as destination in security rule
+
+The spec below shows how to specify a Network Security Group as a destination in security rule. The Network Security
+Group name is mentioned in the `destination` field in the below example. All the required Network Security Groups 
+must be defined in the template, CAPOCI will not lookup Network Security Group from the VCN.
+
+```yaml
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: OCICluster
+metadata:
+  name: "${CLUSTER_NAME}"
+spec:
+  compartmentId: "${OCI_COMPARTMENT_ID}"
+  networkSpec:
+    vcn:
+      name: ${CLUSTER_NAME}
+      cidr: "172.16.0.0/16"
+      networkSecurityGroup:
+        list:
+          - name: ep-nsg
+            role: control-plane-endpoint
+            egressRules:
+              - egressRule:
+                  isStateless: false
+                  destination: "cp-mc-nsg"
+                  protocol: "6"
+                  destinationType: "NETWORK_SECURITY_GROUP"
+                  description: "All traffic to control plane nodes"
+                  tcpOptions:
+                    destinationPortRange:
+                      max: 6443
+                      min: 6443
+          - name: cp-mc-nsg
+            role: control-plane
+            egressRules:
+              - egressRule:
+                  isStateless: false
+                  destination: "0.0.0.0/0"
+                  protocol: "6"
+                  destinationType: "CIDR_BLOCK"
+                  description: "control plane machine access to internet"
+```
+
 [sl-vs-nsg]: https://docs.oracle.com/en-us/iaas/Content/Network/Concepts/securityrules.htm#comparison
 [externally-managed-cluster-infrastructure]: ../gs/externally-managed-cluster-infrastructure.md#example-spec-for-externally-managed-vcn-infrastructure
 [oci-nlb]: https://docs.oracle.com/en-us/iaas/Content/NetworkLoadBalancer/introducton.htm#Overview
