@@ -47,14 +47,6 @@ func (s *ClusterScope) ReconcileNSG(ctx context.Context) error {
 				}
 				s.Logger.Info("Successfully updated network security list", "nsg", nsgOCID)
 			}
-			s.adjustNSGRulesSpec(desiredNSG)
-			isNSGUpdated, err := s.UpdateNSGSecurityRulesIfNeeded(ctx, *desiredNSG, nsg)
-			if err != nil {
-				return err
-			}
-			if !isNSGUpdated {
-				s.Logger.Info("No Reconciliation Required for Network Security Group", "nsg", *desiredNSG.ID)
-			}
 			continue
 		}
 		s.Logger.Info("Creating the network security list")
@@ -64,16 +56,22 @@ func (s *ClusterScope) ReconcileNSG(ctx context.Context) error {
 		}
 		s.Logger.Info("Created the nsg", "nsg", nsgID)
 		desiredNSG.ID = nsgID
-		s.adjustNSGRulesSpec(desiredNSG)
-		err = s.AddNSGSecurityRules(ctx, desiredNSG.ID, desiredNSG.IngressRules, desiredNSG.EgressRules)
+
+	}
+	for _, desiredNSG := range desiredNSGs.List {
+		s.adjustNSGRulesSpec(desiredNSG, desiredNSGs.List)
+		isNSGUpdated, err := s.UpdateNSGSecurityRulesIfNeeded(ctx, *desiredNSG, desiredNSG.ID)
 		if err != nil {
 			return err
+		}
+		if !isNSGUpdated {
+			s.Logger.Info("No Reconciliation Required for Network Security Group", "nsg", *desiredNSG.ID)
 		}
 	}
 	return nil
 }
 
-func (s *ClusterScope) adjustNSGRulesSpec(desiredNSG *infrastructurev1beta2.NSG) {
+func (s *ClusterScope) adjustNSGRulesSpec(desiredNSG *infrastructurev1beta2.NSG, nsgList []*infrastructurev1beta2.NSG) {
 	ingressRules := make([]infrastructurev1beta2.IngressSecurityRuleForNSG, 0)
 	for _, ingressRule := range desiredNSG.IngressRules {
 		if ingressRule.SourceType == infrastructurev1beta2.IngressSecurityRuleSourceTypeServiceCidrBlock {
@@ -84,7 +82,7 @@ func (s *ClusterScope) adjustNSGRulesSpec(desiredNSG *infrastructurev1beta2.NSG)
 	desiredNSG.IngressRules = ingressRules
 	egressRules := make([]infrastructurev1beta2.EgressSecurityRuleForNSG, 0)
 	for _, egressRule := range desiredNSG.EgressRules {
-		if egressRule.DestinationType == infrastructurev1beta2.EgressSecurityRuleSourceTypeServiceCidrBlock {
+		if egressRule.DestinationType == infrastructurev1beta2.EgressSecurityRuleDestinationTypeServiceCidrBlock {
 			egressRule.Destination = common.String(fmt.Sprintf("all-%s-services-in-oracle-services-network", strings.ToLower(s.RegionKey)))
 		}
 		egressRules = append(egressRules, egressRule)
@@ -171,19 +169,19 @@ func (s *ClusterScope) IsNSGEqual(actual *core.NetworkSecurityGroup, desired inf
 
 // UpdateNSGSecurityRulesIfNeeded updates NSG rules if required by comparing actual and desired.
 func (s *ClusterScope) UpdateNSGSecurityRulesIfNeeded(ctx context.Context, desired infrastructurev1beta2.NSG,
-	actual *core.NetworkSecurityGroup) (bool, error) {
+	nsgId *string) (bool, error) {
 	var ingressRulesToAdd []infrastructurev1beta2.IngressSecurityRuleForNSG
 	var egressRulesToAdd []infrastructurev1beta2.EgressSecurityRuleForNSG
 	var securityRulesToRemove []string
 	var isNSGUpdated bool
 	listSecurityRulesResponse, err := s.VCNClient.ListNetworkSecurityGroupSecurityRules(ctx, core.ListNetworkSecurityGroupSecurityRulesRequest{
-		NetworkSecurityGroupId: actual.Id,
+		NetworkSecurityGroupId: nsgId,
 	})
 	if err != nil {
 		s.Logger.Error(err, "failed to reconcile the network security group, failed to list security rules")
 		return isNSGUpdated, errors.Wrap(err, "failed to reconcile the network security group, failed to list security rules")
 	}
-	ingressRules, egressRules := generateSpecFromSecurityRules(listSecurityRulesResponse.Items)
+	ingressRules, egressRules := s.generateSpecFromSecurityRules(listSecurityRulesResponse.Items, nsgId)
 
 	for i, ingressRule := range desired.IngressRules {
 		if ingressRule.IsStateless == nil {
@@ -255,7 +253,7 @@ func (s *ClusterScope) UpdateNSGSecurityRulesIfNeeded(ctx context.Context, desir
 			s.Logger.Error(err, "failed to reconcile the network security group, failed to add security rules")
 			return isNSGUpdated, err
 		}
-		s.Logger.Info("Successfully added missing rules in NSG", "nsg", *actual.Id)
+		s.Logger.Info("Successfully added missing rules in NSG", "nsg", *nsgId)
 	}
 	if len(securityRulesToRemove) > 0 {
 		isNSGUpdated = true
@@ -269,7 +267,7 @@ func (s *ClusterScope) UpdateNSGSecurityRulesIfNeeded(ctx context.Context, desir
 			s.Logger.Error(err, "failed to reconcile the network security group, failed to remove security rules")
 			return isNSGUpdated, err
 		}
-		s.Logger.Info("Successfully deleted rules in NSG", "nsg", *actual.Id)
+		s.Logger.Info("Successfully deleted rules in NSG", "nsg", *nsgId)
 	}
 	return isNSGUpdated, nil
 }
@@ -315,6 +313,9 @@ func (s *ClusterScope) generateAddSecurityRuleFromSpec(ingressRules []infrastruc
 			TcpOptions:  tcpOptions,
 			UdpOptions:  udpOptions,
 		}
+		if ingressRule.SourceType == infrastructurev1beta2.IngressSecurityRuleSourceTypeNSG {
+			secRule.Source = getNsgIdFromName(ingressRule.Source, s.GetNSGSpec())
+		}
 		securityRules = append(securityRules, secRule)
 	}
 	for _, egressRule := range egressRules {
@@ -335,15 +336,15 @@ func (s *ClusterScope) generateAddSecurityRuleFromSpec(ingressRules []infrastruc
 			TcpOptions:      tcpOptions,
 			UdpOptions:      udpOptions,
 		}
-		securityRules = append(securityRules, secRule)
-		if egressRule.DestinationType == "SERVICE_CIDR_BLOCK" {
-			secRule.Destination = common.String(fmt.Sprintf("all-%s-services-in-oracle-services-network", strings.ToLower(s.RegionKey)))
+		if egressRule.DestinationType == infrastructurev1beta2.EgressSecurityRuleDestinationTypeNSG {
+			secRule.Destination = getNsgIdFromName(egressRule.Destination, s.GetNSGSpec())
 		}
+		securityRules = append(securityRules, secRule)
 	}
 	return securityRules
 }
 
-func generateSpecFromSecurityRules(rules []core.SecurityRule) (map[string]infrastructurev1beta2.IngressSecurityRuleForNSG, map[string]infrastructurev1beta2.EgressSecurityRuleForNSG) {
+func (s *ClusterScope) generateSpecFromSecurityRules(rules []core.SecurityRule, nsgId *string) (map[string]infrastructurev1beta2.IngressSecurityRuleForNSG, map[string]infrastructurev1beta2.EgressSecurityRuleForNSG) {
 	var ingressRules = make(map[string]infrastructurev1beta2.IngressSecurityRuleForNSG)
 	var egressRules = make(map[string]infrastructurev1beta2.EgressSecurityRuleForNSG)
 	var stateless *bool
@@ -368,6 +369,9 @@ func generateSpecFromSecurityRules(rules []core.SecurityRule) (map[string]infras
 					Description: rule.Description,
 				},
 			}
+			if rule.SourceType == core.SecurityRuleSourceTypeNetworkSecurityGroup {
+				ingressRule.IngressSecurityRule.Source = getNsgNameFromId(rule.Source, s.GetNSGSpec())
+			}
 			ingressRules[*rule.Id] = ingressRule
 		case core.SecurityRuleDirectionEgress:
 			egressRule := infrastructurev1beta2.EgressSecurityRuleForNSG{
@@ -381,6 +385,9 @@ func generateSpecFromSecurityRules(rules []core.SecurityRule) (map[string]infras
 					UdpOptions:      udpOptions,
 					Description:     rule.Description,
 				},
+			}
+			if rule.DestinationType == core.SecurityRuleDestinationTypeNetworkSecurityGroup {
+				egressRule.EgressSecurityRule.Destination = getNsgNameFromId(rule.Destination, s.GetNSGSpec())
 			}
 			egressRules[*rule.Id] = egressRule
 		}
@@ -464,4 +471,25 @@ func getProtocolOptionsForSpec(icmp *core.IcmpOptions, tcp *core.TcpOptions, udp
 		}
 	}
 	return icmpOptions, tcpOptions, udpOptions
+}
+
+func getNsgIdFromName(nsgName *string, list []*infrastructurev1beta2.NSG) *string {
+	for _, nsg := range list {
+		if nsg.Name == *nsgName {
+			return nsg.ID
+		}
+	}
+	return nil
+}
+
+func getNsgNameFromId(nsgId *string, list []*infrastructurev1beta2.NSG) *string {
+	if nsgId == nil {
+		return nil
+	}
+	for _, nsg := range list {
+		if reflect.DeepEqual(nsg.ID, nsgId) {
+			return &nsg.Name
+		}
+	}
+	return nil
 }

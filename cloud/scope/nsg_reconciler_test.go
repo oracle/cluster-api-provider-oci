@@ -241,6 +241,20 @@ func TestClusterScope_ReconcileNSG(t *testing.T) {
 				Source:     common.String("0.0.0.0/0"),
 			},
 		},
+		{
+			IngressSecurityRule: infrastructurev1beta2.IngressSecurityRule{
+				Description: common.String("External access to Kubernetes API endpoint - 1"),
+				Protocol:    common.String("6"),
+				TcpOptions: &infrastructurev1beta2.TcpOptions{
+					DestinationPortRange: &infrastructurev1beta2.PortRange{
+						Max: common.Int(6443),
+						Min: common.Int(6443),
+					},
+				},
+				SourceType: infrastructurev1beta2.IngressSecurityRuleSourceTypeNSG,
+				Source:     common.String("no-update"),
+			},
+		},
 	}
 	customNSGEgress := []infrastructurev1beta2.EgressSecurityRuleForNSG{
 		{
@@ -255,6 +269,20 @@ func TestClusterScope_ReconcileNSG(t *testing.T) {
 				},
 				DestinationType: infrastructurev1beta2.EgressSecurityRuleDestinationTypeCidrBlock,
 				Destination:     common.String(ControlPlaneMachineSubnetDefaultCIDR),
+			},
+		},
+		{
+			EgressSecurityRule: infrastructurev1beta2.EgressSecurityRule{
+				Description: common.String("All traffic to control plane nodes - 1"),
+				Protocol:    common.String("6"),
+				TcpOptions: &infrastructurev1beta2.TcpOptions{
+					DestinationPortRange: &infrastructurev1beta2.PortRange{
+						Max: common.Int(6443),
+						Min: common.Int(6443),
+					},
+				},
+				DestinationType: infrastructurev1beta2.EgressSecurityRuleDestinationTypeNSG,
+				Destination:     common.String("update-rules"),
 			},
 		},
 	}
@@ -374,12 +402,42 @@ func TestClusterScope_ReconcileNSG(t *testing.T) {
 							},
 						},
 						{
+							Direction:       core.SecurityRuleDirectionEgress,
+							Protocol:        common.String("6"),
+							Description:     common.String("All traffic to control plane nodes - 1"),
+							Destination:     common.String("update-rules-id"),
+							DestinationType: core.SecurityRuleDestinationTypeNetworkSecurityGroup,
+							Id:              common.String("egress-id-1"),
+							IsStateless:     common.Bool(false),
+							TcpOptions: &core.TcpOptions{
+								DestinationPortRange: &core.PortRange{
+									Max: common.Int(6443),
+									Min: common.Int(6443),
+								},
+							},
+						},
+						{
 							Direction:   core.SecurityRuleDirectionIngress,
 							Protocol:    common.String("6"),
 							Description: common.String("External access to Kubernetes API endpoint"),
 							Id:          common.String("ingress-id"),
 							Source:      common.String("0.0.0.0/0"),
 							SourceType:  core.SecurityRuleSourceTypeCidrBlock,
+							IsStateless: common.Bool(false),
+							TcpOptions: &core.TcpOptions{
+								DestinationPortRange: &core.PortRange{
+									Max: common.Int(6443),
+									Min: common.Int(6443),
+								},
+							},
+						},
+						{
+							Direction:   core.SecurityRuleDirectionIngress,
+							Protocol:    common.String("6"),
+							Description: common.String("External access to Kubernetes API endpoint - 1"),
+							Id:          common.String("ingress-id-1"),
+							Source:      common.String("no-update-id"),
+							SourceType:  core.SecurityRuleSourceTypeNetworkSecurityGroup,
 							IsStateless: common.Bool(false),
 							TcpOptions: &core.TcpOptions{
 								DestinationPortRange: &core.PortRange{
@@ -411,12 +469,42 @@ func TestClusterScope_ReconcileNSG(t *testing.T) {
 							},
 						},
 						{
+							Direction:       core.SecurityRuleDirectionEgress,
+							Protocol:        common.String("6"),
+							Description:     common.String("All traffic to control plane nodes - 1"),
+							Destination:     common.String("update-rules-id"),
+							DestinationType: core.SecurityRuleDestinationTypeNetworkSecurityGroup,
+							Id:              common.String("egress-id-1"),
+							IsStateless:     common.Bool(false),
+							TcpOptions: &core.TcpOptions{
+								DestinationPortRange: &core.PortRange{
+									Max: common.Int(6443),
+									Min: common.Int(6443),
+								},
+							},
+						},
+						{
 							Direction:   core.SecurityRuleDirectionIngress,
 							Protocol:    common.String("6"),
 							Description: common.String("External access to Kubernetes API endpoint"),
 							Id:          common.String("ingress-id"),
 							Source:      common.String("0.0.0.0/0"),
 							SourceType:  core.SecurityRuleSourceTypeCidrBlock,
+							IsStateless: common.Bool(false),
+							TcpOptions: &core.TcpOptions{
+								DestinationPortRange: &core.PortRange{
+									Max: common.Int(6443),
+									Min: common.Int(6443),
+								},
+							},
+						},
+						{
+							Direction:   core.SecurityRuleDirectionIngress,
+							Protocol:    common.String("6"),
+							Description: common.String("External access to Kubernetes API endpoint - 1"),
+							Id:          common.String("ingress-id-1"),
+							Source:      common.String("no-update-id"),
+							SourceType:  core.SecurityRuleSourceTypeNetworkSecurityGroup,
 							IsStateless: common.Bool(false),
 							TcpOptions: &core.TcpOptions{
 								DestinationPortRange: &core.PortRange{
@@ -483,11 +571,39 @@ func TestClusterScope_ReconcileNSG(t *testing.T) {
 							},
 						},
 						{
+							Direction:   core.AddSecurityRuleDetailsDirectionIngress,
+							Protocol:    common.String("6"),
+							Description: common.String("External access to Kubernetes API endpoint - 1"),
+							Source:      common.String("no-update-id"),
+							SourceType:  core.AddSecurityRuleDetailsSourceTypeNetworkSecurityGroup,
+							IsStateless: common.Bool(false),
+							TcpOptions: &core.TcpOptions{
+								DestinationPortRange: &core.PortRange{
+									Max: common.Int(6443),
+									Min: common.Int(6443),
+								},
+							},
+						},
+						{
 							Direction:       core.AddSecurityRuleDetailsDirectionEgress,
 							Protocol:        common.String("6"),
 							Description:     common.String("All traffic to control plane nodes"),
 							Destination:     common.String(ControlPlaneMachineSubnetDefaultCIDR),
 							DestinationType: core.AddSecurityRuleDetailsDestinationTypeCidrBlock,
+							IsStateless:     common.Bool(false),
+							TcpOptions: &core.TcpOptions{
+								DestinationPortRange: &core.PortRange{
+									Max: common.Int(6443),
+									Min: common.Int(6443),
+								},
+							},
+						},
+						{
+							Direction:       core.AddSecurityRuleDetailsDirectionEgress,
+							Protocol:        common.String("6"),
+							Description:     common.String("All traffic to control plane nodes - 1"),
+							Destination:     common.String("update-rules-id"),
+							DestinationType: core.AddSecurityRuleDetailsDestinationTypeNetworkSecurityGroup,
 							IsStateless:     common.Bool(false),
 							TcpOptions: &core.TcpOptions{
 								DestinationPortRange: &core.PortRange{
@@ -706,26 +822,7 @@ func TestClusterScope_ReconcileNSG(t *testing.T) {
 				})).Return(core.ListNetworkSecurityGroupSecurityRulesResponse{
 					Items: []core.SecurityRule{},
 				}, nil)
-				vcnClient.EXPECT().AddNetworkSecurityGroupSecurityRules(gomock.Any(), gomock.Eq(core.AddNetworkSecurityGroupSecurityRulesRequest{
-					NetworkSecurityGroupId: common.String("loadbalancer-nsg-id"),
-					AddNetworkSecurityGroupSecurityRulesDetails: core.AddNetworkSecurityGroupSecurityRulesDetails{SecurityRules: []core.AddSecurityRuleDetails{
-						{
-							Direction:       core.AddSecurityRuleDetailsDirectionEgress,
-							Protocol:        common.String("6"),
-							Description:     common.String("All traffic to control plane nodes"),
-							Destination:     common.String(ControlPlaneMachineSubnetDefaultCIDR),
-							DestinationType: core.AddSecurityRuleDetailsDestinationTypeCidrBlock,
-							IsStateless:     common.Bool(false),
-							TcpOptions: &core.TcpOptions{
-								DestinationPortRange: &core.PortRange{
-									Max: common.Int(6443),
-									Min: common.Int(6443),
-								},
-							},
-						},
-					},
-					},
-				})).Return(core.AddNetworkSecurityGroupSecurityRulesResponse{}, errors.New("some error"))
+				vcnClient.EXPECT().AddNetworkSecurityGroupSecurityRules(gomock.Any(), gomock.Any()).Return(core.AddNetworkSecurityGroupSecurityRulesResponse{}, errors.New("some error"))
 			},
 			wantErr:       true,
 			expectedError: "failed add nsg security rules: some error",

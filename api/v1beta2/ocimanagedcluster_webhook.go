@@ -311,7 +311,7 @@ func (c *OCIManagedCluster) GetControlPlaneEndpointDefaultEgressRules() []Egress
 			EgressSecurityRule: EgressSecurityRule{
 				Description:     common.String("Allow Kubernetes API endpoint to communicate with OKE."),
 				Protocol:        common.String("6"),
-				DestinationType: EgressSecurityRuleSourceTypeServiceCidrBlock,
+				DestinationType: EgressSecurityRuleDestinationTypeServiceCidrBlock,
 			},
 		},
 		{
@@ -322,7 +322,7 @@ func (c *OCIManagedCluster) GetControlPlaneEndpointDefaultEgressRules() []Egress
 					Type: common.Int(3),
 					Code: common.Int(4),
 				},
-				DestinationType: EgressSecurityRuleSourceTypeServiceCidrBlock,
+				DestinationType: EgressSecurityRuleDestinationTypeServiceCidrBlock,
 			},
 		},
 		{
@@ -413,7 +413,7 @@ func (c *OCIManagedCluster) GetWorkerDefaultEgressRules() []EgressSecurityRuleFo
 			EgressSecurityRule: EgressSecurityRule{
 				Description:     common.String("Allow worker nodes to communicate with OKE."),
 				Protocol:        common.String("6"),
-				DestinationType: EgressSecurityRuleSourceTypeServiceCidrBlock,
+				DestinationType: EgressSecurityRuleDestinationTypeServiceCidrBlock,
 			},
 		},
 		{
@@ -502,7 +502,7 @@ func (c *OCIManagedCluster) GetPodDefaultEgressRules() []EgressSecurityRuleForNS
 			EgressSecurityRule: EgressSecurityRule{
 				Description:     common.String("Allow worker nodes to communicate with OCI Services."),
 				Protocol:        common.String("6"),
-				DestinationType: EgressSecurityRuleSourceTypeServiceCidrBlock,
+				DestinationType: EgressSecurityRuleDestinationTypeServiceCidrBlock,
 			},
 		},
 		{
@@ -513,7 +513,7 @@ func (c *OCIManagedCluster) GetPodDefaultEgressRules() []EgressSecurityRuleForNS
 					Type: common.Int(3),
 					Code: common.Int(4),
 				},
-				DestinationType: EgressSecurityRuleSourceTypeServiceCidrBlock,
+				DestinationType: EgressSecurityRuleDestinationTypeServiceCidrBlock,
 			},
 		},
 		{
