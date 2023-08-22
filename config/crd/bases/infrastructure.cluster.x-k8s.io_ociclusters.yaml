@@ -3,8 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.10.0
-  creationTimestamp: null
+    controller-gen.kubebuilder.io/version: v0.13.0
   name: ociclusters.infrastructure.cluster.x-k8s.io
 spec:
   group: infrastructure.cluster.x-k8s.io
@@ -129,6 +128,12 @@ spec:
                     properties:
                       cidr:
                         description: VCN CIDR.
+                        type: string
+                      dnsLabel:
+                        description: DnsLabel specifies a DNS label for the VCN, used
+                          in conjunction with the VNIC's hostname and subnet's DNS
+                          label to form a fully qualified domain name (FQDN) for each
+                          VNIC within this subnet (for example, `bminstance1.subnet123.vcn1.oraclevcn.com`).
                         type: string
                       id:
                         description: VCN OCID.
@@ -534,6 +539,12 @@ spec:
                           properties:
                             cidr:
                               description: Subnet CIDR.
+                              type: string
+                            dnsLabel:
+                              description: DnsLabel DNS label for the subnet, used
+                                in conjunction with the VNIC's hostname and VCN's
+                                DNS label to form a fully qualified domain name (FQDN)
+                                for each VNIC within this subnet (for example, `bminstance1.subnet123.vcn1.oraclevcn.com`).
                               type: string
                             id:
                               description: Subnet OCID.
@@ -1279,6 +1290,12 @@ spec:
                       cidr:
                         description: VCN CIDR.
                         type: string
+                      dnsLabel:
+                        description: DnsLabel specifies a DNS label for the VCN, used
+                          in conjunction with the VNIC's hostname and subnet's DNS
+                          label to form a fully qualified domain name (FQDN) for each
+                          VNIC within this subnet (for example, `bminstance1.subnet123.vcn1.oraclevcn.com`).
+                        type: string
                       id:
                         description: VCN OCID.
                         type: string
@@ -1736,6 +1753,12 @@ spec:
                           properties:
                             cidr:
                               description: Subnet CIDR.
+                              type: string
+                            dnsLabel:
+                              description: DnsLabel DNS label for the subnet, used
+                                in conjunction with the VNIC's hostname and VCN's
+                                DNS label to form a fully qualified domain name (FQDN)
+                                for each VNIC within this subnet (for example, `bminstance1.subnet123.vcn1.oraclevcn.com`).
                               type: string
                             id:
                               description: Subnet OCID.
