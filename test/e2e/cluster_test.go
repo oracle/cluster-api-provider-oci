@@ -735,7 +735,7 @@ func validateCustonNSGNetworking(ctx context.Context, ociCluster infrastructurev
 		Expect(err).NotTo(HaveOccurred())
 		switch nsg.Role {
 		case infrastructurev1beta1.ControlPlaneEndpointRole:
-			verifyNsg(ctx, resp, ociClusterOriginal, infrastructurev1beta1.ControlPlaneEndpointRole)
+			verifyNsg(ctx, resp, ociClusterOriginal, &ociCluster, infrastructurev1beta1.ControlPlaneEndpointRole)
 			lbId := ociCluster.Spec.NetworkSpec.APIServerLB.LoadBalancerId
 			lb, err := lbClient.GetNetworkLoadBalancer(ctx, networkloadbalancer.GetNetworkLoadBalancerRequest{
 				NetworkLoadBalancerId: lbId,
@@ -743,15 +743,15 @@ func validateCustonNSGNetworking(ctx context.Context, ociCluster infrastructurev
 			Expect(err).NotTo(HaveOccurred())
 			Expect(lb.NetworkSecurityGroupIds[0]).To(Equal(*nsgId))
 		case infrastructurev1beta1.ControlPlaneRole:
-			verifyNsg(ctx, resp, ociClusterOriginal, infrastructurev1beta1.ControlPlaneRole)
+			verifyNsg(ctx, resp, ociClusterOriginal, &ociCluster, infrastructurev1beta1.ControlPlaneRole)
 			Log("Validating control plane machine vnic NSG")
 			validateVnicNSG(ctx, clusterName, nameSpace, nsgId, "")
 		case infrastructurev1beta1.WorkerRole:
-			verifyNsg(ctx, resp, ociClusterOriginal, infrastructurev1beta1.WorkerRole)
+			verifyNsg(ctx, resp, ociClusterOriginal, &ociCluster, infrastructurev1beta1.WorkerRole)
 			Log("Validating node machine vnic NSG")
 			validateVnicNSG(ctx, clusterName, nameSpace, nsgId, machineDeployment)
 		case infrastructurev1beta1.ServiceLoadBalancerRole:
-			verifyNsg(ctx, resp, ociClusterOriginal, infrastructurev1beta1.ServiceLoadBalancerRole)
+			verifyNsg(ctx, resp, ociClusterOriginal, &ociCluster, infrastructurev1beta1.ServiceLoadBalancerRole)
 		default:
 			return errors.New("invalid nsg role")
 		}
@@ -884,12 +884,12 @@ func verifySeclistSubnet(ctx context.Context, resp core.GetSubnetResponse, ociCl
 	Expect(matches).To(Equal(1))
 }
 
-func verifyNsg(ctx context.Context, resp core.GetNetworkSecurityGroupResponse, ociClusterOriginal *infrastructurev1beta1.OCICluster, role infrastructurev1beta1.Role) {
+func verifyNsg(ctx context.Context, resp core.GetNetworkSecurityGroupResponse, ociClusterOriginal *infrastructurev1beta1.OCICluster, ociClusterActual *infrastructurev1beta1.OCICluster, role infrastructurev1beta1.Role) {
 	listResponse, err := vcnClient.ListNetworkSecurityGroupSecurityRules(ctx, core.ListNetworkSecurityGroupSecurityRulesRequest{
 		NetworkSecurityGroupId: resp.Id,
 	})
 	Expect(err).NotTo(HaveOccurred())
-	ingressRules, egressRules := generateSpecFromSecurityRules(ociClusterOriginal, listResponse.Items)
+	ingressRules, egressRules := generateSpecFromSecurityRules(ociClusterActual, listResponse.Items)
 	matches := 0
 	for _, n := range ociClusterOriginal.Spec.NetworkSpec.Vcn.NetworkSecurityGroups {
 		if n.Role == role {
