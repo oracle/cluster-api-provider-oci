@@ -111,6 +111,7 @@ func (s *ClusterScope) CreateSubnet(ctx context.Context, spec infrastructurev1be
 		RouteTableId:            routeTable,
 		FreeformTags:            s.GetFreeFormTags(),
 		DefinedTags:             s.GetDefinedTags(),
+		DnsLabel:                spec.DnsLabel,
 	}
 	if spec.SecurityList != nil {
 		createSubnetDetails.SecurityListIds = []string{*spec.SecurityList.ID}

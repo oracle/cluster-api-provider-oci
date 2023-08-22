@@ -3096,6 +3096,7 @@ func autoConvert_v1beta1_Subnet_To_v1beta2_Subnet(in *Subnet, out *v1beta2.Subne
 	out.CIDR = in.CIDR
 	out.Type = v1beta2.SubnetType(in.Type)
 	out.SecurityList = (*v1beta2.SecurityList)(unsafe.Pointer(in.SecurityList))
+	out.DnsLabel = (*string)(unsafe.Pointer(in.DnsLabel))
 	return nil
 }
 
@@ -3111,6 +3112,7 @@ func autoConvert_v1beta2_Subnet_To_v1beta1_Subnet(in *v1beta2.Subnet, out *Subne
 	out.CIDR = in.CIDR
 	out.Type = SubnetType(in.Type)
 	out.SecurityList = (*SecurityList)(unsafe.Pointer(in.SecurityList))
+	out.DnsLabel = (*string)(unsafe.Pointer(in.DnsLabel))
 	return nil
 }
 
@@ -3194,6 +3196,7 @@ func autoConvert_v1beta1_VCN_To_v1beta2_VCN(in *VCN, out *v1beta2.VCN, s convers
 	// WARNING: in.PublicRouteTableId requires manual conversion: does not exist in peer-type
 	out.Subnets = *(*[]*v1beta2.Subnet)(unsafe.Pointer(&in.Subnets))
 	// WARNING: in.NetworkSecurityGroups requires manual conversion: does not exist in peer-type
+	out.DnsLabel = (*string)(unsafe.Pointer(in.DnsLabel))
 	return nil
 }
 
@@ -3207,6 +3210,7 @@ func autoConvert_v1beta2_VCN_To_v1beta1_VCN(in *v1beta2.VCN, out *VCN, s convers
 	// WARNING: in.ServiceGateway requires manual conversion: does not exist in peer-type
 	// WARNING: in.RouteTable requires manual conversion: does not exist in peer-type
 	// WARNING: in.NetworkSecurityGroup requires manual conversion: does not exist in peer-type
+	out.DnsLabel = (*string)(unsafe.Pointer(in.DnsLabel))
 	return nil
 }
 

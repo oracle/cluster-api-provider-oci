@@ -40,7 +40,7 @@ func TestClusterScope_CreateVCN(t *testing.T) {
 	vcnClient := mock_vcn.NewMockClient(mockCtrl)
 
 	vcnClient.EXPECT().CreateVcn(gomock.Any(), Eq(func(request interface{}) error {
-		return createVcnDisplayNameMatcher(request, "normal")
+		return vcnMatcher(request, "normal", common.String("label"))
 	})).
 		Return(core.CreateVcnResponse{
 			Vcn: core.Vcn{
@@ -48,7 +48,7 @@ func TestClusterScope_CreateVCN(t *testing.T) {
 			},
 		}, nil)
 	vcnClient.EXPECT().CreateVcn(gomock.Any(), Eq(func(request interface{}) error {
-		return createVcnDisplayNameMatcher(request, "error")
+		return vcnMatcher(request, "error", nil)
 	})).
 		Return(core.CreateVcnResponse{}, errors.New("some error"))
 
@@ -63,7 +63,8 @@ func TestClusterScope_CreateVCN(t *testing.T) {
 			spec: infrastructurev1beta2.OCIClusterSpec{
 				NetworkSpec: infrastructurev1beta2.NetworkSpec{
 					Vcn: infrastructurev1beta2.VCN{
-						Name: "normal",
+						Name:     "normal",
+						DnsLabel: common.String("label"),
 					},
 				},
 			},
@@ -602,7 +603,7 @@ func TestClusterScope_ReconcileVCN(t *testing.T) {
 			}}, nil)
 
 	vcnClient.EXPECT().CreateVcn(gomock.Any(), Eq(func(request interface{}) error {
-		return createVcnDisplayNameMatcher(request, "not_found")
+		return vcnMatcher(request, "not_found", nil)
 	})).
 		Return(core.CreateVcnResponse{
 			Vcn: core.Vcn{
@@ -705,13 +706,16 @@ func TestClusterScope_ReconcileVCN(t *testing.T) {
 	}
 }
 
-func createVcnDisplayNameMatcher(request interface{}, matchStr string) error {
+func vcnMatcher(request interface{}, displayName string, dnsLabel *string) error {
 	r, ok := request.(core.CreateVcnRequest)
 	if !ok {
 		return errors.New("expecting CreateVcnRequest type")
 	}
-	if *r.CreateVcnDetails.DisplayName != matchStr {
-		return errors.New(fmt.Sprintf("expecting DisplayName as %s", matchStr))
+	if *r.CreateVcnDetails.DisplayName != displayName {
+		return errors.New(fmt.Sprintf("expecting DisplayName as %s", displayName))
+	}
+	if !reflect.DeepEqual(r.CreateVcnDetails.DnsLabel, dnsLabel) {
+		return errors.New(fmt.Sprintf("expecting DnsLabel as %v", dnsLabel))
 	}
 	return nil
 }
