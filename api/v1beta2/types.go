@@ -673,6 +673,8 @@ type EgressSecurityRule struct {
 	//   * `SERVICE_CIDR_BLOCK`: If the rule's `destination` is the `cidrBlock` value for a
 	//     Service (the rule is for traffic destined for a
 	//     particular `Service` through a service gateway).
+	//   * `NETWORK_SECURITY_GROUP`: If the rule's `destination` is the OCID (https://docs.cloud.oracle.com/iaas/Content/General/Concepts/identifiers.htm) of a
+	//     NetworkSecurityGroup.
 	DestinationType EgressSecurityRuleDestinationTypeEnum `json:"destinationType,omitempty"`
 
 	IcmpOptions *IcmpOptions `json:"icmpOptions,omitempty"`
@@ -726,6 +728,8 @@ type IngressSecurityRule struct {
 	//   * `SERVICE_CIDR_BLOCK`: If the rule's `source` is the `cidrBlock` value for a
 	//     Service (the rule is for traffic coming from a
 	//     particular `Service` through a service gateway).
+	//   * `NETWORK_SECURITY_GROUP`: If the rule's `destination` is the OCID (https://docs.cloud.oracle.com/iaas/Content/General/Concepts/identifiers.htm) of a
+	//     NetworkSecurityGroup.
 	SourceType IngressSecurityRuleSourceTypeEnum `json:"sourceType,omitempty"`
 
 	TcpOptions *TcpOptions `json:"tcpOptions,omitempty"`
@@ -753,6 +757,7 @@ type IngressSecurityRuleSourceTypeEnum string
 const (
 	IngressSecurityRuleSourceTypeCidrBlock        IngressSecurityRuleSourceTypeEnum = "CIDR_BLOCK"
 	IngressSecurityRuleSourceTypeServiceCidrBlock IngressSecurityRuleSourceTypeEnum = "SERVICE_CIDR_BLOCK"
+	IngressSecurityRuleSourceTypeNSG              IngressSecurityRuleSourceTypeEnum = "NETWORK_SECURITY_GROUP"
 )
 
 // UdpOptions Optional and valid only for UDP. Use to specify particular destination ports for UDP rules.
@@ -802,8 +807,9 @@ type PortRange struct {
 
 const (
 	// EgressSecurityRuleDestinationTypeCidrBlock is the contant for CIDR block security rule destination type
-	EgressSecurityRuleDestinationTypeCidrBlock   EgressSecurityRuleDestinationTypeEnum = "CIDR_BLOCK"
-	EgressSecurityRuleSourceTypeServiceCidrBlock EgressSecurityRuleDestinationTypeEnum = "SERVICE_CIDR_BLOCK"
+	EgressSecurityRuleDestinationTypeCidrBlock        EgressSecurityRuleDestinationTypeEnum = "CIDR_BLOCK"
+	EgressSecurityRuleDestinationTypeServiceCidrBlock EgressSecurityRuleDestinationTypeEnum = "SERVICE_CIDR_BLOCK"
+	EgressSecurityRuleDestinationTypeNSG              EgressSecurityRuleDestinationTypeEnum = "NETWORK_SECURITY_GROUP"
 )
 
 type EgressSecurityRuleDestinationTypeEnum string

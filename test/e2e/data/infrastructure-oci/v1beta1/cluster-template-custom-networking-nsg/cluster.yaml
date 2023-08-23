@@ -14,9 +14,9 @@ spec:
           egressRules:
             - egressRule:
                 isStateless: false
-                destination: "15.0.5.0/28"
+                destination: "cp-mc-nsg"
                 protocol: "6"
-                destinationType: "CIDR_BLOCK"
+                destinationType: "NETWORK_SECURITY_GROUP"
                 description: "All traffic to control plane nodes"
                 tcpOptions:
                   destinationPortRange:
