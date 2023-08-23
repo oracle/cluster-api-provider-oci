@@ -860,6 +860,7 @@ type Subnet struct {
 	// DnsLabel DNS label for the subnet, used in conjunction with the VNIC's hostname and
 	// VCN's DNS label to form a fully qualified domain name (FQDN) for each VNIC
 	// within this subnet (for example, `bminstance1.subnet123.vcn1.oraclevcn.com`).
+	// +optional
 	DnsLabel *string `json:"dnsLabel,omitempty"`
 }
 
@@ -929,6 +930,7 @@ type VCN struct {
 	// DnsLabel specifies a DNS label for the VCN, used in conjunction with the VNIC's hostname and
 	// subnet's DNS label to form a fully qualified domain name (FQDN) for each VNIC
 	// within this subnet (for example, `bminstance1.subnet123.vcn1.oraclevcn.com`).
+	// +optional
 	DnsLabel *string `json:"dnsLabel,omitempty"`
 }
 
