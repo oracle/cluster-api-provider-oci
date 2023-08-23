@@ -192,7 +192,7 @@ func (r *OCIMachinePoolReconciler) SetupWithManager(ctx context.Context, mgr ctr
 	if err != nil {
 		return errors.Wrapf(err, "failed to create mapper for Cluster to OCIMachinePool")
 	}
-	gvk, err := apiutil.GVKForObject(new(infrav2exp.OCIMachinePoolList), mgr.GetScheme())
+	gvk, err := apiutil.GVKForObject(new(infrav2exp.OCIMachinePool), mgr.GetScheme())
 	if err != nil {
 		return errors.Wrapf(err, "failed to find GVK for OCIMachinePool")
 	}
