@@ -9,7 +9,7 @@ spec:
   infrastructureRef:
     apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
     kind: OCIManagedCluster
-    name: "${CLUSTER_NAME}"-virtual
+    name: "${CLUSTER_NAME}-virtual"
     namespace: "${NAMESPACE}"
   controlPlaneRef:
     apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
@@ -22,7 +22,7 @@ kind: OCIManagedCluster
 metadata:
   labels:
     cluster.x-k8s.io/cluster-name: "${CLUSTER_NAME}"
-  name: "${CLUSTER_NAME}"-virtual
+  name: "${CLUSTER_NAME}-virtual"
 spec:
   compartmentId: "${OCI_COMPARTMENT_ID}"
   identityRef:
