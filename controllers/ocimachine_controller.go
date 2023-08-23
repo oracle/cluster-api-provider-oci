@@ -112,7 +112,16 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	var clusterAccessor scope.OCIClusterAccessor
-	if err := r.Client.Get(ctx, ociClusterName, ociCluster); err != nil {
+	if cluster.Spec.InfrastructureRef.Kind == "OCICluster" {
+		if err := r.Client.Get(ctx, ociClusterName, ociCluster); err != nil {
+			logger.Info("Cluster is not available yet")
+			r.Recorder.Eventf(ociMachine, corev1.EventTypeWarning, "ClusterNotAvailable", "Cluster is not available yet")
+			return ctrl.Result{}, nil
+		}
+		clusterAccessor = scope.OCISelfManagedCluster{
+			OCICluster: ociCluster,
+		}
+	} else if cluster.Spec.InfrastructureRef.Kind == "OCIManagedCluster" {
 		// check for oci managed cluster
 		ociManagedCluster := &infrastructurev1beta2.OCIManagedCluster{}
 		ociManagedClusterName := client.ObjectKey{
@@ -120,17 +129,14 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			Name:      cluster.Spec.InfrastructureRef.Name,
 		}
 		if err := r.Client.Get(ctx, ociManagedClusterName, ociManagedCluster); err != nil {
-			logger.Info("Cluster is not available yet")
-			r.Recorder.Eventf(ociMachine, corev1.EventTypeWarning, "ClusterNotAvailable", "Cluster is not available yet")
-			return ctrl.Result{}, nil
+
 		}
 		clusterAccessor = scope.OCIManagedCluster{
 			OCIManagedCluster: ociManagedCluster,
 		}
 	} else {
-		clusterAccessor = scope.OCISelfManagedCluster{
-			OCICluster: ociCluster,
-		}
+		r.Recorder.Eventf(ociMachine, corev1.EventTypeWarning, "InfrastructureClusterTypeNotSupported", fmt.Sprintf("Infrastructure Cluster Type %s is not supported", cluster.Spec.InfrastructureRef.Kind))
+		return ctrl.Result{}, errors.New(fmt.Sprintf("Infrastructure Cluster Type %s is not supported", cluster.Spec.InfrastructureRef.Kind))
 	}
 
 	_, _, clients, err := cloudutil.InitClientsAndRegion(ctx, r.Client, r.Region, clusterAccessor, r.ClientProvider)
