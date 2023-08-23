@@ -113,15 +113,23 @@ func (r *OCIMachinePoolReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		logger.Info("OCIMachinePool or linked Cluster is marked as paused. Won't reconcile")
 		return ctrl.Result{}, nil
 	}
-
-	ociCluster := &infrastructurev1beta2.OCICluster{}
-	ociClusterName := client.ObjectKey{
-		Namespace: cluster.Namespace,
-		Name:      cluster.Name,
-	}
-
 	var clusterAccessor scope.OCIClusterAccessor
-	if err := r.Client.Get(ctx, ociClusterName, ociCluster); err != nil {
+	if cluster.Spec.InfrastructureRef.Kind == "OCICluster" {
+		ociCluster := &infrastructurev1beta2.OCICluster{}
+		ociClusterName := client.ObjectKey{
+			Namespace: cluster.Namespace,
+			Name:      cluster.Spec.InfrastructureRef.Name,
+		}
+		if err := r.Client.Get(ctx, ociClusterName, ociCluster); err != nil {
+			logger.Info("Cluster is not available yet")
+			r.Recorder.Eventf(ociMachinePool, corev1.EventTypeWarning, "ClusterNotAvailable", "Cluster is not available yet")
+			logger.V(2).Info("OCICluster is not available yet")
+			return ctrl.Result{}, nil
+		}
+		clusterAccessor = scope.OCISelfManagedCluster{
+			OCICluster: ociCluster,
+		}
+	} else if cluster.Spec.InfrastructureRef.Kind == "OCIManagedCluster" {
 		ociManagedCluster := &infrastructurev1beta2.OCIManagedCluster{}
 		ociManagedClusterName := client.ObjectKey{
 			Namespace: cluster.Namespace,
@@ -130,16 +138,15 @@ func (r *OCIMachinePoolReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		if err := r.Client.Get(ctx, ociManagedClusterName, ociManagedCluster); err != nil {
 			logger.Info("Cluster is not available yet")
 			r.Recorder.Eventf(ociMachinePool, corev1.EventTypeWarning, "ClusterNotAvailable", "Cluster is not available yet")
-			logger.V(2).Info("OCICluster is not available yet")
+			logger.V(2).Info("OCIManagedCluster is not available yet")
 			return ctrl.Result{}, nil
 		}
 		clusterAccessor = scope.OCIManagedCluster{
 			OCIManagedCluster: ociManagedCluster,
 		}
 	} else {
-		clusterAccessor = scope.OCISelfManagedCluster{
-			OCICluster: ociCluster,
-		}
+		r.Recorder.Eventf(ociMachinePool, corev1.EventTypeWarning, "InfrastructureClusterTypeNotSupported", fmt.Sprintf("Infrastructure Cluster Type %s is not supported", cluster.Spec.InfrastructureRef.Kind))
+		return ctrl.Result{}, errors.New(fmt.Sprintf("Infrastructure Cluster Type %s is not supported", cluster.Spec.InfrastructureRef.Kind))
 	}
 
 	_, _, clients, err := cloudutil.InitClientsAndRegion(ctx, r.Client, r.Region, clusterAccessor, r.ClientProvider)
