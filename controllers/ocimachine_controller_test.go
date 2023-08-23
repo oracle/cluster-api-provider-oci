@@ -954,6 +954,7 @@ func getOciMachineWithNoOwner() *infrastructurev1beta2.OCIMachine {
 func getCluster() *clusterv1.Cluster {
 	infraRef := corev1.ObjectReference{
 		Name: "oci-cluster",
+		Kind: "OCICluster",
 	}
 	return &clusterv1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
