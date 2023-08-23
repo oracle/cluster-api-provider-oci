@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -191,6 +192,12 @@ func (r *OCIMachinePoolReconciler) SetupWithManager(ctx context.Context, mgr ctr
 	if err != nil {
 		return errors.Wrapf(err, "failed to create mapper for Cluster to OCIMachinePool")
 	}
+	gvk, err := apiutil.GVKForObject(new(infrav2exp.OCIMachinePoolList), mgr.GetScheme())
+	if err != nil {
+		return errors.Wrapf(err, "failed to find GVK for OCIMachinePool")
+	}
+	managedClusterToMachinePoolMap := managedClusterToManagedMachinePoolMapFunc(r.Client, gvk, logger)
+
 	err = ctrl.NewControllerManagedBy(mgr).
 		WithOptions(options).
 		For(&infrav2exp.OCIMachinePool{}).
@@ -199,6 +206,10 @@ func (r *OCIMachinePoolReconciler) SetupWithManager(ctx context.Context, mgr ctr
 			&expclusterv1.MachinePool{},
 			handler.EnqueueRequestsFromMapFunc(machinePoolToInfrastructureMapFunc(infrav2exp.
 				GroupVersion.WithKind(scope.OCIMachinePoolKind), logger)),
+		).
+		Watches(
+			&infrastructurev1beta2.OCIManagedCluster{},
+			handler.EnqueueRequestsFromMapFunc(managedClusterToMachinePoolMap),
 		).
 		Watches(
 			&clusterv1.Cluster{},
