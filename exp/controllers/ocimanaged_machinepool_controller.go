@@ -117,7 +117,7 @@ func (r *OCIManagedMachinePoolReconciler) Reconcile(ctx context.Context, req ctr
 	ociManagedCluster := &infrastructurev1beta2.OCIManagedCluster{}
 	ociClusterName := client.ObjectKey{
 		Namespace: cluster.Namespace,
-		Name:      cluster.Name,
+		Name:      cluster.Spec.InfrastructureRef.Name,
 	}
 
 	if err := r.Client.Get(ctx, ociClusterName, ociManagedCluster); err != nil {
@@ -216,7 +216,7 @@ func managedClusterToManagedMachinePoolMapFunc(c client.Client, gvk schema.Group
 	return func(ctx context.Context, o client.Object) []reconcile.Request {
 		ociCluster, ok := o.(*infrastructurev1beta2.OCIManagedCluster)
 		if !ok {
-			panic(fmt.Sprintf("Expected a OCIManagedControlPlane but got a %T", o))
+			panic(fmt.Sprintf("Expected a OCIManagedCluster but got a %T", o))
 		}
 
 		if !ociCluster.ObjectMeta.DeletionTimestamp.IsZero() {
@@ -225,7 +225,7 @@ func managedClusterToManagedMachinePoolMapFunc(c client.Client, gvk schema.Group
 
 		cluster, err := util.GetOwnerCluster(ctx, c, ociCluster.ObjectMeta)
 		if err != nil {
-			log.Error(err, "couldn't get OCI control plane owner ObjectKey")
+			log.Error(err, "couldn't get OCIManagedCluster owner ObjectKey")
 			return nil
 		}
 		if cluster == nil {
