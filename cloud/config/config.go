@@ -162,12 +162,6 @@ func getConfigFromDir(path string) (*AuthConfig, error) {
 func NewConfigurationProvider(cfg *AuthConfig) (common.ConfigurationProvider, error) {
 	if cfg.UseInstancePrincipals {
 		return auth.InstancePrincipalConfigurationProvider()
-	} else if cfg.UseWorkloadIdentity {
-		_, contains := os.LookupEnv(auth.ResourcePrincipalVersionEnvVar)
-		if !contains {
-			os.Setenv(auth.ResourcePrincipalVersionEnvVar, auth.ResourcePrincipalVersion1_1)
-		}
-		return auth.OkeWorkloadIdentityConfigurationProvider()
 	} else {
 		return NewConfigurationProviderWithUserPrincipal(cfg)
 	}

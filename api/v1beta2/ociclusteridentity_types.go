@@ -29,6 +29,8 @@ const (
 	UserPrincipal PrincipalType = "UserPrincipal"
 	// InstancePrincipal represents a instance principal.
 	InstancePrincipal PrincipalType = "InstancePrincipal"
+	// WorkloadPrincipal represents a workload principal.
+	WorkloadPrincipal PrincipalType = "Workload"
 )
 
 // OCIClusterIdentitySpec defines the parameters that are used to create an OCIClusterIdentity.

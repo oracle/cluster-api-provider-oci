@@ -20,7 +20,11 @@ import (
 	"context"
 	"crypto/x509"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
 	"reflect"
+	"time"
 
 	"github.com/go-logr/logr"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
@@ -41,6 +45,14 @@ import (
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+)
+
+const (
+	instanceMetadataRegionInfoURLV2 = "http://169.254.169.254/opc/v2/instance/regionInfo/regionIdentifier"
+)
+
+var (
+	currentRegion *string
 )
 
 // GetClusterIdentityFromRef returns the OCIClusterIdentity referenced by the OCICluster.
@@ -143,6 +155,41 @@ func GetOrBuildClientFromIdentity(ctx context.Context, c client.Client, identity
 		return clientProvider, nil
 	} else if identity.Spec.Type == infrastructurev1beta2.InstancePrincipal {
 		provider, err := auth.InstancePrincipalConfigurationProvider()
+		if err != nil {
+			return nil, err
+		}
+		pool, err := getOCIClientCertPool(ctx, c, namespace, clientOverrides)
+		if err != nil {
+			return nil, err
+		}
+		clientProvider, err := scope.NewClientProvider(scope.ClientProviderParams{
+			CertOverride:          pool,
+			OciAuthConfigProvider: provider,
+			ClientOverrides:       clientOverrides})
+
+		if err != nil {
+			return nil, err
+		}
+		return clientProvider, nil
+	} else if identity.Spec.Type == infrastructurev1beta2.WorkloadPrincipal {
+		_, containsVersion := os.LookupEnv(auth.ResourcePrincipalVersionEnvVar)
+		if !containsVersion {
+			os.Setenv(auth.ResourcePrincipalVersionEnvVar, auth.ResourcePrincipalVersion1_1)
+		}
+		_, containsRegion := os.LookupEnv(auth.ResourcePrincipalRegionEnvVar)
+		if !containsRegion {
+			// initialize the current region from region metadata
+			if currentRegion == nil {
+				regionByte, err := getRegionInfoFromInstanceMetadataServiceProd()
+				if err != nil {
+					return nil, err
+				}
+				currentRegion = common.String(string(regionByte))
+			}
+			os.Setenv(auth.ResourcePrincipalRegionEnvVar, *currentRegion)
+		}
+
+		provider, err := auth.OkeWorkloadIdentityConfigurationProvider()
 		if err != nil {
 			return nil, err
 		}
@@ -405,6 +452,35 @@ func DeleteOrphanedMachinePoolMachines(ctx context.Context, params MachineParams
 	}
 
 	return nil
+}
+func getRegionInfoFromInstanceMetadataServiceProd() ([]byte, error) {
+	request, err := http.NewRequest(http.MethodGet, instanceMetadataRegionInfoURLV2, nil)
+	request.Header.Add("Authorization", "Bearer Oracle")
+
+	client := &http.Client{
+		Timeout: time.Second * 10,
+	}
+	resp, err := client.Do(request)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to call instance metadata service. Error: %v", err)
+	}
+
+	statusCode := resp.StatusCode
+
+	defer resp.Body.Close()
+
+	content, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get region information from response body. Error: %v", err)
+	}
+
+	if statusCode != http.StatusOK {
+		err = fmt.Errorf("HTTP Get failed: URL: %s, Status: %s, Message: %s",
+			instanceMetadataRegionInfoURLV2, resp.Status, string(content))
+		return nil, err
+	}
+
+	return content, nil
 }
 
 // MachineParams specifies the params required to create or delete machinepool machines.
