@@ -21,7 +21,8 @@ import (
 )
 
 const (
-	LogLevelWarn = 3
+	LogLevelWarn  = 3
+	LogLevelDebug = 2
 )
 
 // GetNsgNamesFromId returns the names of the NSGs with the provided IDs
