@@ -25,7 +25,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/go-logr/logr"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
@@ -613,7 +612,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 			return false, err
 		}
 		m.Logger.Info("Node pool", "spec", jsonSpec, "actual", jsonActual)
-		m.Logger.V(LogLevelDebug).Info("Node pool", "spec", spew.Sdump(*spec), "actual", spew.Sdump(*actual))
+
 		nodeConfigDetails := oke.UpdateNodePoolNodeConfigDetails{
 			NsgIds:                         m.getWorkerMachineNSGs(),
 			IsPvEncryptionInTransitEnabled: spec.NodePoolNodeConfig.IsPvEncryptionInTransitEnabled,
