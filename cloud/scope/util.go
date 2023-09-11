@@ -26,6 +26,9 @@ const (
 
 // GetNsgNamesFromId returns the names of the NSGs with the provided IDs
 func GetNsgNamesFromId(ids []string, nsgs []*infrastructurev1beta2.NSG) []string {
+	if len(ids) == 0 {
+		return nil
+	}
 	names := make([]string, 0)
 	for _, id := range ids {
 		for _, nsg := range nsgs {
