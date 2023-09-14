@@ -1642,7 +1642,7 @@ func TestNLBReconciliationDeletion(t *testing.T) {
 			},
 		},
 		{
-			name:          "work request exists",
+			name:          "work request exists, still delete should be called",
 			errorExpected: false,
 			matchError:    errors.New("could not get nlb"),
 			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
@@ -1663,6 +1663,14 @@ func TestNLBReconciliationDeletion(t *testing.T) {
 						},
 					},
 				}, nil)
+				nlbClient.EXPECT().DeleteBackend(gomock.Any(), gomock.Eq(networkloadbalancer.DeleteBackendRequest{
+					NetworkLoadBalancerId: common.String("nlbid"),
+					BackendSetName:        common.String(APIServerLBBackendSetName),
+					BackendName:           common.String("test"),
+				})).Return(networkloadbalancer.DeleteBackendResponse{
+					OpcWorkRequestId: common.String("wrid"),
+				}, nil)
+
 				nlbClient.EXPECT().GetWorkRequest(gomock.Any(), gomock.Eq(
 					networkloadbalancer.GetWorkRequestRequest{
 						WorkRequestId: common.String("wrid"),
@@ -2235,7 +2243,7 @@ func TestLBReconciliationDeletion(t *testing.T) {
 			},
 		},
 		{
-			name:          "work request exists",
+			name:          "work request exists, still delete should be called",
 			errorExpected: false,
 			matchError:    errors.New("could not get lb"),
 			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient) {
@@ -2262,6 +2270,14 @@ func TestLBReconciliationDeletion(t *testing.T) {
 						},
 					},
 				}, nil)
+				lbClient.EXPECT().DeleteBackend(gomock.Any(), gomock.Eq(loadbalancer.DeleteBackendRequest{
+					LoadBalancerId: common.String("lbid"),
+					BackendSetName: common.String(APIServerLBBackendSetName),
+					BackendName:    common.String("1.1.1.1%3A6443"),
+				})).Return(loadbalancer.DeleteBackendResponse{
+					OpcWorkRequestId: common.String("wrid"),
+				}, nil)
+
 				lbClient.EXPECT().GetWorkRequest(gomock.Any(), gomock.Eq(
 					loadbalancer.GetWorkRequestRequest{
 						WorkRequestId: common.String("wrid"),
