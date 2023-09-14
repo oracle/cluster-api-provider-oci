@@ -37,6 +37,9 @@ func (s *ClusterScope) ReconcileApiServerLB(ctx context.Context) error {
 		return err
 	}
 	if lb != nil {
+		if lb.LifecycleState != loadbalancer.LoadBalancerLifecycleStateActive {
+			return errors.New("load balancer is not in active state, hence reconciliation cannot happen")
+		}
 		lbIP, err := s.getLoadbalancerIp(*lb)
 		if err != nil {
 			return err
