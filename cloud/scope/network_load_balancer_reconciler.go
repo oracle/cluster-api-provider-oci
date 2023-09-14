@@ -37,7 +37,7 @@ func (s *ClusterScope) ReconcileApiServerNLB(ctx context.Context) error {
 	}
 	if nlb != nil {
 		if nlb.LifecycleState != networkloadbalancer.LifecycleStateActive {
-			return errors.New("network load balancer is not in active state, hence reconciliation cannot happen")
+			return errors.New(fmt.Sprintf("network load balancer is in %s state. Waiting for ACTIVE state.", nlb.LifecycleState))
 		}
 		lbIP, err := s.getNetworkLoadbalancerIp(*nlb)
 		if err != nil {

@@ -579,7 +579,7 @@ func TestLBReconciliation(t *testing.T) {
 			name:                "lb not active",
 			errorExpected:       true,
 			errorSubStringMatch: true,
-			matchError:          errors.New("load balancer is not in active state, hence reconciliation cannot happen"),
+			matchError:          errors.New(fmt.Sprintf("load balancer is in %s state. Waiting for ACTIVE state.", loadbalancer.LoadBalancerLifecycleStateCreating)),
 			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient) {
 				ociClusterAccessor.OCICluster.Spec.NetworkSpec.APIServerLB.LoadBalancerId = common.String("lb-id")
 				lbClient.EXPECT().GetLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.GetLoadBalancerRequest{

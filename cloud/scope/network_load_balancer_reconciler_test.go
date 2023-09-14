@@ -506,7 +506,7 @@ func TestNLBReconciliation(t *testing.T) {
 			name:                "nlb not active",
 			errorExpected:       true,
 			errorSubStringMatch: true,
-			matchError:          errors.New("network load balancer is not in active state, hence reconciliation cannot happen"),
+			matchError:          errors.New(fmt.Sprintf("network load balancer is in %s state. Waiting for ACTIVE state.", networkloadbalancer.LifecycleStateCreating)),
 			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
 				ociClusterAccessor.OCICluster.Spec.NetworkSpec.APIServerLB.LoadBalancerId = common.String("nlb-id")
 				nlbClient.EXPECT().GetNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.GetNetworkLoadBalancerRequest{
