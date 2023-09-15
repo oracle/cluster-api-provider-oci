@@ -97,11 +97,12 @@ func TestNLBReconciliation(t *testing.T) {
 				})).
 					Return(networkloadbalancer.GetNetworkLoadBalancerResponse{
 						NetworkLoadBalancer: networkloadbalancer.NetworkLoadBalancer{
-							Id:           common.String("nlb-id"),
-							FreeformTags: tags,
-							DefinedTags:  make(map[string]map[string]interface{}),
-							IsPrivate:    common.Bool(false),
-							DisplayName:  common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
+							LifecycleState: networkloadbalancer.LifecycleStateActive,
+							Id:             common.String("nlb-id"),
+							FreeformTags:   tags,
+							DefinedTags:    make(map[string]map[string]interface{}),
+							IsPrivate:      common.Bool(false),
+							DisplayName:    common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
 							IpAddresses: []networkloadbalancer.IpAddress{
 								{
 									IpAddress: common.String("2.2.2.2"),
@@ -123,11 +124,12 @@ func TestNLBReconciliation(t *testing.T) {
 				})).
 					Return(networkloadbalancer.GetNetworkLoadBalancerResponse{
 						NetworkLoadBalancer: networkloadbalancer.NetworkLoadBalancer{
-							Id:           common.String("nlb-id"),
-							FreeformTags: tags,
-							DefinedTags:  make(map[string]map[string]interface{}),
-							IsPrivate:    common.Bool(false),
-							DisplayName:  common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
+							LifecycleState: networkloadbalancer.LifecycleStateActive,
+							Id:             common.String("nlb-id"),
+							FreeformTags:   tags,
+							DefinedTags:    make(map[string]map[string]interface{}),
+							IsPrivate:      common.Bool(false),
+							DisplayName:    common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
 						},
 					}, nil)
 			},
@@ -143,11 +145,12 @@ func TestNLBReconciliation(t *testing.T) {
 				})).
 					Return(networkloadbalancer.GetNetworkLoadBalancerResponse{
 						NetworkLoadBalancer: networkloadbalancer.NetworkLoadBalancer{
-							Id:           common.String("nlb-id"),
-							FreeformTags: tags,
-							DefinedTags:  make(map[string]map[string]interface{}),
-							IsPrivate:    common.Bool(false),
-							DisplayName:  common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
+							LifecycleState: networkloadbalancer.LifecycleStateActive,
+							Id:             common.String("nlb-id"),
+							FreeformTags:   tags,
+							DefinedTags:    make(map[string]map[string]interface{}),
+							IsPrivate:      common.Bool(false),
+							DisplayName:    common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
 							IpAddresses: []networkloadbalancer.IpAddress{
 								{
 									IpAddress: common.String("2.2.2.2"),
@@ -191,11 +194,12 @@ func TestNLBReconciliation(t *testing.T) {
 				})).
 					Return(networkloadbalancer.GetNetworkLoadBalancerResponse{
 						NetworkLoadBalancer: networkloadbalancer.NetworkLoadBalancer{
-							Id:           common.String("nlb-id"),
-							FreeformTags: tags,
-							DefinedTags:  make(map[string]map[string]interface{}),
-							IsPrivate:    common.Bool(false),
-							DisplayName:  common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
+							LifecycleState: networkloadbalancer.LifecycleStateActive,
+							Id:             common.String("nlb-id"),
+							FreeformTags:   tags,
+							DefinedTags:    make(map[string]map[string]interface{}),
+							IsPrivate:      common.Bool(false),
+							DisplayName:    common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
 							IpAddresses: []networkloadbalancer.IpAddress{
 								{
 									IpAddress: common.String("2.2.2.2"),
@@ -466,11 +470,12 @@ func TestNLBReconciliation(t *testing.T) {
 				})).
 					Return(networkloadbalancer.GetNetworkLoadBalancerResponse{
 						NetworkLoadBalancer: networkloadbalancer.NetworkLoadBalancer{
-							Id:           common.String("nlb-id"),
-							FreeformTags: tags,
-							DefinedTags:  make(map[string]map[string]interface{}),
-							IsPrivate:    common.Bool(false),
-							DisplayName:  common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver-test")),
+							LifecycleState: networkloadbalancer.LifecycleStateActive,
+							Id:             common.String("nlb-id"),
+							FreeformTags:   tags,
+							DefinedTags:    make(map[string]map[string]interface{}),
+							IsPrivate:      common.Bool(false),
+							DisplayName:    common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver-test")),
 							IpAddresses: []networkloadbalancer.IpAddress{
 								{
 									IpAddress: common.String("2.2.2.2"),
@@ -498,6 +503,34 @@ func TestNLBReconciliation(t *testing.T) {
 			},
 		},
 		{
+			name:                "nlb not active",
+			errorExpected:       true,
+			errorSubStringMatch: true,
+			matchError:          errors.New(fmt.Sprintf("network load balancer is in %s state. Waiting for ACTIVE state.", networkloadbalancer.LifecycleStateCreating)),
+			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
+				ociClusterAccessor.OCICluster.Spec.NetworkSpec.APIServerLB.LoadBalancerId = common.String("nlb-id")
+				nlbClient.EXPECT().GetNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.GetNetworkLoadBalancerRequest{
+					NetworkLoadBalancerId: common.String("nlb-id"),
+				})).
+					Return(networkloadbalancer.GetNetworkLoadBalancerResponse{
+						NetworkLoadBalancer: networkloadbalancer.NetworkLoadBalancer{
+							LifecycleState: networkloadbalancer.LifecycleStateCreating,
+							Id:             common.String("nlb-id"),
+							FreeformTags:   tags,
+							DefinedTags:    make(map[string]map[string]interface{}),
+							IsPrivate:      common.Bool(false),
+							DisplayName:    common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver-test")),
+							IpAddresses: []networkloadbalancer.IpAddress{
+								{
+									IpAddress: common.String("2.2.2.2"),
+									IsPublic:  common.Bool(true),
+								},
+							},
+						},
+					}, nil)
+			},
+		},
+		{
 			name:                "nlb update request failed",
 			errorExpected:       true,
 			errorSubStringMatch: true,
@@ -509,11 +542,12 @@ func TestNLBReconciliation(t *testing.T) {
 				})).
 					Return(networkloadbalancer.GetNetworkLoadBalancerResponse{
 						NetworkLoadBalancer: networkloadbalancer.NetworkLoadBalancer{
-							Id:           common.String("nlb-id"),
-							FreeformTags: tags,
-							DefinedTags:  make(map[string]map[string]interface{}),
-							IsPrivate:    common.Bool(false),
-							DisplayName:  common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver-test")),
+							LifecycleState: networkloadbalancer.LifecycleStateActive,
+							Id:             common.String("nlb-id"),
+							FreeformTags:   tags,
+							DefinedTags:    make(map[string]map[string]interface{}),
+							IsPrivate:      common.Bool(false),
+							DisplayName:    common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver-test")),
 							IpAddresses: []networkloadbalancer.IpAddress{
 								{
 									IpAddress: common.String("2.2.2.2"),

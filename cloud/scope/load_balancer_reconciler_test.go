@@ -97,11 +97,12 @@ func TestLBReconciliation(t *testing.T) {
 				})).
 					Return(loadbalancer.GetLoadBalancerResponse{
 						LoadBalancer: loadbalancer.LoadBalancer{
-							Id:           common.String("lb-id"),
-							FreeformTags: tags,
-							DefinedTags:  make(map[string]map[string]interface{}),
-							IsPrivate:    common.Bool(false),
-							DisplayName:  common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
+							Id:             common.String("lb-id"),
+							LifecycleState: loadbalancer.LoadBalancerLifecycleStateActive,
+							FreeformTags:   tags,
+							DefinedTags:    make(map[string]map[string]interface{}),
+							IsPrivate:      common.Bool(false),
+							DisplayName:    common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
 							IpAddresses: []loadbalancer.IpAddress{
 								{
 									IpAddress: common.String("2.2.2.2"),
@@ -123,11 +124,12 @@ func TestLBReconciliation(t *testing.T) {
 				})).
 					Return(loadbalancer.GetLoadBalancerResponse{
 						LoadBalancer: loadbalancer.LoadBalancer{
-							Id:           common.String("lb-id"),
-							FreeformTags: tags,
-							DefinedTags:  make(map[string]map[string]interface{}),
-							IsPrivate:    common.Bool(false),
-							DisplayName:  common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
+							Id:             common.String("lb-id"),
+							LifecycleState: loadbalancer.LoadBalancerLifecycleStateActive,
+							FreeformTags:   tags,
+							DefinedTags:    make(map[string]map[string]interface{}),
+							IsPrivate:      common.Bool(false),
+							DisplayName:    common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
 						},
 					}, nil)
 			},
@@ -143,11 +145,12 @@ func TestLBReconciliation(t *testing.T) {
 				})).
 					Return(loadbalancer.GetLoadBalancerResponse{
 						LoadBalancer: loadbalancer.LoadBalancer{
-							Id:           common.String("lb-id"),
-							FreeformTags: tags,
-							DefinedTags:  make(map[string]map[string]interface{}),
-							IsPrivate:    common.Bool(false),
-							DisplayName:  common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
+							Id:             common.String("lb-id"),
+							LifecycleState: loadbalancer.LoadBalancerLifecycleStateActive,
+							FreeformTags:   tags,
+							DefinedTags:    make(map[string]map[string]interface{}),
+							IsPrivate:      common.Bool(false),
+							DisplayName:    common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
 							IpAddresses: []loadbalancer.IpAddress{
 								{
 									IpAddress: common.String("2.2.2.2"),
@@ -189,11 +192,12 @@ func TestLBReconciliation(t *testing.T) {
 				})).
 					Return(loadbalancer.GetLoadBalancerResponse{
 						LoadBalancer: loadbalancer.LoadBalancer{
-							Id:           common.String("lb-id"),
-							FreeformTags: tags,
-							DefinedTags:  make(map[string]map[string]interface{}),
-							IsPrivate:    common.Bool(false),
-							DisplayName:  common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
+							Id:             common.String("lb-id"),
+							LifecycleState: loadbalancer.LoadBalancerLifecycleStateActive,
+							FreeformTags:   tags,
+							DefinedTags:    make(map[string]map[string]interface{}),
+							IsPrivate:      common.Bool(false),
+							DisplayName:    common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
 							IpAddresses: []loadbalancer.IpAddress{
 								{
 									IpAddress: common.String("2.2.2.2"),
@@ -537,11 +541,12 @@ func TestLBReconciliation(t *testing.T) {
 				})).
 					Return(loadbalancer.GetLoadBalancerResponse{
 						LoadBalancer: loadbalancer.LoadBalancer{
-							Id:           common.String("lb-id"),
-							FreeformTags: tags,
-							DefinedTags:  make(map[string]map[string]interface{}),
-							IsPrivate:    common.Bool(false),
-							DisplayName:  common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver-test")),
+							Id:             common.String("lb-id"),
+							LifecycleState: loadbalancer.LoadBalancerLifecycleStateActive,
+							FreeformTags:   tags,
+							DefinedTags:    make(map[string]map[string]interface{}),
+							IsPrivate:      common.Bool(false),
+							DisplayName:    common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver-test")),
 							IpAddresses: []loadbalancer.IpAddress{
 								{
 									IpAddress: common.String("2.2.2.2"),
@@ -571,6 +576,34 @@ func TestLBReconciliation(t *testing.T) {
 			},
 		},
 		{
+			name:                "lb not active",
+			errorExpected:       true,
+			errorSubStringMatch: true,
+			matchError:          errors.New(fmt.Sprintf("load balancer is in %s state. Waiting for ACTIVE state.", loadbalancer.LoadBalancerLifecycleStateCreating)),
+			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient) {
+				ociClusterAccessor.OCICluster.Spec.NetworkSpec.APIServerLB.LoadBalancerId = common.String("lb-id")
+				lbClient.EXPECT().GetLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.GetLoadBalancerRequest{
+					LoadBalancerId: common.String("lb-id"),
+				})).
+					Return(loadbalancer.GetLoadBalancerResponse{
+						LoadBalancer: loadbalancer.LoadBalancer{
+							Id:             common.String("lb-id"),
+							LifecycleState: loadbalancer.LoadBalancerLifecycleStateCreating,
+							FreeformTags:   tags,
+							DefinedTags:    make(map[string]map[string]interface{}),
+							IsPrivate:      common.Bool(false),
+							DisplayName:    common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver-test")),
+							IpAddresses: []loadbalancer.IpAddress{
+								{
+									IpAddress: common.String("2.2.2.2"),
+									IsPublic:  common.Bool(true),
+								},
+							},
+						},
+					}, nil)
+			},
+		},
+		{
 			name:                "lb update request failed",
 			errorExpected:       true,
 			errorSubStringMatch: true,
@@ -582,11 +615,12 @@ func TestLBReconciliation(t *testing.T) {
 				})).
 					Return(loadbalancer.GetLoadBalancerResponse{
 						LoadBalancer: loadbalancer.LoadBalancer{
-							Id:           common.String("lb-id"),
-							FreeformTags: tags,
-							DefinedTags:  make(map[string]map[string]interface{}),
-							IsPrivate:    common.Bool(false),
-							DisplayName:  common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver-test")),
+							Id:             common.String("lb-id"),
+							LifecycleState: loadbalancer.LoadBalancerLifecycleStateActive,
+							FreeformTags:   tags,
+							DefinedTags:    make(map[string]map[string]interface{}),
+							IsPrivate:      common.Bool(false),
+							DisplayName:    common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver-test")),
 							IpAddresses: []loadbalancer.IpAddress{
 								{
 									IpAddress: common.String("2.2.2.2"),
