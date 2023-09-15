@@ -19,7 +19,6 @@ package scope
 import (
 	"context"
 	"fmt"
-
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/oci-go-sdk/v65/common"
@@ -37,6 +36,9 @@ func (s *ClusterScope) ReconcileApiServerNLB(ctx context.Context) error {
 		return err
 	}
 	if nlb != nil {
+		if nlb.LifecycleState != networkloadbalancer.LifecycleStateActive {
+			return errors.New(fmt.Sprintf("network load balancer is in %s state. Waiting for ACTIVE state.", nlb.LifecycleState))
+		}
 		lbIP, err := s.getNetworkLoadbalancerIp(*nlb)
 		if err != nil {
 			return err
