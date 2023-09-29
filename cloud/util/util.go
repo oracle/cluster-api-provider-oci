@@ -24,7 +24,6 @@ import (
 	"net/http"
 	"os"
 	"reflect"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -46,6 +45,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 const (
@@ -176,7 +176,7 @@ func GetOrBuildClientFromIdentity(ctx context.Context, c client.Client, identity
 	} else if identity.Spec.Type == infrastructurev1beta2.WorkloadPrincipal {
 		_, containsVersion := os.LookupEnv(auth.ResourcePrincipalVersionEnvVar)
 		if !containsVersion {
-			os.Setenv(auth.ResourcePrincipalVersionEnvVar, auth.ResourcePrincipalVersion1_1)
+			os.Setenv(auth.ResourcePrincipalVersionEnvVar, auth.ResourcePrincipalVersion2_2)
 		}
 		_, containsRegion := os.LookupEnv(auth.ResourcePrincipalRegionEnvVar)
 		if !containsRegion {
