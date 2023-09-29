@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"os"
 	"reflect"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -109,6 +110,7 @@ func getOCIClientCertPool(ctx context.Context, c client.Client, namespace string
 
 // GetOrBuildClientFromIdentity creates ClientProvider from OCIClusterIdentity object
 func GetOrBuildClientFromIdentity(ctx context.Context, c client.Client, identity *infrastructurev1beta2.OCIClusterIdentity, defaultRegion string, clientOverrides *infrastructurev1beta2.ClientOverrides, namespace string) (*scope.ClientProvider, error) {
+	logger := log.FromContext(ctx)
 	if identity.Spec.Type == infrastructurev1beta2.UserPrincipal {
 		secretRef := identity.Spec.PrincipalSecret
 		key := types.NamespacedName{
@@ -186,6 +188,7 @@ func GetOrBuildClientFromIdentity(ctx context.Context, c client.Client, identity
 				}
 				currentRegion = common.String(string(regionByte))
 			}
+			logger.Info(fmt.Sprintf("Looked up region %s from instance metadata", *currentRegion))
 			os.Setenv(auth.ResourcePrincipalRegionEnvVar, *currentRegion)
 		}
 
@@ -462,7 +465,7 @@ func getRegionInfoFromInstanceMetadataServiceProd() ([]byte, error) {
 	}
 	resp, err := client.Do(request)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to call instance metadata service. Error: %v", err)
+		return nil, errors.Wrap(err, "failed to call instance metadata service")
 	}
 
 	statusCode := resp.StatusCode
@@ -471,7 +474,7 @@ func getRegionInfoFromInstanceMetadataServiceProd() ([]byte, error) {
 
 	content, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get region information from response body. Error: %v", err)
+		return nil, errors.Wrap(err, "failed to get region information from response body")
 	}
 
 	if statusCode != http.StatusOK {
