@@ -855,6 +855,12 @@ type Subnet struct {
 	// The security list associated with Subnet.
 	// +optional
 	SecurityList *SecurityList `json:"securityList,omitempty"`
+
+	// DnsLabel DNS label for the subnet, used in conjunction with the VNIC's hostname and
+	// VCN's DNS label to form a fully qualified domain name (FQDN) for each VNIC
+	// within this subnet (for example, `bminstance1.subnet123.vcn1.oraclevcn.com`).
+	// +optional
+	DnsLabel *string `json:"dnsLabel,omitempty"`
 }
 
 // NSG defines configuration for a Network Security Group.
@@ -913,6 +919,12 @@ type VCN struct {
 	// Configuration for NSG management.
 	// +optional
 	NetworkSecurityGroup NetworkSecurityGroup `json:"networkSecurityGroup,omitempty"`
+
+	// DnsLabel specifies a DNS label for the VCN, used in conjunction with the VNIC's hostname and
+	// subnet's DNS label to form a fully qualified domain name (FQDN) for each VNIC
+	// within this subnet (for example, `bminstance1.subnet123.vcn1.oraclevcn.com`).
+	// +optional
+	DnsLabel *string `json:"dnsLabel,omitempty"`
 }
 
 // LoadBalancerType is an enumeration of the supported load balancer types.

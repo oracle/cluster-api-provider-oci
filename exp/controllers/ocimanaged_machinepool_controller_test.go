@@ -802,6 +802,7 @@ func getMachinePool() *expclusterv1.MachinePool {
 func getCluster() *clusterv1.Cluster {
 	infraRef := corev1.ObjectReference{
 		Name: "oci-cluster",
+		Kind: "OCICluster",
 	}
 	return &clusterv1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{

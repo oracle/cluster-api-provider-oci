@@ -37,6 +37,9 @@ func (s *ClusterScope) ReconcileApiServerLB(ctx context.Context) error {
 		return err
 	}
 	if lb != nil {
+		if lb.LifecycleState != loadbalancer.LoadBalancerLifecycleStateActive {
+			return errors.New(fmt.Sprintf("load balancer is in %s state. Waiting for ACTIVE state.", lb.LifecycleState))
+		}
 		lbIP, err := s.getLoadbalancerIp(*lb)
 		if err != nil {
 			return err

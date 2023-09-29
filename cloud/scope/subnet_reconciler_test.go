@@ -133,6 +133,7 @@ func TestClusterScope_ReconcileSubnet(t *testing.T) {
 									EgressRules:  customEgress,
 									IngressRules: customIngress,
 								},
+								DnsLabel: common.String("label"),
 							},
 							{
 								Role: infrastructurev1beta2.ServiceLoadBalancerRole,
@@ -235,6 +236,7 @@ func TestClusterScope_ReconcileSubnet(t *testing.T) {
 						ProhibitPublicIpOnVnic:  common.Bool(true),
 						RouteTableId:            common.String("private"),
 						SecurityListIds:         []string{"sec_list_id"},
+						DnsLabel:                common.String("label"),
 					},
 				})).Return(
 					core.CreateSubnetResponse{

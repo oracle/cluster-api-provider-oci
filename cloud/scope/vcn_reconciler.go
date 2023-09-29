@@ -133,6 +133,7 @@ func (s *ClusterScope) CreateVCN(ctx context.Context, spec infrastructurev1beta2
 		CidrBlocks:    []string{spec.CIDR},
 		FreeformTags:  s.GetFreeFormTags(),
 		DefinedTags:   s.GetDefinedTags(),
+		DnsLabel:      spec.DnsLabel,
 	}
 	vcnResponse, err := s.VCNClient.CreateVcn(ctx, core.CreateVcnRequest{
 		CreateVcnDetails: vcnDetails,
