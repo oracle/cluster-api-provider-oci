@@ -20,7 +20,11 @@ import (
 	"context"
 	"crypto/x509"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
 	"reflect"
+	"time"
 
 	"github.com/go-logr/logr"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
@@ -41,6 +45,15 @@ import (
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+)
+
+const (
+	instanceMetadataRegionInfoURLV2 = "http://169.254.169.254/opc/v2/instance/regionInfo/regionIdentifier"
+)
+
+var (
+	currentRegion *string
 )
 
 // GetClusterIdentityFromRef returns the OCIClusterIdentity referenced by the OCICluster.
@@ -97,6 +110,7 @@ func getOCIClientCertPool(ctx context.Context, c client.Client, namespace string
 
 // GetOrBuildClientFromIdentity creates ClientProvider from OCIClusterIdentity object
 func GetOrBuildClientFromIdentity(ctx context.Context, c client.Client, identity *infrastructurev1beta2.OCIClusterIdentity, defaultRegion string, clientOverrides *infrastructurev1beta2.ClientOverrides, namespace string) (*scope.ClientProvider, error) {
+	logger := log.FromContext(ctx)
 	if identity.Spec.Type == infrastructurev1beta2.UserPrincipal {
 		secretRef := identity.Spec.PrincipalSecret
 		key := types.NamespacedName{
@@ -143,6 +157,42 @@ func GetOrBuildClientFromIdentity(ctx context.Context, c client.Client, identity
 		return clientProvider, nil
 	} else if identity.Spec.Type == infrastructurev1beta2.InstancePrincipal {
 		provider, err := auth.InstancePrincipalConfigurationProvider()
+		if err != nil {
+			return nil, err
+		}
+		pool, err := getOCIClientCertPool(ctx, c, namespace, clientOverrides)
+		if err != nil {
+			return nil, err
+		}
+		clientProvider, err := scope.NewClientProvider(scope.ClientProviderParams{
+			CertOverride:          pool,
+			OciAuthConfigProvider: provider,
+			ClientOverrides:       clientOverrides})
+
+		if err != nil {
+			return nil, err
+		}
+		return clientProvider, nil
+	} else if identity.Spec.Type == infrastructurev1beta2.WorkloadPrincipal {
+		_, containsVersion := os.LookupEnv(auth.ResourcePrincipalVersionEnvVar)
+		if !containsVersion {
+			os.Setenv(auth.ResourcePrincipalVersionEnvVar, auth.ResourcePrincipalVersion2_2)
+		}
+		_, containsRegion := os.LookupEnv(auth.ResourcePrincipalRegionEnvVar)
+		if !containsRegion {
+			// initialize the current region from region metadata
+			if currentRegion == nil {
+				regionByte, err := getRegionInfoFromInstanceMetadataServiceProd()
+				if err != nil {
+					return nil, err
+				}
+				currentRegion = common.String(string(regionByte))
+			}
+			logger.Info(fmt.Sprintf("Looked up region %s from instance metadata", *currentRegion))
+			os.Setenv(auth.ResourcePrincipalRegionEnvVar, *currentRegion)
+		}
+
+		provider, err := auth.OkeWorkloadIdentityConfigurationProvider()
 		if err != nil {
 			return nil, err
 		}
@@ -405,6 +455,35 @@ func DeleteOrphanedMachinePoolMachines(ctx context.Context, params MachineParams
 	}
 
 	return nil
+}
+func getRegionInfoFromInstanceMetadataServiceProd() ([]byte, error) {
+	request, err := http.NewRequest(http.MethodGet, instanceMetadataRegionInfoURLV2, nil)
+	request.Header.Add("Authorization", "Bearer Oracle")
+
+	client := &http.Client{
+		Timeout: time.Second * 10,
+	}
+	resp, err := client.Do(request)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to call instance metadata service")
+	}
+
+	statusCode := resp.StatusCode
+
+	defer resp.Body.Close()
+
+	content, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get region information from response body")
+	}
+
+	if statusCode != http.StatusOK {
+		err = fmt.Errorf("HTTP Get failed: URL: %s, Status: %s, Message: %s",
+			instanceMetadataRegionInfoURLV2, resp.Status, string(content))
+		return nil, err
+	}
+
+	return content, nil
 }
 
 // MachineParams specifies the params required to create or delete machinepool machines.
