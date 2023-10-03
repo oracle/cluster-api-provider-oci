@@ -272,9 +272,6 @@ func TestNormalReconciliationFunction(t *testing.T) {
 						},
 					}, nil)
 			},
-			validate: func(g *WithT, t *test, result ctrl.Result) {
-				g.Expect(result.RequeueAfter).To(Equal(time.Second * 300))
-			},
 		},
 		{
 			name:               "instance in running state, reconcile every 5 minutes",
@@ -285,7 +282,6 @@ func TestNormalReconciliationFunction(t *testing.T) {
 					machineScope.Machine.ObjectMeta.Annotations = make(map[string]string)
 				}
 				machineScope.Machine.ObjectMeta.Annotations[infrastructurev1beta2.DeleteMachineOnInstanceTermination] = ""
-				machineScope.Machine.ObjectMeta.Annotations[infrastructurev1beta2.DeleteMachineOnInstanceTerminationReconcileInterval] = "120"
 				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
 					{
 						Type:    clusterv1.MachineInternalIP,
@@ -301,9 +297,6 @@ func TestNormalReconciliationFunction(t *testing.T) {
 							LifecycleState: core.InstanceLifecycleStateRunning,
 						},
 					}, nil)
-			},
-			validate: func(g *WithT, t *test, result ctrl.Result) {
-				g.Expect(result.RequeueAfter).To(Equal(time.Second * 120))
 			},
 		},
 		{

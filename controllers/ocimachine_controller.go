@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -296,24 +295,10 @@ func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.
 	machine := machineScope.OCIMachine
 	infraMachine := machineScope.Machine
 
-	// if delete machine on instance termination is set to true, reconcile after every 5 minutes
-	reconcileResult := reconcile.Result{}
 	annotations := infraMachine.GetAnnotations()
 	deleteMachineOnTermination := false
 	if annotations != nil {
 		_, deleteMachineOnTermination = annotations[infrastructurev1beta2.DeleteMachineOnInstanceTermination]
-		if deleteMachineOnTermination {
-			reconcileResult.RequeueAfter = 300 * time.Second
-		}
-		interval, ok := annotations[infrastructurev1beta2.DeleteMachineOnInstanceTerminationReconcileInterval]
-		if ok {
-			// ignoring the error
-			i, err := strconv.Atoi(interval)
-			if err != nil {
-				logger.Info("Error on converting interval annotation to integer, using default")
-			}
-			reconcileResult.RequeueAfter = time.Duration(i) * time.Second
-		}
 	}
 	// Make sure bootstrap data is available and populated.
 	if machineScope.Machine.Spec.Bootstrap.DataSecretName == nil {
@@ -386,7 +371,7 @@ func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.
 			"Instance is in ready state")
 		conditions.MarkTrue(machineScope.OCIMachine, infrastructurev1beta2.InstanceReadyCondition)
 		machineScope.SetReady()
-		return reconcileResult, nil
+		return reconcile.Result{}, nil
 	case core.InstanceLifecycleStateTerminated:
 		if deleteMachineOnTermination && infraMachine.DeletionTimestamp == nil {
 			if err := machineScope.Client.Delete(ctx, infraMachine); err != nil {

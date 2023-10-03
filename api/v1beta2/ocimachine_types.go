@@ -28,9 +28,8 @@ import (
 const (
 	// MachineFinalizer allows ReconcileMachine to clean up OCI resources associated with OCIMachine before
 	// removing it from the apiserver.
-	MachineFinalizer                                    = "ocimachine.infrastructure.cluster.x-k8s.io"
-	DeleteMachineOnInstanceTermination                  = "ociclusters.x-k8s.io/delete-machine-on-instance-termination"
-	DeleteMachineOnInstanceTerminationReconcileInterval = "ociclusters.x-k8s.io/delete-machine-on-instance-termination-reconcile-interval"
+	MachineFinalizer                   = "ocimachine.infrastructure.cluster.x-k8s.io"
+	DeleteMachineOnInstanceTermination = "ociclusters.x-k8s.io/delete-machine-on-instance-termination"
 )
 
 // OCIMachineSpec defines the desired state of OCIMachine
