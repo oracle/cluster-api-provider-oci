@@ -374,6 +374,7 @@ func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.
 		return reconcile.Result{}, nil
 	case core.InstanceLifecycleStateTerminated:
 		if deleteMachineOnTermination && infraMachine.DeletionTimestamp == nil {
+			logger.Info("Deleting underlying machine as instance is terminated")
 			if err := machineScope.Client.Delete(ctx, infraMachine); err != nil {
 				return reconcile.Result{}, errors.Wrapf(err, "failed to delete machine %s/%s", infraMachine.Namespace, infraMachine.Name)
 			}
