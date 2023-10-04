@@ -298,6 +298,9 @@ func TestNormalReconciliationFunction(t *testing.T) {
 						},
 					}, nil)
 			},
+			validate: func(g *WithT, t *test, result ctrl.Result) {
+				g.Expect(result.RequeueAfter).To(Equal(300 * time.Second))
+			},
 		},
 		{
 			name:               "instance in terminated state",
@@ -314,6 +317,9 @@ func TestNormalReconciliationFunction(t *testing.T) {
 							LifecycleState: core.InstanceLifecycleStateTerminated,
 						},
 					}, nil)
+			},
+			validate: func(g *WithT, t *test, result ctrl.Result) {
+				g.Expect(result.RequeueAfter).To(Equal(0 * time.Second))
 			},
 		},
 		{
