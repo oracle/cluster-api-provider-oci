@@ -83,5 +83,22 @@ spec:
   allowedNamespaces: {}
 ```
 
+## Cluster Identity using Workload Identity
+
+Cluster Identity supports [Workload][workload] access to OCI resources also knows as Workload Identity. The example 
+`OCIClusterIdentity` spec shown below uses Workload Identity.
+
+```yaml
+---
+kind: OCIClusterIdentity
+metadata:
+  name: cluster-identity
+  namespace: default
+spec:
+  type: Workload
+  allowedNamespaces: {}
+```
+
 [iam-user]: https://docs.oracle.com/en-us/iaas/Content/API/Concepts/apisigningkey.htm#Required_Keys_and_OCIDs
 [instance-principals]: https://docs.oracle.com/en-us/iaas/Content/Identity/Tasks/callingservicesfrominstances.htm
+[workload]: https://docs.oracle.com/en-us/iaas/Content/ContEng/Tasks/contenggrantingworkloadaccesstoresources.htm
