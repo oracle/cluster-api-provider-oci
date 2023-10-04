@@ -248,6 +248,13 @@ func (r *OCIMachineReconciler) OCIClusterToOCIMachines(ctx context.Context) hand
 func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) (ctrl.Result, error) {
 	controllerutil.AddFinalizer(machineScope.OCIMachine, infrastructurev1beta2.MachineFinalizer)
 	machine := machineScope.OCIMachine
+	infraMachine := machineScope.Machine
+
+	annotations := infraMachine.GetAnnotations()
+	deleteMachineOnTermination := false
+	if annotations != nil {
+		_, deleteMachineOnTermination = annotations[infrastructurev1beta2.DeleteMachineOnInstanceTermination]
+	}
 	// Make sure bootstrap data is available and populated.
 	if machineScope.Machine.Spec.Bootstrap.DataSecretName == nil {
 		r.Recorder.Event(machine, corev1.EventTypeNormal, infrastructurev1beta2.WaitingForBootstrapDataReason, "Bootstrap data secret reference is not yet available")
@@ -319,7 +326,21 @@ func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.
 			"Instance is in ready state")
 		conditions.MarkTrue(machineScope.OCIMachine, infrastructurev1beta2.InstanceReadyCondition)
 		machineScope.SetReady()
-		return reconcile.Result{}, nil
+		if deleteMachineOnTermination {
+			// typically, if the VM is terminated, we should get machine events, so ideally, the 300 seconds
+			// requeue time is not required, but in case, the event is missed, adding the requeue time
+			return reconcile.Result{RequeueAfter: 300 * time.Second}, nil
+		} else {
+			return reconcile.Result{}, nil
+		}
+	case core.InstanceLifecycleStateTerminated:
+		if deleteMachineOnTermination && infraMachine.DeletionTimestamp == nil {
+			logger.Info("Deleting underlying machine as instance is terminated")
+			if err := machineScope.Client.Delete(ctx, infraMachine); err != nil {
+				return reconcile.Result{}, errors.Wrapf(err, "failed to delete machine %s/%s", infraMachine.Namespace, infraMachine.Name)
+			}
+		}
+		fallthrough
 	default:
 		conditions.MarkFalse(machineScope.OCIMachine, infrastructurev1beta2.InstanceReadyCondition, infrastructurev1beta2.InstanceProvisionFailedReason, clusterv1.ConditionSeverityError, "")
 		machineScope.SetFailureReason(capierrors.CreateMachineError)
