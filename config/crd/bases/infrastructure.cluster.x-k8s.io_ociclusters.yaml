@@ -1373,7 +1373,10 @@ spec:
                                               If the rule''s `destination` is the
                                               `cidrBlock` value for a Service (the
                                               rule is for traffic destined for a particular
-                                              `Service` through a service gateway).'
+                                              `Service` through a service gateway).
+                                              * `NETWORK_SECURITY_GROUP`: If the rule''s
+                                              `destination` is the OCID (https://docs.cloud.oracle.com/iaas/Content/General/Concepts/identifiers.htm)
+                                              of a NetworkSecurityGroup.'
                                             type: string
                                           icmpOptions:
                                             description: 'IcmpOptions Optional and
@@ -1605,7 +1608,10 @@ spec:
                                               If the rule''s `source` is the `cidrBlock`
                                               value for a Service (the rule is for
                                               traffic coming from a particular `Service`
-                                              through a service gateway).'
+                                              through a service gateway). * `NETWORK_SECURITY_GROUP`:
+                                              If the rule''s `destination` is the
+                                              OCID (https://docs.cloud.oracle.com/iaas/Content/General/Concepts/identifiers.htm)
+                                              of a NetworkSecurityGroup.'
                                             type: string
                                           tcpOptions:
                                             description: TcpOptions Optional and valid
@@ -1806,7 +1812,10 @@ spec:
                                           * `SERVICE_CIDR_BLOCK`: If the rule''s `destination`
                                           is the `cidrBlock` value for a Service (the
                                           rule is for traffic destined for a particular
-                                          `Service` through a service gateway).'
+                                          `Service` through a service gateway). *
+                                          `NETWORK_SECURITY_GROUP`: If the rule''s
+                                          `destination` is the OCID (https://docs.cloud.oracle.com/iaas/Content/General/Concepts/identifiers.htm)
+                                          of a NetworkSecurityGroup.'
                                         type: string
                                       icmpOptions:
                                         description: 'IcmpOptions Optional and valid
@@ -2018,7 +2027,10 @@ spec:
                                           If the rule''s `source` is the `cidrBlock`
                                           value for a Service (the rule is for traffic
                                           coming from a particular `Service` through
-                                          a service gateway).'
+                                          a service gateway). * `NETWORK_SECURITY_GROUP`:
+                                          If the rule''s `destination` is the OCID
+                                          (https://docs.cloud.oracle.com/iaas/Content/General/Concepts/identifiers.htm)
+                                          of a NetworkSecurityGroup.'
                                         type: string
                                       tcpOptions:
                                         description: TcpOptions Optional and valid

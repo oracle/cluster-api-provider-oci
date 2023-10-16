@@ -192,6 +192,8 @@ spec:
                 description: InfrastructureMachineKind is the kind of the infrastructure
                   resources behind MachinePool Machines.
                 type: string
+              nodepoolLifecycleState:
+                type: string
               ready:
                 type: boolean
               replicas:
@@ -381,6 +383,8 @@ spec:
               infrastructureMachineKind:
                 description: InfrastructureMachineKind is the kind of the infrastructure
                   resources behind MachinePool Machines.
+                type: string
+              nodepoolLifecycleState:
                 type: string
               ready:
                 type: boolean

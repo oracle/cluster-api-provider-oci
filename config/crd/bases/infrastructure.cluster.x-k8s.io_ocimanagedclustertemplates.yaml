@@ -1449,7 +1449,11 @@ spec:
                                                       is the `cidrBlock` value for
                                                       a Service (the rule is for traffic
                                                       destined for a particular `Service`
-                                                      through a service gateway).'
+                                                      through a service gateway).
+                                                      * `NETWORK_SECURITY_GROUP`:
+                                                      If the rule''s `destination`
+                                                      is the OCID (https://docs.cloud.oracle.com/iaas/Content/General/Concepts/identifiers.htm)
+                                                      of a NetworkSecurityGroup.'
                                                     type: string
                                                   icmpOptions:
                                                     description: 'IcmpOptions Optional
@@ -1718,7 +1722,11 @@ spec:
                                                       `cidrBlock` value for a Service
                                                       (the rule is for traffic coming
                                                       from a particular `Service`
-                                                      through a service gateway).'
+                                                      through a service gateway).
+                                                      * `NETWORK_SECURITY_GROUP`:
+                                                      If the rule''s `destination`
+                                                      is the OCID (https://docs.cloud.oracle.com/iaas/Content/General/Concepts/identifiers.htm)
+                                                      of a NetworkSecurityGroup.'
                                                     type: string
                                                   tcpOptions:
                                                     description: TcpOptions Optional
@@ -1941,7 +1949,11 @@ spec:
                                                   `destination` is the `cidrBlock`
                                                   value for a Service (the rule is
                                                   for traffic destined for a particular
-                                                  `Service` through a service gateway).'
+                                                  `Service` through a service gateway).
+                                                  * `NETWORK_SECURITY_GROUP`: If the
+                                                  rule''s `destination` is the OCID
+                                                  (https://docs.cloud.oracle.com/iaas/Content/General/Concepts/identifiers.htm)
+                                                  of a NetworkSecurityGroup.'
                                                 type: string
                                               icmpOptions:
                                                 description: 'IcmpOptions Optional
@@ -2187,7 +2199,10 @@ spec:
                                                   `source` is the `cidrBlock` value
                                                   for a Service (the rule is for traffic
                                                   coming from a particular `Service`
-                                                  through a service gateway).'
+                                                  through a service gateway). * `NETWORK_SECURITY_GROUP`:
+                                                  If the rule''s `destination` is
+                                                  the OCID (https://docs.cloud.oracle.com/iaas/Content/General/Concepts/identifiers.htm)
+                                                  of a NetworkSecurityGroup.'
                                                 type: string
                                               tcpOptions:
                                                 description: TcpOptions Optional and
