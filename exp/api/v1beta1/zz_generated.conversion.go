@@ -1069,6 +1069,7 @@ func autoConvert_v1beta2_OCIManagedMachinePoolSpec_To_v1beta1_OCIManagedMachineP
 func autoConvert_v1beta1_OCIManagedMachinePoolStatus_To_v1beta2_OCIManagedMachinePoolStatus(in *OCIManagedMachinePoolStatus, out *v1beta2.OCIManagedMachinePoolStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
 	out.Conditions = *(*clusterapiapiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
+	out.NodepoolLifecycleState = in.NodepoolLifecycleState
 	out.Replicas = in.Replicas
 	out.FailureReason = (*errors.MachineStatusError)(unsafe.Pointer(in.FailureReason))
 	out.FailureMessages = *(*[]string)(unsafe.Pointer(&in.FailureMessages))
@@ -1084,6 +1085,7 @@ func Convert_v1beta1_OCIManagedMachinePoolStatus_To_v1beta2_OCIManagedMachinePoo
 func autoConvert_v1beta2_OCIManagedMachinePoolStatus_To_v1beta1_OCIManagedMachinePoolStatus(in *v1beta2.OCIManagedMachinePoolStatus, out *OCIManagedMachinePoolStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
 	out.Conditions = *(*clusterapiapiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
+	out.NodepoolLifecycleState = in.NodepoolLifecycleState
 	out.Replicas = in.Replicas
 	out.FailureReason = (*errors.MachineStatusError)(unsafe.Pointer(in.FailureReason))
 	out.FailureMessages = *(*[]string)(unsafe.Pointer(&in.FailureMessages))
@@ -1308,6 +1310,7 @@ func autoConvert_v1beta1_OCIVirtualMachinePoolStatus_To_v1beta2_OCIVirtualMachin
 	out.Ready = in.Ready
 	out.Conditions = *(*clusterapiapiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
 	out.Replicas = in.Replicas
+	out.NodepoolLifecycleState = in.NodepoolLifecycleState
 	out.FailureReason = (*errors.MachinePoolStatusFailure)(unsafe.Pointer(in.FailureReason))
 	out.FailureMessages = *(*[]string)(unsafe.Pointer(&in.FailureMessages))
 	out.InfrastructureMachineKind = in.InfrastructureMachineKind
@@ -1323,6 +1326,7 @@ func autoConvert_v1beta2_OCIVirtualMachinePoolStatus_To_v1beta1_OCIVirtualMachin
 	out.Ready = in.Ready
 	out.Conditions = *(*clusterapiapiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
 	out.Replicas = in.Replicas
+	out.NodepoolLifecycleState = in.NodepoolLifecycleState
 	out.FailureReason = (*errors.MachinePoolStatusFailure)(unsafe.Pointer(in.FailureReason))
 	out.FailureMessages = *(*[]string)(unsafe.Pointer(&in.FailureMessages))
 	out.InfrastructureMachineKind = in.InfrastructureMachineKind
