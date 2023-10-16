@@ -318,6 +318,8 @@ func TestNormalReconciliationFunction(t *testing.T) {
 				g.Expect(*createMachine.Spec.ProviderID).To(Equal("id-1"))
 				g.Expect(*createMachine.Spec.OCID).To(Equal("id-1"))
 
+				g.Expect(ms.OCIManagedMachinePool.Status.NodepoolLifecycleState).To(Equal("CREATING"))
+
 				g.Expect(len(t.deletePoolMachines)).To(Equal(1))
 				deleteMachine := t.deletePoolMachines[0]
 				g.Expect(deleteMachine.Name).To(Equal("test"))

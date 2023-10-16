@@ -289,6 +289,8 @@ func (r *OCIVirtualMachinePoolReconciler) reconcileNormal(ctx context.Context, l
 	machinePoolScope.OCIVirtualMachinePool.Spec.ProviderID = common.String(fmt.Sprintf("oci://%s", *nodePool.Id))
 	machinePoolScope.OCIVirtualMachinePool.Spec.ID = nodePool.Id
 
+	machinePoolScope.OCIVirtualMachinePool.Status.NodepoolLifecycleState = fmt.Sprintf("%s", nodePool.LifecycleState)
+
 	switch nodePool.LifecycleState {
 	case oke.VirtualNodePoolLifecycleStateCreating:
 		machinePoolScope.Info("Node Pool is creating")
@@ -366,6 +368,7 @@ func (r *OCIVirtualMachinePoolReconciler) reconcileDelete(ctx context.Context, m
 		return reconcile.Result{}, nil
 	}
 
+	machinePoolScope.OCIVirtualMachinePool.Status.NodepoolLifecycleState = fmt.Sprintf("%s", nodePool.LifecycleState)
 	machinePoolScope.Info(fmt.Sprintf("Node Pool lifecycle state is %v", nodePool.LifecycleState))
 	switch nodePool.LifecycleState {
 	case oke.VirtualNodePoolLifecycleStateDeleting:

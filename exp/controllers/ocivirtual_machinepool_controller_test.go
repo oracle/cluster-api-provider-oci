@@ -319,6 +319,8 @@ func TestNormalReconciliationFunctionForVirtualMP(t *testing.T) {
 				g.Expect(*machine.Spec.InstanceName).To(Equal("name-1"))
 				g.Expect(*machine.Spec.ProviderID).To(Equal("id-1"))
 				g.Expect(*machine.Spec.OCID).To(Equal("id-1"))
+
+				g.Expect(ms.OCIVirtualMachinePool.Status.NodepoolLifecycleState).To(Equal("ACTIVE"))
 			},
 		},
 		{

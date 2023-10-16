@@ -106,6 +106,9 @@ type OCIVirtualMachinePoolStatus struct {
 	// +optional
 	Replicas int32 `json:"replicas"`
 
+	// +optional
+	NodepoolLifecycleState string `json:"nodepoolLifecycleState,omitempty"`
+
 	// FailureReason will contains the CAPI MachinePoolStatusFailure if the virtual machine pool has hit an error condition.
 	// +optional
 	FailureReason *errors.MachinePoolStatusFailure `json:"failureReason,omitempty"`
