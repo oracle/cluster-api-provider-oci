@@ -216,6 +216,9 @@ type OCIManagedMachinePoolStatus struct {
 	// +optional
 	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
 
+	// +optional
+	NodepoolLifecycleState string `json:"nodepoolLifecycleState,omitempty"`
+
 	// Replicas is the most recently observed number of replicas
 	// +optional
 	Replicas int32 `json:"replicas"`

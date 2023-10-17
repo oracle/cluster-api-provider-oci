@@ -300,6 +300,7 @@ func (r *OCIManagedMachinePoolReconciler) reconcileNormal(ctx context.Context, l
 		machinePoolScope.OCIManagedMachinePool.Status.FailureMessages = failureMessages
 	}
 
+	machinePoolScope.OCIManagedMachinePool.Status.NodepoolLifecycleState = fmt.Sprintf("%s", nodePool.LifecycleState)
 	switch nodePool.LifecycleState {
 	case oke.NodePoolLifecycleStateCreating:
 		machinePoolScope.Info("Node Pool is creating")
@@ -430,6 +431,7 @@ func (r *OCIManagedMachinePoolReconciler) reconcileDelete(ctx context.Context, m
 	}
 
 	machinePoolScope.Info(fmt.Sprintf("Node Pool lifecycle state is %v", nodePool.LifecycleState))
+	machinePoolScope.OCIManagedMachinePool.Status.NodepoolLifecycleState = fmt.Sprintf("%s", nodePool.LifecycleState)
 	switch nodePool.LifecycleState {
 	case oke.NodePoolLifecycleStateDeleting:
 		// Node Pool is already deleting
