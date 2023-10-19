@@ -326,6 +326,10 @@ func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.
 		machineScope.Info("Instance is pending")
 		conditions.MarkFalse(machineScope.OCIMachine, infrastructurev1beta2.InstanceReadyCondition, infrastructurev1beta2.InstanceNotReadyReason, clusterv1.ConditionSeverityInfo, "")
 		return reconcile.Result{RequeueAfter: 10 * time.Second}, nil
+	case core.InstanceLifecycleStateStopping, core.InstanceLifecycleStateStopped:
+		machineScope.SetNotReady()
+		conditions.MarkFalse(machineScope.OCIMachine, infrastructurev1beta2.InstanceReadyCondition, infrastructurev1beta2.InstanceNotReadyReason, clusterv1.ConditionSeverityInfo, "")
+		return reconcile.Result{}, nil
 	case core.InstanceLifecycleStateRunning:
 		machineScope.Info("Instance is active")
 		if machine.Status.Addresses == nil || len(machine.Status.Addresses) == 0 {
@@ -446,7 +450,7 @@ func (r *OCIMachineReconciler) reconcileDelete(ctx context.Context, machineScope
 		if err != nil {
 			return reconcile.Result{}, err
 		}
-		if err := machineScope.DeleteMachine(ctx); err != nil {
+		if err := machineScope.DeleteMachine(ctx, instance); err != nil {
 			machineScope.Error(err, "Error deleting Instance")
 			return ctrl.Result{}, errors.Wrapf(err, "error deleting instance %s", machineScope.Name())
 		}
