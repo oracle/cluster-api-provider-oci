@@ -2391,6 +2391,7 @@ func TestInstanceDeletion(t *testing.T) {
 		expectedEvent       string
 		eventNotExpected    string
 		matchError          error
+		instance            *core.Instance
 		errorSubStringMatch bool
 		testSpecificSetup   func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient)
 	}{
@@ -2404,6 +2405,9 @@ func TestInstanceDeletion(t *testing.T) {
 					PreserveBootVolume: common.Bool(false),
 				})).Return(core.TerminateInstanceResponse{}, nil)
 			},
+			instance: &core.Instance{
+				Id: common.String("test"),
+			},
 		},
 		{
 			name:          "delete instance error",
@@ -2416,6 +2420,9 @@ func TestInstanceDeletion(t *testing.T) {
 					PreserveBootVolume: common.Bool(false),
 				})).Return(core.TerminateInstanceResponse{}, errors.New("could not terminate instance"))
 			},
+			instance: &core.Instance{
+				Id: common.String("test"),
+			},
 		},
 	}
 
@@ -2425,7 +2432,7 @@ func TestInstanceDeletion(t *testing.T) {
 			defer teardown(t, g)
 			setup(t, g)
 			tc.testSpecificSetup(ms, computeClient)
-			err := ms.DeleteMachine(context.Background())
+			err := ms.DeleteMachine(context.Background(), tc.instance)
 			if tc.errorExpected {
 				g.Expect(err).To(Not(BeNil()))
 				if tc.errorSubStringMatch {
