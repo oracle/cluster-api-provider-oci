@@ -299,6 +299,38 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			},
 		},
 		{
+			name:               "instance in stopped state",
+			errorExpected:      false,
+			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityInfo, infrastructurev1beta2.InstanceNotReadyReason}},
+			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient) {
+				computeClient.EXPECT().GetInstance(gomock.Any(), gomock.Eq(core.GetInstanceRequest{
+					InstanceId: common.String("test"),
+				})).
+					Return(core.GetInstanceResponse{
+						Instance: core.Instance{
+							Id:             common.String("test"),
+							LifecycleState: core.InstanceLifecycleStateStopped,
+						},
+					}, nil)
+			},
+		},
+		{
+			name:               "instance in stopping state",
+			errorExpected:      false,
+			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityInfo, infrastructurev1beta2.InstanceNotReadyReason}},
+			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient) {
+				computeClient.EXPECT().GetInstance(gomock.Any(), gomock.Eq(core.GetInstanceRequest{
+					InstanceId: common.String("test"),
+				})).
+					Return(core.GetInstanceResponse{
+						Instance: core.Instance{
+							Id:             common.String("test"),
+							LifecycleState: core.InstanceLifecycleStateStopping,
+						},
+					}, nil)
+			},
+		},
+		{
 			name:               "instance in terminated state",
 			errorExpected:      true,
 			expectedEvent:      "invalid lifecycle state TERMINATED",

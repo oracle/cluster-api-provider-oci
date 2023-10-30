@@ -300,8 +300,8 @@ func (m *MachineScope) getFreeFormTags(ociCluster infrastructurev1beta2.OCIClust
 }
 
 // DeleteMachine terminates the instance using InstanceId from the OCIMachine spec and deletes the boot volume
-func (m *MachineScope) DeleteMachine(ctx context.Context) error {
-	req := core.TerminateInstanceRequest{InstanceId: m.OCIMachine.Spec.InstanceId,
+func (m *MachineScope) DeleteMachine(ctx context.Context, instance *core.Instance) error {
+	req := core.TerminateInstanceRequest{InstanceId: instance.Id,
 		PreserveBootVolume: common.Bool(false)}
 	_, err := m.ComputeClient.TerminateInstance(ctx, req)
 	return err
@@ -402,6 +402,11 @@ func (m *MachineScope) GetInstanceId() *string {
 // SetReady sets the OCIMachine Ready Status.
 func (m *MachineScope) SetReady() {
 	m.OCIMachine.Status.Ready = true
+}
+
+// SetNotReady sets the OCIMachine Ready Status to false.
+func (m *MachineScope) SetNotReady() {
+	m.OCIMachine.Status.Ready = false
 }
 
 // IsReady returns the ready status of the machine.
