@@ -187,8 +187,8 @@ func main() {
 	ctrl.SetLogger(klog.Background())
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:             scheme,
-		MetricsBindAddress: metricsAddr,
+		Scheme:           scheme,
+		PprofBindAddress: metricsAddr,
 		WebhookServer: webhook.NewServer(webhook.Options{
 			Port:    webhookPort,
 			CertDir: webhookCertDir,
@@ -202,7 +202,7 @@ func main() {
 		RenewDeadline:              &leaderElectionRenewDeadline,
 		RetryPeriod:                &leaderElectionRetryPeriod,
 		Cache: cache.Options{
-			Namespaces: []string{watchNamespace},
+			DefaultNamespaces: map[string]cache.Config{watchNamespace: {}},
 		},
 	})
 	if err != nil {
