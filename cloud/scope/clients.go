@@ -17,7 +17,6 @@ limitations under the License.
 package scope
 
 import (
-	"crypto/tls"
 	"crypto/x509"
 	"net/http"
 	"sync"
@@ -416,9 +415,9 @@ func (c *ClientProvider) setCerts(client *http.Client) error {
 	if tr.TLSClientConfig != nil {
 		tr.TLSClientConfig.RootCAs = c.certOverride
 	} else {
-		tr.TLSClientConfig = &tls.Config{
-			RootCAs: c.certOverride,
-		}
+		// If TLS client config is not set, we should error out. else the default values will
+		// be used which will be insecure
+		return errors.New("TLSClientConfig is not set on the client")
 	}
 	client.Transport = tr
 
