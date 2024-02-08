@@ -732,7 +732,9 @@ func (m *MachineScope) getGetControlPlaneMachineNSGs() []string {
 	nsgs := make([]string, 0)
 	for _, nsg := range m.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List {
 		if nsg.Role == infrastructurev1beta2.ControlPlaneRole {
-			nsgs = append(nsgs, *nsg.ID)
+			if nsg.ID != nil {
+				nsgs = append(nsgs, *nsg.ID)
+			}
 		}
 	}
 	return nsgs
@@ -771,7 +773,9 @@ func (m *MachineScope) getWorkerMachineNSGs() []string {
 		for _, nsgName := range m.OCIMachine.Spec.NetworkDetails.NsgNames {
 			for _, nsg := range m.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List {
 				if nsg.Name == nsgName {
-					nsgs = append(nsgs, *nsg.ID)
+					if nsg.ID != nil {
+						nsgs = append(nsgs, *nsg.ID)
+					}
 				}
 			}
 		}
@@ -780,7 +784,9 @@ func (m *MachineScope) getWorkerMachineNSGs() []string {
 		nsgs := make([]string, 0)
 		for _, nsg := range m.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List {
 			if nsg.Role == infrastructurev1beta2.WorkerRole {
-				nsgs = append(nsgs, *nsg.ID)
+				if nsg.ID != nil {
+					nsgs = append(nsgs, *nsg.ID)
+				}
 			}
 		}
 		return nsgs
