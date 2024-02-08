@@ -165,7 +165,9 @@ func (s *ClusterScope) CreateNLB(ctx context.Context, lb infrastructurev1beta2.L
 	var controlPlaneEndpointSubnets []string
 	for _, subnet := range s.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets {
 		if subnet.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
-			controlPlaneEndpointSubnets = append(controlPlaneEndpointSubnets, *subnet.ID)
+			if subnet.ID != nil {
+				controlPlaneEndpointSubnets = append(controlPlaneEndpointSubnets, *subnet.ID)
+			}
 		}
 	}
 	if len(controlPlaneEndpointSubnets) < 1 {
