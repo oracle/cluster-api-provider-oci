@@ -609,6 +609,10 @@ func (m *MachineScope) ReconcileDeleteInstanceOnLB(ctx context.Context) error {
 			LoadBalancerId: loadbalancerId,
 		})
 		if err != nil {
+			if ociutil.IsNotFound(err) {
+				m.Logger.Info("LB has been deleted")
+				return nil
+			}
 			return err
 		}
 		backendSet := lb.BackendSets[APIServerLBBackendSetName]
@@ -658,6 +662,10 @@ func (m *MachineScope) ReconcileDeleteInstanceOnLB(ctx context.Context) error {
 			NetworkLoadBalancerId: loadbalancerId,
 		})
 		if err != nil {
+			if ociutil.IsNotFound(err) {
+				m.Logger.Info("NLB has been deleted")
+				return nil
+			}
 			return err
 		}
 		backendSet := lb.BackendSets[APIServerLBBackendSetName]
