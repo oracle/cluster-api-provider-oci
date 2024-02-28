@@ -610,7 +610,7 @@ func (m *MachineScope) ReconcileDeleteInstanceOnLB(ctx context.Context) error {
 		})
 		if err != nil {
 			if ociutil.IsNotFound(err) {
-				m.Logger.Info("LB has been deleted")
+				m.Logger.Info("LB has been deleted", "lb", *loadbalancerId)
 				return nil
 			}
 			return err
@@ -663,7 +663,7 @@ func (m *MachineScope) ReconcileDeleteInstanceOnLB(ctx context.Context) error {
 		})
 		if err != nil {
 			if ociutil.IsNotFound(err) {
-				m.Logger.Info("NLB has been deleted")
+				m.Logger.Info("NLB has been deleted", "nlb", *loadbalancerId)
 				return nil
 			}
 			return err
