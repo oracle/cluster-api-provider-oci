@@ -1635,6 +1635,16 @@ func TestNLBReconciliationDeletion(t *testing.T) {
 			},
 		},
 		{
+			name:          "get nlb error, not found",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
+				nlbClient.EXPECT().GetNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.GetNetworkLoadBalancerRequest{
+					NetworkLoadBalancerId: common.String("nlbid"),
+				})).Return(networkloadbalancer.GetNetworkLoadBalancerResponse{
+					NetworkLoadBalancer: networkloadbalancer.NetworkLoadBalancer{}}, ociutil.ErrNotFound)
+			},
+		},
+		{
 			name:          "backend exists",
 			errorExpected: false,
 			matchError:    errors.New("could not get nlb"),
@@ -2176,6 +2186,22 @@ func TestLBReconciliationDeletion(t *testing.T) {
 		errorSubStringMatch bool
 		testSpecificSetup   func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient)
 	}{
+		{
+			name:          "get lb error",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_lb.MockLoadBalancerClient) {
+				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+					{
+						Type:    clusterv1.MachineInternalIP,
+						Address: "1.1.1.1",
+					},
+				}
+				nlbClient.EXPECT().GetLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.GetLoadBalancerRequest{
+					LoadBalancerId: common.String("lbid"),
+				})).Return(loadbalancer.GetLoadBalancerResponse{
+					LoadBalancer: loadbalancer.LoadBalancer{}}, ociutil.ErrNotFound)
+			},
+		},
 		{
 			name:          "get lb error",
 			errorExpected: true,
