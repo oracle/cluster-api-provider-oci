@@ -200,27 +200,33 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 	}
 
 	failureDomain := m.Machine.Spec.FailureDomain
-	if failureDomain == nil {
-		m.Logger.Info("Failure Domain is not set in the machine spec, setting it to a random value from 1 to 3")
-		randomFaultDomain, err := rand.Int(rand.Reader, big.NewInt(3))
+	var faultDomain string
+	var availabilityDomain string
+	if failureDomain != nil {
+		failureDomainIndex, err := strconv.Atoi(*failureDomain)
 		if err != nil {
-			m.Logger.Error(err, "Failed to generate random fault domain")
+			m.Logger.Error(err, "Failure Domain is not a valid integer")
+			return nil, errors.Wrap(err, "invalid failure domain parameter, must be a valid integer")
+		}
+		m.Logger.Info("Failure Domain being used", "failure-domain", failureDomainIndex)
+		if failureDomainIndex < 1 || failureDomainIndex > 3 {
+			err = errors.New("failure domain should be a value between 1 and 3")
+			m.Logger.Error(err, "Failure domain should be a value between 1 and 3")
+			return nil, err
+		}
+		faultDomain = m.OCIClusterAccessor.GetFailureDomains()[*failureDomain].Attributes[FaultDomain]
+		availabilityDomain = m.OCIClusterAccessor.GetFailureDomains()[*failureDomain].Attributes[AvailabilityDomain]
+	} else {
+		randomFailureDomain, err := rand.Int(rand.Reader, big.NewInt(3))
+		if err != nil {
+			m.Logger.Error(err, "Failed to generate random failure domain")
 			return nil, err
 		}
 		// the random number generated is between zero and two, whereas we need a number between one and three
-		failureDomain = common.String(strconv.Itoa(int(randomFaultDomain.Int64()) + 1))
+		failureDomain = common.String(strconv.Itoa(int(randomFailureDomain.Int64()) + 1))
+		availabilityDomain = m.OCIClusterAccessor.GetFailureDomains()[*failureDomain].Attributes[AvailabilityDomain]
 	}
-	failureDomainIndex, err := strconv.Atoi(*failureDomain)
-	if err != nil {
-		m.Logger.Error(err, "Failure Domain is not a valid integer")
-		return nil, errors.Wrap(err, "invalid failure domain parameter, must be a valid integer")
-	}
-	m.Logger.Info("Failure Domain being used", "failure-domain", failureDomainIndex)
-	if failureDomainIndex < 1 || failureDomainIndex > 3 {
-		err = errors.New("failure domain should be a value between 1 and 3")
-		m.Logger.Error(err, "Failure domain should be a value between 1 and 3")
-		return nil, err
-	}
+
 	metadata := m.OCIMachine.Spec.Metadata
 	if metadata == nil {
 		metadata = make(map[string]string)
@@ -231,8 +237,6 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 
 	definedTags := ConvertMachineDefinedTags(m.OCIMachine.Spec.DefinedTags)
 
-	availabilityDomain := m.OCIClusterAccessor.GetFailureDomains()[*failureDomain].Attributes[AvailabilityDomain]
-	faultDomain := m.OCIClusterAccessor.GetFailureDomains()[*failureDomain].Attributes[FaultDomain]
 	launchDetails := core.LaunchInstanceDetails{DisplayName: common.String(m.OCIMachine.Name),
 		SourceDetails: sourceDetails,
 		CreateVnicDetails: &core.CreateVnicDetails{
