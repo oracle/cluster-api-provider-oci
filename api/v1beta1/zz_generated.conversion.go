@@ -1674,6 +1674,7 @@ func autoConvert_v1beta1_NetworkDetails_To_v1beta2_NetworkDetails(in *NetworkDet
 	out.AssignPublicIp = in.AssignPublicIp
 	out.SubnetName = in.SubnetName
 	out.NSGId = (*string)(unsafe.Pointer(in.NSGId))
+	out.NSGIds = *(*[]string)(unsafe.Pointer(&in.NSGIds))
 	out.SkipSourceDestCheck = (*bool)(unsafe.Pointer(in.SkipSourceDestCheck))
 	out.NsgNames = *(*[]string)(unsafe.Pointer(&in.NsgNames))
 	out.HostnameLabel = (*string)(unsafe.Pointer(in.HostnameLabel))
@@ -1688,6 +1689,7 @@ func autoConvert_v1beta2_NetworkDetails_To_v1beta1_NetworkDetails(in *v1beta2.Ne
 	out.SubnetName = in.SubnetName
 	out.SkipSourceDestCheck = (*bool)(unsafe.Pointer(in.SkipSourceDestCheck))
 	out.NSGId = (*string)(unsafe.Pointer(in.NSGId))
+	out.NSGIds = *(*[]string)(unsafe.Pointer(&in.NSGIds))
 	out.NsgNames = *(*[]string)(unsafe.Pointer(&in.NsgNames))
 	out.HostnameLabel = (*string)(unsafe.Pointer(in.HostnameLabel))
 	out.DisplayName = (*string)(unsafe.Pointer(in.DisplayName))

@@ -44,7 +44,11 @@ type NetworkDetails struct {
 	SubnetName string `json:"subnetName,omitempty"`
 
 	// NSGId defines the ID of the NSG to use. This parameter takes priority over NsgNames.
+	// Deprecated, please use NetworkDetails.NSGIds
 	NSGId *string `json:"nsgId,omitempty"`
+
+	// NSGIds defines the list of NSG IDs to use. This parameter takes priority over NsgNames.
+	NSGIds []string `json:"nsgIds,omitempty"`
 
 	// SkipSourceDestCheck defines whether the source/destination check is disabled on the VNIC.
 	SkipSourceDestCheck *bool `json:"skipSourceDestCheck,omitempty"`

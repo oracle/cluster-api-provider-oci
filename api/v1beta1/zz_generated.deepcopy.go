@@ -947,6 +947,11 @@ func (in *NetworkDetails) DeepCopyInto(out *NetworkDetails) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.NSGIds != nil {
+		in, out := &in.NSGIds, &out.NSGIds
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.SkipSourceDestCheck != nil {
 		in, out := &in.SkipSourceDestCheck, &out.SkipSourceDestCheck
 		*out = new(bool)

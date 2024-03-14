@@ -188,8 +188,11 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 	}
 
 	var nsgIds []string
+	machineNsgIds := m.OCIMachine.Spec.NetworkDetails.NSGIds
 	nsgId := m.OCIMachine.Spec.NetworkDetails.NSGId
-	if nsgId != nil {
+	if machineNsgIds != nil && len(machineNsgIds) > 0 {
+		nsgIds = machineNsgIds
+	} else if nsgId != nil {
 		nsgIds = []string{*nsgId}
 	} else {
 		if m.IsControlPlane() {
