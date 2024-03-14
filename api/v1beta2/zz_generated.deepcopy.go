@@ -1153,6 +1153,11 @@ func (in *NetworkDetails) DeepCopyInto(out *NetworkDetails) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.NSGIds != nil {
+		in, out := &in.NSGIds, &out.NSGIds
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.NsgNames != nil {
 		in, out := &in.NsgNames, &out.NsgNames
 		*out = make([]string, len(*in))
