@@ -47,7 +47,11 @@ type NetworkDetails struct {
 	SkipSourceDestCheck *bool `json:"skipSourceDestCheck,omitempty"`
 
 	// NSGId defines the ID of the NSG to use. This parameter takes priority over NsgNames.
+	// Deprecated, please use NetworkDetails.NSGIds
 	NSGId *string `json:"nsgId,omitempty"`
+
+	// NSGIds defines the list of NSG IDs to use. This parameter takes priority over NsgNames.
+	NSGIds []string `json:"nsgIds,omitempty"`
 
 	// NsgNames defines a list of the nsg names of the network security groups (NSGs) to add the VNIC to.
 	NsgNames []string `json:"nsgNames,omitempty"`

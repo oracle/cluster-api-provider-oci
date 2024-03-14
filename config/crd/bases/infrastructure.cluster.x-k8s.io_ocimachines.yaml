@@ -271,8 +271,14 @@ spec:
                     type: string
                   nsgId:
                     description: NSGId defines the ID of the NSG to use. This parameter
-                      takes priority over NsgNames.
+                      takes priority over NsgNames. Deprecated, please use NetworkDetails.NSGIds
                     type: string
+                  nsgIds:
+                    description: NSGIds defines the list of NSG IDs to use. This parameter
+                      takes priority over NsgNames.
+                    items:
+                      type: string
+                    type: array
                   nsgNames:
                     description: NsgNames defines a list of the nsg names of the network
                       security groups (NSGs) to add the VNIC to.
@@ -1032,8 +1038,14 @@ spec:
                     type: string
                   nsgId:
                     description: NSGId defines the ID of the NSG to use. This parameter
-                      takes priority over NsgNames.
+                      takes priority over NsgNames. Deprecated, please use NetworkDetails.NSGIds
                     type: string
+                  nsgIds:
+                    description: NSGIds defines the list of NSG IDs to use. This parameter
+                      takes priority over NsgNames.
+                    items:
+                      type: string
+                    type: array
                   nsgNames:
                     description: NsgNames defines a list of the nsg names of the network
                       security groups (NSGs) to add the VNIC to.
