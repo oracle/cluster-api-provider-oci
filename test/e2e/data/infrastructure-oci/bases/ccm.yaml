@@ -94,12 +94,13 @@ data:
                 path: /etc/kubernetes
           containers:
             - name: oci-cloud-controller-manager
-              image: ghcr.io/oracle/cloud-provider-oci:v1.26.0
+              image: ghcr.io/oracle/cloud-provider-oci:v1.28.0
               command: ["/usr/local/bin/oci-cloud-controller-manager"]
               args:
                 - --cloud-config=/etc/oci/cloud-provider.yaml
                 - --cloud-provider=oci
-                - --leader-elect-resource-lock=configmapsleases
+                - --leader-elect-resource-lock=leases
+                - --concurrent-service-syncs=3
                 - --v=2
               volumeMounts:
                 - name: cfg
@@ -145,7 +146,7 @@ data:
           - list
           - watch
           - patch
-    
+          - get
       - apiGroups:
           - ""
         resources:
@@ -242,6 +243,9 @@ data:
           - serviceaccounts
         verbs:
           - create
+          - list
+          - get
+          - watch
       - apiGroups:
           - ""
         resources:
@@ -272,7 +276,7 @@ data:
       - kind: ServiceAccount
         name: cloud-controller-manager
         namespace: kube-system
-
+        
 kind: ConfigMap
 metadata:
   annotations:
@@ -328,7 +332,7 @@ data:
             node-role.kubernetes.io/control-plane: ""
           containers:
             - name: csi-volume-provisioner
-              image: k8s.gcr.io/sig-storage/csi-provisioner:v3.2.1
+              image: registry.k8s.io/sig-storage/csi-provisioner:v3.6.0
               args:
                 - --csi-address=/var/run/shared-tmpfs/csi.sock
                 - --volume-name-prefix=csi
@@ -343,7 +347,7 @@ data:
                 - mountPath: /var/run/shared-tmpfs
                   name: shared-tmpfs
             - name: csi-fss-volume-provisioner
-              image: k8s.gcr.io/sig-storage/csi-provisioner:v3.2.1
+              image: registry.k8s.io/sig-storage/csi-provisioner:v3.6.0
               args:
                 - --csi-address=/var/run/shared-tmpfs/csi-fss.sock
                 - --volume-name-prefix=csi-fss
@@ -358,7 +362,7 @@ data:
                 - mountPath: /var/run/shared-tmpfs
                   name: shared-tmpfs
             - name: csi-attacher
-              image: k8s.gcr.io/sig-storage/csi-attacher:v4.2.0
+              image: registry.k8s.io/sig-storage/csi-attacher:v4.4.0
               args:
                 - --csi-address=/var/run/shared-tmpfs/csi.sock
                 - --timeout=120s
@@ -371,7 +375,7 @@ data:
                 - mountPath: /var/run/shared-tmpfs
                   name: shared-tmpfs
             - name: csi-resizer
-              image: k8s.gcr.io/sig-storage/csi-resizer:v1.7.0
+              image: registry.k8s.io/sig-storage/csi-resizer:v1.9.0
               args:
                 - --csi-address=/var/run/shared-tmpfs/csi.sock
                 - --leader-election
@@ -379,13 +383,26 @@ data:
               volumeMounts:
                 - mountPath: /var/run/shared-tmpfs
                   name: shared-tmpfs
+            - name: snapshot-controller
+              image: registry.k8s.io/sig-storage/snapshot-controller:v6.2.0
+              args:
+                - --leader-election
+              imagePullPolicy: "IfNotPresent"
+              volumeMounts:
+                - mountPath: /var/run/shared-tmpfs
+                  name: shared-tmpfs
+            - name: csi-snapshotter
+              image: registry.k8s.io/sig-storage/csi-snapshotter:v6.2.0
+              args:
+                - --csi-address=/var/run/shared-tmpfs/csi.sock
+                - --leader-election
             - name: oci-csi-controller-driver
               args:
                 - --endpoint=unix://var/run/shared-tmpfs/csi.sock
                 - --fss-csi-endpoint=unix://var/run/shared-tmpfs/csi-fss.sock
               command:
                 - /usr/local/bin/oci-csi-controller-driver
-              image: ghcr.io/oracle/cloud-provider-oci:v1.26.0
+              image: ghcr.io/oracle/cloud-provider-oci:v1.28.0
               imagePullPolicy: IfNotPresent
               volumeMounts:
                 - name: config
@@ -536,7 +553,7 @@ data:
                       fieldPath: spec.nodeName
                 - name: PATH
                   value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/host/usr/bin:/host/sbin
-              image: ghcr.io/oracle/cloud-provider-oci:v1.26.0
+              image: ghcr.io/oracle/cloud-provider-oci:v1.28.0
               securityContext:
                 privileged: true
               volumeMounts:
@@ -551,6 +568,7 @@ data:
                   name: device-dir
                 - mountPath: /host
                   name: host-root
+                  mountPropagation: HostToContainer
                 - mountPath: /sbin/iscsiadm
                   name: chroot-iscsiadm
                   subPath: iscsiadm
@@ -570,7 +588,7 @@ data:
               args:
                 - --csi-address=/csi/csi.sock
                 - --kubelet-registration-path=/var/lib/kubelet/plugins/blockvolume.csi.oraclecloud.com/csi.sock
-              image: k8s.gcr.io/sig-storage/csi-node-driver-registrar:v2.5.1
+              image: registry.k8s.io/sig-storage/csi-node-driver-registrar:v2.5.1
               securityContext:
                 privileged: true
               lifecycle:
@@ -589,7 +607,7 @@ data:
               args:
                 - --csi-address=/fss/csi.sock
                 - --kubelet-registration-path=/var/lib/kubelet/plugins/fss.csi.oraclecloud.com/csi.sock
-              image: k8s.gcr.io/sig-storage/csi-node-driver-registrar:v2.5.0
+              image: registry.k8s.io/sig-storage/csi-node-driver-registrar:v2.5.0
               securityContext:
                 privileged: true
               lifecycle:
@@ -669,36 +687,36 @@ data:
       name: csi-oci
       namespace: kube-system
     rules:
-      - apiGroups: [ "" ]
-        resources: [ "events" ]
-        verbs: [ "get", "list", "watch", "create", "update", "patch" ]
-      - apiGroups: [ "" ]
-        resources: [ "nodes" ]
-        verbs: [ "get", "list", "watch" ]
-      - apiGroups: [ "volume.oci.oracle.com" ]
-        resources: [ "blockscsiinfos" ]
-        verbs: [ "get", "list", "watch", "create", "delete", "update", "patch" ]
-      - apiGroups: [ "" ]
-        resources: [ "persistentvolumes" ]
-        verbs: [ "get", "list", "watch", "create", "delete", "patch" ]
-      - apiGroups: [ "" ]
-        resources: [ "persistentvolumeclaims" ]
-        verbs: [ "get", "list", "watch", "update", "create" ]
-      - apiGroups: [ "storage.k8s.io" ]
-        resources: [ "storageclasses", "volumeattachments", "volumeattachments/status", "csinodes" ]
-        verbs: [ "get", "list", "watch", "patch" ]
-      - apiGroups: [ "coordination.k8s.io" ]
-        resources: [ "leases" ]
-        verbs: [ "get", "list", "watch", "create", "delete", "update", "patch" ]
-      - apiGroups: [ "" ]
-        resources: [ "endpoints" ]
-        verbs: [ "get", "watch", "create", "update" ]
-      - apiGroups: [ "" ]
-        resources: [ "pods" ]
-        verbs: [ "get", "list", "watch" ]
-      - apiGroups: [ "" ]
-        resources: [ "persistentvolumeclaims/status" ]
-        verbs: [ "patch" ]
+     - apiGroups: [ "" ]
+       resources: [ "events" ]
+       verbs: [ "get", "list", "watch", "create", "update", "patch" ]
+     - apiGroups: [ "" ]
+       resources: [ "nodes" ]
+       verbs: [ "get", "list", "watch" ]
+     - apiGroups: [ "volume.oci.oracle.com" ]
+       resources: [ "blockscsiinfos" ]
+       verbs: [ "get", "list", "watch", "create", "delete", "update", "patch" ]
+     - apiGroups: [ "" ]
+       resources: [ "persistentvolumes" ]
+       verbs: [ "get", "list", "watch", "create", "delete", "patch" ]
+     - apiGroups: [ "" ]
+       resources: [ "persistentvolumeclaims" ]
+       verbs: [ "get", "list", "watch", "update", "create" ]
+     - apiGroups: [ "storage.k8s.io" ]
+       resources: [ "storageclasses", "volumeattachments", "volumeattachments/status", "csinodes" ]
+       verbs: [ "get", "list", "watch", "patch" ]
+     - apiGroups: [ "coordination.k8s.io" ]
+       resources: [ "leases" ]
+       verbs: [ "get", "list", "watch", "create", "delete", "update", "patch" ]
+     - apiGroups: [ "" ]
+       resources: [ "endpoints" ]
+       verbs: [ "get", "watch", "create", "update" ]
+     - apiGroups: [ "" ]
+       resources: [ "pods" ]    
+       verbs: [ "get", "list", "watch" ]
+     - apiGroups: [ "" ]
+       resources: [ "persistentvolumeclaims/status" ]
+       verbs: [ "patch" ]
     ---
     
     kind: ClusterRoleBinding
