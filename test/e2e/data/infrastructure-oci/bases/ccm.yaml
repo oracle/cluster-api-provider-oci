@@ -277,7 +277,7 @@ data:
         name: cloud-controller-manager
         namespace: kube-system
         
-        kind: ConfigMap
+kind: ConfigMap
 metadata:
   annotations:
     note: generated
