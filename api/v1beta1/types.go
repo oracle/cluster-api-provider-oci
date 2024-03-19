@@ -1027,6 +1027,10 @@ type RemotePeeringConnection struct {
 	// will be created between local and peer RPC.
 	ManagePeerRPC bool `json:"managePeerRPC,omitempty"`
 
+	// A unique name identifying the RPC, please note this is to identify the RPC
+	// from other RPC elements, and will not be used in any OCI API call.
+	Name string `json:"name,omitempty"`
+
 	// PeerRegionName defined the region name of Peer VCN.
 	PeerRegionName string `json:"peerRegionName,omitempty"`
 
