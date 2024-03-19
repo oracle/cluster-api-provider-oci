@@ -74,6 +74,7 @@ spec shown below uses Instance Principals.
 
 ```yaml
 ---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCIClusterIdentity
 metadata:
   name: cluster-identity
@@ -90,6 +91,7 @@ Cluster Identity supports [Workload][workload] access to OCI resources also know
 
 ```yaml
 ---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCIClusterIdentity
 metadata:
   name: cluster-identity
