@@ -973,6 +973,11 @@ spec:
                                 connection will be created between local and peer
                                 RPC.
                               type: boolean
+                            name:
+                              description: A unique name identifying the RPC, please
+                                note this is to identify the RPC from other RPC elements,
+                                and will not be used in any OCI API call.
+                              type: string
                             peerDRGId:
                               description: PeerDRGId defines the DRG ID of the peer.
                               type: string
@@ -2202,6 +2207,11 @@ spec:
                                 connection will be created between local and peer
                                 RPC.
                               type: boolean
+                            name:
+                              description: A unique name identifying the RPC, please
+                                note this is to identify the RPC from other RPC elements,
+                                and will not be used in any OCI API call.
+                              type: string
                             peerDRGId:
                               description: PeerDRGId defines the DRG ID of the peer.
                               type: string

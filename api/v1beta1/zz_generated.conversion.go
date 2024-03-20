@@ -3013,6 +3013,7 @@ func Convert_v1beta2_PreemptibleInstanceConfig_To_v1beta1_PreemptibleInstanceCon
 
 func autoConvert_v1beta1_RemotePeeringConnection_To_v1beta2_RemotePeeringConnection(in *RemotePeeringConnection, out *v1beta2.RemotePeeringConnection, s conversion.Scope) error {
 	out.ManagePeerRPC = in.ManagePeerRPC
+	out.Name = in.Name
 	out.PeerRegionName = in.PeerRegionName
 	out.PeerDRGId = (*string)(unsafe.Pointer(in.PeerDRGId))
 	out.PeerRPCConnectionId = (*string)(unsafe.Pointer(in.PeerRPCConnectionId))
@@ -3027,6 +3028,7 @@ func Convert_v1beta1_RemotePeeringConnection_To_v1beta2_RemotePeeringConnection(
 
 func autoConvert_v1beta2_RemotePeeringConnection_To_v1beta1_RemotePeeringConnection(in *v1beta2.RemotePeeringConnection, out *RemotePeeringConnection, s conversion.Scope) error {
 	out.ManagePeerRPC = in.ManagePeerRPC
+	out.Name = in.Name
 	out.PeerRegionName = in.PeerRegionName
 	out.PeerDRGId = (*string)(unsafe.Pointer(in.PeerDRGId))
 	out.PeerRPCConnectionId = (*string)(unsafe.Pointer(in.PeerRPCConnectionId))
