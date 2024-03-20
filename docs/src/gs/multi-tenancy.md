@@ -74,6 +74,7 @@ spec shown below uses Instance Principals.
 
 ```yaml
 ---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCIClusterIdentity
 metadata:
   name: cluster-identity
@@ -90,6 +91,7 @@ Cluster Identity supports [Workload][workload] access to OCI resources also know
 
 ```yaml
 ---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCIClusterIdentity
 metadata:
   name: cluster-identity
@@ -98,6 +100,15 @@ spec:
   type: Workload
   allowedNamespaces: {}
 ```
+CAPOCI, by default create a Service Account `capoci-controller-manager` in namespace `cluster-api-provider-oci-system`.
+Workload identity needs to have policies required to create OKE or Self managed clusters. For example, the following
+policies will provide Workload identity with permissions to create OKE cluster.
+- `Allow any-user to manage virtual-network-family in compartment <compartment> where all { request.principal.type = 'workload', request.principal.namespace = 'cluster-api-provider-oci-system', request.principal.service_account = 'capoci-controller-manager'}`
+- `Allow any-user to manage cluster-family in compartment <compartment> where all { request.principal.type = 'workload', request.principal.namespace = 'cluster-api-provider-oci-system', request.principal.service_account = 'capoci-controller-manager'}`
+- `Allow any-user to manage volume-family in compartment <compartment> where all { request.principal.type = 'workload', request.principal.namespace = 'cluster-api-provider-oci-system', request.principal.service_account = 'capoci-controller-manager'}`
+- `Allow any-user to manage instance-family in compartment <compartment> where all { request.principal.type = 'workload', request.principal.namespace = 'cluster-api-provider-oci-system', request.principal.service_account = 'capoci-controller-manager'}`
+- `Allow any-user to inspect compartments in compartment <compartment> where all { request.principal.type = 'workload', request.principal.namespace = 'cluster-api-provider-oci-system', request.principal.service_account = 'capoci-controller-manager'}`
+
 
 [iam-user]: https://docs.oracle.com/en-us/iaas/Content/API/Concepts/apisigningkey.htm#Required_Keys_and_OCIDs
 [instance-principals]: https://docs.oracle.com/en-us/iaas/Content/Identity/Tasks/callingservicesfrominstances.htm
