@@ -1171,7 +1171,7 @@ type LaunchIscsiVolumeAttachment struct {
 
 	// Refer the top-level definition of encryptionInTransitType.
 	// The default value is NONE.
-	EncryptionInTransitType EncryptionInTransitTypeEnum `json:"EncryptionInTransitType,omitempty"`
+	EncryptionInTransitType EncryptionInTransitTypeEnum `json:"encryptionInTransitType,omitempty"`
 }
 
 // LaunchCreateVolumeFromAttributes The details of the volume to create for CreateVolume operation.

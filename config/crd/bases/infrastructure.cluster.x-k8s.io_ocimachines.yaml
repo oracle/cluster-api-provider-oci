@@ -256,10 +256,6 @@ spec:
                     launchIscsiVolumeAttachment:
                       description: The details of iscsi volume attachment.
                       properties:
-                        EncryptionInTransitType:
-                          description: Refer the top-level definition of encryptionInTransitType.
-                            The default value is NONE.
-                          type: string
                         device:
                           description: The device name. To retrieve a list of devices
                             for a given instance, see ListInstanceDevices.
@@ -267,6 +263,10 @@ spec:
                         displayName:
                           description: A user-friendly name. Does not have to be unique,
                             and it's changeable. Avoid entering confidential information.
+                          type: string
+                        encryptionInTransitType:
+                          description: Refer the top-level definition of encryptionInTransitType.
+                            The default value is NONE.
                           type: string
                         isAgentAutoIscsiLoginEnabled:
                           description: Whether to enable Oracle Cloud Agent to perform
@@ -1127,10 +1127,6 @@ spec:
                     launchIscsiVolumeAttachment:
                       description: The details of iscsi volume attachment.
                       properties:
-                        EncryptionInTransitType:
-                          description: Refer the top-level definition of encryptionInTransitType.
-                            The default value is NONE.
-                          type: string
                         device:
                           description: The device name. To retrieve a list of devices
                             for a given instance, see ListInstanceDevices.
@@ -1138,6 +1134,10 @@ spec:
                         displayName:
                           description: A user-friendly name. Does not have to be unique,
                             and it's changeable. Avoid entering confidential information.
+                          type: string
+                        encryptionInTransitType:
+                          description: Refer the top-level definition of encryptionInTransitType.
+                            The default value is NONE.
                           type: string
                         isAgentAutoIscsiLoginEnabled:
                           description: Whether to enable Oracle Cloud Agent to perform
