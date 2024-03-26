@@ -1115,6 +1115,94 @@ type NetworkSecurityGroup struct {
 	List []*NSG `json:"list,omitempty"`
 }
 
+type VolumeType string
+
+const (
+	IscsiType VolumeType = "iscsi"
+)
+
+// EncryptionInTransitTypeEnum Enum with underlying type: string
+type EncryptionInTransitTypeEnum string
+
+// Set of constants representing the allowable values for EncryptionInTransitTypeEnum
+const (
+	EncryptionInTransitTypeNone                  EncryptionInTransitTypeEnum = "NONE"
+	EncryptionInTransitTypeBmEncryptionInTransit EncryptionInTransitTypeEnum = "BM_ENCRYPTION_IN_TRANSIT"
+)
+
+// LaunchVolumeAttachment specifies the details of the volume attachment.
+type LaunchVolumeAttachment struct {
+	// The type of volume. Valid value is iscsi.
+	Type VolumeType `json:"volumeType,omitempty"`
+
+	// The details of iscsi volume attachment.
+	IscsiAttachment LaunchIscsiVolumeAttachment `json:"launchIscsiVolumeAttachment,omitempty"`
+}
+
+// LaunchIscsiVolumeAttachment specifies the iscsi volume attachments to create as part of the launch instance operation.
+type LaunchIscsiVolumeAttachment struct {
+	// The device name. To retrieve a list of devices for a given instance, see ListInstanceDevices.
+	Device *string `json:"device,omitempty"`
+
+	// A user-friendly name. Does not have to be unique, and it's changeable.
+	// Avoid entering confidential information.
+	DisplayName *string `json:"displayName,omitempty"`
+
+	// Whether the attachment was created in read-only mode.
+	IsReadOnly *bool `json:"isReadOnly,omitempty"`
+
+	// Whether the attachment should be created in shareable mode. If an attachment
+	// is created in shareable mode, then other instances can attach the same volume, provided
+	// that they also create their attachments in shareable mode. Only certain volume types can
+	// be attached in shareable mode. Defaults to false if not specified.
+	IsShareable *bool `json:"isShareable,omitempty"`
+
+	// The OCID of the volume. If CreateVolumeDetails is specified, this field must be omitted from the request.
+	VolumeId *string `json:"volumeId,omitempty"`
+
+	// LaunchCreateVolumeFromAttributes The details of the volume to create for CreateVolume operation.
+	LaunchCreateVolumeFromAttributes LaunchCreateVolumeFromAttributes `json:"launchCreateVolumeFromAttributes,omitempty"`
+
+	// Whether to use CHAP authentication for the volume attachment. Defaults to false.
+	UseChap *bool `json:"useChap,omitempty"`
+
+	// Whether to enable Oracle Cloud Agent to perform the iSCSI login and logout commands after the volume attach or detach operations for non multipath-enabled iSCSI attachments.
+	IsAgentAutoIscsiLoginEnabled *bool `json:"isAgentAutoIscsiLoginEnabled,omitempty"`
+
+	// Refer the top-level definition of encryptionInTransitType.
+	// The default value is NONE.
+	EncryptionInTransitType EncryptionInTransitTypeEnum `json:"EncryptionInTransitType,omitempty"`
+}
+
+// LaunchCreateVolumeFromAttributes The details of the volume to create for CreateVolume operation.
+type LaunchCreateVolumeFromAttributes struct {
+
+	// The size of the volume in GBs.
+	SizeInGBs *int64 `json:"sizeInGBs,omitempty"`
+
+	// The OCID of the compartment that contains the volume. If not provided,
+	// it will be inherited from the instance.
+	CompartmentId *string `json:"compartmentId,omitempty"`
+
+	// A user-friendly name. Does not have to be unique, and it's changeable.
+	// Avoid entering confidential information.
+	DisplayName *string `json:"displayName,omitempty"`
+
+	// The OCID of the Vault service key to assign as the master encryption key
+	// for the volume.
+	KmsKeyId *string `json:"kmsKeyId,omitempty"`
+
+	// The number of volume performance units (VPUs) that will be applied to this volume per GB,
+	// representing the Block Volume service's elastic performance options.
+	// See Block Volume Performance Levels (https://docs.cloud.oracle.com/iaas/Content/Block/Concepts/blockvolumeperformance.htm#perf_levels) for more information.
+	// Allowed values:
+	//   * `0`: Represents Lower Cost option.
+	//   * `10`: Represents Balanced option.
+	//   * `20`: Represents Higher Performance option.
+	//   * `30`-`120`: Represents the Ultra High Performance option.
+	VpusPerGB *int64 `json:"vpusPerGB,omitempty"`
+}
+
 const (
 	VCNNativeCNI CNIOptionEnum = "OCI_VCN_IP_NATIVE"
 	FlannelCNI   CNIOptionEnum = "FLANNEL_OVERLAY"
