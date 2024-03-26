@@ -875,8 +875,9 @@ func TestMachineReconciliationDeletionNormal(t *testing.T) {
 						},
 					}, nil)
 				computeClient.EXPECT().TerminateInstance(gomock.Any(), gomock.Eq(core.TerminateInstanceRequest{
-					InstanceId:         common.String("test"),
-					PreserveBootVolume: common.Bool(false),
+					InstanceId:                         common.String("test"),
+					PreserveBootVolume:                 common.Bool(false),
+					PreserveDataVolumesCreatedAtLaunch: common.Bool(false),
 				})).Return(core.TerminateInstanceResponse{}, nil)
 			},
 		},
@@ -938,8 +939,9 @@ func TestMachineReconciliationDeletionNormal(t *testing.T) {
 					}}, nil)
 
 				computeClient.EXPECT().TerminateInstance(gomock.Any(), gomock.Eq(core.TerminateInstanceRequest{
-					InstanceId:         common.String("test"),
-					PreserveBootVolume: common.Bool(false),
+					InstanceId:                         common.String("test"),
+					PreserveBootVolume:                 common.Bool(false),
+					PreserveDataVolumesCreatedAtLaunch: common.Bool(false),
 				})).Return(core.TerminateInstanceResponse{}, nil)
 			},
 		},

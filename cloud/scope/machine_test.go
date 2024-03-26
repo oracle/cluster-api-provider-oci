@@ -2524,8 +2524,9 @@ func TestInstanceDeletion(t *testing.T) {
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				ms.OCIMachine.Spec.InstanceId = common.String("test")
 				computeClient.EXPECT().TerminateInstance(gomock.Any(), gomock.Eq(core.TerminateInstanceRequest{
-					InstanceId:         common.String("test"),
-					PreserveBootVolume: common.Bool(false),
+					InstanceId:                         common.String("test"),
+					PreserveBootVolume:                 common.Bool(false),
+					PreserveDataVolumesCreatedAtLaunch: common.Bool(false),
 				})).Return(core.TerminateInstanceResponse{}, nil)
 			},
 			instance: &core.Instance{
