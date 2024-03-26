@@ -8,7 +8,7 @@ require (
 	github.com/google/gofuzz v1.2.0
 	github.com/onsi/ginkgo/v2 v2.13.1
 	github.com/onsi/gomega v1.30.0
-	github.com/oracle/oci-go-sdk/v65 v65.45.0
+	github.com/oracle/oci-go-sdk/v65 v65.61.2
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.17.0
 	github.com/spf13/pflag v1.0.5
@@ -22,7 +22,7 @@ require (
 	sigs.k8s.io/cluster-api v1.6.3
 	sigs.k8s.io/cluster-api/test v1.6.3
 	sigs.k8s.io/controller-runtime v0.16.5
-	sigs.k8s.io/kind v0.20.0
+	sigs.k8s.io/kind v0.21.0
 )
 
 require (

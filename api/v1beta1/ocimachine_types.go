@@ -95,6 +95,9 @@ type OCIMachineSpec struct {
 	// DedicatedVmHostId defines the OCID of the dedicated VM host.
 	DedicatedVmHostId *string `json:"dedicatedVmHostId,omitempty"`
 
+	// Volume attachments to create as part of the launch instance operation.
+	LaunchVolumeAttachment []LaunchVolumeAttachment `json:"launchVolumeAttachments,omitempty"`
+
 	// Provider ID of the instance, this will be set by Cluster API provider itself,
 	// users should not set this parameter.
 	// +optional
@@ -134,6 +137,14 @@ type OCIMachineSpec struct {
 	// +optional
 	// Deprecated, please use NetworkDetails.NSGNames
 	NSGName string `json:"nsgName,omitempty"`
+
+	// Specifies whether to delete or preserve the boot volume when terminating an instance.
+	// When set to true, the boot volume is preserved. The default value is false.
+	PreserveBootVolume bool `json:"preserveBootVolume,omitempty"`
+
+	// Specifies whether to delete or preserve the data volumes created during launch when
+	//terminating an instance. When set to true, the data volumes are preserved. The default value is true.
+	PreserveDataVolumesCreatedAtLaunch bool `json:"preserveDataVolumesCreatedAtLaunch,omitempty"`
 }
 
 // OCIMachineStatus defines the observed state of OCIMachine.

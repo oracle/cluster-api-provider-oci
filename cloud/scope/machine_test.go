@@ -470,6 +470,20 @@ func TestInstanceReconciliation(t *testing.T) {
 				ms.OCIMachine.Spec.NetworkDetails.SkipSourceDestCheck = common.Bool(true)
 				ms.OCIMachine.Spec.NetworkDetails.AssignPrivateDnsRecord = common.Bool(true)
 				ms.OCIMachine.Spec.NetworkDetails.DisplayName = common.String("display-name")
+				ms.OCIMachine.Spec.LaunchVolumeAttachment = []infrastructurev1beta2.LaunchVolumeAttachment{
+					{
+						Type: infrastructurev1beta2.IscsiType,
+						IscsiAttachment: infrastructurev1beta2.LaunchIscsiVolumeAttachment{
+							Device:      common.String("/dev/oci"),
+							IsShareable: common.Bool(true),
+							LaunchCreateVolumeFromAttributes: infrastructurev1beta2.LaunchCreateVolumeFromAttributes{
+								DisplayName: common.String("test-volume"),
+								SizeInGBs:   common.Int64(75),
+								VpusPerGB:   common.Int64(20),
+							},
+						},
+					},
+				}
 				ms.OCIMachine.Spec.InstanceSourceViaImageDetails = &infrastructurev1beta2.InstanceSourceViaImageConfig{
 					KmsKeyId:            common.String("kms-key-id"),
 					BootVolumeVpusPerGB: common.Int64(32),
@@ -501,6 +515,17 @@ func TestInstanceReconciliation(t *testing.T) {
 						SkipSourceDestCheck:    common.Bool(true),
 						AssignPrivateDnsRecord: common.Bool(true),
 						DisplayName:            common.String("display-name"),
+					},
+					LaunchVolumeAttachments: []core.LaunchAttachVolumeDetails{
+						core.LaunchAttachIScsiVolumeDetails{
+							Device:      common.String("/dev/oci"),
+							IsShareable: common.Bool(true),
+							LaunchCreateVolumeDetails: core.LaunchCreateVolumeFromAttributes{
+								DisplayName: common.String("test-volume"),
+								SizeInGBs:   common.Int64(75),
+								VpusPerGB:   common.Int64(20),
+							},
+						},
 					},
 					Metadata: map[string]string{
 						"user_data": base64.StdEncoding.EncodeToString([]byte("test")),
@@ -2499,8 +2524,9 @@ func TestInstanceDeletion(t *testing.T) {
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				ms.OCIMachine.Spec.InstanceId = common.String("test")
 				computeClient.EXPECT().TerminateInstance(gomock.Any(), gomock.Eq(core.TerminateInstanceRequest{
-					InstanceId:         common.String("test"),
-					PreserveBootVolume: common.Bool(false),
+					InstanceId:                         common.String("test"),
+					PreserveBootVolume:                 common.Bool(false),
+					PreserveDataVolumesCreatedAtLaunch: common.Bool(false),
 				})).Return(core.TerminateInstanceResponse{}, nil)
 			},
 			instance: &core.Instance{
@@ -2514,8 +2540,9 @@ func TestInstanceDeletion(t *testing.T) {
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				ms.OCIMachine.Spec.InstanceId = common.String("test")
 				computeClient.EXPECT().TerminateInstance(gomock.Any(), gomock.Eq(core.TerminateInstanceRequest{
-					InstanceId:         common.String("test"),
-					PreserveBootVolume: common.Bool(false),
+					InstanceId:                         common.String("test"),
+					PreserveBootVolume:                 common.Bool(false),
+					PreserveDataVolumesCreatedAtLaunch: common.Bool(false),
 				})).Return(core.TerminateInstanceResponse{}, errors.New("could not terminate instance"))
 			},
 			instance: &core.Instance{

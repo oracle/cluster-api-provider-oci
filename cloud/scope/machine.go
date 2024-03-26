@@ -281,6 +281,7 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 	launchDetails.AvailabilityConfig = m.getAvailabilityConfig()
 	launchDetails.PreemptibleInstanceConfig = m.getPreemptibleInstanceConfig()
 	launchDetails.PlatformConfig = m.getPlatformConfig()
+	launchDetails.LaunchVolumeAttachments = m.getLaunchVolumeAttachments()
 	req := core.LaunchInstanceRequest{LaunchInstanceDetails: launchDetails,
 		OpcRetryToken: ociutil.GetOPCRetryToken(string(m.OCIMachine.UID))}
 	resp, err := m.ComputeClient.LaunchInstance(ctx, req)
@@ -310,7 +311,9 @@ func (m *MachineScope) getFreeFormTags() map[string]string {
 // DeleteMachine terminates the instance using InstanceId from the OCIMachine spec and deletes the boot volume
 func (m *MachineScope) DeleteMachine(ctx context.Context, instance *core.Instance) error {
 	req := core.TerminateInstanceRequest{InstanceId: instance.Id,
-		PreserveBootVolume: common.Bool(false)}
+		PreserveBootVolume:                 common.Bool(m.OCIMachine.Spec.PreserveBootVolume),
+		PreserveDataVolumesCreatedAtLaunch: common.Bool(m.OCIMachine.Spec.PreserveDataVolumesCreatedAtLaunch),
+	}
 	_, err := m.ComputeClient.TerminateInstance(ctx, req)
 	return err
 }
@@ -978,4 +981,57 @@ func (m *MachineScope) getPlatformConfig() core.PlatformConfig {
 		}
 	}
 	return nil
+}
+
+func (m *MachineScope) getLaunchVolumeAttachments() []core.LaunchAttachVolumeDetails {
+	volumeAttachmentsInSpec := m.OCIMachine.Spec.LaunchVolumeAttachment
+	if len(volumeAttachmentsInSpec) < 0 {
+		return nil
+	}
+	var volumes []core.LaunchAttachVolumeDetails
+
+	for _, attachment := range volumeAttachmentsInSpec {
+		if attachment.Type == infrastructurev1beta2.IscsiType {
+			volumes = append(volumes, getIscsiVolumeAttachment(attachment.IscsiAttachment))
+		}
+	}
+	return volumes
+}
+
+func getIscsiVolumeAttachment(attachment infrastructurev1beta2.LaunchIscsiVolumeAttachment) core.LaunchAttachVolumeDetails {
+	volumeDetails := core.LaunchAttachIScsiVolumeDetails{
+		Device:                       attachment.Device,
+		DisplayName:                  attachment.DisplayName,
+		IsShareable:                  attachment.IsShareable,
+		IsReadOnly:                   attachment.IsReadOnly,
+		VolumeId:                     attachment.VolumeId,
+		UseChap:                      attachment.UseChap,
+		IsAgentAutoIscsiLoginEnabled: attachment.IsAgentAutoIscsiLoginEnabled,
+		EncryptionInTransitType:      getEncryptionType(attachment.EncryptionInTransitType),
+		LaunchCreateVolumeDetails:    getLaunchCreateVolumeDetails(attachment.LaunchCreateVolumeFromAttributes),
+	}
+	return volumeDetails
+}
+
+func getLaunchCreateVolumeDetails(attributes infrastructurev1beta2.LaunchCreateVolumeFromAttributes) core.LaunchCreateVolumeFromAttributes {
+	return core.LaunchCreateVolumeFromAttributes{
+		SizeInGBs:     attributes.SizeInGBs,
+		DisplayName:   attributes.DisplayName,
+		CompartmentId: attributes.CompartmentId,
+		KmsKeyId:      attributes.KmsKeyId,
+		VpusPerGB:     attributes.VpusPerGB,
+	}
+}
+
+func getEncryptionType(transitType infrastructurev1beta2.EncryptionInTransitTypeEnum) core.EncryptionInTransitTypeEnum {
+	if transitType == "" {
+		return ""
+	}
+	switch transitType {
+	case infrastructurev1beta2.EncryptionInTransitTypeNone:
+		return core.EncryptionInTransitTypeNone
+	case infrastructurev1beta2.EncryptionInTransitTypeBmEncryptionInTransit:
+		return core.EncryptionInTransitTypeBmEncryptionInTransit
+	}
+	return ""
 }

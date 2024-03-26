@@ -192,19 +192,6 @@ func (c *ClientProvider) createVcnClient(region string, ociAuthConfigProvider co
 	dispatcher := vcnClient.HTTPClient
 	vcnClient.HTTPClient = metrics.NewHttpRequestDispatcherWrapper(dispatcher, region)
 
-	if c.certOverride != nil {
-		if client, ok := dispatcher.(*http.Client); ok {
-			err = c.setCerts(client)
-			if err != nil {
-				logger.Error(err, "unable to create OCI VCN Client")
-				return nil, err
-			}
-		} else {
-			return nil, errors.New("The VCN Client dispatcher is not of http.Client type. Can not patch the tls config.")
-		}
-
-	}
-
 	if c.ociClientOverrides != nil && c.ociClientOverrides.VCNClientUrl != nil {
 		vcnClient.Host = *c.ociClientOverrides.VCNClientUrl
 	}
@@ -222,18 +209,6 @@ func (c *ClientProvider) createNLbClient(region string, ociAuthConfigProvider co
 	nlbClient.SetRegion(region)
 	dispatcher := nlbClient.HTTPClient
 	nlbClient.HTTPClient = metrics.NewHttpRequestDispatcherWrapper(dispatcher, region)
-
-	if c.certOverride != nil {
-		if client, ok := dispatcher.(*http.Client); ok {
-			err = c.setCerts(client)
-			if err != nil {
-				logger.Error(err, "unable to create OCI NetworkLoadBalancer Client")
-				return nil, err
-			}
-		} else {
-			return nil, errors.New("The Network Loadbalancer Client dispatcher is not of http.Client type. Can not patch the tls config.")
-		}
-	}
 
 	if c.ociClientOverrides != nil && c.ociClientOverrides.NetworkLoadBalancerClientUrl != nil {
 		nlbClient.Host = *c.ociClientOverrides.NetworkLoadBalancerClientUrl
@@ -253,18 +228,6 @@ func (c *ClientProvider) createLBClient(region string, ociAuthConfigProvider com
 	dispatcher := lbClient.HTTPClient
 	lbClient.HTTPClient = metrics.NewHttpRequestDispatcherWrapper(dispatcher, region)
 
-	if c.certOverride != nil {
-		if client, ok := dispatcher.(*http.Client); ok {
-			err = c.setCerts(client)
-			if err != nil {
-				logger.Error(err, "unable to create OCI Loadbalancer Client")
-				return nil, err
-			}
-		} else {
-			return nil, errors.New("The Loadbalancer Client dispatcher is not of http.Client type. Can not patch the tls config.")
-		}
-	}
-
 	if c.ociClientOverrides != nil && c.ociClientOverrides.LoadBalancerClientUrl != nil {
 		lbClient.Host = *c.ociClientOverrides.LoadBalancerClientUrl
 	}
@@ -282,18 +245,6 @@ func (c *ClientProvider) createIdentityClient(region string, ociAuthConfigProvid
 	identityClt.SetRegion(region)
 	dispatcher := identityClt.HTTPClient
 	identityClt.HTTPClient = metrics.NewHttpRequestDispatcherWrapper(dispatcher, region)
-
-	if c.certOverride != nil {
-		if client, ok := dispatcher.(*http.Client); ok {
-			err = c.setCerts(client)
-			if err != nil {
-				logger.Error(err, "unable to create OCI Identity Client")
-				return nil, err
-			}
-		} else {
-			return nil, errors.New("The Identity Client dispatcher is not of http.Client type. Can not patch the tls config.")
-		}
-	}
 
 	if c.ociClientOverrides != nil && c.ociClientOverrides.IdentityClientUrl != nil {
 		identityClt.Host = *c.ociClientOverrides.IdentityClientUrl
@@ -313,18 +264,6 @@ func (c *ClientProvider) createComputeClient(region string, ociAuthConfigProvide
 	dispatcher := computeClient.HTTPClient
 	computeClient.HTTPClient = metrics.NewHttpRequestDispatcherWrapper(dispatcher, region)
 
-	if c.certOverride != nil {
-		if client, ok := dispatcher.(*http.Client); ok {
-			err = c.setCerts(client)
-			if err != nil {
-				logger.Error(err, "unable to create OCI Compute Client")
-				return nil, err
-			}
-		} else {
-			return nil, errors.New("The Compute Client dispatcher is not of http.Client type. Can not patch the tls config.")
-		}
-	}
-
 	if c.ociClientOverrides != nil && c.ociClientOverrides.ComputeClientUrl != nil {
 		computeClient.Host = *c.ociClientOverrides.ComputeClientUrl
 	}
@@ -343,18 +282,6 @@ func (c *ClientProvider) createComputeManagementClient(region string, ociAuthCon
 	dispatcher := computeManagementClient.HTTPClient
 	computeManagementClient.HTTPClient = metrics.NewHttpRequestDispatcherWrapper(dispatcher, region)
 
-	if c.certOverride != nil {
-		if client, ok := dispatcher.(*http.Client); ok {
-			err = c.setCerts(client)
-			if err != nil {
-				logger.Error(err, "unable to create OCI Compute Management Client")
-				return nil, err
-			}
-		} else {
-			return nil, errors.New("The Compute Management Client dispatcher is not of http.Client type. Can not patch the tls config.")
-		}
-	}
-
 	if c.ociClientOverrides != nil && c.ociClientOverrides.ComputeManagementClientUrl != nil {
 		computeManagementClient.Host = *c.ociClientOverrides.ComputeManagementClientUrl
 	}
@@ -372,18 +299,6 @@ func (c *ClientProvider) createContainerEngineClient(region string, ociAuthConfi
 	containerEngineClt.SetRegion(region)
 	dispatcher := containerEngineClt.HTTPClient
 	containerEngineClt.HTTPClient = metrics.NewHttpRequestDispatcherWrapper(dispatcher, region)
-
-	if c.certOverride != nil {
-		if client, ok := dispatcher.(*http.Client); ok {
-			err = c.setCerts(client)
-			if err != nil {
-				logger.Error(err, "unable to create OCI Container Engine Client")
-				return nil, err
-			}
-		} else {
-			return nil, errors.New("The Container Engine Client dispatcher is not of http.Client type. Can not patch the tls config.")
-		}
-	}
 
 	if c.ociClientOverrides != nil && c.ociClientOverrides.ContainerEngineClientUrl != nil {
 		containerEngineClt.Host = *c.ociClientOverrides.ContainerEngineClientUrl
@@ -409,17 +324,3 @@ func setVersionHeader() func(request *http.Request) error {
 	}
 }
 
-// setCerts updates the client TLSClientConfig with the ClientProvider certOverride
-func (c *ClientProvider) setCerts(client *http.Client) error {
-	tr := client.Transport.(*http.Transport).Clone()
-	if tr.TLSClientConfig != nil {
-		tr.TLSClientConfig.RootCAs = c.certOverride
-	} else {
-		// If TLS client config is not set, we should error out. else the default values will
-		// be used which will be insecure
-		return errors.New("TLSClientConfig is not set on the client")
-	}
-	client.Transport = tr
-
-	return nil
-}
