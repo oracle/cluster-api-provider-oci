@@ -13,6 +13,13 @@ spec:
         ocpus: "1"
       metadata:
         ssh_authorized_keys: "${OCI_SSH_KEY}"
+      launchVolumeAttachments:
+        - volumeType: "iscsi"
+          launchIscsiVolumeAttachment:
+            launchCreateVolumeFromAttributes:
+              sizeInGBs: 75
+            encryptionInTransitType: "BM_ENCRYPTION_IN_TRANSIT"
+            isAgentAutoIscsiLoginEnabled: true
 ---
 apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
 kind: KubeadmConfigTemplate

@@ -123,11 +123,22 @@ type OCIMachineSpec struct {
 	// +optional
 	DefinedTags map[string]map[string]string `json:"definedTags,omitempty"`
 
+	// Volume attachments to create as part of the launch instance operation.
+	LaunchVolumeAttachment []LaunchVolumeAttachment `json:"launchVolumeAttachments,omitempty"`
+
 	// The name of the subnet to use. The name here refers to the subnets
 	// defined in the OCICluster Spec. Optional, only if multiple subnets of a type
 	// is defined, else the first element is used.
 	// +optional
 	SubnetName string `json:"subnetName,omitempty"`
+
+	// Specifies whether to delete or preserve the boot volume when terminating an instance.
+	// When set to true, the boot volume is preserved. The default value is false.
+	PreserveBootVolume bool `json:"preserveBootVolume,omitempty"`
+
+	// Specifies whether to delete or preserve the data volumes created during launch when
+	//terminating an instance. When set to true, the data volumes are preserved. The default value is true.
+	PreserveDataVolumesCreatedAtLaunch bool `json:"preserveDataVolumesCreatedAtLaunch,omitempty"`
 }
 
 // OCIMachineStatus defines the observed state of OCIMachine.
