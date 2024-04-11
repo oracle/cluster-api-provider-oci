@@ -323,4 +323,3 @@ func setVersionHeader() func(request *http.Request) error {
 		return nil
 	}
 }
-

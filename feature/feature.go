@@ -37,7 +37,7 @@ func init() {
 // To add a new feature, define a key for it above and add it here.
 var defaultCAPOCIFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	// Every feature should be initiated here:
-	MachinePool: {Default: false, PreRelease: featuregate.Alpha},
+	MachinePool: {Default: true, PreRelease: featuregate.Beta},
 	// Every feature should be initiated here:
-	OKE: {Default: false, PreRelease: featuregate.Alpha},
+	OKE: {Default: true, PreRelease: featuregate.Beta},
 }

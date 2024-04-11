@@ -49,7 +49,7 @@ IMG ?= controller:latest
 CRD_OPTIONS ?= "crd"
 
 # enable machine pool feature
-EXP_MACHINE_POOL ?= false
+EXP_MACHINE_POOL ?= true
 
 # Set build time variables including version details
 LDFLAGS := $(shell source ./hack/version.sh; version::ldflags)
