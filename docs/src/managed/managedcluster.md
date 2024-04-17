@@ -1,7 +1,6 @@
 # Managed Clusters (OKE)
 - **Feature status:** As of CAPOCI v0.12.0, OKE has been moved out of experimental mode with self managed nodes.
-  Virtual Node Pool and Mnagaed Node Pool are still experimental due to underlying CAPI dependencies.
-- **Feature gate:** MachinePool=true
+  Virtual Node Pool and Managed Node Pool are still experimental due to underlying CAPI dependencies.
 
 Cluster API Provider for OCI (CAPOCI) experimentally supports managing OCI Container 
 Engine for Kubernetes (OKE) clusters. CAPOCI implements this with three
@@ -36,15 +35,6 @@ The following Cluster API parameters are also available:
 
 
 ## Pre-Requisites
-
-### Environment Variables
-
-Managed clusters also require the following feature flags set as environment variables before [installing 
-CAPI and CAPOCI components using clusterctl][install-cluster-api].
-
-```bash
-export EXP_MACHINE_POOL=true
-```
 
 ### OCI Security Policies
 
