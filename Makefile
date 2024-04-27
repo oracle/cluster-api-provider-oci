@@ -49,7 +49,7 @@ IMG ?= controller:latest
 CRD_OPTIONS ?= "crd"
 
 # enable machine pool feature
-EXP_MACHINE_POOL ?= false
+EXP_MACHINE_POOL ?= true
 
 # Set build time variables including version details
 LDFLAGS := $(shell source ./hack/version.sh; version::ldflags)
@@ -378,7 +378,7 @@ $(KUSTOMIZE): ## Download kustomize locally if necessary.
 	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) sigs.k8s.io/kustomize/kustomize/v4 $(KUSTOMIZE_BIN) v4.5.2
 
 $(GINKGO): ## Build ginkgo.
-	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) github.com/onsi/ginkgo/v2/ginkgo $(GINKGO_BIN) v2.13.1
+	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) github.com/onsi/ginkgo/v2/ginkgo $(GINKGO_BIN) v2.17.1
 
 $(GOLANGCI_LINT): ## Build golanci-lint.
 	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) github.com/golangci/golangci-lint/cmd/golangci-lint $(GOLANGCI_LINT_BIN) v1.44.0
