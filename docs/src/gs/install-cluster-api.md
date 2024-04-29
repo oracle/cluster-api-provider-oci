@@ -45,8 +45,8 @@ parameters explained in above section will not be used.
 Please ensure the following policies in the dynamic group for CAPOCI to be able to talk to various OCI Services.
 
 ```
-allow dynamic-group [your dynamic group name] to read instance-family in compartment [your compartment name]
-allow dynamic-group [your dynamic group name] to use virtual-network-family in compartment [your compartment name]
+allow dynamic-group [your dynamic group name] to manage instance-family in compartment [your compartment name]
+allow dynamic-group [your dynamic group name] to manage virtual-network-family in compartment [your compartment name]
 allow dynamic-group [your dynamic group name] to manage load-balancers in compartment [your compartment name]
 ```
 
