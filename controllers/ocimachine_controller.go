@@ -326,8 +326,9 @@ func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.
 		machineScope.Info("Instance is pending")
 		conditions.MarkFalse(machineScope.OCIMachine, infrastructurev1beta2.InstanceReadyCondition, infrastructurev1beta2.InstanceNotReadyReason, clusterv1.ConditionSeverityInfo, "")
 		return reconcile.Result{RequeueAfter: 10 * time.Second}, nil
-	case core.InstanceLifecycleStateStopping, core.InstanceLifecycleStateStopped:
+	case core.InstanceLifecycleStateStopping, core.InstanceLifecycleStateStopped, core.InstanceLifecycleStateMoving:
 		machineScope.SetNotReady()
+		machineScope.Info(fmt.Sprintf("Instance is in %s state and not ready", instance.LifecycleState))
 		conditions.MarkFalse(machineScope.OCIMachine, infrastructurev1beta2.InstanceReadyCondition, infrastructurev1beta2.InstanceNotReadyReason, clusterv1.ConditionSeverityInfo, "")
 		return reconcile.Result{}, nil
 	case core.InstanceLifecycleStateRunning:
