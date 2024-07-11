@@ -94,7 +94,7 @@ data:
                 path: /etc/kubernetes
           containers:
             - name: oci-cloud-controller-manager
-              image: ghcr.io/oracle/cloud-provider-oci:v1.28.0
+              image: ghcr.io/oracle/cloud-provider-oci:v1.29.0
               command: ["/usr/local/bin/oci-cloud-controller-manager"]
               args:
                 - --cloud-config=/etc/oci/cloud-provider.yaml
@@ -332,7 +332,7 @@ data:
             node-role.kubernetes.io/control-plane: ""
           containers:
             - name: csi-volume-provisioner
-              image: registry.k8s.io/sig-storage/csi-provisioner:v3.6.0
+              image: registry.k8s.io/sig-storage/csi-provisioner:v5.0.1
               args:
                 - --csi-address=/var/run/shared-tmpfs/csi.sock
                 - --volume-name-prefix=csi
@@ -347,7 +347,7 @@ data:
                 - mountPath: /var/run/shared-tmpfs
                   name: shared-tmpfs
             - name: csi-fss-volume-provisioner
-              image: registry.k8s.io/sig-storage/csi-provisioner:v3.6.0
+              image: registry.k8s.io/sig-storage/csi-provisioner:v5.0.1
               args:
                 - --csi-address=/var/run/shared-tmpfs/csi-fss.sock
                 - --volume-name-prefix=csi-fss
@@ -362,7 +362,7 @@ data:
                 - mountPath: /var/run/shared-tmpfs
                   name: shared-tmpfs
             - name: csi-attacher
-              image: registry.k8s.io/sig-storage/csi-attacher:v4.4.0
+              image: registry.k8s.io/sig-storage/csi-attacher:v4.6.1
               args:
                 - --csi-address=/var/run/shared-tmpfs/csi.sock
                 - --timeout=120s
@@ -375,7 +375,7 @@ data:
                 - mountPath: /var/run/shared-tmpfs
                   name: shared-tmpfs
             - name: csi-resizer
-              image: registry.k8s.io/sig-storage/csi-resizer:v1.9.0
+              image: registry.k8s.io/sig-storage/csi-resizer:v1.11.1
               args:
                 - --csi-address=/var/run/shared-tmpfs/csi.sock
                 - --leader-election
@@ -402,7 +402,7 @@ data:
                 - --fss-csi-endpoint=unix://var/run/shared-tmpfs/csi-fss.sock
               command:
                 - /usr/local/bin/oci-csi-controller-driver
-              image: ghcr.io/oracle/cloud-provider-oci:v1.28.0
+              image: ghcr.io/oracle/cloud-provider-oci:v1.29.0
               imagePullPolicy: IfNotPresent
               volumeMounts:
                 - name: config
@@ -553,7 +553,7 @@ data:
                       fieldPath: spec.nodeName
                 - name: PATH
                   value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/host/usr/bin:/host/sbin
-              image: ghcr.io/oracle/cloud-provider-oci:v1.28.0
+              image: ghcr.io/oracle/cloud-provider-oci:v1.29.0
               securityContext:
                 privileged: true
               volumeMounts:
