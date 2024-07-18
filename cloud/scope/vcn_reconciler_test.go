@@ -40,7 +40,7 @@ func TestClusterScope_CreateVCN(t *testing.T) {
 	vcnClient := mock_vcn.NewMockClient(mockCtrl)
 
 	vcnClient.EXPECT().CreateVcn(gomock.Any(), Eq(func(request interface{}) error {
-		return vcnMatcher(request, "normal", common.String("label"))
+		return vcnMatcher(request, "normal", common.String("label"), []string{"test-cidr"})
 	})).
 		Return(core.CreateVcnResponse{
 			Vcn: core.Vcn{
@@ -48,7 +48,15 @@ func TestClusterScope_CreateVCN(t *testing.T) {
 			},
 		}, nil)
 	vcnClient.EXPECT().CreateVcn(gomock.Any(), Eq(func(request interface{}) error {
-		return vcnMatcher(request, "error", nil)
+		return vcnMatcher(request, "normal", common.String("label"), []string{"test-cidr1", "test-cidr2"})
+	})).
+		Return(core.CreateVcnResponse{
+			Vcn: core.Vcn{
+				Id: common.String("normal_id"),
+			},
+		}, nil)
+	vcnClient.EXPECT().CreateVcn(gomock.Any(), Eq(func(request interface{}) error {
+		return vcnMatcher(request, "error", nil, []string{VcnDefaultCidr})
 	})).
 		Return(core.CreateVcnResponse{}, errors.New("some error"))
 
@@ -65,6 +73,21 @@ func TestClusterScope_CreateVCN(t *testing.T) {
 					Vcn: infrastructurev1beta2.VCN{
 						Name:     "normal",
 						DnsLabel: common.String("label"),
+						CIDR:     "test-cidr",
+					},
+				},
+			},
+			want:    common.String("normal_id"),
+			wantErr: false,
+		},
+		{
+			name: "create vcn is successful, multiple cidrs",
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
+						Name:     "normal",
+						DnsLabel: common.String("label"),
+						CIDRS:    []string{"test-cidr1", "test-cidr2"},
 					},
 				},
 			},
@@ -392,11 +415,11 @@ func TestClusterScope_GetVcnCidr(t *testing.T) {
 	tests := []struct {
 		name string
 		spec infrastructurev1beta2.OCIClusterSpec
-		want string
+		want []string
 	}{
 		{
 			name: "cidr not present",
-			want: VcnDefaultCidr,
+			want: []string{VcnDefaultCidr},
 		},
 		{
 			name: "cidr present",
@@ -407,7 +430,7 @@ func TestClusterScope_GetVcnCidr(t *testing.T) {
 					},
 				},
 			},
-			want: "foo",
+			want: []string{"foo"},
 		},
 	}
 	l := log.FromContext(context.Background())
@@ -426,7 +449,7 @@ func TestClusterScope_GetVcnCidr(t *testing.T) {
 				OCIClusterAccessor: ociClusterAccessor,
 				Logger:             &l,
 			}
-			if got := s.GetVcnCidr(); got != tt.want {
+			if got := s.GetVcnCidrs(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("GetVcnCidr() = %v, want %v", got, tt.want)
 			}
 		})
@@ -603,7 +626,7 @@ func TestClusterScope_ReconcileVCN(t *testing.T) {
 			}}, nil)
 
 	vcnClient.EXPECT().CreateVcn(gomock.Any(), Eq(func(request interface{}) error {
-		return vcnMatcher(request, "not_found", nil)
+		return vcnMatcher(request, "not_found", common.String("label"), []string{VcnDefaultCidr})
 	})).
 		Return(core.CreateVcnResponse{
 			Vcn: core.Vcn{
@@ -664,7 +687,8 @@ func TestClusterScope_ReconcileVCN(t *testing.T) {
 				CompartmentId: "bar",
 				NetworkSpec: infrastructurev1beta2.NetworkSpec{
 					Vcn: infrastructurev1beta2.VCN{
-						Name: "not_found",
+						Name:     "not_found",
+						DnsLabel: common.String("label"),
 					},
 				},
 			},
@@ -706,7 +730,7 @@ func TestClusterScope_ReconcileVCN(t *testing.T) {
 	}
 }
 
-func vcnMatcher(request interface{}, displayName string, dnsLabel *string) error {
+func vcnMatcher(request interface{}, displayName string, dnsLabel *string, cidrs []string) error {
 	r, ok := request.(core.CreateVcnRequest)
 	if !ok {
 		return errors.New("expecting CreateVcnRequest type")
@@ -716,6 +740,9 @@ func vcnMatcher(request interface{}, displayName string, dnsLabel *string) error
 	}
 	if !reflect.DeepEqual(r.CreateVcnDetails.DnsLabel, dnsLabel) {
 		return errors.New(fmt.Sprintf("expecting DnsLabel as %v", dnsLabel))
+	}
+	if !reflect.DeepEqual(r.CreateVcnDetails.CidrBlocks, cidrs) {
+		return errors.New(fmt.Sprintf("expecting cidrblocks as %v, actual %v", cidrs, r.CreateVcnDetails.CidrBlocks))
 	}
 	return nil
 }

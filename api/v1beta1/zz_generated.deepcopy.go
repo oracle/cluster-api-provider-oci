@@ -2509,6 +2509,11 @@ func (in *VCN) DeepCopyInto(out *VCN) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.CIDRS != nil {
+		in, out := &in.CIDRS, &out.CIDRS
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.NatGatewayId != nil {
 		in, out := &in.NatGatewayId, &out.NatGatewayId
 		*out = new(string)

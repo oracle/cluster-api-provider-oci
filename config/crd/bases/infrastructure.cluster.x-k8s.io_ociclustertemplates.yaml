@@ -140,8 +140,13 @@ spec:
                             description: VCN configuration.
                             properties:
                               cidr:
-                                description: VCN CIDR.
+                                description: VCN CIDR. Deprecated, please use NetworkDetails.cidrs
                                 type: string
+                              cidrs:
+                                description: VCN CIDRs.
+                                items:
+                                  type: string
+                                type: array
                               dnsLabel:
                                 description: DnsLabel specifies a DNS label for the
                                   VCN, used in conjunction with the VNIC's hostname
@@ -1353,8 +1358,13 @@ spec:
                             description: VCN configuration.
                             properties:
                               cidr:
-                                description: VCN CIDR.
+                                description: VCN CIDR. Deprecated, please use NetworkDetails.cidrs
                                 type: string
+                              cidrs:
+                                description: VCN CIDRs.
+                                items:
+                                  type: string
+                                type: array
                               dnsLabel:
                                 description: DnsLabel specifies a DNS label for the
                                   VCN, used in conjunction with the VNIC's hostname

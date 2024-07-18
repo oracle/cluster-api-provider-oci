@@ -895,9 +895,15 @@ type VCN struct {
 	// VCN Name.
 	// +optional
 	Name string `json:"name"`
+
 	// VCN CIDR.
 	// +optional
+	// Deprecated, please use NetworkDetails.cidrs
 	CIDR string `json:"cidr,omitempty"`
+
+	// VCN CIDRs.
+	// +optional
+	CIDRS []string `json:"cidrs,omitempty"`
 
 	// ID of Nat Gateway.
 	// +optional
