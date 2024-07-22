@@ -123,7 +123,7 @@ func (s *ClusterScope) UpdateVCN(ctx context.Context, vcn infrastructurev1beta2.
 func (s *ClusterScope) CreateVCN(ctx context.Context, spec infrastructurev1beta2.VCN) (*string, error) {
 	vcnDetails := core.CreateVcnDetails{
 		CompartmentId: common.String(s.GetCompartmentId()),
-		DisplayName:   common.String(spec.Name),
+		DisplayName:   common.String(s.GetVcnName()),
 		CidrBlocks:    s.GetVcnCidrs(),
 		FreeformTags:  s.GetFreeFormTags(),
 		DefinedTags:   s.GetDefinedTags(),
