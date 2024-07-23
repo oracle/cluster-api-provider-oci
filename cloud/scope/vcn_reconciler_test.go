@@ -542,7 +542,7 @@ func TestClusterScope_IsVcnEquals(t *testing.T) {
 				},
 				Logger: &l,
 			}
-			if got := s.IsVcnEquals(tt.actual, tt.desired); got != tt.want {
+			if got := s.IsVcnEquals(tt.actual); got != tt.want {
 				t.Errorf("IsVcnEquals() = %v, want %v", got, tt.want)
 			}
 		})
