@@ -37,7 +37,7 @@ func (s *ClusterScope) ReconcileVCN(ctx context.Context) error {
 	}
 	if vcn != nil {
 		s.OCIClusterAccessor.GetNetworkSpec().Vcn.ID = vcn.Id
-		if s.IsVcnEquals(vcn, spec) {
+		if s.IsVcnEquals(vcn) {
 			s.Logger.Info("No Reconciliation Required for VCN", "vcn", s.getVcnId())
 			return nil
 		}
@@ -48,8 +48,8 @@ func (s *ClusterScope) ReconcileVCN(ctx context.Context) error {
 	return err
 }
 
-func (s *ClusterScope) IsVcnEquals(actual *core.Vcn, desired infrastructurev1beta2.VCN) bool {
-	if *actual.DisplayName != desired.Name {
+func (s *ClusterScope) IsVcnEquals(actual *core.Vcn) bool {
+	if *actual.DisplayName != s.GetVcnName() {
 		return false
 	}
 	return true
@@ -106,7 +106,7 @@ func (s *ClusterScope) GetVCN(ctx context.Context) (*core.Vcn, error) {
 
 func (s *ClusterScope) UpdateVCN(ctx context.Context, vcn infrastructurev1beta2.VCN) error {
 	updateVCNDetails := core.UpdateVcnDetails{
-		DisplayName: common.String(vcn.Name),
+		DisplayName: common.String(s.GetVcnName()),
 	}
 	vcnResponse, err := s.VCNClient.UpdateVcn(ctx, core.UpdateVcnRequest{
 		UpdateVcnDetails: updateVCNDetails,
