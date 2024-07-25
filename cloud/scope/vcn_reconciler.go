@@ -28,7 +28,7 @@ import (
 )
 
 func (s *ClusterScope) ReconcileVCN(ctx context.Context) error {
-	desiredVCN := s.VCNSpec()
+	spec := s.OCIClusterAccessor.GetNetworkSpec().Vcn
 
 	var err error
 	vcn, err := s.GetVCN(ctx)
@@ -37,19 +37,19 @@ func (s *ClusterScope) ReconcileVCN(ctx context.Context) error {
 	}
 	if vcn != nil {
 		s.OCIClusterAccessor.GetNetworkSpec().Vcn.ID = vcn.Id
-		if s.IsVcnEquals(vcn, desiredVCN) {
+		if s.IsVcnEquals(vcn) {
 			s.Logger.Info("No Reconciliation Required for VCN", "vcn", s.getVcnId())
 			return nil
 		}
-		return s.UpdateVCN(ctx, desiredVCN)
+		return s.UpdateVCN(ctx, spec)
 	}
-	vcnId, err := s.CreateVCN(ctx, desiredVCN)
+	vcnId, err := s.CreateVCN(ctx, spec)
 	s.OCIClusterAccessor.GetNetworkSpec().Vcn.ID = vcnId
 	return err
 }
 
-func (s *ClusterScope) IsVcnEquals(actual *core.Vcn, desired infrastructurev1beta2.VCN) bool {
-	if *actual.DisplayName != desired.Name {
+func (s *ClusterScope) IsVcnEquals(actual *core.Vcn) bool {
+	if *actual.DisplayName != s.GetVcnName() {
 		return false
 	}
 	return true
@@ -62,19 +62,13 @@ func (s *ClusterScope) GetVcnName() string {
 	return fmt.Sprintf("%s", s.OCIClusterAccessor.GetName())
 }
 
-func (s *ClusterScope) GetVcnCidr() string {
-	if s.OCIClusterAccessor.GetNetworkSpec().Vcn.CIDR != "" {
-		return s.OCIClusterAccessor.GetNetworkSpec().Vcn.CIDR
+func (s *ClusterScope) GetVcnCidrs() []string {
+	if s.OCIClusterAccessor.GetNetworkSpec().Vcn.CIDRS != nil && len(s.OCIClusterAccessor.GetNetworkSpec().Vcn.CIDRS) > 0 {
+		return s.OCIClusterAccessor.GetNetworkSpec().Vcn.CIDRS
+	} else if s.OCIClusterAccessor.GetNetworkSpec().Vcn.CIDR != "" {
+		return []string{s.OCIClusterAccessor.GetNetworkSpec().Vcn.CIDR}
 	}
-	return VcnDefaultCidr
-}
-
-func (s *ClusterScope) VCNSpec() infrastructurev1beta2.VCN {
-	vcnSpec := infrastructurev1beta2.VCN{
-		Name: s.GetVcnName(),
-		CIDR: s.GetVcnCidr(),
-	}
-	return vcnSpec
+	return []string{VcnDefaultCidr}
 }
 
 func (s *ClusterScope) GetVCN(ctx context.Context) (*core.Vcn, error) {
@@ -112,7 +106,7 @@ func (s *ClusterScope) GetVCN(ctx context.Context) (*core.Vcn, error) {
 
 func (s *ClusterScope) UpdateVCN(ctx context.Context, vcn infrastructurev1beta2.VCN) error {
 	updateVCNDetails := core.UpdateVcnDetails{
-		DisplayName: common.String(vcn.Name),
+		DisplayName: common.String(s.GetVcnName()),
 	}
 	vcnResponse, err := s.VCNClient.UpdateVcn(ctx, core.UpdateVcnRequest{
 		UpdateVcnDetails: updateVCNDetails,
@@ -129,8 +123,8 @@ func (s *ClusterScope) UpdateVCN(ctx context.Context, vcn infrastructurev1beta2.
 func (s *ClusterScope) CreateVCN(ctx context.Context, spec infrastructurev1beta2.VCN) (*string, error) {
 	vcnDetails := core.CreateVcnDetails{
 		CompartmentId: common.String(s.GetCompartmentId()),
-		DisplayName:   common.String(spec.Name),
-		CidrBlocks:    []string{spec.CIDR},
+		DisplayName:   common.String(s.GetVcnName()),
+		CidrBlocks:    s.GetVcnCidrs(),
 		FreeformTags:  s.GetFreeFormTags(),
 		DefinedTags:   s.GetDefinedTags(),
 		DnsLabel:      spec.DnsLabel,

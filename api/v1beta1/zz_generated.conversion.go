@@ -3323,6 +3323,7 @@ func autoConvert_v1beta1_VCN_To_v1beta2_VCN(in *VCN, out *v1beta2.VCN, s convers
 	out.ID = (*string)(unsafe.Pointer(in.ID))
 	out.Name = in.Name
 	out.CIDR = in.CIDR
+	out.CIDRS = *(*[]string)(unsafe.Pointer(&in.CIDRS))
 	// WARNING: in.NatGatewayId requires manual conversion: does not exist in peer-type
 	// WARNING: in.InternetGatewayId requires manual conversion: does not exist in peer-type
 	// WARNING: in.ServiceGatewayId requires manual conversion: does not exist in peer-type
@@ -3338,6 +3339,7 @@ func autoConvert_v1beta2_VCN_To_v1beta1_VCN(in *v1beta2.VCN, out *VCN, s convers
 	out.ID = (*string)(unsafe.Pointer(in.ID))
 	out.Name = in.Name
 	out.CIDR = in.CIDR
+	out.CIDRS = *(*[]string)(unsafe.Pointer(&in.CIDRS))
 	out.Subnets = *(*[]*Subnet)(unsafe.Pointer(&in.Subnets))
 	// WARNING: in.InternetGateway requires manual conversion: does not exist in peer-type
 	// WARNING: in.NATGateway requires manual conversion: does not exist in peer-type
