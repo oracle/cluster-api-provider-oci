@@ -155,6 +155,10 @@ func (s *ClusterScope) CreateNLB(ctx context.Context, lb infrastructurev1beta2.L
 	}
 
 	backendSetDetails := make(map[string]networkloadbalancer.BackendSetDetails)
+	healthCheckUrl := lb.NLBSpec.BackendSetDetails.HealthChecker.UrlPath
+	if healthCheckUrl == nil {
+		healthCheckUrl = common.String("/healthz")
+	}
 	backendSetDetails[APIServerLBBackendSetName] = networkloadbalancer.BackendSetDetails{
 		Policy:                   LoadBalancerPolicy,
 		IsPreserveSource:         isPreserverSourceIp,
@@ -163,7 +167,7 @@ func (s *ClusterScope) CreateNLB(ctx context.Context, lb infrastructurev1beta2.L
 		HealthChecker: &networkloadbalancer.HealthChecker{
 			Port:       common.Int(int(s.APIServerPort())),
 			Protocol:   networkloadbalancer.HealthCheckProtocolsHttps,
-			UrlPath:    common.String("/healthz"),
+			UrlPath:    healthCheckUrl,
 			ReturnCode: common.Int(200),
 		},
 		Backends: []networkloadbalancer.Backend{},

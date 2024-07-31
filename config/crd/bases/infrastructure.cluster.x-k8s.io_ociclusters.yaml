@@ -124,6 +124,16 @@ spec:
                             description: BackendSetDetails specifies the configuration
                               of a network load balancer backend set.
                             properties:
+                              healthChecker:
+                                description: If enabled existing connections will
+                                  be forwarded to an alternative healthy backend as
+                                  soon as current backend becomes unhealthy.
+                                properties:
+                                  urlPath:
+                                    description: 'The path against which to run the
+                                      health check. Example: `/healthcheck`'
+                                    type: string
+                                type: object
                               isFailOpen:
                                 description: If enabled, the network load balancer
                                   will continue to distribute traffic in the configured
@@ -1324,6 +1334,18 @@ spec:
                             description: BackendSetDetails specifies the configuration
                               of a network load balancer backend set.
                             properties:
+                              healthChecker:
+                                description: If enabled existing connections will
+                                  be forwarded to an alternative healthy backend as
+                                  soon as current backend becomes unhealthy.
+                                properties:
+                                  urlPath:
+                                    description: 'The path against which to run the
+                                      health check. Example: `/healthcheck`'
+                                    type: string
+                                required:
+                                - urlPath
+                                type: object
                               isFailOpen:
                                 description: If enabled, the network load balancer
                                   will continue to distribute traffic in the configured

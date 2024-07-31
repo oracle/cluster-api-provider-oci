@@ -369,6 +369,9 @@ func TestNLBReconciliation(t *testing.T) {
 							IsInstantFailoverEnabled: common.Bool(true),
 							IsFailOpen:               common.Bool(false),
 							IsPreserveSource:         common.Bool(false),
+							HealthChecker: infrastructurev1beta2.HealthChecker{
+								UrlPath: common.String("readyz"),
+							},
 						},
 					},
 				}
@@ -403,7 +406,7 @@ func TestNLBReconciliation(t *testing.T) {
 								HealthChecker: &networkloadbalancer.HealthChecker{
 									Port:       common.Int(6443),
 									Protocol:   networkloadbalancer.HealthCheckProtocolsHttps,
-									UrlPath:    common.String("/healthz"),
+									UrlPath:    common.String("readyz"),
 									ReturnCode: common.Int(200),
 								},
 								Backends: []networkloadbalancer.Backend{},

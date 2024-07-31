@@ -990,6 +990,19 @@ type BackendSetDetails struct {
 	// If enabled existing connections will be forwarded to an alternative healthy backend as soon as current backend becomes unhealthy.
 	// +optional
 	IsInstantFailoverEnabled *bool `json:"isInstantFailoverEnabled,omitempty"`
+
+	// If enabled existing connections will be forwarded to an alternative healthy backend as soon as current backend becomes unhealthy.
+	// +optional
+	HealthChecker HealthChecker `json:"healthChecker,omitempty"`
+}
+
+// HealthChecker The health check policy configuration.
+// For more information, see Editing Health Check Policies (https://docs.cloud.oracle.com/Content/NetworkLoadBalancer/HealthCheckPolicies/health-check-policy-management.htm).
+type HealthChecker struct {
+
+	// The path against which to run the health check.
+	// Example: `/healthcheck`
+	UrlPath *string `mandatory:"false" json:"urlPath"`
 }
 
 // NetworkSpec specifies what the OCI networking resources should look like.
