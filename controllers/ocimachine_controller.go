@@ -28,6 +28,7 @@ import (
 	cloudutil "github.com/oracle/cluster-api-provider-oci/cloud/util"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
+	"github.com/oracle/oci-go-sdk/v65/workrequests"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -68,25 +69,32 @@ type OCIMachineReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, reterr error) {
+	fmt.Print("hello")
 	logger := log.FromContext(ctx)
 	logger.Info("Got reconciliation event for machine")
 
 	ociMachine := &infrastructurev1beta2.OCIMachine{}
 	err := r.Get(ctx, req.NamespacedName, ociMachine)
+	fmt.Print(err)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
+			fmt.Println("Result1 ", ctrl.Result{})
 			return ctrl.Result{}, nil
 		}
+		fmt.Println("Result2 ", ctrl.Result{})
 		return ctrl.Result{}, err
 	}
 	// Fetch the Machine.
 	machine, err := util.GetOwnerMachine(ctx, r.Client, ociMachine.ObjectMeta)
+	fmt.Print(machine)
 	if err != nil {
+		fmt.Println("Result3 ", ctrl.Result{})
 		return ctrl.Result{}, err
 	}
 	if machine == nil {
 		r.Recorder.Eventf(ociMachine, corev1.EventTypeNormal, "OwnerRefNotSet", "Cluster Controller has not yet set OwnerRef")
 		logger.Info("Machine Controller has not yet set OwnerRef")
+		fmt.Println("Result4 ", ctrl.Result{})
 		return ctrl.Result{}, nil
 	}
 	logger = logger.WithValues("machine-name", ociMachine.Name)
@@ -156,6 +164,7 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		VCNClient:                 clients.VCNClient,
 		NetworkLoadBalancerClient: clients.NetworkLoadBalancerClient,
 		LoadBalancerClient:        clients.LoadBalancerClient,
+		WorkRequestsClient:        clients.WorkRequestsClient,
 	})
 	if err != nil {
 		return ctrl.Result{}, errors.Errorf("failed to create scope: %+v", err)
@@ -396,6 +405,32 @@ func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.
 		conditions.MarkFalse(machineScope.OCIMachine, infrastructurev1beta2.InstanceReadyCondition, infrastructurev1beta2.InstanceProvisionFailedReason, clusterv1.ConditionSeverityError, "")
 		machineScope.SetFailureReason(capierrors.CreateMachineError)
 		machineScope.SetFailureMessage(errors.Errorf("Instance status %q is unexpected", instance.LifecycleState))
+		wrequest := workrequests.ListWorkRequestsRequest{
+			CompartmentId: instance.CompartmentId,
+			ResourceId:    instance.Id,
+		}
+		wresp, err := machineScope.WorkRequestsClient.ListWorkRequests(ctx, wrequest)
+		if err != nil {
+			r.Recorder.Event(machine, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "Failed to normal reconcile OCIMachine").Error())
+			return reconcile.Result{}, errors.Wrapf(err, "failed to normal reconcile OCI Machine %s/%s", machineScope.OCIMachine.Namespace, machineScope.OCIMachine.Name)
+		}
+		for _, wrqst := range wresp.Items {
+			if wrqst.Status == "FAILED" {
+				logger.Info("Fetching work-request errors for the terminating/terminated instances")
+				wreq := workrequests.ListWorkRequestErrorsRequest{
+					WorkRequestId: wrqst.Id,
+				}
+				wr_errs, err := machineScope.WorkRequestsClient.ListWorkRequestErrors(ctx, wreq)
+				if err != nil {
+					r.Recorder.Event(machine, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "Failed to normal reconcile OCIMachine").Error())
+					return reconcile.Result{}, errors.Wrapf(err, "failed to normal reconcile OCI Machine %s/%s", machineScope.OCIMachine.Namespace, machineScope.OCIMachine.Name)
+				}
+				for _, wr_err := range wr_errs.Items {
+					fmt.Printf("WorkRequestErrorMessage: %s\n", *wr_err.Message)
+					r.Recorder.Eventf(machine, corev1.EventTypeWarning, "ReconcileError", *wr_err.Message)
+				}
+			}
+		}
 		r.Recorder.Eventf(machine, corev1.EventTypeWarning, "ReconcileError",
 			"Instance  has invalid lifecycle state %s", instance.LifecycleState)
 		return reconcile.Result{}, errors.New(fmt.Sprintf("instance  has invalid lifecycle state %s", instance.LifecycleState))

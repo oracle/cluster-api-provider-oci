@@ -32,6 +32,7 @@ import (
 	lb "github.com/oracle/cluster-api-provider-oci/cloud/services/loadbalancer"
 	nlb "github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
+	wr "github.com/oracle/cluster-api-provider-oci/cloud/services/workrequests"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/oracle/oci-go-sdk/v65/loadbalancer"
@@ -63,6 +64,7 @@ type MachineScopeParams struct {
 	VCNClient                 vcn.Client
 	NetworkLoadBalancerClient nlb.NetworkLoadBalancerClient
 	LoadBalancerClient        lb.LoadBalancerClient
+	WorkRequestsClient        wr.Client
 }
 
 type MachineScope struct {
@@ -77,6 +79,7 @@ type MachineScope struct {
 	VCNClient                 vcn.Client
 	NetworkLoadBalancerClient nlb.NetworkLoadBalancerClient
 	LoadBalancerClient        lb.LoadBalancerClient
+	WorkRequestsClient        wr.Client
 }
 
 // NewMachineScope creates a MachineScope given the MachineScopeParams
@@ -109,6 +112,7 @@ func NewMachineScope(params MachineScopeParams) (*MachineScope, error) {
 		VCNClient:                 params.VCNClient,
 		NetworkLoadBalancerClient: params.NetworkLoadBalancerClient,
 		LoadBalancerClient:        params.LoadBalancerClient,
+		WorkRequestsClient:        params.WorkRequestsClient,
 	}, nil
 }
 
