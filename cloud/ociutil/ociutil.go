@@ -64,7 +64,8 @@ func IsNotFound(err error) bool {
 // AwaitNLBWorkRequest waits for the LB work request to either succeed, fail. See k8s.io/apimachinery/pkg/util/wait
 func AwaitNLBWorkRequest(ctx context.Context, networkLoadBalancerClient nlb.NetworkLoadBalancerClient, workRequestId *string) (*networkloadbalancer.WorkRequest, error) {
 	var wr *networkloadbalancer.WorkRequest
-	err := wait.PollWithContext(ctx, WorkRequestPollInterval, WorkRequestTimeout, func(ctx context.Context) (done bool, err error) {
+	immediate := true
+	err := wait.PollUntilContextTimeout(ctx, WorkRequestPollInterval, WorkRequestTimeout, immediate, func(ctx context.Context) (done bool, err error) {
 		twr, err := networkLoadBalancerClient.GetWorkRequest(ctx, networkloadbalancer.GetWorkRequestRequest{
 			WorkRequestId: workRequestId,
 		})
@@ -86,7 +87,8 @@ func AwaitNLBWorkRequest(ctx context.Context, networkLoadBalancerClient nlb.Netw
 // AwaitLBWorkRequest waits for the LBaaS work request to either succeed, fail. See k8s.io/apimachinery/pkg/util/wait
 func AwaitLBWorkRequest(ctx context.Context, loadBalancerClient lb.LoadBalancerClient, workRequestId *string) (*loadbalancer.WorkRequest, error) {
 	var wr *loadbalancer.WorkRequest
-	err := wait.PollWithContext(ctx, WorkRequestPollInterval, WorkRequestTimeout, func(ctx context.Context) (done bool, err error) {
+	immediate := true
+	err := wait.PollUntilContextTimeout(ctx, WorkRequestPollInterval, WorkRequestTimeout, immediate, func(ctx context.Context) (done bool, err error) {
 		twr, err := loadBalancerClient.GetWorkRequest(ctx, loadbalancer.GetWorkRequestRequest{
 			WorkRequestId: workRequestId,
 		})
