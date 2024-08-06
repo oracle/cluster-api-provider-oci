@@ -1002,7 +1002,7 @@ type HealthChecker struct {
 
 	// The path against which to run the health check.
 	// Example: `/healthcheck`
-	UrlPath *string `mandatory:"false" json:"urlPath"`
+	UrlPath *string `json:"urlPath,omitempty"`
 }
 
 // NetworkSpec specifies what the OCI networking resources should look like.

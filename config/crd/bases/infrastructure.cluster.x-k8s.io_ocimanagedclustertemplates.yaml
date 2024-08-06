@@ -1417,8 +1417,6 @@ spec:
                                             description: 'The path against which to
                                               run the health check. Example: `/healthcheck`'
                                             type: string
-                                        required:
-                                        - urlPath
                                         type: object
                                       isFailOpen:
                                         description: If enabled, the network load
