@@ -993,6 +993,7 @@ type HealthChecker struct {
 
 	// The path against which to run the health check.
 	// Example: `/healthcheck`
+	// Default value is `/healthz`
 	UrlPath *string `json:"urlPath,omitempty"`
 }
 
