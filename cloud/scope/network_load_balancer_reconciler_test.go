@@ -245,7 +245,7 @@ func TestNLBReconciliation(t *testing.T) {
 			},
 		},
 		{
-			name:          "create network load balancer",
+			name:          "create network load balancer, default values",
 			errorExpected: false,
 			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta2.Subnet{
@@ -266,6 +266,7 @@ func TestNLBReconciliation(t *testing.T) {
 						},
 					},
 				}
+				clusterScope.OCIClusterAccessor.GetNetworkSpec().APIServerLB = infrastructurev1beta2.LoadBalancer{}
 				definedTags, definedTagsInterface := getDefinedTags()
 				ociClusterAccessor.OCICluster.Spec.DefinedTags = definedTags
 				nlbClient.EXPECT().ListNetworkLoadBalancers(gomock.Any(), gomock.Eq(networkloadbalancer.ListNetworkLoadBalancersRequest{
@@ -296,6 +297,116 @@ func TestNLBReconciliation(t *testing.T) {
 									Port:       common.Int(6443),
 									Protocol:   networkloadbalancer.HealthCheckProtocolsHttps,
 									UrlPath:    common.String("/healthz"),
+									ReturnCode: common.Int(200),
+								},
+								Backends: []networkloadbalancer.Backend{},
+							},
+						},
+						FreeformTags: tags,
+						DefinedTags:  definedTagsInterface,
+					},
+					OpcRetryToken: ociutil.GetOPCRetryToken("%s-%s", "create-nlb", string("resource_uid")),
+				})).
+					Return(networkloadbalancer.CreateNetworkLoadBalancerResponse{
+						NetworkLoadBalancer: networkloadbalancer.NetworkLoadBalancer{
+							Id: common.String("nlb-id"),
+						},
+						OpcWorkRequestId: common.String("opc-wr-id"),
+					}, nil)
+				nlbClient.EXPECT().GetWorkRequest(gomock.Any(), gomock.Eq(networkloadbalancer.GetWorkRequestRequest{
+					WorkRequestId: common.String("opc-wr-id"),
+				})).Return(networkloadbalancer.GetWorkRequestResponse{
+					WorkRequest: networkloadbalancer.WorkRequest{
+						Status: networkloadbalancer.OperationStatusSucceeded,
+					},
+				}, nil)
+
+				nlbClient.EXPECT().GetNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.GetNetworkLoadBalancerRequest{
+					NetworkLoadBalancerId: common.String("nlb-id"),
+				})).
+					Return(networkloadbalancer.GetNetworkLoadBalancerResponse{
+						NetworkLoadBalancer: networkloadbalancer.NetworkLoadBalancer{
+							Id:           common.String("nlb-id"),
+							FreeformTags: tags,
+							DefinedTags:  make(map[string]map[string]interface{}),
+							IsPrivate:    common.Bool(false),
+							DisplayName:  common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
+							IpAddresses: []networkloadbalancer.IpAddress{
+								{
+									IpAddress: common.String("2.2.2.2"),
+									IsPublic:  common.Bool(true),
+								},
+							},
+						},
+					}, nil)
+			},
+		},
+		{
+			name:          "create network load balancer",
+			errorExpected: false,
+			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
+				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta2.Subnet{
+					{
+						Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+						ID:   common.String("s1"),
+					},
+				}
+				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup = infrastructurev1beta2.NetworkSecurityGroup{
+					List: []*infrastructurev1beta2.NSG{
+						{
+							Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+							ID:   common.String("nsg1"),
+						},
+						{
+							Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+							ID:   common.String("nsg2"),
+						},
+					},
+				}
+				clusterScope.OCIClusterAccessor.GetNetworkSpec().APIServerLB = infrastructurev1beta2.LoadBalancer{
+					NLBSpec: infrastructurev1beta2.NLBSpec{
+						BackendSetDetails: infrastructurev1beta2.BackendSetDetails{
+							IsInstantFailoverEnabled: common.Bool(true),
+							IsFailOpen:               common.Bool(false),
+							IsPreserveSource:         common.Bool(false),
+							HealthChecker: infrastructurev1beta2.HealthChecker{
+								UrlPath: common.String("readyz"),
+							},
+						},
+					},
+				}
+				definedTags, definedTagsInterface := getDefinedTags()
+				ociClusterAccessor.OCICluster.Spec.DefinedTags = definedTags
+				nlbClient.EXPECT().ListNetworkLoadBalancers(gomock.Any(), gomock.Eq(networkloadbalancer.ListNetworkLoadBalancersRequest{
+					CompartmentId: common.String("compartment-id"),
+					DisplayName:   common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
+				})).
+					Return(networkloadbalancer.ListNetworkLoadBalancersResponse{}, nil)
+				nlbClient.EXPECT().CreateNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.CreateNetworkLoadBalancerRequest{
+					CreateNetworkLoadBalancerDetails: networkloadbalancer.CreateNetworkLoadBalancerDetails{
+						CompartmentId:           common.String("compartment-id"),
+						DisplayName:             common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
+						SubnetId:                common.String("s1"),
+						IsPrivate:               common.Bool(false),
+						NetworkSecurityGroupIds: []string{"nsg1", "nsg2"},
+						Listeners: map[string]networkloadbalancer.ListenerDetails{
+							APIServerLBListener: {
+								Protocol:              networkloadbalancer.ListenerProtocolsTcp,
+								Port:                  common.Int(6443),
+								DefaultBackendSetName: common.String(APIServerLBBackendSetName),
+								Name:                  common.String(APIServerLBListener),
+							},
+						},
+						BackendSets: map[string]networkloadbalancer.BackendSetDetails{
+							APIServerLBBackendSetName: networkloadbalancer.BackendSetDetails{
+								Policy:                   LoadBalancerPolicy,
+								IsInstantFailoverEnabled: common.Bool(true),
+								IsFailOpen:               common.Bool(false),
+								IsPreserveSource:         common.Bool(false),
+								HealthChecker: &networkloadbalancer.HealthChecker{
+									Port:       common.Int(6443),
+									Protocol:   networkloadbalancer.HealthCheckProtocolsHttps,
+									UrlPath:    common.String("readyz"),
 									ReturnCode: common.Int(200),
 								},
 								Backends: []networkloadbalancer.Backend{},
