@@ -144,7 +144,8 @@ spec:
                                         properties:
                                           urlPath:
                                             description: 'The path against which to
-                                              run the health check. Example: `/healthcheck`'
+                                              run the health check. Example: `/healthcheck`
+                                              Default value is `/healthz`'
                                             type: string
                                         type: object
                                       isFailOpen:
@@ -1405,7 +1406,8 @@ spec:
                                         properties:
                                           urlPath:
                                             description: 'The path against which to
-                                              run the health check. Example: `/healthcheck`'
+                                              run the health check. Example: `/healthcheck`
+                                              Default value is `/healthz`'
                                             type: string
                                         type: object
                                       isFailOpen:
