@@ -27,8 +27,10 @@ import (
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/loadbalancer/mock_lb"
+	"github.com/oracle/cluster-api-provider-oci/cloud/services/workrequests/mock_workrequests"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/loadbalancer"
+	"github.com/oracle/oci-go-sdk/v65/workrequests"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -40,6 +42,7 @@ func TestLBReconciliation(t *testing.T) {
 		cs                 *ClusterScope
 		mockCtrl           *gomock.Controller
 		lbClient           *mock_lb.MockLoadBalancerClient
+		wrClient           *mock_workrequests.MockClient
 		ociClusterAccessor OCISelfManagedCluster
 		tags               map[string]string
 	)
@@ -48,6 +51,7 @@ func TestLBReconciliation(t *testing.T) {
 		var err error
 		mockCtrl = gomock.NewController(t)
 		lbClient = mock_lb.NewMockLoadBalancerClient(mockCtrl)
+		wrClient = mock_workrequests.NewMockClient(mockCtrl)
 		client := fake.NewClientBuilder().Build()
 		ociClusterAccessor = OCISelfManagedCluster{
 			&infrastructurev1beta2.OCICluster{
@@ -64,6 +68,7 @@ func TestLBReconciliation(t *testing.T) {
 		ociClusterAccessor.OCICluster.Spec.ControlPlaneEndpoint.Port = 6443
 		cs, err = NewClusterScope(ClusterScopeParams{
 			LoadBalancerClient: lbClient,
+			WorkRequestClient:  wrClient,
 			Cluster:            &clusterv1.Cluster{},
 			OCIClusterAccessor: ociClusterAccessor,
 			Client:             client,
@@ -85,12 +90,12 @@ func TestLBReconciliation(t *testing.T) {
 		eventNotExpected    string
 		matchError          error
 		errorSubStringMatch bool
-		testSpecificSetup   func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient)
+		testSpecificSetup   func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient)
 	}{
 		{
 			name:          "lb exists",
 			errorExpected: false,
-			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient) {
+			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerId = common.String("lb-id")
 				lbClient.EXPECT().GetLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.GetLoadBalancerRequest{
 					LoadBalancerId: common.String("lb-id"),
@@ -117,7 +122,7 @@ func TestLBReconciliation(t *testing.T) {
 			name:          "lb does not have ip address",
 			errorExpected: true,
 			matchError:    errors.New("lb does not have valid ip addresses"),
-			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient) {
+			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerId = common.String("lb-id")
 				lbClient.EXPECT().GetLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.GetLoadBalancerRequest{
 					LoadBalancerId: common.String("lb-id"),
@@ -138,7 +143,7 @@ func TestLBReconciliation(t *testing.T) {
 			name:          "lb does not have public ip address",
 			errorExpected: true,
 			matchError:    errors.New("lb does not have valid public ip address"),
-			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient) {
+			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerId = common.String("lb-id")
 				lbClient.EXPECT().GetLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.GetLoadBalancerRequest{
 					LoadBalancerId: common.String("lb-id"),
@@ -165,7 +170,7 @@ func TestLBReconciliation(t *testing.T) {
 			name:          "lb lookup by display name",
 			errorExpected: true,
 			matchError:    errors.New("lb does not have valid public ip address"),
-			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient) {
+			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				lbClient.EXPECT().ListLoadBalancers(gomock.Any(), gomock.Eq(loadbalancer.ListLoadBalancersRequest{
 					CompartmentId: common.String("compartment-id"),
 					DisplayName:   common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
@@ -212,7 +217,7 @@ func TestLBReconciliation(t *testing.T) {
 			name:          "no cp subnet",
 			errorExpected: true,
 			matchError:    errors.New("control plane endpoint subnet not provided"),
-			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient) {
+			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				lbClient.EXPECT().ListLoadBalancers(gomock.Any(), gomock.Eq(loadbalancer.ListLoadBalancersRequest{
 					CompartmentId: common.String("compartment-id"),
 					DisplayName:   common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
@@ -223,7 +228,7 @@ func TestLBReconciliation(t *testing.T) {
 		{
 			name:          "create load balancer more than one subnet",
 			errorExpected: false,
-			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient) {
+			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta2.Subnet{
 					{
 						Role: infrastructurev1beta2.ControlPlaneEndpointRole,
@@ -322,7 +327,7 @@ func TestLBReconciliation(t *testing.T) {
 		{
 			name:          "create load balancer",
 			errorExpected: false,
-			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient) {
+			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta2.Subnet{
 					{
 						Role: infrastructurev1beta2.ControlPlaneEndpointRole,
@@ -419,7 +424,7 @@ func TestLBReconciliation(t *testing.T) {
 			errorExpected:       true,
 			errorSubStringMatch: true,
 			matchError:          errors.New("request failed"),
-			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient) {
+			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta2.Subnet{
 					{
 						Role: infrastructurev1beta2.ControlPlaneEndpointRole,
@@ -471,8 +476,8 @@ func TestLBReconciliation(t *testing.T) {
 			name:                "work request failed",
 			errorExpected:       true,
 			errorSubStringMatch: true,
-			matchError:          errors.New("WorkRequest opc-wr-id failed"),
-			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient) {
+			matchError:          errors.New("No more Ip available in CIDR 1.1.1.1/1, WorkRequest opc-wr-id failed"),
+			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta2.Subnet{
 					{
 						Role: infrastructurev1beta2.ControlPlaneEndpointRole,
@@ -527,6 +532,17 @@ func TestLBReconciliation(t *testing.T) {
 						LifecycleState: loadbalancer.WorkRequestLifecycleStateFailed,
 					},
 				}, nil)
+				wrClient.EXPECT().ListWorkRequestErrors(gomock.Any(), gomock.Eq(workrequests.ListWorkRequestErrorsRequest{
+					WorkRequestId: common.String("opc-wr-id"),
+				})).
+					Return(workrequests.ListWorkRequestErrorsResponse{
+						Items: []workrequests.WorkRequestError{
+							{
+								Code:    common.String("NoAvailableIpAddress"),
+								Message: common.String("No more Ip available in CIDR 1.1.1.1/1"),
+							},
+						},
+					}, nil)
 			},
 		},
 		{
@@ -534,7 +550,7 @@ func TestLBReconciliation(t *testing.T) {
 			errorExpected:       true,
 			errorSubStringMatch: true,
 			matchError:          errors.New("failed to reconcile the apiserver LB, failed to update lb"),
-			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient) {
+			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				ociClusterAccessor.OCICluster.Spec.NetworkSpec.APIServerLB.LoadBalancerId = common.String("lb-id")
 				lbClient.EXPECT().GetLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.GetLoadBalancerRequest{
 					LoadBalancerId: common.String("lb-id"),
@@ -573,6 +589,17 @@ func TestLBReconciliation(t *testing.T) {
 						LifecycleState: loadbalancer.WorkRequestLifecycleStateFailed,
 					},
 				}, nil)
+				wrClient.EXPECT().ListWorkRequestErrors(gomock.Any(), gomock.Eq(workrequests.ListWorkRequestErrorsRequest{
+					WorkRequestId: common.String("opc-wr-id"),
+				})).
+					Return(workrequests.ListWorkRequestErrorsResponse{
+						Items: []workrequests.WorkRequestError{
+							{
+								Code:    common.String("FailedToUpdateLb"),
+								Message: common.String("Lb not in active state"),
+							},
+						},
+					}, nil)
 			},
 		},
 		{
@@ -580,7 +607,7 @@ func TestLBReconciliation(t *testing.T) {
 			errorExpected:       true,
 			errorSubStringMatch: true,
 			matchError:          errors.New(fmt.Sprintf("load balancer is in %s state. Waiting for ACTIVE state.", loadbalancer.LoadBalancerLifecycleStateCreating)),
-			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient) {
+			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				ociClusterAccessor.OCICluster.Spec.NetworkSpec.APIServerLB.LoadBalancerId = common.String("lb-id")
 				lbClient.EXPECT().GetLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.GetLoadBalancerRequest{
 					LoadBalancerId: common.String("lb-id"),
@@ -608,7 +635,7 @@ func TestLBReconciliation(t *testing.T) {
 			errorExpected:       true,
 			errorSubStringMatch: true,
 			matchError:          errors.New("request failed"),
-			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient) {
+			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerId = common.String("lb-id")
 				lbClient.EXPECT().GetLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.GetLoadBalancerRequest{
 					LoadBalancerId: common.String("lb-id"),
@@ -646,7 +673,7 @@ func TestLBReconciliation(t *testing.T) {
 			g := NewWithT(t)
 			defer teardown(t, g)
 			setup(t, g)
-			tc.testSpecificSetup(cs, lbClient)
+			tc.testSpecificSetup(cs, lbClient, wrClient)
 			err := cs.ReconcileApiServerLB(context.Background())
 			if tc.errorExpected {
 				g.Expect(err).To(Not(BeNil()))
@@ -668,6 +695,7 @@ func TestLBDeletion(t *testing.T) {
 		cs                 *ClusterScope
 		mockCtrl           *gomock.Controller
 		lbClient           *mock_lb.MockLoadBalancerClient
+		wrClient           *mock_workrequests.MockClient
 		ociClusterAccessor OCISelfManagedCluster
 		tags               map[string]string
 	)
@@ -676,6 +704,7 @@ func TestLBDeletion(t *testing.T) {
 		var err error
 		mockCtrl = gomock.NewController(t)
 		lbClient = mock_lb.NewMockLoadBalancerClient(mockCtrl)
+		wrClient = mock_workrequests.NewMockClient(mockCtrl)
 		client := fake.NewClientBuilder().Build()
 		ociClusterAccessor = OCISelfManagedCluster{
 			&infrastructurev1beta2.OCICluster{
@@ -692,6 +721,7 @@ func TestLBDeletion(t *testing.T) {
 		ociClusterAccessor.OCICluster.Spec.ControlPlaneEndpoint.Port = 6443
 		cs, err = NewClusterScope(ClusterScopeParams{
 			LoadBalancerClient: lbClient,
+			WorkRequestClient:  wrClient,
 			Cluster:            &clusterv1.Cluster{},
 			OCIClusterAccessor: ociClusterAccessor,
 			Client:             client,
@@ -713,12 +743,12 @@ func TestLBDeletion(t *testing.T) {
 		eventNotExpected    string
 		matchError          error
 		errorSubStringMatch bool
-		testSpecificSetup   func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient)
+		testSpecificSetup   func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient)
 	}{
 		{
 			name:          "lb already deleted",
 			errorExpected: false,
-			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient) {
+			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerId = common.String("lb-id")
 				lbClient.EXPECT().GetLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.GetLoadBalancerRequest{
 					LoadBalancerId: common.String("lb-id"),
@@ -729,7 +759,7 @@ func TestLBDeletion(t *testing.T) {
 		{
 			name:          "list lb by display name",
 			errorExpected: false,
-			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient) {
+			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				lbClient.EXPECT().ListLoadBalancers(gomock.Any(), gomock.Eq(loadbalancer.ListLoadBalancersRequest{
 					CompartmentId: common.String("compartment-id"),
 					DisplayName:   common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
@@ -787,7 +817,7 @@ func TestLBDeletion(t *testing.T) {
 		{
 			name:          "lb delete by id",
 			errorExpected: false,
-			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient) {
+			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerId = common.String("lb-id")
 				lbClient.EXPECT().GetLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.GetLoadBalancerRequest{
 					LoadBalancerId: common.String("lb-id"),
@@ -827,7 +857,7 @@ func TestLBDeletion(t *testing.T) {
 			errorExpected:       true,
 			errorSubStringMatch: true,
 			matchError:          errors.New("request failed"),
-			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient) {
+			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerId = common.String("lb-id")
 				lbClient.EXPECT().GetLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.GetLoadBalancerRequest{
 					LoadBalancerId: common.String("lb-id"),
@@ -858,7 +888,7 @@ func TestLBDeletion(t *testing.T) {
 			errorExpected:       true,
 			errorSubStringMatch: true,
 			matchError:          errors.New("work request to delete lb failed"),
-			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient) {
+			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerId = common.String("lb-id")
 				lbClient.EXPECT().GetLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.GetLoadBalancerRequest{
 					LoadBalancerId: common.String("lb-id"),
@@ -891,6 +921,17 @@ func TestLBDeletion(t *testing.T) {
 						LifecycleState: loadbalancer.WorkRequestLifecycleStateFailed,
 					},
 				}, nil)
+				wrClient.EXPECT().ListWorkRequestErrors(gomock.Any(), gomock.Eq(workrequests.ListWorkRequestErrorsRequest{
+					WorkRequestId: common.String("opc-wr-id"),
+				})).
+					Return(workrequests.ListWorkRequestErrorsResponse{
+						Items: []workrequests.WorkRequestError{
+							{
+								Code:    common.String("FailedToDeleteLb"),
+								Message: common.String("Internal Server Error"),
+							},
+						},
+					}, nil)
 			},
 		},
 	}
@@ -899,7 +940,7 @@ func TestLBDeletion(t *testing.T) {
 			g := NewWithT(t)
 			defer teardown(t, g)
 			setup(t, g)
-			tc.testSpecificSetup(cs, lbClient)
+			tc.testSpecificSetup(cs, lbClient, wrClient)
 			err := cs.DeleteApiServerLB(context.Background())
 			if tc.errorExpected {
 				g.Expect(err).To(Not(BeNil()))

@@ -560,7 +560,7 @@ func (m *MachineScope) ReconcileCreateInstanceOnLB(ctx context.Context) error {
 			m.OCIMachine.Status.CreateBackendWorkRequestId = *resp.OpcWorkRequestId
 			logger.Info("Add instance to LB backend-set", "WorkRequestId", resp.OpcWorkRequestId)
 			logger.Info("Waiting for LB work request to be complete")
-			_, err = ociutil.AwaitLBWorkRequest(ctx, m.LoadBalancerClient, resp.OpcWorkRequestId)
+			_, err = ociutil.AwaitLBWorkRequest(ctx, m.LoadBalancerClient, m.WorkRequestsClient, resp.OpcWorkRequestId)
 			if err != nil {
 				return err
 			}
@@ -597,7 +597,7 @@ func (m *MachineScope) ReconcileCreateInstanceOnLB(ctx context.Context) error {
 			m.OCIMachine.Status.CreateBackendWorkRequestId = *resp.OpcWorkRequestId
 			logger.Info("Add instance to NLB backend-set", "WorkRequestId", resp.OpcWorkRequestId)
 			logger.Info("Waiting for NLB work request to be complete")
-			_, err = ociutil.AwaitNLBWorkRequest(ctx, m.NetworkLoadBalancerClient, resp.OpcWorkRequestId)
+			_, err = ociutil.AwaitNLBWorkRequest(ctx, m.NetworkLoadBalancerClient, m.WorkRequestsClient, resp.OpcWorkRequestId)
 			if err != nil {
 				return err
 			}
@@ -665,7 +665,7 @@ func (m *MachineScope) ReconcileDeleteInstanceOnLB(ctx context.Context) error {
 			m.OCIMachine.Status.DeleteBackendWorkRequestId = *resp.OpcWorkRequestId
 			logger.Info("Delete instance from LB backend-set", "WorkRequestId", resp.OpcWorkRequestId)
 			logger.Info("Waiting for LB work request to be complete")
-			_, err = ociutil.AwaitLBWorkRequest(ctx, m.LoadBalancerClient, resp.OpcWorkRequestId)
+			_, err = ociutil.AwaitLBWorkRequest(ctx, m.LoadBalancerClient, m.WorkRequestsClient, resp.OpcWorkRequestId)
 			if err != nil {
 				return err
 			}
@@ -700,7 +700,7 @@ func (m *MachineScope) ReconcileDeleteInstanceOnLB(ctx context.Context) error {
 			m.OCIMachine.Status.DeleteBackendWorkRequestId = *resp.OpcWorkRequestId
 			logger.Info("Delete instance from LB backend-set", "WorkRequestId", resp.OpcWorkRequestId)
 			logger.Info("Waiting for LB work request to be complete")
-			_, err = ociutil.AwaitNLBWorkRequest(ctx, m.NetworkLoadBalancerClient, resp.OpcWorkRequestId)
+			_, err = ociutil.AwaitNLBWorkRequest(ctx, m.NetworkLoadBalancerClient, m.WorkRequestsClient, resp.OpcWorkRequestId)
 			if err != nil {
 				return err
 			}

@@ -19,6 +19,7 @@ package scope
 import (
 	"context"
 	"fmt"
+
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/oci-go-sdk/v65/common"
@@ -87,7 +88,7 @@ func (s *ClusterScope) DeleteApiServerNLB(ctx context.Context) error {
 		s.Logger.Error(err, "failed to delete apiserver nlb")
 		return errors.Wrap(err, "failed to delete apiserver nlb")
 	}
-	_, err = ociutil.AwaitNLBWorkRequest(ctx, s.NetworkLoadBalancerClient, lbResponse.OpcWorkRequestId)
+	_, err = ociutil.AwaitNLBWorkRequest(ctx, s.NetworkLoadBalancerClient, s.WorkRequestClient, lbResponse.OpcWorkRequestId)
 	if err != nil {
 		return errors.Wrap(err, "work request to delete nlb failed")
 	}
@@ -126,7 +127,7 @@ func (s *ClusterScope) UpdateNLB(ctx context.Context, nlb infrastructurev1beta2.
 		s.Logger.Error(err, "failed to reconcile the apiserver NLB, failed to generate update nlb workrequest")
 		return errors.Wrap(err, "failed to reconcile the apiserver NLB, failed to generate update nlb workrequest")
 	}
-	_, err = ociutil.AwaitNLBWorkRequest(ctx, s.NetworkLoadBalancerClient, nlbResponse.OpcWorkRequestId)
+	_, err = ociutil.AwaitNLBWorkRequest(ctx, s.NetworkLoadBalancerClient, s.WorkRequestClient, nlbResponse.OpcWorkRequestId)
 	if err != nil {
 		s.Logger.Error(err, "failed to reconcile the apiserver NLB, failed to update nlb")
 		return errors.Wrap(err, "failed to reconcile the apiserver NLB, failed to update nlb")
@@ -206,7 +207,7 @@ func (s *ClusterScope) CreateNLB(ctx context.Context, lb infrastructurev1beta2.L
 		s.Logger.Error(err, "failed to create apiserver nlb, failed to create work request")
 		return nil, nil, errors.Wrap(err, "failed to create apiserver nlb, failed to create work request")
 	}
-	_, err = ociutil.AwaitNLBWorkRequest(ctx, s.NetworkLoadBalancerClient, nlbResponse.OpcWorkRequestId)
+	_, err = ociutil.AwaitNLBWorkRequest(ctx, s.NetworkLoadBalancerClient, s.WorkRequestClient, nlbResponse.OpcWorkRequestId)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "awaiting network load balancer")
 	}

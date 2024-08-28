@@ -29,6 +29,7 @@ import (
 	lb "github.com/oracle/cluster-api-provider-oci/cloud/services/loadbalancer"
 	nlb "github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
+	wr "github.com/oracle/cluster-api-provider-oci/cloud/services/workrequests"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/identity"
 	"github.com/pkg/errors"
@@ -55,6 +56,7 @@ type ClusterScopeParams struct {
 	NetworkLoadBalancerClient nlb.NetworkLoadBalancerClient
 	LoadBalancerClient        lb.LoadBalancerClient
 	IdentityClient            identityClient.Client
+	WorkRequestClient         wr.Client
 	// RegionIdentifier Identifier as specified here https://docs.oracle.com/en-us/iaas/Content/General/Concepts/regions.htm
 	RegionIdentifier      string
 	OCIAuthConfigProvider common.ConfigurationProvider
@@ -73,6 +75,7 @@ type ClusterScope struct {
 	NetworkLoadBalancerClient nlb.NetworkLoadBalancerClient
 	LoadBalancerClient        lb.LoadBalancerClient
 	IdentityClient            identityClient.Client
+	WorkRequestClient         wr.Client
 	// RegionIdentifier Identifier as specified here https://docs.oracle.com/en-us/iaas/Content/General/Concepts/regions.htm
 	RegionIdentifier   string
 	ClientProvider     *ClientProvider
@@ -104,6 +107,7 @@ func NewClusterScope(params ClusterScopeParams) (*ClusterScope, error) {
 		NetworkLoadBalancerClient: params.NetworkLoadBalancerClient,
 		LoadBalancerClient:        params.LoadBalancerClient,
 		IdentityClient:            params.IdentityClient,
+		WorkRequestClient:         params.WorkRequestClient,
 		RegionIdentifier:          params.RegionIdentifier,
 		ClientProvider:            params.ClientProvider,
 		OCIClusterAccessor:        params.OCIClusterAccessor,

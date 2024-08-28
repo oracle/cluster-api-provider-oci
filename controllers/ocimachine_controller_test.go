@@ -804,6 +804,18 @@ func TestNormalReconciliationFunction(t *testing.T) {
 					WorkRequest: networkloadbalancer.WorkRequest{
 						Status: networkloadbalancer.OperationStatusFailed,
 					}}, nil)
+
+				wrClient.EXPECT().ListWorkRequestErrors(gomock.Any(), gomock.Eq(workrequests.ListWorkRequestErrorsRequest{
+					WorkRequestId: common.String("wrid"),
+				})).
+					Return(workrequests.ListWorkRequestErrorsResponse{
+						Items: []workrequests.WorkRequestError{
+							{
+								Code:    common.String("InternalServerError"),
+								Message: common.String("Failed due to unknown error"),
+							},
+						},
+					}, nil)
 			},
 			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta2.InstanceLBBackendAdditionFailedReason}},
 		},

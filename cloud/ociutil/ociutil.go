@@ -24,11 +24,13 @@ import (
 
 	lb "github.com/oracle/cluster-api-provider-oci/cloud/services/loadbalancer"
 	nlb "github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer"
+	wrs "github.com/oracle/cluster-api-provider-oci/cloud/services/workrequests"
 
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/oracle/oci-go-sdk/v65/loadbalancer"
 	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
+	"github.com/oracle/oci-go-sdk/v65/workrequests"
 
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -62,7 +64,7 @@ func IsNotFound(err error) bool {
 }
 
 // AwaitNLBWorkRequest waits for the LB work request to either succeed, fail. See k8s.io/apimachinery/pkg/util/wait
-func AwaitNLBWorkRequest(ctx context.Context, networkLoadBalancerClient nlb.NetworkLoadBalancerClient, workRequestId *string) (*networkloadbalancer.WorkRequest, error) {
+func AwaitNLBWorkRequest(ctx context.Context, networkLoadBalancerClient nlb.NetworkLoadBalancerClient, WorkRequestClient wrs.Client, workRequestId *string) (*networkloadbalancer.WorkRequest, error) {
 	var wr *networkloadbalancer.WorkRequest
 	immediate := true
 	err := wait.PollUntilContextTimeout(ctx, WorkRequestPollInterval, WorkRequestTimeout, immediate, func(ctx context.Context) (done bool, err error) {
@@ -77,7 +79,19 @@ func AwaitNLBWorkRequest(ctx context.Context, networkLoadBalancerClient nlb.Netw
 			wr = &twr.WorkRequest
 			return true, nil
 		case networkloadbalancer.OperationStatusFailed:
-			return false, errors.Errorf("WorkRequest %s failed", *workRequestId)
+			resp, err := WorkRequestClient.ListWorkRequestErrors(ctx, workrequests.ListWorkRequestErrorsRequest{
+				WorkRequestId: workRequestId,
+			})
+			if err != nil {
+				return false, errors.Wrap(err, "Failed to fetch work-request-errors for failed workrequest")
+			}
+			final_err := errors.Errorf("WorkRequest %s failed", *workRequestId)
+			for _, wr_err := range resp.Items {
+				//fmt.Printf("WorkRequestErrorMessage: %s\n", *wr_err.Message)
+				final_err = errors.Errorf("%s, %s", *wr_err.Message, final_err.Error())
+			}
+			//fmt.Printf("Final error: %s", final_err)
+			return false, final_err
 		}
 		return false, nil
 	})
@@ -85,7 +99,7 @@ func AwaitNLBWorkRequest(ctx context.Context, networkLoadBalancerClient nlb.Netw
 }
 
 // AwaitLBWorkRequest waits for the LBaaS work request to either succeed, fail. See k8s.io/apimachinery/pkg/util/wait
-func AwaitLBWorkRequest(ctx context.Context, loadBalancerClient lb.LoadBalancerClient, workRequestId *string) (*loadbalancer.WorkRequest, error) {
+func AwaitLBWorkRequest(ctx context.Context, loadBalancerClient lb.LoadBalancerClient, WorkRequestClient wrs.Client, workRequestId *string) (*loadbalancer.WorkRequest, error) {
 	var wr *loadbalancer.WorkRequest
 	immediate := true
 	err := wait.PollUntilContextTimeout(ctx, WorkRequestPollInterval, WorkRequestTimeout, immediate, func(ctx context.Context) (done bool, err error) {
@@ -100,7 +114,19 @@ func AwaitLBWorkRequest(ctx context.Context, loadBalancerClient lb.LoadBalancerC
 			wr = &twr.WorkRequest
 			return true, nil
 		case loadbalancer.WorkRequestLifecycleStateFailed:
-			return false, errors.Errorf("WorkRequest %s failed", *workRequestId)
+			resp, err := WorkRequestClient.ListWorkRequestErrors(ctx, workrequests.ListWorkRequestErrorsRequest{
+				WorkRequestId: workRequestId,
+			})
+			if err != nil {
+				return false, errors.Wrap(err, "Failed to fetch work-request-errors for failed workrequest")
+			}
+			final_err := errors.Errorf("WorkRequest %s failed", *workRequestId)
+			for _, wr_err := range resp.Items {
+				//fmt.Printf("WorkRequestErrorMessage: %s\n", *wr_err.Message)
+				final_err = errors.Errorf("%s, %s", *wr_err.Message, final_err.Error())
+			}
+			//fmt.Printf("Final error: %s", final_err)
+			return false, final_err
 		}
 		return false, nil
 	})

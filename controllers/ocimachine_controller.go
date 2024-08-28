@@ -69,7 +69,6 @@ type OCIMachineReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, reterr error) {
-	fmt.Print("hello")
 	logger := log.FromContext(ctx)
 	logger.Info("Got reconciliation event for machine")
 
@@ -78,23 +77,19 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	fmt.Print(err)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			fmt.Println("Result1 ", ctrl.Result{})
 			return ctrl.Result{}, nil
 		}
-		fmt.Println("Result2 ", ctrl.Result{})
 		return ctrl.Result{}, err
 	}
 	// Fetch the Machine.
 	machine, err := util.GetOwnerMachine(ctx, r.Client, ociMachine.ObjectMeta)
 	fmt.Print(machine)
 	if err != nil {
-		fmt.Println("Result3 ", ctrl.Result{})
 		return ctrl.Result{}, err
 	}
 	if machine == nil {
 		r.Recorder.Eventf(ociMachine, corev1.EventTypeNormal, "OwnerRefNotSet", "Cluster Controller has not yet set OwnerRef")
 		logger.Info("Machine Controller has not yet set OwnerRef")
-		fmt.Println("Result4 ", ctrl.Result{})
 		return ctrl.Result{}, nil
 	}
 	logger = logger.WithValues("machine-name", ociMachine.Name)

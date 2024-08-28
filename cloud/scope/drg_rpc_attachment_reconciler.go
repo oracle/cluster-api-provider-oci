@@ -253,7 +253,8 @@ func (s *ClusterScope) waitForRPCToBeProvisioned(ctx context.Context, rpc *core.
 		return errors.New("invalid RPC lifecycle state")
 	}
 
-	err := wait.PollWithContext(ctx, PollInterval, RequestTimeout, func(ctx context.Context) (done bool, err error) {
+	immediate := true
+	err := wait.PollUntilContextTimeout(ctx, PollInterval, RequestTimeout, immediate, func(ctx context.Context) (done bool, err error) {
 		rpc, err := s.getRPC(ctx, rpc.Id, vcnClient)
 		if err != nil {
 			return true, err
@@ -271,7 +272,8 @@ func (s *ClusterScope) waitForRPCToBeProvisioned(ctx context.Context, rpc *core.
 }
 
 func (s *ClusterScope) waitForRPCToBeDeleted(ctx context.Context, rpcId *string, vcnClient vcn.Client) error {
-	err := wait.PollWithContext(ctx, PollInterval, RequestTimeout, func(ctx context.Context) (done bool, err error) {
+	immediate := true
+	err := wait.PollUntilContextTimeout(ctx, PollInterval, RequestTimeout, immediate, func(ctx context.Context) (done bool, err error) {
 		rpc, err := s.getRPC(ctx, rpcId, vcnClient)
 		if err != nil {
 			if ociutil.IsNotFound(err) {

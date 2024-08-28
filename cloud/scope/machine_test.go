@@ -25,8 +25,10 @@ import (
 
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/loadbalancer/mock_lb"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer/mock_nlb"
+	"github.com/oracle/cluster-api-provider-oci/cloud/services/workrequests/mock_workrequests"
 	"github.com/oracle/oci-go-sdk/v65/loadbalancer"
 	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
+	"github.com/oracle/oci-go-sdk/v65/workrequests"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/golang/mock/gomock"
@@ -1297,12 +1299,14 @@ func TestNLBReconciliationCreation(t *testing.T) {
 		ms         *MachineScope
 		mockCtrl   *gomock.Controller
 		nlbClient  *mock_nlb.MockNetworkLoadBalancerClient
+		wrClient   *mock_workrequests.MockClient
 		ociCluster infrastructurev1beta2.OCICluster
 	)
 	setup := func(t *testing.T, g *WithT) {
 		var err error
 		mockCtrl = gomock.NewController(t)
 		nlbClient = mock_nlb.NewMockNetworkLoadBalancerClient(mockCtrl)
+		wrClient = mock_workrequests.NewMockClient(mockCtrl)
 		client := fake.NewClientBuilder().WithObjects().Build()
 		ociCluster = infrastructurev1beta2.OCICluster{
 			ObjectMeta: metav1.ObjectMeta{
@@ -1313,6 +1317,7 @@ func TestNLBReconciliationCreation(t *testing.T) {
 		ociCluster.Spec.ControlPlaneEndpoint.Port = 6443
 		ms, err = NewMachineScope(MachineScopeParams{
 			NetworkLoadBalancerClient: nlbClient,
+			WorkRequestsClient:        wrClient,
 			OCIMachine: &infrastructurev1beta2.OCIMachine{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
@@ -1343,19 +1348,19 @@ func TestNLBReconciliationCreation(t *testing.T) {
 		eventNotExpected    string
 		matchError          error
 		errorSubStringMatch bool
-		testSpecificSetup   func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient)
+		testSpecificSetup   func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient)
 	}{
 		{
 			name:          "ip doesnt exist",
 			errorExpected: true,
 			matchError:    errors.New("could not find machine IP Address in status object"),
-			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
+			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 			},
 		},
 		{
 			name:          "ip exists",
 			errorExpected: false,
-			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
+			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
 					{
 						Type:    clusterv1.MachineInternalIP,
@@ -1401,7 +1406,7 @@ func TestNLBReconciliationCreation(t *testing.T) {
 		{
 			name:          "work request exists, will retry",
 			errorExpected: false,
-			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
+			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
 					{
 						Type:    clusterv1.MachineInternalIP,
@@ -1447,7 +1452,7 @@ func TestNLBReconciliationCreation(t *testing.T) {
 		{
 			name:          "backend exists",
 			errorExpected: false,
-			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
+			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
 					{
 						Type:    clusterv1.MachineInternalIP,
@@ -1476,7 +1481,7 @@ func TestNLBReconciliationCreation(t *testing.T) {
 			name:          "create backend error",
 			errorExpected: true,
 			matchError:    errors.New("could not create backend"),
-			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
+			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
 					{
 						Type:    clusterv1.MachineInternalIP,
@@ -1515,7 +1520,7 @@ func TestNLBReconciliationCreation(t *testing.T) {
 			name:          "get nlb error",
 			errorExpected: true,
 			matchError:    errors.New("could not get nlb"),
-			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
+			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
 					{
 						Type:    clusterv1.MachineInternalIP,
@@ -1529,10 +1534,11 @@ func TestNLBReconciliationCreation(t *testing.T) {
 			},
 		},
 		{
-			name:          "work request failed",
-			errorExpected: true,
-			matchError:    errors.Errorf("WorkRequest %s failed", "wrid"),
-			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
+			name:                "work request failed",
+			errorExpected:       true,
+			errorSubStringMatch: true,
+			matchError:          errors.Errorf("WorkRequest %s failed", "wrid"),
+			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
 					{
 						Type:    clusterv1.MachineInternalIP,
@@ -1573,6 +1579,18 @@ func TestNLBReconciliationCreation(t *testing.T) {
 					WorkRequest: networkloadbalancer.WorkRequest{
 						Status: networkloadbalancer.OperationStatusFailed,
 					}}, nil)
+
+				wrClient.EXPECT().ListWorkRequestErrors(gomock.Any(), gomock.Eq(workrequests.ListWorkRequestErrorsRequest{
+					WorkRequestId: common.String("wrid"),
+				})).
+					Return(workrequests.ListWorkRequestErrorsResponse{
+						Items: []workrequests.WorkRequestError{
+							{
+								Code:    common.String("InternalServerError"),
+								Message: common.String("Failed due to Unknown error"),
+							},
+						},
+					}, nil)
 			},
 		},
 	}
@@ -1581,7 +1599,7 @@ func TestNLBReconciliationCreation(t *testing.T) {
 			g := NewWithT(t)
 			defer teardown(t, g)
 			setup(t, g)
-			tc.testSpecificSetup(ms, nlbClient)
+			tc.testSpecificSetup(ms, nlbClient, wrClient)
 			err := ms.ReconcileCreateInstanceOnLB(context.Background())
 			if tc.errorExpected {
 				g.Expect(err).To(Not(BeNil()))
@@ -1602,12 +1620,14 @@ func TestNLBReconciliationDeletion(t *testing.T) {
 		ms         *MachineScope
 		mockCtrl   *gomock.Controller
 		nlbClient  *mock_nlb.MockNetworkLoadBalancerClient
+		wrClient   *mock_workrequests.MockClient
 		ociCluster infrastructurev1beta2.OCICluster
 	)
 	setup := func(t *testing.T, g *WithT) {
 		var err error
 		mockCtrl = gomock.NewController(t)
 		nlbClient = mock_nlb.NewMockNetworkLoadBalancerClient(mockCtrl)
+		wrClient = mock_workrequests.NewMockClient(mockCtrl)
 		client := fake.NewClientBuilder().WithObjects().Build()
 		ociCluster = infrastructurev1beta2.OCICluster{
 			ObjectMeta: metav1.ObjectMeta{
@@ -1618,6 +1638,7 @@ func TestNLBReconciliationDeletion(t *testing.T) {
 		ociCluster.Spec.ControlPlaneEndpoint.Port = 6443
 		ms, err = NewMachineScope(MachineScopeParams{
 			NetworkLoadBalancerClient: nlbClient,
+			WorkRequestsClient:        wrClient,
 			OCIMachine: &infrastructurev1beta2.OCIMachine{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
@@ -1648,13 +1669,13 @@ func TestNLBReconciliationDeletion(t *testing.T) {
 		eventNotExpected    string
 		matchError          error
 		errorSubStringMatch bool
-		testSpecificSetup   func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient)
+		testSpecificSetup   func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient)
 	}{
 		{
 			name:          "get nlb error",
 			errorExpected: true,
 			matchError:    errors.New("could not get nlb"),
-			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
+			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				nlbClient.EXPECT().GetNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.GetNetworkLoadBalancerRequest{
 					NetworkLoadBalancerId: common.String("nlbid"),
 				})).Return(networkloadbalancer.GetNetworkLoadBalancerResponse{
@@ -1664,7 +1685,7 @@ func TestNLBReconciliationDeletion(t *testing.T) {
 		{
 			name:          "get nlb error, not found",
 			errorExpected: false,
-			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
+			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				nlbClient.EXPECT().GetNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.GetNetworkLoadBalancerRequest{
 					NetworkLoadBalancerId: common.String("nlbid"),
 				})).Return(networkloadbalancer.GetNetworkLoadBalancerResponse{
@@ -1675,7 +1696,7 @@ func TestNLBReconciliationDeletion(t *testing.T) {
 			name:          "backend exists",
 			errorExpected: false,
 			matchError:    errors.New("could not get nlb"),
-			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
+			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				nlbClient.EXPECT().GetNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.GetNetworkLoadBalancerRequest{
 					NetworkLoadBalancerId: common.String("nlbid"),
 				})).Return(networkloadbalancer.GetNetworkLoadBalancerResponse{
@@ -1712,7 +1733,7 @@ func TestNLBReconciliationDeletion(t *testing.T) {
 		{
 			name:          "backend does not exist",
 			errorExpected: false,
-			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
+			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				nlbClient.EXPECT().GetNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.GetNetworkLoadBalancerRequest{
 					NetworkLoadBalancerId: common.String("nlbid"),
 				})).Return(networkloadbalancer.GetNetworkLoadBalancerResponse{
@@ -1731,7 +1752,7 @@ func TestNLBReconciliationDeletion(t *testing.T) {
 			name:          "work request exists, still delete should be called",
 			errorExpected: false,
 			matchError:    errors.New("could not get nlb"),
-			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
+			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				machineScope.OCIMachine.Status.DeleteBackendWorkRequestId = "wrid"
 				nlbClient.EXPECT().GetNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.GetNetworkLoadBalancerRequest{
 					NetworkLoadBalancerId: common.String("nlbid"),
@@ -1767,10 +1788,11 @@ func TestNLBReconciliationDeletion(t *testing.T) {
 			},
 		},
 		{
-			name:          "work request failed",
-			errorExpected: true,
-			matchError:    errors.Errorf("WorkRequest %s failed", "wrid"),
-			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
+			name:                "work request failed",
+			errorExpected:       true,
+			errorSubStringMatch: true,
+			matchError:          errors.Errorf("WorkRequest %s failed", "wrid"),
+			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				nlbClient.EXPECT().GetNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.GetNetworkLoadBalancerRequest{
 					NetworkLoadBalancerId: common.String("nlbid"),
 				})).Return(networkloadbalancer.GetNetworkLoadBalancerResponse{
@@ -1802,13 +1824,25 @@ func TestNLBReconciliationDeletion(t *testing.T) {
 					WorkRequest: networkloadbalancer.WorkRequest{
 						Status: networkloadbalancer.OperationStatusFailed,
 					}}, nil)
+
+				wrClient.EXPECT().ListWorkRequestErrors(gomock.Any(), gomock.Eq(workrequests.ListWorkRequestErrorsRequest{
+					WorkRequestId: common.String("wrid"),
+				})).
+					Return(workrequests.ListWorkRequestErrorsResponse{
+						Items: []workrequests.WorkRequestError{
+							{
+								Code:    common.String("InternalServerError"),
+								Message: common.String("Failed due to unknown error"),
+							},
+						},
+					}, nil)
 			},
 		},
 		{
 			name:          "delete backend fails",
 			errorExpected: true,
 			matchError:    errors.New("backend request failed"),
-			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
+			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				nlbClient.EXPECT().GetNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.GetNetworkLoadBalancerRequest{
 					NetworkLoadBalancerId: common.String("nlbid"),
 				})).Return(networkloadbalancer.GetNetworkLoadBalancerResponse{
@@ -1840,7 +1874,7 @@ func TestNLBReconciliationDeletion(t *testing.T) {
 			g := NewWithT(t)
 			defer teardown(t, g)
 			setup(t, g)
-			tc.testSpecificSetup(ms, nlbClient)
+			tc.testSpecificSetup(ms, nlbClient, wrClient)
 			err := ms.ReconcileDeleteInstanceOnLB(context.Background())
 			if tc.errorExpected {
 				g.Expect(err).To(Not(BeNil()))
@@ -1861,12 +1895,14 @@ func TestLBReconciliationCreation(t *testing.T) {
 		ms         *MachineScope
 		mockCtrl   *gomock.Controller
 		lbClient   *mock_lb.MockLoadBalancerClient
+		wrClient   *mock_workrequests.MockClient
 		ociCluster infrastructurev1beta2.OCICluster
 	)
 	setup := func(t *testing.T, g *WithT) {
 		var err error
 		mockCtrl = gomock.NewController(t)
 		lbClient = mock_lb.NewMockLoadBalancerClient(mockCtrl)
+		wrClient = mock_workrequests.NewMockClient(mockCtrl)
 		client := fake.NewClientBuilder().WithObjects().Build()
 		ociCluster = infrastructurev1beta2.OCICluster{
 			ObjectMeta: metav1.ObjectMeta{
@@ -1878,6 +1914,7 @@ func TestLBReconciliationCreation(t *testing.T) {
 		ociCluster.Spec.NetworkSpec.APIServerLB.LoadBalancerType = infrastructurev1beta2.LoadBalancerTypeLB
 		ms, err = NewMachineScope(MachineScopeParams{
 			LoadBalancerClient: lbClient,
+			WorkRequestsClient: wrClient,
 			OCIMachine: &infrastructurev1beta2.OCIMachine{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
@@ -1908,19 +1945,19 @@ func TestLBReconciliationCreation(t *testing.T) {
 		eventNotExpected    string
 		matchError          error
 		errorSubStringMatch bool
-		testSpecificSetup   func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient)
+		testSpecificSetup   func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient)
 	}{
 		{
 			name:          "ip doesnt exist",
 			errorExpected: true,
 			matchError:    errors.New("could not find machine IP Address in status object"),
-			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient) {
+			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 			},
 		},
 		{
 			name:          "ip exists",
 			errorExpected: false,
-			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient) {
+			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
 					{
 						Type:    clusterv1.MachineInternalIP,
@@ -1965,7 +2002,7 @@ func TestLBReconciliationCreation(t *testing.T) {
 		{
 			name:          "work request exists, will retry",
 			errorExpected: false,
-			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient) {
+			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
 					{
 						Type:    clusterv1.MachineInternalIP,
@@ -2010,7 +2047,7 @@ func TestLBReconciliationCreation(t *testing.T) {
 		{
 			name:          "backend exists",
 			errorExpected: false,
-			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient) {
+			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
 					{
 						Type:    clusterv1.MachineInternalIP,
@@ -2039,7 +2076,7 @@ func TestLBReconciliationCreation(t *testing.T) {
 			name:          "create backend error",
 			errorExpected: true,
 			matchError:    errors.New("could not create backend"),
-			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient) {
+			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
 					{
 						Type:    clusterv1.MachineInternalIP,
@@ -2077,7 +2114,7 @@ func TestLBReconciliationCreation(t *testing.T) {
 			name:          "get lb error",
 			errorExpected: true,
 			matchError:    errors.New("could not get lb"),
-			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient) {
+			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
 					{
 						Type:    clusterv1.MachineInternalIP,
@@ -2091,10 +2128,11 @@ func TestLBReconciliationCreation(t *testing.T) {
 			},
 		},
 		{
-			name:          "work request failed",
-			errorExpected: true,
-			matchError:    errors.Errorf("WorkRequest %s failed", "wrid"),
-			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient) {
+			name:                "work request failed",
+			errorExpected:       true,
+			errorSubStringMatch: true,
+			matchError:          errors.Errorf("WorkRequest %s failed", "wrid"),
+			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
 					{
 						Type:    clusterv1.MachineInternalIP,
@@ -2134,6 +2172,18 @@ func TestLBReconciliationCreation(t *testing.T) {
 					WorkRequest: loadbalancer.WorkRequest{
 						LifecycleState: loadbalancer.WorkRequestLifecycleStateFailed,
 					}}, nil)
+
+				wrClient.EXPECT().ListWorkRequestErrors(gomock.Any(), gomock.Eq(workrequests.ListWorkRequestErrorsRequest{
+					WorkRequestId: common.String("wrid"),
+				})).
+					Return(workrequests.ListWorkRequestErrorsResponse{
+						Items: []workrequests.WorkRequestError{
+							{
+								Code:    common.String("InternalServerError"),
+								Message: common.String("Failed due to Unknown error"),
+							},
+						},
+					}, nil)
 			},
 		},
 	}
@@ -2142,7 +2192,7 @@ func TestLBReconciliationCreation(t *testing.T) {
 			g := NewWithT(t)
 			defer teardown(t, g)
 			setup(t, g)
-			tc.testSpecificSetup(ms, lbClient)
+			tc.testSpecificSetup(ms, lbClient, wrClient)
 			err := ms.ReconcileCreateInstanceOnLB(context.Background())
 			if tc.errorExpected {
 				g.Expect(err).To(Not(BeNil()))
@@ -2164,12 +2214,14 @@ func TestLBReconciliationDeletion(t *testing.T) {
 		ms         *MachineScope
 		mockCtrl   *gomock.Controller
 		lbClient   *mock_lb.MockLoadBalancerClient
+		wrClient   *mock_workrequests.MockClient
 		ociCluster infrastructurev1beta2.OCICluster
 	)
 	setup := func(t *testing.T, g *WithT) {
 		var err error
 		mockCtrl = gomock.NewController(t)
 		lbClient = mock_lb.NewMockLoadBalancerClient(mockCtrl)
+		wrClient = mock_workrequests.NewMockClient(mockCtrl)
 		client := fake.NewClientBuilder().WithObjects().Build()
 		ociCluster = infrastructurev1beta2.OCICluster{
 			ObjectMeta: metav1.ObjectMeta{
@@ -2181,6 +2233,7 @@ func TestLBReconciliationDeletion(t *testing.T) {
 		ociCluster.Spec.NetworkSpec.APIServerLB.LoadBalancerType = infrastructurev1beta2.LoadBalancerTypeLB
 		ms, err = NewMachineScope(MachineScopeParams{
 			LoadBalancerClient: lbClient,
+			WorkRequestsClient: wrClient,
 			OCIMachine: &infrastructurev1beta2.OCIMachine{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
@@ -2211,12 +2264,12 @@ func TestLBReconciliationDeletion(t *testing.T) {
 		eventNotExpected    string
 		matchError          error
 		errorSubStringMatch bool
-		testSpecificSetup   func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient)
+		testSpecificSetup   func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient)
 	}{
 		{
 			name:          "get lb error",
 			errorExpected: false,
-			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_lb.MockLoadBalancerClient) {
+			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
 					{
 						Type:    clusterv1.MachineInternalIP,
@@ -2233,7 +2286,7 @@ func TestLBReconciliationDeletion(t *testing.T) {
 			name:          "get lb error",
 			errorExpected: true,
 			matchError:    errors.New("could not get lb"),
-			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_lb.MockLoadBalancerClient) {
+			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
 					{
 						Type:    clusterv1.MachineInternalIP,
@@ -2249,7 +2302,7 @@ func TestLBReconciliationDeletion(t *testing.T) {
 		{
 			name:          "no ip",
 			errorExpected: false,
-			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_lb.MockLoadBalancerClient) {
+			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				nlbClient.EXPECT().GetLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.GetLoadBalancerRequest{
 					LoadBalancerId: common.String("lbid"),
 				})).Return(loadbalancer.GetLoadBalancerResponse{
@@ -2260,7 +2313,7 @@ func TestLBReconciliationDeletion(t *testing.T) {
 			name:          "backend exists",
 			errorExpected: false,
 			matchError:    errors.New("could not get lb"),
-			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient) {
+			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
 					{
 						Type:    clusterv1.MachineInternalIP,
@@ -2303,7 +2356,7 @@ func TestLBReconciliationDeletion(t *testing.T) {
 		{
 			name:          "backend does not exist",
 			errorExpected: false,
-			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient) {
+			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
 					{
 						Type:    clusterv1.MachineInternalIP,
@@ -2328,7 +2381,7 @@ func TestLBReconciliationDeletion(t *testing.T) {
 			name:          "work request exists, still delete should be called",
 			errorExpected: false,
 			matchError:    errors.New("could not get lb"),
-			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient) {
+			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
 					{
 						Type:    clusterv1.MachineInternalIP,
@@ -2370,10 +2423,11 @@ func TestLBReconciliationDeletion(t *testing.T) {
 			},
 		},
 		{
-			name:          "work request failed",
-			errorExpected: true,
-			matchError:    errors.Errorf("WorkRequest %s failed", "wrid"),
-			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient) {
+			name:                "work request failed",
+			errorExpected:       true,
+			errorSubStringMatch: true,
+			matchError:          errors.Errorf("WorkRequest %s failed", "wrid"),
+			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
 					{
 						Type:    clusterv1.MachineInternalIP,
@@ -2411,13 +2465,25 @@ func TestLBReconciliationDeletion(t *testing.T) {
 					WorkRequest: loadbalancer.WorkRequest{
 						LifecycleState: loadbalancer.WorkRequestLifecycleStateFailed,
 					}}, nil)
+
+				wrClient.EXPECT().ListWorkRequestErrors(gomock.Any(), gomock.Eq(workrequests.ListWorkRequestErrorsRequest{
+					WorkRequestId: common.String("wrid"),
+				})).
+					Return(workrequests.ListWorkRequestErrorsResponse{
+						Items: []workrequests.WorkRequestError{
+							{
+								Code:    common.String("InternalServerError"),
+								Message: common.String("Failed due to Unknown error"),
+							},
+						},
+					}, nil)
 			},
 		},
 		{
 			name:          "delete backend fails",
 			errorExpected: true,
 			matchError:    errors.New("backend request failed"),
-			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient) {
+			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
 				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
 					{
 						Type:    clusterv1.MachineInternalIP,
@@ -2455,7 +2521,7 @@ func TestLBReconciliationDeletion(t *testing.T) {
 			g := NewWithT(t)
 			defer teardown(t, g)
 			setup(t, g)
-			tc.testSpecificSetup(ms, lbClient)
+			tc.testSpecificSetup(ms, lbClient, wrClient)
 			err := ms.ReconcileDeleteInstanceOnLB(context.Background())
 			if tc.errorExpected {
 				g.Expect(err).To(Not(BeNil()))
