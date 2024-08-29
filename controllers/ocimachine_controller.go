@@ -74,7 +74,7 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	ociMachine := &infrastructurev1beta2.OCIMachine{}
 	err := r.Get(ctx, req.NamespacedName, ociMachine)
-	fmt.Print(err)
+
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
@@ -83,7 +83,7 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 	// Fetch the Machine.
 	machine, err := util.GetOwnerMachine(ctx, r.Client, ociMachine.ObjectMeta)
-	fmt.Print(machine)
+
 	if err != nil {
 		return ctrl.Result{}, err
 	}
