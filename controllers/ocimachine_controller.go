@@ -335,18 +335,13 @@ func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.
 		machineScope.Info("Instance is active")
 		if machine.Status.Addresses == nil || len(machine.Status.Addresses) == 0 {
 			machineScope.Info("IP address is not set on the instance, looking up the address")
-			ipAddress, err := machineScope.GetInstanceIp(ctx)
+			ipAddresses, err := machineScope.GetInstanceIPs(ctx)
 			if err != nil {
 				r.Recorder.Event(machine, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to reconcile OCIMachine").Error())
 				conditions.MarkFalse(machineScope.OCIMachine, infrastructurev1beta2.InstanceReadyCondition, infrastructurev1beta2.InstanceIPAddressNotFound, clusterv1.ConditionSeverityError, "")
 				return ctrl.Result{}, err
 			}
-			machine.Status.Addresses = []clusterv1.MachineAddress{
-				{
-					Address: *ipAddress,
-					Type:    clusterv1.MachineInternalIP,
-				},
-			}
+			machine.Status.Addresses = ipAddresses
 		}
 		if machineScope.IsControlPlane() {
 			err := machineScope.ReconcileCreateInstanceOnLB(ctx)
