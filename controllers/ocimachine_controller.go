@@ -294,6 +294,37 @@ func (r *OCIMachineReconciler) OCIManagedClusterToOCIMachines() handler.MapFunc 
 	}
 }
 
+func (r *OCIMachineReconciler) recordErrorsOnFailedWorkRequest(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, instance *core.Instance) (ctrl.Result, error) {
+	machine := machineScope.OCIMachine
+	wrequest := workrequests.ListWorkRequestsRequest{
+		CompartmentId: instance.CompartmentId,
+		ResourceId:    instance.Id,
+	}
+	wresp, err := machineScope.WorkRequestsClient.ListWorkRequests(ctx, wrequest)
+	if err != nil {
+		r.Recorder.Event(machine, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "Failed to reconcile OCIMachine").Error())
+		return reconcile.Result{}, errors.Wrapf(err, "failed to list workrequests for OCI Machine %s/%s", machineScope.OCIMachine.Namespace, machineScope.OCIMachine.Name)
+	}
+	for _, wrqst := range wresp.Items {
+		if wrqst.Status == "FAILED" {
+			logger.Info("Fetching work-request errors for the all failed work-requests for the instance")
+			wreq := workrequests.ListWorkRequestErrorsRequest{
+				WorkRequestId: wrqst.Id,
+			}
+			wr_errs, err := machineScope.WorkRequestsClient.ListWorkRequestErrors(ctx, wreq)
+			if err != nil {
+				r.Recorder.Event(machine, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "Failed to normal reconcile OCIMachine").Error())
+				return reconcile.Result{}, errors.Wrapf(err, "failed to normal reconcile OCI Machine %s/%s", machineScope.OCIMachine.Namespace, machineScope.OCIMachine.Name)
+			}
+			for _, wr_err := range wr_errs.Items {
+				r.Recorder.Eventf(machine, corev1.EventTypeWarning, "ReconcileError", *wr_err.Message)
+			}
+		}
+	}
+	r.Recorder.Eventf(machine, corev1.EventTypeWarning, "ReconcileError", "Instance  has invalid lifecycle state %s", instance.LifecycleState)
+	return reconcile.Result{}, errors.New(fmt.Sprintf("instance  has invalid lifecycle state %s", instance.LifecycleState))
+}
+
 func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) (ctrl.Result, error) {
 	controllerutil.AddFinalizer(machineScope.OCIMachine, infrastructurev1beta2.MachineFinalizer)
 	machine := machineScope.OCIMachine
@@ -400,35 +431,7 @@ func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.
 		conditions.MarkFalse(machineScope.OCIMachine, infrastructurev1beta2.InstanceReadyCondition, infrastructurev1beta2.InstanceProvisionFailedReason, clusterv1.ConditionSeverityError, "")
 		machineScope.SetFailureReason(capierrors.CreateMachineError)
 		machineScope.SetFailureMessage(errors.Errorf("Instance status %q is unexpected", instance.LifecycleState))
-		wrequest := workrequests.ListWorkRequestsRequest{
-			CompartmentId: instance.CompartmentId,
-			ResourceId:    instance.Id,
-		}
-		wresp, err := machineScope.WorkRequestsClient.ListWorkRequests(ctx, wrequest)
-		if err != nil {
-			r.Recorder.Event(machine, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "Failed to normal reconcile OCIMachine").Error())
-			return reconcile.Result{}, errors.Wrapf(err, "failed to normal reconcile OCI Machine %s/%s", machineScope.OCIMachine.Namespace, machineScope.OCIMachine.Name)
-		}
-		for _, wrqst := range wresp.Items {
-			if wrqst.Status == "FAILED" {
-				logger.Info("Fetching work-request errors for the terminating/terminated instances")
-				wreq := workrequests.ListWorkRequestErrorsRequest{
-					WorkRequestId: wrqst.Id,
-				}
-				wr_errs, err := machineScope.WorkRequestsClient.ListWorkRequestErrors(ctx, wreq)
-				if err != nil {
-					r.Recorder.Event(machine, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "Failed to normal reconcile OCIMachine").Error())
-					return reconcile.Result{}, errors.Wrapf(err, "failed to normal reconcile OCI Machine %s/%s", machineScope.OCIMachine.Namespace, machineScope.OCIMachine.Name)
-				}
-				for _, wr_err := range wr_errs.Items {
-					fmt.Printf("WorkRequestErrorMessage: %s\n", *wr_err.Message)
-					r.Recorder.Eventf(machine, corev1.EventTypeWarning, "ReconcileError", *wr_err.Message)
-				}
-			}
-		}
-		r.Recorder.Eventf(machine, corev1.EventTypeWarning, "ReconcileError",
-			"Instance  has invalid lifecycle state %s", instance.LifecycleState)
-		return reconcile.Result{}, errors.New(fmt.Sprintf("instance  has invalid lifecycle state %s", instance.LifecycleState))
+		return r.recordErrorsOnFailedWorkRequest(ctx, logger, machineScope, instance)
 	}
 }
 

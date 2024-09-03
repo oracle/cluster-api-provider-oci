@@ -63,8 +63,22 @@ func IsNotFound(err error) bool {
 	return ok && serviceErr.GetHTTPStatusCode() == http.StatusNotFound
 }
 
+func FetchErrorsOnFailedWorkRequest(ctx context.Context, workRequestClient wrs.Client, workRequestId *string) (done bool, err error) {
+	resp, err := workRequestClient.ListWorkRequestErrors(ctx, workrequests.ListWorkRequestErrorsRequest{
+		WorkRequestId: workRequestId,
+	})
+	if err != nil {
+		return false, errors.Wrapf(err, "Failed to fetch work-request-errors for failed workrequest: %s", *workRequestId)
+	}
+	final_err := errors.Errorf("WorkRequest %s failed", *workRequestId)
+	for _, wr_err := range resp.Items {
+		final_err = errors.Errorf("%s, %s", *wr_err.Message, final_err.Error())
+	}
+	return false, final_err
+}
+
 // AwaitNLBWorkRequest waits for the LB work request to either succeed, fail. See k8s.io/apimachinery/pkg/util/wait
-func AwaitNLBWorkRequest(ctx context.Context, networkLoadBalancerClient nlb.NetworkLoadBalancerClient, WorkRequestClient wrs.Client, workRequestId *string) (*networkloadbalancer.WorkRequest, error) {
+func AwaitNLBWorkRequest(ctx context.Context, networkLoadBalancerClient nlb.NetworkLoadBalancerClient, workRequestClient wrs.Client, workRequestId *string) (*networkloadbalancer.WorkRequest, error) {
 	var wr *networkloadbalancer.WorkRequest
 	immediate := true
 	err := wait.PollUntilContextTimeout(ctx, WorkRequestPollInterval, WorkRequestTimeout, immediate, func(ctx context.Context) (done bool, err error) {
@@ -79,19 +93,7 @@ func AwaitNLBWorkRequest(ctx context.Context, networkLoadBalancerClient nlb.Netw
 			wr = &twr.WorkRequest
 			return true, nil
 		case networkloadbalancer.OperationStatusFailed:
-			resp, err := WorkRequestClient.ListWorkRequestErrors(ctx, workrequests.ListWorkRequestErrorsRequest{
-				WorkRequestId: workRequestId,
-			})
-			if err != nil {
-				return false, errors.Wrap(err, "Failed to fetch work-request-errors for failed workrequest")
-			}
-			final_err := errors.Errorf("WorkRequest %s failed", *workRequestId)
-			for _, wr_err := range resp.Items {
-				//fmt.Printf("WorkRequestErrorMessage: %s\n", *wr_err.Message)
-				final_err = errors.Errorf("%s, %s", *wr_err.Message, final_err.Error())
-			}
-			//fmt.Printf("Final error: %s", final_err)
-			return false, final_err
+			return FetchErrorsOnFailedWorkRequest(ctx, workRequestClient, workRequestId)
 		}
 		return false, nil
 	})
@@ -99,7 +101,7 @@ func AwaitNLBWorkRequest(ctx context.Context, networkLoadBalancerClient nlb.Netw
 }
 
 // AwaitLBWorkRequest waits for the LBaaS work request to either succeed, fail. See k8s.io/apimachinery/pkg/util/wait
-func AwaitLBWorkRequest(ctx context.Context, loadBalancerClient lb.LoadBalancerClient, WorkRequestClient wrs.Client, workRequestId *string) (*loadbalancer.WorkRequest, error) {
+func AwaitLBWorkRequest(ctx context.Context, loadBalancerClient lb.LoadBalancerClient, workRequestClient wrs.Client, workRequestId *string) (*loadbalancer.WorkRequest, error) {
 	var wr *loadbalancer.WorkRequest
 	immediate := true
 	err := wait.PollUntilContextTimeout(ctx, WorkRequestPollInterval, WorkRequestTimeout, immediate, func(ctx context.Context) (done bool, err error) {
@@ -114,19 +116,7 @@ func AwaitLBWorkRequest(ctx context.Context, loadBalancerClient lb.LoadBalancerC
 			wr = &twr.WorkRequest
 			return true, nil
 		case loadbalancer.WorkRequestLifecycleStateFailed:
-			resp, err := WorkRequestClient.ListWorkRequestErrors(ctx, workrequests.ListWorkRequestErrorsRequest{
-				WorkRequestId: workRequestId,
-			})
-			if err != nil {
-				return false, errors.Wrap(err, "Failed to fetch work-request-errors for failed workrequest")
-			}
-			final_err := errors.Errorf("WorkRequest %s failed", *workRequestId)
-			for _, wr_err := range resp.Items {
-				//fmt.Printf("WorkRequestErrorMessage: %s\n", *wr_err.Message)
-				final_err = errors.Errorf("%s, %s", *wr_err.Message, final_err.Error())
-			}
-			//fmt.Printf("Final error: %s", final_err)
-			return false, final_err
+			return FetchErrorsOnFailedWorkRequest(ctx, workRequestClient, workRequestId)
 		}
 		return false, nil
 	})
