@@ -32,6 +32,7 @@ import (
 	lb "github.com/oracle/cluster-api-provider-oci/cloud/services/loadbalancer"
 	nlb "github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
+	wr "github.com/oracle/cluster-api-provider-oci/cloud/services/workrequests"
 	"github.com/oracle/cluster-api-provider-oci/version"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/containerengine"
@@ -39,6 +40,7 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/identity"
 	"github.com/oracle/oci-go-sdk/v65/loadbalancer"
 	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
+	"github.com/oracle/oci-go-sdk/v65/workrequests"
 	"github.com/pkg/errors"
 	"k8s.io/klog/v2/klogr"
 )
@@ -52,6 +54,7 @@ type OCIClients struct {
 	LoadBalancerClient        lb.LoadBalancerClient
 	IdentityClient            identityClient.Client
 	ContainerEngineClient     containerEngineClient.Client
+	WorkRequestsClient        wr.Client
 	BaseClient                base.BaseClient
 }
 
@@ -161,11 +164,11 @@ func (c *ClientProvider) createClients(region string) (OCIClients, error) {
 	if err != nil {
 		return OCIClients{}, err
 	}
-	baseClient, err := c.createBaseClient(region, c.ociAuthConfigProvider, c.Logger)
+	workrequestsClt, err := c.createWorkrequestsClient(region, c.ociAuthConfigProvider, c.Logger)
 	if err != nil {
 		return OCIClients{}, err
 	}
-
+	baseClient, err := c.createBaseClient(region, c.ociAuthConfigProvider, c.Logger)
 	if err != nil {
 		return OCIClients{}, err
 	}
@@ -178,6 +181,7 @@ func (c *ClientProvider) createClients(region string) (OCIClients, error) {
 		ComputeClient:             computeClient,
 		ComputeManagementClient:   computeManagementClient,
 		ContainerEngineClient:     containerEngineClt,
+		WorkRequestsClient:        workrequestsClt,
 		BaseClient:                baseClient,
 	}, err
 }
@@ -306,6 +310,24 @@ func (c *ClientProvider) createContainerEngineClient(region string, ociAuthConfi
 	containerEngineClt.Interceptor = setVersionHeader()
 
 	return &containerEngineClt, nil
+}
+
+func (c *ClientProvider) createWorkrequestsClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (*workrequests.WorkRequestClient, error) {
+	workrequestsClt, err := workrequests.NewWorkRequestClientWithConfigurationProvider(ociAuthConfigProvider)
+	if err != nil {
+		logger.Error(err, "unable to create OCI WorkRequests client")
+		return nil, err
+	}
+	workrequestsClt.SetRegion(region)
+	dispatcher := workrequestsClt.HTTPClient
+	workrequestsClt.HTTPClient = metrics.NewHttpRequestDispatcherWrapper(dispatcher, region)
+
+	if c.ociClientOverrides != nil && c.ociClientOverrides.WorkrequestClientUrl != nil {
+		workrequestsClt.Host = *c.ociClientOverrides.WorkrequestClientUrl
+	}
+	workrequestsClt.Interceptor = setVersionHeader()
+
+	return &workrequestsClt, nil
 }
 
 func (c *ClientProvider) createBaseClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (base.BaseClient, error) {

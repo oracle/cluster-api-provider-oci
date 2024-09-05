@@ -32,6 +32,7 @@ import (
 	lb "github.com/oracle/cluster-api-provider-oci/cloud/services/loadbalancer"
 	nlb "github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
+	wr "github.com/oracle/cluster-api-provider-oci/cloud/services/workrequests"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/oracle/oci-go-sdk/v65/loadbalancer"
@@ -63,6 +64,7 @@ type MachineScopeParams struct {
 	VCNClient                 vcn.Client
 	NetworkLoadBalancerClient nlb.NetworkLoadBalancerClient
 	LoadBalancerClient        lb.LoadBalancerClient
+	WorkRequestsClient        wr.Client
 }
 
 type MachineScope struct {
@@ -77,6 +79,7 @@ type MachineScope struct {
 	VCNClient                 vcn.Client
 	NetworkLoadBalancerClient nlb.NetworkLoadBalancerClient
 	LoadBalancerClient        lb.LoadBalancerClient
+	WorkRequestsClient        wr.Client
 }
 
 // NewMachineScope creates a MachineScope given the MachineScopeParams
@@ -109,6 +112,7 @@ func NewMachineScope(params MachineScopeParams) (*MachineScope, error) {
 		VCNClient:                 params.VCNClient,
 		NetworkLoadBalancerClient: params.NetworkLoadBalancerClient,
 		LoadBalancerClient:        params.LoadBalancerClient,
+		WorkRequestsClient:        params.WorkRequestsClient,
 	}, nil
 }
 
@@ -556,7 +560,7 @@ func (m *MachineScope) ReconcileCreateInstanceOnLB(ctx context.Context) error {
 			m.OCIMachine.Status.CreateBackendWorkRequestId = *resp.OpcWorkRequestId
 			logger.Info("Add instance to LB backend-set", "WorkRequestId", resp.OpcWorkRequestId)
 			logger.Info("Waiting for LB work request to be complete")
-			_, err = ociutil.AwaitLBWorkRequest(ctx, m.LoadBalancerClient, resp.OpcWorkRequestId)
+			_, err = ociutil.AwaitLBWorkRequest(ctx, m.LoadBalancerClient, m.WorkRequestsClient, resp.OpcWorkRequestId)
 			if err != nil {
 				return err
 			}
@@ -593,7 +597,7 @@ func (m *MachineScope) ReconcileCreateInstanceOnLB(ctx context.Context) error {
 			m.OCIMachine.Status.CreateBackendWorkRequestId = *resp.OpcWorkRequestId
 			logger.Info("Add instance to NLB backend-set", "WorkRequestId", resp.OpcWorkRequestId)
 			logger.Info("Waiting for NLB work request to be complete")
-			_, err = ociutil.AwaitNLBWorkRequest(ctx, m.NetworkLoadBalancerClient, resp.OpcWorkRequestId)
+			_, err = ociutil.AwaitNLBWorkRequest(ctx, m.NetworkLoadBalancerClient, m.WorkRequestsClient, resp.OpcWorkRequestId)
 			if err != nil {
 				return err
 			}
@@ -661,7 +665,7 @@ func (m *MachineScope) ReconcileDeleteInstanceOnLB(ctx context.Context) error {
 			m.OCIMachine.Status.DeleteBackendWorkRequestId = *resp.OpcWorkRequestId
 			logger.Info("Delete instance from LB backend-set", "WorkRequestId", resp.OpcWorkRequestId)
 			logger.Info("Waiting for LB work request to be complete")
-			_, err = ociutil.AwaitLBWorkRequest(ctx, m.LoadBalancerClient, resp.OpcWorkRequestId)
+			_, err = ociutil.AwaitLBWorkRequest(ctx, m.LoadBalancerClient, m.WorkRequestsClient, resp.OpcWorkRequestId)
 			if err != nil {
 				return err
 			}
@@ -696,7 +700,7 @@ func (m *MachineScope) ReconcileDeleteInstanceOnLB(ctx context.Context) error {
 			m.OCIMachine.Status.DeleteBackendWorkRequestId = *resp.OpcWorkRequestId
 			logger.Info("Delete instance from LB backend-set", "WorkRequestId", resp.OpcWorkRequestId)
 			logger.Info("Waiting for LB work request to be complete")
-			_, err = ociutil.AwaitNLBWorkRequest(ctx, m.NetworkLoadBalancerClient, resp.OpcWorkRequestId)
+			_, err = ociutil.AwaitNLBWorkRequest(ctx, m.NetworkLoadBalancerClient, m.WorkRequestsClient, resp.OpcWorkRequestId)
 			if err != nil {
 				return err
 			}

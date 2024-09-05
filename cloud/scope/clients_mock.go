@@ -31,6 +31,7 @@ import (
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
 	"github.com/oracle/oci-go-sdk/v65/loadbalancer"
 	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
+	"github.com/oracle/oci-go-sdk/v65/workrequests"
 	"k8s.io/klog/v2/klogr"
 )
 
@@ -40,6 +41,7 @@ type MockOCIClients struct {
 	NetworkLoadBalancerClient *networkloadbalancer.NetworkLoadBalancerClient
 	LoadBalancerClient        *loadbalancer.LoadBalancerClient
 	IdentityClient            identity.Client
+	WorkRequestsClient        *workrequests.WorkRequestClient
 }
 
 var (
@@ -54,6 +56,7 @@ func MockNewClientProvider(mockClients MockOCIClients) (*ClientProvider, error) 
 		LoadBalancerClient:        mockClients.LoadBalancerClient,
 		IdentityClient:            mockClients.IdentityClient,
 		ComputeClient:             mockClients.ComputeClient,
+		WorkRequestsClient:        mockClients.WorkRequestsClient,
 	}}
 
 	authConfig, err := MockAuthConfig()
