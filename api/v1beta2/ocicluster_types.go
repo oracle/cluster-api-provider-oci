@@ -178,6 +178,12 @@ type ClientOverrides struct {
 	// +optional
 	// +nullable
 	ContainerEngineClientUrl *string `json:"containerEngineClientUrl,omitempty"`
+
+	// WorkrequestClientUrl allows the default work request SDK client URL to be changed.
+	//
+	// +optional
+	// +nullable
+	WorkrequestClientUrl *string `json:"workrequestClientUrl,omitempty"`
 }
 
 // GetConditions returns the list of conditions for an OCICluster API object.

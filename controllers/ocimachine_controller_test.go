@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -30,9 +31,11 @@ import (
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/compute/mock_compute"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer/mock_nlb"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn/mock_vcn"
+	"github.com/oracle/cluster-api-provider-oci/cloud/services/workrequests/mock_workrequests"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
+	"github.com/oracle/oci-go-sdk/v65/workrequests"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -115,6 +118,7 @@ func TestMachineReconciliation(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			fmt.Println("Name of test: ", tc.name)
 			g := NewWithT(t)
 			defer teardown(t, g)
 			setup(t, g)
@@ -159,6 +163,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 		computeClient *mock_compute.MockComputeClient
 		nlbClient     *mock_nlb.MockNetworkLoadBalancerClient
 		vcnClient     *mock_vcn.MockClient
+		wrClient      *mock_workrequests.MockClient
 		ms            *scope.MachineScope
 	)
 
@@ -169,6 +174,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 		computeClient = mock_compute.NewMockComputeClient(mockCtrl)
 		nlbClient = mock_nlb.NewMockNetworkLoadBalancerClient(mockCtrl)
 		vcnClient = mock_vcn.NewMockClient(mockCtrl)
+		wrClient = mock_workrequests.NewMockClient(mockCtrl)
 		machine := getMachine()
 		ociMachine = getOciMachine()
 		machine.Spec.Bootstrap.DataSecretName = common.String("bootstrap")
@@ -178,6 +184,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			ComputeClient:             computeClient,
 			NetworkLoadBalancerClient: nlbClient,
 			VCNClient:                 vcnClient,
+			WorkRequestsClient:        wrClient,
 			OCIMachine:                ociMachine,
 			Machine:                   machine,
 			OCIClusterAccessor: scope.OCISelfManagedCluster{
@@ -205,7 +212,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 		eventNotExpected   string
 		conditionAssertion []conditionAssertion
 		deleteMachines     []clusterv1.Machine
-		testSpecificSetup  func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient)
+		testSpecificSetup  func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient, wrclient *mock_workrequests.MockClient)
 		validate           func(g *WithT, t *test, result ctrl.Result)
 	}
 	tests := []test{
@@ -213,7 +220,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			name:               "instance in provisioning state",
 			errorExpected:      false,
 			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityInfo, infrastructurev1beta2.InstanceNotReadyReason}},
-			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient) {
+			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient, wrclient *mock_workrequests.MockClient) {
 				computeClient.EXPECT().GetInstance(gomock.Any(), gomock.Eq(core.GetInstanceRequest{
 					InstanceId: common.String("test"),
 				})).
@@ -229,7 +236,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			name:               "instance in running state",
 			errorExpected:      false,
 			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionTrue, "", ""}},
-			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient) {
+			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient, wrclient *mock_workrequests.MockClient) {
 				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
 					{
 						Type:    clusterv1.MachineInternalIP,
@@ -251,7 +258,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			name:               "instance in running state, reconcile every 5 minutes",
 			errorExpected:      false,
 			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionTrue, "", ""}},
-			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient) {
+			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient, wrclient *mock_workrequests.MockClient) {
 				if machineScope.Machine.ObjectMeta.Annotations == nil {
 					machineScope.Machine.ObjectMeta.Annotations = make(map[string]string)
 				}
@@ -277,7 +284,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			name:               "instance in running state, reconcile every 5 minutes",
 			errorExpected:      false,
 			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionTrue, "", ""}},
-			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient) {
+			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient, wrclient *mock_workrequests.MockClient) {
 				if machineScope.Machine.ObjectMeta.Annotations == nil {
 					machineScope.Machine.ObjectMeta.Annotations = make(map[string]string)
 				}
@@ -306,7 +313,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			name:               "instance in stopped state",
 			errorExpected:      false,
 			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityInfo, infrastructurev1beta2.InstanceNotReadyReason}},
-			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient) {
+			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient, wrclient *mock_workrequests.MockClient) {
 				computeClient.EXPECT().GetInstance(gomock.Any(), gomock.Eq(core.GetInstanceRequest{
 					InstanceId: common.String("test"),
 				})).
@@ -322,7 +329,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			name:               "instance in stopping state",
 			errorExpected:      false,
 			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityInfo, infrastructurev1beta2.InstanceNotReadyReason}},
-			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient) {
+			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient, wrclient *mock_workrequests.MockClient) {
 				computeClient.EXPECT().GetInstance(gomock.Any(), gomock.Eq(core.GetInstanceRequest{
 					InstanceId: common.String("test"),
 				})).
@@ -338,7 +345,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			name:               "instance in moving state",
 			errorExpected:      false,
 			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityInfo, infrastructurev1beta2.InstanceNotReadyReason}},
-			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient) {
+			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient, wrclient *mock_workrequests.MockClient) {
 				computeClient.EXPECT().GetInstance(gomock.Any(), gomock.Eq(core.GetInstanceRequest{
 					InstanceId: common.String("test"),
 				})).
@@ -351,11 +358,61 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			},
 		},
 		{
+			name:               "instance in terminating state due to provision failure",
+			errorExpected:      true,
+			expectedEvent:      "No more Ip available in CIDR 1.1.1.1/1",
+			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta2.InstanceProvisionFailedReason}},
+			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient, wrclient *mock_workrequests.MockClient) {
+				computeClient.EXPECT().GetInstance(gomock.Any(), gomock.Eq(core.GetInstanceRequest{
+					InstanceId: common.String("test"),
+				})).
+					Return(core.GetInstanceResponse{
+						Instance: core.Instance{
+							Id:             common.String("test"),
+							LifecycleState: core.InstanceLifecycleStateTerminating,
+							CompartmentId:  common.String("test-compartment"),
+						},
+					}, nil)
+				// Mock the work-requests
+				wrclient.EXPECT().ListWorkRequests(gomock.Any(), gomock.Eq(workrequests.ListWorkRequestsRequest{
+					CompartmentId: common.String("test-compartment"),
+					ResourceId:    common.String("test"),
+				})).
+					Return(workrequests.ListWorkRequestsResponse{
+						Items: []workrequests.WorkRequestSummary{
+							{
+								Id:     common.String("wr1"),
+								Status: workrequests.WorkRequestSummaryStatusEnum(workrequests.WorkRequestStatusFailed),
+							},
+							{
+								Id:     common.String("wr2"),
+								Status: workrequests.WorkRequestSummaryStatusEnum(workrequests.WorkRequestStatusInProgress),
+							},
+						},
+					}, nil)
+				// Mock work-request errors for the failure provision work-request
+				wrclient.EXPECT().ListWorkRequestErrors(gomock.Any(), gomock.Eq(workrequests.ListWorkRequestErrorsRequest{
+					WorkRequestId: common.String("wr1"),
+				})).
+					Return(workrequests.ListWorkRequestErrorsResponse{
+						Items: []workrequests.WorkRequestError{
+							{
+								Code:    common.String("NoAvailableIpAddress"),
+								Message: common.String("No more Ip available in CIDR 1.1.1.1/1"),
+							},
+						},
+					}, nil)
+			},
+			validate: func(g *WithT, t *test, result ctrl.Result) {
+				g.Expect(result.RequeueAfter).To(Equal(0 * time.Second))
+			},
+		},
+		{
 			name:               "instance in terminated state",
 			errorExpected:      true,
 			expectedEvent:      "invalid lifecycle state TERMINATED",
 			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta2.InstanceProvisionFailedReason}},
-			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient) {
+			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient, wrclient *mock_workrequests.MockClient) {
 				computeClient.EXPECT().GetInstance(gomock.Any(), gomock.Eq(core.GetInstanceRequest{
 					InstanceId: common.String("test"),
 				})).
@@ -363,6 +420,34 @@ func TestNormalReconciliationFunction(t *testing.T) {
 						Instance: core.Instance{
 							Id:             common.String("test"),
 							LifecycleState: core.InstanceLifecycleStateTerminated,
+							CompartmentId:  common.String("test-compartment"),
+						},
+					}, nil)
+				wrclient.EXPECT().ListWorkRequests(gomock.Any(), gomock.Eq(workrequests.ListWorkRequestsRequest{
+					CompartmentId: common.String("test-compartment"),
+					ResourceId:    common.String("test"),
+				})).
+					Return(workrequests.ListWorkRequestsResponse{
+						Items: []workrequests.WorkRequestSummary{
+							{
+								Id:     common.String("wr1"),
+								Status: workrequests.WorkRequestSummaryStatusEnum(workrequests.WorkRequestStatusFailed),
+							},
+							{
+								Id:     common.String("wr2"),
+								Status: workrequests.WorkRequestSummaryStatusEnum(workrequests.WorkRequestStatusSucceeded),
+							},
+						},
+					}, nil)
+				wrclient.EXPECT().ListWorkRequestErrors(gomock.Any(), gomock.Eq(workrequests.ListWorkRequestErrorsRequest{
+					WorkRequestId: common.String("wr1"),
+				})).
+					Return(workrequests.ListWorkRequestErrorsResponse{
+						Items: []workrequests.WorkRequestError{
+							{
+								Code:    common.String("NoAvailableIpAddress"),
+								Message: common.String("No more Ip available in CIDR 1.1.1.1/1"),
+							},
 						},
 					}, nil)
 			},
@@ -375,7 +460,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			errorExpected:      true,
 			expectedEvent:      "invalid lifecycle state TERMINATED",
 			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta2.InstanceProvisionFailedReason}},
-			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient) {
+			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient, wrclient *mock_workrequests.MockClient) {
 				fakeClient := fake.NewClientBuilder().WithObjects(getSecret()).Build()
 				if machineScope.Machine.ObjectMeta.Annotations == nil {
 					machineScope.Machine.ObjectMeta.Annotations = make(map[string]string)
@@ -396,6 +481,34 @@ func TestNormalReconciliationFunction(t *testing.T) {
 						Instance: core.Instance{
 							Id:             common.String("test"),
 							LifecycleState: core.InstanceLifecycleStateTerminated,
+							CompartmentId:  common.String("test-compartment"),
+						},
+					}, nil)
+				wrclient.EXPECT().ListWorkRequests(gomock.Any(), gomock.Eq(workrequests.ListWorkRequestsRequest{
+					CompartmentId: common.String("test-compartment"),
+					ResourceId:    common.String("test"),
+				})).
+					Return(workrequests.ListWorkRequestsResponse{
+						Items: []workrequests.WorkRequestSummary{
+							{
+								Id:     common.String("wr1"),
+								Status: workrequests.WorkRequestSummaryStatusEnum(workrequests.WorkRequestStatusFailed),
+							},
+							{
+								Id:     common.String("wr2"),
+								Status: workrequests.WorkRequestSummaryStatusEnum(workrequests.WorkRequestStatusSucceeded),
+							},
+						},
+					}, nil)
+				wrclient.EXPECT().ListWorkRequestErrors(gomock.Any(), gomock.Eq(workrequests.ListWorkRequestErrorsRequest{
+					WorkRequestId: common.String("wr1"),
+				})).
+					Return(workrequests.ListWorkRequestErrorsResponse{
+						Items: []workrequests.WorkRequestError{
+							{
+								Code:    common.String("NoAvailableIpAddress"),
+								Message: common.String("No more Ip available in CIDR 1.1.1.1/1"),
+							},
 						},
 					}, nil)
 			},
@@ -408,7 +521,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			errorExpected:      true,
 			expectedEvent:      "server error",
 			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta2.InstanceIPAddressNotFound}},
-			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient) {
+			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient, wrclient *mock_workrequests.MockClient) {
 				machineScope.Machine.ObjectMeta.Labels = make(map[string]string)
 				machineScope.Machine.ObjectMeta.Labels[clusterv1.MachineControlPlaneLabel] = "true"
 				computeClient.EXPECT().GetInstance(gomock.Any(), gomock.Eq(core.GetInstanceRequest{
@@ -431,7 +544,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 		{
 			name:          "control plane backend backend exists",
 			errorExpected: false,
-			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
+			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrclient *mock_workrequests.MockClient) {
 				machineScope.Machine.ObjectMeta.Labels = make(map[string]string)
 				machineScope.Machine.ObjectMeta.Labels[clusterv1.MachineControlPlaneLabel] = "true"
 				computeClient.EXPECT().GetInstance(gomock.Any(), gomock.Eq(core.GetInstanceRequest{
@@ -488,7 +601,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 		{
 			name:          "backend creation",
 			errorExpected: false,
-			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
+			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrclient *mock_workrequests.MockClient) {
 				machineScope.Machine.ObjectMeta.Labels = make(map[string]string)
 				machineScope.Machine.ObjectMeta.Labels[clusterv1.MachineControlPlaneLabel] = "true"
 				computeClient.EXPECT().GetInstance(gomock.Any(), gomock.Eq(core.GetInstanceRequest{
@@ -563,7 +676,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 		{
 			name:          "ip address exists",
 			errorExpected: false,
-			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
+			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrclient *mock_workrequests.MockClient) {
 				machineScope.Machine.ObjectMeta.Labels = make(map[string]string)
 				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
 					{
@@ -622,7 +735,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 		{
 			name:          "backend creation fails",
 			errorExpected: true,
-			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
+			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrclient *mock_workrequests.MockClient) {
 				machineScope.Machine.ObjectMeta.Labels = make(map[string]string)
 				machineScope.Machine.ObjectMeta.Labels[clusterv1.MachineControlPlaneLabel] = "true"
 				computeClient.EXPECT().GetInstance(gomock.Any(), gomock.Eq(core.GetInstanceRequest{
@@ -691,6 +804,18 @@ func TestNormalReconciliationFunction(t *testing.T) {
 					WorkRequest: networkloadbalancer.WorkRequest{
 						Status: networkloadbalancer.OperationStatusFailed,
 					}}, nil)
+
+				wrClient.EXPECT().ListWorkRequestErrors(gomock.Any(), gomock.Eq(workrequests.ListWorkRequestErrorsRequest{
+					WorkRequestId: common.String("wrid"),
+				})).
+					Return(workrequests.ListWorkRequestErrorsResponse{
+						Items: []workrequests.WorkRequestError{
+							{
+								Code:    common.String("InternalServerError"),
+								Message: common.String("Failed due to unknown error"),
+							},
+						},
+					}, nil)
 			},
 			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta2.InstanceLBBackendAdditionFailedReason}},
 		},
@@ -701,7 +826,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			g := NewWithT(t)
 			defer teardown(t, g)
 			setup(t, g)
-			tc.testSpecificSetup(&tc, ms, computeClient, vcnClient, nlbClient)
+			tc.testSpecificSetup(&tc, ms, computeClient, vcnClient, nlbClient, wrClient)
 			ctx := context.Background()
 			result, err := r.reconcileNormal(ctx, log.FromContext(ctx), ms)
 			if len(tc.conditionAssertion) > 0 {

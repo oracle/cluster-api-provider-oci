@@ -69,6 +69,7 @@ func TestClients_NewClientProviderWithClientOverrides(t *testing.T) {
 		NetworkLoadBalancerClientUrl: common.String("NetworkLoadBalancerClientUrl"),
 		IdentityClientUrl:            common.String("IdentityClientUrl"),
 		ContainerEngineClientUrl:     common.String("ContainerEngineClientUrl"),
+		WorkrequestClientUrl:         common.String("WorkrequestClientUrl"),
 	}
 
 	clientProvider, err := NewClientProvider(ClientProviderParams{
@@ -108,6 +109,7 @@ func TestClients_NewClientProviderWithMissingOverrides(t *testing.T) {
 		LoadBalancerClientUrl: common.String("LoadBalancerClientUrl"),
 		//NetworkLoadBalancerClientUrl is missing,
 		//IdentityClientUrl is missing,
+		//WorkrequestClientUrl is missing,
 		ContainerEngineClientUrl: common.String("ContainerEngineClientUrl"),
 	}
 

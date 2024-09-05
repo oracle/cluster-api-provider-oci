@@ -88,7 +88,7 @@ func (s *ClusterScope) DeleteApiServerLB(ctx context.Context) error {
 		s.Logger.Error(err, "failed to delete apiserver lb")
 		return errors.Wrap(err, "failed to delete apiserver lb")
 	}
-	_, err = ociutil.AwaitLBWorkRequest(ctx, s.LoadBalancerClient, lbResponse.OpcWorkRequestId)
+	_, err = ociutil.AwaitLBWorkRequest(ctx, s.LoadBalancerClient, s.WorkRequestClient, lbResponse.OpcWorkRequestId)
 	if err != nil {
 		return errors.Wrap(err, "work request to delete lb failed")
 	}
@@ -129,7 +129,7 @@ func (s *ClusterScope) UpdateLB(ctx context.Context, lb infrastructurev1beta2.Lo
 		s.Logger.Error(err, "failed to reconcile the apiserver LB, failed to generate update lb workrequest")
 		return errors.Wrap(err, "failed to reconcile the apiserver LB, failed to generate update lb workrequest")
 	}
-	_, err = ociutil.AwaitLBWorkRequest(ctx, s.LoadBalancerClient, lbResponse.OpcWorkRequestId)
+	_, err = ociutil.AwaitLBWorkRequest(ctx, s.LoadBalancerClient, s.WorkRequestClient, lbResponse.OpcWorkRequestId)
 	if err != nil {
 		s.Logger.Error(err, "failed to reconcile the apiserver LB, failed to update lb")
 		return errors.Wrap(err, "failed to reconcile the apiserver LB, failed to update lb")
@@ -202,7 +202,7 @@ func (s *ClusterScope) CreateLB(ctx context.Context, lb infrastructurev1beta2.Lo
 		return nil, nil, errors.Wrap(err, "failed to create apiserver lb, failed to create work request")
 	}
 
-	wr, err := ociutil.AwaitLBWorkRequest(ctx, s.LoadBalancerClient, lbResponse.OpcWorkRequestId)
+	wr, err := ociutil.AwaitLBWorkRequest(ctx, s.LoadBalancerClient, s.WorkRequestClient, lbResponse.OpcWorkRequestId)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "awaiting load balancer")
 	}
