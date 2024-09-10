@@ -32,16 +32,6 @@ by our users, contributors, and maintainers.
 To ask questions or get the latest project news, please join us in the
 [#cluster-api-oci][#cluster-api-oci] channel on [Slack](http://slack.k8s.io/).
 
-### Office Hours
-
-The maintainers host office hours on the first Tuesday of every month
-at 06:00 PT / 09:00 ET / 14:00 CET / 18:00 IST via [Zooom][zoomMeeting].
-
-All interested community members are invited to join us. A recording of each
-session will be made available afterwards for folks who are unable to attend.
-
-Previous meetings: [ [notes][notes] | [recordings][notes] (coming soon) ]
-
 ### Support Policy
 
 **NOTE:** As the versioning for this project is tied to the versioning of Cluster API, future modifications to this
