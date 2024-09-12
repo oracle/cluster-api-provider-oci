@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
@@ -118,7 +117,6 @@ func TestMachineReconciliation(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			fmt.Println("Name of test: ", tc.name)
 			g := NewWithT(t)
 			defer teardown(t, g)
 			setup(t, g)
@@ -802,20 +800,22 @@ func TestNormalReconciliationFunction(t *testing.T) {
 						WorkRequestId: common.String("wrid"),
 					})).Return(networkloadbalancer.GetWorkRequestResponse{
 					WorkRequest: networkloadbalancer.WorkRequest{
-						Status: networkloadbalancer.OperationStatusFailed,
+						Status:        networkloadbalancer.OperationStatusFailed,
+						CompartmentId: common.String("compartment-id"),
 					}}, nil)
-
-				wrClient.EXPECT().ListWorkRequestErrors(gomock.Any(), gomock.Eq(workrequests.ListWorkRequestErrorsRequest{
+				nlbClient.EXPECT().ListWorkRequestErrors(gomock.Any(), gomock.Eq(networkloadbalancer.ListWorkRequestErrorsRequest{
 					WorkRequestId: common.String("wrid"),
-				})).
-					Return(workrequests.ListWorkRequestErrorsResponse{
-						Items: []workrequests.WorkRequestError{
+					CompartmentId: common.String("compartment-id"),
+				})).Return(networkloadbalancer.ListWorkRequestErrorsResponse{
+					WorkRequestErrorCollection: networkloadbalancer.WorkRequestErrorCollection{
+						Items: []networkloadbalancer.WorkRequestError{
 							{
-								Code:    common.String("InternalServerError"),
-								Message: common.String("Failed due to unknown error"),
+								Code:    common.String("OKE-001"),
+								Message: common.String("No more Ip available in CIDR 1.1.1.1/1"),
 							},
 						},
-					}, nil)
+					},
+				}, nil)
 			},
 			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta2.InstanceLBBackendAdditionFailedReason}},
 		},
