@@ -28,7 +28,6 @@ import (
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/workrequests/mock_workrequests"
 	"github.com/oracle/oci-go-sdk/v65/loadbalancer"
 	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
-	"github.com/oracle/oci-go-sdk/v65/workrequests"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/golang/mock/gomock"
@@ -1577,20 +1576,22 @@ func TestNLBReconciliationCreation(t *testing.T) {
 						WorkRequestId: common.String("wrid"),
 					})).Return(networkloadbalancer.GetWorkRequestResponse{
 					WorkRequest: networkloadbalancer.WorkRequest{
-						Status: networkloadbalancer.OperationStatusFailed,
+						CompartmentId: common.String("compartment-id"),
+						Status:        networkloadbalancer.OperationStatusFailed,
 					}}, nil)
-
-				wrClient.EXPECT().ListWorkRequestErrors(gomock.Any(), gomock.Eq(workrequests.ListWorkRequestErrorsRequest{
+				nlbClient.EXPECT().ListWorkRequestErrors(gomock.Any(), gomock.Eq(networkloadbalancer.ListWorkRequestErrorsRequest{
 					WorkRequestId: common.String("wrid"),
-				})).
-					Return(workrequests.ListWorkRequestErrorsResponse{
-						Items: []workrequests.WorkRequestError{
+					CompartmentId: common.String("compartment-id"),
+				})).Return(networkloadbalancer.ListWorkRequestErrorsResponse{
+					WorkRequestErrorCollection: networkloadbalancer.WorkRequestErrorCollection{
+						Items: []networkloadbalancer.WorkRequestError{
 							{
-								Code:    common.String("InternalServerError"),
-								Message: common.String("Failed due to Unknown error"),
+								Code:    common.String("OKE-001"),
+								Message: common.String("No more Ip available in CIDR 1.1.1.1/1"),
 							},
 						},
-					}, nil)
+					},
+				}, nil)
 			},
 		},
 	}
@@ -1822,20 +1823,23 @@ func TestNLBReconciliationDeletion(t *testing.T) {
 						WorkRequestId: common.String("wrid"),
 					})).Return(networkloadbalancer.GetWorkRequestResponse{
 					WorkRequest: networkloadbalancer.WorkRequest{
-						Status: networkloadbalancer.OperationStatusFailed,
+						CompartmentId: common.String("compartment-id"),
+						Status:        networkloadbalancer.OperationStatusFailed,
 					}}, nil)
 
-				wrClient.EXPECT().ListWorkRequestErrors(gomock.Any(), gomock.Eq(workrequests.ListWorkRequestErrorsRequest{
+				nlbClient.EXPECT().ListWorkRequestErrors(gomock.Any(), gomock.Eq(networkloadbalancer.ListWorkRequestErrorsRequest{
 					WorkRequestId: common.String("wrid"),
-				})).
-					Return(workrequests.ListWorkRequestErrorsResponse{
-						Items: []workrequests.WorkRequestError{
+					CompartmentId: common.String("compartment-id"),
+				})).Return(networkloadbalancer.ListWorkRequestErrorsResponse{
+					WorkRequestErrorCollection: networkloadbalancer.WorkRequestErrorCollection{
+						Items: []networkloadbalancer.WorkRequestError{
 							{
-								Code:    common.String("InternalServerError"),
+								Code:    common.String("OKE-001"),
 								Message: common.String("Failed due to unknown error"),
 							},
 						},
-					}, nil)
+					},
+				}, nil)
 			},
 		},
 		{
@@ -2171,19 +2175,12 @@ func TestLBReconciliationCreation(t *testing.T) {
 					})).Return(loadbalancer.GetWorkRequestResponse{
 					WorkRequest: loadbalancer.WorkRequest{
 						LifecycleState: loadbalancer.WorkRequestLifecycleStateFailed,
-					}}, nil)
-
-				wrClient.EXPECT().ListWorkRequestErrors(gomock.Any(), gomock.Eq(workrequests.ListWorkRequestErrorsRequest{
-					WorkRequestId: common.String("wrid"),
-				})).
-					Return(workrequests.ListWorkRequestErrorsResponse{
-						Items: []workrequests.WorkRequestError{
+						ErrorDetails: []loadbalancer.WorkRequestError{
 							{
-								Code:    common.String("InternalServerError"),
-								Message: common.String("Failed due to Unknown error"),
+								Message: common.String("Internal server error to create lb"),
 							},
 						},
-					}, nil)
+					}}, nil)
 			},
 		},
 	}
@@ -2464,19 +2461,12 @@ func TestLBReconciliationDeletion(t *testing.T) {
 					})).Return(loadbalancer.GetWorkRequestResponse{
 					WorkRequest: loadbalancer.WorkRequest{
 						LifecycleState: loadbalancer.WorkRequestLifecycleStateFailed,
-					}}, nil)
-
-				wrClient.EXPECT().ListWorkRequestErrors(gomock.Any(), gomock.Eq(workrequests.ListWorkRequestErrorsRequest{
-					WorkRequestId: common.String("wrid"),
-				})).
-					Return(workrequests.ListWorkRequestErrorsResponse{
-						Items: []workrequests.WorkRequestError{
+						ErrorDetails: []loadbalancer.WorkRequestError{
 							{
-								Code:    common.String("InternalServerError"),
-								Message: common.String("Failed due to Unknown error"),
+								Message: common.String("Internal Server error to delete lb"),
 							},
 						},
-					}, nil)
+					}}, nil)
 			},
 		},
 		{

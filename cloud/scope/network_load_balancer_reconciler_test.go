@@ -27,10 +27,8 @@ import (
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer/mock_nlb"
-	"github.com/oracle/cluster-api-provider-oci/cloud/services/workrequests/mock_workrequests"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
-	"github.com/oracle/oci-go-sdk/v65/workrequests"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,7 +40,6 @@ func TestNLBReconciliation(t *testing.T) {
 		cs                 *ClusterScope
 		mockCtrl           *gomock.Controller
 		nlbClient          *mock_nlb.MockNetworkLoadBalancerClient
-		wrClient           *mock_workrequests.MockClient
 		ociClusterAccessor OCISelfManagedCluster
 		tags               map[string]string
 	)
@@ -51,7 +48,6 @@ func TestNLBReconciliation(t *testing.T) {
 		var err error
 		mockCtrl = gomock.NewController(t)
 		nlbClient = mock_nlb.NewMockNetworkLoadBalancerClient(mockCtrl)
-		wrClient = mock_workrequests.NewMockClient(mockCtrl)
 		client := fake.NewClientBuilder().Build()
 		ociClusterAccessor = OCISelfManagedCluster{
 			&infrastructurev1beta2.OCICluster{
@@ -68,7 +64,6 @@ func TestNLBReconciliation(t *testing.T) {
 		ociClusterAccessor.OCICluster.Spec.ControlPlaneEndpoint.Port = 6443
 		cs, err = NewClusterScope(ClusterScopeParams{
 			NetworkLoadBalancerClient: nlbClient,
-			WorkRequestClient:         wrClient,
 			Cluster:                   &clusterv1.Cluster{},
 			OCIClusterAccessor:        ociClusterAccessor,
 			Client:                    client,
@@ -90,12 +85,12 @@ func TestNLBReconciliation(t *testing.T) {
 		eventNotExpected    string
 		matchError          error
 		errorSubStringMatch bool
-		testSpecificSetup   func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient)
+		testSpecificSetup   func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient)
 	}{
 		{
 			name:          "nlb exists",
 			errorExpected: false,
-			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
+			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerId = common.String("nlb-id")
 				nlbClient.EXPECT().GetNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.GetNetworkLoadBalancerRequest{
 					NetworkLoadBalancerId: common.String("nlb-id"),
@@ -122,7 +117,7 @@ func TestNLBReconciliation(t *testing.T) {
 			name:          "nlb does not have ip address",
 			errorExpected: true,
 			matchError:    errors.New("nlb does not have valid ip addresses"),
-			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
+			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerId = common.String("nlb-id")
 				nlbClient.EXPECT().GetNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.GetNetworkLoadBalancerRequest{
 					NetworkLoadBalancerId: common.String("nlb-id"),
@@ -143,7 +138,7 @@ func TestNLBReconciliation(t *testing.T) {
 			name:          "nlb does not have public ip address",
 			errorExpected: true,
 			matchError:    errors.New("nlb does not have valid public ip address"),
-			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
+			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerId = common.String("nlb-id")
 				nlbClient.EXPECT().GetNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.GetNetworkLoadBalancerRequest{
 					NetworkLoadBalancerId: common.String("nlb-id"),
@@ -170,7 +165,7 @@ func TestNLBReconciliation(t *testing.T) {
 			name:          "nlb lookup by display name",
 			errorExpected: true,
 			matchError:    errors.New("nlb does not have valid public ip address"),
-			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
+			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
 				nlbClient.EXPECT().ListNetworkLoadBalancers(gomock.Any(), gomock.Eq(networkloadbalancer.ListNetworkLoadBalancersRequest{
 					CompartmentId: common.String("compartment-id"),
 					DisplayName:   common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
@@ -219,7 +214,7 @@ func TestNLBReconciliation(t *testing.T) {
 			name:          "no cp subnet",
 			errorExpected: true,
 			matchError:    errors.New("control plane endpoint subnet not provided"),
-			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
+			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
 				nlbClient.EXPECT().ListNetworkLoadBalancers(gomock.Any(), gomock.Eq(networkloadbalancer.ListNetworkLoadBalancersRequest{
 					CompartmentId: common.String("compartment-id"),
 					DisplayName:   common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
@@ -231,7 +226,7 @@ func TestNLBReconciliation(t *testing.T) {
 			name:          "more than one cp subnet",
 			errorExpected: true,
 			matchError:    errors.New("cannot have more than 1 control plane endpoint subnet"),
-			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
+			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta2.Subnet{
 					{
 						Role: infrastructurev1beta2.ControlPlaneEndpointRole,
@@ -252,7 +247,7 @@ func TestNLBReconciliation(t *testing.T) {
 		{
 			name:          "create network load balancer",
 			errorExpected: false,
-			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
+			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta2.Subnet{
 					{
 						Role: infrastructurev1beta2.ControlPlaneEndpointRole,
@@ -350,7 +345,7 @@ func TestNLBReconciliation(t *testing.T) {
 			errorExpected:       true,
 			errorSubStringMatch: true,
 			matchError:          errors.New("request failed"),
-			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
+			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta2.Subnet{
 					{
 						Role: infrastructurev1beta2.ControlPlaneEndpointRole,
@@ -402,8 +397,8 @@ func TestNLBReconciliation(t *testing.T) {
 			name:                "work request failed",
 			errorExpected:       true,
 			errorSubStringMatch: true,
-			matchError:          errors.New("No more Ip available in CIDR 1.1.1.1/1, WorkRequest opc-wr-id failed"),
-			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
+			matchError:          errors.New("No more Ip available in CIDR 1.1.1.1/1: WorkRequest opc-wr-id failed"),
+			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta2.Subnet{
 					{
 						Role: infrastructurev1beta2.ControlPlaneEndpointRole,
@@ -458,20 +453,23 @@ func TestNLBReconciliation(t *testing.T) {
 					WorkRequestId: common.String("opc-wr-id"),
 				})).Return(networkloadbalancer.GetWorkRequestResponse{
 					WorkRequest: networkloadbalancer.WorkRequest{
-						Status: networkloadbalancer.OperationStatusFailed,
+						CompartmentId: common.String("compartment-id"),
+						Status:        networkloadbalancer.OperationStatusFailed,
 					},
 				}, nil)
-				wrClient.EXPECT().ListWorkRequestErrors(gomock.Any(), gomock.Eq(workrequests.ListWorkRequestErrorsRequest{
+				nlbClient.EXPECT().ListWorkRequestErrors(gomock.Any(), gomock.Eq(networkloadbalancer.ListWorkRequestErrorsRequest{
 					WorkRequestId: common.String("opc-wr-id"),
-				})).
-					Return(workrequests.ListWorkRequestErrorsResponse{
-						Items: []workrequests.WorkRequestError{
+					CompartmentId: common.String("compartment-id"),
+				})).Return(networkloadbalancer.ListWorkRequestErrorsResponse{
+					WorkRequestErrorCollection: networkloadbalancer.WorkRequestErrorCollection{
+						Items: []networkloadbalancer.WorkRequestError{
 							{
-								Code:    common.String("NoAvailableIpAddress"),
+								Code:    common.String("OKE-001"),
 								Message: common.String("No more Ip available in CIDR 1.1.1.1/1"),
 							},
 						},
-					}, nil)
+					},
+				}, nil)
 			},
 		},
 		{
@@ -479,7 +477,7 @@ func TestNLBReconciliation(t *testing.T) {
 			errorExpected:       true,
 			errorSubStringMatch: true,
 			matchError:          errors.New("failed to reconcile the apiserver NLB, failed to update nlb"),
-			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
+			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
 				ociClusterAccessor.OCICluster.Spec.NetworkSpec.APIServerLB.LoadBalancerId = common.String("nlb-id")
 				nlbClient.EXPECT().GetNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.GetNetworkLoadBalancerRequest{
 					NetworkLoadBalancerId: common.String("nlb-id"),
@@ -513,20 +511,23 @@ func TestNLBReconciliation(t *testing.T) {
 					WorkRequestId: common.String("opc-wr-id"),
 				})).Return(networkloadbalancer.GetWorkRequestResponse{
 					WorkRequest: networkloadbalancer.WorkRequest{
-						Status: networkloadbalancer.OperationStatusFailed,
+						CompartmentId: common.String("compartment-id"),
+						Status:        networkloadbalancer.OperationStatusFailed,
 					},
 				}, nil)
-				wrClient.EXPECT().ListWorkRequestErrors(gomock.Any(), gomock.Eq(workrequests.ListWorkRequestErrorsRequest{
+				nlbClient.EXPECT().ListWorkRequestErrors(gomock.Any(), gomock.Eq(networkloadbalancer.ListWorkRequestErrorsRequest{
 					WorkRequestId: common.String("opc-wr-id"),
-				})).
-					Return(workrequests.ListWorkRequestErrorsResponse{
-						Items: []workrequests.WorkRequestError{
+					CompartmentId: common.String("compartment-id"),
+				})).Return(networkloadbalancer.ListWorkRequestErrorsResponse{
+					WorkRequestErrorCollection: networkloadbalancer.WorkRequestErrorCollection{
+						Items: []networkloadbalancer.WorkRequestError{
 							{
-								Code:    common.String("IncorrectState"),
-								Message: common.String("NLB is not in active state"),
+								Code:    common.String("OKE-001"),
+								Message: common.String("No more Ip available in CIDR 1.1.1.1/1"),
 							},
 						},
-					}, nil)
+					},
+				}, nil)
 			},
 		},
 		{
@@ -534,15 +535,15 @@ func TestNLBReconciliation(t *testing.T) {
 			errorExpected:       true,
 			errorSubStringMatch: true,
 			matchError:          errors.New(fmt.Sprintf("network load balancer is in %s state. Waiting for ACTIVE state.", networkloadbalancer.LifecycleStateCreating)),
-			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
-				ociClusterAccessor.OCICluster.Spec.NetworkSpec.APIServerLB.LoadBalancerId = common.String("nlb-id")
+			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
+				ociClusterAccessor.OCICluster.Spec.NetworkSpec.APIServerLB.LoadBalancerId = common.String("nlbId")
 				nlbClient.EXPECT().GetNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.GetNetworkLoadBalancerRequest{
-					NetworkLoadBalancerId: common.String("nlb-id"),
+					NetworkLoadBalancerId: common.String("nlbId"),
 				})).
 					Return(networkloadbalancer.GetNetworkLoadBalancerResponse{
 						NetworkLoadBalancer: networkloadbalancer.NetworkLoadBalancer{
 							LifecycleState: networkloadbalancer.LifecycleStateCreating,
-							Id:             common.String("nlb-id"),
+							Id:             common.String("nlbId"),
 							FreeformTags:   tags,
 							DefinedTags:    make(map[string]map[string]interface{}),
 							IsPrivate:      common.Bool(false),
@@ -562,7 +563,7 @@ func TestNLBReconciliation(t *testing.T) {
 			errorExpected:       true,
 			errorSubStringMatch: true,
 			matchError:          errors.New("request failed"),
-			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
+			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerId = common.String("nlb-id")
 				nlbClient.EXPECT().GetNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.GetNetworkLoadBalancerRequest{
 					NetworkLoadBalancerId: common.String("nlb-id"),
@@ -598,7 +599,7 @@ func TestNLBReconciliation(t *testing.T) {
 			g := NewWithT(t)
 			defer teardown(t, g)
 			setup(t, g)
-			tc.testSpecificSetup(cs, nlbClient, wrClient)
+			tc.testSpecificSetup(cs, nlbClient)
 			err := cs.ReconcileApiServerNLB(context.Background())
 			if tc.errorExpected {
 				g.Expect(err).To(Not(BeNil()))
@@ -619,7 +620,6 @@ func TestNLBDeletion(t *testing.T) {
 		cs                 *ClusterScope
 		mockCtrl           *gomock.Controller
 		nlbClient          *mock_nlb.MockNetworkLoadBalancerClient
-		wrClient           *mock_workrequests.MockClient
 		ociClusterAccessor OCISelfManagedCluster
 		tags               map[string]string
 	)
@@ -628,7 +628,6 @@ func TestNLBDeletion(t *testing.T) {
 		var err error
 		mockCtrl = gomock.NewController(t)
 		nlbClient = mock_nlb.NewMockNetworkLoadBalancerClient(mockCtrl)
-		wrClient = mock_workrequests.NewMockClient(mockCtrl)
 		client := fake.NewClientBuilder().Build()
 		ociClusterAccessor = OCISelfManagedCluster{
 			&infrastructurev1beta2.OCICluster{
@@ -645,7 +644,6 @@ func TestNLBDeletion(t *testing.T) {
 		ociClusterAccessor.OCICluster.Spec.ControlPlaneEndpoint.Port = 6443
 		cs, err = NewClusterScope(ClusterScopeParams{
 			NetworkLoadBalancerClient: nlbClient,
-			WorkRequestClient:         wrClient,
 			Cluster:                   &clusterv1.Cluster{},
 			OCIClusterAccessor:        ociClusterAccessor,
 			Client:                    client,
@@ -667,12 +665,12 @@ func TestNLBDeletion(t *testing.T) {
 		eventNotExpected    string
 		matchError          error
 		errorSubStringMatch bool
-		testSpecificSetup   func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient)
+		testSpecificSetup   func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient)
 	}{
 		{
 			name:          "nlb already deleted",
 			errorExpected: false,
-			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
+			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerId = common.String("nlb-id")
 				nlbClient.EXPECT().GetNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.GetNetworkLoadBalancerRequest{
 					NetworkLoadBalancerId: common.String("nlb-id"),
@@ -683,7 +681,7 @@ func TestNLBDeletion(t *testing.T) {
 		{
 			name:          "list nlb by display name",
 			errorExpected: false,
-			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
+			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
 				nlbClient.EXPECT().ListNetworkLoadBalancers(gomock.Any(), gomock.Eq(networkloadbalancer.ListNetworkLoadBalancersRequest{
 					CompartmentId: common.String("compartment-id"),
 					DisplayName:   common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
@@ -734,7 +732,7 @@ func TestNLBDeletion(t *testing.T) {
 		{
 			name:          "nlb delete by id",
 			errorExpected: false,
-			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
+			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerId = common.String("nlb-id")
 				nlbClient.EXPECT().GetNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.GetNetworkLoadBalancerRequest{
 					NetworkLoadBalancerId: common.String("nlb-id"),
@@ -774,7 +772,7 @@ func TestNLBDeletion(t *testing.T) {
 			errorExpected:       true,
 			errorSubStringMatch: true,
 			matchError:          errors.New("request failed"),
-			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
+			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerId = common.String("nlb-id")
 				nlbClient.EXPECT().GetNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.GetNetworkLoadBalancerRequest{
 					NetworkLoadBalancerId: common.String("nlb-id"),
@@ -805,18 +803,19 @@ func TestNLBDeletion(t *testing.T) {
 			errorExpected:       true,
 			errorSubStringMatch: true,
 			matchError:          errors.New("work request to delete nlb failed"),
-			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
+			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerId = common.String("nlb-id")
 				nlbClient.EXPECT().GetNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.GetNetworkLoadBalancerRequest{
 					NetworkLoadBalancerId: common.String("nlb-id"),
 				})).
 					Return(networkloadbalancer.GetNetworkLoadBalancerResponse{
 						NetworkLoadBalancer: networkloadbalancer.NetworkLoadBalancer{
-							Id:           common.String("nlb-id"),
-							FreeformTags: tags,
-							DefinedTags:  make(map[string]map[string]interface{}),
-							IsPrivate:    common.Bool(false),
-							DisplayName:  common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
+							Id:            common.String("nlb-id"),
+							CompartmentId: common.String("test-compartment"),
+							FreeformTags:  tags,
+							DefinedTags:   make(map[string]map[string]interface{}),
+							IsPrivate:     common.Bool(false),
+							DisplayName:   common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
 							IpAddresses: []networkloadbalancer.IpAddress{
 								{
 									IpAddress: common.String("2.2.2.2"),
@@ -835,20 +834,23 @@ func TestNLBDeletion(t *testing.T) {
 					WorkRequestId: common.String("opc-wr-id"),
 				})).Return(networkloadbalancer.GetWorkRequestResponse{
 					WorkRequest: networkloadbalancer.WorkRequest{
-						Status: networkloadbalancer.OperationStatusFailed,
+						CompartmentId: common.String("test-compartment"),
+						Status:        networkloadbalancer.OperationStatusFailed,
 					},
 				}, nil)
-				wrClient.EXPECT().ListWorkRequestErrors(gomock.Any(), gomock.Eq(workrequests.ListWorkRequestErrorsRequest{
+				nlbClient.EXPECT().ListWorkRequestErrors(gomock.Any(), gomock.Eq(networkloadbalancer.ListWorkRequestErrorsRequest{
 					WorkRequestId: common.String("opc-wr-id"),
-				})).
-					Return(workrequests.ListWorkRequestErrorsResponse{
-						Items: []workrequests.WorkRequestError{
+					CompartmentId: common.String("test-compartment"),
+				})).Return(networkloadbalancer.ListWorkRequestErrorsResponse{
+					WorkRequestErrorCollection: networkloadbalancer.WorkRequestErrorCollection{
+						Items: []networkloadbalancer.WorkRequestError{
 							{
-								Code:    common.String("FailedToDeleteNLb"),
-								Message: common.String("Internal Server Error"),
+								Code:    common.String("OKE-001"),
+								Message: common.String("Failed to delete NLB"),
 							},
 						},
-					}, nil)
+					},
+				}, nil)
 			},
 		},
 	}
@@ -857,7 +859,7 @@ func TestNLBDeletion(t *testing.T) {
 			g := NewWithT(t)
 			defer teardown(t, g)
 			setup(t, g)
-			tc.testSpecificSetup(cs, nlbClient, wrClient)
+			tc.testSpecificSetup(cs, nlbClient)
 			err := cs.DeleteApiServerNLB(context.Background())
 			if tc.errorExpected {
 				g.Expect(err).To(Not(BeNil()))
