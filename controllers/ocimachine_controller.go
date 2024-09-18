@@ -317,9 +317,9 @@ func (r *OCIMachineReconciler) recordErrorsOnFailedWorkRequest(ctx context.Conte
 				r.Recorder.Event(machine, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "Failed to normal reconcile OCIMachine").Error())
 				return reconcile.Result{}, errors.Wrapf(err, "failed to normal reconcile OCI Machine %s/%s", machineScope.OCIMachine.Namespace, machineScope.OCIMachine.Name)
 			}
-			final_error = final_error + fmt.Sprintf("Workrequest %s failed.", *wrqst.Id)
+			final_error = fmt.Sprintf("%s Workrequest %s failed.", final_error, *wrqst.Id)
 			for _, wr_err := range wr_errs.Items {
-				final_error = final_error + " " + *wr_err.Message
+				final_error = fmt.Sprintf("%s %s", final_error, *wr_err.Message)
 			}
 		}
 	}
