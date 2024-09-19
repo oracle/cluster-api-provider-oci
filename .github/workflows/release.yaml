@@ -30,7 +30,7 @@ jobs:
           echo "Release Tag: ${{ github.ref_name }}" 
           curl -sSL https://doc.crds.dev/github.com/oracle/cluster-api-provider-oci@${{ github.ref_name }}
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v4
         with:
           name: CAPOCI Artifacts
           path: out/
