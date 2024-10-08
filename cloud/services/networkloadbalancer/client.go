@@ -18,6 +18,7 @@ package nlb
 
 import (
 	"context"
+
 	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
 )
 
@@ -28,6 +29,7 @@ type NetworkLoadBalancerClient interface {
 	CreateNetworkLoadBalancer(ctx context.Context, request networkloadbalancer.CreateNetworkLoadBalancerRequest) (response networkloadbalancer.CreateNetworkLoadBalancerResponse, err error)
 	DeleteBackend(ctx context.Context, request networkloadbalancer.DeleteBackendRequest) (response networkloadbalancer.DeleteBackendResponse, err error)
 	GetWorkRequest(ctx context.Context, request networkloadbalancer.GetWorkRequestRequest) (response networkloadbalancer.GetWorkRequestResponse, err error)
+	ListWorkRequestErrors(ctx context.Context, request networkloadbalancer.ListWorkRequestErrorsRequest) (response networkloadbalancer.ListWorkRequestErrorsResponse, err error)
 	UpdateNetworkLoadBalancer(ctx context.Context, request networkloadbalancer.UpdateNetworkLoadBalancerRequest) (response networkloadbalancer.UpdateNetworkLoadBalancerResponse, err error)
 	DeleteNetworkLoadBalancer(ctx context.Context, request networkloadbalancer.DeleteNetworkLoadBalancerRequest) (response networkloadbalancer.DeleteNetworkLoadBalancerResponse, err error)
 }
