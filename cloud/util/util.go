@@ -25,6 +25,7 @@ import (
 	"os"
 	"reflect"
 	"time"
+	"strings"
 
 	"github.com/go-logr/logr"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
@@ -46,6 +47,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 const (
@@ -498,4 +502,173 @@ type MachineParams struct {
 	Namespace            string                             // the namespace in which machinepool machine has to be created
 	SpecInfraMachines    []infrav2exp.OCIMachinePoolMachine // the spec of actual machines in the pool
 	Logger               *logr.Logger                       // the logger which has to be used
+}
+
+func NewWorkloadClient(ctx context.Context, machineScope *scope.MachineScope) (wlClient client.Client, err error) {
+	u := &unstructured.Unstructured{}
+	u.SetGroupVersionKind(schema.GroupVersionKind{
+		Kind:    "Secret",
+		Version: "v1",
+	})
+	cluster := machineScope.Cluster
+
+	secret_obj := client.ObjectKey{
+		Namespace: cluster.Namespace,
+		Name:      cluster.Spec.InfrastructureRef.Name + "-kubeconfig",
+	}
+	secret := &corev1.Secret{}
+	if err := machineScope.Client.Get(ctx, secret_obj, secret); err != nil {
+		return nil, err
+	}
+	secretData := secret.Data["value"]
+	wlKubeConfig := string(secretData)
+	tmpfile, err := os.CreateTemp("", "kubeconfig")
+	if err != nil {
+		machineScope.Info(fmt.Sprintf("error create tmp file: %s", err))
+		return nil, err
+
+	}
+	defer os.Remove(tmpfile.Name())
+	if err := os.WriteFile(tmpfile.Name(), []byte(wlKubeConfig), 0666); err != nil {
+		machineScope.Info(fmt.Sprintf("error write tmp file: %s", err))
+		return nil, err
+
+	}
+	config, err := clientcmd.BuildConfigFromFlags("", tmpfile.Name())
+	if err != nil {
+		machineScope.Info(fmt.Sprintf("error build config: %s", err))
+		return nil, err
+
+	}
+
+	wlClient, err = client.New(config, client.Options{})
+
+	return wlClient, err
+}
+
+
+func CreateNpn(ctx context.Context, machineScope *scope.MachineScope) error {
+	machineScope.Info("CREATE NPN CR NOW!!!")
+
+	wlClient, err := NewWorkloadClient(ctx, machineScope)
+	if err != nil {
+		return err
+	}
+	npnCr := &unstructured.Unstructured{}
+	instance, err := machineScope.GetOrCreateMachine(ctx)
+	if err != nil {
+		return err
+	}
+	slicedId := strings.Split(*instance.Id, ".")
+	instanceSuffix := slicedId[len(slicedId) - 1]
+	maxPodCount := machineScope.OCIMachine.Spec.MaxPodPerNode
+	podSubnetIds := machineScope.OCIMachine.Spec.PodSubnetIds
+	podNsgIds := machineScope.OCIMachine.Spec.PodNSGIds
+	npnCr.Object = map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"name": instanceSuffix,
+		},
+		"spec": map[string]interface{}{
+			"id": *instance.Id,
+			"maxPodCount": maxPodCount,
+			"podSubnetIds": podSubnetIds,
+			"networkSecurityGroupIds": podNsgIds,
+	
+		},
+	}
+	npnCr.SetGroupVersionKind(schema.GroupVersionKind{
+		Version: "oci.oraclecloud.com/v1beta1",
+		Kind:    "NativePodNetwork",
+	})
+	// TODO: Handle Already Exists?
+	if existedNpnCr, err := GetNpn(ctx, machineScope); existedNpnCr != nil {
+		machineScope.Info("NPN CR already exists, skip creation.")
+		return err
+	}
+	err = wlClient.Create(ctx, npnCr)
+	return err
+}
+
+
+func GetNpn(ctx context.Context, machineScope *scope.MachineScope) (*unstructured.Unstructured, error) {
+	machineScope.Info("GET NPN CR NOW!!!")
+
+	wlClient, err := NewWorkloadClient(ctx, machineScope)
+	if err != nil {
+		machineScope.Info(fmt.Sprintf("Failed to initialize kube client set: %s", err))
+		return nil, err
+	}
+	instance, err := machineScope.GetOrCreateMachine(ctx)
+	if err != nil {
+		machineScope.Info(fmt.Sprintf("Failed to get machine: %s", err))
+		return nil, err
+	}
+	npnCr := &unstructured.Unstructured{}
+	slicedId := strings.Split(*instance.Id, ".")
+	instanceSuffix := slicedId[len(slicedId) - 1]
+	npnCr.SetGroupVersionKind(schema.GroupVersionKind{
+		Version: "oci.oraclecloud.com/v1beta1",
+		Kind:    "NativePodNetwork",
+	})
+	if err := wlClient.Get(ctx, client.ObjectKey{
+		Name:      instanceSuffix,
+	}, npnCr); err != nil {
+		machineScope.Info(fmt.Sprintf("Failed to Get NPN CR: %s", err))
+		return nil, err
+	}
+	return npnCr, nil
+}
+
+func DeleteNpn(ctx context.Context, machineScope *scope.MachineScope) error {
+	machineScope.Info("DELETE NPN CR NOW!!!")
+
+	wlClient, err := NewWorkloadClient(ctx, machineScope)
+	if err != nil {
+		machineScope.Info(fmt.Sprintf("Failed to initialize kube client set: %s", err))
+		return err
+	}
+	instance, err := machineScope.GetOrCreateMachine(ctx)
+	if err != nil {
+		machineScope.Info(fmt.Sprintf("Failed to get machine: %s", err))
+		return err
+	}
+	npnCr := &unstructured.Unstructured{}
+	slicedId := strings.Split(*instance.Id, ".")
+	instanceSuffix := slicedId[len(slicedId) - 1]
+	npnCr.SetName(instanceSuffix)
+	npnCr.SetGroupVersionKind(schema.GroupVersionKind{
+		Version: "oci.oraclecloud.com/v1beta1",
+		Kind:    "NativePodNetwork",
+	})
+	if err := wlClient.Delete(ctx, npnCr); err != nil {
+		machineScope.Info(fmt.Sprintf("Failed to delete NPN CR: %s", err))
+		return err
+	}
+	return nil
+}
+
+func HasNpnCrd(ctx context.Context, machineScope *scope.MachineScope) error {
+	machineScope.Info("GET NPN CRD NOW!!!")
+
+	wlClient, err := NewWorkloadClient(ctx, machineScope)
+	if err != nil {
+		return err
+	}
+	npnCrd := &unstructured.Unstructured{}
+	npnCrd.SetGroupVersionKind(schema.GroupVersionKind{
+		Version: "apiextensions.k8s.io/v1",
+		Kind:    "CustomResourceDefinition",
+	})
+
+	err = wlClient.Get(context.Background(), client.ObjectKey{
+		Name:      "nativepodnetworks.oci.oraclecloud.com",
+	}, npnCrd)
+	if err != nil {
+		// machineScope.Info(fmt.Sprintf("Failed to Get NPN CRD, reason: %v", apierrors.ReasonForError(err)))
+		machineScope.Info(fmt.Sprintf("Failed to Get NPN CRD Failed, reason: %v", err))
+		return err
+	}
+
+	return nil
+
 }
