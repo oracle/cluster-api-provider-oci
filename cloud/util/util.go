@@ -24,8 +24,8 @@ import (
 	"net/http"
 	"os"
 	"reflect"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
@@ -38,7 +38,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/clientcmd"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	expclusterv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util"
@@ -47,13 +50,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 const (
 	instanceMetadataRegionInfoURLV2 = "http://169.254.169.254/opc/v2/instance/regionInfo/regionIdentifier"
+	npnVersion                      = "oci.oraclecloud.com/v1beta1"
+	npnKind                         = "NativePodNetwork"
+	apiExtensionVersion             = "apiextensions.k8s.io/v1"
+	npnCrdName                      = "nativepodnetworks.oci.oraclecloud.com"
 )
 
 var (
@@ -546,79 +550,6 @@ func NewWorkloadClient(ctx context.Context, machineScope *scope.MachineScope) (w
 	return wlClient, err
 }
 
-
-func CreateNpn(ctx context.Context, machineScope *scope.MachineScope) error {
-	machineScope.Info("CREATE NPN CR NOW!!!")
-
-	wlClient, err := NewWorkloadClient(ctx, machineScope)
-	if err != nil {
-		return err
-	}
-	npnCr := &unstructured.Unstructured{}
-	instance, err := machineScope.GetOrCreateMachine(ctx)
-	if err != nil {
-		return err
-	}
-	slicedId := strings.Split(*instance.Id, ".")
-	instanceSuffix := slicedId[len(slicedId) - 1]
-	maxPodCount := machineScope.OCIMachine.Spec.MaxPodPerNode
-	podSubnetIds := machineScope.OCIMachine.Spec.PodSubnetIds
-	podNsgIds := machineScope.OCIMachine.Spec.PodNSGIds
-	npnCr.Object = map[string]interface{}{
-		"metadata": map[string]interface{}{
-			"name": instanceSuffix,
-		},
-		"spec": map[string]interface{}{
-			"id": *instance.Id,
-			"maxPodCount": maxPodCount,
-			"podSubnetIds": podSubnetIds,
-			"networkSecurityGroupIds": podNsgIds,
-	
-		},
-	}
-	npnCr.SetGroupVersionKind(schema.GroupVersionKind{
-		Version: "oci.oraclecloud.com/v1beta1",
-		Kind:    "NativePodNetwork",
-	})
-	// TODO: Handle Already Exists?
-	if existedNpnCr, err := GetNpn(ctx, machineScope); existedNpnCr != nil {
-		machineScope.Info("NPN CR already exists, skip creation.")
-		return err
-	}
-	err = wlClient.Create(ctx, npnCr)
-	return err
-}
-
-
-func GetNpn(ctx context.Context, machineScope *scope.MachineScope) (*unstructured.Unstructured, error) {
-	machineScope.Info("GET NPN CR NOW!!!")
-
-	wlClient, err := NewWorkloadClient(ctx, machineScope)
-	if err != nil {
-		machineScope.Info(fmt.Sprintf("Failed to initialize kube client set: %s", err))
-		return nil, err
-	}
-	instance, err := machineScope.GetOrCreateMachine(ctx)
-	if err != nil {
-		machineScope.Info(fmt.Sprintf("Failed to get machine: %s", err))
-		return nil, err
-	}
-	npnCr := &unstructured.Unstructured{}
-	slicedId := strings.Split(*instance.Id, ".")
-	instanceSuffix := slicedId[len(slicedId) - 1]
-	npnCr.SetGroupVersionKind(schema.GroupVersionKind{
-		Version: "oci.oraclecloud.com/v1beta1",
-		Kind:    "NativePodNetwork",
-	})
-	if err := wlClient.Get(ctx, client.ObjectKey{
-		Name:      instanceSuffix,
-	}, npnCr); err != nil {
-		machineScope.Info(fmt.Sprintf("Failed to Get NPN CR: %s", err))
-		return nil, err
-	}
-	return npnCr, nil
-}
-
 func DeleteNpn(ctx context.Context, machineScope *scope.MachineScope) error {
 	machineScope.Info("DELETE NPN CR NOW!!!")
 
@@ -634,11 +565,11 @@ func DeleteNpn(ctx context.Context, machineScope *scope.MachineScope) error {
 	}
 	npnCr := &unstructured.Unstructured{}
 	slicedId := strings.Split(*instance.Id, ".")
-	instanceSuffix := slicedId[len(slicedId) - 1]
+	instanceSuffix := slicedId[len(slicedId)-1]
 	npnCr.SetName(instanceSuffix)
 	npnCr.SetGroupVersionKind(schema.GroupVersionKind{
-		Version: "oci.oraclecloud.com/v1beta1",
-		Kind:    "NativePodNetwork",
+		Version: npnVersion,
+		Kind:    npnKind,
 	})
 	if err := wlClient.Delete(ctx, npnCr); err != nil {
 		machineScope.Info(fmt.Sprintf("Failed to delete NPN CR: %s", err))
@@ -647,28 +578,70 @@ func DeleteNpn(ctx context.Context, machineScope *scope.MachineScope) error {
 	return nil
 }
 
-func HasNpnCrd(ctx context.Context, machineScope *scope.MachineScope) error {
-	machineScope.Info("GET NPN CRD NOW!!!")
+func HasNpnCrd(ctx context.Context, machineScope *scope.MachineScope) (bool, error) {
+	machineScope.Info("Get NPN CRD Now.")
 
 	wlClient, err := NewWorkloadClient(ctx, machineScope)
 	if err != nil {
-		return err
+		return false, err
 	}
 	npnCrd := &unstructured.Unstructured{}
 	npnCrd.SetGroupVersionKind(schema.GroupVersionKind{
-		Version: "apiextensions.k8s.io/v1",
+		Version: apiExtensionVersion,
 		Kind:    "CustomResourceDefinition",
 	})
 
 	err = wlClient.Get(context.Background(), client.ObjectKey{
-		Name:      "nativepodnetworks.oci.oraclecloud.com",
+		Name: npnCrdName,
 	}, npnCrd)
 	if err != nil {
-		// machineScope.Info(fmt.Sprintf("Failed to Get NPN CRD, reason: %v", apierrors.ReasonForError(err)))
-		machineScope.Info(fmt.Sprintf("Failed to Get NPN CRD Failed, reason: %v", err))
-		return err
+		machineScope.Info(fmt.Sprintf("Failed to Get NPN CRD, reason: %v", err))
+		return false, err
 	}
 
-	return nil
+	return true, nil
 
+}
+
+func GetOrCreateNpn(ctx context.Context, machineScope *scope.MachineScope) (*unstructured.Unstructured, error) {
+
+	machineScope.Info("Get Or Create NPN CR NOW.")
+	instance, err := machineScope.GetOrCreateMachine(ctx)
+	if err != nil {
+		machineScope.Info(fmt.Sprintf("Failed to get machine: %s", err))
+		return nil, err
+	}
+	wlClient, err := NewWorkloadClient(ctx, machineScope)
+	if err != nil {
+		return nil, err
+	}
+	npnCr := &unstructured.Unstructured{}
+	slicedId := strings.Split(*instance.Id, ".")
+	instanceSuffix := slicedId[len(slicedId)-1]
+	npnCr.SetGroupVersionKind(schema.GroupVersionKind{
+		Version: npnVersion,
+		Kind:    npnKind,
+	})
+	err = wlClient.Get(ctx, client.ObjectKey{Name: instanceSuffix}, npnCr)
+	// Return NPN CR Object if it existed
+	if err == nil {
+		machineScope.Info(fmt.Sprintf("Sucessfully Get an Existed NPN CR Object: %s", npnCr))
+		return npnCr, nil
+	}
+	maxPodCount := machineScope.OCIMachine.Spec.MaxPodPerNode
+	podSubnetIds := machineScope.OCIMachine.Spec.PodSubnetIds
+	podNsgIds := machineScope.OCIMachine.Spec.PodNSGIds
+	npnCr.Object = map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"name": instanceSuffix,
+		},
+		"spec": map[string]interface{}{
+			"id":                      *instance.Id,
+			"maxPodCount":             maxPodCount,
+			"podSubnetIds":            podSubnetIds,
+			"networkSecurityGroupIds": podNsgIds,
+		},
+	}
+	err = wlClient.Create(ctx, npnCr)
+	return npnCr, err
 }

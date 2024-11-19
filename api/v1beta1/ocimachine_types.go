@@ -160,7 +160,6 @@ type OCIMachineSpec struct {
 	// Specifies the list of Network Security Groups used for the VCN IP NATIVE CNI type for pod networking.
 	// Set on each NPN CR associated with the OCI Machine.
 	PodNSGIds []string `json:"podNsgIds,omitempty"`
-
 }
 
 // OCIMachineStatus defines the observed state of OCIMachine.

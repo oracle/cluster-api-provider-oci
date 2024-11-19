@@ -417,15 +417,16 @@ func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.
 		CNIType := machineScope.OCIMachine.Spec.CNIType
 		if CNIType == "VCN_IP_NATIVE" {
 			machineScope.Info(fmt.Sprintf("CNI Type is: %s", CNIType))
-			if err := cloudutil.HasNpnCrd(ctx, machineScope); err != nil {
-				return reconcile.Result{RequeueAfter: 120 * time.Second}, nil
+			if crdExsited, err := cloudutil.HasNpnCrd(ctx, machineScope); crdExsited != true {
+				return reconcile.Result{RequeueAfter: 60 * time.Second}, err
 			} else {
-				err := cloudutil.CreateNpn(ctx, machineScope)
+				_, err := cloudutil.GetOrCreateNpn(ctx, machineScope)
 				if err != nil {
-					machineScope.Info(fmt.Sprintf("Create NPN CR failed, reason: %v", apierrors.ReasonForError(err)))
+					machineScope.Info(fmt.Sprintf("GetOrCreate NPN CR failed, Requeue Now, Reason: %v", apierrors.ReasonForError(err)))
+					return reconcile.Result{RequeueAfter: 120 * time.Second}, nil
 				}
+				machineScope.Info(fmt.Sprintf("NPN CR Reconcile Normal Completes"))
 			}
-			machineScope.Info("Reconcile Normal Completes!!!")
 		}
 
 		if deleteMachineOnTermination {
@@ -503,7 +504,6 @@ func (r *OCIMachineReconciler) reconcileDelete(ctx context.Context, machineScope
 			} else {
 				machineScope.Info(fmt.Sprintf("Successfully Deleted NPN CR for the current node"))
 			}
-			machineScope.Info("Reconcile Delete Completes!!!")
 		}
 
 		return reconcile.Result{}, nil
