@@ -525,24 +525,10 @@ func NewWorkloadClient(ctx context.Context, machineScope *scope.MachineScope) (w
 		return nil, err
 	}
 	secretData := secret.Data["value"]
-	wlKubeConfig := string(secretData)
-	tmpfile, err := os.CreateTemp("", "kubeconfig")
-	if err != nil {
-		machineScope.Info(fmt.Sprintf("error create tmp file: %s", err))
-		return nil, err
-
-	}
-	defer os.Remove(tmpfile.Name())
-	if err := os.WriteFile(tmpfile.Name(), []byte(wlKubeConfig), 0666); err != nil {
-		machineScope.Info(fmt.Sprintf("error write tmp file: %s", err))
-		return nil, err
-
-	}
-	config, err := clientcmd.BuildConfigFromFlags("", tmpfile.Name())
+	config, err := clientcmd.RESTConfigFromKubeConfig(secretData)
 	if err != nil {
 		machineScope.Info(fmt.Sprintf("error build config: %s", err))
 		return nil, err
-
 	}
 
 	wlClient, err = client.New(config, client.Options{})
