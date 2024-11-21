@@ -415,7 +415,7 @@ func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.
 		machineScope.SetReady()
 
 		CNIType := machineScope.OCIMachine.Spec.CNIType
-		if CNIType == "VCN_IP_NATIVE" {
+		if CNIType == "OCI_VCN_IP_NATIVE" {
 			machineScope.Info(fmt.Sprintf("CNI Type is: %s", CNIType))
 			if crdExsited, err := cloudutil.HasNpnCrd(ctx, machineScope); crdExsited != true {
 				return reconcile.Result{RequeueAfter: 60 * time.Second}, err
@@ -496,7 +496,7 @@ func (r *OCIMachineReconciler) reconcileDelete(ctx context.Context, machineScope
 			"InstanceTerminated", "Deleted the instance")
 
 		CNIType := machineScope.OCIMachine.Spec.CNIType
-		if CNIType == "VCN_IP_NATIVE" {
+		if CNIType == "OCI_VCN_IP_NATIVE" {
 			machineScope.Info(fmt.Sprintf("CNI Type is: %s", CNIType))
 			err := cloudutil.DeleteNpn(ctx, machineScope)
 			if err != nil {
