@@ -36,6 +36,7 @@ func (src *OCIManagedControlPlane) ConvertTo(dstRaw conversion.Hub) error {
 	dst.Spec.ClusterType = restored.Spec.ClusterType
 	dst.Spec.Addons = restored.Spec.Addons
 	dst.Status.AddonStatus = restored.Status.AddonStatus
+	dst.Spec.ClusterOption.OpenIdConnectDiscovery.IsOpenIdConnectDiscoveryEnabled = restored.Spec.ClusterOption.OpenIdConnectDiscovery.IsOpenIdConnectDiscoveryEnabled
 	return nil
 }
 
