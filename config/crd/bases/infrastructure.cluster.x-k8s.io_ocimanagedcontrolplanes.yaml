@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.13.0
+    controller-gen.kubebuilder.io/version: v0.14.0
   name: ocimanagedcontrolplanes.infrastructure.cluster.x-k8s.io
 spec:
   group: infrastructure.cluster.x-k8s.io
@@ -21,19 +21,25 @@ spec:
           API.
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
           spec:
-            description: OCIManagedControlPlaneSpec defines the desired state of OCIManagedControlPlane.
+            description: |-
+              OCIManagedControlPlaneSpec defines the desired state of OCIManagedControlPlane.
               The properties are generated from https://docs.oracle.com/en-us/iaas/api/#/en/containerengine/20180222/datatypes/CreateClusterDetails
             properties:
               clusterOptions:
@@ -135,37 +141,37 @@ spec:
                     operational state.
                   properties:
                     lastTransitionTime:
-                      description: Last time the condition transitioned from one status
-                        to another. This should be when the underlying condition changed.
-                        If that is not known, then using the time when the API field
-                        changed is acceptable.
+                      description: |-
+                        Last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed. If that is not known, then using the time when
+                        the API field changed is acceptable.
                       format: date-time
                       type: string
                     message:
-                      description: A human readable message indicating details about
-                        the transition. This field may be empty.
+                      description: |-
+                        A human readable message indicating details about the transition.
+                        This field may be empty.
                       type: string
                     reason:
-                      description: The reason for the condition's last transition
-                        in CamelCase. The specific API may choose whether or not this
-                        field is considered a guaranteed API. This field may not be
-                        empty.
+                      description: |-
+                        The reason for the condition's last transition in CamelCase.
+                        The specific API may choose whether or not this field is considered a guaranteed API.
+                        This field may not be empty.
                       type: string
                     severity:
-                      description: Severity provides an explicit classification of
-                        Reason code, so the users or machines can immediately understand
-                        the current situation and act accordingly. The Severity field
-                        MUST be set only when Status=False.
+                      description: |-
+                        Severity provides an explicit classification of Reason code, so the users or machines can immediately
+                        understand the current situation and act accordingly.
+                        The Severity field MUST be set only when Status=False.
                       type: string
                     status:
                       description: Status of the condition, one of True, False, Unknown.
                       type: string
                     type:
-                      description: Type of condition in CamelCase or in foo.example.com/CamelCase.
-                        Many .condition.type values are consistent across resources
-                        like Available, but because arbitrary conditions can be useful
-                        (see .node.status.conditions), the ability to deconflict is
-                        important.
+                      description: |-
+                        Type of condition in CamelCase or in foo.example.com/CamelCase.
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions
+                        can be useful (see .node.status.conditions), the ability to deconflict is important.
                       type: string
                   required:
                   - lastTransitionTime
@@ -174,8 +180,9 @@ spec:
                   type: object
                 type: array
               initialized:
-                description: Initialized denotes whether or not the control plane
-                  has the uploaded kubernetes config-map.
+                description: |-
+                  Initialized denotes whether or not the control plane has the
+                  uploaded kubernetes config-map.
                 type: boolean
               ready:
                 type: boolean
@@ -196,19 +203,25 @@ spec:
           API.
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
           spec:
-            description: OCIManagedControlPlaneSpec defines the desired state of OCIManagedControlPlane.
+            description: |-
+              OCIManagedControlPlaneSpec defines the desired state of OCIManagedControlPlane.
               The properties are generated from https://docs.oracle.com/en-us/iaas/api/#/en/containerengine/20180222/datatypes/CreateClusterDetails
             properties:
               addons:
@@ -269,6 +282,87 @@ spec:
                           not to enable the Pod Security Policy admission controller.
                         type: boolean
                     type: object
+                  openIdConnectDiscovery:
+                    description: OpenIDConnectDiscovery specifies OIDC discovery settings
+                    properties:
+                      isOpenIdConnectDiscoveryEnabled:
+                        description: IsOpenIDConnectDiscoveryEnabled defines whether
+                          or not to enable the OIDC discovery.
+                        type: boolean
+                    type: object
+                  openIdConnectTokenAuthenticationConfig:
+                    description: OpenIDConnectTokenAuthenticationConfig
+                    properties:
+                      caCertificate:
+                        description: A Base64 encoded public RSA or ECDSA certificates
+                          used to sign your identity provider's web certificate.
+                        type: string
+                      clientId:
+                        description: A client id that all tokens must be issued for.
+                        type: string
+                      groupsClaim:
+                        description: JWT claim to use as the user's group. If the
+                          claim is present it must be an array of strings.
+                        type: string
+                      groupsPrefix:
+                        description: Prefix prepended to group claims to prevent clashes
+                          with existing names (such as system:groups).
+                        type: string
+                      isOpenIdConnectAuthEnabled:
+                        description: IsOpenIdConnectAuthEnabled defines whether or
+                          not to enable the OIDC authentication.
+                        type: boolean
+                      issuerUrl:
+                        description: URL of the provider that allows the API server
+                          to discover public signing keys. Only URLs that use the
+                          https:// scheme are accepted. This is typically the provider's
+                          discovery URL, changed to have an empty path.
+                        type: string
+                      requiredClaims:
+                        description: A key=value pair that describes a required claim
+                          in the ID Token. If set, the claim is verified to be present
+                          in the ID Token with a matching value. Repeat this flag
+                          to specify multiple claims.
+                        items:
+                          description: KeyValue The properties that define a key value
+                            pair.
+                          properties:
+                            key:
+                              description: The key of the pair.
+                              type: string
+                            value:
+                              description: The value of the pair.
+                              type: string
+                          required:
+                          - key
+                          - value
+                          type: object
+                        type: array
+                      signingAlgorithms:
+                        description: The signing algorithms accepted. Default is ["RS256"].
+                        items:
+                          type: string
+                        type: array
+                      usernameClaim:
+                        description: JWT claim to use as the user name. By default
+                          sub, which is expected to be a unique identifier of the
+                          end user. Admins can choose other claims, such as email
+                          or name, depending on their provider. However, claims other
+                          than email will be prefixed with the issuer URL to prevent
+                          naming clashes with other plugins.
+                        type: string
+                      usernamePrefix:
+                        description: 'Prefix prepended to username claims to prevent
+                          clashes with existing names (such as system:users). For
+                          example, the value oidc: will create usernames like oidc:jane.doe.
+                          If this flag isn''t provided and --oidc-username-claim is
+                          a value other than email the prefix defaults to ( Issuer
+                          URL )# where ( Issuer URL ) is the value of --oidc-issuer-url.
+                          The value - can be used to disable all prefixing.'
+                        type: string
+                    required:
+                    - isOpenIdConnectAuthEnabled
+                    type: object
                 type: object
               clusterPodNetworkOptions:
                 description: ClusterPodNetworkOptions defines the available CNIs and
@@ -283,8 +377,10 @@ spec:
                   type: object
                 type: array
               clusterType:
-                description: ClusterTypeEnum defines the type of cluster. Supported
-                  types are * `BASIC_CLUSTER` * `ENHANCED_CLUSTER`
+                description: |-
+                  ClusterTypeEnum defines the type of cluster. Supported types are
+                  * `BASIC_CLUSTER`
+                  * `ENHANCED_CLUSTER`
                 type: string
               controlPlaneEndpoint:
                 description: ControlPlaneEndpoint represents the endpoint used to
@@ -378,37 +474,37 @@ spec:
                     operational state.
                   properties:
                     lastTransitionTime:
-                      description: Last time the condition transitioned from one status
-                        to another. This should be when the underlying condition changed.
-                        If that is not known, then using the time when the API field
-                        changed is acceptable.
+                      description: |-
+                        Last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed. If that is not known, then using the time when
+                        the API field changed is acceptable.
                       format: date-time
                       type: string
                     message:
-                      description: A human readable message indicating details about
-                        the transition. This field may be empty.
+                      description: |-
+                        A human readable message indicating details about the transition.
+                        This field may be empty.
                       type: string
                     reason:
-                      description: The reason for the condition's last transition
-                        in CamelCase. The specific API may choose whether or not this
-                        field is considered a guaranteed API. This field may not be
-                        empty.
+                      description: |-
+                        The reason for the condition's last transition in CamelCase.
+                        The specific API may choose whether or not this field is considered a guaranteed API.
+                        This field may not be empty.
                       type: string
                     severity:
-                      description: Severity provides an explicit classification of
-                        Reason code, so the users or machines can immediately understand
-                        the current situation and act accordingly. The Severity field
-                        MUST be set only when Status=False.
+                      description: |-
+                        Severity provides an explicit classification of Reason code, so the users or machines can immediately
+                        understand the current situation and act accordingly.
+                        The Severity field MUST be set only when Status=False.
                       type: string
                     status:
                       description: Status of the condition, one of True, False, Unknown.
                       type: string
                     type:
-                      description: Type of condition in CamelCase or in foo.example.com/CamelCase.
-                        Many .condition.type values are consistent across resources
-                        like Available, but because arbitrary conditions can be useful
-                        (see .node.status.conditions), the ability to deconflict is
-                        important.
+                      description: |-
+                        Type of condition in CamelCase or in foo.example.com/CamelCase.
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions
+                        can be useful (see .node.status.conditions), the ability to deconflict is important.
                       type: string
                   required:
                   - lastTransitionTime
@@ -417,8 +513,9 @@ spec:
                   type: object
                 type: array
               initialized:
-                description: Initialized denotes whether or not the control plane
-                  has the uploaded kubernetes config-map.
+                description: |-
+                  Initialized denotes whether or not the control plane has the
+                  uploaded kubernetes config-map.
                 type: boolean
               ready:
                 type: boolean
