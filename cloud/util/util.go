@@ -628,6 +628,7 @@ func GetOrCreateNpn(ctx context.Context, machineScope *scope.MachineScope) (*uns
 			"networkSecurityGroupIds": podNsgIds,
 		},
 	}
+	machineScope.Info(fmt.Sprintf("NPN CR to Create is: %v", npnCr))
 	err = wlClient.Create(ctx, npnCr)
 	return npnCr, err
 }
