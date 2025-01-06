@@ -418,7 +418,7 @@ func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.
 		if CNIType == "OCI_VCN_IP_NATIVE" {
 			machineScope.Info(fmt.Sprintf("CNI Type is: %s", CNIType))
 			if crdExsited, err := cloudutil.HasNpnCrd(ctx, machineScope); crdExsited != true {
-				return reconcile.Result{RequeueAfter: 60 * time.Second}, err
+				return reconcile.Result{RequeueAfter: 60 * time.Second}, nil
 			} else {
 				_, err := cloudutil.GetOrCreateNpn(ctx, machineScope)
 				if err != nil {
