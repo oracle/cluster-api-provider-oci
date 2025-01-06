@@ -422,7 +422,7 @@ func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.
 			} else {
 				_, err := cloudutil.GetOrCreateNpn(ctx, machineScope)
 				if err != nil {
-					machineScope.Info(fmt.Sprintf("GetOrCreate NPN CR failed, Requeue Now, Reason: %v", apierrors.ReasonForError(err)))
+					machineScope.Info(fmt.Sprintf("GetOrCreate NPN CR failed, Requeue Now, Reason: %v", err))
 					return reconcile.Result{RequeueAfter: 120 * time.Second}, nil
 				}
 				machineScope.Info(fmt.Sprintf("NPN CR Reconcile Normal Completes"))
