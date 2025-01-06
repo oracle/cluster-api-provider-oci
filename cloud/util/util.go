@@ -617,7 +617,8 @@ func GetOrCreateNpn(ctx context.Context, machineScope *scope.MachineScope) (*uns
 	maxPodCount := machineScope.OCIMachine.Spec.MaxPodPerNode
 	podSubnetIds := machineScope.OCIMachine.Spec.PodSubnetIds
 	podNsgIds := machineScope.OCIMachine.Spec.PodNSGIds
-	npnCr.Object = map[string]interface{}{
+	npnCrCreate := &unstructured.Unstructured{}
+	npnCrCreate.Object = map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"name": instanceSuffix,
 		},
@@ -628,7 +629,12 @@ func GetOrCreateNpn(ctx context.Context, machineScope *scope.MachineScope) (*uns
 			"networkSecurityGroupIds": podNsgIds,
 		},
 	}
-	machineScope.Info(fmt.Sprintf("NPN CR to Create is: %v", npnCr))
-	err = wlClient.Create(ctx, npnCr)
-	return npnCr, err
+
+	npnCrCreate.SetGroupVersionKind(schema.GroupVersionKind{
+		Version: npnVersion,
+		Kind:    npnKind,
+	})
+	machineScope.Info(fmt.Sprintf("NPN CR to Create is: %v", npnCrCreate))
+	err = wlClient.Create(ctx, npnCrCreate)
+	return npnCrCreate, err
 }
