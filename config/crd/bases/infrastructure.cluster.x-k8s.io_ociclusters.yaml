@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.13.0
+    controller-gen.kubebuilder.io/version: v0.14.0
   name: ociclusters.infrastructure.cluster.x-k8s.io
 spec:
   group: infrastructure.cluster.x-k8s.io
@@ -20,14 +20,19 @@ spec:
         description: OCICluster is the Schema for the ociclusters API.
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -57,10 +62,10 @@ spec:
                   additionalProperties:
                     type: string
                   type: object
-                description: 'Defined tags for this resource. Each key is predefined
-                  and scoped to a namespace. For more information, see Resource Tags
-                  (https://docs.cloud.oracle.com/iaas/Content/General/Concepts/resourcetags.htm).
-                  Example: `{"Operations": {"CostCenter": "42"}}`'
+                description: |-
+                  Defined tags for this resource. Each key is predefined and scoped to a
+                  namespace. For more information, see Resource Tags (https://docs.cloud.oracle.com/iaas/Content/General/Concepts/resourcetags.htm).
+                  Example: `{"Operations": {"CostCenter": "42"}}`
                 type: object
               freeformTags:
                 additionalProperties:
@@ -75,33 +80,40 @@ spec:
                     description: API version of the referent.
                     type: string
                   fieldPath:
-                    description: 'If referring to a piece of an object instead of
-                      an entire object, this string should contain a valid JSON/Go
-                      field access statement, such as desiredState.manifest.containers[2].
-                      For example, if the object reference is to a container within
-                      a pod, this would take on a value like: "spec.containers{name}"
-                      (where "name" refers to the name of the container that triggered
-                      the event) or if no container name is specified "spec.containers[2]"
-                      (container with index 2 in this pod). This syntax is chosen
-                      only to have some well-defined way of referencing a part of
-                      an object. TODO: this design is not final and this field is
-                      subject to change in the future.'
+                    description: |-
+                      If referring to a piece of an object instead of an entire object, this string
+                      should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                      For example, if the object reference is to a container within a pod, this would take on a value like:
+                      "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                      the event) or if no container name is specified "spec.containers[2]" (container with
+                      index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                      referencing a part of an object.
+                      TODO: this design is not final and this field is subject to change in the future.
                     type: string
                   kind:
-                    description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                    description: |-
+                      Kind of the referent.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
                     type: string
                   name:
-                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                    description: |-
+                      Name of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                     type: string
                   namespace:
-                    description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                    description: |-
+                      Namespace of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
                     type: string
                   resourceVersion:
-                    description: 'Specific resourceVersion to which this reference
-                      is made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                    description: |-
+                      Specific resourceVersion to which this reference is made, if any.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
                     type: string
                   uid:
-                    description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                    description: |-
+                      UID of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
                     type: string
                 type: object
                 x-kubernetes-map-type: atomic
@@ -130,15 +142,15 @@ spec:
                                   soon as current backend becomes unhealthy.
                                 properties:
                                   urlPath:
-                                    description: 'The path against which to run the
-                                      health check. Example: `/healthcheck` Default
-                                      value is `/healthz`'
+                                    description: |-
+                                      The path against which to run the health check.
+                                      Example: `/healthcheck`
+                                      Default value is `/healthz`
                                     type: string
                                 type: object
                               isFailOpen:
-                                description: If enabled, the network load balancer
-                                  will continue to distribute traffic in the configured
-                                  distribution in the event all backends are unhealthy.
+                                description: |-
+                                  If enabled, the network load balancer will continue to distribute traffic in the configured distribution in the event all backends are unhealthy.
                                   The value is false by default.
                                 type: boolean
                               isInstantFailoverEnabled:
@@ -147,27 +159,26 @@ spec:
                                   soon as current backend becomes unhealthy.
                                 type: boolean
                               isPreserveSource:
-                                description: If this parameter is enabled, then the
-                                  network load balancer preserves the source IP of
-                                  the packet when it is forwarded to backends. Backends
-                                  see the original source IP. If the isPreserveSourceDestination
-                                  parameter is enabled for the network load balancer
-                                  resource, then this parameter cannot be disabled.
+                                description: |-
+                                  If this parameter is enabled, then the network load balancer preserves the source IP of the packet when it is forwarded to backends.
+                                  Backends see the original source IP. If the isPreserveSourceDestination parameter is enabled for the network load balancer resource, then this parameter cannot be disabled.
                                   The value is false by default.
                                 type: boolean
                             type: object
                         type: object
                     type: object
                   skipNetworkManagement:
-                    description: SkipNetworkManagement defines if the networking spec(VCN
-                      related) specified by the user needs to be reconciled(actioned-upon)
+                    description: |-
+                      SkipNetworkManagement defines if the networking spec(VCN related) specified by the user needs to be reconciled(actioned-upon)
                       or used as it is. APIServerLB will still be reconciled.
                     type: boolean
                   vcn:
                     description: VCN configuration.
                     properties:
                       cidr:
-                        description: VCN CIDR. Deprecated, please use NetworkDetails.cidrs
+                        description: |-
+                          VCN CIDR.
+                          Deprecated, please use NetworkDetails.cidrs
                         type: string
                       cidrs:
                         description: VCN CIDRs.
@@ -175,10 +186,10 @@ spec:
                           type: string
                         type: array
                       dnsLabel:
-                        description: DnsLabel specifies a DNS label for the VCN, used
-                          in conjunction with the VNIC's hostname and subnet's DNS
-                          label to form a fully qualified domain name (FQDN) for each
-                          VNIC within this subnet (for example, `bminstance1.subnet123.vcn1.oraclevcn.com`).
+                        description: |-
+                          DnsLabel specifies a DNS label for the VCN, used in conjunction with the VNIC's hostname and
+                          subnet's DNS label to form a fully qualified domain name (FQDN) for each VNIC
+                          within this subnet (for example, `bminstance1.subnet123.vcn1.oraclevcn.com`).
                         type: string
                       id:
                         description: VCN OCID.
@@ -196,8 +207,9 @@ spec:
                         description: NetworkSecurityGroups is the configuration for
                           the Network Security Groups required in the VCN.
                         items:
-                          description: NSG defines configuration for a Network Security
-                            Group. https://docs.oracle.com/en-us/iaas/Content/Network/Concepts/networksecuritygroups.htm
+                          description: |-
+                            NSG defines configuration for a Network Security Group.
+                            https://docs.oracle.com/en-us/iaas/Content/Network/Concepts/networksecuritygroups.htm
                           properties:
                             egressRules:
                               description: EgressRules on the NSG.
@@ -214,47 +226,37 @@ spec:
                                           choice for the rule.
                                         type: string
                                       destination:
-                                        description: 'Conceptually, this is the range
-                                          of IP addresses that a packet originating
-                                          from the instance can go to. Allowed values:
-                                          * IP address range in CIDR notation. For
-                                          example: `192.168.1.0/24` or `2001:0db8:0123:45::/56`
-                                          Note that IPv6 addressing is currently supported
-                                          only in certain regions. See IPv6 Addresses
-                                          (https://docs.cloud.oracle.com/iaas/Content/Network/Concepts/ipv6.htm).
-                                          * The `cidrBlock` value for a Service, if
-                                          you''re setting up a security list rule
-                                          for traffic destined for a particular `Service`
-                                          through a service gateway. For example:
-                                          `oci-phx-objectstorage`.'
+                                        description: |-
+                                          Conceptually, this is the range of IP addresses that a packet originating from the instance
+                                          can go to.
+                                          Allowed values:
+                                            * IP address range in CIDR notation. For example: `192.168.1.0/24` or `2001:0db8:0123:45::/56`
+                                              Note that IPv6 addressing is currently supported only in certain regions. See
+                                              IPv6 Addresses (https://docs.cloud.oracle.com/iaas/Content/Network/Concepts/ipv6.htm).
+                                            * The `cidrBlock` value for a Service, if you're
+                                              setting up a security list rule for traffic destined for a particular `Service` through
+                                              a service gateway. For example: `oci-phx-objectstorage`.
                                         type: string
                                       destinationType:
-                                        description: 'Type of destination for the
-                                          rule. The default is `CIDR_BLOCK`. Allowed
-                                          values: * `CIDR_BLOCK`: If the rule''s `destination`
-                                          is an IP address range in CIDR notation.
-                                          * `SERVICE_CIDR_BLOCK`: If the rule''s `destination`
-                                          is the `cidrBlock` value for a Service (the
-                                          rule is for traffic destined for a particular
-                                          `Service` through a service gateway).'
+                                        description: |-
+                                          Type of destination for the rule. The default is `CIDR_BLOCK`.
+                                          Allowed values:
+                                            * `CIDR_BLOCK`: If the rule's `destination` is an IP address range in CIDR notation.
+                                            * `SERVICE_CIDR_BLOCK`: If the rule's `destination` is the `cidrBlock` value for a
+                                              Service (the rule is for traffic destined for a
+                                              particular `Service` through a service gateway).
                                         type: string
                                       icmpOptions:
-                                        description: 'IcmpOptions Optional and valid
-                                          only for ICMP and ICMPv6. Use to specify
-                                          a particular ICMP type and code as defined
-                                          in: - ICMP Parameters (http://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml)
+                                        description: |-
+                                          IcmpOptions Optional and valid only for ICMP and ICMPv6. Use to specify a particular ICMP type and code
+                                          as defined in:
+                                          - ICMP Parameters (http://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml)
                                           - ICMPv6 Parameters (https://www.iana.org/assignments/icmpv6-parameters/icmpv6-parameters.xhtml)
-                                          If you specify ICMP or ICMPv6 as the protocol
-                                          but omit this object, then all ICMP types
-                                          and codes are allowed. If you do provide
-                                          this object, the type is required and the
-                                          code is optional. To enable MTU negotiation
-                                          for ingress internet traffic via IPv4, make
-                                          sure to allow type 3 ("Destination Unreachable")
-                                          code 4 ("Fragmentation Needed and Don''t
-                                          Fragment was Set"). If you need to specify
-                                          multiple codes for a single type, create
-                                          a separate security list rule for each.'
+                                          If you specify ICMP or ICMPv6 as the protocol but omit this object, then all ICMP types and
+                                          codes are allowed. If you do provide this object, the type is required and the code is optional.
+                                          To enable MTU negotiation for ingress internet traffic via IPv4, make sure to allow type 3 ("Destination
+                                          Unreachable") code 4 ("Fragmentation Needed and Don't Fragment was Set"). If you need to specify
+                                          multiple codes for a single type, create a separate security list rule for each.
                                         properties:
                                           code:
                                             description: The ICMP code (optional).
@@ -264,41 +266,33 @@ spec:
                                             type: integer
                                         type: object
                                       isStateless:
-                                        description: A stateless rule allows traffic
-                                          in one direction. Remember to add a corresponding
-                                          stateless rule in the other direction if
-                                          you need to support bidirectional traffic.
-                                          For example, if egress traffic allows TCP
-                                          destination port 80, there should be an
-                                          ingress rule to allow TCP source port 80.
-                                          Defaults to false, which means the rule
-                                          is stateful and a corresponding rule is
-                                          not necessary for bidirectional traffic.
+                                        description: |-
+                                          A stateless rule allows traffic in one direction. Remember to add a corresponding
+                                          stateless rule in the other direction if you need to support bidirectional traffic. For
+                                          example, if egress traffic allows TCP destination port 80, there should be an ingress
+                                          rule to allow TCP source port 80. Defaults to false, which means the rule is stateful
+                                          and a corresponding rule is not necessary for bidirectional traffic.
                                         type: boolean
                                       protocol:
-                                        description: The transport protocol. Specify
-                                          either `all` or an IPv4 protocol number
-                                          as defined in Protocol Numbers (http://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml).
-                                          Options are supported only for ICMP ("1"),
-                                          TCP ("6"), UDP ("17"), and ICMPv6 ("58").
+                                        description: |-
+                                          The transport protocol. Specify either `all` or an IPv4 protocol number as
+                                          defined in
+                                          Protocol Numbers (http://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml).
+                                          Options are supported only for ICMP ("1"), TCP ("6"), UDP ("17"), and ICMPv6 ("58").
                                         type: string
                                       tcpOptions:
-                                        description: TcpOptions Optional and valid
-                                          only for TCP. Use to specify particular
-                                          destination ports for TCP rules. If you
-                                          specify TCP as the protocol but omit this
-                                          object, then all destination ports are allowed.
+                                        description: |-
+                                          TcpOptions Optional and valid only for TCP. Use to specify particular destination ports for TCP rules.
+                                          If you specify TCP as the protocol but omit this object, then all destination ports are allowed.
                                         properties:
                                           destinationPortRange:
                                             description: PortRange The representation
                                               of PortRange.
                                             properties:
                                               max:
-                                                description: The maximum port number,
-                                                  which must not be less than the
-                                                  minimum port number. To specify
-                                                  a single port number, set both the
-                                                  min and max to the same value.
+                                                description: |-
+                                                  The maximum port number, which must not be less than the minimum port number. To specify
+                                                  a single port number, set both the min and max to the same value.
                                                 type: integer
                                               min:
                                                 description: The minimum port number,
@@ -311,11 +305,9 @@ spec:
                                               of PortRange.
                                             properties:
                                               max:
-                                                description: The maximum port number,
-                                                  which must not be less than the
-                                                  minimum port number. To specify
-                                                  a single port number, set both the
-                                                  min and max to the same value.
+                                                description: |-
+                                                  The maximum port number, which must not be less than the minimum port number. To specify
+                                                  a single port number, set both the min and max to the same value.
                                                 type: integer
                                               min:
                                                 description: The minimum port number,
@@ -325,22 +317,18 @@ spec:
                                             type: object
                                         type: object
                                       udpOptions:
-                                        description: UdpOptions Optional and valid
-                                          only for UDP. Use to specify particular
-                                          destination ports for UDP rules. If you
-                                          specify UDP as the protocol but omit this
-                                          object, then all destination ports are allowed.
+                                        description: |-
+                                          UdpOptions Optional and valid only for UDP. Use to specify particular destination ports for UDP rules.
+                                          If you specify UDP as the protocol but omit this object, then all destination ports are allowed.
                                         properties:
                                           destinationPortRange:
                                             description: PortRange The representation
                                               of PortRange.
                                             properties:
                                               max:
-                                                description: The maximum port number,
-                                                  which must not be less than the
-                                                  minimum port number. To specify
-                                                  a single port number, set both the
-                                                  min and max to the same value.
+                                                description: |-
+                                                  The maximum port number, which must not be less than the minimum port number. To specify
+                                                  a single port number, set both the min and max to the same value.
                                                 type: integer
                                               min:
                                                 description: The minimum port number,
@@ -353,11 +341,9 @@ spec:
                                               of PortRange.
                                             properties:
                                               max:
-                                                description: The maximum port number,
-                                                  which must not be less than the
-                                                  minimum port number. To specify
-                                                  a single port number, set both the
-                                                  min and max to the same value.
+                                                description: |-
+                                                  The maximum port number, which must not be less than the minimum port number. To specify
+                                                  a single port number, set both the min and max to the same value.
                                                 type: integer
                                               min:
                                                 description: The minimum port number,
@@ -368,9 +354,9 @@ spec:
                                         type: object
                                     type: object
                                   id:
-                                    description: 'EgressSecurityRule ID for NSG. Deprecated:
-                                      this field is not populated and used during
-                                      reconciliation'
+                                    description: |-
+                                      EgressSecurityRule ID for NSG.
+                                      Deprecated: this field is not populated and used during reconciliation
                                     type: string
                                 type: object
                               type: array
@@ -384,9 +370,9 @@ spec:
                                   for NSG
                                 properties:
                                   id:
-                                    description: 'IngressSecurityRule ID for NSG.
-                                      Deprecated: this field is not populated and
-                                      used during reconciliation'
+                                    description: |-
+                                      IngressSecurityRule ID for NSG.
+                                      Deprecated: this field is not populated and used during reconciliation
                                     type: string
                                   ingressRule:
                                     description: IngressSecurityRule A rule for allowing
@@ -397,22 +383,16 @@ spec:
                                           choice for the rule.
                                         type: string
                                       icmpOptions:
-                                        description: 'IcmpOptions Optional and valid
-                                          only for ICMP and ICMPv6. Use to specify
-                                          a particular ICMP type and code as defined
-                                          in: - ICMP Parameters (http://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml)
+                                        description: |-
+                                          IcmpOptions Optional and valid only for ICMP and ICMPv6. Use to specify a particular ICMP type and code
+                                          as defined in:
+                                          - ICMP Parameters (http://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml)
                                           - ICMPv6 Parameters (https://www.iana.org/assignments/icmpv6-parameters/icmpv6-parameters.xhtml)
-                                          If you specify ICMP or ICMPv6 as the protocol
-                                          but omit this object, then all ICMP types
-                                          and codes are allowed. If you do provide
-                                          this object, the type is required and the
-                                          code is optional. To enable MTU negotiation
-                                          for ingress internet traffic via IPv4, make
-                                          sure to allow type 3 ("Destination Unreachable")
-                                          code 4 ("Fragmentation Needed and Don''t
-                                          Fragment was Set"). If you need to specify
-                                          multiple codes for a single type, create
-                                          a separate security list rule for each.'
+                                          If you specify ICMP or ICMPv6 as the protocol but omit this object, then all ICMP types and
+                                          codes are allowed. If you do provide this object, the type is required and the code is optional.
+                                          To enable MTU negotiation for ingress internet traffic via IPv4, make sure to allow type 3 ("Destination
+                                          Unreachable") code 4 ("Fragmentation Needed and Don't Fragment was Set"). If you need to specify
+                                          multiple codes for a single type, create a separate security list rule for each.
                                         properties:
                                           code:
                                             description: The ICMP code (optional).
@@ -422,66 +402,53 @@ spec:
                                             type: integer
                                         type: object
                                       isStateless:
-                                        description: A stateless rule allows traffic
-                                          in one direction. Remember to add a corresponding
-                                          stateless rule in the other direction if
-                                          you need to support bidirectional traffic.
-                                          For example, if ingress traffic allows TCP
-                                          destination port 80, there should be an
-                                          egress rule to allow TCP source port 80.
-                                          Defaults to false, which means the rule
-                                          is stateful and a corresponding rule is
-                                          not necessary for bidirectional traffic.
+                                        description: |-
+                                          A stateless rule allows traffic in one direction. Remember to add a corresponding
+                                          stateless rule in the other direction if you need to support bidirectional traffic. For
+                                          example, if ingress traffic allows TCP destination port 80, there should be an egress
+                                          rule to allow TCP source port 80. Defaults to false, which means the rule is stateful
+                                          and a corresponding rule is not necessary for bidirectional traffic.
                                         type: boolean
                                       protocol:
-                                        description: The transport protocol. Specify
-                                          either `all` or an IPv4 protocol number
-                                          as defined in Protocol Numbers (http://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml).
-                                          Options are supported only for ICMP ("1"),
-                                          TCP ("6"), UDP ("17"), and ICMPv6 ("58").
+                                        description: |-
+                                          The transport protocol. Specify either `all` or an IPv4 protocol number as
+                                          defined in
+                                          Protocol Numbers (http://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml).
+                                          Options are supported only for ICMP ("1"), TCP ("6"), UDP ("17"), and ICMPv6 ("58").
                                         type: string
                                       source:
-                                        description: 'Conceptually, this is the range
-                                          of IP addresses that a packet coming into
-                                          the instance can come from. Allowed values:
-                                          * IP address range in CIDR notation. For
-                                          example: `192.168.1.0/24` or `2001:0db8:0123:45::/56`.
-                                          IPv6 addressing is supported for all commercial
-                                          and government regions. See IPv6 Addresses
-                                          (https://docs.cloud.oracle.com/iaas/Content/Network/Concepts/ipv6.htm).
-                                          * The `cidrBlock` value for a Service, if
-                                          you''re setting up a security list rule
-                                          for traffic coming from a particular `Service`
-                                          through a service gateway. For example:
-                                          `oci-phx-objectstorage`.'
+                                        description: |-
+                                          Conceptually, this is the range of IP addresses that a packet coming into the instance
+                                          can come from.
+                                          Allowed values:
+                                            * IP address range in CIDR notation. For example: `192.168.1.0/24` or `2001:0db8:0123:45::/56`.
+                                              IPv6 addressing is supported for all commercial and government regions. See
+                                              IPv6 Addresses (https://docs.cloud.oracle.com/iaas/Content/Network/Concepts/ipv6.htm).
+                                            * The `cidrBlock` value for a Service, if you're
+                                              setting up a security list rule for traffic coming from a particular `Service` through
+                                              a service gateway. For example: `oci-phx-objectstorage`.
                                         type: string
                                       sourceType:
-                                        description: 'Type of source for the rule.
-                                          The default is `CIDR_BLOCK`. * `CIDR_BLOCK`:
-                                          If the rule''s `source` is an IP address
-                                          range in CIDR notation. * `SERVICE_CIDR_BLOCK`:
-                                          If the rule''s `source` is the `cidrBlock`
-                                          value for a Service (the rule is for traffic
-                                          coming from a particular `Service` through
-                                          a service gateway).'
+                                        description: |-
+                                          Type of source for the rule. The default is `CIDR_BLOCK`.
+                                            * `CIDR_BLOCK`: If the rule's `source` is an IP address range in CIDR notation.
+                                            * `SERVICE_CIDR_BLOCK`: If the rule's `source` is the `cidrBlock` value for a
+                                              Service (the rule is for traffic coming from a
+                                              particular `Service` through a service gateway).
                                         type: string
                                       tcpOptions:
-                                        description: TcpOptions Optional and valid
-                                          only for TCP. Use to specify particular
-                                          destination ports for TCP rules. If you
-                                          specify TCP as the protocol but omit this
-                                          object, then all destination ports are allowed.
+                                        description: |-
+                                          TcpOptions Optional and valid only for TCP. Use to specify particular destination ports for TCP rules.
+                                          If you specify TCP as the protocol but omit this object, then all destination ports are allowed.
                                         properties:
                                           destinationPortRange:
                                             description: PortRange The representation
                                               of PortRange.
                                             properties:
                                               max:
-                                                description: The maximum port number,
-                                                  which must not be less than the
-                                                  minimum port number. To specify
-                                                  a single port number, set both the
-                                                  min and max to the same value.
+                                                description: |-
+                                                  The maximum port number, which must not be less than the minimum port number. To specify
+                                                  a single port number, set both the min and max to the same value.
                                                 type: integer
                                               min:
                                                 description: The minimum port number,
@@ -494,11 +461,9 @@ spec:
                                               of PortRange.
                                             properties:
                                               max:
-                                                description: The maximum port number,
-                                                  which must not be less than the
-                                                  minimum port number. To specify
-                                                  a single port number, set both the
-                                                  min and max to the same value.
+                                                description: |-
+                                                  The maximum port number, which must not be less than the minimum port number. To specify
+                                                  a single port number, set both the min and max to the same value.
                                                 type: integer
                                               min:
                                                 description: The minimum port number,
@@ -508,22 +473,18 @@ spec:
                                             type: object
                                         type: object
                                       udpOptions:
-                                        description: UdpOptions Optional and valid
-                                          only for UDP. Use to specify particular
-                                          destination ports for UDP rules. If you
-                                          specify UDP as the protocol but omit this
-                                          object, then all destination ports are allowed.
+                                        description: |-
+                                          UdpOptions Optional and valid only for UDP. Use to specify particular destination ports for UDP rules.
+                                          If you specify UDP as the protocol but omit this object, then all destination ports are allowed.
                                         properties:
                                           destinationPortRange:
                                             description: PortRange The representation
                                               of PortRange.
                                             properties:
                                               max:
-                                                description: The maximum port number,
-                                                  which must not be less than the
-                                                  minimum port number. To specify
-                                                  a single port number, set both the
-                                                  min and max to the same value.
+                                                description: |-
+                                                  The maximum port number, which must not be less than the minimum port number. To specify
+                                                  a single port number, set both the min and max to the same value.
                                                 type: integer
                                               min:
                                                 description: The minimum port number,
@@ -536,11 +497,9 @@ spec:
                                               of PortRange.
                                             properties:
                                               max:
-                                                description: The maximum port number,
-                                                  which must not be less than the
-                                                  minimum port number. To specify
-                                                  a single port number, set both the
-                                                  min and max to the same value.
+                                                description: |-
+                                                  The maximum port number, which must not be less than the minimum port number. To specify
+                                                  a single port number, set both the min and max to the same value.
                                                 type: integer
                                               min:
                                                 description: The minimum port number,
@@ -579,17 +538,18 @@ spec:
                         description: Subnets is the configuration for subnets required
                           in the VCN.
                         items:
-                          description: Subnet defines the configuration for a network's
-                            subnet https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/managingVCNs_topic-Overview_of_VCNs_and_Subnets.htm#Overview
+                          description: |-
+                            Subnet defines the configuration for a network's subnet
+                            https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/managingVCNs_topic-Overview_of_VCNs_and_Subnets.htm#Overview
                           properties:
                             cidr:
                               description: Subnet CIDR.
                               type: string
                             dnsLabel:
-                              description: DnsLabel DNS label for the subnet, used
-                                in conjunction with the VNIC's hostname and VCN's
-                                DNS label to form a fully qualified domain name (FQDN)
-                                for each VNIC within this subnet (for example, `bminstance1.subnet123.vcn1.oraclevcn.com`).
+                              description: |-
+                                DnsLabel DNS label for the subnet, used in conjunction with the VNIC's hostname and
+                                VCN's DNS label to form a fully qualified domain name (FQDN) for each VNIC
+                                within this subnet (for example, `bminstance1.subnet123.vcn1.oraclevcn.com`).
                               type: string
                             id:
                               description: Subnet OCID.
@@ -615,47 +575,37 @@ spec:
                                           choice for the rule.
                                         type: string
                                       destination:
-                                        description: 'Conceptually, this is the range
-                                          of IP addresses that a packet originating
-                                          from the instance can go to. Allowed values:
-                                          * IP address range in CIDR notation. For
-                                          example: `192.168.1.0/24` or `2001:0db8:0123:45::/56`
-                                          Note that IPv6 addressing is currently supported
-                                          only in certain regions. See IPv6 Addresses
-                                          (https://docs.cloud.oracle.com/iaas/Content/Network/Concepts/ipv6.htm).
-                                          * The `cidrBlock` value for a Service, if
-                                          you''re setting up a security list rule
-                                          for traffic destined for a particular `Service`
-                                          through a service gateway. For example:
-                                          `oci-phx-objectstorage`.'
+                                        description: |-
+                                          Conceptually, this is the range of IP addresses that a packet originating from the instance
+                                          can go to.
+                                          Allowed values:
+                                            * IP address range in CIDR notation. For example: `192.168.1.0/24` or `2001:0db8:0123:45::/56`
+                                              Note that IPv6 addressing is currently supported only in certain regions. See
+                                              IPv6 Addresses (https://docs.cloud.oracle.com/iaas/Content/Network/Concepts/ipv6.htm).
+                                            * The `cidrBlock` value for a Service, if you're
+                                              setting up a security list rule for traffic destined for a particular `Service` through
+                                              a service gateway. For example: `oci-phx-objectstorage`.
                                         type: string
                                       destinationType:
-                                        description: 'Type of destination for the
-                                          rule. The default is `CIDR_BLOCK`. Allowed
-                                          values: * `CIDR_BLOCK`: If the rule''s `destination`
-                                          is an IP address range in CIDR notation.
-                                          * `SERVICE_CIDR_BLOCK`: If the rule''s `destination`
-                                          is the `cidrBlock` value for a Service (the
-                                          rule is for traffic destined for a particular
-                                          `Service` through a service gateway).'
+                                        description: |-
+                                          Type of destination for the rule. The default is `CIDR_BLOCK`.
+                                          Allowed values:
+                                            * `CIDR_BLOCK`: If the rule's `destination` is an IP address range in CIDR notation.
+                                            * `SERVICE_CIDR_BLOCK`: If the rule's `destination` is the `cidrBlock` value for a
+                                              Service (the rule is for traffic destined for a
+                                              particular `Service` through a service gateway).
                                         type: string
                                       icmpOptions:
-                                        description: 'IcmpOptions Optional and valid
-                                          only for ICMP and ICMPv6. Use to specify
-                                          a particular ICMP type and code as defined
-                                          in: - ICMP Parameters (http://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml)
+                                        description: |-
+                                          IcmpOptions Optional and valid only for ICMP and ICMPv6. Use to specify a particular ICMP type and code
+                                          as defined in:
+                                          - ICMP Parameters (http://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml)
                                           - ICMPv6 Parameters (https://www.iana.org/assignments/icmpv6-parameters/icmpv6-parameters.xhtml)
-                                          If you specify ICMP or ICMPv6 as the protocol
-                                          but omit this object, then all ICMP types
-                                          and codes are allowed. If you do provide
-                                          this object, the type is required and the
-                                          code is optional. To enable MTU negotiation
-                                          for ingress internet traffic via IPv4, make
-                                          sure to allow type 3 ("Destination Unreachable")
-                                          code 4 ("Fragmentation Needed and Don''t
-                                          Fragment was Set"). If you need to specify
-                                          multiple codes for a single type, create
-                                          a separate security list rule for each.'
+                                          If you specify ICMP or ICMPv6 as the protocol but omit this object, then all ICMP types and
+                                          codes are allowed. If you do provide this object, the type is required and the code is optional.
+                                          To enable MTU negotiation for ingress internet traffic via IPv4, make sure to allow type 3 ("Destination
+                                          Unreachable") code 4 ("Fragmentation Needed and Don't Fragment was Set"). If you need to specify
+                                          multiple codes for a single type, create a separate security list rule for each.
                                         properties:
                                           code:
                                             description: The ICMP code (optional).
@@ -665,41 +615,33 @@ spec:
                                             type: integer
                                         type: object
                                       isStateless:
-                                        description: A stateless rule allows traffic
-                                          in one direction. Remember to add a corresponding
-                                          stateless rule in the other direction if
-                                          you need to support bidirectional traffic.
-                                          For example, if egress traffic allows TCP
-                                          destination port 80, there should be an
-                                          ingress rule to allow TCP source port 80.
-                                          Defaults to false, which means the rule
-                                          is stateful and a corresponding rule is
-                                          not necessary for bidirectional traffic.
+                                        description: |-
+                                          A stateless rule allows traffic in one direction. Remember to add a corresponding
+                                          stateless rule in the other direction if you need to support bidirectional traffic. For
+                                          example, if egress traffic allows TCP destination port 80, there should be an ingress
+                                          rule to allow TCP source port 80. Defaults to false, which means the rule is stateful
+                                          and a corresponding rule is not necessary for bidirectional traffic.
                                         type: boolean
                                       protocol:
-                                        description: The transport protocol. Specify
-                                          either `all` or an IPv4 protocol number
-                                          as defined in Protocol Numbers (http://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml).
-                                          Options are supported only for ICMP ("1"),
-                                          TCP ("6"), UDP ("17"), and ICMPv6 ("58").
+                                        description: |-
+                                          The transport protocol. Specify either `all` or an IPv4 protocol number as
+                                          defined in
+                                          Protocol Numbers (http://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml).
+                                          Options are supported only for ICMP ("1"), TCP ("6"), UDP ("17"), and ICMPv6 ("58").
                                         type: string
                                       tcpOptions:
-                                        description: TcpOptions Optional and valid
-                                          only for TCP. Use to specify particular
-                                          destination ports for TCP rules. If you
-                                          specify TCP as the protocol but omit this
-                                          object, then all destination ports are allowed.
+                                        description: |-
+                                          TcpOptions Optional and valid only for TCP. Use to specify particular destination ports for TCP rules.
+                                          If you specify TCP as the protocol but omit this object, then all destination ports are allowed.
                                         properties:
                                           destinationPortRange:
                                             description: PortRange The representation
                                               of PortRange.
                                             properties:
                                               max:
-                                                description: The maximum port number,
-                                                  which must not be less than the
-                                                  minimum port number. To specify
-                                                  a single port number, set both the
-                                                  min and max to the same value.
+                                                description: |-
+                                                  The maximum port number, which must not be less than the minimum port number. To specify
+                                                  a single port number, set both the min and max to the same value.
                                                 type: integer
                                               min:
                                                 description: The minimum port number,
@@ -712,11 +654,9 @@ spec:
                                               of PortRange.
                                             properties:
                                               max:
-                                                description: The maximum port number,
-                                                  which must not be less than the
-                                                  minimum port number. To specify
-                                                  a single port number, set both the
-                                                  min and max to the same value.
+                                                description: |-
+                                                  The maximum port number, which must not be less than the minimum port number. To specify
+                                                  a single port number, set both the min and max to the same value.
                                                 type: integer
                                               min:
                                                 description: The minimum port number,
@@ -726,22 +666,18 @@ spec:
                                             type: object
                                         type: object
                                       udpOptions:
-                                        description: UdpOptions Optional and valid
-                                          only for UDP. Use to specify particular
-                                          destination ports for UDP rules. If you
-                                          specify UDP as the protocol but omit this
-                                          object, then all destination ports are allowed.
+                                        description: |-
+                                          UdpOptions Optional and valid only for UDP. Use to specify particular destination ports for UDP rules.
+                                          If you specify UDP as the protocol but omit this object, then all destination ports are allowed.
                                         properties:
                                           destinationPortRange:
                                             description: PortRange The representation
                                               of PortRange.
                                             properties:
                                               max:
-                                                description: The maximum port number,
-                                                  which must not be less than the
-                                                  minimum port number. To specify
-                                                  a single port number, set both the
-                                                  min and max to the same value.
+                                                description: |-
+                                                  The maximum port number, which must not be less than the minimum port number. To specify
+                                                  a single port number, set both the min and max to the same value.
                                                 type: integer
                                               min:
                                                 description: The minimum port number,
@@ -754,11 +690,9 @@ spec:
                                               of PortRange.
                                             properties:
                                               max:
-                                                description: The maximum port number,
-                                                  which must not be less than the
-                                                  minimum port number. To specify
-                                                  a single port number, set both the
-                                                  min and max to the same value.
+                                                description: |-
+                                                  The maximum port number, which must not be less than the minimum port number. To specify
+                                                  a single port number, set both the min and max to the same value.
                                                 type: integer
                                               min:
                                                 description: The minimum port number,
@@ -783,22 +717,16 @@ spec:
                                           choice for the rule.
                                         type: string
                                       icmpOptions:
-                                        description: 'IcmpOptions Optional and valid
-                                          only for ICMP and ICMPv6. Use to specify
-                                          a particular ICMP type and code as defined
-                                          in: - ICMP Parameters (http://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml)
+                                        description: |-
+                                          IcmpOptions Optional and valid only for ICMP and ICMPv6. Use to specify a particular ICMP type and code
+                                          as defined in:
+                                          - ICMP Parameters (http://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml)
                                           - ICMPv6 Parameters (https://www.iana.org/assignments/icmpv6-parameters/icmpv6-parameters.xhtml)
-                                          If you specify ICMP or ICMPv6 as the protocol
-                                          but omit this object, then all ICMP types
-                                          and codes are allowed. If you do provide
-                                          this object, the type is required and the
-                                          code is optional. To enable MTU negotiation
-                                          for ingress internet traffic via IPv4, make
-                                          sure to allow type 3 ("Destination Unreachable")
-                                          code 4 ("Fragmentation Needed and Don''t
-                                          Fragment was Set"). If you need to specify
-                                          multiple codes for a single type, create
-                                          a separate security list rule for each.'
+                                          If you specify ICMP or ICMPv6 as the protocol but omit this object, then all ICMP types and
+                                          codes are allowed. If you do provide this object, the type is required and the code is optional.
+                                          To enable MTU negotiation for ingress internet traffic via IPv4, make sure to allow type 3 ("Destination
+                                          Unreachable") code 4 ("Fragmentation Needed and Don't Fragment was Set"). If you need to specify
+                                          multiple codes for a single type, create a separate security list rule for each.
                                         properties:
                                           code:
                                             description: The ICMP code (optional).
@@ -808,66 +736,53 @@ spec:
                                             type: integer
                                         type: object
                                       isStateless:
-                                        description: A stateless rule allows traffic
-                                          in one direction. Remember to add a corresponding
-                                          stateless rule in the other direction if
-                                          you need to support bidirectional traffic.
-                                          For example, if ingress traffic allows TCP
-                                          destination port 80, there should be an
-                                          egress rule to allow TCP source port 80.
-                                          Defaults to false, which means the rule
-                                          is stateful and a corresponding rule is
-                                          not necessary for bidirectional traffic.
+                                        description: |-
+                                          A stateless rule allows traffic in one direction. Remember to add a corresponding
+                                          stateless rule in the other direction if you need to support bidirectional traffic. For
+                                          example, if ingress traffic allows TCP destination port 80, there should be an egress
+                                          rule to allow TCP source port 80. Defaults to false, which means the rule is stateful
+                                          and a corresponding rule is not necessary for bidirectional traffic.
                                         type: boolean
                                       protocol:
-                                        description: The transport protocol. Specify
-                                          either `all` or an IPv4 protocol number
-                                          as defined in Protocol Numbers (http://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml).
-                                          Options are supported only for ICMP ("1"),
-                                          TCP ("6"), UDP ("17"), and ICMPv6 ("58").
+                                        description: |-
+                                          The transport protocol. Specify either `all` or an IPv4 protocol number as
+                                          defined in
+                                          Protocol Numbers (http://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml).
+                                          Options are supported only for ICMP ("1"), TCP ("6"), UDP ("17"), and ICMPv6 ("58").
                                         type: string
                                       source:
-                                        description: 'Conceptually, this is the range
-                                          of IP addresses that a packet coming into
-                                          the instance can come from. Allowed values:
-                                          * IP address range in CIDR notation. For
-                                          example: `192.168.1.0/24` or `2001:0db8:0123:45::/56`.
-                                          IPv6 addressing is supported for all commercial
-                                          and government regions. See IPv6 Addresses
-                                          (https://docs.cloud.oracle.com/iaas/Content/Network/Concepts/ipv6.htm).
-                                          * The `cidrBlock` value for a Service, if
-                                          you''re setting up a security list rule
-                                          for traffic coming from a particular `Service`
-                                          through a service gateway. For example:
-                                          `oci-phx-objectstorage`.'
+                                        description: |-
+                                          Conceptually, this is the range of IP addresses that a packet coming into the instance
+                                          can come from.
+                                          Allowed values:
+                                            * IP address range in CIDR notation. For example: `192.168.1.0/24` or `2001:0db8:0123:45::/56`.
+                                              IPv6 addressing is supported for all commercial and government regions. See
+                                              IPv6 Addresses (https://docs.cloud.oracle.com/iaas/Content/Network/Concepts/ipv6.htm).
+                                            * The `cidrBlock` value for a Service, if you're
+                                              setting up a security list rule for traffic coming from a particular `Service` through
+                                              a service gateway. For example: `oci-phx-objectstorage`.
                                         type: string
                                       sourceType:
-                                        description: 'Type of source for the rule.
-                                          The default is `CIDR_BLOCK`. * `CIDR_BLOCK`:
-                                          If the rule''s `source` is an IP address
-                                          range in CIDR notation. * `SERVICE_CIDR_BLOCK`:
-                                          If the rule''s `source` is the `cidrBlock`
-                                          value for a Service (the rule is for traffic
-                                          coming from a particular `Service` through
-                                          a service gateway).'
+                                        description: |-
+                                          Type of source for the rule. The default is `CIDR_BLOCK`.
+                                            * `CIDR_BLOCK`: If the rule's `source` is an IP address range in CIDR notation.
+                                            * `SERVICE_CIDR_BLOCK`: If the rule's `source` is the `cidrBlock` value for a
+                                              Service (the rule is for traffic coming from a
+                                              particular `Service` through a service gateway).
                                         type: string
                                       tcpOptions:
-                                        description: TcpOptions Optional and valid
-                                          only for TCP. Use to specify particular
-                                          destination ports for TCP rules. If you
-                                          specify TCP as the protocol but omit this
-                                          object, then all destination ports are allowed.
+                                        description: |-
+                                          TcpOptions Optional and valid only for TCP. Use to specify particular destination ports for TCP rules.
+                                          If you specify TCP as the protocol but omit this object, then all destination ports are allowed.
                                         properties:
                                           destinationPortRange:
                                             description: PortRange The representation
                                               of PortRange.
                                             properties:
                                               max:
-                                                description: The maximum port number,
-                                                  which must not be less than the
-                                                  minimum port number. To specify
-                                                  a single port number, set both the
-                                                  min and max to the same value.
+                                                description: |-
+                                                  The maximum port number, which must not be less than the minimum port number. To specify
+                                                  a single port number, set both the min and max to the same value.
                                                 type: integer
                                               min:
                                                 description: The minimum port number,
@@ -880,11 +795,9 @@ spec:
                                               of PortRange.
                                             properties:
                                               max:
-                                                description: The maximum port number,
-                                                  which must not be less than the
-                                                  minimum port number. To specify
-                                                  a single port number, set both the
-                                                  min and max to the same value.
+                                                description: |-
+                                                  The maximum port number, which must not be less than the minimum port number. To specify
+                                                  a single port number, set both the min and max to the same value.
                                                 type: integer
                                               min:
                                                 description: The minimum port number,
@@ -894,22 +807,18 @@ spec:
                                             type: object
                                         type: object
                                       udpOptions:
-                                        description: UdpOptions Optional and valid
-                                          only for UDP. Use to specify particular
-                                          destination ports for UDP rules. If you
-                                          specify UDP as the protocol but omit this
-                                          object, then all destination ports are allowed.
+                                        description: |-
+                                          UdpOptions Optional and valid only for UDP. Use to specify particular destination ports for UDP rules.
+                                          If you specify UDP as the protocol but omit this object, then all destination ports are allowed.
                                         properties:
                                           destinationPortRange:
                                             description: PortRange The representation
                                               of PortRange.
                                             properties:
                                               max:
-                                                description: The maximum port number,
-                                                  which must not be less than the
-                                                  minimum port number. To specify
-                                                  a single port number, set both the
-                                                  min and max to the same value.
+                                                description: |-
+                                                  The maximum port number, which must not be less than the minimum port number. To specify
+                                                  a single port number, set both the min and max to the same value.
                                                 type: integer
                                               min:
                                                 description: The minimum port number,
@@ -922,11 +831,9 @@ spec:
                                               of PortRange.
                                             properties:
                                               max:
-                                                description: The maximum port number,
-                                                  which must not be less than the
-                                                  minimum port number. To specify
-                                                  a single port number, set both the
-                                                  min and max to the same value.
+                                                description: |-
+                                                  The maximum port number, which must not be less than the minimum port number. To specify
+                                                  a single port number, set both the min and max to the same value.
                                                 type: integer
                                               min:
                                                 description: The minimum port number,
@@ -958,76 +865,72 @@ spec:
                     description: VCNPeering configuration.
                     properties:
                       drg:
-                        description: DRG configuration refers to the DRG which has
-                          to be created if required. If management cluster and workload
-                          cluster shares the same DRG, this fields is not required
-                          to be specified.
+                        description: |-
+                          DRG configuration refers to the DRG which has to be created if required. If management cluster
+                          and workload cluster shares the same DRG, this fields is not required to be specified.
                         properties:
                           id:
                             description: ID is the OCID for the created DRG.
                             type: string
                           manage:
-                            description: Manage defines whether the DRG has to be
-                              managed(including create). If set to false(the default)
-                              the ID has to be specified by the user to a valid DRG
-                              ID to which the VCN has to be attached.
+                            description: |-
+                              Manage defines whether the DRG has to be managed(including create). If set to false(the default) the ID
+                              has to be specified by the user to a valid DRG ID to which the VCN has to be attached.
                             type: boolean
                           name:
                             description: Name is the name of the created DRG.
                             type: string
                           vcnAttachmentId:
-                            description: VcnAttachmentId is the ID of the VCN attachment
-                              of the DRG. The workload cluster VCN can be attached
-                              to either the management cluster VCN if they are sharing
-                              the same DRG or to the workload cluster DRG.
+                            description: |-
+                              VcnAttachmentId is the ID of the VCN attachment of the DRG.
+                              The workload cluster VCN can be attached to either the management cluster VCN if they are sharing the same DRG
+                              or to the workload cluster DRG.
                             type: string
                         type: object
                       peerRouteRules:
-                        description: PeerRouteRules defines the routing rules which
-                          will be added to the private route tables of the workload
-                          cluster VCN. The routes defined here will be directed to
-                          DRG.
+                        description: |-
+                          PeerRouteRules defines the routing rules which will be added to the private route tables
+                          of the workload cluster VCN. The routes defined here will be directed to DRG.
                         items:
                           description: PeerRouteRule defines a Route Rule to be routed
                             via a DRG.
                           properties:
                             vcnCIDRRange:
-                              description: VCNCIDRRange is the CIDR Range of peer
-                                VCN to which the workload cluster VCN will be peered.
-                                The CIDR range is required to add the route rule in
-                                the workload cluster VCN, the route rule will forward
-                                any traffic to the CIDR to the DRG.
+                              description: |-
+                                VCNCIDRRange is the CIDR Range of peer VCN to which the
+                                workload cluster VCN will be peered. The CIDR range is required to add the route rule
+                                in the workload cluster VCN, the route rule will forward any traffic to the CIDR to the DRG.
                               type: string
                           type: object
                         type: array
                       remotePeeringConnections:
-                        description: RemotePeeringConnections defines the RPC connections
-                          which be established with the workload cluster DRG.
+                        description: |-
+                          RemotePeeringConnections defines the RPC connections which be established with the
+                          workload cluster DRG.
                         items:
-                          description: RemotePeeringConnection is used to peer VCNs
-                            residing in different regions(typically). Remote VCN Peering
-                            is explained here - https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/remoteVCNpeering.htm
+                          description: |-
+                            RemotePeeringConnection is used to peer VCNs residing in different regions(typically).
+                            Remote VCN Peering is explained here - https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/remoteVCNpeering.htm
                           properties:
                             managePeerRPC:
-                              description: ManagePeerRPC will define if the Peer VCN
-                                needs to be managed. If set to true a Remote Peering
-                                Connection will be created in the Peer DRG and the
-                                connection will be created between local and peer
-                                RPC.
+                              description: |-
+                                ManagePeerRPC will define if the Peer VCN needs to be managed. If set to true
+                                a Remote Peering Connection will be created in the Peer DRG and the connection
+                                will be created between local and peer RPC.
                               type: boolean
                             name:
-                              description: A unique name identifying the RPC, please
-                                note this is to identify the RPC from other RPC elements,
-                                and will not be used in any OCI API call.
+                              description: |-
+                                A unique name identifying the RPC, please note this is to identify the RPC
+                                from other RPC elements, and will not be used in any OCI API call.
                               type: string
                             peerDRGId:
                               description: PeerDRGId defines the DRG ID of the peer.
                               type: string
                             peerRPCConnectionId:
-                              description: PeerRPCConnectionId defines the RPC ID
-                                of peer. If ManagePeerRPC is set to true this will
-                                be created by Cluster API Provider for OCI, otherwise
-                                this has be defined by the user.
+                              description: |-
+                                PeerRPCConnectionId defines the RPC ID of peer. If ManagePeerRPC is set to true
+                                this will be created by Cluster API Provider for OCI, otherwise this has be defined by the
+                                user.
                               type: string
                             peerRegionName:
                               description: PeerRegionName defined the region name
@@ -1042,14 +945,15 @@ spec:
                     type: object
                 type: object
               ociResourceIdentifier:
-                description: The unique ID which will be used to tag all the resources
-                  created by this Cluster. The tag will be used to identify resources
-                  belonging to this cluster. this will be auto-generated and should
-                  not be set by the user.
+                description: |-
+                  The unique ID which will be used to tag all the resources created by this Cluster.
+                  The tag will be used to identify resources belonging to this cluster.
+                  this will be auto-generated and should not be set by the user.
                 type: string
               region:
-                description: Region the cluster operates in. It must be one of available
-                  regions in Region Identifier format. See https://docs.oracle.com/en-us/iaas/Content/General/Concepts/regions.htm
+                description: |-
+                  Region the cluster operates in. It must be one of available regions in Region Identifier format.
+                  See https://docs.oracle.com/en-us/iaas/Content/General/Concepts/regions.htm
                 type: string
             type: object
           status:
@@ -1070,9 +974,9 @@ spec:
                       description: 'Name is the AD''s full name. Example: Uocm:PHX-AD-1'
                       type: string
                   type: object
-                description: AvailabilityDomains encapsulates the clusters Availability
-                  Domain (AD) information in a map where the map key is the AD name
-                  and the struct is details about the AD.
+                description: |-
+                  AvailabilityDomains encapsulates the clusters Availability Domain (AD) information in a map
+                  where the map key is the AD name and the struct is details about the AD.
                 type: object
               conditions:
                 description: NetworkSpec encapsulates all things related to OCI network.
@@ -1081,37 +985,37 @@ spec:
                     operational state.
                   properties:
                     lastTransitionTime:
-                      description: Last time the condition transitioned from one status
-                        to another. This should be when the underlying condition changed.
-                        If that is not known, then using the time when the API field
-                        changed is acceptable.
+                      description: |-
+                        Last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed. If that is not known, then using the time when
+                        the API field changed is acceptable.
                       format: date-time
                       type: string
                     message:
-                      description: A human readable message indicating details about
-                        the transition. This field may be empty.
+                      description: |-
+                        A human readable message indicating details about the transition.
+                        This field may be empty.
                       type: string
                     reason:
-                      description: The reason for the condition's last transition
-                        in CamelCase. The specific API may choose whether or not this
-                        field is considered a guaranteed API. This field may not be
-                        empty.
+                      description: |-
+                        The reason for the condition's last transition in CamelCase.
+                        The specific API may choose whether or not this field is considered a guaranteed API.
+                        This field may not be empty.
                       type: string
                     severity:
-                      description: Severity provides an explicit classification of
-                        Reason code, so the users or machines can immediately understand
-                        the current situation and act accordingly. The Severity field
-                        MUST be set only when Status=False.
+                      description: |-
+                        Severity provides an explicit classification of Reason code, so the users or machines can immediately
+                        understand the current situation and act accordingly.
+                        The Severity field MUST be set only when Status=False.
                       type: string
                     status:
                       description: Status of the condition, one of True, False, Unknown.
                       type: string
                     type:
-                      description: Type of condition in CamelCase or in foo.example.com/CamelCase.
-                        Many .condition.type values are consistent across resources
-                        like Available, but because arbitrary conditions can be useful
-                        (see .node.status.conditions), the ability to deconflict is
-                        important.
+                      description: |-
+                        Type of condition in CamelCase or in foo.example.com/CamelCase.
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions
+                        can be useful (see .node.status.conditions), the ability to deconflict is important.
                       type: string
                   required:
                   - lastTransitionTime
@@ -1121,9 +1025,9 @@ spec:
                 type: array
               failureDomains:
                 additionalProperties:
-                  description: FailureDomainSpec is the Schema for Cluster API failure
-                    domains. It allows controllers to understand how many failure
-                    domains a cluster can optionally span across.
+                  description: |-
+                    FailureDomainSpec is the Schema for Cluster API failure domains.
+                    It allows controllers to understand how many failure domains a cluster can optionally span across.
                   properties:
                     attributes:
                       additionalProperties:
@@ -1152,14 +1056,19 @@ spec:
         description: OCICluster is the Schema for the ociclusters API.
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -1181,9 +1090,9 @@ spec:
                       description: 'Name is the AD''s full name. Example: Uocm:PHX-AD-1'
                       type: string
                   type: object
-                description: AvailabilityDomains encapsulates the clusters Availability
-                  Domain (AD) information in a map where the map key is the AD name
-                  and the struct is details about the AD.
+                description: |-
+                  AvailabilityDomains encapsulates the clusters Availability Domain (AD) information in a map
+                  where the map key is the AD name and the struct is details about the AD.
                 type: object
               clientOverrides:
                 description: ClientOverrides allows the default client SDK URLs to
@@ -1191,9 +1100,9 @@ spec:
                 nullable: true
                 properties:
                   certOverride:
-                    description: CertOverride is a secret that contains information
-                      about a cert override used by all the OCI SDK clients. The secret
-                      must contain data with a `cert`property.
+                    description: |-
+                      CertOverride is a secret that contains information about a cert override used by all the OCI SDK clients.
+                      The secret must contain data with a `cert`property.
                     nullable: true
                     properties:
                       name:
@@ -1270,10 +1179,10 @@ spec:
                   additionalProperties:
                     type: string
                   type: object
-                description: 'Defined tags for this resource. Each key is predefined
-                  and scoped to a namespace. For more information, see Resource Tags
-                  (https://docs.cloud.oracle.com/iaas/Content/General/Concepts/resourcetags.htm).
-                  Example: `{"Operations": {"CostCenter": "42"}}`'
+                description: |-
+                  Defined tags for this resource. Each key is predefined and scoped to a
+                  namespace. For more information, see Resource Tags (https://docs.cloud.oracle.com/iaas/Content/General/Concepts/resourcetags.htm).
+                  Example: `{"Operations": {"CostCenter": "42"}}`
                 type: object
               freeformTags:
                 additionalProperties:
@@ -1288,33 +1197,40 @@ spec:
                     description: API version of the referent.
                     type: string
                   fieldPath:
-                    description: 'If referring to a piece of an object instead of
-                      an entire object, this string should contain a valid JSON/Go
-                      field access statement, such as desiredState.manifest.containers[2].
-                      For example, if the object reference is to a container within
-                      a pod, this would take on a value like: "spec.containers{name}"
-                      (where "name" refers to the name of the container that triggered
-                      the event) or if no container name is specified "spec.containers[2]"
-                      (container with index 2 in this pod). This syntax is chosen
-                      only to have some well-defined way of referencing a part of
-                      an object. TODO: this design is not final and this field is
-                      subject to change in the future.'
+                    description: |-
+                      If referring to a piece of an object instead of an entire object, this string
+                      should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                      For example, if the object reference is to a container within a pod, this would take on a value like:
+                      "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                      the event) or if no container name is specified "spec.containers[2]" (container with
+                      index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                      referencing a part of an object.
+                      TODO: this design is not final and this field is subject to change in the future.
                     type: string
                   kind:
-                    description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                    description: |-
+                      Kind of the referent.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
                     type: string
                   name:
-                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                    description: |-
+                      Name of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                     type: string
                   namespace:
-                    description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                    description: |-
+                      Namespace of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
                     type: string
                   resourceVersion:
-                    description: 'Specific resourceVersion to which this reference
-                      is made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                    description: |-
+                      Specific resourceVersion to which this reference is made, if any.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
                     type: string
                   uid:
-                    description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                    description: |-
+                      UID of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
                     type: string
                 type: object
                 x-kubernetes-map-type: atomic
@@ -1346,15 +1262,15 @@ spec:
                                   soon as current backend becomes unhealthy.
                                 properties:
                                   urlPath:
-                                    description: 'The path against which to run the
-                                      health check. Example: `/healthcheck` Default
-                                      value is `/healthz`'
+                                    description: |-
+                                      The path against which to run the health check.
+                                      Example: `/healthcheck`
+                                      Default value is `/healthz`
                                     type: string
                                 type: object
                               isFailOpen:
-                                description: If enabled, the network load balancer
-                                  will continue to distribute traffic in the configured
-                                  distribution in the event all backends are unhealthy.
+                                description: |-
+                                  If enabled, the network load balancer will continue to distribute traffic in the configured distribution in the event all backends are unhealthy.
                                   The value is false by default.
                                 type: boolean
                               isInstantFailoverEnabled:
@@ -1363,27 +1279,26 @@ spec:
                                   soon as current backend becomes unhealthy.
                                 type: boolean
                               isPreserveSource:
-                                description: If this parameter is enabled, then the
-                                  network load balancer preserves the source IP of
-                                  the packet when it is forwarded to backends. Backends
-                                  see the original source IP. If the isPreserveSourceDestination
-                                  parameter is enabled for the network load balancer
-                                  resource, then this parameter cannot be disabled.
+                                description: |-
+                                  If this parameter is enabled, then the network load balancer preserves the source IP of the packet when it is forwarded to backends.
+                                  Backends see the original source IP. If the isPreserveSourceDestination parameter is enabled for the network load balancer resource, then this parameter cannot be disabled.
                                   The value is false by default.
                                 type: boolean
                             type: object
                         type: object
                     type: object
                   skipNetworkManagement:
-                    description: SkipNetworkManagement defines if the networking spec(VCN
-                      related) specified by the user needs to be reconciled(actioned-upon)
+                    description: |-
+                      SkipNetworkManagement defines if the networking spec(VCN related) specified by the user needs to be reconciled(actioned-upon)
                       or used as it is. APIServerLB will still be reconciled.
                     type: boolean
                   vcn:
                     description: VCN configuration.
                     properties:
                       cidr:
-                        description: VCN CIDR. Deprecated, please use NetworkDetails.cidrs
+                        description: |-
+                          VCN CIDR.
+                          Deprecated, please use NetworkDetails.cidrs
                         type: string
                       cidrs:
                         description: VCN CIDRs.
@@ -1391,10 +1306,10 @@ spec:
                           type: string
                         type: array
                       dnsLabel:
-                        description: DnsLabel specifies a DNS label for the VCN, used
-                          in conjunction with the VNIC's hostname and subnet's DNS
-                          label to form a fully qualified domain name (FQDN) for each
-                          VNIC within this subnet (for example, `bminstance1.subnet123.vcn1.oraclevcn.com`).
+                        description: |-
+                          DnsLabel specifies a DNS label for the VCN, used in conjunction with the VNIC's hostname and
+                          subnet's DNS label to form a fully qualified domain name (FQDN) for each VNIC
+                          within this subnet (for example, `bminstance1.subnet123.vcn1.oraclevcn.com`).
                         type: string
                       id:
                         description: VCN OCID.
@@ -1431,8 +1346,9 @@ spec:
                             description: NetworkSecurityGroup is the configuration
                               for the Network Security Groups required in the VCN.
                             items:
-                              description: NSG defines configuration for a Network
-                                Security Group. https://docs.oracle.com/en-us/iaas/Content/Network/Concepts/networksecuritygroups.htm
+                              description: |-
+                                NSG defines configuration for a Network Security Group.
+                                https://docs.oracle.com/en-us/iaas/Content/Network/Concepts/networksecuritygroups.htm
                               properties:
                                 egressRules:
                                   description: EgressRules on the NSG.
@@ -1449,54 +1365,39 @@ spec:
                                               your choice for the rule.
                                             type: string
                                           destination:
-                                            description: 'Conceptually, this is the
-                                              range of IP addresses that a packet
-                                              originating from the instance can go
-                                              to. Allowed values: * IP address range
-                                              in CIDR notation. For example: `192.168.1.0/24`
-                                              or `2001:0db8:0123:45::/56` Note that
-                                              IPv6 addressing is currently supported
-                                              only in certain regions. See IPv6 Addresses
-                                              (https://docs.cloud.oracle.com/iaas/Content/Network/Concepts/ipv6.htm).
-                                              * The `cidrBlock` value for a Service,
-                                              if you''re setting up a security list
-                                              rule for traffic destined for a particular
-                                              `Service` through a service gateway.
-                                              For example: `oci-phx-objectstorage`.'
+                                            description: |-
+                                              Conceptually, this is the range of IP addresses that a packet originating from the instance
+                                              can go to.
+                                              Allowed values:
+                                                * IP address range in CIDR notation. For example: `192.168.1.0/24` or `2001:0db8:0123:45::/56`
+                                                  Note that IPv6 addressing is currently supported only in certain regions. See
+                                                  IPv6 Addresses (https://docs.cloud.oracle.com/iaas/Content/Network/Concepts/ipv6.htm).
+                                                * The `cidrBlock` value for a Service, if you're
+                                                  setting up a security list rule for traffic destined for a particular `Service` through
+                                                  a service gateway. For example: `oci-phx-objectstorage`.
                                             type: string
                                           destinationType:
-                                            description: 'Type of destination for
-                                              the rule. The default is `CIDR_BLOCK`.
-                                              Allowed values: * `CIDR_BLOCK`: If the
-                                              rule''s `destination` is an IP address
-                                              range in CIDR notation. * `SERVICE_CIDR_BLOCK`:
-                                              If the rule''s `destination` is the
-                                              `cidrBlock` value for a Service (the
-                                              rule is for traffic destined for a particular
-                                              `Service` through a service gateway).
-                                              * `NETWORK_SECURITY_GROUP`: If the rule''s
-                                              `destination` is the OCID (https://docs.cloud.oracle.com/iaas/Content/General/Concepts/identifiers.htm)
-                                              of a NetworkSecurityGroup.'
+                                            description: |-
+                                              Type of destination for the rule. The default is `CIDR_BLOCK`.
+                                              Allowed values:
+                                                * `CIDR_BLOCK`: If the rule's `destination` is an IP address range in CIDR notation.
+                                                * `SERVICE_CIDR_BLOCK`: If the rule's `destination` is the `cidrBlock` value for a
+                                                  Service (the rule is for traffic destined for a
+                                                  particular `Service` through a service gateway).
+                                                * `NETWORK_SECURITY_GROUP`: If the rule's `destination` is the OCID (https://docs.cloud.oracle.com/iaas/Content/General/Concepts/identifiers.htm) of a
+                                                  NetworkSecurityGroup.
                                             type: string
                                           icmpOptions:
-                                            description: 'IcmpOptions Optional and
-                                              valid only for ICMP and ICMPv6. Use
-                                              to specify a particular ICMP type and
-                                              code as defined in: - ICMP Parameters
-                                              (http://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml)
+                                            description: |-
+                                              IcmpOptions Optional and valid only for ICMP and ICMPv6. Use to specify a particular ICMP type and code
+                                              as defined in:
+                                              - ICMP Parameters (http://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml)
                                               - ICMPv6 Parameters (https://www.iana.org/assignments/icmpv6-parameters/icmpv6-parameters.xhtml)
-                                              If you specify ICMP or ICMPv6 as the
-                                              protocol but omit this object, then
-                                              all ICMP types and codes are allowed.
-                                              If you do provide this object, the type
-                                              is required and the code is optional.
-                                              To enable MTU negotiation for ingress
-                                              internet traffic via IPv4, make sure
-                                              to allow type 3 ("Destination Unreachable")
-                                              code 4 ("Fragmentation Needed and Don''t
-                                              Fragment was Set"). If you need to specify
-                                              multiple codes for a single type, create
-                                              a separate security list rule for each.'
+                                              If you specify ICMP or ICMPv6 as the protocol but omit this object, then all ICMP types and
+                                              codes are allowed. If you do provide this object, the type is required and the code is optional.
+                                              To enable MTU negotiation for ingress internet traffic via IPv4, make sure to allow type 3 ("Destination
+                                              Unreachable") code 4 ("Fragmentation Needed and Don't Fragment was Set"). If you need to specify
+                                              multiple codes for a single type, create a separate security list rule for each.
                                             properties:
                                               code:
                                                 description: The ICMP code (optional).
@@ -1506,45 +1407,33 @@ spec:
                                                 type: integer
                                             type: object
                                           isStateless:
-                                            description: A stateless rule allows traffic
-                                              in one direction. Remember to add a
-                                              corresponding stateless rule in the
-                                              other direction if you need to support
-                                              bidirectional traffic. For example,
-                                              if egress traffic allows TCP destination
-                                              port 80, there should be an ingress
-                                              rule to allow TCP source port 80. Defaults
-                                              to false, which means the rule is stateful
-                                              and a corresponding rule is not necessary
-                                              for bidirectional traffic.
+                                            description: |-
+                                              A stateless rule allows traffic in one direction. Remember to add a corresponding
+                                              stateless rule in the other direction if you need to support bidirectional traffic. For
+                                              example, if egress traffic allows TCP destination port 80, there should be an ingress
+                                              rule to allow TCP source port 80. Defaults to false, which means the rule is stateful
+                                              and a corresponding rule is not necessary for bidirectional traffic.
                                             type: boolean
                                           protocol:
-                                            description: The transport protocol. Specify
-                                              either `all` or an IPv4 protocol number
-                                              as defined in Protocol Numbers (http://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml).
-                                              Options are supported only for ICMP
-                                              ("1"), TCP ("6"), UDP ("17"), and ICMPv6
-                                              ("58").
+                                            description: |-
+                                              The transport protocol. Specify either `all` or an IPv4 protocol number as
+                                              defined in
+                                              Protocol Numbers (http://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml).
+                                              Options are supported only for ICMP ("1"), TCP ("6"), UDP ("17"), and ICMPv6 ("58").
                                             type: string
                                           tcpOptions:
-                                            description: TcpOptions Optional and valid
-                                              only for TCP. Use to specify particular
-                                              destination ports for TCP rules. If
-                                              you specify TCP as the protocol but
-                                              omit this object, then all destination
-                                              ports are allowed.
+                                            description: |-
+                                              TcpOptions Optional and valid only for TCP. Use to specify particular destination ports for TCP rules.
+                                              If you specify TCP as the protocol but omit this object, then all destination ports are allowed.
                                             properties:
                                               destinationPortRange:
                                                 description: PortRange The representation
                                                   of PortRange.
                                                 properties:
                                                   max:
-                                                    description: The maximum port
-                                                      number, which must not be less
-                                                      than the minimum port number.
-                                                      To specify a single port number,
-                                                      set both the min and max to
-                                                      the same value.
+                                                    description: |-
+                                                      The maximum port number, which must not be less than the minimum port number. To specify
+                                                      a single port number, set both the min and max to the same value.
                                                     type: integer
                                                   min:
                                                     description: The minimum port
@@ -1557,12 +1446,9 @@ spec:
                                                   of PortRange.
                                                 properties:
                                                   max:
-                                                    description: The maximum port
-                                                      number, which must not be less
-                                                      than the minimum port number.
-                                                      To specify a single port number,
-                                                      set both the min and max to
-                                                      the same value.
+                                                    description: |-
+                                                      The maximum port number, which must not be less than the minimum port number. To specify
+                                                      a single port number, set both the min and max to the same value.
                                                     type: integer
                                                   min:
                                                     description: The minimum port
@@ -1572,24 +1458,18 @@ spec:
                                                 type: object
                                             type: object
                                           udpOptions:
-                                            description: UdpOptions Optional and valid
-                                              only for UDP. Use to specify particular
-                                              destination ports for UDP rules. If
-                                              you specify UDP as the protocol but
-                                              omit this object, then all destination
-                                              ports are allowed.
+                                            description: |-
+                                              UdpOptions Optional and valid only for UDP. Use to specify particular destination ports for UDP rules.
+                                              If you specify UDP as the protocol but omit this object, then all destination ports are allowed.
                                             properties:
                                               destinationPortRange:
                                                 description: PortRange The representation
                                                   of PortRange.
                                                 properties:
                                                   max:
-                                                    description: The maximum port
-                                                      number, which must not be less
-                                                      than the minimum port number.
-                                                      To specify a single port number,
-                                                      set both the min and max to
-                                                      the same value.
+                                                    description: |-
+                                                      The maximum port number, which must not be less than the minimum port number. To specify
+                                                      a single port number, set both the min and max to the same value.
                                                     type: integer
                                                   min:
                                                     description: The minimum port
@@ -1602,12 +1482,9 @@ spec:
                                                   of PortRange.
                                                 properties:
                                                   max:
-                                                    description: The maximum port
-                                                      number, which must not be less
-                                                      than the minimum port number.
-                                                      To specify a single port number,
-                                                      set both the min and max to
-                                                      the same value.
+                                                    description: |-
+                                                      The maximum port number, which must not be less than the minimum port number. To specify
+                                                      a single port number, set both the min and max to the same value.
                                                     type: integer
                                                   min:
                                                     description: The minimum port
@@ -1637,24 +1514,16 @@ spec:
                                               your choice for the rule.
                                             type: string
                                           icmpOptions:
-                                            description: 'IcmpOptions Optional and
-                                              valid only for ICMP and ICMPv6. Use
-                                              to specify a particular ICMP type and
-                                              code as defined in: - ICMP Parameters
-                                              (http://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml)
+                                            description: |-
+                                              IcmpOptions Optional and valid only for ICMP and ICMPv6. Use to specify a particular ICMP type and code
+                                              as defined in:
+                                              - ICMP Parameters (http://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml)
                                               - ICMPv6 Parameters (https://www.iana.org/assignments/icmpv6-parameters/icmpv6-parameters.xhtml)
-                                              If you specify ICMP or ICMPv6 as the
-                                              protocol but omit this object, then
-                                              all ICMP types and codes are allowed.
-                                              If you do provide this object, the type
-                                              is required and the code is optional.
-                                              To enable MTU negotiation for ingress
-                                              internet traffic via IPv4, make sure
-                                              to allow type 3 ("Destination Unreachable")
-                                              code 4 ("Fragmentation Needed and Don''t
-                                              Fragment was Set"). If you need to specify
-                                              multiple codes for a single type, create
-                                              a separate security list rule for each.'
+                                              If you specify ICMP or ICMPv6 as the protocol but omit this object, then all ICMP types and
+                                              codes are allowed. If you do provide this object, the type is required and the code is optional.
+                                              To enable MTU negotiation for ingress internet traffic via IPv4, make sure to allow type 3 ("Destination
+                                              Unreachable") code 4 ("Fragmentation Needed and Don't Fragment was Set"). If you need to specify
+                                              multiple codes for a single type, create a separate security list rule for each.
                                             properties:
                                               code:
                                                 description: The ICMP code (optional).
@@ -1664,74 +1533,55 @@ spec:
                                                 type: integer
                                             type: object
                                           isStateless:
-                                            description: A stateless rule allows traffic
-                                              in one direction. Remember to add a
-                                              corresponding stateless rule in the
-                                              other direction if you need to support
-                                              bidirectional traffic. For example,
-                                              if ingress traffic allows TCP destination
-                                              port 80, there should be an egress rule
-                                              to allow TCP source port 80. Defaults
-                                              to false, which means the rule is stateful
-                                              and a corresponding rule is not necessary
-                                              for bidirectional traffic.
+                                            description: |-
+                                              A stateless rule allows traffic in one direction. Remember to add a corresponding
+                                              stateless rule in the other direction if you need to support bidirectional traffic. For
+                                              example, if ingress traffic allows TCP destination port 80, there should be an egress
+                                              rule to allow TCP source port 80. Defaults to false, which means the rule is stateful
+                                              and a corresponding rule is not necessary for bidirectional traffic.
                                             type: boolean
                                           protocol:
-                                            description: The transport protocol. Specify
-                                              either `all` or an IPv4 protocol number
-                                              as defined in Protocol Numbers (http://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml).
-                                              Options are supported only for ICMP
-                                              ("1"), TCP ("6"), UDP ("17"), and ICMPv6
-                                              ("58").
+                                            description: |-
+                                              The transport protocol. Specify either `all` or an IPv4 protocol number as
+                                              defined in
+                                              Protocol Numbers (http://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml).
+                                              Options are supported only for ICMP ("1"), TCP ("6"), UDP ("17"), and ICMPv6 ("58").
                                             type: string
                                           source:
-                                            description: 'Conceptually, this is the
-                                              range of IP addresses that a packet
-                                              coming into the instance can come from.
-                                              Allowed values: * IP address range in
-                                              CIDR notation. For example: `192.168.1.0/24`
-                                              or `2001:0db8:0123:45::/56`. IPv6 addressing
-                                              is supported for all commercial and
-                                              government regions. See IPv6 Addresses
-                                              (https://docs.cloud.oracle.com/iaas/Content/Network/Concepts/ipv6.htm).
-                                              * The `cidrBlock` value for a Service,
-                                              if you''re setting up a security list
-                                              rule for traffic coming from a particular
-                                              `Service` through a service gateway.
-                                              For example: `oci-phx-objectstorage`.'
+                                            description: |-
+                                              Conceptually, this is the range of IP addresses that a packet coming into the instance
+                                              can come from.
+                                              Allowed values:
+                                                * IP address range in CIDR notation. For example: `192.168.1.0/24` or `2001:0db8:0123:45::/56`.
+                                                  IPv6 addressing is supported for all commercial and government regions. See
+                                                  IPv6 Addresses (https://docs.cloud.oracle.com/iaas/Content/Network/Concepts/ipv6.htm).
+                                                * The `cidrBlock` value for a Service, if you're
+                                                  setting up a security list rule for traffic coming from a particular `Service` through
+                                                  a service gateway. For example: `oci-phx-objectstorage`.
                                             type: string
                                           sourceType:
-                                            description: 'Type of source for the rule.
-                                              The default is `CIDR_BLOCK`. * `CIDR_BLOCK`:
-                                              If the rule''s `source` is an IP address
-                                              range in CIDR notation. * `SERVICE_CIDR_BLOCK`:
-                                              If the rule''s `source` is the `cidrBlock`
-                                              value for a Service (the rule is for
-                                              traffic coming from a particular `Service`
-                                              through a service gateway). * `NETWORK_SECURITY_GROUP`:
-                                              If the rule''s `destination` is the
-                                              OCID (https://docs.cloud.oracle.com/iaas/Content/General/Concepts/identifiers.htm)
-                                              of a NetworkSecurityGroup.'
+                                            description: |-
+                                              Type of source for the rule. The default is `CIDR_BLOCK`.
+                                                * `CIDR_BLOCK`: If the rule's `source` is an IP address range in CIDR notation.
+                                                * `SERVICE_CIDR_BLOCK`: If the rule's `source` is the `cidrBlock` value for a
+                                                  Service (the rule is for traffic coming from a
+                                                  particular `Service` through a service gateway).
+                                                * `NETWORK_SECURITY_GROUP`: If the rule's `destination` is the OCID (https://docs.cloud.oracle.com/iaas/Content/General/Concepts/identifiers.htm) of a
+                                                  NetworkSecurityGroup.
                                             type: string
                                           tcpOptions:
-                                            description: TcpOptions Optional and valid
-                                              only for TCP. Use to specify particular
-                                              destination ports for TCP rules. If
-                                              you specify TCP as the protocol but
-                                              omit this object, then all destination
-                                              ports are allowed.
+                                            description: |-
+                                              TcpOptions Optional and valid only for TCP. Use to specify particular destination ports for TCP rules.
+                                              If you specify TCP as the protocol but omit this object, then all destination ports are allowed.
                                             properties:
                                               destinationPortRange:
                                                 description: PortRange The representation
                                                   of PortRange.
                                                 properties:
                                                   max:
-                                                    description: The maximum port
-                                                      number, which must not be less
-                                                      than the minimum port number.
-                                                      To specify a single port number,
-                                                      set both the min and max to
-                                                      the same value.
+                                                    description: |-
+                                                      The maximum port number, which must not be less than the minimum port number. To specify
+                                                      a single port number, set both the min and max to the same value.
                                                     type: integer
                                                   min:
                                                     description: The minimum port
@@ -1744,12 +1594,9 @@ spec:
                                                   of PortRange.
                                                 properties:
                                                   max:
-                                                    description: The maximum port
-                                                      number, which must not be less
-                                                      than the minimum port number.
-                                                      To specify a single port number,
-                                                      set both the min and max to
-                                                      the same value.
+                                                    description: |-
+                                                      The maximum port number, which must not be less than the minimum port number. To specify
+                                                      a single port number, set both the min and max to the same value.
                                                     type: integer
                                                   min:
                                                     description: The minimum port
@@ -1759,24 +1606,18 @@ spec:
                                                 type: object
                                             type: object
                                           udpOptions:
-                                            description: UdpOptions Optional and valid
-                                              only for UDP. Use to specify particular
-                                              destination ports for UDP rules. If
-                                              you specify UDP as the protocol but
-                                              omit this object, then all destination
-                                              ports are allowed.
+                                            description: |-
+                                              UdpOptions Optional and valid only for UDP. Use to specify particular destination ports for UDP rules.
+                                              If you specify UDP as the protocol but omit this object, then all destination ports are allowed.
                                             properties:
                                               destinationPortRange:
                                                 description: PortRange The representation
                                                   of PortRange.
                                                 properties:
                                                   max:
-                                                    description: The maximum port
-                                                      number, which must not be less
-                                                      than the minimum port number.
-                                                      To specify a single port number,
-                                                      set both the min and max to
-                                                      the same value.
+                                                    description: |-
+                                                      The maximum port number, which must not be less than the minimum port number. To specify
+                                                      a single port number, set both the min and max to the same value.
                                                     type: integer
                                                   min:
                                                     description: The minimum port
@@ -1789,12 +1630,9 @@ spec:
                                                   of PortRange.
                                                 properties:
                                                   max:
-                                                    description: The maximum port
-                                                      number, which must not be less
-                                                      than the minimum port number.
-                                                      To specify a single port number,
-                                                      set both the min and max to
-                                                      the same value.
+                                                    description: |-
+                                                      The maximum port number, which must not be less than the minimum port number. To specify
+                                                      a single port number, set both the min and max to the same value.
                                                     type: integer
                                                   min:
                                                     description: The minimum port
@@ -1854,17 +1692,18 @@ spec:
                         description: Subnets is the configuration for subnets required
                           in the VCN.
                         items:
-                          description: Subnet defines the configuration for a network's
-                            subnet https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/managingVCNs_topic-Overview_of_VCNs_and_Subnets.htm#Overview
+                          description: |-
+                            Subnet defines the configuration for a network's subnet
+                            https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/managingVCNs_topic-Overview_of_VCNs_and_Subnets.htm#Overview
                           properties:
                             cidr:
                               description: Subnet CIDR.
                               type: string
                             dnsLabel:
-                              description: DnsLabel DNS label for the subnet, used
-                                in conjunction with the VNIC's hostname and VCN's
-                                DNS label to form a fully qualified domain name (FQDN)
-                                for each VNIC within this subnet (for example, `bminstance1.subnet123.vcn1.oraclevcn.com`).
+                              description: |-
+                                DnsLabel DNS label for the subnet, used in conjunction with the VNIC's hostname and
+                                VCN's DNS label to form a fully qualified domain name (FQDN) for each VNIC
+                                within this subnet (for example, `bminstance1.subnet123.vcn1.oraclevcn.com`).
                               type: string
                             id:
                               description: Subnet OCID.
@@ -1890,50 +1729,39 @@ spec:
                                           choice for the rule.
                                         type: string
                                       destination:
-                                        description: 'Conceptually, this is the range
-                                          of IP addresses that a packet originating
-                                          from the instance can go to. Allowed values:
-                                          * IP address range in CIDR notation. For
-                                          example: `192.168.1.0/24` or `2001:0db8:0123:45::/56`
-                                          Note that IPv6 addressing is currently supported
-                                          only in certain regions. See IPv6 Addresses
-                                          (https://docs.cloud.oracle.com/iaas/Content/Network/Concepts/ipv6.htm).
-                                          * The `cidrBlock` value for a Service, if
-                                          you''re setting up a security list rule
-                                          for traffic destined for a particular `Service`
-                                          through a service gateway. For example:
-                                          `oci-phx-objectstorage`.'
+                                        description: |-
+                                          Conceptually, this is the range of IP addresses that a packet originating from the instance
+                                          can go to.
+                                          Allowed values:
+                                            * IP address range in CIDR notation. For example: `192.168.1.0/24` or `2001:0db8:0123:45::/56`
+                                              Note that IPv6 addressing is currently supported only in certain regions. See
+                                              IPv6 Addresses (https://docs.cloud.oracle.com/iaas/Content/Network/Concepts/ipv6.htm).
+                                            * The `cidrBlock` value for a Service, if you're
+                                              setting up a security list rule for traffic destined for a particular `Service` through
+                                              a service gateway. For example: `oci-phx-objectstorage`.
                                         type: string
                                       destinationType:
-                                        description: 'Type of destination for the
-                                          rule. The default is `CIDR_BLOCK`. Allowed
-                                          values: * `CIDR_BLOCK`: If the rule''s `destination`
-                                          is an IP address range in CIDR notation.
-                                          * `SERVICE_CIDR_BLOCK`: If the rule''s `destination`
-                                          is the `cidrBlock` value for a Service (the
-                                          rule is for traffic destined for a particular
-                                          `Service` through a service gateway). *
-                                          `NETWORK_SECURITY_GROUP`: If the rule''s
-                                          `destination` is the OCID (https://docs.cloud.oracle.com/iaas/Content/General/Concepts/identifiers.htm)
-                                          of a NetworkSecurityGroup.'
+                                        description: |-
+                                          Type of destination for the rule. The default is `CIDR_BLOCK`.
+                                          Allowed values:
+                                            * `CIDR_BLOCK`: If the rule's `destination` is an IP address range in CIDR notation.
+                                            * `SERVICE_CIDR_BLOCK`: If the rule's `destination` is the `cidrBlock` value for a
+                                              Service (the rule is for traffic destined for a
+                                              particular `Service` through a service gateway).
+                                            * `NETWORK_SECURITY_GROUP`: If the rule's `destination` is the OCID (https://docs.cloud.oracle.com/iaas/Content/General/Concepts/identifiers.htm) of a
+                                              NetworkSecurityGroup.
                                         type: string
                                       icmpOptions:
-                                        description: 'IcmpOptions Optional and valid
-                                          only for ICMP and ICMPv6. Use to specify
-                                          a particular ICMP type and code as defined
-                                          in: - ICMP Parameters (http://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml)
+                                        description: |-
+                                          IcmpOptions Optional and valid only for ICMP and ICMPv6. Use to specify a particular ICMP type and code
+                                          as defined in:
+                                          - ICMP Parameters (http://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml)
                                           - ICMPv6 Parameters (https://www.iana.org/assignments/icmpv6-parameters/icmpv6-parameters.xhtml)
-                                          If you specify ICMP or ICMPv6 as the protocol
-                                          but omit this object, then all ICMP types
-                                          and codes are allowed. If you do provide
-                                          this object, the type is required and the
-                                          code is optional. To enable MTU negotiation
-                                          for ingress internet traffic via IPv4, make
-                                          sure to allow type 3 ("Destination Unreachable")
-                                          code 4 ("Fragmentation Needed and Don''t
-                                          Fragment was Set"). If you need to specify
-                                          multiple codes for a single type, create
-                                          a separate security list rule for each.'
+                                          If you specify ICMP or ICMPv6 as the protocol but omit this object, then all ICMP types and
+                                          codes are allowed. If you do provide this object, the type is required and the code is optional.
+                                          To enable MTU negotiation for ingress internet traffic via IPv4, make sure to allow type 3 ("Destination
+                                          Unreachable") code 4 ("Fragmentation Needed and Don't Fragment was Set"). If you need to specify
+                                          multiple codes for a single type, create a separate security list rule for each.
                                         properties:
                                           code:
                                             description: The ICMP code (optional).
@@ -1943,41 +1771,33 @@ spec:
                                             type: integer
                                         type: object
                                       isStateless:
-                                        description: A stateless rule allows traffic
-                                          in one direction. Remember to add a corresponding
-                                          stateless rule in the other direction if
-                                          you need to support bidirectional traffic.
-                                          For example, if egress traffic allows TCP
-                                          destination port 80, there should be an
-                                          ingress rule to allow TCP source port 80.
-                                          Defaults to false, which means the rule
-                                          is stateful and a corresponding rule is
-                                          not necessary for bidirectional traffic.
+                                        description: |-
+                                          A stateless rule allows traffic in one direction. Remember to add a corresponding
+                                          stateless rule in the other direction if you need to support bidirectional traffic. For
+                                          example, if egress traffic allows TCP destination port 80, there should be an ingress
+                                          rule to allow TCP source port 80. Defaults to false, which means the rule is stateful
+                                          and a corresponding rule is not necessary for bidirectional traffic.
                                         type: boolean
                                       protocol:
-                                        description: The transport protocol. Specify
-                                          either `all` or an IPv4 protocol number
-                                          as defined in Protocol Numbers (http://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml).
-                                          Options are supported only for ICMP ("1"),
-                                          TCP ("6"), UDP ("17"), and ICMPv6 ("58").
+                                        description: |-
+                                          The transport protocol. Specify either `all` or an IPv4 protocol number as
+                                          defined in
+                                          Protocol Numbers (http://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml).
+                                          Options are supported only for ICMP ("1"), TCP ("6"), UDP ("17"), and ICMPv6 ("58").
                                         type: string
                                       tcpOptions:
-                                        description: TcpOptions Optional and valid
-                                          only for TCP. Use to specify particular
-                                          destination ports for TCP rules. If you
-                                          specify TCP as the protocol but omit this
-                                          object, then all destination ports are allowed.
+                                        description: |-
+                                          TcpOptions Optional and valid only for TCP. Use to specify particular destination ports for TCP rules.
+                                          If you specify TCP as the protocol but omit this object, then all destination ports are allowed.
                                         properties:
                                           destinationPortRange:
                                             description: PortRange The representation
                                               of PortRange.
                                             properties:
                                               max:
-                                                description: The maximum port number,
-                                                  which must not be less than the
-                                                  minimum port number. To specify
-                                                  a single port number, set both the
-                                                  min and max to the same value.
+                                                description: |-
+                                                  The maximum port number, which must not be less than the minimum port number. To specify
+                                                  a single port number, set both the min and max to the same value.
                                                 type: integer
                                               min:
                                                 description: The minimum port number,
@@ -1990,11 +1810,9 @@ spec:
                                               of PortRange.
                                             properties:
                                               max:
-                                                description: The maximum port number,
-                                                  which must not be less than the
-                                                  minimum port number. To specify
-                                                  a single port number, set both the
-                                                  min and max to the same value.
+                                                description: |-
+                                                  The maximum port number, which must not be less than the minimum port number. To specify
+                                                  a single port number, set both the min and max to the same value.
                                                 type: integer
                                               min:
                                                 description: The minimum port number,
@@ -2004,22 +1822,18 @@ spec:
                                             type: object
                                         type: object
                                       udpOptions:
-                                        description: UdpOptions Optional and valid
-                                          only for UDP. Use to specify particular
-                                          destination ports for UDP rules. If you
-                                          specify UDP as the protocol but omit this
-                                          object, then all destination ports are allowed.
+                                        description: |-
+                                          UdpOptions Optional and valid only for UDP. Use to specify particular destination ports for UDP rules.
+                                          If you specify UDP as the protocol but omit this object, then all destination ports are allowed.
                                         properties:
                                           destinationPortRange:
                                             description: PortRange The representation
                                               of PortRange.
                                             properties:
                                               max:
-                                                description: The maximum port number,
-                                                  which must not be less than the
-                                                  minimum port number. To specify
-                                                  a single port number, set both the
-                                                  min and max to the same value.
+                                                description: |-
+                                                  The maximum port number, which must not be less than the minimum port number. To specify
+                                                  a single port number, set both the min and max to the same value.
                                                 type: integer
                                               min:
                                                 description: The minimum port number,
@@ -2032,11 +1846,9 @@ spec:
                                               of PortRange.
                                             properties:
                                               max:
-                                                description: The maximum port number,
-                                                  which must not be less than the
-                                                  minimum port number. To specify
-                                                  a single port number, set both the
-                                                  min and max to the same value.
+                                                description: |-
+                                                  The maximum port number, which must not be less than the minimum port number. To specify
+                                                  a single port number, set both the min and max to the same value.
                                                 type: integer
                                               min:
                                                 description: The minimum port number,
@@ -2061,22 +1873,16 @@ spec:
                                           choice for the rule.
                                         type: string
                                       icmpOptions:
-                                        description: 'IcmpOptions Optional and valid
-                                          only for ICMP and ICMPv6. Use to specify
-                                          a particular ICMP type and code as defined
-                                          in: - ICMP Parameters (http://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml)
+                                        description: |-
+                                          IcmpOptions Optional and valid only for ICMP and ICMPv6. Use to specify a particular ICMP type and code
+                                          as defined in:
+                                          - ICMP Parameters (http://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml)
                                           - ICMPv6 Parameters (https://www.iana.org/assignments/icmpv6-parameters/icmpv6-parameters.xhtml)
-                                          If you specify ICMP or ICMPv6 as the protocol
-                                          but omit this object, then all ICMP types
-                                          and codes are allowed. If you do provide
-                                          this object, the type is required and the
-                                          code is optional. To enable MTU negotiation
-                                          for ingress internet traffic via IPv4, make
-                                          sure to allow type 3 ("Destination Unreachable")
-                                          code 4 ("Fragmentation Needed and Don''t
-                                          Fragment was Set"). If you need to specify
-                                          multiple codes for a single type, create
-                                          a separate security list rule for each.'
+                                          If you specify ICMP or ICMPv6 as the protocol but omit this object, then all ICMP types and
+                                          codes are allowed. If you do provide this object, the type is required and the code is optional.
+                                          To enable MTU negotiation for ingress internet traffic via IPv4, make sure to allow type 3 ("Destination
+                                          Unreachable") code 4 ("Fragmentation Needed and Don't Fragment was Set"). If you need to specify
+                                          multiple codes for a single type, create a separate security list rule for each.
                                         properties:
                                           code:
                                             description: The ICMP code (optional).
@@ -2086,69 +1892,55 @@ spec:
                                             type: integer
                                         type: object
                                       isStateless:
-                                        description: A stateless rule allows traffic
-                                          in one direction. Remember to add a corresponding
-                                          stateless rule in the other direction if
-                                          you need to support bidirectional traffic.
-                                          For example, if ingress traffic allows TCP
-                                          destination port 80, there should be an
-                                          egress rule to allow TCP source port 80.
-                                          Defaults to false, which means the rule
-                                          is stateful and a corresponding rule is
-                                          not necessary for bidirectional traffic.
+                                        description: |-
+                                          A stateless rule allows traffic in one direction. Remember to add a corresponding
+                                          stateless rule in the other direction if you need to support bidirectional traffic. For
+                                          example, if ingress traffic allows TCP destination port 80, there should be an egress
+                                          rule to allow TCP source port 80. Defaults to false, which means the rule is stateful
+                                          and a corresponding rule is not necessary for bidirectional traffic.
                                         type: boolean
                                       protocol:
-                                        description: The transport protocol. Specify
-                                          either `all` or an IPv4 protocol number
-                                          as defined in Protocol Numbers (http://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml).
-                                          Options are supported only for ICMP ("1"),
-                                          TCP ("6"), UDP ("17"), and ICMPv6 ("58").
+                                        description: |-
+                                          The transport protocol. Specify either `all` or an IPv4 protocol number as
+                                          defined in
+                                          Protocol Numbers (http://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml).
+                                          Options are supported only for ICMP ("1"), TCP ("6"), UDP ("17"), and ICMPv6 ("58").
                                         type: string
                                       source:
-                                        description: 'Conceptually, this is the range
-                                          of IP addresses that a packet coming into
-                                          the instance can come from. Allowed values:
-                                          * IP address range in CIDR notation. For
-                                          example: `192.168.1.0/24` or `2001:0db8:0123:45::/56`.
-                                          IPv6 addressing is supported for all commercial
-                                          and government regions. See IPv6 Addresses
-                                          (https://docs.cloud.oracle.com/iaas/Content/Network/Concepts/ipv6.htm).
-                                          * The `cidrBlock` value for a Service, if
-                                          you''re setting up a security list rule
-                                          for traffic coming from a particular `Service`
-                                          through a service gateway. For example:
-                                          `oci-phx-objectstorage`.'
+                                        description: |-
+                                          Conceptually, this is the range of IP addresses that a packet coming into the instance
+                                          can come from.
+                                          Allowed values:
+                                            * IP address range in CIDR notation. For example: `192.168.1.0/24` or `2001:0db8:0123:45::/56`.
+                                              IPv6 addressing is supported for all commercial and government regions. See
+                                              IPv6 Addresses (https://docs.cloud.oracle.com/iaas/Content/Network/Concepts/ipv6.htm).
+                                            * The `cidrBlock` value for a Service, if you're
+                                              setting up a security list rule for traffic coming from a particular `Service` through
+                                              a service gateway. For example: `oci-phx-objectstorage`.
                                         type: string
                                       sourceType:
-                                        description: 'Type of source for the rule.
-                                          The default is `CIDR_BLOCK`. * `CIDR_BLOCK`:
-                                          If the rule''s `source` is an IP address
-                                          range in CIDR notation. * `SERVICE_CIDR_BLOCK`:
-                                          If the rule''s `source` is the `cidrBlock`
-                                          value for a Service (the rule is for traffic
-                                          coming from a particular `Service` through
-                                          a service gateway). * `NETWORK_SECURITY_GROUP`:
-                                          If the rule''s `destination` is the OCID
-                                          (https://docs.cloud.oracle.com/iaas/Content/General/Concepts/identifiers.htm)
-                                          of a NetworkSecurityGroup.'
+                                        description: |-
+                                          Type of source for the rule. The default is `CIDR_BLOCK`.
+                                            * `CIDR_BLOCK`: If the rule's `source` is an IP address range in CIDR notation.
+                                            * `SERVICE_CIDR_BLOCK`: If the rule's `source` is the `cidrBlock` value for a
+                                              Service (the rule is for traffic coming from a
+                                              particular `Service` through a service gateway).
+                                            * `NETWORK_SECURITY_GROUP`: If the rule's `destination` is the OCID (https://docs.cloud.oracle.com/iaas/Content/General/Concepts/identifiers.htm) of a
+                                              NetworkSecurityGroup.
                                         type: string
                                       tcpOptions:
-                                        description: TcpOptions Optional and valid
-                                          only for TCP. Use to specify particular
-                                          destination ports for TCP rules. If you
-                                          specify TCP as the protocol but omit this
-                                          object, then all destination ports are allowed.
+                                        description: |-
+                                          TcpOptions Optional and valid only for TCP. Use to specify particular destination ports for TCP rules.
+                                          If you specify TCP as the protocol but omit this object, then all destination ports are allowed.
                                         properties:
                                           destinationPortRange:
                                             description: PortRange The representation
                                               of PortRange.
                                             properties:
                                               max:
-                                                description: The maximum port number,
-                                                  which must not be less than the
-                                                  minimum port number. To specify
-                                                  a single port number, set both the
-                                                  min and max to the same value.
+                                                description: |-
+                                                  The maximum port number, which must not be less than the minimum port number. To specify
+                                                  a single port number, set both the min and max to the same value.
                                                 type: integer
                                               min:
                                                 description: The minimum port number,
@@ -2161,11 +1953,9 @@ spec:
                                               of PortRange.
                                             properties:
                                               max:
-                                                description: The maximum port number,
-                                                  which must not be less than the
-                                                  minimum port number. To specify
-                                                  a single port number, set both the
-                                                  min and max to the same value.
+                                                description: |-
+                                                  The maximum port number, which must not be less than the minimum port number. To specify
+                                                  a single port number, set both the min and max to the same value.
                                                 type: integer
                                               min:
                                                 description: The minimum port number,
@@ -2175,22 +1965,18 @@ spec:
                                             type: object
                                         type: object
                                       udpOptions:
-                                        description: UdpOptions Optional and valid
-                                          only for UDP. Use to specify particular
-                                          destination ports for UDP rules. If you
-                                          specify UDP as the protocol but omit this
-                                          object, then all destination ports are allowed.
+                                        description: |-
+                                          UdpOptions Optional and valid only for UDP. Use to specify particular destination ports for UDP rules.
+                                          If you specify UDP as the protocol but omit this object, then all destination ports are allowed.
                                         properties:
                                           destinationPortRange:
                                             description: PortRange The representation
                                               of PortRange.
                                             properties:
                                               max:
-                                                description: The maximum port number,
-                                                  which must not be less than the
-                                                  minimum port number. To specify
-                                                  a single port number, set both the
-                                                  min and max to the same value.
+                                                description: |-
+                                                  The maximum port number, which must not be less than the minimum port number. To specify
+                                                  a single port number, set both the min and max to the same value.
                                                 type: integer
                                               min:
                                                 description: The minimum port number,
@@ -2203,11 +1989,9 @@ spec:
                                               of PortRange.
                                             properties:
                                               max:
-                                                description: The maximum port number,
-                                                  which must not be less than the
-                                                  minimum port number. To specify
-                                                  a single port number, set both the
-                                                  min and max to the same value.
+                                                description: |-
+                                                  The maximum port number, which must not be less than the minimum port number. To specify
+                                                  a single port number, set both the min and max to the same value.
                                                 type: integer
                                               min:
                                                 description: The minimum port number,
@@ -2239,76 +2023,72 @@ spec:
                     description: VCNPeering configuration.
                     properties:
                       drg:
-                        description: DRG configuration refers to the DRG which has
-                          to be created if required. If management cluster and workload
-                          cluster shares the same DRG, this fields is not required
-                          to be specified.
+                        description: |-
+                          DRG configuration refers to the DRG which has to be created if required. If management cluster
+                          and workload cluster shares the same DRG, this fields is not required to be specified.
                         properties:
                           id:
                             description: ID is the OCID for the created DRG.
                             type: string
                           manage:
-                            description: Manage defines whether the DRG has to be
-                              managed(including create). If set to false(the default)
-                              the ID has to be specified by the user to a valid DRG
-                              ID to which the VCN has to be attached.
+                            description: |-
+                              Manage defines whether the DRG has to be managed(including create). If set to false(the default) the ID
+                              has to be specified by the user to a valid DRG ID to which the VCN has to be attached.
                             type: boolean
                           name:
                             description: Name is the name of the created DRG.
                             type: string
                           vcnAttachmentId:
-                            description: VcnAttachmentId is the ID of the VCN attachment
-                              of the DRG. The workload cluster VCN can be attached
-                              to either the management cluster VCN if they are sharing
-                              the same DRG or to the workload cluster DRG.
+                            description: |-
+                              VcnAttachmentId is the ID of the VCN attachment of the DRG.
+                              The workload cluster VCN can be attached to either the management cluster VCN if they are sharing the same DRG
+                              or to the workload cluster DRG.
                             type: string
                         type: object
                       peerRouteRules:
-                        description: PeerRouteRules defines the routing rules which
-                          will be added to the private route tables of the workload
-                          cluster VCN. The routes defined here will be directed to
-                          DRG.
+                        description: |-
+                          PeerRouteRules defines the routing rules which will be added to the private route tables
+                          of the workload cluster VCN. The routes defined here will be directed to DRG.
                         items:
                           description: PeerRouteRule defines a Route Rule to be routed
                             via a DRG.
                           properties:
                             vcnCIDRRange:
-                              description: VCNCIDRRange is the CIDR Range of peer
-                                VCN to which the workload cluster VCN will be peered.
-                                The CIDR range is required to add the route rule in
-                                the workload cluster VCN, the route rule will forward
-                                any traffic to the CIDR to the DRG.
+                              description: |-
+                                VCNCIDRRange is the CIDR Range of peer VCN to which the
+                                workload cluster VCN will be peered. The CIDR range is required to add the route rule
+                                in the workload cluster VCN, the route rule will forward any traffic to the CIDR to the DRG.
                               type: string
                           type: object
                         type: array
                       remotePeeringConnections:
-                        description: RemotePeeringConnections defines the RPC connections
-                          which be established with the workload cluster DRG.
+                        description: |-
+                          RemotePeeringConnections defines the RPC connections which be established with the
+                          workload cluster DRG.
                         items:
-                          description: RemotePeeringConnection is used to peer VCNs
-                            residing in different regions(typically). Remote VCN Peering
-                            is explained here - https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/remoteVCNpeering.htm
+                          description: |-
+                            RemotePeeringConnection is used to peer VCNs residing in different regions(typically).
+                            Remote VCN Peering is explained here - https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/remoteVCNpeering.htm
                           properties:
                             managePeerRPC:
-                              description: ManagePeerRPC will define if the Peer VCN
-                                needs to be managed. If set to true a Remote Peering
-                                Connection will be created in the Peer DRG and the
-                                connection will be created between local and peer
-                                RPC.
+                              description: |-
+                                ManagePeerRPC will define if the Peer VCN needs to be managed. If set to true
+                                a Remote Peering Connection will be created in the Peer DRG and the connection
+                                will be created between local and peer RPC.
                               type: boolean
                             name:
-                              description: A unique name identifying the RPC, please
-                                note this is to identify the RPC from other RPC elements,
-                                and will not be used in any OCI API call.
+                              description: |-
+                                A unique name identifying the RPC, please note this is to identify the RPC
+                                from other RPC elements, and will not be used in any OCI API call.
                               type: string
                             peerDRGId:
                               description: PeerDRGId defines the DRG ID of the peer.
                               type: string
                             peerRPCConnectionId:
-                              description: PeerRPCConnectionId defines the RPC ID
-                                of peer. If ManagePeerRPC is set to true this will
-                                be created by Cluster API Provider for OCI, otherwise
-                                this has be defined by the user.
+                              description: |-
+                                PeerRPCConnectionId defines the RPC ID of peer. If ManagePeerRPC is set to true
+                                this will be created by Cluster API Provider for OCI, otherwise this has be defined by the
+                                user.
                               type: string
                             peerRegionName:
                               description: PeerRegionName defined the region name
@@ -2323,14 +2103,15 @@ spec:
                     type: object
                 type: object
               ociResourceIdentifier:
-                description: The unique ID which will be used to tag all the resources
-                  created by this Cluster. The tag will be used to identify resources
-                  belonging to this cluster. this will be auto-generated and should
-                  not be set by the user.
+                description: |-
+                  The unique ID which will be used to tag all the resources created by this Cluster.
+                  The tag will be used to identify resources belonging to this cluster.
+                  this will be auto-generated and should not be set by the user.
                 type: string
               region:
-                description: Region the cluster operates in. It must be one of available
-                  regions in Region Identifier format. See https://docs.oracle.com/en-us/iaas/Content/General/Concepts/regions.htm
+                description: |-
+                  Region the cluster operates in. It must be one of available regions in Region Identifier format.
+                  See https://docs.oracle.com/en-us/iaas/Content/General/Concepts/regions.htm
                 type: string
             type: object
           status:
@@ -2343,37 +2124,37 @@ spec:
                     operational state.
                   properties:
                     lastTransitionTime:
-                      description: Last time the condition transitioned from one status
-                        to another. This should be when the underlying condition changed.
-                        If that is not known, then using the time when the API field
-                        changed is acceptable.
+                      description: |-
+                        Last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed. If that is not known, then using the time when
+                        the API field changed is acceptable.
                       format: date-time
                       type: string
                     message:
-                      description: A human readable message indicating details about
-                        the transition. This field may be empty.
+                      description: |-
+                        A human readable message indicating details about the transition.
+                        This field may be empty.
                       type: string
                     reason:
-                      description: The reason for the condition's last transition
-                        in CamelCase. The specific API may choose whether or not this
-                        field is considered a guaranteed API. This field may not be
-                        empty.
+                      description: |-
+                        The reason for the condition's last transition in CamelCase.
+                        The specific API may choose whether or not this field is considered a guaranteed API.
+                        This field may not be empty.
                       type: string
                     severity:
-                      description: Severity provides an explicit classification of
-                        Reason code, so the users or machines can immediately understand
-                        the current situation and act accordingly. The Severity field
-                        MUST be set only when Status=False.
+                      description: |-
+                        Severity provides an explicit classification of Reason code, so the users or machines can immediately
+                        understand the current situation and act accordingly.
+                        The Severity field MUST be set only when Status=False.
                       type: string
                     status:
                       description: Status of the condition, one of True, False, Unknown.
                       type: string
                     type:
-                      description: Type of condition in CamelCase or in foo.example.com/CamelCase.
-                        Many .condition.type values are consistent across resources
-                        like Available, but because arbitrary conditions can be useful
-                        (see .node.status.conditions), the ability to deconflict is
-                        important.
+                      description: |-
+                        Type of condition in CamelCase or in foo.example.com/CamelCase.
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions
+                        can be useful (see .node.status.conditions), the ability to deconflict is important.
                       type: string
                   required:
                   - lastTransitionTime
@@ -2383,9 +2164,9 @@ spec:
                 type: array
               failureDomains:
                 additionalProperties:
-                  description: FailureDomainSpec is the Schema for Cluster API failure
-                    domains. It allows controllers to understand how many failure
-                    domains a cluster can optionally span across.
+                  description: |-
+                    FailureDomainSpec is the Schema for Cluster API failure domains.
+                    It allows controllers to understand how many failure domains a cluster can optionally span across.
                   properties:
                     attributes:
                       additionalProperties:
