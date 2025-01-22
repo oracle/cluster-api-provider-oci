@@ -76,6 +76,17 @@ func Test_GetNsgNamesFromId(t *testing.T) {
 			},
 			expected: make([]string, 0),
 		},
+		{
+			name: "nil",
+			ids:  []string{"id-3"},
+			nsgs: []*infrastructurev1beta2.NSG{
+				{
+					//ID:   nil, // Not specifying ID should set it to nil.
+					Name: "test-1",
+				},
+			},
+			expected: make([]string, 0),
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
