@@ -323,8 +323,10 @@ func (r *OCIMachineReconciler) recordErrorsOnFailedWorkRequest(ctx context.Conte
 			}
 		}
 	}
-	r.Recorder.Eventf(machine, corev1.EventTypeWarning, "ReconcileError", "%s. Instance  has invalid lifecycle state %s", final_error, instance.LifecycleState)
-	return reconcile.Result{}, errors.New(fmt.Sprintf("instance  has invalid lifecycle state %s", instance.LifecycleState))
+	if final_error != "" {
+		r.Recorder.Eventf(machine, corev1.EventTypeWarning, "ReconcileError", "%s. Instance  has invalid lifecycle state %s", final_error, instance.LifecycleState)
+	}
+	return reconcile.Result{}, errors.New(fmt.Sprintf("instance has invalid lifecycle state %s", instance.LifecycleState))
 }
 
 func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) (ctrl.Result, error) {
