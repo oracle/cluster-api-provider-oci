@@ -415,6 +415,22 @@ func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.
 			"Instance is in ready state")
 		conditions.MarkTrue(machineScope.OCIMachine, infrastructurev1beta2.InstanceReadyCondition)
 		machineScope.SetReady()
+
+		CNIType := machineScope.OCIMachine.Spec.CNIType
+		if CNIType == "OCI_VCN_IP_NATIVE" {
+			machineScope.Info(fmt.Sprintf("CNI Type is: %s", CNIType))
+			if crdExsited, _ := cloudutil.HasNpnCrd(ctx, machineScope); crdExsited != true {
+				return reconcile.Result{RequeueAfter: 60 * time.Second}, nil
+			} else {
+				_, err := cloudutil.GetOrCreateNpn(ctx, machineScope)
+				if err != nil {
+					machineScope.Info(fmt.Sprintf("GetOrCreate NPN CR failed, Requeue Now, Reason: %v", err))
+					return reconcile.Result{RequeueAfter: 120 * time.Second}, nil
+				}
+				machineScope.Info(fmt.Sprintf("NPN CR Reconcile Normal Completes"))
+			}
+		}
+
 		if deleteMachineOnTermination {
 			// typically, if the VM is terminated, we should get machine events, so ideally, the 300 seconds
 			// requeue time is not required, but in case, the event is missed, adding the requeue time
@@ -480,6 +496,19 @@ func (r *OCIMachineReconciler) reconcileDelete(ctx context.Context, machineScope
 		machineScope.Info("Instance is deleted")
 		r.Recorder.Eventf(machineScope.OCIMachine, corev1.EventTypeNormal,
 			"InstanceTerminated", "Deleted the instance")
+
+		CNIType := machineScope.OCIMachine.Spec.CNIType
+		if CNIType == "OCI_VCN_IP_NATIVE" {
+			machineScope.Info(fmt.Sprintf("CNI Type is: %s", CNIType))
+			err := cloudutil.DeleteNpn(ctx, machineScope)
+			if err != nil {
+				machineScope.Info(fmt.Sprintf("Delete NPN CR failed, reason: %v", apierrors.ReasonForError(err)))
+				return reconcile.Result{RequeueAfter: 60 * time.Second}, nil
+			} else {
+				machineScope.Info(fmt.Sprintf("Successfully Deleted NPN CR for the current node"))
+			}
+		}
+
 		return reconcile.Result{}, nil
 	default:
 		if !machineScope.IsResourceCreatedByClusterAPI(instance.FreeformTags) {
