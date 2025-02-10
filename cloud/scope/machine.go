@@ -1000,7 +1000,7 @@ func (m *MachineScope) getLaunchVolumeAttachments() []core.LaunchAttachVolumeDet
 		} else if attachment.Type == infrastructurev1beta2.ParavirtualizedType {
 			volumes = append(volumes, getParavirtualizedVolumeAttachment(attachment.ParavirtualizedAttachment))
 		} else {
-			m.Logger.Info("Block Volume attachment type not supported")
+			m.Logger.Info("Unknown attachment type not supported")
 		}
 	}
 	return volumes
