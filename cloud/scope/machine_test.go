@@ -552,7 +552,7 @@ func TestInstanceReconciliation(t *testing.T) {
 			},
 		},
 		{
-			name:          "check all params together, with subnet id set, nsg id list",
+			name:          "check all params together, with paravirtualized volume support",
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				setupAllParams(ms)
