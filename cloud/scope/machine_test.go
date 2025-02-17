@@ -568,10 +568,11 @@ func TestInstanceReconciliation(t *testing.T) {
 				ms.OCIMachine.Spec.NetworkDetails.DisplayName = common.String("display-name")
 				ms.OCIMachine.Spec.LaunchVolumeAttachment = []infrastructurev1beta2.LaunchVolumeAttachment{
 					{
-						Type: infrastructurev1beta2.IscsiType,
-						IscsiAttachment: infrastructurev1beta2.LaunchIscsiVolumeAttachment{
+						Type: infrastructurev1beta2.ParavirtualizedType,
+						ParavirtualizedAttachment: infrastructurev1beta2.LaunchParavirtualizedVolumeAttachment{
 							Device:      common.String("/dev/oci"),
 							IsShareable: common.Bool(true),
+							IsPvEncryptionInTransitEnabled: common.Bool(false), 
 							LaunchCreateVolumeFromAttributes: infrastructurev1beta2.LaunchCreateVolumeFromAttributes{
 								DisplayName: common.String("test-volume"),
 								SizeInGBs:   common.Int64(75),
