@@ -997,6 +997,10 @@ func (m *MachineScope) getLaunchVolumeAttachments() []core.LaunchAttachVolumeDet
 	for _, attachment := range volumeAttachmentsInSpec {
 		if attachment.Type == infrastructurev1beta2.IscsiType {
 			volumes = append(volumes, getIscsiVolumeAttachment(attachment.IscsiAttachment))
+		} else if attachment.Type == infrastructurev1beta2.ParavirtualizedType {
+			volumes = append(volumes, getParavirtualizedVolumeAttachment(attachment.ParavirtualizedAttachment))
+		} else {
+			m.Logger.Info("Unknown attachment type not supported")
 		}
 	}
 	return volumes
@@ -1012,6 +1016,19 @@ func getIscsiVolumeAttachment(attachment infrastructurev1beta2.LaunchIscsiVolume
 		UseChap:                      attachment.UseChap,
 		IsAgentAutoIscsiLoginEnabled: attachment.IsAgentAutoIscsiLoginEnabled,
 		EncryptionInTransitType:      getEncryptionType(attachment.EncryptionInTransitType),
+		LaunchCreateVolumeDetails:    getLaunchCreateVolumeDetails(attachment.LaunchCreateVolumeFromAttributes),
+	}
+	return volumeDetails
+}
+
+func getParavirtualizedVolumeAttachment(attachment infrastructurev1beta2.LaunchParavirtualizedVolumeAttachment) core.LaunchAttachVolumeDetails {
+	volumeDetails := core.LaunchAttachParavirtualizedVolumeDetails{
+		Device:                       attachment.Device,
+		DisplayName:                  attachment.DisplayName,
+		IsShareable:                  attachment.IsShareable,
+		IsReadOnly:                   attachment.IsReadOnly,
+		VolumeId:                     attachment.VolumeId,
+		IsPvEncryptionInTransitEnabled:      attachment.IsPvEncryptionInTransitEnabled,
 		LaunchCreateVolumeDetails:    getLaunchCreateVolumeDetails(attachment.LaunchCreateVolumeFromAttributes),
 	}
 	return volumeDetails

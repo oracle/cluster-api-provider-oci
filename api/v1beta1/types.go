@@ -1098,6 +1098,7 @@ type VolumeType string
 
 const (
 	IscsiType VolumeType = "iscsi"
+	ParavirtualizedType VolumeType = "paravirtualized"
 )
 
 // EncryptionInTransitTypeEnum Enum with underlying type: string
@@ -1115,6 +1116,7 @@ type LaunchVolumeAttachment struct {
 
 	// The details of iscsi volume attachment.
 	IscsiAttachment LaunchIscsiVolumeAttachment `json:"launchIscsiVolumeAttachment,omitempty"`
+	ParavirtualizedAttachment LaunchParavirtualizedVolumeAttachment `json:"launchParavirtualizedVolumeAttachment,omitempty"`
 }
 
 // LaunchIscsiVolumeAttachment specifies the iscsi volume attachments to create as part of the launch instance operation.
@@ -1150,6 +1152,35 @@ type LaunchIscsiVolumeAttachment struct {
 	// Refer the top-level definition of encryptionInTransitType.
 	// The default value is NONE.
 	EncryptionInTransitType EncryptionInTransitTypeEnum `json:"encryptionInTransitType,omitempty"`
+}
+
+// LaunchParavirtualizedVolumeAttachment specifies the paravirtualized volume attachments to create as part of the launch instance operation.
+type LaunchParavirtualizedVolumeAttachment struct {
+	// The device name. To retrieve a list of devices for a given instance, see ListInstanceDevices.
+	Device *string `json:"device,omitempty"`
+
+	// A user-friendly name. Does not have to be unique, and it's changeable.
+	// Avoid entering confidential information.
+	DisplayName *string `json:"displayName,omitempty"`
+
+	// Whether the attachment was created in read-only mode.
+	IsReadOnly *bool `json:"isReadOnly,omitempty"`
+
+	// Whether the attachment should be created in shareable mode. If an attachment
+	// is created in shareable mode, then other instances can attach the same volume, provided
+	// that they also create their attachments in shareable mode. Only certain volume types can
+	// be attached in shareable mode. Defaults to false if not specified.
+	IsShareable *bool `json:"isShareable,omitempty"`
+
+	// The OCID of the volume. If CreateVolumeDetails is specified, this field must be omitted from the request.
+	VolumeId *string `json:"volumeId,omitempty"`
+
+	// LaunchCreateVolumeFromAttributes The details of the volume to create for CreateVolume operation.
+	LaunchCreateVolumeFromAttributes LaunchCreateVolumeFromAttributes `json:"launchCreateVolumeFromAttributes,omitempty"`
+	
+	// Refer the top-level definition of isPvEncryptionInTransitEnabled.
+	// The default value is False.
+	IsPvEncryptionInTransitEnabled *bool `json:"isPvEncryptionInTransitEnabled,omitempty"`
 }
 
 // LaunchCreateVolumeFromAttributes The details of the volume to create for CreateVolume operation.
