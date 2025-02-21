@@ -560,7 +560,7 @@ func (m *MachineScope) ReconcileCreateInstanceOnLB(ctx context.Context) error {
 			m.OCIMachine.Status.CreateBackendWorkRequestId = *resp.OpcWorkRequestId
 			logger.Info("Add instance to LB backend-set", "WorkRequestId", resp.OpcWorkRequestId)
 			logger.Info("Waiting for LB work request to be complete")
-			_, err = ociutil.AwaitLBWorkRequest(ctx, m.LoadBalancerClient, m.WorkRequestsClient, resp.OpcWorkRequestId)
+			_, err = ociutil.AwaitLBWorkRequest(ctx, m.LoadBalancerClient, resp.OpcWorkRequestId)
 			if err != nil {
 				return err
 			}
@@ -597,7 +597,7 @@ func (m *MachineScope) ReconcileCreateInstanceOnLB(ctx context.Context) error {
 			m.OCIMachine.Status.CreateBackendWorkRequestId = *resp.OpcWorkRequestId
 			logger.Info("Add instance to NLB backend-set", "WorkRequestId", resp.OpcWorkRequestId)
 			logger.Info("Waiting for NLB work request to be complete")
-			_, err = ociutil.AwaitNLBWorkRequest(ctx, m.NetworkLoadBalancerClient, m.WorkRequestsClient, resp.OpcWorkRequestId)
+			_, err = ociutil.AwaitNLBWorkRequest(ctx, m.NetworkLoadBalancerClient, resp.OpcWorkRequestId)
 			if err != nil {
 				return err
 			}
@@ -665,7 +665,7 @@ func (m *MachineScope) ReconcileDeleteInstanceOnLB(ctx context.Context) error {
 			m.OCIMachine.Status.DeleteBackendWorkRequestId = *resp.OpcWorkRequestId
 			logger.Info("Delete instance from LB backend-set", "WorkRequestId", resp.OpcWorkRequestId)
 			logger.Info("Waiting for LB work request to be complete")
-			_, err = ociutil.AwaitLBWorkRequest(ctx, m.LoadBalancerClient, m.WorkRequestsClient, resp.OpcWorkRequestId)
+			_, err = ociutil.AwaitLBWorkRequest(ctx, m.LoadBalancerClient, resp.OpcWorkRequestId)
 			if err != nil {
 				return err
 			}
@@ -700,7 +700,7 @@ func (m *MachineScope) ReconcileDeleteInstanceOnLB(ctx context.Context) error {
 			m.OCIMachine.Status.DeleteBackendWorkRequestId = *resp.OpcWorkRequestId
 			logger.Info("Delete instance from LB backend-set", "WorkRequestId", resp.OpcWorkRequestId)
 			logger.Info("Waiting for LB work request to be complete")
-			_, err = ociutil.AwaitNLBWorkRequest(ctx, m.NetworkLoadBalancerClient, m.WorkRequestsClient, resp.OpcWorkRequestId)
+			_, err = ociutil.AwaitNLBWorkRequest(ctx, m.NetworkLoadBalancerClient, resp.OpcWorkRequestId)
 			if err != nil {
 				return err
 			}
@@ -997,6 +997,10 @@ func (m *MachineScope) getLaunchVolumeAttachments() []core.LaunchAttachVolumeDet
 	for _, attachment := range volumeAttachmentsInSpec {
 		if attachment.Type == infrastructurev1beta2.IscsiType {
 			volumes = append(volumes, getIscsiVolumeAttachment(attachment.IscsiAttachment))
+		} else if attachment.Type == infrastructurev1beta2.ParavirtualizedType {
+			volumes = append(volumes, getParavirtualizedVolumeAttachment(attachment.ParavirtualizedAttachment))
+		} else {
+			m.Logger.Info("Unknown attachment type not supported")
 		}
 	}
 	return volumes
@@ -1012,6 +1016,19 @@ func getIscsiVolumeAttachment(attachment infrastructurev1beta2.LaunchIscsiVolume
 		UseChap:                      attachment.UseChap,
 		IsAgentAutoIscsiLoginEnabled: attachment.IsAgentAutoIscsiLoginEnabled,
 		EncryptionInTransitType:      getEncryptionType(attachment.EncryptionInTransitType),
+		LaunchCreateVolumeDetails:    getLaunchCreateVolumeDetails(attachment.LaunchCreateVolumeFromAttributes),
+	}
+	return volumeDetails
+}
+
+func getParavirtualizedVolumeAttachment(attachment infrastructurev1beta2.LaunchParavirtualizedVolumeAttachment) core.LaunchAttachVolumeDetails {
+	volumeDetails := core.LaunchAttachParavirtualizedVolumeDetails{
+		Device:                       attachment.Device,
+		DisplayName:                  attachment.DisplayName,
+		IsShareable:                  attachment.IsShareable,
+		IsReadOnly:                   attachment.IsReadOnly,
+		VolumeId:                     attachment.VolumeId,
+		IsPvEncryptionInTransitEnabled:      attachment.IsPvEncryptionInTransitEnabled,
 		LaunchCreateVolumeDetails:    getLaunchCreateVolumeDetails(attachment.LaunchCreateVolumeFromAttributes),
 	}
 	return volumeDetails

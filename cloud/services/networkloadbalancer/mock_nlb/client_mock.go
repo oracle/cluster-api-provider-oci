@@ -125,6 +125,21 @@ func (mr *MockNetworkLoadBalancerClientMockRecorder) GetWorkRequest(ctx, request
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWorkRequest", reflect.TypeOf((*MockNetworkLoadBalancerClient)(nil).GetWorkRequest), ctx, request)
 }
 
+// ListWorkRequestErrors mocks base method.
+func (m *MockNetworkLoadBalancerClient) ListWorkRequestErrors(ctx context.Context, request networkloadbalancer.ListWorkRequestErrorsRequest) (networkloadbalancer.ListWorkRequestErrorsResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListWorkRequestErrors", ctx, request)
+	ret0, _ := ret[0].(networkloadbalancer.ListWorkRequestErrorsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListWorkRequestErrors indicates an expected call of GetWorkRequest.
+func (mr *MockNetworkLoadBalancerClientMockRecorder) ListWorkRequestErrors(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWorkRequestErrors", reflect.TypeOf((*MockNetworkLoadBalancerClient)(nil).ListWorkRequestErrors), ctx, request)
+}
+
 // ListNetworkLoadBalancers mocks base method.
 func (m *MockNetworkLoadBalancerClient) ListNetworkLoadBalancers(ctx context.Context, request networkloadbalancer.ListNetworkLoadBalancersRequest) (networkloadbalancer.ListNetworkLoadBalancersResponse, error) {
 	m.ctrl.T.Helper()

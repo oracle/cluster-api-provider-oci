@@ -28,7 +28,6 @@ import (
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/workrequests/mock_workrequests"
 	"github.com/oracle/oci-go-sdk/v65/loadbalancer"
 	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
-	"github.com/oracle/oci-go-sdk/v65/workrequests"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/golang/mock/gomock"
@@ -522,6 +521,103 @@ func TestInstanceReconciliation(t *testing.T) {
 						core.LaunchAttachIScsiVolumeDetails{
 							Device:      common.String("/dev/oci"),
 							IsShareable: common.Bool(true),
+							LaunchCreateVolumeDetails: core.LaunchCreateVolumeFromAttributes{
+								DisplayName: common.String("test-volume"),
+								SizeInGBs:   common.Int64(75),
+								VpusPerGB:   common.Int64(20),
+							},
+						},
+					},
+					Metadata: map[string]string{
+						"user_data": base64.StdEncoding.EncodeToString([]byte("test")),
+					},
+					Shape: common.String("shape"),
+					ShapeConfig: &core.LaunchInstanceShapeConfigDetails{
+						Ocpus:                   common.Float32(2),
+						MemoryInGBs:             common.Float32(100),
+						BaselineOcpuUtilization: core.LaunchInstanceShapeConfigDetailsBaselineOcpuUtilization8,
+					},
+					AvailabilityDomain:             common.String("ad2"),
+					CompartmentId:                  common.String("test"),
+					IsPvEncryptionInTransitEnabled: common.Bool(true),
+					DefinedTags:                    map[string]map[string]interface{}{},
+					FreeformTags: map[string]string{
+						ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,
+						ociutil.ClusterResourceIdentifier: "resource_uid",
+					},
+				}
+				computeClient.EXPECT().LaunchInstance(gomock.Any(), gomock.Eq(core.LaunchInstanceRequest{
+					LaunchInstanceDetails: launchDetails,
+					OpcRetryToken:         ociutil.GetOPCRetryToken("machineuid")})).Return(core.LaunchInstanceResponse{}, nil)
+			},
+		},
+		{
+			name:          "check all params together, with paravirtualized volume support",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				setupAllParams(ms)
+				ms.OCIMachine.Spec.CapacityReservationId = common.String("cap-id")
+				ms.OCIMachine.Spec.DedicatedVmHostId = common.String("dedicated-host-id")
+				ms.OCIMachine.Spec.NetworkDetails.HostnameLabel = common.String("hostname-label")
+				ms.OCIMachine.Spec.NetworkDetails.SubnetId = common.String("subnet-machine-id")
+				ms.OCIMachine.Spec.NetworkDetails.NSGIds = []string{"nsg-machine-id-1", "nsg-machine-id-2"}
+				// above array should take precedence
+				ms.OCIMachine.Spec.NetworkDetails.NSGId = common.String("nsg-machine-id")
+				ms.OCIMachine.Spec.NetworkDetails.SkipSourceDestCheck = common.Bool(true)
+				ms.OCIMachine.Spec.NetworkDetails.AssignPrivateDnsRecord = common.Bool(true)
+				ms.OCIMachine.Spec.NetworkDetails.DisplayName = common.String("display-name")
+				ms.OCIMachine.Spec.LaunchVolumeAttachment = []infrastructurev1beta2.LaunchVolumeAttachment{
+					{
+						Type: infrastructurev1beta2.ParavirtualizedType,
+						ParavirtualizedAttachment: infrastructurev1beta2.LaunchParavirtualizedVolumeAttachment{
+							Device:      common.String("/dev/oci"),
+							IsShareable: common.Bool(true),
+							IsPvEncryptionInTransitEnabled: common.Bool(false), 
+							LaunchCreateVolumeFromAttributes: infrastructurev1beta2.LaunchCreateVolumeFromAttributes{
+								DisplayName: common.String("test-volume"),
+								SizeInGBs:   common.Int64(75),
+								VpusPerGB:   common.Int64(20),
+							},
+						},
+					},
+				}
+				ms.OCIMachine.Spec.InstanceSourceViaImageDetails = &infrastructurev1beta2.InstanceSourceViaImageConfig{
+					KmsKeyId:            common.String("kms-key-id"),
+					BootVolumeVpusPerGB: common.Int64(32),
+				}
+				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
+					DisplayName:   common.String("name"),
+					CompartmentId: common.String("test"),
+				})).Return(core.ListInstancesResponse{}, nil)
+
+				launchDetails := core.LaunchInstanceDetails{DisplayName: common.String("name"),
+					CapacityReservationId: common.String("cap-id"),
+					DedicatedVmHostId:     common.String("dedicated-host-id"),
+					SourceDetails: core.InstanceSourceViaImageDetails{
+						ImageId:             common.String("image"),
+						BootVolumeSizeInGBs: common.Int64(120),
+						KmsKeyId:            common.String("kms-key-id"),
+						BootVolumeVpusPerGB: common.Int64(32),
+					},
+					CreateVnicDetails: &core.CreateVnicDetails{
+						SubnetId:       common.String("subnet-machine-id"),
+						AssignPublicIp: common.Bool(false),
+						DefinedTags:    map[string]map[string]interface{}{},
+						FreeformTags: map[string]string{
+							ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,
+							ociutil.ClusterResourceIdentifier: "resource_uid",
+						},
+						NsgIds:                 []string{"nsg-machine-id-1", "nsg-machine-id-2"},
+						HostnameLabel:          common.String("hostname-label"),
+						SkipSourceDestCheck:    common.Bool(true),
+						AssignPrivateDnsRecord: common.Bool(true),
+						DisplayName:            common.String("display-name"),
+					},
+					LaunchVolumeAttachments: []core.LaunchAttachVolumeDetails{
+						core.LaunchAttachParavirtualizedVolumeDetails{
+							Device:      common.String("/dev/oci"),
+							IsShareable: common.Bool(true),
+							IsPvEncryptionInTransitEnabled:  common.Bool(false),
 							LaunchCreateVolumeDetails: core.LaunchCreateVolumeFromAttributes{
 								DisplayName: common.String("test-volume"),
 								SizeInGBs:   common.Int64(75),
@@ -1577,20 +1673,22 @@ func TestNLBReconciliationCreation(t *testing.T) {
 						WorkRequestId: common.String("wrid"),
 					})).Return(networkloadbalancer.GetWorkRequestResponse{
 					WorkRequest: networkloadbalancer.WorkRequest{
-						Status: networkloadbalancer.OperationStatusFailed,
+						CompartmentId: common.String("compartment-id"),
+						Status:        networkloadbalancer.OperationStatusFailed,
 					}}, nil)
-
-				wrClient.EXPECT().ListWorkRequestErrors(gomock.Any(), gomock.Eq(workrequests.ListWorkRequestErrorsRequest{
+				nlbClient.EXPECT().ListWorkRequestErrors(gomock.Any(), gomock.Eq(networkloadbalancer.ListWorkRequestErrorsRequest{
 					WorkRequestId: common.String("wrid"),
-				})).
-					Return(workrequests.ListWorkRequestErrorsResponse{
-						Items: []workrequests.WorkRequestError{
+					CompartmentId: common.String("compartment-id"),
+				})).Return(networkloadbalancer.ListWorkRequestErrorsResponse{
+					WorkRequestErrorCollection: networkloadbalancer.WorkRequestErrorCollection{
+						Items: []networkloadbalancer.WorkRequestError{
 							{
-								Code:    common.String("InternalServerError"),
-								Message: common.String("Failed due to Unknown error"),
+								Code:    common.String("OKE-001"),
+								Message: common.String("No more Ip available in CIDR 1.1.1.1/1"),
 							},
 						},
-					}, nil)
+					},
+				}, nil)
 			},
 		},
 	}
@@ -1822,20 +1920,23 @@ func TestNLBReconciliationDeletion(t *testing.T) {
 						WorkRequestId: common.String("wrid"),
 					})).Return(networkloadbalancer.GetWorkRequestResponse{
 					WorkRequest: networkloadbalancer.WorkRequest{
-						Status: networkloadbalancer.OperationStatusFailed,
+						CompartmentId: common.String("compartment-id"),
+						Status:        networkloadbalancer.OperationStatusFailed,
 					}}, nil)
 
-				wrClient.EXPECT().ListWorkRequestErrors(gomock.Any(), gomock.Eq(workrequests.ListWorkRequestErrorsRequest{
+				nlbClient.EXPECT().ListWorkRequestErrors(gomock.Any(), gomock.Eq(networkloadbalancer.ListWorkRequestErrorsRequest{
 					WorkRequestId: common.String("wrid"),
-				})).
-					Return(workrequests.ListWorkRequestErrorsResponse{
-						Items: []workrequests.WorkRequestError{
+					CompartmentId: common.String("compartment-id"),
+				})).Return(networkloadbalancer.ListWorkRequestErrorsResponse{
+					WorkRequestErrorCollection: networkloadbalancer.WorkRequestErrorCollection{
+						Items: []networkloadbalancer.WorkRequestError{
 							{
-								Code:    common.String("InternalServerError"),
+								Code:    common.String("OKE-001"),
 								Message: common.String("Failed due to unknown error"),
 							},
 						},
-					}, nil)
+					},
+				}, nil)
 			},
 		},
 		{
@@ -2171,19 +2272,12 @@ func TestLBReconciliationCreation(t *testing.T) {
 					})).Return(loadbalancer.GetWorkRequestResponse{
 					WorkRequest: loadbalancer.WorkRequest{
 						LifecycleState: loadbalancer.WorkRequestLifecycleStateFailed,
-					}}, nil)
-
-				wrClient.EXPECT().ListWorkRequestErrors(gomock.Any(), gomock.Eq(workrequests.ListWorkRequestErrorsRequest{
-					WorkRequestId: common.String("wrid"),
-				})).
-					Return(workrequests.ListWorkRequestErrorsResponse{
-						Items: []workrequests.WorkRequestError{
+						ErrorDetails: []loadbalancer.WorkRequestError{
 							{
-								Code:    common.String("InternalServerError"),
-								Message: common.String("Failed due to Unknown error"),
+								Message: common.String("Internal server error to create lb"),
 							},
 						},
-					}, nil)
+					}}, nil)
 			},
 		},
 	}
@@ -2464,19 +2558,12 @@ func TestLBReconciliationDeletion(t *testing.T) {
 					})).Return(loadbalancer.GetWorkRequestResponse{
 					WorkRequest: loadbalancer.WorkRequest{
 						LifecycleState: loadbalancer.WorkRequestLifecycleStateFailed,
-					}}, nil)
-
-				wrClient.EXPECT().ListWorkRequestErrors(gomock.Any(), gomock.Eq(workrequests.ListWorkRequestErrorsRequest{
-					WorkRequestId: common.String("wrid"),
-				})).
-					Return(workrequests.ListWorkRequestErrorsResponse{
-						Items: []workrequests.WorkRequestError{
+						ErrorDetails: []loadbalancer.WorkRequestError{
 							{
-								Code:    common.String("InternalServerError"),
-								Message: common.String("Failed due to Unknown error"),
+								Message: common.String("Internal Server error to delete lb"),
 							},
 						},
-					}, nil)
+					}}, nil)
 			},
 		},
 		{
