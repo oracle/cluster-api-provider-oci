@@ -417,10 +417,10 @@ func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.
 		CNIType := machineScope.OCIMachine.Spec.CNIType
 		if CNIType == "OCI_VCN_IP_NATIVE" {
 			machineScope.Info(fmt.Sprintf("CNI Type is: %s", CNIType))
-			if crdExsited, _ := cloudutil.HasNpnCrd(ctx, machineScope); crdExsited != true {
+			if crdExsited, _ := machineScope.HasNpnCrd(ctx); crdExsited != true {
 				return reconcile.Result{RequeueAfter: 60 * time.Second}, nil
 			} else {
-				_, err := cloudutil.GetOrCreateNpn(ctx, machineScope)
+				_, err := machineScope.GetOrCreateNpn(ctx)
 				if err != nil {
 					machineScope.Info(fmt.Sprintf("GetOrCreate NPN CR failed, Requeue Now, Reason: %v", err))
 					return reconcile.Result{RequeueAfter: 120 * time.Second}, nil
@@ -498,7 +498,7 @@ func (r *OCIMachineReconciler) reconcileDelete(ctx context.Context, machineScope
 		CNIType := machineScope.OCIMachine.Spec.CNIType
 		if CNIType == "OCI_VCN_IP_NATIVE" {
 			machineScope.Info(fmt.Sprintf("CNI Type is: %s", CNIType))
-			err := cloudutil.DeleteNpn(ctx, machineScope)
+			err := machineScope.DeleteNpn(ctx)
 			if err != nil {
 				machineScope.Info(fmt.Sprintf("Delete NPN CR failed, reason: %v", apierrors.ReasonForError(err)))
 				return reconcile.Result{RequeueAfter: 60 * time.Second}, nil

@@ -24,7 +24,6 @@ import (
 	"net/http"
 	"os"
 	"reflect"
-	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -38,10 +37,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/clientcmd"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	expclusterv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util"
@@ -506,135 +502,4 @@ type MachineParams struct {
 	Namespace            string                             // the namespace in which machinepool machine has to be created
 	SpecInfraMachines    []infrav2exp.OCIMachinePoolMachine // the spec of actual machines in the pool
 	Logger               *logr.Logger                       // the logger which has to be used
-}
-
-func NewWorkloadClient(ctx context.Context, machineScope *scope.MachineScope) (wlClient client.Client, err error) {
-	u := &unstructured.Unstructured{}
-	u.SetGroupVersionKind(schema.GroupVersionKind{
-		Kind:    "Secret",
-		Version: "v1",
-	})
-	cluster := machineScope.Cluster
-
-	secret_obj := client.ObjectKey{
-		Namespace: cluster.Namespace,
-		Name:      cluster.Spec.InfrastructureRef.Name + "-kubeconfig",
-	}
-	secret := &corev1.Secret{}
-	if err := machineScope.Client.Get(ctx, secret_obj, secret); err != nil {
-		return nil, err
-	}
-	secretData := secret.Data["value"]
-	config, err := clientcmd.RESTConfigFromKubeConfig(secretData)
-	if err != nil {
-		machineScope.Info(fmt.Sprintf("error build config: %s", err))
-		return nil, err
-	}
-
-	wlClient, err = client.New(config, client.Options{})
-
-	return wlClient, err
-}
-
-func DeleteNpn(ctx context.Context, machineScope *scope.MachineScope) error {
-	machineScope.Info("DELETE NPN CR NOW!!!")
-
-	wlClient, err := NewWorkloadClient(ctx, machineScope)
-	if err != nil {
-		machineScope.Info(fmt.Sprintf("Failed to initialize kube client set: %s", err))
-		return err
-	}
-	instance, err := machineScope.GetOrCreateMachine(ctx)
-	if err != nil {
-		machineScope.Info(fmt.Sprintf("Failed to get machine: %s", err))
-		return err
-	}
-	npnCr := &unstructured.Unstructured{}
-	slicedId := strings.Split(*instance.Id, ".")
-	instanceSuffix := slicedId[len(slicedId)-1]
-	npnCr.SetName(instanceSuffix)
-	npnCr.SetGroupVersionKind(schema.GroupVersionKind{
-		Version: npnVersion,
-		Kind:    npnKind,
-	})
-	if err := wlClient.Delete(ctx, npnCr); err != nil {
-		machineScope.Info(fmt.Sprintf("Failed to delete NPN CR: %s", err))
-		return err
-	}
-	return nil
-}
-
-func HasNpnCrd(ctx context.Context, machineScope *scope.MachineScope) (bool, error) {
-	machineScope.Info("Get NPN CRD Now.")
-
-	wlClient, err := NewWorkloadClient(ctx, machineScope)
-	if err != nil {
-		return false, err
-	}
-	npnCrd := &unstructured.Unstructured{}
-	npnCrd.SetGroupVersionKind(schema.GroupVersionKind{
-		Version: apiExtensionVersion,
-		Kind:    "CustomResourceDefinition",
-	})
-
-	err = wlClient.Get(context.Background(), client.ObjectKey{
-		Name: npnCrdName,
-	}, npnCrd)
-	if err != nil {
-		machineScope.Info(fmt.Sprintf("Failed to Get NPN CRD, reason: %v", err))
-		return false, err
-	}
-
-	return true, nil
-
-}
-
-func GetOrCreateNpn(ctx context.Context, machineScope *scope.MachineScope) (*unstructured.Unstructured, error) {
-
-	machineScope.Info("Get Or Create NPN CR NOW.")
-	instance, err := machineScope.GetOrCreateMachine(ctx)
-	if err != nil {
-		machineScope.Info(fmt.Sprintf("Failed to get machine: %s", err))
-		return nil, err
-	}
-	wlClient, err := NewWorkloadClient(ctx, machineScope)
-	if err != nil {
-		return nil, err
-	}
-	npnCr := &unstructured.Unstructured{}
-	slicedId := strings.Split(*instance.Id, ".")
-	instanceSuffix := slicedId[len(slicedId)-1]
-	npnCr.SetGroupVersionKind(schema.GroupVersionKind{
-		Version: npnVersion,
-		Kind:    npnKind,
-	})
-	err = wlClient.Get(ctx, client.ObjectKey{Name: instanceSuffix}, npnCr)
-	// Return NPN CR Object if it existed
-	if err == nil {
-		machineScope.Info(fmt.Sprintf("Sucessfully Get an Existed NPN CR Object: %s", npnCr))
-		return npnCr, nil
-	}
-	maxPodCount := machineScope.OCIMachine.Spec.MaxPodPerNode
-	podSubnetIds := machineScope.OCIMachine.Spec.PodSubnetIds
-	podNsgIds := machineScope.OCIMachine.Spec.PodNSGIds
-	npnCrCreate := &unstructured.Unstructured{}
-	npnCrCreate.Object = map[string]interface{}{
-		"metadata": map[string]interface{}{
-			"name": instanceSuffix,
-		},
-		"spec": map[string]interface{}{
-			"id":                      *instance.Id,
-			"maxPodCount":             maxPodCount,
-			"podSubnetIds":            podSubnetIds,
-			"networkSecurityGroupIds": podNsgIds,
-		},
-	}
-
-	npnCrCreate.SetGroupVersionKind(schema.GroupVersionKind{
-		Version: npnVersion,
-		Kind:    npnKind,
-	})
-	machineScope.Info(fmt.Sprintf("NPN CR to Create is: %v", npnCrCreate))
-	err = wlClient.Create(ctx, npnCrCreate)
-	return npnCrCreate, err
 }
