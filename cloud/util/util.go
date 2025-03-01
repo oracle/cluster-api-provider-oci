@@ -50,10 +50,6 @@ import (
 
 const (
 	instanceMetadataRegionInfoURLV2 = "http://169.254.169.254/opc/v2/instance/regionInfo/regionIdentifier"
-	npnVersion                      = "oci.oraclecloud.com/v1beta1"
-	npnKind                         = "NativePodNetwork"
-	apiExtensionVersion             = "apiextensions.k8s.io/v1"
-	npnCrdName                      = "nativepodnetworks.oci.oraclecloud.com"
 )
 
 var (

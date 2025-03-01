@@ -64,7 +64,7 @@ func (m *MachineScope) NewWorkloadClient(ctx context.Context) (wlClient client.C
 }
 
 func (m *MachineScope) DeleteNpn(ctx context.Context) error {
-	m.Info("DELETE NPN CR NOW!!!")
+	m.Info("DELETE NPN CR NOW.")
 
 	wlClient, err := m.NewWorkloadClient(ctx)
 	if err != nil {

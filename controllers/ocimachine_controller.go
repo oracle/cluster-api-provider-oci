@@ -503,7 +503,7 @@ func (r *OCIMachineReconciler) reconcileDelete(ctx context.Context, machineScope
 				machineScope.Info(fmt.Sprintf("Delete NPN CR failed, reason: %v", apierrors.ReasonForError(err)))
 				return reconcile.Result{RequeueAfter: 60 * time.Second}, nil
 			} else {
-				machineScope.Info(fmt.Sprintf("Successfully Deleted NPN CR for the current node"))
+				machineScope.Info(fmt.Sprintf("Successfully Deleted NPN CR for the current node."))
 			}
 		}
 
