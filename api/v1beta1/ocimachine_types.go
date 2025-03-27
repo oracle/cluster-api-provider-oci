@@ -153,10 +153,6 @@ type OCIMachineSpec struct {
 	// Specifies the maximum number of pods allowed for each node, decided by the shape
 	MaxPodPerNode int `json:"maxPodCount,omitempty"`
 
-	// VCN_IP_NATIVE or FLANNEL_OVERLAY.
-	// Used for the NPN CR Reconciliation feature gate.
-	CNIType string `json:"cniType,omitempty"`
-
 	// Specifies the list of Network Security Groups used for the VCN IP NATIVE CNI type for pod networking.
 	// Set on each NPN CR associated with the OCI Machine.
 	PodNSGIds []string `json:"podNsgIds,omitempty"`

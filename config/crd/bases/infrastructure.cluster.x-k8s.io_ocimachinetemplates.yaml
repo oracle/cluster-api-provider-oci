@@ -147,10 +147,6 @@ spec:
                           You can opt out of all default reservations by specifying an empty string as input for this field.
                           For more information, see Capacity Reservations (https://docs.cloud.oracle.com/iaas/Content/Compute/Tasks/reserve-capacity.htm#default).
                         type: string
-                      cniType:
-                        description: VCN_IP_NATIVE or FLANNEL_OVERLAY. Used for the
-                          NPN CR Reconciliation feature gate.
-                        type: string
                       compartmentId:
                         description: Compartment to launch the instance in.
                         type: string
@@ -1006,10 +1002,6 @@ spec:
                           CapacityReservationId defines the OCID of the compute capacity reservation this instance is launched under.
                           You can opt out of all default reservations by specifying an empty string as input for this field.
                           For more information, see Capacity Reservations (https://docs.cloud.oracle.com/iaas/Content/Compute/Tasks/reserve-capacity.htm#default).
-                        type: string
-                      cniType:
-                        description: VCN_IP_NATIVE or FLANNEL_OVERLAY. Used for the
-                          NPN CR Reconciliation feature gate.
                         type: string
                       compartmentId:
                         description: Compartment to launch the instance in.

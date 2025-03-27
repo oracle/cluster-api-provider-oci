@@ -967,6 +967,9 @@ type NetworkSpec struct {
 	// VCNPeering configuration.
 	// +optional
 	VCNPeering *VCNPeering `json:"vcnPeering,omitempty"`
+
+	// The CNI to be used are OCI_VCN_IP_NATIVE and FLANNEL_OVERLAY
+	CniType CNIOptionEnum `json:"cniType,omitempty"`
 }
 
 // VCNPeering defines the VCN peering details of the workload cluster VCN.

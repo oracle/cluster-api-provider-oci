@@ -141,6 +141,10 @@ spec:
                                 description: LoadBalancer Name.
                                 type: string
                             type: object
+                          cniType:
+                            description: The CNI to be used are OCI_VCN_IP_NATIVE
+                              and FLANNEL_OVERLAY
+                            type: string
                           skipNetworkManagement:
                             description: |-
                               SkipNetworkManagement defines if the networking spec(VCN related) specified by the user needs to be reconciled(actioned-upon)
@@ -1165,6 +1169,10 @@ spec:
                                 description: LoadBalancer Name.
                                 type: string
                             type: object
+                          cniType:
+                            description: The CNI to be used are OCI_VCN_IP_NATIVE
+                              and FLANNEL_OVERLAY
+                            type: string
                           skipNetworkManagement:
                             description: |-
                               SkipNetworkManagement defines if the networking spec(VCN related) specified by the user needs to be reconciled(actioned-upon)
