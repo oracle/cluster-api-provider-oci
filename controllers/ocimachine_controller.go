@@ -414,6 +414,7 @@ func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.
 		conditions.MarkTrue(machineScope.OCIMachine, infrastructurev1beta2.InstanceReadyCondition)
 		machineScope.SetReady()
 		CNIType := machineScope.OCIClusterAccessor.GetNetworkSpec().CniType
+		machineScope.Info(fmt.Sprintf("OCICluster's CNI Type is: %v", CNIType))
 		if CNIType == infrastructurev1beta2.VCNNativeCNI {
 			machineScope.Info(fmt.Sprintf("CNI Type is: %s", CNIType))
 			if crdExsited, _ := machineScope.HasNpnCrd(ctx); crdExsited != true {
