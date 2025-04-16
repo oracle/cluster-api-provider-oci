@@ -63,14 +63,8 @@ func (m *MachineScope) NewWorkloadClient(ctx context.Context) (wlClient client.C
 	return wlClient, err
 }
 
-func (m *MachineScope) DeleteNpn(ctx context.Context) error {
+func (m *MachineScope) DeleteNpn(ctx context.Context, wlClient client.Client) error {
 	m.Info("DELETE NPN CR NOW.")
-
-	wlClient, err := m.NewWorkloadClient(ctx)
-	if err != nil {
-		m.Info(fmt.Sprintf("Failed to initialize kube client set: %s", err))
-		return err
-	}
 	instance, err := m.GetOrCreateMachine(ctx)
 	if err != nil {
 		m.Info(fmt.Sprintf("Failed to get machine: %s", err))
@@ -91,20 +85,16 @@ func (m *MachineScope) DeleteNpn(ctx context.Context) error {
 	return nil
 }
 
-func (m *MachineScope) HasNpnCrd(ctx context.Context) (bool, error) {
+func (m *MachineScope) HasNpnCrd(ctx context.Context, wlClient client.Client) (bool, error) {
 	m.Info("Get NPN CRD Now.")
 
-	wlClient, err := m.NewWorkloadClient(ctx)
-	if err != nil {
-		return false, err
-	}
 	npnCrd := &unstructured.Unstructured{}
 	npnCrd.SetGroupVersionKind(schema.GroupVersionKind{
 		Version: apiExtensionVersion,
 		Kind:    "CustomResourceDefinition",
 	})
 
-	err = wlClient.Get(context.Background(), client.ObjectKey{
+	err := wlClient.Get(context.Background(), client.ObjectKey{
 		Name: npnCrdName,
 	}, npnCrd)
 	if err != nil {
@@ -116,7 +106,7 @@ func (m *MachineScope) HasNpnCrd(ctx context.Context) (bool, error) {
 
 }
 
-func (m *MachineScope) GetOrCreateNpn(ctx context.Context) (*unstructured.Unstructured, error) {
+func (m *MachineScope) GetOrCreateNpn(ctx context.Context, wlClient client.Client) (*unstructured.Unstructured, error) {
 
 	m.Info("Get Or Create NPN CR NOW.")
 	instance, err := m.GetOrCreateMachine(ctx)
@@ -124,10 +114,7 @@ func (m *MachineScope) GetOrCreateNpn(ctx context.Context) (*unstructured.Unstru
 		m.Info(fmt.Sprintf("Failed to get machine: %s", err))
 		return nil, err
 	}
-	wlClient, err := m.NewWorkloadClient(ctx)
-	if err != nil {
-		return nil, err
-	}
+
 	npnCr := &unstructured.Unstructured{}
 	slicedId := strings.Split(*instance.Id, ".")
 	instanceSuffix := slicedId[len(slicedId)-1]

@@ -417,10 +417,15 @@ func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.
 		CNIType := machineScope.OCIMachine.Spec.CNIType
 		if CNIType == "OCI_VCN_IP_NATIVE" {
 			machineScope.Info(fmt.Sprintf("CNI Type is: %s", CNIType))
-			if crdExsited, _ := machineScope.HasNpnCrd(ctx); crdExsited != true {
+			wlClient, err := machineScope.NewWorkloadClient(ctx)
+			if err != nil {
+				machineScope.Info(fmt.Sprintf("Initializing wlClient for npn operations failed, Requeuing, Reason: %v", err))
+				return reconcile.Result{RequeueAfter: 120 * time.Second}, nil
+			}
+			if crdExisted, _ := machineScope.HasNpnCrd(ctx, wlClient); crdExisted != true {
 				return reconcile.Result{RequeueAfter: 60 * time.Second}, nil
 			} else {
-				_, err := machineScope.GetOrCreateNpn(ctx)
+				_, err := machineScope.GetOrCreateNpn(ctx, wlClient)
 				if err != nil {
 					machineScope.Info(fmt.Sprintf("GetOrCreate NPN CR failed, Requeue Now, Reason: %v", err))
 					return reconcile.Result{RequeueAfter: 120 * time.Second}, nil
@@ -498,7 +503,12 @@ func (r *OCIMachineReconciler) reconcileDelete(ctx context.Context, machineScope
 		CNIType := machineScope.OCIMachine.Spec.CNIType
 		if CNIType == "OCI_VCN_IP_NATIVE" {
 			machineScope.Info(fmt.Sprintf("CNI Type is: %s", CNIType))
-			err := machineScope.DeleteNpn(ctx)
+			wlClient, err := machineScope.NewWorkloadClient(ctx)
+			if err != nil {
+				machineScope.Info(fmt.Sprintf("Initializing workload client failed, reason: %v", apierrors.ReasonForError(err)))
+				return reconcile.Result{RequeueAfter: 60 * time.Second}, nil
+			}
+			err = machineScope.DeleteNpn(ctx, wlClient)
 			if err != nil {
 				machineScope.Info(fmt.Sprintf("Delete NPN CR failed, reason: %v", apierrors.ReasonForError(err)))
 				return reconcile.Result{RequeueAfter: 60 * time.Second}, nil
