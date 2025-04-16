@@ -413,9 +413,9 @@ func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.
 			"Instance is in ready state")
 		conditions.MarkTrue(machineScope.OCIMachine, infrastructurev1beta2.InstanceReadyCondition)
 		machineScope.SetReady()
-
-		CNIType := machineScope.OCIMachine.Spec.CNIType
-		if CNIType == "OCI_VCN_IP_NATIVE" {
+		networkSpec := machineScope.OCIClusterAccessor.GetNetworkSpec()
+		CNIType := networkSpec.CniType
+		if CNIType == infrastructurev1beta2.VCNNativeCNI {
 			machineScope.Info(fmt.Sprintf("CNI Type is: %s", CNIType))
 			wlClient, err := machineScope.NewWorkloadClient(ctx)
 			if err != nil {
@@ -499,9 +499,8 @@ func (r *OCIMachineReconciler) reconcileDelete(ctx context.Context, machineScope
 		machineScope.Info("Instance is deleted")
 		r.Recorder.Eventf(machineScope.OCIMachine, corev1.EventTypeNormal,
 			"InstanceTerminated", "Deleted the instance")
-
-		CNIType := machineScope.OCIMachine.Spec.CNIType
-		if CNIType == "OCI_VCN_IP_NATIVE" {
+		CNIType := machineScope.OCIClusterAccessor.GetNetworkSpec().CniType
+		if CNIType == infrastructurev1beta2.VCNNativeCNI {
 			machineScope.Info(fmt.Sprintf("CNI Type is: %s", CNIType))
 			wlClient, err := machineScope.NewWorkloadClient(ctx)
 			if err != nil {

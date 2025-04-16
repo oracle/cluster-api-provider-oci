@@ -1945,6 +1945,7 @@ func autoConvert_v1beta1_NetworkSpec_To_v1beta2_NetworkSpec(in *NetworkSpec, out
 		return err
 	}
 	out.VCNPeering = (*v1beta2.VCNPeering)(unsafe.Pointer(in.VCNPeering))
+	out.CniType = v1beta2.CNIOptionEnum(in.CniType)
 	return nil
 }
 
@@ -1962,6 +1963,7 @@ func autoConvert_v1beta2_NetworkSpec_To_v1beta1_NetworkSpec(in *v1beta2.NetworkS
 		return err
 	}
 	out.VCNPeering = (*VCNPeering)(unsafe.Pointer(in.VCNPeering))
+	out.CniType = CNIOptionEnum(in.CniType)
 	return nil
 }
 
@@ -2445,7 +2447,6 @@ func autoConvert_v1beta1_OCIMachineSpec_To_v1beta2_OCIMachineSpec(in *OCIMachine
 	out.PreserveDataVolumesCreatedAtLaunch = in.PreserveDataVolumesCreatedAtLaunch
 	out.PodSubnetIds = *(*[]string)(unsafe.Pointer(&in.PodSubnetIds))
 	out.MaxPodPerNode = in.MaxPodPerNode
-	out.CNIType = in.CNIType
 	out.PodNSGIds = *(*[]string)(unsafe.Pointer(&in.PodNSGIds))
 	return nil
 }
@@ -2485,7 +2486,6 @@ func autoConvert_v1beta2_OCIMachineSpec_To_v1beta1_OCIMachineSpec(in *v1beta2.OC
 	out.PreserveDataVolumesCreatedAtLaunch = in.PreserveDataVolumesCreatedAtLaunch
 	out.PodSubnetIds = *(*[]string)(unsafe.Pointer(&in.PodSubnetIds))
 	out.MaxPodPerNode = in.MaxPodPerNode
-	out.CNIType = in.CNIType
 	out.PodNSGIds = *(*[]string)(unsafe.Pointer(&in.PodNSGIds))
 	return nil
 }
