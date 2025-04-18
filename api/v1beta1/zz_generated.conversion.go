@@ -2333,6 +2333,10 @@ func autoConvert_v1beta1_OCIMachineSpec_To_v1beta2_OCIMachineSpec(in *OCIMachine
 	// WARNING: in.NSGName requires manual conversion: does not exist in peer-type
 	out.PreserveBootVolume = in.PreserveBootVolume
 	out.PreserveDataVolumesCreatedAtLaunch = in.PreserveDataVolumesCreatedAtLaunch
+	out.PodSubnetIds = *(*[]string)(unsafe.Pointer(&in.PodSubnetIds))
+	out.MaxPodPerNode = in.MaxPodPerNode
+	out.CNIType = in.CNIType
+	out.PodNSGIds = *(*[]string)(unsafe.Pointer(&in.PodNSGIds))
 	return nil
 }
 
@@ -2369,6 +2373,10 @@ func autoConvert_v1beta2_OCIMachineSpec_To_v1beta1_OCIMachineSpec(in *v1beta2.OC
 	out.SubnetName = in.SubnetName
 	out.PreserveBootVolume = in.PreserveBootVolume
 	out.PreserveDataVolumesCreatedAtLaunch = in.PreserveDataVolumesCreatedAtLaunch
+	out.PodSubnetIds = *(*[]string)(unsafe.Pointer(&in.PodSubnetIds))
+	out.MaxPodPerNode = in.MaxPodPerNode
+	out.CNIType = in.CNIType
+	out.PodNSGIds = *(*[]string)(unsafe.Pointer(&in.PodNSGIds))
 	return nil
 }
 

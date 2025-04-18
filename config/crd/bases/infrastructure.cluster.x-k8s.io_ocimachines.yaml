@@ -139,6 +139,10 @@ spec:
                   You can opt out of all default reservations by specifying an empty string as input for this field.
                   For more information, see Capacity Reservations (https://docs.cloud.oracle.com/iaas/Content/Compute/Tasks/reserve-capacity.htm#default).
                 type: string
+              cniType:
+                description: VCN_IP_NATIVE or FLANNEL_OVERLAY. Used for the NPN CR
+                  Reconciliation feature gate.
+                type: string
               compartmentId:
                 description: Compartment to launch the instance in.
                 type: string
@@ -345,6 +349,10 @@ spec:
                       type: string
                   type: object
                 type: array
+              maxPodCount:
+                description: Specifies the maximum number of pods allowed for each
+                  node, decided by the shape
+                type: integer
               metadata:
                 additionalProperties:
                   type: string
@@ -716,6 +724,20 @@ spec:
                       Based on the enum, exactly one of the specific configuration types must be set
                     type: string
                 type: object
+              podNsgIds:
+                description: Specifies the list of Network Security Groups used for
+                  the VCN IP NATIVE CNI type for pod networking. Set on each NPN CR
+                  associated with the OCI Machine.
+                items:
+                  type: string
+                type: array
+              podSubnetIds:
+                description: Specifies the list of pod subnets being used for the
+                  VCN IP NATIVE CNI type for pod networking. Set on each NPN CR associated
+                  with the OCI Machine.
+                items:
+                  type: string
+                type: array
               preemptibleInstanceConfig:
                 description: PreemptibleInstanceConfig Configuration options for preemptible
                   instances.
@@ -1031,6 +1053,10 @@ spec:
                   You can opt out of all default reservations by specifying an empty string as input for this field.
                   For more information, see Capacity Reservations (https://docs.cloud.oracle.com/iaas/Content/Compute/Tasks/reserve-capacity.htm#default).
                 type: string
+              cniType:
+                description: VCN_IP_NATIVE or FLANNEL_OVERLAY. Used for the NPN CR
+                  Reconciliation feature gate.
+                type: string
               compartmentId:
                 description: Compartment to launch the instance in.
                 type: string
@@ -1239,6 +1265,10 @@ spec:
                       type: string
                   type: object
                 type: array
+              maxPodCount:
+                description: Specifies the maximum number of pods allowed for each
+                  node, decided by the shape
+                type: integer
               metadata:
                 additionalProperties:
                   type: string
@@ -1603,6 +1633,20 @@ spec:
                       Based on the enum, exactly one of the specific configuration types must be set
                     type: string
                 type: object
+              podNsgIds:
+                description: Specifies the list of Network Security Groups used for
+                  the VCN IP NATIVE CNI type for pod networking. Set on each NPN CR
+                  associated with the OCI Machine.
+                items:
+                  type: string
+                type: array
+              podSubnetIds:
+                description: Specifies the list of pod subnets being used for the
+                  VCN IP NATIVE CNI type for pod networking. Set on each NPN CR associated
+                  with the OCI Machine.
+                items:
+                  type: string
+                type: array
               preemptibleInstanceConfig:
                 description: PreemptibleInstanceConfig Configuration options for preemptible
                   instances.
