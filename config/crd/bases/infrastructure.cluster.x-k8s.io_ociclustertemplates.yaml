@@ -1063,6 +1063,11 @@ spec:
                               URL to be changed.
                             nullable: true
                             type: string
+                          workrequestClientUrl:
+                            description: WorkrequestClientUrl allows the default work
+                              request SDK client URL to be changed.
+                            nullable: true
+                            type: string
                         type: object
                       compartmentId:
                         description: Compartment to create the cluster network.

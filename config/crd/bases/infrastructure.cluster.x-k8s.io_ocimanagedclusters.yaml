@@ -1145,6 +1145,11 @@ spec:
                       to be changed.
                     nullable: true
                     type: string
+                  workrequestClientUrl:
+                    description: WorkrequestClientUrl allows the default work request
+                      SDK client URL to be changed.
+                    nullable: true
+                    type: string
                 type: object
               identityRef:
                 description: IdentityRef is a reference to an identity(principal)
