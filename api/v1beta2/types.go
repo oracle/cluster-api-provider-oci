@@ -955,6 +955,49 @@ type LoadBalancer struct {
 	// Type of Load Balancer: NLB (default) or LBaaS.
 	// +optional
 	LoadBalancerType LoadBalancerType `json:"loadBalancerType,omitempty"`
+
+	// The NLB Spec
+	// +optional
+	NLBSpec NLBSpec `json:"nlbSpec,omitempty"`
+}
+
+// NLBSpec specifies the NLB spec.
+type NLBSpec struct {
+	// BackendSetDetails specifies the configuration of a network load balancer backend set.
+	// +optional
+	BackendSetDetails BackendSetDetails `json:"backendSetDetails,omitempty"`
+}
+
+// BackendSetDetails specifies the configuration of a network load balancer backend set.
+type BackendSetDetails struct {
+	// If this parameter is enabled, then the network load balancer preserves the source IP of the packet when it is forwarded to backends.
+	// Backends see the original source IP. If the isPreserveSourceDestination parameter is enabled for the network load balancer resource, then this parameter cannot be disabled.
+	// The value is false by default.
+	// +optional
+	IsPreserveSource *bool `json:"isPreserveSource,omitempty"`
+
+	// If enabled, the network load balancer will continue to distribute traffic in the configured distribution in the event all backends are unhealthy.
+	// The value is false by default.
+	// +optional
+	IsFailOpen *bool `json:"isFailOpen,omitempty"`
+
+	// If enabled existing connections will be forwarded to an alternative healthy backend as soon as current backend becomes unhealthy.
+	// +optional
+	IsInstantFailoverEnabled *bool `json:"isInstantFailoverEnabled,omitempty"`
+
+	// If enabled existing connections will be forwarded to an alternative healthy backend as soon as current backend becomes unhealthy.
+	// +optional
+	HealthChecker HealthChecker `json:"healthChecker,omitempty"`
+}
+
+// HealthChecker The health check policy configuration.
+// For more information, see Editing Health Check Policies (https://docs.cloud.oracle.com/Content/NetworkLoadBalancer/HealthCheckPolicies/health-check-policy-management.htm).
+type HealthChecker struct {
+
+	// The path against which to run the health check.
+	// Example: `/healthcheck`
+	// Default value is `/healthz`
+	UrlPath *string `json:"urlPath,omitempty"`
 }
 
 // NetworkSpec specifies what the OCI networking resources should look like.
