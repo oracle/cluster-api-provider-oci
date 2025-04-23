@@ -145,6 +145,7 @@ func (m *MachineScope) GetOrCreateNpn(ctx context.Context) (*unstructured.Unstru
 	podSubnetIds := m.OCIMachine.Spec.PodSubnetIds
 	podNsgIds := m.OCIMachine.Spec.PodNSGIds
 	npnCrCreate := &unstructured.Unstructured{}
+	ipFamilies := []string{"IPv4"}
 	npnCrCreate.Object = map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"name": instanceSuffix,
@@ -154,6 +155,7 @@ func (m *MachineScope) GetOrCreateNpn(ctx context.Context) (*unstructured.Unstru
 			"maxPodCount":             maxPodCount,
 			"podSubnetIds":            podSubnetIds,
 			"networkSecurityGroupIds": podNsgIds,
+			"ipFamilies":              ipFamilies,
 		},
 	}
 
