@@ -37,6 +37,9 @@ type NetworkDetails struct {
 	// SubnetId defines the ID of the subnet to use. This parameter takes priority over SubnetName.
 	SubnetId *string `json:"subnetId,omitempty"`
 
+	// IPv6 defines if the instance should have an IPv6
+	AssignIpv6Ip bool `json:"assignIpv6Ip,omitempty"`
+
 	// AssignPublicIp defines whether the instance should have a public IP address
 	AssignPublicIp bool `json:"assignPublicIp,omitempty"`
 
@@ -70,6 +73,9 @@ type NetworkDetails struct {
 type VnicAttachment struct {
 	// VnicAttachmentId defines the ID of the VnicAttachment
 	VnicAttachmentId *string `json:"vnicAttachmentId,omitempty"`
+
+	// IPv6 defines if the instance should have an IPv6
+	AssignIpv6Ip bool `json:"assignIpv6Ip,omitempty"`
 
 	// AssignPublicIp defines whether the vnic should have a public IP address
 	// +optional
@@ -866,6 +872,8 @@ type Subnet struct {
 	// within this subnet (for example, `bminstance1.subnet123.vcn1.oraclevcn.com`).
 	// +optional
 	DnsLabel *string `json:"dnsLabel,omitempty"`
+
+	Ipv6CidrBlockHextet *string `json:"ipv6CidrBlockHextet,omitempty"`
 }
 
 // NSG defines configuration for a Network Security Group.
@@ -942,6 +950,14 @@ type VCN struct {
 	// within this subnet (for example, `bminstance1.subnet123.vcn1.oraclevcn.com`).
 	// +optional
 	DnsLabel *string `json:"dnsLabel,omitempty"`
+
+	// Configuration to allow OCI to assign IPv6 Prefix.
+	// +optional
+	IsOracleGuaAllocationEnabled *bool `json:"isOracleGuaAllocationEnabled,omitempty"`
+
+	// Configuration to enable IPv6.
+	// +optional
+	IsIpv6Enabled *bool `json:"isIpv6Enabled,omitempty"`
 }
 
 // LoadBalancer Configuration
@@ -1097,7 +1113,7 @@ type RemotePeeringConnection struct {
 type VolumeType string
 
 const (
-	IscsiType VolumeType = "iscsi"
+	IscsiType           VolumeType = "iscsi"
 	ParavirtualizedType VolumeType = "paravirtualized"
 )
 
@@ -1115,7 +1131,7 @@ type LaunchVolumeAttachment struct {
 	Type VolumeType `json:"volumeType,omitempty"`
 
 	// The details of iscsi volume attachment.
-	IscsiAttachment LaunchIscsiVolumeAttachment `json:"launchIscsiVolumeAttachment,omitempty"`
+	IscsiAttachment           LaunchIscsiVolumeAttachment           `json:"launchIscsiVolumeAttachment,omitempty"`
 	ParavirtualizedAttachment LaunchParavirtualizedVolumeAttachment `json:"launchParavirtualizedVolumeAttachment,omitempty"`
 }
 
@@ -1177,7 +1193,7 @@ type LaunchParavirtualizedVolumeAttachment struct {
 
 	// LaunchCreateVolumeFromAttributes The details of the volume to create for CreateVolume operation.
 	LaunchCreateVolumeFromAttributes LaunchCreateVolumeFromAttributes `json:"launchCreateVolumeFromAttributes,omitempty"`
-	
+
 	// Refer the top-level definition of isPvEncryptionInTransitEnabled.
 	// The default value is False.
 	IsPvEncryptionInTransitEnabled *bool `json:"isPvEncryptionInTransitEnabled,omitempty"`

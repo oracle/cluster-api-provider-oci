@@ -102,6 +102,16 @@ spec:
       metadata:
         ssh_authorized_keys: "${OCI_SSH_KEY}"
       isPvEncryptionInTransitEnabled: ${OCI_NODE_PV_TRANSIT_ENCRYPTION=true}
+      launchVolumeAttachments:
+        - volumeType: "paravirtualized"
+          launchParavirtualizedVolumeAttachment:
+            isReadOnly: true
+            isShareable: true
+            isPvEncryptionInTransitEnabled: true
+            launchCreateVolumeFromAttributes:
+              displayName: "paravirt-volume"
+              sizeInGBs: 75
+              vpusPerGB: 20
 ---
 apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
 kind: KubeadmConfigTemplate

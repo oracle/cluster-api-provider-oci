@@ -151,6 +151,18 @@ func (s *ClusterScope) CreateRouteTable(ctx context.Context, routeTableType stri
 				Description:     common.String("traffic to/from internet"),
 			},
 		}
+		resp, err := s.VCNClient.GetVcn(ctx, core.GetVcnRequest{VcnId: s.getVcnId()})
+		if err != nil {
+			panic(err)
+		}
+		if resp.Vcn.Ipv6CidrBlocks != nil {
+			routeRules = append(routeRules, core.RouteRule{
+				DestinationType: core.RouteRuleDestinationTypeCidrBlock,
+				Destination:     common.String("::/0"),
+				NetworkEntityId: s.OCIClusterAccessor.GetNetworkSpec().Vcn.InternetGateway.Id,
+				Description:     common.String("ipv6 traffic to/from internet"),
+			})
+		}
 		routeTableName = PublicRouteTableName
 	}
 	vcnId := s.getVcnId()

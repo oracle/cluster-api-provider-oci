@@ -18,6 +18,9 @@ package scope
 
 import (
 	"context"
+	"fmt"
+	"net"
+	"strings"
 
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
@@ -101,6 +104,35 @@ func (s *ClusterScope) CreateSubnet(ctx context.Context, spec infrastructurev1be
 	} else {
 		routeTable = s.getRouteTableId(infrastructurev1beta2.Public)
 	}
+
+	resp, err := s.VCNClient.GetVcn(ctx, core.GetVcnRequest{VcnId: s.getVcnId()})
+
+	var ipv6subnetCIDR_Ptr *string
+
+	if resp.Vcn.Ipv6CidrBlocks != nil {
+		vcnCIDR := resp.Vcn.Ipv6CidrBlocks[0]
+
+		ip, _, err := net.ParseCIDR(vcnCIDR)
+		if err != nil {
+			panic(err)
+		}
+
+		// Split into hextets
+		hextets := strings.Split(ip.String(), ":")
+
+		// Modify the 4th hextet (index 3)
+		originalHextet := hextets[3]
+		if len(originalHextet) < 4 {
+			originalHextet = fmt.Sprintf("%04s", originalHextet) // pad with leading zeros if needed
+		}
+		newHextet := originalHextet[:2] + *spec.Ipv6CidrBlockHextet
+		hextets[3] = newHextet
+
+		// Reconstruct the IPv6 address with a /64 CIDR
+		ipv6subnetCIDR := strings.Join(hextets, ":") + "/64"
+		ipv6subnetCIDR_Ptr = &ipv6subnetCIDR
+	}
+
 	createSubnetDetails := core.CreateSubnetDetails{
 		CompartmentId:           common.String(s.GetCompartmentId()),
 		CidrBlock:               common.String(spec.CIDR),
@@ -112,7 +144,9 @@ func (s *ClusterScope) CreateSubnet(ctx context.Context, spec infrastructurev1be
 		FreeformTags:            s.GetFreeFormTags(),
 		DefinedTags:             s.GetDefinedTags(),
 		DnsLabel:                spec.DnsLabel,
+		Ipv6CidrBlock:           ipv6subnetCIDR_Ptr,
 	}
+
 	if spec.SecurityList != nil {
 		createSubnetDetails.SecurityListIds = []string{*spec.SecurityList.ID}
 	}
