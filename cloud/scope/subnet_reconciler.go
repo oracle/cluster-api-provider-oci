@@ -123,7 +123,7 @@ func (s *ClusterScope) CreateSubnet(ctx context.Context, spec infrastructurev1be
 		hextets := strings.Split(ip.String(), ":")
 
 		// Modify the 4th hextet (index 3) of vcn CIDR to reflect the subnet CIDR with Ipv6CidrBlockHextet value in it
-		if len(hextets) == 8 {
+		if len(hextets) >= 4 {
 			originalHextet := hextets[3]
 			if len(originalHextet) < 4 {
 				originalHextet = fmt.Sprintf("%04s", originalHextet)
