@@ -200,7 +200,7 @@ var _ = Describe("Workload cluster creation", func() {
 		validateOLImage(namespace.Name, clusterName)
 	})
 
-	It("Oracle Linux with IPv6 - With 1 control-plane nodes and 1 worker nodes [PRBlocking]", func() {
+	It("Machine with IPv6 - With 1 control-plane nodes and 1 worker nodes [PRBlocking]", func() {
 		clusterName = getClusterName(clusterNamePrefix, "machine-with-ipv6")
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
@@ -220,10 +220,9 @@ var _ = Describe("Workload cluster creation", func() {
 			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),
 			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
 		}, result)
-		validateOLImage(namespace.Name, clusterName)
 	})
 
-	It("Oracle Linux with paravirtualized - With 1 control-plane nodes and 1 worker nodes [PRBlocking]", func() {
+	It("Machine with pravirtualized - With 1 control-plane nodes and 1 worker nodes [PRBlocking]", func() {
 		clusterName = getClusterName(clusterNamePrefix, "with-paravirt-bv")
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
@@ -243,7 +242,6 @@ var _ = Describe("Workload cluster creation", func() {
 			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),
 			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
 		}, result)
-		validateOLImage(namespace.Name, clusterName)
 	})
 
 	It("Windows - With 1 Linux control-plane nodes and with 1 Windows worker nodes using Calico CNI", func() {
