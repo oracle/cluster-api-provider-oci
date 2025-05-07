@@ -36,7 +36,6 @@ spec:
   networkSpec:
     vcn:
       isIpv6Enabled: true
-      isOracleGuaAllocationEnabled: true
       subnets:
         - ipv6CidrBlockHextet: "01"
           name: control-plane-endpoint

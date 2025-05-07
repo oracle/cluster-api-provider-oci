@@ -169,9 +169,6 @@ spec:
                       isIpv6Enabled:
                         description: isIpv6Enabled enables the possibility to assign IPv6 to cluster nodes.
                         type: boolean
-                      isOracleGuaAllocationEnabled:
-                        description: isOracleGuaAllocationEnabled enables OCI to assign a /56 prefix.
-                        type: boolean
                       cidr:
                         description: VCN CIDR. Deprecated, please use NetworkDetails.cidrs
                         type: string
@@ -1393,9 +1390,6 @@ spec:
                     properties:
                       isIpv6Enabled:
                         description: isIpv6Enabled enables the possibility to assign IPv6 to cluster nodes.
-                        type: boolean
-                      isOracleGuaAllocationEnabled:
-                        description: isOracleGuaAllocationEnabled enables OCI to assign a /56 prefix.
                         type: boolean
                       cidr:
                         description: VCN CIDR. Deprecated, please use NetworkDetails.cidrs
