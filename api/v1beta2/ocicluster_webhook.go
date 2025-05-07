@@ -63,6 +63,26 @@ func (c *OCICluster) ValidateCreate() (admission.Warnings, error) {
 	clusterlogger.Info("validate update cluster", "name", c.Name)
 
 	var allErrs field.ErrorList
+	var ipv6hextets []*string
+	var hextatassigned bool
+
+	ipv6hextets = append(ipv6hextets, c.GetControlPlaneEndpointSubnet().Ipv6CidrBlockHextet, c.GetControlPlaneMachineSubnet().Ipv6CidrBlockHextet, c.GetServiceLoadBalancerSubnet().Ipv6CidrBlockHextet, c.GetNodeSubnet()[0].Ipv6CidrBlockHextet)
+
+	for _, hextet := range ipv6hextets {
+		if hextet != nil {
+			hextatassigned = true
+			break
+		}
+	}
+
+	if hextatassigned {
+		if c.Spec.NetworkSpec.Vcn.IsIpv6Enabled == nil {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "NetworkSpec.Vcn.IsIpv6Enabled"), c.Spec.NetworkSpec.Vcn.IsIpv6Enabled, "field needs to be true and not nil"))
+		}
+		if c.Spec.NetworkSpec.Vcn.IsIpv6Enabled == common.Bool(false) {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "NetworkSpec.Vcn.IsIpv6Enabled"), c.Spec.NetworkSpec.Vcn.IsIpv6Enabled, "field needs to be true"))
+		}
+	}
 
 	allErrs = append(allErrs, c.validate(nil)...)
 
