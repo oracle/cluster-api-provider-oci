@@ -109,28 +109,32 @@ func (s *ClusterScope) CreateSubnet(ctx context.Context, spec infrastructurev1be
 
 	var ipv6subnetCIDR_Ptr *string
 
+	// Constructing IPv6 Subnet CIDR
 	if resp.Vcn.Ipv6CidrBlocks != nil {
+
+		// VCNs can have multiple IPv6 CIDR Blocks, and the CIDR block with IPv6 GUA Allocated by Oracle is the first (index 0) in the list
 		vcnCIDR := resp.Vcn.Ipv6CidrBlocks[0]
 
+		// Split CIDR block into hextets
 		ip, _, err := net.ParseCIDR(vcnCIDR)
 		if err != nil {
 			panic(err)
 		}
-
-		// Split into hextets
 		hextets := strings.Split(ip.String(), ":")
 
-		// Modify the 4th hextet (index 3)
-		originalHextet := hextets[3]
-		if len(originalHextet) < 4 {
-			originalHextet = fmt.Sprintf("%04s", originalHextet) // pad with leading zeros if needed
-		}
-		newHextet := originalHextet[:2] + *spec.Ipv6CidrBlockHextet
-		hextets[3] = newHextet
+		// Modify the 4th hextet (index 3) of vcn CIDR to reflect the subnet CIDR with Ipv6CidrBlockHextet value in it
+		if len(hextets) == 8 {
+			originalHextet := hextets[3]
+			if len(originalHextet) < 4 {
+				originalHextet = fmt.Sprintf("%04s", originalHextet)
+			}
+			newHextet := originalHextet[:2] + *spec.Ipv6CidrBlockHextet
+			hextets[3] = newHextet
 
-		// Reconstruct the IPv6 address with a /64 CIDR
-		ipv6subnetCIDR := strings.Join(hextets, ":") + "/64"
-		ipv6subnetCIDR_Ptr = &ipv6subnetCIDR
+			// Reconstruct the IPv6 address with a /64 CIDR for the subnet
+			ipv6subnetCIDR := strings.Join(hextets, ":") + "/64"
+			ipv6subnetCIDR_Ptr = &ipv6subnetCIDR
+		}
 	}
 
 	createSubnetDetails := core.CreateSubnetDetails{

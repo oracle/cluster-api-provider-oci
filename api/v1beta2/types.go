@@ -76,10 +76,6 @@ type VnicAttachment struct {
 	// VnicAttachmentId defines the ID of the VnicAttachment
 	VnicAttachmentId *string `json:"vnicAttachmentId,omitempty"`
 
-	// AssignIPv6 defines whether the vnic should have a IPv6 address
-	// +optional
-	AssignIpv6Ip bool `json:"assignIpv6Ip,omitempty"`
-
 	// AssignPublicIp defines whether the vnic should have a public IP address
 	// +optional
 	AssignPublicIp bool `json:"assignPublicIp,omitempty"`
@@ -951,7 +947,7 @@ type VCN struct {
 	// +optional
 	DnsLabel *string `json:"dnsLabel,omitempty"`
 
-	// Configuration to allow OCI to assign IPv6 Prefix.
+	// Configuration to allow OCI to assign IPv6 Prefix. When true will use a /56 IPv6 global unicast address (GUA) prefix allocated by Oracle
 	// +optional
 	IsOracleGuaAllocationEnabled *bool `json:"isOracleGuaAllocationEnabled,omitempty"`
 

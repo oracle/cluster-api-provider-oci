@@ -74,9 +74,6 @@ type VnicAttachment struct {
 	// VnicAttachmentId defines the ID of the VnicAttachment
 	VnicAttachmentId *string `json:"vnicAttachmentId,omitempty"`
 
-	// IPv6 defines if the instance should have an IPv6
-	AssignIpv6Ip bool `json:"assignIpv6Ip,omitempty"`
-
 	// AssignPublicIp defines whether the vnic should have a public IP address
 	// +optional
 	AssignPublicIp bool `json:"assignPublicIp,omitempty"`
@@ -873,6 +870,11 @@ type Subnet struct {
 	// +optional
 	DnsLabel *string `json:"dnsLabel,omitempty"`
 
+	// Use this to enable IPv6 hextet for this subnet. The VCN must be enabled for IPv6.
+	// You can't change this subnet characteristic later. All subnets are /64 in size. The subnet
+	// portion of the IPv6 address is the fourth hextet from the left (1111 in the following example).
+	// Example: `2001:0db8:0123:1111::/64`
+	// +optional
 	Ipv6CidrBlockHextet *string `json:"ipv6CidrBlockHextet,omitempty"`
 }
 
@@ -951,7 +953,7 @@ type VCN struct {
 	// +optional
 	DnsLabel *string `json:"dnsLabel,omitempty"`
 
-	// Configuration to allow OCI to assign IPv6 Prefix.
+	// Configuration to allow OCI to assign IPv6 Prefix. When true will use a /56 IPv6 global unicast address (GUA) prefix allocated by Oracle
 	// +optional
 	IsOracleGuaAllocationEnabled *bool `json:"isOracleGuaAllocationEnabled,omitempty"`
 
