@@ -72,7 +72,7 @@ spec:
         assignIpv6Ip: true
 ```
 
-- [IPv6 Example Template](../../../templates/cluster-template-with-ipv6.yaml)
+- [IPv6 Example Template](https://github.com/oracle/cluster-api-provider-oci/blob/main/templates/cluster-template-with-ipv6.yaml)
 
 
 **Note:**
