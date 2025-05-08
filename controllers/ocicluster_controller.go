@@ -29,6 +29,7 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -174,6 +175,16 @@ func (r *OCIClusterReconciler) reconcileComponent(ctx context.Context, cluster *
 	return nil
 }
 
+// SkipApiserverManagement is a hack to check for the annotation "cluster.x-k8s.io/skip-apiserver-management"
+func skipApiserverManagement(o metav1.Object) bool {
+	annotations := o.GetAnnotations()
+	if annotations == nil {
+		return false
+	}
+	_, ok := annotations["cluster.x-k8s.io/skip-apiserver-lb-management"]
+	return ok
+}
+
 func (r *OCIClusterReconciler) reconcile(ctx context.Context, logger logr.Logger, clusterScope scope.ClusterScopeClient, cluster *infrastructurev1beta2.OCICluster) (ctrl.Result, error) {
 	// If the OCICluster doesn't have our finalizer, add it.
 	controllerutil.AddFinalizer(cluster, infrastructurev1beta2.ClusterFinalizer)
@@ -245,18 +256,22 @@ func (r *OCIClusterReconciler) reconcile(ctx context.Context, logger logr.Logger
 		return ctrl.Result{}, err
 	}
 
-	// Reconcile the API Server LoadBalancer based on the specified LoadBalancerType.
-	loadBalancerType := cluster.Spec.NetworkSpec.APIServerLB.LoadBalancerType
-	if loadBalancerType == infrastructurev1beta2.LoadBalancerTypeLB {
-		if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileApiServerLB, "Api Server Loadbalancer",
-			infrastructurev1beta2.APIServerLoadBalancerFailedReason, infrastructurev1beta2.ApiServerLoadBalancerEventReady); err != nil {
-			return ctrl.Result{}, err
+	if !skipApiserverManagement(cluster) {
+		// Reconcile the API Server LoadBalancer based on the specified LoadBalancerType.
+		loadBalancerType := cluster.Spec.NetworkSpec.APIServerLB.LoadBalancerType
+		if loadBalancerType == infrastructurev1beta2.LoadBalancerTypeLB {
+			if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileApiServerLB, "Api Server Loadbalancer",
+				infrastructurev1beta2.APIServerLoadBalancerFailedReason, infrastructurev1beta2.ApiServerLoadBalancerEventReady); err != nil {
+				return ctrl.Result{}, err
+			}
+		} else {
+			if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileApiServerNLB, "Api Server Network Loadbalancer",
+				infrastructurev1beta2.APIServerLoadBalancerFailedReason, infrastructurev1beta2.ApiServerLoadBalancerEventReady); err != nil {
+				return ctrl.Result{}, err
+			}
 		}
 	} else {
-		if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileApiServerNLB, "Api Server Network Loadbalancer",
-			infrastructurev1beta2.APIServerLoadBalancerFailedReason, infrastructurev1beta2.ApiServerLoadBalancerEventReady); err != nil {
-			return ctrl.Result{}, err
-		}
+		logger.Info("ApiServer Loadbalancer Reconciliation is skipped")
 	}
 
 	conditions.MarkTrue(cluster, infrastructurev1beta2.ClusterReadyCondition)
@@ -338,20 +353,24 @@ func (r *OCIClusterReconciler) reconcileDelete(ctx context.Context, logger logr.
 	// Declare the err variable before the if-else block
 	var err error
 
-	// Delete API Server LoadBalancer based on the specified LoadBalancerType
-	// If the type is LB, it calls DeleteApiServerLbsLB(),
-	// If no specific type is provided, it defaults to calling DeleteApiServerLB().
-	loadBalancerType := cluster.Spec.NetworkSpec.APIServerLB.LoadBalancerType
-	if loadBalancerType == infrastructurev1beta2.LoadBalancerTypeLB {
-		err = clusterScope.DeleteApiServerLB(ctx)
-	} else {
-		err = clusterScope.DeleteApiServerNLB(ctx)
-	}
+	if !skipApiserverManagement(cluster) {
+		// Delete API Server LoadBalancer based on the specified LoadBalancerType
+		// If the type is LB, it calls DeleteApiServerLbsLB(),
+		// If no specific type is provided, it defaults to calling DeleteApiServerLB().
+		loadBalancerType := cluster.Spec.NetworkSpec.APIServerLB.LoadBalancerType
+		if loadBalancerType == infrastructurev1beta2.LoadBalancerTypeLB {
+			err = clusterScope.DeleteApiServerLB(ctx)
+		} else {
+			err = clusterScope.DeleteApiServerNLB(ctx)
+		}
 
-	if err != nil {
-		r.Recorder.Event(cluster, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to delete Api Server Loadbalancer").Error())
-		conditions.MarkFalse(cluster, infrastructurev1beta2.ClusterReadyCondition, infrastructurev1beta2.APIServerLoadBalancerFailedReason, clusterv1.ConditionSeverityError, "")
-		return ctrl.Result{}, errors.Wrapf(err, "failed to delete apiserver LB for OCICluster %s/%s", cluster.Namespace, cluster.Name)
+		if err != nil {
+			r.Recorder.Event(cluster, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to delete Api Server Loadbalancer").Error())
+			conditions.MarkFalse(cluster, infrastructurev1beta2.ClusterReadyCondition, infrastructurev1beta2.APIServerLoadBalancerFailedReason, clusterv1.ConditionSeverityError, "")
+			return ctrl.Result{}, errors.Wrapf(err, "failed to delete apiserver LB for OCICluster %s/%s", cluster.Namespace, cluster.Name)
+		}
+	} else {
+		logger.Info("ApiServer LB Reconciliation is skipped, the ApiServer Loadbalancer will not be deleted")
 	}
 
 	// This below if condition specifies if the network related infrastructure needs to be reconciled. Any new
