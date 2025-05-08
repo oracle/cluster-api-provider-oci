@@ -131,8 +131,10 @@ func (s *ClusterScope) CreateVCN(ctx context.Context, spec infrastructurev1beta2
 		IsIpv6Enabled: spec.IsIpv6Enabled,
 	}
 
-	if *spec.IsIpv6Enabled {
-		vcnDetails.IsOracleGuaAllocationEnabled = common.Bool(true)
+	if spec.IsIpv6Enabled != nil {
+		if spec.IsIpv6Enabled == common.Bool(true) {
+			vcnDetails.IsOracleGuaAllocationEnabled = common.Bool(true)
+		}
 	}
 
 	vcnResponse, err := s.VCNClient.CreateVcn(ctx, core.CreateVcnRequest{
