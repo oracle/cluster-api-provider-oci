@@ -1,4 +1,4 @@
-# IPv6 GUA Allocated by Oracle Guide
+# IPv6 Global Unicast Address (GUA) Allocated by Oracle Guide
 
 This section contains information about the IPv6 aspects of Cluster API Provider OCI.
 
@@ -72,7 +72,11 @@ spec:
         assignIpv6Ip: true
 ```
 
+- [IPv6 Example Template](../../../templates/cluster-template-with-ipv6.yaml)
+
 
 **Note:**
-- **VCNs, subnets and VMs can be asigned with IPv6 just at creation step. After creation they can be updated with IPv6 just from UI console**
+- **VCNs, subnets and VMs can be asigned with IPv6 just at creation step. After creation they can be updated with IPv6 just from UI console.**
 - **You cannot create a VM with IPv6 in a subnet/vcn without IPv6 enabled capabilities.**
+- **Once VCNs, subnets are enabled with IPv6 cannot unassign their IPv6 CIDRs.**
+- **CAPOCI don't support BYOIP IPv6 prefix at the moment.**
