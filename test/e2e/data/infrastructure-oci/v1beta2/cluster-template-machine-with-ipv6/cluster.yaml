@@ -1,0 +1,39 @@
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: OCICluster
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: "${CLUSTER_NAME}"
+  name: "${CLUSTER_NAME}"
+spec:
+  compartmentId: "${OCI_COMPARTMENT_ID}"
+  networkSpec:
+    vcn:
+      isIpv6Enabled: true
+      subnets:
+        - ipv6CidrBlockHextet: "01"
+          name: control-plane-endpoint
+          role: control-plane-endpoint
+          type: public
+        - ipv6CidrBlockHextet: "02"
+          name: control-plane
+          role: control-plane
+          type: private
+        - ipv6CidrBlockHextet: "03"
+          name: service-lb
+          role: service-lb
+          type: public
+        - ipv6CidrBlockHextet: "04"
+          name: worker
+          role: worker
+          type: private
+---
+kind: OCIMachineTemplate
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+metadata:
+  name: "${CLUSTER_NAME}-control-plane"
+spec:
+  template:
+    spec:
+      networkDetails:
+        assignIpv6Ip: true

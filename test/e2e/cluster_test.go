@@ -200,6 +200,50 @@ var _ = Describe("Workload cluster creation", func() {
 		validateOLImage(namespace.Name, clusterName)
 	})
 
+	It("Machine with IPv6 - With 1 control-plane nodes and 1 worker nodes [PRBlocking]", func() {
+		clusterName = getClusterName(clusterNamePrefix, "machine-with-ipv6")
+		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
+			ClusterProxy: bootstrapClusterProxy,
+			ConfigCluster: clusterctl.ConfigClusterInput{
+				LogFolder:                filepath.Join(artifactFolder, "clusters", bootstrapClusterProxy.GetName()),
+				ClusterctlConfigPath:     clusterctlConfigPath,
+				KubeconfigPath:           bootstrapClusterProxy.GetKubeconfigPath(),
+				InfrastructureProvider:   clusterctl.DefaultInfrastructureProvider,
+				Flavor:                   "machine-with-ipv6",
+				Namespace:                namespace.Name,
+				ClusterName:              clusterName,
+				KubernetesVersion:        e2eConfig.GetVariable(capi_e2e.KubernetesVersion),
+				ControlPlaneMachineCount: pointer.Int64Ptr(1),
+				WorkerMachineCount:       pointer.Int64Ptr(1),
+			},
+			WaitForClusterIntervals:      e2eConfig.GetIntervals(specName, "wait-cluster"),
+			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),
+			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
+		}, result)
+	})
+
+	It("Machine with pravirtualized - With 1 control-plane nodes and 1 worker nodes [PRBlocking]", func() {
+		clusterName = getClusterName(clusterNamePrefix, "with-paravirt-bv")
+		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
+			ClusterProxy: bootstrapClusterProxy,
+			ConfigCluster: clusterctl.ConfigClusterInput{
+				LogFolder:                filepath.Join(artifactFolder, "clusters", bootstrapClusterProxy.GetName()),
+				ClusterctlConfigPath:     clusterctlConfigPath,
+				KubeconfigPath:           bootstrapClusterProxy.GetKubeconfigPath(),
+				InfrastructureProvider:   clusterctl.DefaultInfrastructureProvider,
+				Flavor:                   "with-paravirt-bv",
+				Namespace:                namespace.Name,
+				ClusterName:              clusterName,
+				KubernetesVersion:        e2eConfig.GetVariable(capi_e2e.KubernetesVersion),
+				ControlPlaneMachineCount: pointer.Int64Ptr(1),
+				WorkerMachineCount:       pointer.Int64Ptr(1),
+			},
+			WaitForClusterIntervals:      e2eConfig.GetIntervals(specName, "wait-cluster"),
+			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),
+			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
+		}, result)
+	})
+
 	It("Windows - With 1 Linux control-plane nodes and with 1 Windows worker nodes using Calico CNI", func() {
 		clusterName = getClusterName(clusterNamePrefix, "windows-calico")
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{

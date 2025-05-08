@@ -34,6 +34,7 @@
   - [Default Network Infrastructure](./networking/infrastructure.md)
     - [Using Calico](./networking/calico.md)
     - [Using Antrea](./networking/antrea.md)
+    - [Using IPv6](./networking/ipv6.md)
   - [Custom Networking](./networking/custom-networking.md)
   - [Private Cluster](./networking/private-cluster.md)
 - [Managed Clusters (OKE)](./managed/managedcluster.md)

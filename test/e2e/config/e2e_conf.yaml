@@ -77,6 +77,8 @@ providers:
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-managed-cluster-identity.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-cluster-identity.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-windows-calico.yaml"
+          - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-machine-with-ipv6.yaml"
+          - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-with-paravirt-bv.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/metadata.yaml"
 
 variables:

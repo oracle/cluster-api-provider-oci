@@ -34,23 +34,8 @@ _artifacts/
 config/default/manager_image_patch.yaml-e
 config/default/manager_pull_policy.yaml-e
 test/e2e/config/e2e_conf-envsubst.yaml
-test/e2e/data/infrastructure-oci/v1beta1/cluster-template-antrea.yaml
-test/e2e/data/infrastructure-oci/v1beta1/cluster-template-ccm-testing.yaml
-test/e2e/data/infrastructure-oci/v1beta1/cluster-template-kcp-remediation.yaml
-test/e2e/data/infrastructure-oci/v1beta1/cluster-template-md-remediation.yaml
-test/e2e/data/infrastructure-oci/v1beta1/cluster-template-node-drain.yaml
-test/e2e/data/infrastructure-oci/v1beta1/cluster-template-oracle-linux.yaml
-test/e2e/data/infrastructure-oci/v1beta1/cluster-template.yaml
-test/e2e/data/infrastructure-oci/v1beta1/cluster-template-bare-metal.yaml
-test/e2e/data/infrastructure-oci/v1beta1/cluster-template-custom-networking-seclist.yaml
-test/e2e/data/infrastructure-oci/v1beta1/cluster-template-custom-networking-nsg.yaml
-test/e2e/data/infrastructure-oci/v1beta1/cluster-template-multiple-node-nsg.yaml
-test/e2e/data/infrastructure-oci/v1beta1/cluster-template-local-vcn-peering.yaml
-test/e2e/data/infrastructure-oci/v1beta1/cluster-template-cluster-class.yaml
-test/e2e/data/infrastructure-oci/v1beta1/cluster-template-remote-vcn-peering.yaml
-test/e2e/data/infrastructure-oci/v1beta1/cluster-template-externally-managed-vcn.yaml
-test/e2e/data/infrastructure-oci/v1beta1/cluster-template-alternative-region.yaml
-test/e2e/data/infrastructure-oci/v1beta1/cluster-template-machine-pool.yaml
+test/e2e/data/infrastructure-oci/v1beta*/cluster-template*.yaml
+
 
 # tilt
 tilt-settings.json

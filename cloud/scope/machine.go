@@ -248,6 +248,7 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 		SourceDetails: sourceDetails,
 		CreateVnicDetails: &core.CreateVnicDetails{
 			SubnetId:               subnetId,
+			AssignIpv6Ip:           common.Bool(m.OCIMachine.Spec.NetworkDetails.AssignIpv6Ip),
 			AssignPublicIp:         common.Bool(m.OCIMachine.Spec.NetworkDetails.AssignPublicIp),
 			FreeformTags:           tags,
 			DefinedTags:            definedTags,
@@ -1023,13 +1024,13 @@ func getIscsiVolumeAttachment(attachment infrastructurev1beta2.LaunchIscsiVolume
 
 func getParavirtualizedVolumeAttachment(attachment infrastructurev1beta2.LaunchParavirtualizedVolumeAttachment) core.LaunchAttachVolumeDetails {
 	volumeDetails := core.LaunchAttachParavirtualizedVolumeDetails{
-		Device:                       attachment.Device,
-		DisplayName:                  attachment.DisplayName,
-		IsShareable:                  attachment.IsShareable,
-		IsReadOnly:                   attachment.IsReadOnly,
-		VolumeId:                     attachment.VolumeId,
-		IsPvEncryptionInTransitEnabled:      attachment.IsPvEncryptionInTransitEnabled,
-		LaunchCreateVolumeDetails:    getLaunchCreateVolumeDetails(attachment.LaunchCreateVolumeFromAttributes),
+		Device:                         attachment.Device,
+		DisplayName:                    attachment.DisplayName,
+		IsShareable:                    attachment.IsShareable,
+		IsReadOnly:                     attachment.IsReadOnly,
+		VolumeId:                       attachment.VolumeId,
+		IsPvEncryptionInTransitEnabled: attachment.IsPvEncryptionInTransitEnabled,
+		LaunchCreateVolumeDetails:      getLaunchCreateVolumeDetails(attachment.LaunchCreateVolumeFromAttributes),
 	}
 	return volumeDetails
 }

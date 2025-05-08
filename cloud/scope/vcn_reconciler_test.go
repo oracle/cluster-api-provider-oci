@@ -71,9 +71,10 @@ func TestClusterScope_CreateVCN(t *testing.T) {
 			spec: infrastructurev1beta2.OCIClusterSpec{
 				NetworkSpec: infrastructurev1beta2.NetworkSpec{
 					Vcn: infrastructurev1beta2.VCN{
-						Name:     "normal",
-						DnsLabel: common.String("label"),
-						CIDR:     "test-cidr",
+						Name:          "normal",
+						DnsLabel:      common.String("label"),
+						CIDR:          "test-cidr",
+						IsIpv6Enabled: common.Bool(true),
 					},
 				},
 			},
@@ -85,9 +86,10 @@ func TestClusterScope_CreateVCN(t *testing.T) {
 			spec: infrastructurev1beta2.OCIClusterSpec{
 				NetworkSpec: infrastructurev1beta2.NetworkSpec{
 					Vcn: infrastructurev1beta2.VCN{
-						Name:     "normal",
-						DnsLabel: common.String("label"),
-						CIDRS:    []string{"test-cidr1", "test-cidr2"},
+						Name:          "normal",
+						DnsLabel:      common.String("label"),
+						CIDRS:         []string{"test-cidr1", "test-cidr2"},
+						IsIpv6Enabled: common.Bool(true),
 					},
 				},
 			},

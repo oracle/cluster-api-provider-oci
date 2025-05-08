@@ -166,6 +166,9 @@ spec:
                   vcn:
                     description: VCN configuration.
                     properties:
+                      isIpv6Enabled:
+                        description: isIpv6Enabled enables the possibility to assign IPv6 to cluster nodes.
+                        type: boolean
                       cidr:
                         description: VCN CIDR. Deprecated, please use NetworkDetails.cidrs
                         type: string
@@ -590,6 +593,9 @@ spec:
                                 in conjunction with the VNIC's hostname and VCN's
                                 DNS label to form a fully qualified domain name (FQDN)
                                 for each VNIC within this subnet (for example, `bminstance1.subnet123.vcn1.oraclevcn.com`).
+                              type: string
+                            ipv6CidrBlockHextet:
+                              description: Subnet IPv6 CIDR.
                               type: string
                             id:
                               description: Subnet OCID.
@@ -1382,6 +1388,9 @@ spec:
                   vcn:
                     description: VCN configuration.
                     properties:
+                      isIpv6Enabled:
+                        description: isIpv6Enabled enables the possibility to assign IPv6 to cluster nodes.
+                        type: boolean
                       cidr:
                         description: VCN CIDR. Deprecated, please use NetworkDetails.cidrs
                         type: string
@@ -1865,6 +1874,9 @@ spec:
                                 in conjunction with the VNIC's hostname and VCN's
                                 DNS label to form a fully qualified domain name (FQDN)
                                 for each VNIC within this subnet (for example, `bminstance1.subnet123.vcn1.oraclevcn.com`).
+                              type: string
+                            ipv6CidrBlockHextet:
+                              description: Subnet IPv6 CIDR.
                               type: string
                             id:
                               description: Subnet OCID.

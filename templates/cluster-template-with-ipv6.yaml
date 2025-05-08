@@ -33,6 +33,27 @@ metadata:
   name: "${CLUSTER_NAME}"
 spec:
   compartmentId: "${OCI_COMPARTMENT_ID}"
+  networkSpec:
+    vcn:
+      isIpv6Enabled: true
+      subnets:
+        - ipv6CidrBlockHextet: "01"
+          name: control-plane-endpoint
+          role: control-plane-endpoint
+          type: public
+        - ipv6CidrBlockHextet: "02"
+          name: control-plane
+          role: control-plane
+          type: private
+        - ipv6CidrBlockHextet: "03"
+          name: service-lb
+          role: service-lb
+          type: public
+        - ipv6CidrBlockHextet: "04"
+          name: worker
+          role: worker
+          type: private
+      
 ---
 kind: KubeadmControlPlane
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1
@@ -86,6 +107,8 @@ spec:
       metadata:
         ssh_authorized_keys: "${OCI_SSH_KEY}"
       isPvEncryptionInTransitEnabled: ${OCI_CONTROL_PLANE_PV_TRANSIT_ENCRYPTION=true}
+      networkDetails:
+        assignIpv6Ip: true
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCIMachineTemplate
@@ -102,6 +125,8 @@ spec:
       metadata:
         ssh_authorized_keys: "${OCI_SSH_KEY}"
       isPvEncryptionInTransitEnabled: ${OCI_NODE_PV_TRANSIT_ENCRYPTION=true}
+      networkDetails:
+        assignIpv6Ip: true
 ---
 apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
 kind: KubeadmConfigTemplate
