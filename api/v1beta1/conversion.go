@@ -49,6 +49,13 @@ func Convert_v1beta1_VCN_To_v1beta2_VCN(in *VCN, out *v1beta2.VCN, s conversion.
 		}
 		out.NetworkSecurityGroup.List = nsgList
 	}
+	if in.IsIpv6Enabled != nil {
+		out.IsIpv6Enabled = in.IsIpv6Enabled
+	}
+	if in.IsOracleGuaAllocationEnabled != nil {
+		
+		out.IsOracleGuaAllocationEnabled = in.IsOracleGuaAllocationEnabled
+	}
 	return nil
 }
 
@@ -80,6 +87,13 @@ func Convert_v1beta2_VCN_To_v1beta1_VCN(in *v1beta2.VCN, out *VCN, s conversion.
 		}
 		out.NetworkSecurityGroups = nsgList
 	}
+	if in.IsIpv6Enabled != nil {
+		out.IsIpv6Enabled = in.IsIpv6Enabled
+	}
+	if in.IsOracleGuaAllocationEnabled != nil {
+		
+		out.IsOracleGuaAllocationEnabled = in.IsOracleGuaAllocationEnabled
+	}
 	return nil
 }
 
@@ -105,6 +119,9 @@ func Convert_v1beta1_IngressSecurityRuleForNSG_To_v1beta2_IngressSecurityRuleFor
 
 // Convert_v1beta1_NetworkDetails_To_v1beta2_NetworkDetails converts v1beta1 NetworkDetails to v1beta2 NetworkDetails
 func Convert_v1beta1_NetworkDetails_To_v1beta2_NetworkDetails(in *NetworkDetails, out *v1beta2.NetworkDetails, s conversion.Scope) error {
+	if in.NetworkDetails.AssignIpv6Ip != null {
+		out.NetworkDetails.AssignIpv6Ip = in.NetworkDetails.AssignIpv6Ip
+	}
 	return autoConvert_v1beta1_NetworkDetails_To_v1beta2_NetworkDetails(in, out, s)
 }
 
@@ -116,6 +133,9 @@ func Convert_v1beta1_OCIMachineSpec_To_v1beta2_OCIMachineSpec(in *OCIMachineSpec
 	}
 	if in.NSGName != "" && len(in.NetworkDetails.NsgNames) == 0 {
 		out.NetworkDetails.NsgNames = []string{in.NSGName}
+	}
+	if in.NetworkDetails.AssignIpv6Ip != null {
+		out.NetworkDetails.AssignIpv6Ip = in.NetworkDetails.AssignIpv6Ip
 	}
 	return nil
 }
