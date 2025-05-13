@@ -119,9 +119,6 @@ func Convert_v1beta1_IngressSecurityRuleForNSG_To_v1beta2_IngressSecurityRuleFor
 
 // Convert_v1beta1_NetworkDetails_To_v1beta2_NetworkDetails converts v1beta1 NetworkDetails to v1beta2 NetworkDetails
 func Convert_v1beta1_NetworkDetails_To_v1beta2_NetworkDetails(in *NetworkDetails, out *v1beta2.NetworkDetails, s conversion.Scope) error {
-	if in.NetworkDetails.AssignIpv6Ip != null {
-		out.NetworkDetails.AssignIpv6Ip = in.NetworkDetails.AssignIpv6Ip
-	}
 	return autoConvert_v1beta1_NetworkDetails_To_v1beta2_NetworkDetails(in, out, s)
 }
 
@@ -133,9 +130,6 @@ func Convert_v1beta1_OCIMachineSpec_To_v1beta2_OCIMachineSpec(in *OCIMachineSpec
 	}
 	if in.NSGName != "" && len(in.NetworkDetails.NsgNames) == 0 {
 		out.NetworkDetails.NsgNames = []string{in.NSGName}
-	}
-	if in.NetworkDetails.AssignIpv6Ip != null {
-		out.NetworkDetails.AssignIpv6Ip = in.NetworkDetails.AssignIpv6Ip
 	}
 	return nil
 }

@@ -66,7 +66,17 @@ func (c *OCICluster) ValidateCreate() (admission.Warnings, error) {
 	var ipv6hextets []*string
 	var hextatassigned bool
 
-	ipv6hextets = append(ipv6hextets, c.GetControlPlaneEndpointSubnet().Ipv6CidrBlockHextet, c.GetControlPlaneMachineSubnet().Ipv6CidrBlockHextet, c.GetServiceLoadBalancerSubnet().Ipv6CidrBlockHextet, c.GetNodeSubnet()[0].Ipv6CidrBlockHextet)
+	if c.GetControlPlaneEndpointSubnet() != nil && c.GetControlPlaneMachineSubnet() != nil && c.GetServiceLoadBalancerSubnet() != nil {
+		ipv6hextets = append(ipv6hextets, 
+			c.GetControlPlaneEndpointSubnet().Ipv6CidrBlockHextet, 
+			c.GetControlPlaneMachineSubnet().Ipv6CidrBlockHextet, 
+			c.GetServiceLoadBalancerSubnet().Ipv6CidrBlockHextet)
+		
+		nodeSubnets := c.GetNodeSubnet()
+		if len(nodeSubnets) > 0 {
+			ipv6hextets = append(ipv6hextets, nodeSubnets[0].Ipv6CidrBlockHextet)
+		}
+	}
 
 	for _, hextet := range ipv6hextets {
 		if hextet != nil {
