@@ -174,6 +174,14 @@ func TestClusterScope_ReconcileSubnet(t *testing.T) {
 			},
 			wantErr: false,
 			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_vcn.MockClient) {
+				vcnClient.EXPECT().GetVcn(gomock.Any(), gomock.Eq(core.GetVcnRequest{
+					VcnId: common.String("vcn"),
+				})).
+					Return(core.GetVcnResponse{
+						Vcn: core.Vcn{
+							Id: common.String("vcn"),
+						},
+					}, nil).Times(2)
 				vcnClient.EXPECT().ListSubnets(gomock.Any(), gomock.Eq(core.ListSubnetsRequest{
 					CompartmentId: common.String("foo"),
 					DisplayName:   common.String("creation_needed"),

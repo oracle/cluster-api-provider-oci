@@ -18,8 +18,9 @@ package scope
 
 import (
 	"context"
-	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
 	"testing"
+
+	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
 
 	"github.com/golang/mock/gomock"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
@@ -87,6 +88,15 @@ func TestClusterScope_ReconcileRouteTable(t *testing.T) {
 			Description:     common.String("traffic to/from internet"),
 		},
 	}
+
+	vcnClient.EXPECT().GetVcn(gomock.Any(), gomock.Eq(core.GetVcnRequest{
+		VcnId: common.String("vcn1"),
+	})).
+		Return(core.GetVcnResponse{
+			Vcn: core.Vcn{
+				Id: common.String("vcn1"),
+			},
+		}, nil).Times(2)
 
 	vcnClient.EXPECT().GetRouteTable(gomock.Any(), gomock.Eq(core.GetRouteTableRequest{
 		RtId: common.String("private"),
