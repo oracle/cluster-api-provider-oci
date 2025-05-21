@@ -28,6 +28,10 @@ import (
 )
 
 func (s *ClusterScope) ReconcileVCN(ctx context.Context) error {
+	if s.OCIClusterAccessor.GetNetworkSpec().Vcn.Skip {
+		s.Logger.Info("Skipping VCN reconciliation as per spec")
+		return nil
+	}
 	spec := s.OCIClusterAccessor.GetNetworkSpec().Vcn
 
 	var err error
@@ -150,6 +154,10 @@ func (s *ClusterScope) CreateVCN(ctx context.Context, spec infrastructurev1beta2
 }
 
 func (s *ClusterScope) DeleteVCN(ctx context.Context) error {
+	if s.OCIClusterAccessor.GetNetworkSpec().Vcn.Skip {
+		s.Logger.Info("Skipping VCN reconciliation as per spec")
+		return nil
+	}
 	vcn, err := s.GetVCN(ctx)
 
 	if err != nil && !ociutil.IsNotFound(err) {

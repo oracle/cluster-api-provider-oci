@@ -186,6 +186,9 @@ spec:
                       id:
                         description: VCN OCID.
                         type: string
+                      skip:
+                        description: Skip specifies whether to skip creating vcn
+                        type: boolean
                       internetGatewayId:
                         description: ID of Internet Gateway.
                         type: string
@@ -597,6 +600,9 @@ spec:
                             id:
                               description: Subnet OCID.
                               type: string
+                            skip:
+                              description: Skip specifies whether to skip creating subnet
+                              type: boolean
                             name:
                               description: Subnet Name.
                               type: string
@@ -1405,6 +1411,9 @@ spec:
                       id:
                         description: VCN OCID.
                         type: string
+                      skip:
+                        description: Skip specifies whether to skip creating vcn
+                        type: boolean
                       internetGateway:
                         description: Configuration for Internet Gateway.
                         properties:
@@ -1875,6 +1884,9 @@ spec:
                             id:
                               description: Subnet OCID.
                               type: string
+                            skip:
+                              description: Skip specifies whether to skip creating subnet
+                              type: boolean
                             name:
                               description: Subnet Name.
                               type: string

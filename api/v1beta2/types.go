@@ -854,6 +854,9 @@ type Subnet struct {
 	ID *string `json:"id,omitempty"`
 	// Subnet Name.
 	Name string `json:"name"`
+	// Skip specifies whether to skip creating subnets.
+	// +optional
+	Skip bool `json:"skip,omitempty"`
 	// Subnet CIDR.
 	// +optional
 	CIDR string `json:"cidr,omitempty"`
@@ -905,6 +908,10 @@ type VCN struct {
 	// VCN Name.
 	// +optional
 	Name string `json:"name"`
+
+	// Skip specifies whether to skip creating VCN.
+	// +optional
+	Skip bool `json:"skip,omitempty"`
 
 	// VCN CIDR.
 	// +optional
