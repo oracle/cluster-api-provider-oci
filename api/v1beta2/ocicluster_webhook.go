@@ -94,33 +94,36 @@ func (c *OCICluster) ValidateCreate() (admission.Warnings, error) {
 		}
 	}
 
-	if c.Spec.NetworkSpec.Vcn.Skip != *common.Bool(true) {
+	if c.Spec.NetworkSpec.Vcn.Skip == *common.Bool(true) {
+		if c.Spec.NetworkSpec.Vcn.ID == common.String("") || c.Spec.NetworkSpec.Vcn.ID == nil {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "NetworkSpec.Vcn.ID"), c.Spec.NetworkSpec.Vcn.ID, "field is required"))
+		}
+
 		for _, subnet := range c.Spec.NetworkSpec.Vcn.Subnets {
 			if subnet.Skip == *common.Bool(true) {
-				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "subnet.Skip"), subnet.Skip, "field cannot be true when VCN is not skipped"))
+				if subnet.ID == common.String("") || subnet.ID == nil {
+					allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "subnet.ID"), subnet.ID, "field is required"))
+				}
+			}
+			if subnet.ID != common.String("") {
+				if subnet.Skip != *common.Bool(true) {
+					allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "subnet.Skip"), subnet.Skip, "field requires to be true if Subnet ID is specified"))
+				}
 			}
 		}
 	} else {
 		for _, subnet := range c.Spec.NetworkSpec.Vcn.Subnets {
 			if subnet.Skip == *common.Bool(true) {
-				if subnet.ID == nil {
-					allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "subnet.ID"), subnet.ID, "field is required"))
-				}
+				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "subnet.Skip"), subnet.Skip, "field cannot be true when VCN is not skipped"))
 			}
 		}
 	}
 
-	// if c.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List != nil {
-	// 	if c.Spec.NetworkSpec.Vcn.Skip != *common.Bool(true) {
-	// 		if c.Spec.NetworkSpec.Vcn.CIDR == "" {
-	// 			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "NetworkSpec.Vcn.CIDR"), c.Spec.NetworkSpec.Vcn.CIDR, "field is required"))
-	// 		}
-	// 	} else {
-	// 		if c.Spec.NetworkSpec.Vcn.ID == nil {
-	// 			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "NetworkSpec.Vcn.ID"), c.Spec.NetworkSpec.Vcn.ID, "field is required"))
-	// 		}
-	// 	}
-	// }
+	if c.Spec.NetworkSpec.Vcn.ID != common.String("") {
+		if c.Spec.NetworkSpec.Vcn.Skip != *common.Bool(true) {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "NetworkSpec.Vcn.Skip"), c.Spec.NetworkSpec.Vcn.Skip, "field requires to be true if VCN ID is specified"))
+		}
+	}
 
 	allErrs = append(allErrs, c.validate(nil)...)
 
@@ -161,33 +164,36 @@ func (c *OCICluster) ValidateUpdate(old runtime.Object) (admission.Warnings, err
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "compartmentId"), c.Spec.CompartmentId, "field is immutable"))
 	}
 
-	if c.Spec.NetworkSpec.Vcn.Skip != *common.Bool(true) {
+	if c.Spec.NetworkSpec.Vcn.Skip == *common.Bool(true) {
+		if c.Spec.NetworkSpec.Vcn.ID == common.String("") || c.Spec.NetworkSpec.Vcn.ID == nil {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "NetworkSpec.Vcn.ID"), c.Spec.NetworkSpec.Vcn.ID, "field is required"))
+		}
+
 		for _, subnet := range c.Spec.NetworkSpec.Vcn.Subnets {
 			if subnet.Skip == *common.Bool(true) {
-				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "subnet.Skip"), subnet.Skip, "field cannot be true when VCN is not skipped"))
+				if subnet.ID == common.String("") || subnet.ID == nil {
+					allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "subnet.ID"), subnet.ID, "field is required"))
+				}
+			}
+			if subnet.ID != common.String("") {
+				if subnet.Skip != *common.Bool(true) {
+					allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "subnet.Skip"), subnet.Skip, "field requires to be true if Subnet ID is specified"))
+				}
 			}
 		}
 	} else {
 		for _, subnet := range c.Spec.NetworkSpec.Vcn.Subnets {
 			if subnet.Skip == *common.Bool(true) {
-				if subnet.ID == nil {
-					allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "subnet.ID"), subnet.ID, "field is required"))
-				}
+				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "subnet.Skip"), subnet.Skip, "field cannot be true when VCN is not skipped"))
 			}
 		}
 	}
 
-	// if c.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List != nil {
-	// 	if c.Spec.NetworkSpec.Vcn.Skip != *common.Bool(true) {
-	// 		if c.Spec.NetworkSpec.Vcn.CIDR == "" {
-	// 			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "NetworkSpec.Vcn.CIDR"), c.Spec.NetworkSpec.Vcn.CIDR, "field is required"))
-	// 		}
-	// 	} else {
-	// 		if c.Spec.NetworkSpec.Vcn.ID == nil {
-	// 			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "NetworkSpec.Vcn.ID"), c.Spec.NetworkSpec.Vcn.ID, "field is required"))
-	// 		}
-	// 	}
-	// }
+	if c.Spec.NetworkSpec.Vcn.ID != common.String("") {
+		if c.Spec.NetworkSpec.Vcn.Skip != *common.Bool(true) {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "NetworkSpec.Vcn.Skip"), c.Spec.NetworkSpec.Vcn.Skip, "field requires to be true if VCN ID is specified"))
+		}
+	}
 
 	allErrs = append(allErrs, c.validate(oldCluster)...)
 

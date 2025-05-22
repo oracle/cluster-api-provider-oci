@@ -49,6 +49,12 @@ func (src *OCIManagedCluster) ConvertTo(dstRaw conversion.Hub) error {
 	dst.Spec.NetworkSpec.Vcn.RouteTable.Skip = restored.Spec.NetworkSpec.Vcn.RouteTable.Skip
 	dst.Spec.NetworkSpec.APIServerLB.LoadBalancerType = restored.Spec.NetworkSpec.APIServerLB.LoadBalancerType
 	dst.Spec.ClientOverrides = restored.Spec.ClientOverrides
+
+	dst.Spec.NetworkSpec.Vcn.Skip = restored.Spec.NetworkSpec.Vcn.Skip
+	for i := range dst.Spec.NetworkSpec.Vcn.Subnets {
+		dst.Spec.NetworkSpec.Vcn.Subnets[i] = restored.Spec.NetworkSpec.Vcn.Subnets[i]
+	}
+
 	return nil
 }
 

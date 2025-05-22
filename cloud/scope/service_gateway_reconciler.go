@@ -27,6 +27,10 @@ import (
 )
 
 func (s *ClusterScope) ReconcileServiceGateway(ctx context.Context) error {
+	if s.OCIClusterAccessor.GetNetworkSpec().Vcn.ServiceGateway.Skip {
+		s.Logger.Info("Skipping Service Gateway reconciliation as per spec")
+		return nil
+	}
 	if s.IsAllSubnetsPublic() {
 		s.Logger.Info("All subnets are public, we don't need service gateway")
 		return nil
@@ -86,6 +90,10 @@ func (s *ClusterScope) CreateServiceGateway(ctx context.Context) (*string, error
 }
 
 func (s *ClusterScope) DeleteServiceGateway(ctx context.Context) error {
+	if s.OCIClusterAccessor.GetNetworkSpec().Vcn.ServiceGateway.Skip {
+		s.Logger.Info("Skipping Service Gateway reconciliation as per spec")
+		return nil
+	}
 	sgw, err := s.GetServiceGateway(ctx)
 	if err != nil && !ociutil.IsNotFound(err) {
 		return err
