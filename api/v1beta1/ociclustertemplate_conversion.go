@@ -44,11 +44,6 @@ func (src *OCIClusterTemplate) ConvertTo(dstRaw conversion.Hub) error {
 	dst.Spec.Template.Spec.NetworkSpec.APIServerLB.LoadBalancerType = restored.Spec.Template.Spec.NetworkSpec.APIServerLB.LoadBalancerType
 	dst.Spec.Template.Spec.ClientOverrides = restored.Spec.Template.Spec.ClientOverrides
 
-	dst.Spec.Template.Spec.NetworkSpec.Vcn.Skip = restored.Spec.Template.Spec.NetworkSpec.Vcn.Skip
-	for i := range dst.Spec.Template.Spec.NetworkSpec.Vcn.Subnets {
-		dst.Spec.Template.Spec.NetworkSpec.Vcn.Subnets[i] = restored.Spec.Template.Spec.NetworkSpec.Vcn.Subnets[i]
-	}
-
 	return nil
 }
 
