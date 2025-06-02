@@ -13,7 +13,7 @@ Oracle recommends using [Instance principals][instance-principals] to be used by
 following policies in the dynamic group for CSI to be able to talk to various OCI Services.
 
 ```
-allow dynamic-group [your dynamic group name] to read instance-family in compartment [your compartment name]
+allow dynamic-group [your dynamic group name] to use instance-family in compartment [your compartment name]
 allow dynamic-group [your dynamic group name] to use virtual-network-family in compartment [your compartment name]
 allow dynamic-group [your dynamic group name] to manage volume-family in compartment [your compartment name]
 ```
