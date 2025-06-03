@@ -48,10 +48,9 @@ kind: OCIManagedCluster
 spec:
   compartmentId: "${OCI_COMPARTMENT_ID}"
   networkSpec:
-    skipNetworkManagement: true
     vcn:
       skip: true
-      id: <Insert VCN OCID Here>
+      id: <Insert VCN OCID Here> // REQUIRED
       networkSecurityGroup:
         skip: false
       internetGateway:
@@ -63,22 +62,22 @@ spec:
       routeTable:
         skip: true
       subnets:
-        - id: <Insert control Plane Subnet OCID Here>
+        - id: <Insert control Plane Subnet OCID Here> // REQUIRED
           role: control-plane-endpoint
           name: control-plane-endpoint
           type: public
           skip: true
-        - id: <Insert control Plane Subnet OCID Here>
+        - id: <Insert control Plane Subnet OCID Here> // REQUIRED
           role: worker
           name: worker
           type: private
           skip: true
-        - id: <Insert control Plane Subnet OCID Here>
+        - id: <Insert control Plane Subnet OCID Here> // REQUIRED
           role: control-plane
           name: control-plane
           type: private
           skip: true
-        - id: <Insert control Plane Subnet OCID Here>
+        - id: <Insert control Plane Subnet OCID Here> // REQUIRED
           role: service-lb
           name: service-lb
           type: public

@@ -36,7 +36,7 @@ spec:
   compartmentId: "${OCI_COMPARTMENT_ID}"
   networkSpec:
     vcn:
-      id: 
+      id: "${VCN_ID}"
       skip: true
       networkSecurityGroup:
         skip: false
@@ -49,22 +49,22 @@ spec:
       routeTable:
         skip: true
       subnets:
-        - id: 
+        - id: "${SUBNET_ID_CPE}"
           role: control-plane-endpoint
           name: control-plane-endpoint
           type: public
           skip: true
-        - id: 
+        - id: "${SUBNET_ID_W}"
           role: worker
           name: worker
           type: private
           skip: true
-        - id: 
+        - id: "${SUBNET_ID_CP}"
           role: control-plane
           name: control-plane
           type: private
           skip: true
-        - id: 
+        - id: "${SUBNET_ID_LB}"
           role: service-lb
           name: service-lb
           type: public

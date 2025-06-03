@@ -43,7 +43,6 @@ func (src *OCIClusterTemplate) ConvertTo(dstRaw conversion.Hub) error {
 	dst.Spec.Template.Spec.AvailabilityDomains = restored.Spec.Template.Spec.AvailabilityDomains
 	dst.Spec.Template.Spec.NetworkSpec.APIServerLB.LoadBalancerType = restored.Spec.Template.Spec.NetworkSpec.APIServerLB.LoadBalancerType
 	dst.Spec.Template.Spec.ClientOverrides = restored.Spec.Template.Spec.ClientOverrides
-
 	return nil
 }
 

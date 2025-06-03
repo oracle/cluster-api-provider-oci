@@ -33,6 +33,7 @@ func (s *ClusterScope) ReconcileSubnet(ctx context.Context) error {
 	desiredSubnets := s.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets
 	for _, desiredSubnet := range desiredSubnets {
 		if desiredSubnet.Skip {
+			s.Logger.Info("Skipping Subnet reconciliation as per spec")
 			continue
 		}
 		subnet, err := s.GetSubnet(ctx, *desiredSubnet)
@@ -192,6 +193,7 @@ func (s *ClusterScope) DeleteSubnets(ctx context.Context) error {
 	desiredSubnets := s.GetSubnetsSpec()
 	for _, desiredSubnet := range desiredSubnets {
 		if desiredSubnet.Skip {
+			s.Logger.Info("Skipping Subnet reconciliation as per spec")
 			continue
 		}
 		subnet, err := s.GetSubnet(ctx, *desiredSubnet)

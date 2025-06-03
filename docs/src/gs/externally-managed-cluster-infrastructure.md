@@ -49,7 +49,7 @@ spec:
 In the above spec, note that name has to be mentioned for Subnet/NSG. This is so that Kubernetes
 can merge the list properly when there is an update.
 
-## Example spec for externally managed VCN, Subnet and Gateways, but the other networking components self managed
+## Example spec for externally managed VCN, Subnet, Internet Gateway, Nat Gateway, Service Gateway and routing table, but the other networking components are still managed by CAPOCI (e.g. Network Security Groups)
 
 Example spec is given below
 
@@ -63,7 +63,7 @@ spec:
   networkSpec:
     vcn:
       skip: true
-      id: <Insert VCN OCID Here>
+      id: <Insert VCN OCID Here>  // REQUIRED
       networkSecurityGroup:
         skip: false
       internetGateway:
@@ -75,22 +75,22 @@ spec:
       routeTable:
         skip: true
       subnets:
-        - id: <Insert control Plane Subnet OCID Here>
+        - id: <Insert control Plane Subnet OCID Here>  // REQUIRED
           role: control-plane-endpoint
           name: control-plane-endpoint
           type: public
           skip: true
-        - id: <Insert control Plane Subnet OCID Here>
+        - id: <Insert control Plane Subnet OCID Here>  // REQUIRED
           role: worker
           name: worker
           type: private
           skip: true
-        - id: <Insert control Plane Subnet OCID Here>
+        - id: <Insert control Plane Subnet OCID Here>  // REQUIRED
           role: control-plane
           name: control-plane
           type: private
           skip: true
-        - id: <Insert control Plane Subnet OCID Here>
+        - id: <Insert control Plane Subnet OCID Here>  // REQUIRED
           role: service-lb
           name: service-lb
           type: public
@@ -140,8 +140,6 @@ spec:
         - id: <OCID of Worker Subnet>
           role: worker
 ```
-
-
 
 ## Status
 

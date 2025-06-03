@@ -856,6 +856,7 @@ type Subnet struct {
 	Name string `json:"name"`
 	// Skip specifies whether to skip creating subnets.
 	// +optional
+
 	Skip bool `json:"skip,omitempty"`
 	// Subnet CIDR.
 	// +optional
