@@ -41,7 +41,7 @@ spec:
 
 ## Use a pre-existing VCN, Subnet and Gatways, but the other networking components self managed
 
-The following `OCIManagedCluster` snippet can be used to to use a pre-existing VCN.
+The following `OCIManagedCluster` example spec is given below
 
 ```yaml
 kind: OCIManagedCluster

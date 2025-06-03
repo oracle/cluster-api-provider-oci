@@ -49,10 +49,7 @@ spec:
 In the above spec, note that name has to be mentioned for Subnet/NSG. This is so that Kubernetes
 can merge the list properly when there is an update.
 
-
-
 ## Example spec for externally managed VCN, Subnet and Gateways, but the other networking components self managed
-
 
 Example spec is given below
 
