@@ -49,6 +49,57 @@ spec:
 In the above spec, note that name has to be mentioned for Subnet/NSG. This is so that Kubernetes
 can merge the list properly when there is an update.
 
+
+
+## Example spec for externally managed VCN, Subnet and Gateways, but the other networking components self managed
+
+
+Example spec is given below
+
+```yaml
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: OCICluster
+metadata:
+  name: "${CLUSTER_NAME}"
+spec:
+  compartmentId: "${OCI_COMPARTMENT_ID}"
+  networkSpec:
+    vcn:
+      skip: true
+      id: <Insert VCN OCID Here>
+      networkSecurityGroup:
+        skip: false
+      internetGateway:
+        skip: true
+      natGateway:
+        skip: true
+      serviceGateway:
+        skip: true
+      routeTable:
+        skip: true
+      subnets:
+        - id: <Insert control Plane Subnet OCID Here>
+          role: control-plane-endpoint
+          name: control-plane-endpoint
+          type: public
+          skip: true
+        - id: <Insert control Plane Subnet OCID Here>
+          role: worker
+          name: worker
+          type: private
+          skip: true
+        - id: <Insert control Plane Subnet OCID Here>
+          role: control-plane
+          name: control-plane
+          type: private
+          skip: true
+        - id: <Insert control Plane Subnet OCID Here>
+          role: service-lb
+          name: service-lb
+          type: public
+          skip: true
+```
+
 ## Example `OCICluster` Spec with external infrastructure
 
 CAPOCI supports [externally managed cluster infrastructure](https://github.com/kubernetes-sigs/cluster-api/blob/10d89ceca938e4d3d94a1d1c2b60515bcdf39829/docs/proposals/20210203-externally-managed-cluster-infrastructure.md).
@@ -92,6 +143,8 @@ spec:
         - id: <OCID of Worker Subnet>
           role: worker
 ```
+
+
 
 ## Status
 
