@@ -910,6 +910,7 @@ type VCN struct {
 	Name string `json:"name"`
 
 	// Skip specifies whether to skip creating VCN.
+	// When is set to true, InternetGateway, NatGateway, ServiceGateway, RouteTable should be also have Skip set to true
 	// +optional
 	Skip bool `json:"skip,omitempty"`
 
@@ -1132,6 +1133,7 @@ type RemotePeeringConnection struct {
 // InternetGateway is used to specify the options for creating internet gateway.
 type InternetGateway struct {
 	// Skip specifies whether to skip creating internet gateway even if any one Subnet is public.
+	// In case of VCN being Skipped (Skip field of VCN set to true), this field should be true also
 	// +optional
 	Skip bool `json:"skip,omitempty"`
 
@@ -1143,6 +1145,7 @@ type InternetGateway struct {
 // NATGateway is used to specify the options for creating NAT gateway.
 type NATGateway struct {
 	// Skip specifies whether to skip creating NAT gateway even if any one Subnet is private.
+	// In case of VCN being Skipped (Skip field of VCN set to true), this field should be true also
 	// +optional
 	Skip bool `json:"skip,omitempty"`
 
@@ -1154,6 +1157,7 @@ type NATGateway struct {
 // ServiceGateway is used to specify the options for creating Service gateway.
 type ServiceGateway struct {
 	// Skip specifies whether to skip creating Service gateway.
+	// In case of VCN being Skipped (Skip field of VCN set to true), this field should be true also
 	// +optional
 	Skip bool `json:"skip,omitempty"`
 
@@ -1165,6 +1169,7 @@ type ServiceGateway struct {
 // RouteTable is used to specify the options for creating Route table.
 type RouteTable struct {
 	// Skip specifies whether to skip creating Route table.
+	// In case of VCN being Skipped (Skip field of VCN set to true), this field should be true also
 	// +optional
 	Skip bool `json:"skip,omitempty"`
 
