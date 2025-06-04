@@ -582,6 +582,28 @@ var _ = Describe("Workload cluster creation", func() {
 		}, result)
 	})
 
+	It("Self manage NSG [PRBlocking]", func() {
+		clusterName = getClusterName(clusterNamePrefix, "self-manage-nsg")
+		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
+			ClusterProxy: bootstrapClusterProxy,
+			ConfigCluster: clusterctl.ConfigClusterInput{
+				LogFolder:                filepath.Join(artifactFolder, "clusters", bootstrapClusterProxy.GetName()),
+				ClusterctlConfigPath:     clusterctlConfigPath,
+				KubeconfigPath:           bootstrapClusterProxy.GetKubeconfigPath(),
+				InfrastructureProvider:   clusterctl.DefaultInfrastructureProvider,
+				Flavor:                   "self-manage-nsg",
+				Namespace:                namespace.Name,
+				ClusterName:              clusterName,
+				KubernetesVersion:        e2eConfig.GetVariable(capi_e2e.KubernetesVersion),
+				ControlPlaneMachineCount: pointer.Int64(1),
+				WorkerMachineCount:       pointer.Int64(0),
+			},
+			CNIManifestPath:              e2eConfig.GetVariable(capi_e2e.CNIPath),
+			WaitForClusterIntervals:      e2eConfig.GetIntervals(specName, "wait-cluster"),
+			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane-nsg"),
+		}, result)
+	})
+
 	It("Machine Pool - Simple", func() {
 		clusterName = getClusterName(clusterNamePrefix, "machine-pool")
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{

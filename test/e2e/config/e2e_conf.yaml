@@ -79,6 +79,7 @@ providers:
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-windows-calico.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-machine-with-ipv6.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-with-paravirt-bv.yaml"
+          - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-self-manage-nsg.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/metadata.yaml"
 
 variables:
@@ -115,6 +116,7 @@ intervals:
   default/wait-controllers: ["3m", "10s"]
   default/wait-cluster: ["30m", "10s"]
   default/wait-control-plane: ["30m", "10s"]
+  default/wait-control-plane-nsg: ["10m", "10s"]
   default/wait-worker-nodes: ["30m", "10s"]
   default/wait-windows-worker-nodes: ["60m", "30s"]
   default/wait-cluster-bare-metal: [ "60m", "10s" ]
