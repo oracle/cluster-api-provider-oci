@@ -65,15 +65,15 @@ spec:
       skip: true
       id: <Insert VCN OCID Here>  // REQUIRED
       networkSecurityGroup:
-        skip: false
+        skip: false 
       internetGateway:
-        skip: true
+        skip: true // REQUIRED
       natGateway:
-        skip: true
+        skip: true // REQUIRED
       serviceGateway:
-        skip: true
+        skip: true // REQUIRED
       routeTable:
-        skip: true
+        skip: true // REQUIRED
       subnets:
         - id: <Insert control Plane Subnet OCID Here>  // REQUIRED
           role: control-plane-endpoint
