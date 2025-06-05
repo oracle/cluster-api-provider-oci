@@ -582,7 +582,7 @@ var _ = Describe("Workload cluster creation", func() {
 		}, result)
 	})
 
-	It("Self manage NSG [PRBlocking]", func() {
+	It("Self manage NSG", func() {
 		clusterName = getClusterName(clusterNamePrefix, "self-manage-nsg")
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
