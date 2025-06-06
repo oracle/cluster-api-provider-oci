@@ -3391,6 +3391,7 @@ func autoConvert_v1beta1_Subnet_To_v1beta2_Subnet(in *Subnet, out *v1beta2.Subne
 	out.Role = v1beta2.Role(in.Role)
 	out.ID = (*string)(unsafe.Pointer(in.ID))
 	out.Name = in.Name
+	out.Skip = in.Skip
 	out.CIDR = in.CIDR
 	out.Type = v1beta2.SubnetType(in.Type)
 	out.SecurityList = (*v1beta2.SecurityList)(unsafe.Pointer(in.SecurityList))
@@ -3408,6 +3409,7 @@ func autoConvert_v1beta2_Subnet_To_v1beta1_Subnet(in *v1beta2.Subnet, out *Subne
 	out.Role = Role(in.Role)
 	out.ID = (*string)(unsafe.Pointer(in.ID))
 	out.Name = in.Name
+	out.Skip = in.Skip
 	out.CIDR = in.CIDR
 	out.Type = SubnetType(in.Type)
 	out.SecurityList = (*SecurityList)(unsafe.Pointer(in.SecurityList))
@@ -3488,6 +3490,7 @@ func Convert_v1beta2_UdpOptions_To_v1beta1_UdpOptions(in *v1beta2.UdpOptions, ou
 func autoConvert_v1beta1_VCN_To_v1beta2_VCN(in *VCN, out *v1beta2.VCN, s conversion.Scope) error {
 	out.ID = (*string)(unsafe.Pointer(in.ID))
 	out.Name = in.Name
+	out.Skip = in.Skip
 	out.CIDR = in.CIDR
 	out.CIDRS = *(*[]string)(unsafe.Pointer(&in.CIDRS))
 	// WARNING: in.NatGatewayId requires manual conversion: does not exist in peer-type
@@ -3506,6 +3509,7 @@ func autoConvert_v1beta1_VCN_To_v1beta2_VCN(in *VCN, out *v1beta2.VCN, s convers
 func autoConvert_v1beta2_VCN_To_v1beta1_VCN(in *v1beta2.VCN, out *VCN, s conversion.Scope) error {
 	out.ID = (*string)(unsafe.Pointer(in.ID))
 	out.Name = in.Name
+	out.Skip = in.Skip
 	out.CIDR = in.CIDR
 	out.CIDRS = *(*[]string)(unsafe.Pointer(&in.CIDRS))
 	out.Subnets = *(*[]*Subnet)(unsafe.Pointer(&in.Subnets))
