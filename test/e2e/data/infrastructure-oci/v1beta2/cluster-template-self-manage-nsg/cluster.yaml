@@ -1,0 +1,44 @@
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: OCICluster
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: "${CLUSTER_NAME}"
+  name: "${CLUSTER_NAME}"
+spec:
+  compartmentId: "${OCI_COMPARTMENT_ID}"
+  networkSpec:
+    vcn:
+      id: "${EXTERNAL_VCN_ID}"
+      skip: true
+      networkSecurityGroup:
+        skip: false
+      internetGateway:
+        skip: true
+      natGateway:
+        skip: true
+      serviceGateway:
+        skip: true
+      routeTable:
+        skip: true
+      subnets:
+        - id: "${EXTERNAL_VCN_CPE_SUBNET}"
+          role: control-plane-endpoint
+          name: control-plane-endpoint
+          type: public
+          skip: true
+        - id: "${EXTERNAL_VCN_WORKER_SUBNET}"
+          role: worker
+          name: worker
+          type: private
+          skip: true
+        - id: "${EXTERNAL_VCN_CP_SUBNET}"
+          role: control-plane
+          name: control-plane
+          type: private
+          skip: true
+        - id: "${EXTERNAL_VCN_LB_SUBNET}"
+          role: service-lb
+          name: service-lb
+          type: public
+          skip: true

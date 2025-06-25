@@ -332,6 +332,7 @@ func TestInstanceReconciliation(t *testing.T) {
 				ms.OCIMachine.Spec.NetworkDetails.SkipSourceDestCheck = common.Bool(true)
 				ms.OCIMachine.Spec.NetworkDetails.AssignPrivateDnsRecord = common.Bool(true)
 				ms.OCIMachine.Spec.NetworkDetails.DisplayName = common.String("display-name")
+				ms.OCIMachine.Spec.NetworkDetails.AssignIpv6Ip = true
 				ms.OCIMachine.Spec.InstanceSourceViaImageDetails = &infrastructurev1beta2.InstanceSourceViaImageConfig{
 					KmsKeyId:            common.String("kms-key-id"),
 					BootVolumeVpusPerGB: common.Int64(32),
@@ -363,6 +364,7 @@ func TestInstanceReconciliation(t *testing.T) {
 						HostnameLabel:          common.String("hostname-label"),
 						SkipSourceDestCheck:    common.Bool(true),
 						AssignPrivateDnsRecord: common.Bool(true),
+						AssignIpv6Ip:           common.Bool(true),
 						DisplayName:            common.String("display-name"),
 					},
 					Metadata: map[string]string{
@@ -400,6 +402,7 @@ func TestInstanceReconciliation(t *testing.T) {
 				ms.OCIMachine.Spec.NetworkDetails.NSGId = common.String("nsg-machine-id")
 				ms.OCIMachine.Spec.NetworkDetails.SkipSourceDestCheck = common.Bool(true)
 				ms.OCIMachine.Spec.NetworkDetails.AssignPrivateDnsRecord = common.Bool(true)
+				ms.OCIMachine.Spec.NetworkDetails.AssignIpv6Ip = true
 				ms.OCIMachine.Spec.NetworkDetails.DisplayName = common.String("display-name")
 				ms.OCIMachine.Spec.InstanceSourceViaImageDetails = &infrastructurev1beta2.InstanceSourceViaImageConfig{
 					KmsKeyId:            common.String("kms-key-id"),
@@ -431,6 +434,7 @@ func TestInstanceReconciliation(t *testing.T) {
 						HostnameLabel:          common.String("hostname-label"),
 						SkipSourceDestCheck:    common.Bool(true),
 						AssignPrivateDnsRecord: common.Bool(true),
+						AssignIpv6Ip:           common.Bool(true),
 						DisplayName:            common.String("display-name"),
 					},
 					Metadata: map[string]string{
@@ -470,6 +474,7 @@ func TestInstanceReconciliation(t *testing.T) {
 				ms.OCIMachine.Spec.NetworkDetails.NSGId = common.String("nsg-machine-id")
 				ms.OCIMachine.Spec.NetworkDetails.SkipSourceDestCheck = common.Bool(true)
 				ms.OCIMachine.Spec.NetworkDetails.AssignPrivateDnsRecord = common.Bool(true)
+				ms.OCIMachine.Spec.NetworkDetails.AssignIpv6Ip = true
 				ms.OCIMachine.Spec.NetworkDetails.DisplayName = common.String("display-name")
 				ms.OCIMachine.Spec.LaunchVolumeAttachment = []infrastructurev1beta2.LaunchVolumeAttachment{
 					{
@@ -515,6 +520,7 @@ func TestInstanceReconciliation(t *testing.T) {
 						HostnameLabel:          common.String("hostname-label"),
 						SkipSourceDestCheck:    common.Bool(true),
 						AssignPrivateDnsRecord: common.Bool(true),
+						AssignIpv6Ip:           common.Bool(true),
 						DisplayName:            common.String("display-name"),
 					},
 					LaunchVolumeAttachments: []core.LaunchAttachVolumeDetails{
@@ -565,14 +571,15 @@ func TestInstanceReconciliation(t *testing.T) {
 				ms.OCIMachine.Spec.NetworkDetails.NSGId = common.String("nsg-machine-id")
 				ms.OCIMachine.Spec.NetworkDetails.SkipSourceDestCheck = common.Bool(true)
 				ms.OCIMachine.Spec.NetworkDetails.AssignPrivateDnsRecord = common.Bool(true)
+				ms.OCIMachine.Spec.NetworkDetails.AssignIpv6Ip = true
 				ms.OCIMachine.Spec.NetworkDetails.DisplayName = common.String("display-name")
 				ms.OCIMachine.Spec.LaunchVolumeAttachment = []infrastructurev1beta2.LaunchVolumeAttachment{
 					{
 						Type: infrastructurev1beta2.ParavirtualizedType,
 						ParavirtualizedAttachment: infrastructurev1beta2.LaunchParavirtualizedVolumeAttachment{
-							Device:      common.String("/dev/oci"),
-							IsShareable: common.Bool(true),
-							IsPvEncryptionInTransitEnabled: common.Bool(false), 
+							Device:                         common.String("/dev/oci"),
+							IsShareable:                    common.Bool(true),
+							IsPvEncryptionInTransitEnabled: common.Bool(false),
 							LaunchCreateVolumeFromAttributes: infrastructurev1beta2.LaunchCreateVolumeFromAttributes{
 								DisplayName: common.String("test-volume"),
 								SizeInGBs:   common.Int64(75),
@@ -611,13 +618,14 @@ func TestInstanceReconciliation(t *testing.T) {
 						HostnameLabel:          common.String("hostname-label"),
 						SkipSourceDestCheck:    common.Bool(true),
 						AssignPrivateDnsRecord: common.Bool(true),
+						AssignIpv6Ip:           common.Bool(true),
 						DisplayName:            common.String("display-name"),
 					},
 					LaunchVolumeAttachments: []core.LaunchAttachVolumeDetails{
 						core.LaunchAttachParavirtualizedVolumeDetails{
-							Device:      common.String("/dev/oci"),
-							IsShareable: common.Bool(true),
-							IsPvEncryptionInTransitEnabled:  common.Bool(false),
+							Device:                         common.String("/dev/oci"),
+							IsShareable:                    common.Bool(true),
+							IsPvEncryptionInTransitEnabled: common.Bool(false),
 							LaunchCreateVolumeDetails: core.LaunchCreateVolumeFromAttributes{
 								DisplayName: common.String("test-volume"),
 								SizeInGBs:   common.Int64(75),
@@ -667,6 +675,7 @@ func TestInstanceReconciliation(t *testing.T) {
 					CreateVnicDetails: &core.CreateVnicDetails{
 						SubnetId:       common.String("nodesubnet"),
 						AssignPublicIp: common.Bool(false),
+						AssignIpv6Ip:   common.Bool(false),
 						DefinedTags:    map[string]map[string]interface{}{},
 						FreeformTags: map[string]string{
 							ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,
@@ -715,6 +724,7 @@ func TestInstanceReconciliation(t *testing.T) {
 					CreateVnicDetails: &core.CreateVnicDetails{
 						SubnetId:       common.String("nodesubnet"),
 						AssignPublicIp: common.Bool(false),
+						AssignIpv6Ip:   common.Bool(false),
 						DefinedTags:    map[string]map[string]interface{}{},
 						FreeformTags: map[string]string{
 							ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,
@@ -770,6 +780,7 @@ func TestInstanceReconciliation(t *testing.T) {
 					CreateVnicDetails: &core.CreateVnicDetails{
 						SubnetId:       common.String("test-subnet-1"),
 						AssignPublicIp: common.Bool(false),
+						AssignIpv6Ip:   common.Bool(false),
 						DefinedTags:    map[string]map[string]interface{}{},
 						FreeformTags: map[string]string{
 							ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,
@@ -828,6 +839,7 @@ func TestInstanceReconciliation(t *testing.T) {
 					CreateVnicDetails: &core.CreateVnicDetails{
 						SubnetId:       common.String("nodesubnet"),
 						AssignPublicIp: common.Bool(false),
+						AssignIpv6Ip:   common.Bool(false),
 						DefinedTags:    map[string]map[string]interface{}{},
 						FreeformTags: map[string]string{
 							ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,
@@ -887,6 +899,7 @@ func TestInstanceReconciliation(t *testing.T) {
 					CreateVnicDetails: &core.CreateVnicDetails{
 						SubnetId:       common.String("nodesubnet"),
 						AssignPublicIp: common.Bool(false),
+						AssignIpv6Ip:   common.Bool(false),
 						DefinedTags:    map[string]map[string]interface{}{},
 						FreeformTags: map[string]string{
 							ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,

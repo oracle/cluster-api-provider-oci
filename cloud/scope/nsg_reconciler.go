@@ -30,6 +30,10 @@ import (
 )
 
 func (s *ClusterScope) ReconcileNSG(ctx context.Context) error {
+	if s.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.Skip {
+		s.Logger.Info("Skipping Network Security Group reconciliation as per spec")
+		return nil
+	}
 	desiredNSGs := s.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup
 	for _, desiredNSG := range desiredNSGs.List {
 		nsg, err := s.GetNSG(ctx, *desiredNSG)
@@ -124,6 +128,10 @@ func (s *ClusterScope) GetNSG(ctx context.Context, spec infrastructurev1beta2.NS
 }
 
 func (s *ClusterScope) DeleteNSGs(ctx context.Context) error {
+	if s.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.Skip {
+		s.Logger.Info("Skipping Network Security Group reconciliation as per spec")
+		return nil
+	}
 	desiredNSGs := s.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup
 	for _, desiredNSG := range desiredNSGs.List {
 		nsg, err := s.GetNSG(ctx, *desiredNSG)

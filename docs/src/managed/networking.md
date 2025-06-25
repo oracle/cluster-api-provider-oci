@@ -39,6 +39,51 @@ spec:
           type: public
 ```
 
+## Use a pre-existing VCN, Subnet and Gatways, but the other networking components self managed
+
+The following `OCIManagedCluster` example spec is given below
+
+```yaml
+kind: OCIManagedCluster
+spec:
+  compartmentId: "${OCI_COMPARTMENT_ID}"
+  networkSpec:
+    vcn:
+      skip: true
+      id: <Insert VCN OCID Here> // REQUIRED
+      networkSecurityGroup:
+        skip: false
+      internetGateway:
+        skip: true // REQUIRED
+      natGateway:
+        skip: true // REQUIRED
+      serviceGateway:
+        skip: true // REQUIRED
+      routeTable:
+        skip: true // REQUIRED
+      subnets:
+        - id: <Insert control Plane Subnet OCID Here> // REQUIRED
+          role: control-plane-endpoint
+          name: control-plane-endpoint
+          type: public
+          skip: true
+        - id: <Insert control Plane Subnet OCID Here> // REQUIRED
+          role: worker
+          name: worker
+          type: private
+          skip: true
+        - id: <Insert control Plane Subnet OCID Here> // REQUIRED
+          role: control-plane
+          name: control-plane
+          type: private
+          skip: true
+        - id: <Insert control Plane Subnet OCID Here> // REQUIRED
+          role: service-lb
+          name: service-lb
+          type: public
+          skip: true
+```
+
 ## Use flannel as CNI
 
 Use the template `cluster-template-managed-flannel.yaml` as an example for using flannel as the CNI. The template

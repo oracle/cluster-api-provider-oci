@@ -66,7 +66,17 @@ func (c *OCICluster) ValidateCreate() (admission.Warnings, error) {
 	var ipv6hextets []*string
 	var hextatassigned bool
 
-	ipv6hextets = append(ipv6hextets, c.GetControlPlaneEndpointSubnet().Ipv6CidrBlockHextet, c.GetControlPlaneMachineSubnet().Ipv6CidrBlockHextet, c.GetServiceLoadBalancerSubnet().Ipv6CidrBlockHextet, c.GetNodeSubnet()[0].Ipv6CidrBlockHextet)
+	if c.GetControlPlaneEndpointSubnet() != nil && c.GetControlPlaneMachineSubnet() != nil && c.GetServiceLoadBalancerSubnet() != nil {
+		ipv6hextets = append(ipv6hextets,
+			c.GetControlPlaneEndpointSubnet().Ipv6CidrBlockHextet,
+			c.GetControlPlaneMachineSubnet().Ipv6CidrBlockHextet,
+			c.GetServiceLoadBalancerSubnet().Ipv6CidrBlockHextet)
+
+		nodeSubnets := c.GetNodeSubnet()
+		if len(nodeSubnets) > 0 {
+			ipv6hextets = append(ipv6hextets, nodeSubnets[0].Ipv6CidrBlockHextet)
+		}
+	}
 
 	for _, hextet := range ipv6hextets {
 		if hextet != nil {
@@ -81,6 +91,57 @@ func (c *OCICluster) ValidateCreate() (admission.Warnings, error) {
 		}
 		if c.Spec.NetworkSpec.Vcn.IsIpv6Enabled == common.Bool(false) {
 			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "NetworkSpec.Vcn.IsIpv6Enabled"), c.Spec.NetworkSpec.Vcn.IsIpv6Enabled, "field needs to be true"))
+		}
+	}
+
+	// If Skip field is true, ID field of VCN should be specified
+	if c.Spec.NetworkSpec.Vcn.Skip == *common.Bool(true) {
+		if c.Spec.NetworkSpec.Vcn.ID == common.String("") || c.Spec.NetworkSpec.Vcn.ID == nil {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "NetworkSpec.Vcn.ID"), c.Spec.NetworkSpec.Vcn.ID, "field is required"))
+		}
+
+		// If Skip field is True, Skip field of InternetGateway should be true
+		if c.Spec.NetworkSpec.Vcn.InternetGateway.Skip != *common.Bool(true) {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "NetworkSpec.Vcn.InternetGateway.Skip"), c.Spec.NetworkSpec.Vcn.InternetGateway.Skip, "field requires to be true when VCN is skipped"))
+		}
+
+		// If Skip field is True, Skip field of ServiceGateway should be true
+		if c.Spec.NetworkSpec.Vcn.ServiceGateway.Skip != *common.Bool(true) {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "NetworkSpec.Vcn.ServiceGateway.Skip"), c.Spec.NetworkSpec.Vcn.ServiceGateway.Skip, "field requires to be true when VCN is skipped"))
+		}
+
+		// If Skip field is True, Skip field of NATGateway should be true
+		if c.Spec.NetworkSpec.Vcn.NATGateway.Skip != *common.Bool(true) {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "NetworkSpec.Vcn.NATGateway.Skip"), c.Spec.NetworkSpec.Vcn.NATGateway.Skip, "field requires to be true when VCN is skipped"))
+		}
+
+		// If Skip field is True, Skip field of RouteTable should be true
+		if c.Spec.NetworkSpec.Vcn.RouteTable.Skip != *common.Bool(true) {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "NetworkSpec.Vcn.RouteTable.Skip"), c.Spec.NetworkSpec.Vcn.RouteTable.Skip, "field requires to be true when VCN is skipped"))
+		}
+
+		// For each subnet
+		for _, subnet := range c.Spec.NetworkSpec.Vcn.Subnets {
+
+			// if Skip field is true, ID field of Subnet should also be specified
+			if subnet.Skip == *common.Bool(true) {
+				if subnet.ID == common.String("") || subnet.ID == nil {
+					allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "subnet.ID"), subnet.ID, "field is required"))
+				}
+			}
+			// if ID field is specified, Skip field of Subnet should also be true
+			if subnet.ID != common.String("") {
+				if subnet.Skip != *common.Bool(true) {
+					allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "subnet.Skip"), subnet.Skip, "field requires to be true if Subnet ID is specified"))
+				}
+			}
+		}
+	} else {
+		// If Skip field of VCN is false, for each subnet in that VCN the Skip field of Subnet cannot be true
+		for _, subnet := range c.Spec.NetworkSpec.Vcn.Subnets {
+			if subnet.Skip == *common.Bool(true) {
+				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "subnet.Skip"), subnet.Skip, "field cannot be true when VCN is not skipped"))
+			}
 		}
 	}
 
@@ -121,6 +182,57 @@ func (c *OCICluster) ValidateUpdate(old runtime.Object) (admission.Warnings, err
 
 	if c.Spec.CompartmentId != oldCluster.Spec.CompartmentId {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "compartmentId"), c.Spec.CompartmentId, "field is immutable"))
+	}
+
+	// If Skip field is true, ID field of VCN should be specified
+	if c.Spec.NetworkSpec.Vcn.Skip == *common.Bool(true) {
+		if c.Spec.NetworkSpec.Vcn.ID == common.String("") || c.Spec.NetworkSpec.Vcn.ID == nil {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "NetworkSpec.Vcn.ID"), c.Spec.NetworkSpec.Vcn.ID, "field is required"))
+		}
+
+		// If Skip field is True, Skip field of InternetGateway should be true
+		if c.Spec.NetworkSpec.Vcn.InternetGateway.Skip != *common.Bool(true) {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "NetworkSpec.Vcn.InternetGateway.Skip"), c.Spec.NetworkSpec.Vcn.InternetGateway.Skip, "field requires to be true when VCN is skipped"))
+		}
+
+		// If Skip field is True, Skip field of ServiceGateway should be true
+		if c.Spec.NetworkSpec.Vcn.ServiceGateway.Skip != *common.Bool(true) {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "NetworkSpec.Vcn.ServiceGateway.Skip"), c.Spec.NetworkSpec.Vcn.ServiceGateway.Skip, "field requires to be true when VCN is skipped"))
+		}
+
+		// If Skip field is True, Skip field of NATGateway should be true
+		if c.Spec.NetworkSpec.Vcn.NATGateway.Skip != *common.Bool(true) {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "NetworkSpec.Vcn.NATGateway.Skip"), c.Spec.NetworkSpec.Vcn.NATGateway.Skip, "field requires to be true when VCN is skipped"))
+		}
+
+		// If Skip field is True, Skip field of RouteTable should be true
+		if c.Spec.NetworkSpec.Vcn.RouteTable.Skip != *common.Bool(true) {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "NetworkSpec.Vcn.RouteTable.Skip"), c.Spec.NetworkSpec.Vcn.RouteTable.Skip, "field requires to be true when VCN is skipped"))
+		}
+
+		// For each subnet
+		for _, subnet := range c.Spec.NetworkSpec.Vcn.Subnets {
+
+			// if Skip field is true, ID field of Subnet should also be specified
+			if subnet.Skip == *common.Bool(true) {
+				if subnet.ID == common.String("") || subnet.ID == nil {
+					allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "subnet.ID"), subnet.ID, "field is required"))
+				}
+			}
+			// if ID field is specified, Skip field of Subnet should also be true
+			if subnet.ID != common.String("") {
+				if subnet.Skip != *common.Bool(true) {
+					allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "subnet.Skip"), subnet.Skip, "field requires to be true if Subnet ID is specified"))
+				}
+			}
+		}
+	} else {
+		// If Skip field of VCN is false, for each subnet in that VCN the Skip field of Subnet cannot be true
+		for _, subnet := range c.Spec.NetworkSpec.Vcn.Subnets {
+			if subnet.Skip == *common.Bool(true) {
+				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "subnet.Skip"), subnet.Skip, "field cannot be true when VCN is not skipped"))
+			}
+		}
 	}
 
 	allErrs = append(allErrs, c.validate(oldCluster)...)

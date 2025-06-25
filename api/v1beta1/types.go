@@ -854,6 +854,10 @@ type Subnet struct {
 	ID *string `json:"id,omitempty"`
 	// Subnet Name.
 	Name string `json:"name"`
+	// Skip specifies whether to skip creating subnets. If set to true (default: false) the ID
+	// must be specified by the user to a valid Subnet ID.
+	// +optional
+	Skip bool `json:"skip,omitempty"`
 	// Subnet CIDR.
 	// +optional
 	CIDR string `json:"cidr,omitempty"`
@@ -905,6 +909,12 @@ type VCN struct {
 	// VCN Name.
 	// +optional
 	Name string `json:"name"`
+
+	// Skip specifies whether to skip creating VCN.
+	// When is set to true, InternetGateway, NatGateway, ServiceGateway, RouteTable must have also Skip set to true
+	// If set to true(default: false) the ID must be specified by the user to a valid VCN ID.
+	// +optional
+	Skip bool `json:"skip,omitempty"`
 
 	// VCN CIDR.
 	// +optional

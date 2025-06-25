@@ -54,7 +54,7 @@ spec:
     schema:
       openAPIV3Schema:
         type: string
-        default: VM.Standard.E4.Flex
+        default: VM.Standard.E5.Flex
   - name: ocpus
     required: false
     schema:
@@ -201,7 +201,7 @@ spec:
   template:
     spec:
       # will be replaced by shape variable defined above
-      shape: VM.Standard.E4.Flex
+      shape: VM.Standard.E5.Flex
       metadata: {}
       shapeConfig: {}
 ---
@@ -213,7 +213,7 @@ spec:
   template:
     spec:
       # will be replaced by shape variable defined above
-      shape: VM.Standard.E4.Flex
+      shape: VM.Standard.E5.Flex
       metadata: {}
       shapeConfig: {}
 ---

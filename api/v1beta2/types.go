@@ -854,6 +854,10 @@ type Subnet struct {
 	ID *string `json:"id,omitempty"`
 	// Subnet Name.
 	Name string `json:"name"`
+	// Skip specifies whether to skip creating subnets. If set to true(default: false) the ID
+	// must be specified by the user to a valid Subnet ID.
+	// +optional
+	Skip bool `json:"skip,omitempty"`
 	// Subnet CIDR.
 	// +optional
 	CIDR string `json:"cidr,omitempty"`
@@ -905,6 +909,12 @@ type VCN struct {
 	// VCN Name.
 	// +optional
 	Name string `json:"name"`
+
+	// Skip specifies whether to skip creating VCN.
+	// When is set to true, InternetGateway, NatGateway, ServiceGateway, RouteTable must have also Skip set to true
+	// If set to true(default: false) the ID must be specified by the user to a valid VCN ID.
+	// +optional
+	Skip bool `json:"skip,omitempty"`
 
 	// VCN CIDR.
 	// +optional
@@ -1125,6 +1135,7 @@ type RemotePeeringConnection struct {
 // InternetGateway is used to specify the options for creating internet gateway.
 type InternetGateway struct {
 	// Skip specifies whether to skip creating internet gateway even if any one Subnet is public.
+	// In case of VCN being Skipped (Skip field of VCN set to true), this field must be true also
 	// +optional
 	Skip bool `json:"skip,omitempty"`
 
@@ -1136,6 +1147,7 @@ type InternetGateway struct {
 // NATGateway is used to specify the options for creating NAT gateway.
 type NATGateway struct {
 	// Skip specifies whether to skip creating NAT gateway even if any one Subnet is private.
+	// In case of VCN being Skipped (Skip field of VCN set to true), this field must be true also
 	// +optional
 	Skip bool `json:"skip,omitempty"`
 
@@ -1147,6 +1159,7 @@ type NATGateway struct {
 // ServiceGateway is used to specify the options for creating Service gateway.
 type ServiceGateway struct {
 	// Skip specifies whether to skip creating Service gateway.
+	// In case of VCN being Skipped (Skip field of VCN set to true), this field must be true also
 	// +optional
 	Skip bool `json:"skip,omitempty"`
 
@@ -1158,6 +1171,7 @@ type ServiceGateway struct {
 // RouteTable is used to specify the options for creating Route table.
 type RouteTable struct {
 	// Skip specifies whether to skip creating Route table.
+	// In case of VCN being Skipped (Skip field of VCN set to true), this field must be true also
 	// +optional
 	Skip bool `json:"skip,omitempty"`
 
