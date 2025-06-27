@@ -17,6 +17,7 @@ limitations under the License.
 package v1beta2
 
 import (
+	"github.com/oracle/oci-go-sdk/v65/common"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -55,6 +56,18 @@ func (c *OCIManagedControlPlane) ValidateCreate() (admission.Warnings, error) {
 	var allErrs field.ErrorList
 	if len(c.Name) > 31 {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("Name"), c.Name, "Name cannot be more than 31 characters"))
+	}
+
+	if c.Spec.ClusterOption.OpenIdConnectTokenAuthenticationConfig.IsOpenIdConnectAuthEnabled == *common.Bool(true) {
+		if c.Spec.ClusterType != EnhancedClusterType {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("ClusterType"), c.Spec.ClusterType, "ClusterType needs to be set to ENHANCED_CLUSTER for OpenIdConnectTokenAuthenticationConfig to be enabled."))
+		}
+		if c.Spec.ClusterOption.OpenIdConnectTokenAuthenticationConfig.ClientId == nil {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("ClientId"), c.Spec.ClusterOption.OpenIdConnectTokenAuthenticationConfig.ClientId, "ClientId cannot be empty when OpenIdConnectAuth is enabled."))
+		}
+		if c.Spec.ClusterOption.OpenIdConnectTokenAuthenticationConfig.IssuerUrl == nil {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("IssuerUrl "), c.Spec.ClusterOption.OpenIdConnectTokenAuthenticationConfig.IssuerUrl, "IssuerUrl cannot be empty when OpenIdConnectAuth is enabled."))
+		}
 	}
 	if len(allErrs) == 0 {
 		return nil, nil
