@@ -17,7 +17,6 @@ limitations under the License.
 package v1beta2
 
 import (
-	"github.com/oracle/oci-go-sdk/v65/common"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -58,7 +57,7 @@ func (c *OCIManagedControlPlane) ValidateCreate() (admission.Warnings, error) {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("Name"), c.Name, "Name cannot be more than 31 characters"))
 	}
 
-	if c.Spec.ClusterOption.OpenIdConnectTokenAuthenticationConfig.IsOpenIdConnectAuthEnabled == *common.Bool(true) {
+	if c.Spec.ClusterOption.OpenIdConnectTokenAuthenticationConfig != nil && c.Spec.ClusterOption.OpenIdConnectTokenAuthenticationConfig.IsOpenIdConnectAuthEnabled {
 		if c.Spec.ClusterType != EnhancedClusterType {
 			allErrs = append(allErrs, field.Invalid(field.NewPath("ClusterType"), c.Spec.ClusterType, "ClusterType needs to be set to ENHANCED_CLUSTER for OpenIdConnectTokenAuthenticationConfig to be enabled."))
 		}
