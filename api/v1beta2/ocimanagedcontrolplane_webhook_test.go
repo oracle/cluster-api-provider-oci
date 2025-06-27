@@ -20,6 +20,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/oracle/oci-go-sdk/v65/common"
+
 	"github.com/onsi/gomega"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -75,6 +77,85 @@ func TestOCIManagedControlPlane_ValidateCreate(t *testing.T) {
 			c: &OCIManagedControlPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "abcdefghijklmno",
+				},
+			},
+			expectErr: false,
+		},
+		{
+			name: "OpenIdConnectAuthEnabledWithValidConfig",
+			c: &OCIManagedControlPlane{
+				Spec: OCIManagedControlPlaneSpec{
+					ClusterType: EnhancedClusterType,
+					ClusterOption: ClusterOptions{
+						OpenIdConnectTokenAuthenticationConfig: &OpenIDConnectTokenAuthenticationConfig{
+							IsOpenIdConnectAuthEnabled: *common.Bool(true),
+							ClientId:                   common.String("client-id"),
+							IssuerUrl:                  common.String("issuer-url"),
+						},
+					},
+				},
+			},
+			expectErr: false,
+		},
+		{
+			name: "OpenIdConnectAuthEnabledWithInvalidClusterType",
+			c: &OCIManagedControlPlane{
+				Spec: OCIManagedControlPlaneSpec{
+					ClusterType: BasicClusterType,
+					ClusterOption: ClusterOptions{
+						OpenIdConnectTokenAuthenticationConfig: &OpenIDConnectTokenAuthenticationConfig{
+							IsOpenIdConnectAuthEnabled: *common.Bool(true),
+							ClientId:                   common.String("client-id"),
+							IssuerUrl:                  common.String("issuer-url"),
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "ClusterType needs to be set to ENHANCED_CLUSTER for OpenIdConnectTokenAuthenticationConfig to be enabled.",
+			expectErr:             true,
+		},
+		{
+			name: "OpenIdConnectAuthEnabledWithMissingClientId",
+			c: &OCIManagedControlPlane{
+				Spec: OCIManagedControlPlaneSpec{
+					ClusterType: EnhancedClusterType,
+					ClusterOption: ClusterOptions{
+						OpenIdConnectTokenAuthenticationConfig: &OpenIDConnectTokenAuthenticationConfig{
+							IsOpenIdConnectAuthEnabled: *common.Bool(true),
+							IssuerUrl:                  common.String("issuer-url"),
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "ClientId cannot be empty when OpenIdConnectAuth is enabled.",
+			expectErr:             true,
+		},
+		{
+			name: "OpenIdConnectAuthEnabledWithMissingIssuerUrl",
+			c: &OCIManagedControlPlane{
+				Spec: OCIManagedControlPlaneSpec{
+					ClusterType: EnhancedClusterType,
+					ClusterOption: ClusterOptions{
+						OpenIdConnectTokenAuthenticationConfig: &OpenIDConnectTokenAuthenticationConfig{
+							IsOpenIdConnectAuthEnabled: *common.Bool(true),
+							ClientId:                   common.String("client-id"),
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "IssuerUrl cannot be empty when OpenIdConnectAuth is enabled.",
+			expectErr:             true,
+		},
+		{
+			name: "OpenIdConnectAuthDisabled",
+			c: &OCIManagedControlPlane{
+				Spec: OCIManagedControlPlaneSpec{
+					ClusterType: BasicClusterType,
+					ClusterOption: ClusterOptions{
+						OpenIdConnectTokenAuthenticationConfig: &OpenIDConnectTokenAuthenticationConfig{
+							IsOpenIdConnectAuthEnabled: *common.Bool(false),
+						},
+					},
 				},
 			},
 			expectErr: false,

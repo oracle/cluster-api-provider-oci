@@ -36,6 +36,26 @@ func (src *OCIManagedControlPlane) ConvertTo(dstRaw conversion.Hub) error {
 	dst.Spec.ClusterType = restored.Spec.ClusterType
 	dst.Spec.Addons = restored.Spec.Addons
 	dst.Status.AddonStatus = restored.Status.AddonStatus
+
+	// Handle ClusterOption conversion
+	// Copy OpenIdConnectDiscovery if present
+	if restored.Spec.ClusterOption.OpenIdConnectDiscovery != nil {
+		if dst.Spec.ClusterOption.OpenIdConnectDiscovery == nil {
+			dst.Spec.ClusterOption.OpenIdConnectDiscovery = &v1beta2.OpenIDConnectDiscovery{}
+		}
+		dst.Spec.ClusterOption.OpenIdConnectDiscovery.IsOpenIdConnectDiscoveryEnabled =
+			restored.Spec.ClusterOption.OpenIdConnectDiscovery.IsOpenIdConnectDiscoveryEnabled
+	}
+
+	// Copy OpenIdConnectTokenAuthenticationConfig if present
+	if restored.Spec.ClusterOption.OpenIdConnectTokenAuthenticationConfig != nil {
+		if dst.Spec.ClusterOption.OpenIdConnectTokenAuthenticationConfig == nil {
+			dst.Spec.ClusterOption.OpenIdConnectTokenAuthenticationConfig = &v1beta2.OpenIDConnectTokenAuthenticationConfig{}
+		}
+		*dst.Spec.ClusterOption.OpenIdConnectTokenAuthenticationConfig =
+			*restored.Spec.ClusterOption.OpenIdConnectTokenAuthenticationConfig
+	}
+
 	return nil
 }
 
