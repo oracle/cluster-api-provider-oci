@@ -564,10 +564,6 @@ func (s *ManagedControlPlaneScope) updateCAPIKubeconfigSecret(ctx context.Contex
 		return fmt.Errorf("generating presigned token: %w", err)
 	}
 
-	if err != nil {
-		return fmt.Errorf("generating presigned token: %w", err)
-	}
-
 	userName := getKubeConfigUserName(*okeCluster.Name, false)
 	config.AuthInfos[userName].Token = token
 
