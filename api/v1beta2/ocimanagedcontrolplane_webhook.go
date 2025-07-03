@@ -56,6 +56,18 @@ func (c *OCIManagedControlPlane) ValidateCreate() (admission.Warnings, error) {
 	if len(c.Name) > 31 {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("Name"), c.Name, "Name cannot be more than 31 characters"))
 	}
+
+	if c.Spec.ClusterOption.OpenIdConnectTokenAuthenticationConfig != nil && c.Spec.ClusterOption.OpenIdConnectTokenAuthenticationConfig.IsOpenIdConnectAuthEnabled {
+		if c.Spec.ClusterType != EnhancedClusterType {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("ClusterType"), c.Spec.ClusterType, "ClusterType needs to be set to ENHANCED_CLUSTER for OpenIdConnectTokenAuthenticationConfig to be enabled."))
+		}
+		if c.Spec.ClusterOption.OpenIdConnectTokenAuthenticationConfig.ClientId == nil {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("ClientId"), c.Spec.ClusterOption.OpenIdConnectTokenAuthenticationConfig.ClientId, "ClientId cannot be empty when OpenIdConnectAuth is enabled."))
+		}
+		if c.Spec.ClusterOption.OpenIdConnectTokenAuthenticationConfig.IssuerUrl == nil {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("IssuerUrl "), c.Spec.ClusterOption.OpenIdConnectTokenAuthenticationConfig.IssuerUrl, "IssuerUrl cannot be empty when OpenIdConnectAuth is enabled."))
+		}
+	}
 	if len(allErrs) == 0 {
 		return nil, nil
 	}

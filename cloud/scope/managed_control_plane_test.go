@@ -1146,6 +1146,132 @@ func TestAddonReconcile(t *testing.T) {
 			if tc.matchStatus != nil {
 				g.Expect(cs.OCIManagedControlPlane.Status.AddonStatus).To(Equal(tc.matchStatus))
 			}
+
+		})
+	}
+}
+
+func TestCompareSpecs(t *testing.T) {
+	var (
+		cs       *ManagedControlPlaneScope
+		mockCtrl *gomock.Controller
+	)
+
+	setup := func(t *testing.T, g *WithT) {
+		mockCtrl = gomock.NewController(t)
+		var err error
+
+		ociClusterAccessor := OCIManagedCluster{
+			&infrastructurev1beta2.OCIManagedCluster{
+				ObjectMeta: metav1.ObjectMeta{
+					UID: "cluster_uid",
+				},
+			},
+		}
+
+		cs, err = NewManagedControlPlaneScope(ManagedControlPlaneScopeParams{
+			OCIManagedControlPlane: &infrastructurev1beta2.OCIManagedControlPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+				},
+				Spec: infrastructurev1beta2.OCIManagedControlPlaneSpec{},
+			},
+			OCIClusterAccessor: ociClusterAccessor,
+			Cluster: &clusterv1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "default",
+				},
+			},
+		})
+		g.Expect(err).To(BeNil())
+	}
+
+	teardown := func(t *testing.T, g *WithT) {
+		mockCtrl.Finish()
+	}
+
+	specWithFields := func(version, kms string, enableDashboard bool) *infrastructurev1beta2.OCIManagedControlPlaneSpec {
+		return &infrastructurev1beta2.OCIManagedControlPlaneSpec{
+			Version:  common.String(version),
+			KmsKeyId: common.String(kms),
+			ClusterOption: infrastructurev1beta2.ClusterOptions{
+				AddOnOptions: &infrastructurev1beta2.AddOnOptions{
+					IsKubernetesDashboardEnabled: common.Bool(enableDashboard),
+				},
+			},
+			ImagePolicyConfig: &infrastructurev1beta2.ImagePolicyConfig{
+				IsPolicyEnabled: common.Bool(true),
+				KeyDetails: []infrastructurev1beta2.KeyDetails{{
+					KmsKeyId: common.String("image-kms-id"),
+				}},
+			},
+			ClusterPodNetworkOptions: []infrastructurev1beta2.ClusterPodNetworkOptions{
+				{
+					CniType: infrastructurev1beta2.VCNNativeCNI,
+				},
+			},
+		}
+	}
+
+	tests := []struct {
+		name          string
+		spec1         *infrastructurev1beta2.OCIManagedControlPlaneSpec
+		spec2         *infrastructurev1beta2.OCIManagedControlPlaneSpec
+		expectedEqual bool
+	}{
+		{
+			name:          "both specs nil",
+			spec1:         nil,
+			spec2:         nil,
+			expectedEqual: true,
+		},
+		{
+			name:          "spec1 nil, spec2 not nil",
+			spec1:         nil,
+			spec2:         specWithFields("v1.27.2", "kms1", true),
+			expectedEqual: false,
+		},
+		{
+			name:          "spec2 nil, spec1 not nil",
+			spec1:         specWithFields("v1.27.2", "kms1", true),
+			spec2:         nil,
+			expectedEqual: false,
+		},
+		{
+			name:          "specs are equal",
+			spec1:         specWithFields("v1.27.2", "kms1", true),
+			spec2:         specWithFields("v1.27.2", "kms1", true),
+			expectedEqual: true,
+		},
+		{
+			name:          "specs differ in version",
+			spec1:         specWithFields("v1.27.2", "kms1", true),
+			spec2:         specWithFields("v1.26.0", "kms1", true),
+			expectedEqual: false,
+		},
+		{
+			name:          "specs differ in kmsKeyId",
+			spec1:         specWithFields("v1.27.2", "kms1", true),
+			spec2:         specWithFields("v1.27.2", "kms2", true),
+			expectedEqual: false,
+		},
+		{
+			name:          "specs differ in AddOnOptions",
+			spec1:         specWithFields("v1.27.2", "kms1", true),
+			spec2:         specWithFields("v1.27.2", "kms1", false),
+			expectedEqual: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+			defer teardown(t, g)
+			setup(t, g)
+
+			equal := cs.compareSpecs(tc.spec1, tc.spec2)
+			g.Expect(equal).To(Equal(tc.expectedEqual))
 		})
 	}
 }
