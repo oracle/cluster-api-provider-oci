@@ -91,32 +91,40 @@ func (m *OCIManagedMachinePool) validateVersion(allErrs field.ErrorList) field.E
 
 func (m *OCIManagedMachinePool) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	var allErrs field.ErrorList
+	var warnings admission.Warnings
+
 	oldManagedMachinePool, ok := old.(*OCIManagedMachinePool)
 	if !ok {
 		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected an OCIManagedMachinePool but got a %T", old))
 	}
 
 	allErrs = m.validateVersion(allErrs)
+
 	if !reflect.DeepEqual(m.Spec.Version, oldManagedMachinePool.Spec.Version) {
 		newImage := m.getImageId()
 		oldImage := oldManagedMachinePool.getImageId()
-		// if an image has been provided in updated machine pool and it matches old image id,
-		// and if Kubernetes version has been updated, that means the image is not correct. If the version has
-		// been changed, the image should have been updated by the user, or set as nil in which case
-		// CAPOCI will lookup a correct image
-		if newImage != nil && reflect.DeepEqual(newImage, oldImage) {
-			allErrs = append(
-				allErrs,
-				field.Invalid(field.NewPath("spec", "nodeSourceViaImage", "imageId"),
-					m.getImageId(), "image id has not been updated for the newer version, "+
-						"either provide a newer image or set the field as nil"))
 
+		if newImage != nil && reflect.DeepEqual(newImage, oldImage) {
+			// if an image has been provided in updated machine pool and it matches old image id,
+			// and if Kubernetes version has been updated, that means that it might be a custom image.
+			// This allows the use of custom images that support multiple Kubernetes versions. If the image is not a custom image
+			// then the image should have been updated by the user, or set as nil in which case
+			// CAPOCI will lookup a correct image.
+			warnMsg := fmt.Sprintf("Kubernetes version was updated from %q to %q without changing the imageId. "+
+				"If you are not using a custom multi-version image, this may cause nodepool creation to fail.",
+				*oldManagedMachinePool.Spec.Version, *m.Spec.Version)
+			warnings = append(warnings, warnMsg)
 		}
 	}
-	if len(allErrs) == 0 {
-		return nil, nil
+
+	// If there are any hard errors (like an invalid version format), return them.
+	// Also return the list of accumulated warnings.
+	if len(allErrs) > 0 {
+		return warnings, apierrors.NewInvalid(m.GroupVersionKind().GroupKind(), m.Name, allErrs)
 	}
-	return nil, apierrors.NewInvalid(m.GroupVersionKind().GroupKind(), m.Name, allErrs)
+
+	// If there are no errors, return the warnings.
+	return warnings, nil
 }
 
 func (m *OCIManagedMachinePool) ValidateDelete() (admission.Warnings, error) {
