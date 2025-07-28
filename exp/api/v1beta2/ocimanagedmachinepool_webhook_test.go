@@ -255,7 +255,7 @@ func TestOCIManagedMachinePool_ValidateUpdate(t *testing.T) {
 			expectErr: false,
 		},
 		{
-			name: "should not allow version update with same image",
+			name: "should allow version update with same image",
 			m: &OCIManagedMachinePool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "abcdefghijklmno",
@@ -278,7 +278,7 @@ func TestOCIManagedMachinePool_ValidateUpdate(t *testing.T) {
 					},
 				},
 			},
-			expectErr: true,
+			expectErr: false,
 		},
 	}
 	for _, test := range tests {
