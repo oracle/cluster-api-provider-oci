@@ -32,7 +32,7 @@ func GetNsgNamesFromId(ids []string, nsgs []*infrastructurev1beta2.NSG) []string
 	names := make([]string, 0)
 	for _, id := range ids {
 		for _, nsg := range nsgs {
-			if id == *nsg.ID {
+			if nsg != nil && nsg.ID != nil && id == *nsg.ID {
 				names = append(names, nsg.Name)
 			}
 		}
