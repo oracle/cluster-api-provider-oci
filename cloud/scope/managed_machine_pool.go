@@ -129,7 +129,7 @@ func (m *ManagedMachinePoolScope) SetReplicaCount(count int32) {
 // GetWorkerMachineSubnet returns the WorkerRole core.Subnet id for the cluster
 func (m *ManagedMachinePoolScope) GetWorkerMachineSubnet() *string {
 	for _, subnet := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets {
-		if subnet.Role == infrastructurev1beta2.WorkerRole {
+		if subnet != nil && subnet.Role == infrastructurev1beta2.WorkerRole {
 			return subnet.ID
 		}
 	}
@@ -140,7 +140,7 @@ func (m *ManagedMachinePoolScope) GetWorkerMachineSubnet() *string {
 func (m *ManagedMachinePoolScope) SetListandSetMachinePoolInstances(ctx context.Context, nodePool *oke.NodePool) (int32, error) {
 	providerIDList := make([]string, 0)
 	for _, instance := range nodePool.Nodes {
-		if instance.LifecycleState == oke.NodeLifecycleStateActive {
+		if instance.Id != nil && instance.LifecycleState == oke.NodeLifecycleStateActive {
 			providerIDList = append(providerIDList, *instance.Id)
 		}
 	}
@@ -484,7 +484,7 @@ func (m *ManagedMachinePoolScope) getFreeFormTags() map[string]string {
 func (m *ManagedMachinePoolScope) getWorkerMachineSubnets() []string {
 	subnetList := make([]string, 0)
 	for _, subnet := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets {
-		if subnet.Role == infrastructurev1beta2.WorkerRole {
+		if subnet != nil && subnet.Role == infrastructurev1beta2.WorkerRole {
 			subnetList = append(subnetList, subnet.Name)
 		}
 	}
