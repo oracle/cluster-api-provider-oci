@@ -120,7 +120,7 @@ func (s *ClusterScope) GetNSG(ctx context.Context, spec infrastructurev1beta2.NS
 		return nil, errors.Wrap(err, "failed to list network security groups")
 	}
 	for _, nsg := range nsgs.Items {
-		if s.IsResourceCreatedByClusterAPI(nsg.FreeformTags) {
+		if &nsg != nil && s.IsResourceCreatedByClusterAPI(nsg.FreeformTags) {
 			return &nsg, nil
 		}
 	}
@@ -160,7 +160,7 @@ func (s *ClusterScope) GetNSGSpec() []*infrastructurev1beta2.NSG {
 
 func (s *ClusterScope) IsNSGExitsByRole(role infrastructurev1beta2.Role) bool {
 	for _, nsg := range s.GetNSGSpec() {
-		if role == nsg.Role {
+		if nsg != nil && role == nsg.Role {
 			return true
 		}
 	}
@@ -483,7 +483,7 @@ func getProtocolOptionsForSpec(icmp *core.IcmpOptions, tcp *core.TcpOptions, udp
 
 func getNsgIdFromName(nsgName *string, list []*infrastructurev1beta2.NSG) *string {
 	for _, nsg := range list {
-		if nsg.Name == *nsgName {
+		if nsg != nil && nsg.ID != nil && nsg.Name == *nsgName {
 			return nsg.ID
 		}
 	}
@@ -495,7 +495,7 @@ func getNsgNameFromId(nsgId *string, list []*infrastructurev1beta2.NSG) *string 
 		return nil
 	}
 	for _, nsg := range list {
-		if reflect.DeepEqual(nsg.ID, nsgId) {
+		if nsg != nil && nsg.ID != nil && reflect.DeepEqual(nsg.ID, nsgId) {
 			return &nsg.Name
 		}
 	}

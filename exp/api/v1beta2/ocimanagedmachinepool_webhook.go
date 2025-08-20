@@ -104,7 +104,7 @@ func (m *OCIManagedMachinePool) ValidateUpdate(old runtime.Object) (admission.Wa
 		newImage := m.getImageId()
 		oldImage := oldManagedMachinePool.getImageId()
 
-		if newImage != nil && reflect.DeepEqual(newImage, oldImage) {
+		if newImage != nil && oldImage != nil && reflect.DeepEqual(newImage, oldImage) {
 			// if an image has been provided in updated machine pool and it matches old image id,
 			// and if Kubernetes version has been updated, that means that it might be a custom image.
 			// This allows the use of custom images that support multiple Kubernetes versions. If the image is not a custom image

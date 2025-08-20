@@ -744,7 +744,7 @@ func (m *MachineScope) getCompartmentId() string {
 
 func (m *MachineScope) getGetControlPlaneMachineSubnet() *string {
 	for _, subnet := range m.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets {
-		if subnet.Role == infrastructurev1beta2.ControlPlaneRole {
+		if subnet != nil && subnet.ID != nil && subnet.Role == infrastructurev1beta2.ControlPlaneRole {
 			return subnet.ID
 		}
 	}
@@ -754,7 +754,7 @@ func (m *MachineScope) getGetControlPlaneMachineSubnet() *string {
 func (m *MachineScope) getGetControlPlaneMachineNSGs() []string {
 	nsgs := make([]string, 0)
 	for _, nsg := range m.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List {
-		if nsg.Role == infrastructurev1beta2.ControlPlaneRole {
+		if nsg != nil && nsg.Role == infrastructurev1beta2.ControlPlaneRole {
 			if nsg.ID != nil {
 				nsgs = append(nsgs, *nsg.ID)
 			}
@@ -767,7 +767,7 @@ func (m *MachineScope) getGetControlPlaneMachineNSGs() []string {
 // and returns the subnet ID if the name matches
 func (m *MachineScope) getMachineSubnet(name string) (*string, error) {
 	for _, subnet := range m.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets {
-		if subnet.Name == name {
+		if subnet != nil && subnet.ID != nil && subnet.Name == name {
 			return subnet.ID, nil
 		}
 	}
@@ -776,7 +776,7 @@ func (m *MachineScope) getMachineSubnet(name string) (*string, error) {
 
 func (m *MachineScope) getWorkerMachineSubnet() *string {
 	for _, subnet := range m.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets {
-		if subnet.Role == infrastructurev1beta2.WorkerRole {
+		if subnet != nil && subnet.ID != nil && subnet.Role == infrastructurev1beta2.WorkerRole {
 			// if a subnet name is defined, use the correct subnet
 			if m.OCIMachine.Spec.SubnetName != "" {
 				if m.OCIMachine.Spec.SubnetName == subnet.Name {
@@ -795,7 +795,7 @@ func (m *MachineScope) getWorkerMachineNSGs() []string {
 		nsgs := make([]string, 0)
 		for _, nsgName := range m.OCIMachine.Spec.NetworkDetails.NsgNames {
 			for _, nsg := range m.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List {
-				if nsg.Name == nsgName {
+				if nsg != nil && nsg.Name == nsgName {
 					if nsg.ID != nil {
 						nsgs = append(nsgs, *nsg.ID)
 					}
@@ -806,7 +806,7 @@ func (m *MachineScope) getWorkerMachineNSGs() []string {
 	} else {
 		nsgs := make([]string, 0)
 		for _, nsg := range m.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List {
-			if nsg.Role == infrastructurev1beta2.WorkerRole {
+			if nsg != nil && nsg.Role == infrastructurev1beta2.WorkerRole {
 				if nsg.ID != nil {
 					nsgs = append(nsgs, *nsg.ID)
 				}

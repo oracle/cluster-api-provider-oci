@@ -251,7 +251,7 @@ func (s *ClusterScope) GetSubnet(ctx context.Context, spec infrastructurev1beta2
 
 func (s *ClusterScope) GetControlPlaneEndpointSubnet() *infrastructurev1beta2.Subnet {
 	for _, subnet := range s.GetSubnetsSpec() {
-		if subnet.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
+		if subnet != nil && subnet.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
 			return subnet
 		}
 	}
@@ -260,7 +260,7 @@ func (s *ClusterScope) GetControlPlaneEndpointSubnet() *infrastructurev1beta2.Su
 
 func (s *ClusterScope) GetControlPlaneMachineSubnet() *infrastructurev1beta2.Subnet {
 	for _, subnet := range s.GetSubnetsSpec() {
-		if subnet.Role == infrastructurev1beta2.ControlPlaneRole {
+		if subnet != nil && subnet.Role == infrastructurev1beta2.ControlPlaneRole {
 			return subnet
 		}
 	}
@@ -269,7 +269,7 @@ func (s *ClusterScope) GetControlPlaneMachineSubnet() *infrastructurev1beta2.Sub
 
 func (s *ClusterScope) GetServiceLoadBalancerSubnet() *infrastructurev1beta2.Subnet {
 	for _, subnet := range s.GetSubnetsSpec() {
-		if subnet.Role == infrastructurev1beta2.ServiceLoadBalancerRole {
+		if subnet != nil && subnet.Role == infrastructurev1beta2.ServiceLoadBalancerRole {
 			return subnet
 		}
 	}
@@ -279,7 +279,7 @@ func (s *ClusterScope) GetServiceLoadBalancerSubnet() *infrastructurev1beta2.Sub
 func (s *ClusterScope) GetNodeSubnet() []*infrastructurev1beta2.Subnet {
 	var nodeSubnets []*infrastructurev1beta2.Subnet
 	for _, subnet := range s.GetSubnetsSpec() {
-		if subnet.Role == infrastructurev1beta2.WorkerRole {
+		if subnet != nil && subnet.Role == infrastructurev1beta2.WorkerRole {
 			nodeSubnets = append(nodeSubnets, subnet)
 		}
 	}
@@ -307,7 +307,7 @@ func (s *ClusterScope) IsSubnetsEqual(actual *core.Subnet, desired infrastructur
 
 func (s *ClusterScope) isControlPlaneEndpointSubnetPrivate() bool {
 	for _, subnet := range s.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets {
-		if subnet.Role == infrastructurev1beta2.ControlPlaneEndpointRole && subnet.Type == infrastructurev1beta2.Private {
+		if subnet != nil && subnet.Role == infrastructurev1beta2.ControlPlaneEndpointRole && subnet.Type == infrastructurev1beta2.Private {
 			return true
 		}
 	}
@@ -316,7 +316,7 @@ func (s *ClusterScope) isControlPlaneEndpointSubnetPrivate() bool {
 
 func (s *ClusterScope) GetControlPlaneEndpointSubnetCidr() string {
 	for _, subnet := range s.GetSubnetsSpec() {
-		if subnet.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
+		if subnet != nil && subnet.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
 			if subnet.CIDR != "" {
 				return subnet.CIDR
 			}
@@ -327,7 +327,7 @@ func (s *ClusterScope) GetControlPlaneEndpointSubnetCidr() string {
 
 func (s *ClusterScope) GetServiceLoadBalancerSubnetCidr() string {
 	for _, subnet := range s.GetSubnetsSpec() {
-		if subnet.Role == infrastructurev1beta2.ServiceLoadBalancerRole {
+		if subnet != nil && subnet.Role == infrastructurev1beta2.ServiceLoadBalancerRole {
 			if subnet.CIDR != "" {
 				return subnet.CIDR
 			}
@@ -340,7 +340,7 @@ func (s *ClusterScope) NodeSubnetCidr() []string {
 	subnets := s.GetNodeSubnet()
 	var nodeCIDR []string
 	for _, subnet := range subnets {
-		if subnet.CIDR != "" {
+		if subnet != nil && subnet.CIDR != "" {
 			nodeCIDR = append(nodeCIDR, subnet.CIDR)
 		}
 		nodeCIDR = append(nodeCIDR, WorkerSubnetDefaultCIDR)
@@ -376,7 +376,7 @@ func (s *ClusterScope) IsAllSubnetsPrivate() bool {
 // IsAllSubnetsPublic determines if all the ClusterScope's subnets are public
 func (s *ClusterScope) IsAllSubnetsPublic() bool {
 	for _, subnet := range s.GetSubnetsSpec() {
-		if subnet.Type == infrastructurev1beta2.Private {
+		if subnet != nil && subnet.Type == infrastructurev1beta2.Private {
 			return false
 		}
 	}
