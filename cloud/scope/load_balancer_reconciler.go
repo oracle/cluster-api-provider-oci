@@ -22,6 +22,7 @@ import (
 
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
+	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/loadbalancer"
 	"github.com/pkg/errors"
@@ -183,7 +184,7 @@ func (s *ClusterScope) CreateLB(ctx context.Context, lb infrastructurev1beta2.Lo
 		DefinedTags:  s.GetDefinedTags(),
 	}
 	nsgs := make([]string, 0)
-	for _, nsg := range s.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List {
+	for _, nsg := range ptr.ToNSGSlice(s.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List) {
 		if nsg.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
 			if nsg.ID != nil {
 				nsgs = append(nsgs, *nsg.ID)
