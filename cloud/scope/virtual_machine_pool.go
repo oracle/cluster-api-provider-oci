@@ -128,7 +128,7 @@ func (m *VirtualMachinePoolScope) SetReplicaCount(count int32) {
 // GetWorkerMachineSubnet returns the WorkerRole core.Subnet id for the cluster
 func (m *VirtualMachinePoolScope) GetWorkerMachineSubnet() *string {
 	for _, subnet := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets {
-		if subnet != nil && subnet.ID != nil && subnet.Role == infrastructurev1beta2.WorkerRole {
+		if subnet != nil && subnet.Role == infrastructurev1beta2.WorkerRole {
 			return subnet.ID
 		}
 	}
@@ -472,7 +472,7 @@ func (m *VirtualMachinePoolScope) getTaints() []oke.Taint {
 
 func (m *VirtualMachinePoolScope) getSubnet(name *string) *string {
 	for _, subnet := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets {
-		if subnet != nil && subnet.ID != nil && subnet.Name == *name {
+		if subnet != nil && subnet.Name == *name {
 			return subnet.ID
 		}
 	}

@@ -245,7 +245,7 @@ func (m *MachinePoolScope) GetBootstrapData() (string, error) {
 // GetWorkerMachineNSG returns the worker role core.NetworkSecurityGroup id for the cluster
 func (m *MachinePoolScope) GetWorkerMachineNSG() *string {
 	for _, nsg := range m.OCIClusterAccesor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List {
-		if nsg != nil && nsg.ID != nil && nsg.Role == infrastructurev1beta2.WorkerRole {
+		if nsg != nil && nsg.Role == infrastructurev1beta2.WorkerRole {
 			return nsg.ID
 		}
 	}
