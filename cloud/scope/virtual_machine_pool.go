@@ -20,7 +20,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"reflect"
 
 	"github.com/go-logr/logr"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
@@ -33,7 +36,6 @@ import (
 	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
 	"github.com/pkg/errors"
 	"k8s.io/klog/v2/klogr"
-	"reflect"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	capierrors "sigs.k8s.io/cluster-api/errors"
 	expclusterv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
@@ -126,7 +128,7 @@ func (m *VirtualMachinePoolScope) SetReplicaCount(count int32) {
 // GetWorkerMachineSubnet returns the WorkerRole core.Subnet id for the cluster
 func (m *VirtualMachinePoolScope) GetWorkerMachineSubnet() *string {
 	for _, subnet := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets {
-		if subnet.Role == infrastructurev1beta2.WorkerRole {
+		if subnet != nil && subnet.ID != nil && subnet.Role == infrastructurev1beta2.WorkerRole {
 			return subnet.ID
 		}
 	}
@@ -376,7 +378,7 @@ func (m *VirtualMachinePoolScope) getFreeFormTags() map[string]string {
 func (m *VirtualMachinePoolScope) getWorkerMachineSubnets() []string {
 	subnetList := make([]string, 0)
 	for _, subnet := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets {
-		if subnet.Role == infrastructurev1beta2.WorkerRole {
+		if subnet != nil && subnet.Role == infrastructurev1beta2.WorkerRole {
 			subnetList = append(subnetList, subnet.Name)
 		}
 	}
@@ -389,14 +391,14 @@ func (m *VirtualMachinePoolScope) getWorkerMachineNSGs() []string {
 	if len(specNsgNames) > 0 {
 		for _, nsgName := range specNsgNames {
 			for _, nsg := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
-				if nsg.Name == nsgName {
+				if nsg != nil && nsg.ID != nil && nsg.Name == nsgName {
 					nsgList = append(nsgList, *nsg.ID)
 				}
 			}
 		}
 	} else {
 		for _, nsg := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
-			if nsg.Role == infrastructurev1beta2.WorkerRole {
+			if nsg != nil && nsg.ID != nil && nsg.Role == infrastructurev1beta2.WorkerRole {
 				nsgList = append(nsgList, *nsg.ID)
 			}
 		}
@@ -407,7 +409,7 @@ func (m *VirtualMachinePoolScope) getWorkerMachineNSGs() []string {
 func (m *VirtualMachinePoolScope) getWorkerMachineNSGList() []string {
 	nsgList := make([]string, 0)
 	for _, nsg := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
-		if nsg.Role == infrastructurev1beta2.WorkerRole {
+		if nsg != nil && nsg.Role == infrastructurev1beta2.WorkerRole {
 			nsgList = append(nsgList, nsg.Name)
 		}
 	}
@@ -419,7 +421,7 @@ func (m *VirtualMachinePoolScope) getPodNSGs(nsgs []string) []string {
 	if len(nsgs) > 0 {
 		for _, nsgName := range nsgs {
 			for _, nsg := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
-				if nsg.Name == nsgName {
+				if nsg != nil && nsg.ID != nil && nsg.Name == nsgName {
 					nsgList = append(nsgList, *nsg.ID)
 				}
 			}
@@ -470,7 +472,7 @@ func (m *VirtualMachinePoolScope) getTaints() []oke.Taint {
 
 func (m *VirtualMachinePoolScope) getSubnet(name *string) *string {
 	for _, subnet := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets {
-		if subnet.Name == *name {
+		if subnet != nil && subnet.ID != nil && subnet.Name == *name {
 			return subnet.ID
 		}
 	}

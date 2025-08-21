@@ -161,7 +161,7 @@ func (s *ClusterScope) CreateLB(ctx context.Context, lb infrastructurev1beta2.Lo
 	}
 	var controlPlaneEndpointSubnets []string
 	for _, subnet := range s.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets {
-		if subnet.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
+		if subnet != nil && subnet.ID != nil && subnet.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
 			controlPlaneEndpointSubnets = append(controlPlaneEndpointSubnets, *subnet.ID)
 		}
 	}
@@ -184,7 +184,7 @@ func (s *ClusterScope) CreateLB(ctx context.Context, lb infrastructurev1beta2.Lo
 	}
 	nsgs := make([]string, 0)
 	for _, nsg := range s.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List {
-		if nsg.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
+		if nsg != nil && nsg.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
 			if nsg.ID != nil {
 				nsgs = append(nsgs, *nsg.ID)
 			}

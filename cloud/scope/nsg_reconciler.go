@@ -160,7 +160,7 @@ func (s *ClusterScope) GetNSGSpec() []*infrastructurev1beta2.NSG {
 
 func (s *ClusterScope) IsNSGExitsByRole(role infrastructurev1beta2.Role) bool {
 	for _, nsg := range s.GetNSGSpec() {
-		if nsg != nil && role == nsg.Role {
+		if role == nsg.Role {
 			return true
 		}
 	}
@@ -483,7 +483,7 @@ func getProtocolOptionsForSpec(icmp *core.IcmpOptions, tcp *core.TcpOptions, udp
 
 func getNsgIdFromName(nsgName *string, list []*infrastructurev1beta2.NSG) *string {
 	for _, nsg := range list {
-		if nsg != nil && nsg.ID != nil && nsg.Name == *nsgName {
+		if nsg != nil && nsg.Name == *nsgName {
 			return nsg.ID
 		}
 	}

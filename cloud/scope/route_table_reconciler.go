@@ -94,22 +94,22 @@ func (s *ClusterScope) getRouteTable(ctx context.Context, routeTableType string)
 	if routeTableType == infrastructurev1beta2.Private {
 		routeTableName = PrivateRouteTableName
 	}
-	if vcnId != nil {
-		rts, err := s.VCNClient.ListRouteTables(ctx, core.ListRouteTablesRequest{
-			CompartmentId: common.String(s.GetCompartmentId()),
-			VcnId:         vcnId,
-			DisplayName:   common.String(routeTableName),
-		})
-		if err != nil {
-			s.Logger.Error(err, "failed to list route tables")
-			return nil, errors.Wrap(err, "failed to list route tables")
-		}
-		for _, rt := range rts.Items {
-			if s.IsResourceCreatedByClusterAPI(rt.FreeformTags) {
-				return &rt, nil
-			}
+
+	rts, err := s.VCNClient.ListRouteTables(ctx, core.ListRouteTablesRequest{
+		CompartmentId: common.String(s.GetCompartmentId()),
+		VcnId:         vcnId,
+		DisplayName:   common.String(routeTableName),
+	})
+	if err != nil {
+		s.Logger.Error(err, "failed to list route tables")
+		return nil, errors.Wrap(err, "failed to list route tables")
+	}
+	for _, rt := range rts.Items {
+		if s.IsResourceCreatedByClusterAPI(rt.FreeformTags) {
+			return &rt, nil
 		}
 	}
+
 	return nil, nil
 }
 
