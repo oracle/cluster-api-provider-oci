@@ -89,14 +89,15 @@ func (s *ClusterScope) getRouteTable(ctx context.Context, routeTableType string)
 		}
 
 	}
-	vcId := s.getVcnId()
+	vcnId := s.getVcnId()
 	routeTableName := PublicRouteTableName
 	if routeTableType == infrastructurev1beta2.Private {
 		routeTableName = PrivateRouteTableName
 	}
+
 	rts, err := s.VCNClient.ListRouteTables(ctx, core.ListRouteTablesRequest{
 		CompartmentId: common.String(s.GetCompartmentId()),
-		VcnId:         vcId,
+		VcnId:         vcnId,
 		DisplayName:   common.String(routeTableName),
 	})
 	if err != nil {
@@ -108,6 +109,7 @@ func (s *ClusterScope) getRouteTable(ctx context.Context, routeTableType string)
 			return &rt, nil
 		}
 	}
+
 	return nil, nil
 }
 
