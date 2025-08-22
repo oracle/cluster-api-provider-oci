@@ -129,7 +129,7 @@ func (m *ManagedMachinePoolScope) SetReplicaCount(count int32) {
 // GetWorkerMachineSubnet returns the WorkerRole core.Subnet id for the cluster
 func (m *ManagedMachinePoolScope) GetWorkerMachineSubnet() *string {
 	for _, subnet := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets {
-		if subnet.Role == infrastructurev1beta2.WorkerRole {
+		if subnet != nil && subnet.Role == infrastructurev1beta2.WorkerRole {
 			return subnet.ID
 		}
 	}
@@ -140,7 +140,7 @@ func (m *ManagedMachinePoolScope) GetWorkerMachineSubnet() *string {
 func (m *ManagedMachinePoolScope) SetListandSetMachinePoolInstances(ctx context.Context, nodePool *oke.NodePool) (int32, error) {
 	providerIDList := make([]string, 0)
 	for _, instance := range nodePool.Nodes {
-		if instance.LifecycleState == oke.NodeLifecycleStateActive {
+		if instance.Id != nil && instance.LifecycleState == oke.NodeLifecycleStateActive {
 			providerIDList = append(providerIDList, *instance.Id)
 		}
 	}
@@ -484,7 +484,7 @@ func (m *ManagedMachinePoolScope) getFreeFormTags() map[string]string {
 func (m *ManagedMachinePoolScope) getWorkerMachineSubnets() []string {
 	subnetList := make([]string, 0)
 	for _, subnet := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets {
-		if subnet.Role == infrastructurev1beta2.WorkerRole {
+		if subnet != nil && subnet.Role == infrastructurev1beta2.WorkerRole {
 			subnetList = append(subnetList, subnet.Name)
 		}
 	}
@@ -497,14 +497,14 @@ func (m *ManagedMachinePoolScope) getWorkerMachineNSGs() []string {
 	if len(specNsgNames) > 0 {
 		for _, nsgName := range specNsgNames {
 			for _, nsg := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
-				if nsg.Name == nsgName {
+				if nsg != nil && nsg.ID != nil && nsg.Name == nsgName {
 					nsgList = append(nsgList, *nsg.ID)
 				}
 			}
 		}
 	} else {
 		for _, nsg := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
-			if nsg.Role == infrastructurev1beta2.WorkerRole {
+			if nsg != nil && nsg.ID != nil && nsg.Role == infrastructurev1beta2.WorkerRole {
 				nsgList = append(nsgList, *nsg.ID)
 			}
 		}
@@ -515,7 +515,7 @@ func (m *ManagedMachinePoolScope) getWorkerMachineNSGs() []string {
 func (m *ManagedMachinePoolScope) getWorkerMachineNSGList() []string {
 	nsgList := make([]string, 0)
 	for _, nsg := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
-		if nsg.Role == infrastructurev1beta2.WorkerRole {
+		if nsg != nil && nsg.Role == infrastructurev1beta2.WorkerRole {
 			nsgList = append(nsgList, nsg.Name)
 		}
 	}
@@ -527,7 +527,7 @@ func (m *ManagedMachinePoolScope) getPodSubnets(subnets []string) []string {
 	if len(subnets) > 0 {
 		for _, subnetName := range subnets {
 			for _, subnet := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets {
-				if subnet.Name == subnetName {
+				if subnet != nil && subnet.ID != nil && subnet.Name == subnetName {
 					subnetList = append(subnetList, *subnet.ID)
 				}
 			}
@@ -541,7 +541,7 @@ func (m *ManagedMachinePoolScope) getPodNSGs(nsgs []string) []string {
 	if len(nsgs) > 0 {
 		for _, nsgName := range nsgs {
 			for _, nsg := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
-				if nsg.Name == nsgName {
+				if nsg != nil && nsg.ID != nil && nsg.Name == nsgName {
 					nsgList = append(nsgList, *nsg.ID)
 				}
 			}
@@ -581,7 +581,7 @@ func (m *ManagedMachinePoolScope) getInitialNodeKeyValuePairs() []oke.KeyValue {
 
 func (m *ManagedMachinePoolScope) getWorkerMachineSubnet(name *string) *string {
 	for _, subnet := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets {
-		if subnet.Name == *name {
+		if subnet != nil && subnet.ID != nil && subnet.Name == *name {
 			return subnet.ID
 		}
 	}
