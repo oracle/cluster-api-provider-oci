@@ -171,8 +171,9 @@ setup-envtest: install-setup-envtest # Build setup-envtest from tools folder.
 .PHONY: test
 test: setup-envtest ## Run tests
 	KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" go test -coverprofile=coverage.out ./... $(TEST_ARGS)
-	go tool cover -func=coverage.out -o coverage.txt
-	go tool cover -html=coverage.out -o coverage.html
+	grep -v 'zz_generated' coverage.out > coverage_filtered.out
+	go tool cover -func=coverage_filtered.out -o coverage.txt
+	go tool cover -html=coverage_filtered.out -o coverage.html
 
 ##@ Build
 
