@@ -1,0 +1,22 @@
+# .golangci.yml
+version: "2"
+linters:
+  default: none
+  enable:
+    - unused
+    - govet
+    - nilnil
+    - nilnesserr
+    - nilerr
+    - nilaway
+  settings:
+    custom:
+      nilaway:
+        type: module
+        description: "Static analysis tool to detect potential nil panics in Go code."
+        settings:
+          include-pkgs: "github.com/oracle/cluster-api-provider-oci/" 
+
+issues:
+  max-issues-per-linter: 500
+  max-same-issues: 100
