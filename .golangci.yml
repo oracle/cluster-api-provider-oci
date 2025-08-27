@@ -6,6 +6,7 @@ linters:
     - unused
     - govet
     - nilnil
+    - staticcheck
     - nilnesserr
     - nilerr
     - nilaway
