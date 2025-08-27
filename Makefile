@@ -72,6 +72,9 @@ KUSTOMIZE := $(BIN_DIR)/$(KUSTOMIZE_BIN)
 
 GOLANGCI_LINT_BIN := golangci-lint
 GOLANGCI_LINT := $(BIN_DIR)/$(GOLANGCI_LINT_BIN)
+GOLANGCI_LINT_VER := v2.4.0
+GOLANGCI_LINT_CONFIG_FILE := ./custom-gcl
+LINT_ARGS := run ./...
 
 GINKGO_BIN := ginkgo
 GINKGO := $(BIN_DIR)/$(GINKGO_BIN)
@@ -183,8 +186,9 @@ run: manifests generate fmt ## Run a controller from your host.
 ## Linting
 ## --------------------------------------
 
+.PHONY: lint
 lint: $(GOLANGCI_LINT)
-	$(GOLANGCI_LINT) run -v --timeout 300s --fast=false
+	$(GOLANGCI_LINT_CONFIG_FILE) $(LINT_ARGS)
 
 ## --------------------------------------
 ## Docker
@@ -384,7 +388,8 @@ $(GINKGO): ## Build ginkgo.
 	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) github.com/onsi/ginkgo/v2/ginkgo $(GINKGO_BIN) v2.17.1
 
 $(GOLANGCI_LINT): ## Build golanci-lint.
-	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) github.com/golangci/golangci-lint/cmd/golangci-lint $(GOLANGCI_LINT_BIN) v1.44.0
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(BIN_DIR) $(GOLANGCI_LINT_VERSION)
+	$(GOLANGCI_LINT) custom
 
 $(ENVSUBST): ## Build envsubst from tools folder.
 	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) github.com/drone/envsubst/v2/cmd/envsubst $(ENVSUBST_BIN) $(ENVSUBST_VER)
