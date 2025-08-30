@@ -246,7 +246,7 @@ func getProtocolOptions(icmp *infrastructurev1beta2.IcmpOptions, tcp *infrastruc
 
 func (s *ClusterScope) IsSecurityListExitsByRole(role infrastructurev1beta2.Role) bool {
 	for _, subnet := range s.GetSubnetsSpec() {
-		if role == subnet.Role {
+		if subnet != nil && role == subnet.Role {
 			if subnet.SecurityList != nil {
 				return true
 			}
