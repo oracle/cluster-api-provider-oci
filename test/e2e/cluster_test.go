@@ -316,7 +316,7 @@ var _ = Describe("Workload cluster creation", func() {
 
 		workloadClusterProxy := bootstrapClusterProxy.GetWorkloadCluster(ctx, namespace.Name, clusterName)
 
-		err = workloadClusterProxy.Apply(ctx, []byte(ccmCrs))
+		err = workloadClusterProxy.CreateOrUpdate(ctx, []byte(ccmCrs))
 		Expect(err).NotTo(HaveOccurred())
 
 		Log("Creating the LB service")
