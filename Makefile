@@ -377,7 +377,7 @@ envsubst: $(ENVSUBST) ## Build a local copy of envsubst.
 kubectl: $(KUBECTL) ## Build a local copy of kubectl.
 
 $(CONTROLLER_GEN): ## Download controller-gen locally if necessary.
-	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) sigs.k8s.io/controller-tools/cmd/controller-gen $(CONTROLLER_GEN_BIN) v0.13.0
+	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) sigs.k8s.io/controller-tools/cmd/controller-gen $(CONTROLLER_GEN_BIN) v0.14.0
 
 $(CONVERSION_GEN): ## Download controller-gen locally if necessary.
 	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) k8s.io/code-generator/cmd/conversion-gen $(CONVERSION_GEN_BIN) v0.23.1
@@ -386,7 +386,7 @@ $(KUSTOMIZE): ## Download kustomize locally if necessary.
 	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) sigs.k8s.io/kustomize/kustomize/v4 $(KUSTOMIZE_BIN) v4.5.2
 
 $(GINKGO): ## Build ginkgo.
-	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) github.com/onsi/ginkgo/v2/ginkgo $(GINKGO_BIN) v2.17.1
+	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) github.com/onsi/ginkgo/v2/ginkgo $(GINKGO_BIN) v2.19.1
 
 $(GOLANGCI_LINT): ## Build golanci-lint.
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(BIN_DIR) $(GOLANGCI_LINT_VERSION)
