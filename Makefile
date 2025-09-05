@@ -87,7 +87,7 @@ CONVERSION_GEN := $(BIN_DIR)/conversion-gen
 
 # set up `setup-envtest` to install kubebuilder dependency
 export KUBEBUILDER_ENVTEST_KUBERNETES_VERSION ?= 1.24.2
-SETUP_ENVTEST_VER := v0.0.0-20230131074648-f5014c077fc3
+SETUP_ENVTEST_VER := release-0.19
 SETUP_ENVTEST_BIN := setup-envtest
 SETUP_ENVTEST := $(abspath $(TOOLS_BIN_DIR)/$(SETUP_ENVTEST_BIN)-$(SETUP_ENVTEST_VER))
 SETUP_ENVTEST_PKG := sigs.k8s.io/controller-runtime/tools/setup-envtest
@@ -377,10 +377,10 @@ envsubst: $(ENVSUBST) ## Build a local copy of envsubst.
 kubectl: $(KUBECTL) ## Build a local copy of kubectl.
 
 $(CONTROLLER_GEN): ## Download controller-gen locally if necessary.
-	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) sigs.k8s.io/controller-tools/cmd/controller-gen $(CONTROLLER_GEN_BIN) v0.14.0
+	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) sigs.k8s.io/controller-tools/cmd/controller-gen $(CONTROLLER_GEN_BIN) v0.16.1
 
 $(CONVERSION_GEN): ## Download controller-gen locally if necessary.
-	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) k8s.io/code-generator/cmd/conversion-gen $(CONVERSION_GEN_BIN) v0.23.1
+	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) k8s.io/code-generator/cmd/conversion-gen $(CONVERSION_GEN_BIN) v0.31.0
 
 $(KUSTOMIZE): ## Download kustomize locally if necessary.
 	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) sigs.k8s.io/kustomize/kustomize/v4 $(KUSTOMIZE_BIN) v4.5.2

@@ -35,7 +35,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	capierrors "sigs.k8s.io/cluster-api/errors"
 	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -189,7 +188,7 @@ func (r *OCIMachineReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Ma
 	err = ctrl.NewControllerManagedBy(mgr).
 		WithOptions(options).
 		For(&infrastructurev1beta2.OCIMachine{}).
-		WithEventFilter(predicates.ResourceNotPaused(ctrl.LoggerFrom(ctx))).
+		WithEventFilter(predicates.ResourceNotPaused(mgr.GetScheme(), ctrl.LoggerFrom(ctx))).
 		Watches(
 			&clusterv1.Machine{},
 			handler.EnqueueRequestsFromMapFunc(util.MachineToInfrastructureMapFunc(infrastructurev1beta2.
@@ -207,7 +206,7 @@ func (r *OCIMachineReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Ma
 			&clusterv1.Cluster{},
 			handler.EnqueueRequestsFromMapFunc(clusterToObjectFunc),
 			builder.WithPredicates(
-				predicates.ClusterUnpausedAndInfrastructureReady(ctrl.LoggerFrom(ctx)),
+				predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetScheme(), ctrl.LoggerFrom(ctx)),
 			),
 		).
 		// don't queue reconcile if resource is paused
@@ -431,7 +430,7 @@ func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.
 	default:
 		machineScope.SetNotReady()
 		conditions.MarkFalse(machineScope.OCIMachine, infrastructurev1beta2.InstanceReadyCondition, infrastructurev1beta2.InstanceProvisionFailedReason, clusterv1.ConditionSeverityError, "")
-		machineScope.SetFailureReason(capierrors.CreateMachineError)
+		machineScope.SetFailureReason(cloudutil.CreateError)
 		machineScope.SetFailureMessage(errors.Errorf("Instance status %q is unexpected", instance.LifecycleState))
 		return r.recordErrorsOnFailedWorkRequest(ctx, logger, machineScope, instance)
 	}

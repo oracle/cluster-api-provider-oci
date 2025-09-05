@@ -43,7 +43,6 @@ import (
 	"k8s.io/klog/v2/klogr"
 	"k8s.io/utils/pointer"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	capierrors "sigs.k8s.io/cluster-api/errors"
 	capiUtil "sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
@@ -437,7 +436,7 @@ func (m *MachineScope) SetFailureMessage(v error) {
 }
 
 // SetFailureReason sets the OCIMachine status error reason.
-func (m *MachineScope) SetFailureReason(v capierrors.MachineStatusError) {
+func (m *MachineScope) SetFailureReason(v string) {
 	m.OCIMachine.Status.FailureReason = &v
 }
 

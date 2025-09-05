@@ -267,8 +267,8 @@ func (r *OCIManagedClusterControlPlaneReconciler) SetupWithManager(ctx context.C
 			&clusterv1.Cluster{},
 			handler.EnqueueRequestsFromMapFunc(ClusterToOCIManagedControlPlaneMapper()),
 			builder.WithPredicates(
-				predicates.ClusterUnpaused(log),
-				predicates.ResourceNotPausedAndHasFilterLabel(log, ""),
+				predicates.ClusterUnpaused(mgr.GetScheme(), log),
+				predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetScheme(), log, ""),
 			),
 		).
 		Complete(r)

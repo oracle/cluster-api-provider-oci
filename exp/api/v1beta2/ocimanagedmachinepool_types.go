@@ -4,7 +4,6 @@ import (
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	"sigs.k8s.io/cluster-api/errors"
 )
 
 const (
@@ -223,7 +222,7 @@ type OCIManagedMachinePoolStatus struct {
 	// +optional
 	Replicas int32 `json:"replicas"`
 
-	FailureReason *errors.MachineStatusError `json:"failureReason,omitempty"`
+	FailureReason *string `json:"failureReason,omitempty"`
 
 	FailureMessages []string `json:"failureMessages,omitempty"`
 

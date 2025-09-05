@@ -74,7 +74,7 @@ func (r *OCIMachinePoolMachineReconciler) SetupWithManager(ctx context.Context, 
 	err := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(options).
 		For(&infrav2exp.OCIMachinePoolMachine{}).
-		WithEventFilter(predicates.ResourceNotPaused(ctrl.LoggerFrom(ctx))).
+		WithEventFilter(predicates.ResourceNotPaused(mgr.GetScheme(), ctrl.LoggerFrom(ctx))).
 		Complete(r)
 
 	if err != nil {

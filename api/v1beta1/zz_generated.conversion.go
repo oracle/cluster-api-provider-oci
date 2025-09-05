@@ -30,7 +30,6 @@ import (
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	apiv1beta1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	errors "sigs.k8s.io/cluster-api/errors"
 )
 
 func init() {
@@ -2541,7 +2540,7 @@ func Convert_v1beta2_OCIMachineSpec_To_v1beta1_OCIMachineSpec(in *v1beta2.OCIMac
 func autoConvert_v1beta1_OCIMachineStatus_To_v1beta2_OCIMachineStatus(in *OCIMachineStatus, out *v1beta2.OCIMachineStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
 	out.Addresses = *(*[]apiv1beta1.MachineAddress)(unsafe.Pointer(&in.Addresses))
-	out.FailureReason = (*errors.MachineStatusError)(unsafe.Pointer(in.FailureReason))
+	out.FailureReason = (*string)(unsafe.Pointer(in.FailureReason))
 	out.FailureMessage = (*string)(unsafe.Pointer(in.FailureMessage))
 	out.LaunchInstanceWorkRequestId = in.LaunchInstanceWorkRequestId
 	out.CreateBackendWorkRequestId = in.CreateBackendWorkRequestId
@@ -2558,7 +2557,7 @@ func Convert_v1beta1_OCIMachineStatus_To_v1beta2_OCIMachineStatus(in *OCIMachine
 func autoConvert_v1beta2_OCIMachineStatus_To_v1beta1_OCIMachineStatus(in *v1beta2.OCIMachineStatus, out *OCIMachineStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
 	out.Addresses = *(*[]apiv1beta1.MachineAddress)(unsafe.Pointer(&in.Addresses))
-	out.FailureReason = (*errors.MachineStatusError)(unsafe.Pointer(in.FailureReason))
+	out.FailureReason = (*string)(unsafe.Pointer(in.FailureReason))
 	out.FailureMessage = (*string)(unsafe.Pointer(in.FailureMessage))
 	out.LaunchInstanceWorkRequestId = in.LaunchInstanceWorkRequestId
 	out.CreateBackendWorkRequestId = in.CreateBackendWorkRequestId

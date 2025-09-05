@@ -38,7 +38,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	capierrors "sigs.k8s.io/cluster-api/errors"
 	expclusterv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/annotations"
@@ -214,10 +213,10 @@ func (r *OCIMachinePoolReconciler) SetupWithManager(ctx context.Context, mgr ctr
 			&clusterv1.Cluster{},
 			handler.EnqueueRequestsFromMapFunc(clusterToObjectFunc),
 			builder.WithPredicates(
-				predicates.ClusterUnpausedAndInfrastructureReady(ctrl.LoggerFrom(ctx)),
+				predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetScheme(), ctrl.LoggerFrom(ctx)),
 			),
 		).
-		WithEventFilter(predicates.ResourceNotPaused(ctrl.LoggerFrom(ctx))).
+		WithEventFilter(predicates.ResourceNotPaused(mgr.GetScheme(), ctrl.LoggerFrom(ctx))).
 		Complete(r)
 
 	if err != nil {
@@ -393,7 +392,7 @@ func (r *OCIMachinePoolReconciler) reconcileNormal(ctx context.Context, logger l
 		machinePoolScope.SetReady()
 	default:
 		conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav2exp.InstancePoolReadyCondition, infrav2exp.InstancePoolProvisionFailedReason, clusterv1.ConditionSeverityError, "")
-		machinePoolScope.SetFailureReason(capierrors.CreateMachineError)
+		machinePoolScope.SetFailureReason(cloudutil.CreateError)
 		machinePoolScope.SetFailureMessage(errors.Errorf("Instance Pool status %q is unexpected", instancePool.LifecycleState))
 		r.Recorder.Eventf(machinePoolScope.OCIMachinePool, corev1.EventTypeWarning, "ReconcileError",
 			"Instance pool has invalid lifecycle state %s", instancePool.LifecycleState)

@@ -282,7 +282,7 @@ func (r *OCIManagedClusterReconciler) SetupWithManager(ctx context.Context, mgr 
 	err = ctrl.NewControllerManagedBy(mgr).
 		WithOptions(options).
 		For(&infrastructurev1beta2.OCIManagedCluster{}).
-		WithEventFilter(predicates.ResourceNotPaused(log)). // don't queue reconcile if resource is paused
+		WithEventFilter(predicates.ResourceNotPaused(mgr.GetScheme(), log)). // don't queue reconcile if resource is paused
 		// watch OCIManagedControlPlane resources
 		Watches(
 			&infrastructurev1beta2.OCIManagedControlPlane{},
@@ -292,8 +292,8 @@ func (r *OCIManagedClusterReconciler) SetupWithManager(ctx context.Context, mgr 
 			&clusterv1.Cluster{},
 			handler.EnqueueRequestsFromMapFunc(r.clusterToInfrastructureMapFunc(log)),
 			builder.WithPredicates(
-				predicates.ClusterUnpaused(log),
-				predicates.ResourceNotPausedAndHasFilterLabel(log, ""),
+				predicates.ClusterUnpaused(mgr.GetScheme(), log),
+				predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetScheme(), log, ""),
 			),
 		).
 		Complete(r)

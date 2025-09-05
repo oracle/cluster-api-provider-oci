@@ -285,14 +285,14 @@ func (r *OCIClusterReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Ma
 	err := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(options).
 		For(&infrastructurev1beta2.OCICluster{}).
-		WithEventFilter(predicates.ResourceNotPaused(log)).              // don't queue reconcile if resource is paused
-		WithEventFilter(predicates.ResourceIsNotExternallyManaged(log)). //the externally managed cluster won't be reconciled
+		WithEventFilter(predicates.ResourceNotPaused(mgr.GetScheme(), log)).              // don't queue reconcile if resource is paused
+		WithEventFilter(predicates.ResourceIsNotExternallyManaged(mgr.GetScheme(), log)). //the externally managed cluster won't be reconciled
 		Watches(
 			&clusterv1.Cluster{},
 			handler.EnqueueRequestsFromMapFunc(r.clusterToInfrastructureMapFunc(log)),
 			builder.WithPredicates(
-				predicates.ClusterUnpaused(log),
-				predicates.ResourceNotPausedAndHasFilterLabel(log, ""),
+				predicates.ClusterUnpaused(mgr.GetScheme(), log),
+				predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetScheme(), log, ""),
 			),
 		).
 		Complete(r)
