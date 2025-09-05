@@ -38,7 +38,6 @@ import (
 	"github.com/pkg/errors"
 	"k8s.io/klog/v2/klogr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	capierrors "sigs.k8s.io/cluster-api/errors"
 	expclusterv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/patch"
@@ -119,7 +118,7 @@ func (m *ManagedMachinePoolScope) Close(ctx context.Context) error {
 }
 
 // SetFailureReason sets the OCIMachine status error reason.
-func (m *ManagedMachinePoolScope) SetFailureReason(v capierrors.MachineStatusError) {
+func (m *ManagedMachinePoolScope) SetFailureReason(v string) {
 	m.OCIManagedMachinePool.Status.FailureReason = &v
 }
 

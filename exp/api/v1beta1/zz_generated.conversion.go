@@ -928,7 +928,7 @@ func autoConvert_v1beta1_OCIMachinePoolStatus_To_v1beta2_OCIMachinePoolStatus(in
 	out.Ready = in.Ready
 	out.Replicas = in.Replicas
 	out.Conditions = *(*clusterapiapiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
-	out.FailureReason = (*errors.MachineStatusError)(unsafe.Pointer(in.FailureReason))
+	out.FailureReason = (*string)(unsafe.Pointer(in.FailureReason))
 	out.FailureMessage = (*string)(unsafe.Pointer(in.FailureMessage))
 	out.InfrastructureMachineKind = in.InfrastructureMachineKind
 	return nil
@@ -943,7 +943,7 @@ func autoConvert_v1beta2_OCIMachinePoolStatus_To_v1beta1_OCIMachinePoolStatus(in
 	out.Ready = in.Ready
 	out.Replicas = in.Replicas
 	out.Conditions = *(*clusterapiapiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
-	out.FailureReason = (*errors.MachineStatusError)(unsafe.Pointer(in.FailureReason))
+	out.FailureReason = (*string)(unsafe.Pointer(in.FailureReason))
 	out.FailureMessage = (*string)(unsafe.Pointer(in.FailureMessage))
 	out.InfrastructureMachineKind = in.InfrastructureMachineKind
 	return nil
@@ -1071,7 +1071,7 @@ func autoConvert_v1beta1_OCIManagedMachinePoolStatus_To_v1beta2_OCIManagedMachin
 	out.Conditions = *(*clusterapiapiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
 	out.NodepoolLifecycleState = in.NodepoolLifecycleState
 	out.Replicas = in.Replicas
-	out.FailureReason = (*errors.MachineStatusError)(unsafe.Pointer(in.FailureReason))
+	out.FailureReason = (*string)(unsafe.Pointer(in.FailureReason))
 	out.FailureMessages = *(*[]string)(unsafe.Pointer(&in.FailureMessages))
 	out.InfrastructureMachineKind = in.InfrastructureMachineKind
 	return nil

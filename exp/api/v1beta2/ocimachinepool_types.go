@@ -20,7 +20,6 @@ import (
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	"sigs.k8s.io/cluster-api/errors"
 )
 
 // +kubebuilder:object:generate=true
@@ -202,7 +201,7 @@ type OCIMachinePoolStatus struct {
 	// +optional
 	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
 
-	FailureReason *errors.MachineStatusError `json:"failureReason,omitempty"`
+	FailureReason *string `json:"failureReason,omitempty"`
 
 	FailureMessage *string `json:"failureMessage,omitempty"`
 

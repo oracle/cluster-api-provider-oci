@@ -597,7 +597,7 @@ func (in *OCIMachinePoolStatus) DeepCopyInto(out *OCIMachinePoolStatus) {
 	}
 	if in.FailureReason != nil {
 		in, out := &in.FailureReason, &out.FailureReason
-		*out = new(errors.MachineStatusError)
+		*out = new(string)
 		**out = **in
 	}
 	if in.FailureMessage != nil {
