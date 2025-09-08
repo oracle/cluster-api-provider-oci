@@ -70,6 +70,7 @@ func (s *ClusterScope) GetDesiredRouteTables() []string {
 }
 
 func (s *ClusterScope) getRouteTable(ctx context.Context, routeTableType string) (*core.RouteTable, error) {
+	var err error
 	routeTableId := s.OCIClusterAccessor.GetNetworkSpec().Vcn.RouteTable.PublicRouteTableId
 	if routeTableType == infrastructurev1beta2.Private {
 		routeTableId = s.OCIClusterAccessor.GetNetworkSpec().Vcn.RouteTable.PrivateRouteTableId
@@ -110,7 +111,7 @@ func (s *ClusterScope) getRouteTable(ctx context.Context, routeTableType string)
 		}
 	}
 
-	return nil, nil
+	return nil, err
 }
 
 func (s *ClusterScope) CreateRouteTable(ctx context.Context, routeTableType string) (*string, error) {

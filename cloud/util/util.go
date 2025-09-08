@@ -71,7 +71,7 @@ func GetClusterIdentityFromRef(ctx context.Context, c client.Client, ociClusterN
 		}
 		return identity, nil
 	}
-	return nil, nil
+	return nil, errors.New("Cluster Identity not found")
 }
 
 // getOCIClientCertFromSecret returns the cert referenced by the OCICluster.
@@ -89,7 +89,7 @@ func getOCIClientCertFromSecret(ctx context.Context, c client.Client, ociCluster
 		}
 		return secret, nil
 	}
-	return nil, nil
+	return nil, errors.New("OCI Client Cert not found")
 }
 
 func getOCIClientCertPool(ctx context.Context, c client.Client, namespace string, clientOverrides *infrastructurev1beta2.ClientOverrides) (*x509.CertPool, error) {

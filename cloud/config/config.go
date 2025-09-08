@@ -17,7 +17,6 @@ limitations under the License.
 package config
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -148,7 +147,7 @@ func getConfigFromDir(path string) (*AuthConfig, error) {
 
 func NewConfigurationProvider(cfg *AuthConfig) (common.ConfigurationProvider, error) {
 	if cfg == nil {
-		return nil, fmt.Errorf("auth config must not be nil")
+		return nil, errors.New("auth config must not be nil")
 	}
 	if cfg.UseInstancePrincipals {
 		return auth.InstancePrincipalConfigurationProvider()
@@ -159,17 +158,18 @@ func NewConfigurationProvider(cfg *AuthConfig) (common.ConfigurationProvider, er
 
 func NewConfigurationProviderWithUserPrincipal(cfg *AuthConfig) (common.ConfigurationProvider, error) {
 	var conf common.ConfigurationProvider
-	if cfg != nil {
-		conf = common.NewRawConfigurationProvider(
-			cfg.TenancyID,
-			cfg.UserID,
-			cfg.Region,
-			cfg.Fingerprint,
-			cfg.PrivateKey,
-			common.String(cfg.Passphrase))
-		return conf, nil
+	var err error
+	if cfg == nil {
+		return nil, err
 	}
-	return nil, nil
+	conf = common.NewRawConfigurationProvider(
+		cfg.TenancyID,
+		cfg.UserID,
+		cfg.Region,
+		cfg.Fingerprint,
+		cfg.PrivateKey,
+		common.String(cfg.Passphrase))
+	return conf, nil
 }
 
 func ReadFile(path string, key string) (string, error) {

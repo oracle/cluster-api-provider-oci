@@ -350,6 +350,7 @@ func (m *MachineScope) getMachineFromOCID(ctx context.Context, instanceID *strin
 // and it was created by the cluster
 func (m *MachineScope) GetMachineByDisplayName(ctx context.Context, name string) (*core.Instance, error) {
 	var page *string
+	var err error
 	for {
 		req := core.ListInstancesRequest{DisplayName: common.String(name),
 			CompartmentId: common.String(m.getCompartmentId()), Page: page}
@@ -358,11 +359,11 @@ func (m *MachineScope) GetMachineByDisplayName(ctx context.Context, name string)
 			return nil, err
 		}
 		if len(resp.Items) == 0 {
-			return nil, nil
+			return nil, err
 		}
 		for _, instance := range resp.Items {
 			if m.IsResourceCreatedByClusterAPI(instance.FreeformTags) {
-				return &instance, nil
+				return &instance, err
 			}
 		}
 
@@ -372,7 +373,7 @@ func (m *MachineScope) GetMachineByDisplayName(ctx context.Context, name string)
 			page = resp.OpcNextPage
 		}
 	}
-	return nil, nil
+	return nil, err
 }
 
 // PatchObject persists the cluster configuration and status.

@@ -76,6 +76,7 @@ func (s *ClusterScope) GetVcnCidrs() []string {
 }
 
 func (s *ClusterScope) GetVCN(ctx context.Context) (*core.Vcn, error) {
+	var err error
 	vcnId := s.getVcnId()
 	if vcnId != nil {
 		resp, err := s.VCNClient.GetVcn(ctx, core.GetVcnRequest{
@@ -105,7 +106,7 @@ func (s *ClusterScope) GetVCN(ctx context.Context) (*core.Vcn, error) {
 			return &vcn, nil
 		}
 	}
-	return nil, nil
+	return nil, err
 }
 
 func (s *ClusterScope) UpdateVCN(ctx context.Context, vcn infrastructurev1beta2.VCN) error {

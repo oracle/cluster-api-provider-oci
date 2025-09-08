@@ -198,6 +198,7 @@ func (m *VirtualMachinePoolScope) IsResourceCreatedByClusterAPI(resourceFreeForm
 // FindVirtualNodePool attempts to find the node pool by id if the id exists or by name. It checks to make sure
 // the node pool was created by the cluster before returning the correct pool
 func (m *VirtualMachinePoolScope) FindVirtualNodePool(ctx context.Context) (*oke.VirtualNodePool, error) {
+	var err error
 	if m.OCIVirtualMachinePool.Spec.ID != nil {
 		response, err := m.ContainerEngineClient.GetVirtualNodePool(ctx, oke.GetVirtualNodePoolRequest{
 			VirtualNodePoolId: m.OCIVirtualMachinePool.Spec.ID,
@@ -236,7 +237,7 @@ func (m *VirtualMachinePoolScope) FindVirtualNodePool(ctx context.Context) (*oke
 			page = response.OpcNextPage
 		}
 	}
-	return nil, nil
+	return nil, err
 }
 
 func (m *VirtualMachinePoolScope) getNodePoolName() string {

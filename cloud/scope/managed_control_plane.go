@@ -314,6 +314,7 @@ func (s *ManagedControlPlaneScope) getOKEClusterFromOCID(ctx context.Context, cl
 
 func (s *ManagedControlPlaneScope) getOKEClusterByDisplayName(ctx context.Context, name string) (*oke.Cluster, error) {
 	var page *string
+	var err error
 	for {
 		req := oke.ListClustersRequest{
 			Name:          common.String(name),
@@ -325,7 +326,7 @@ func (s *ManagedControlPlaneScope) getOKEClusterByDisplayName(ctx context.Contex
 			return nil, err
 		}
 		if len(resp.Items) == 0 {
-			return nil, nil
+			return nil, err
 		}
 		for _, cluster := range resp.Items {
 			if s.isResourceCreatedByClusterAPI(cluster.FreeformTags) {
@@ -338,7 +339,7 @@ func (s *ManagedControlPlaneScope) getOKEClusterByDisplayName(ctx context.Contex
 			page = resp.OpcNextPage
 		}
 	}
-	return nil, nil
+	return nil, err
 }
 
 func (s *ManagedControlPlaneScope) isResourceCreatedByClusterAPI(resourceFreeFormTags map[string]string) bool {

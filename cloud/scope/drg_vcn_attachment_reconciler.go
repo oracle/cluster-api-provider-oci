@@ -64,6 +64,7 @@ func (s *ClusterScope) ReconcileDRGVCNAttachment(ctx context.Context) error {
 }
 
 func (s *ClusterScope) GetDRGAttachment(ctx context.Context) (*core.DrgAttachment, error) {
+	var err error
 	if s.getDRG().VcnAttachmentId != nil {
 		response, err := s.VCNClient.GetDrgAttachment(ctx, core.GetDrgAttachmentRequest{
 			DrgAttachmentId: s.getDRG().VcnAttachmentId,
@@ -91,14 +92,14 @@ func (s *ClusterScope) GetDRGAttachment(ctx context.Context) (*core.DrgAttachmen
 	}
 
 	if len(attachments.Items) == 0 {
-		return nil, nil
+		return nil, err
 	} else if len(attachments.Items) > 1 {
 		return nil, errors.New("found more than one DRG VCN attachment to same VCN, please remove any " +
 			"DRG VCN attachments which has been created outside Cluster API for Oracle for the VCN")
 	} else {
 		attachment := attachments.Items[0]
 		if s.IsResourceCreatedByClusterAPI(attachment.FreeformTags) {
-			return &attachment, nil
+			return &attachment, err
 		} else {
 			return nil, errors.New("cluster api tags have been modified out of context")
 		}

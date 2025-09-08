@@ -95,6 +95,7 @@ func (s *ClusterScope) adjustNSGRulesSpec(desiredNSG *infrastructurev1beta2.NSG,
 }
 
 func (s *ClusterScope) GetNSG(ctx context.Context, spec infrastructurev1beta2.NSG) (*core.NetworkSecurityGroup, error) {
+	var err error
 	nsgOCID := spec.ID
 	if nsgOCID != nil {
 		resp, err := s.VCNClient.GetNetworkSecurityGroup(ctx, core.GetNetworkSecurityGroupRequest{
@@ -124,7 +125,7 @@ func (s *ClusterScope) GetNSG(ctx context.Context, spec infrastructurev1beta2.NS
 			return &nsg, nil
 		}
 	}
-	return nil, nil
+	return nil, err
 }
 
 func (s *ClusterScope) DeleteNSGs(ctx context.Context) error {

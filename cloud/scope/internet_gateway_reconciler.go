@@ -59,6 +59,7 @@ func (s *ClusterScope) ReconcileInternetGateway(ctx context.Context) error {
 //
 // 2. Listing the Internet Gateways for the Compartment (by ID) and filtering by tag
 func (s *ClusterScope) GetInternetGateway(ctx context.Context) (*core.InternetGateway, error) {
+	var err error
 	gwId := s.OCIClusterAccessor.GetNetworkSpec().Vcn.InternetGateway.Id
 	if gwId != nil {
 		resp, err := s.VCNClient.GetInternetGateway(ctx, core.GetInternetGatewayRequest{
@@ -88,7 +89,7 @@ func (s *ClusterScope) GetInternetGateway(ctx context.Context) (*core.InternetGa
 			return &igw, nil
 		}
 	}
-	return nil, nil
+	return nil, err
 }
 
 // CreateInternetGateway creates the Internet Gateway for the cluster based on the ClusterScope

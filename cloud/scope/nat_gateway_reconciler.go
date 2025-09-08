@@ -56,6 +56,7 @@ func (s *ClusterScope) ReconcileNatGateway(ctx context.Context) error {
 //
 // 2. Listing the NAT Gateways for the Compartment (by ID), VCN and DisplayName and filtering by tag
 func (s *ClusterScope) GetNatGateway(ctx context.Context) (*core.NatGateway, error) {
+	var err error
 	ngwId := s.OCIClusterAccessor.GetNetworkSpec().Vcn.NATGateway.Id
 	if ngwId != nil {
 		resp, err := s.VCNClient.GetNatGateway(ctx, core.GetNatGatewayRequest{
@@ -85,7 +86,7 @@ func (s *ClusterScope) GetNatGateway(ctx context.Context) (*core.NatGateway, err
 			return &ngw, nil
 		}
 	}
-	return nil, nil
+	return nil, err
 }
 
 // UpdateNatGateway updates the FreeFormTags and DefinedTags
