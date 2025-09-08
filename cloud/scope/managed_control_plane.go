@@ -278,10 +278,8 @@ func getOKEClusterTypeFromSpecType(controlPlaneSpec infrastructurev1beta2.OCIMan
 		switch controlPlaneSpec.ClusterType {
 		case infrastructurev1beta2.BasicClusterType:
 			return oke.ClusterTypeBasicCluster
-			break
 		case infrastructurev1beta2.EnhancedClusterType:
 			return oke.ClusterTypeEnhancedCluster
-			break
 		default:
 			break
 		}
@@ -450,10 +448,18 @@ func (s *ManagedControlPlaneScope) createCAPIKubeconfigSecret(ctx context.Contex
 	if err != nil {
 		return err
 	}
+	if reflect.DeepEqual(rawConfig, api.Config{}) {
+		return err
+	}
 	userName := getKubeConfigUserName(*okeCluster.Name, false)
 	currentContext := rawConfig.Contexts[rawConfig.CurrentContext]
+	if currentContext == nil {
+		return err
+	}
 	currentCluster := rawConfig.Clusters[currentContext.Cluster]
-
+	if currentCluster == nil {
+		return err
+	}
 	cfg, err := createBaseKubeConfig(userName, currentCluster, currentContext.Cluster, rawConfig.CurrentContext)
 	if err != nil {
 		return err
@@ -557,13 +563,24 @@ func (s *ManagedControlPlaneScope) ReconcileBootstrapSecret(ctx context.Context,
 			return err
 		}
 		config, err := clientcmd.NewClientConfigFromBytes(body)
-
+		if err != nil {
+			return err
+		}
 		rawConfig, err := config.RawConfig()
 		if err != nil {
 			return err
 		}
+		if reflect.DeepEqual(rawConfig, api.Config{}) {
+			return err
+		}
 		currentContext := rawConfig.Contexts[rawConfig.CurrentContext]
+		if currentContext == nil {
+			return err
+		}
 		currentCluster := rawConfig.Clusters[currentContext.Cluster]
+		if currentCluster == nil {
+			return err
+		}
 		certData := base64.StdEncoding.EncodeToString(currentCluster.CertificateAuthorityData)
 
 		endpoint := strings.Split(*okeCluster.Endpoints.PrivateEndpoint, ":")[0]
@@ -616,7 +633,9 @@ func (s *ManagedControlPlaneScope) updateCAPIKubeconfigSecret(ctx context.Contex
 	}
 
 	userName := getKubeConfigUserName(*okeCluster.Name, false)
-	config.AuthInfos[userName].Token = token
+	if config.AuthInfos[userName] != nil {
+		config.AuthInfos[userName].Token = token
+	}
 
 	out, err := clientcmd.Write(*config)
 	if err != nil {

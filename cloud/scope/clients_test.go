@@ -83,7 +83,7 @@ func TestClients_NewClientProviderWithClientOverrides(t *testing.T) {
 		t.Errorf("Expected clientProvider:%v to equal nil", clientProvider)
 	}
 
-	if !reflect.DeepEqual(clientProvider.ociClientOverrides, clientOverrides) {
+	if clientProvider != nil && !reflect.DeepEqual(clientProvider.ociClientOverrides, clientOverrides) {
 		t.Errorf("clientProvider.ociClientOverrides: %v doesn't equal clientOverrides: %v", clientProvider.ociClientOverrides, clientOverrides)
 	}
 }
@@ -124,7 +124,7 @@ func TestClients_NewClientProviderWithMissingOverrides(t *testing.T) {
 		t.Errorf("Expected clientProvider:%v to equal nil", clientProvider)
 	}
 
-	if !reflect.DeepEqual(clientProvider.ociClientOverrides, clientOverrides) {
+	if clientProvider != nil && !reflect.DeepEqual(clientProvider.ociClientOverrides, clientOverrides) {
 		t.Errorf("clientProvider.ociClientOverrides: %v doesn't equal clientOverrides: %v", clientProvider.ociClientOverrides, clientOverrides)
 	}
 }

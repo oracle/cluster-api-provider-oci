@@ -58,7 +58,10 @@ func IsNotFound(err error) bool {
 	}
 	err = errors.Cause(err)
 	serviceErr, ok := common.IsServiceError(err)
-	return ok && serviceErr.GetHTTPStatusCode() == http.StatusNotFound
+	if serviceErr != nil {
+		return ok && serviceErr.GetHTTPStatusCode() == http.StatusNotFound
+	}
+	return false
 }
 
 // AwaitNLBWorkRequest waits for the LB work request to either succeed, fail. See k8s.io/apimachinery/pkg/util/wait

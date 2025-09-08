@@ -17,6 +17,7 @@ limitations under the License.
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -146,6 +147,9 @@ func getConfigFromDir(path string) (*AuthConfig, error) {
 }
 
 func NewConfigurationProvider(cfg *AuthConfig) (common.ConfigurationProvider, error) {
+	if cfg == nil {
+		return nil, fmt.Errorf("auth config must not be nil")
+	}
 	if cfg.UseInstancePrincipals {
 		return auth.InstancePrincipalConfigurationProvider()
 	} else {
