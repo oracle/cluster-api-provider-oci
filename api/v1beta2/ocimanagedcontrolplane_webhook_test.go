@@ -17,6 +17,7 @@ limitations under the License.
 package v1beta2
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -49,7 +50,7 @@ func TestOCIManagedControlPlane_CreateDefault(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := gomega.NewWithT(t)
-			test.c.Default()
+			(&OCIManagedControlPlaneWebhook{}).Default(context.Background(), test.c)
 			test.expect(g, test.c)
 		})
 	}
@@ -166,11 +167,11 @@ func TestOCIManagedControlPlane_ValidateCreate(t *testing.T) {
 			g := gomega.NewWithT(t)
 
 			if test.expectErr {
-				_, err := test.c.ValidateCreate()
+				_, err := (&OCIManagedControlPlaneWebhook{}).ValidateCreate(context.Background(), test.c)
 				g.Expect(err).NotTo(gomega.Succeed())
 				g.Expect(strings.Contains(err.Error(), test.errorMgsShouldContain)).To(gomega.BeTrue())
 			} else {
-				_, err := test.c.ValidateCreate()
+				_, err := (&OCIManagedControlPlaneWebhook{}).ValidateCreate(context.Background(), test.c)
 				g.Expect(err).To(gomega.Succeed())
 			}
 		})

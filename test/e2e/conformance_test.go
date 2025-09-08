@@ -78,11 +78,11 @@ var _ = Describe("Conformance Tests", func() {
 
 		var err error
 
-		kubernetesVersion := e2eConfig.GetVariable(capi_e2e.KubernetesVersion)
+		kubernetesVersion := e2eConfig.MustGetVariable(capi_e2e.KubernetesVersion)
 		flavor := clusterctl.DefaultFlavor
-		workerMachineCount, err := strconv.ParseInt(e2eConfig.GetVariable("CONFORMANCE_WORKER_MACHINE_COUNT"), 10, 64)
+		workerMachineCount, err := strconv.ParseInt(e2eConfig.MustGetVariable("CONFORMANCE_WORKER_MACHINE_COUNT"), 10, 64)
 		Expect(err).NotTo(HaveOccurred())
-		controlPlaneMachineCount, err := strconv.ParseInt(e2eConfig.GetVariable("CONFORMANCE_CONTROL_PLANE_MACHINE_COUNT"), 10, 64)
+		controlPlaneMachineCount, err := strconv.ParseInt(e2eConfig.MustGetVariable("CONFORMANCE_CONTROL_PLANE_MACHINE_COUNT"), 10, 64)
 		Expect(err).NotTo(HaveOccurred())
 
 		stopwatch := experiment.NewStopwatch()

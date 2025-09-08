@@ -93,6 +93,7 @@ var _ = Describe("Cluster Upgrade Tests", func() {
 			Cluster:           result.Cluster,
 			ClusterProxy:      bootstrapClusterProxy,
 			Namespace:         namespace,
+			ClusterctlConfigPath: clusterctlConfigPath,
 			CancelWatches:     cancelWatches,
 			IntervalsGetter:   e2eConfig.GetIntervals,
 			SkipCleanup:       skipCleanup,
@@ -114,7 +115,7 @@ var _ = Describe("Cluster Upgrade Tests", func() {
 				Flavor:                   clusterctl.DefaultFlavor,
 				Namespace:                namespace.Name,
 				ClusterName:              clusterName,
-				KubernetesVersion:        e2eConfig.GetVariable(capi_e2e.KubernetesVersionUpgradeFrom),
+				KubernetesVersion:        e2eConfig.MustGetVariable(capi_e2e.KubernetesVersionUpgradeFrom),
 				ControlPlaneMachineCount: pointer.Int64Ptr(1),
 				WorkerMachineCount:       pointer.Int64Ptr(1),
 			},
@@ -135,7 +136,7 @@ var _ = Describe("Cluster Upgrade Tests", func() {
 		})
 		patchHelper, err := patch.NewHelper(controlPlane, bootstrapClusterProxy.GetClient())
 
-		upgradeVersion := e2eConfig.GetVariable(capi_e2e.KubernetesVersionUpgradeTo)
+		upgradeVersion := e2eConfig.MustGetVariable(capi_e2e.KubernetesVersionUpgradeTo)
 		controlPlane.Spec.MachineTemplate.InfrastructureRef.Name = newCPMachineTemplateName
 		controlPlane.Spec.Version = upgradeVersion
 

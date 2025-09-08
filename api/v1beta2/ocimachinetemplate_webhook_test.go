@@ -17,6 +17,7 @@ limitations under the License.
 package v1beta2
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -99,11 +100,11 @@ func TestOCIMachineTemplate_ValidateCreate(t *testing.T) {
 			g := gomega.NewWithT(t)
 
 			if test.expectErr {
-				_, err := test.inputTemplate.ValidateCreate()
+				_, err := (&OCIMachineTemplateWebhook{}).ValidateCreate(context.Background(), test.inputTemplate)
 				g.Expect(err).NotTo(gomega.Succeed())
 				g.Expect(strings.Contains(err.Error(), test.errorField)).To(gomega.BeTrue())
 			} else {
-				_, err := test.inputTemplate.ValidateCreate()
+				_, err := (&OCIMachineTemplateWebhook{}).ValidateCreate(context.Background(), test.inputTemplate)
 				g.Expect(err).To(gomega.Succeed())
 			}
 		})
@@ -116,11 +117,11 @@ func TestOCIMachineTemplate_ValidateUpdate(t *testing.T) {
 			g := gomega.NewWithT(t)
 
 			if test.expectErr {
-				_, err := test.inputTemplate.ValidateUpdate(nil)
+				_, err := (&OCIMachineTemplateWebhook{}).ValidateUpdate(context.Background(), nil, test.inputTemplate)
 				g.Expect(err).NotTo(gomega.Succeed())
 				g.Expect(strings.Contains(err.Error(), test.errorField)).To(gomega.BeTrue())
 			} else {
-				_, err := test.inputTemplate.ValidateUpdate(nil)
+				_, err := (&OCIMachineTemplateWebhook{}).ValidateUpdate(context.Background(), nil, test.inputTemplate)
 				g.Expect(err).To(gomega.Succeed())
 			}
 		})

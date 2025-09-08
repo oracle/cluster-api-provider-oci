@@ -17,6 +17,7 @@ limitations under the License.
 package v1beta2
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 
@@ -32,21 +33,31 @@ import (
 
 var logger = ctrl.Log.WithName("ocimachinepool-resource")
 
+type OCIManagedMachinePoolWebhook struct{}
+
 var (
-	_ webhook.Defaulter = &OCIManagedMachinePool{}
-	_ webhook.Validator = &OCIManagedMachinePool{}
+	_ webhook.CustomDefaulter = &OCIManagedMachinePoolWebhook{}
+	_ webhook.CustomValidator = &OCIManagedMachinePoolWebhook{}
 )
 
 // +kubebuilder:webhook:verbs=create;update,path=/validate-infrastructure-cluster-x-k8s-io-v1beta2-ocimanagedmachinepool,mutating=false,failurePolicy=fail,matchPolicy=Equivalent,groups=infrastructure.cluster.x-k8s.io,resources=ocimanagedmachinepools,versions=v1beta2,name=validation.ocimanagedmachinepool.infrastructure.cluster.x-k8s.io,sideEffects=None,admissionReviewVersions=v1beta1
 // +kubebuilder:webhook:verbs=create;update,path=/mutate-infrastructure-cluster-x-k8s-io-v1beta2-ocimanagedmachinepool,mutating=true,failurePolicy=fail,matchPolicy=Equivalent,groups=infrastructure.cluster.x-k8s.io,resources=ocimanagedmachinepools,versions=v1beta2,name=default.ocimanagedmachinepool.infrastructure.cluster.x-k8s.io,sideEffects=None,admissionReviewVersions=v1beta1
 
 func (m *OCIManagedMachinePool) SetupWebhookWithManager(mgr ctrl.Manager) error {
+	w := new(OCIManagedMachinePoolWebhook)
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(m).
+		WithDefaulter(w).
+		WithValidator(w).
 		Complete()
 }
 
-func (m *OCIManagedMachinePool) Default() {
+func (*OCIManagedMachinePoolWebhook) Default(_ context.Context, obj runtime.Object) error {
+	m, ok := obj.(*OCIManagedMachinePool)
+	if !ok {
+		return fmt.Errorf("expected an OCIManagedMachinePool object but got %T", m)
+	}
+
 	if m.Spec.NodePoolNodeConfig == nil {
 		m.Spec.NodePoolNodeConfig = &NodePoolNodeConfig{}
 	}
@@ -59,9 +70,16 @@ func (m *OCIManagedMachinePool) Default() {
 			},
 		}
 	}
+
+	return nil
 }
 
-func (m *OCIManagedMachinePool) ValidateCreate() (admission.Warnings, error) {
+func (*OCIManagedMachinePoolWebhook) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
+	m, ok := obj.(*OCIManagedMachinePool)
+	if !ok {
+		return nil, fmt.Errorf("expected an OCIManagedMachinePool object but got %T", m)
+	}
+
 	var allErrs field.ErrorList
 	if len(m.Name) > 31 {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("Name"), m.Name, "Name cannot be more than 31 characters"))
@@ -89,13 +107,18 @@ func (m *OCIManagedMachinePool) validateVersion(allErrs field.ErrorList) field.E
 	return allErrs
 }
 
-func (m *OCIManagedMachinePool) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
+func (*OCIManagedMachinePoolWebhook) ValidateUpdate(_ context.Context, oldRaw, newObj runtime.Object) (admission.Warnings, error) {
+	m, ok := newObj.(*OCIManagedMachinePool)
+	if !ok {
+		return nil, fmt.Errorf("expected an OCIManagedMachinePool object but got %T", m)
+	}
+
 	var allErrs field.ErrorList
 	var warnings admission.Warnings
 
-	oldManagedMachinePool, ok := old.(*OCIManagedMachinePool)
+	oldManagedMachinePool, ok := oldRaw.(*OCIManagedMachinePool)
 	if !ok {
-		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected an OCIManagedMachinePool but got a %T", old))
+		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected an OCIManagedMachinePool but got a %T", oldRaw))
 	}
 
 	allErrs = m.validateVersion(allErrs)
@@ -127,7 +150,7 @@ func (m *OCIManagedMachinePool) ValidateUpdate(old runtime.Object) (admission.Wa
 	return warnings, nil
 }
 
-func (m *OCIManagedMachinePool) ValidateDelete() (admission.Warnings, error) {
+func (*OCIManagedMachinePoolWebhook) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
 	return nil, nil
 }
 

@@ -17,6 +17,9 @@ limitations under the License.
 package v1beta2
 
 import (
+	"context"
+	"fmt"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -27,15 +30,22 @@ import (
 
 var managedcplanelogger = ctrl.Log.WithName("ocimanagedcontrolplane-resource")
 
+type OCIManagedControlPlaneWebhook struct{}
+
 var (
-	_ webhook.Defaulter = &OCIManagedControlPlane{}
-	_ webhook.Validator = &OCIManagedControlPlane{}
+	_ webhook.CustomDefaulter = &OCIManagedControlPlaneWebhook{}
+	_ webhook.CustomValidator = &OCIManagedControlPlaneWebhook{}
 )
 
 // +kubebuilder:webhook:verbs=create;update,path=/validate-infrastructure-cluster-x-k8s-io-v1beta2-ocimanagedcontrolplane,mutating=false,failurePolicy=fail,matchPolicy=Equivalent,groups=infrastructure.cluster.x-k8s.io,resources=ocimanagedcontrolplanes,versions=v1beta2,name=validation.ocimanagedcontrolplane.infrastructure.cluster.x-k8s.io,sideEffects=None,admissionReviewVersions=v1beta1
 // +kubebuilder:webhook:verbs=create;update,path=/mutate-infrastructure-cluster-x-k8s-io-v1beta2-ocimanagedcontrolplane,mutating=true,failurePolicy=fail,matchPolicy=Equivalent,groups=infrastructure.cluster.x-k8s.io,resources=ocimanagedcontrolplanes,versions=v1beta2,name=default.ocimanagedcontrolplane.infrastructure.cluster.x-k8s.io,sideEffects=None,admissionReviewVersions=v1beta1
 
-func (c *OCIManagedControlPlane) Default() {
+func (*OCIManagedControlPlaneWebhook) Default(_ context.Context, obj runtime.Object) error {
+	c, ok := obj.(*OCIManagedControlPlane)
+	if !ok {
+		return fmt.Errorf("expected an OCIManagedControlPlane object but got %T", c)
+	}
+
 	if len(c.Spec.ClusterPodNetworkOptions) == 0 {
 		c.Spec.ClusterPodNetworkOptions = []ClusterPodNetworkOptions{
 			{
@@ -43,15 +53,25 @@ func (c *OCIManagedControlPlane) Default() {
 			},
 		}
 	}
+
+	return nil
 }
 
 func (c *OCIManagedControlPlane) SetupWebhookWithManager(mgr ctrl.Manager) error {
+	w := new(OCIManagedControlPlaneWebhook)
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(c).
+		WithDefaulter(w).
+		WithValidator(w).
 		Complete()
 }
 
-func (c *OCIManagedControlPlane) ValidateCreate() (admission.Warnings, error) {
+func (*OCIManagedControlPlaneWebhook) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
+	c, ok := obj.(*OCIManagedControlPlane)
+	if !ok {
+		return nil, fmt.Errorf("expected an OCIManagedControlPlane object but got %T", c)
+	}
+
 	var allErrs field.ErrorList
 	if len(c.Name) > 31 {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("Name"), c.Name, "Name cannot be more than 31 characters"))
@@ -74,10 +94,10 @@ func (c *OCIManagedControlPlane) ValidateCreate() (admission.Warnings, error) {
 	return nil, apierrors.NewInvalid(c.GroupVersionKind().GroupKind(), c.Name, allErrs)
 }
 
-func (c *OCIManagedControlPlane) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
+func (*OCIManagedControlPlaneWebhook) ValidateUpdate(_ context.Context, oldRaw, newObj runtime.Object) (admission.Warnings, error) {
 	return nil, nil
 }
 
-func (c *OCIManagedControlPlane) ValidateDelete() (admission.Warnings, error) {
+func (*OCIManagedControlPlaneWebhook) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
 	return nil, nil
 }
