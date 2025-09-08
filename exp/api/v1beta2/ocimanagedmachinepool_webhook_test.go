@@ -17,6 +17,7 @@ limitations under the License.
 package v1beta2
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -68,7 +69,7 @@ func TestOCIManagedMachinePool_CreateDefault(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := gomega.NewWithT(t)
-			test.m.Default()
+			(&OCIManagedMachinePoolWebhook{}).Default(context.Background(), test.m)
 			test.expect(g, test.m)
 		})
 	}
@@ -135,11 +136,11 @@ func TestOCIManagedMachinePool_ValidateCreate(t *testing.T) {
 			g := gomega.NewWithT(t)
 
 			if test.expectErr {
-				_, err := test.m.ValidateCreate()
+				_, err := (&OCIManagedMachinePoolWebhook{}).ValidateCreate(context.Background(), test.m)
 				g.Expect(err).NotTo(gomega.Succeed())
 				g.Expect(strings.Contains(err.Error(), test.errorMgsShouldContain)).To(gomega.BeTrue())
 			} else {
-				_, err := test.m.ValidateCreate()
+				_, err := (&OCIManagedMachinePoolWebhook{}).ValidateCreate(context.Background(), test.m)
 				g.Expect(err).To(gomega.Succeed())
 			}
 		})
@@ -284,7 +285,7 @@ func TestOCIManagedMachinePool_ValidateUpdate(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := gomega.NewWithT(t)
-			_, err := test.m.ValidateUpdate(test.old)
+			_, err := (&OCIManagedMachinePoolWebhook{}).ValidateUpdate(context.Background(), test.old, test.m)
 			if test.expectErr {
 				g.Expect(err).NotTo(gomega.Succeed())
 				g.Expect(strings.Contains(err.Error(), test.errorMgsShouldContain)).To(gomega.BeTrue())

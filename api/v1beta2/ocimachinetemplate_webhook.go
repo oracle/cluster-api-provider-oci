@@ -17,6 +17,7 @@ limitations under the License.
 package v1beta2
 
 import (
+	"context"
 	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -27,20 +28,29 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
+type OCIMachineTemplateWebhook struct{}
+
 var (
-	_ webhook.Validator = &OCIMachineTemplate{}
+	_ webhook.CustomValidator = &OCIMachineTemplateWebhook{}
 )
 
 // +kubebuilder:webhook:verbs=create;update,path=/validate-infrastructure-cluster-x-k8s-io-v1beta2-ocimachinetemplate,mutating=false,failurePolicy=fail,matchPolicy=Equivalent,groups=infrastructure.cluster.x-k8s.io,resources=ocimachinetemplates,versions=v1beta2,name=validation.ocimachinetemplate.infrastructure.cluster.x-k8s.io,sideEffects=None,admissionReviewVersions=v1beta1
 
 func (m *OCIMachineTemplate) SetupWebhookWithManager(mgr ctrl.Manager) error {
+	w := new(OCIMachineTemplateWebhook)
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(m).
+		WithValidator(w).
 		Complete()
 }
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
-func (m *OCIMachineTemplate) ValidateCreate() (admission.Warnings, error) {
+func (*OCIMachineTemplateWebhook) ValidateCreate(_ context.Context, raw runtime.Object) (admission.Warnings, error) {
+	m, ok := raw.(*OCIMachineTemplate)
+	if !ok {
+		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected a OCIMachineTemplate but got a %T", raw))
+	}
+
 	clusterlogger.Info("validate create machinetemplate", "name", m.Name)
 
 	var allErrs field.ErrorList
@@ -55,14 +65,22 @@ func (m *OCIMachineTemplate) ValidateCreate() (admission.Warnings, error) {
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
-func (m *OCIMachineTemplate) ValidateDelete() (admission.Warnings, error) {
+func (*OCIMachineTemplateWebhook) ValidateDelete(_ context.Context, raw runtime.Object) (admission.Warnings, error) {
+	m, ok := raw.(*OCIMachineTemplate)
+	if !ok {
+		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected a OCIMachineTemplate but got a %T", raw))
+	}
 	clusterlogger.Info("validate delete machinetemplate", "name", m.Name)
 
 	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (m *OCIMachineTemplate) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
+func (*OCIMachineTemplateWebhook) ValidateUpdate(ctx context.Context, oldRaw runtime.Object, newRaw runtime.Object) (admission.Warnings, error) {
+	m, ok := newRaw.(*OCIMachineTemplate)
+	if !ok {
+		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected a OCIMachineTemplate but got a %T", newRaw))
+	}
 	clusterlogger.Info("validate update machinetemplate", "name", m.Name)
 
 	var allErrs field.ErrorList

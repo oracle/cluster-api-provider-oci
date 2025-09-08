@@ -386,7 +386,7 @@ $(KUSTOMIZE): ## Download kustomize locally if necessary.
 	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) sigs.k8s.io/kustomize/kustomize/v4 $(KUSTOMIZE_BIN) v4.5.2
 
 $(GINKGO): ## Build ginkgo.
-	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) github.com/onsi/ginkgo/v2/ginkgo $(GINKGO_BIN) v2.19.1
+	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) github.com/onsi/ginkgo/v2/ginkgo $(GINKGO_BIN) v2.23.3
 
 $(GOLANGCI_LINT): ## Build golanci-lint.
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(BIN_DIR) $(GOLANGCI_LINT_VERSION)

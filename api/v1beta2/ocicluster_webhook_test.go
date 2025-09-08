@@ -20,6 +20,7 @@
 package v1beta2
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -482,11 +483,11 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 			g := gomega.NewWithT(t)
 
 			if test.expectErr {
-				_, err := test.c.ValidateCreate()
+				_, err := (&OCIClusterWebhook{}).ValidateCreate(context.Background(), test.c)
 				g.Expect(err).NotTo(gomega.Succeed())
 				g.Expect(strings.Contains(err.Error(), test.errorMgsShouldContain)).To(gomega.BeTrue())
 			} else {
-				_, err := test.c.ValidateCreate()
+				_, err := (&OCIClusterWebhook{}).ValidateCreate(context.Background(), test.c)
 				g.Expect(err).To(gomega.Succeed())
 			}
 		})
@@ -606,11 +607,11 @@ func TestOCICluster_ValidateUpdate(t *testing.T) {
 			g := gomega.NewWithT(t)
 
 			if test.expectErr {
-				_, err := test.c.ValidateUpdate(test.old)
+				_, err := (&OCIClusterWebhook{}).ValidateUpdate(context.Background(), test.old, test.c)
 				g.Expect(err).NotTo(gomega.Succeed())
 				g.Expect(strings.Contains(err.Error(), test.errorMgsShouldContain)).To(gomega.BeTrue())
 			} else {
-				_, err := test.c.ValidateUpdate(test.old)
+				_, err := (&OCIClusterWebhook{}).ValidateUpdate(context.Background(), test.old, test.c)
 				g.Expect(err).To(gomega.Succeed())
 			}
 		})
@@ -783,7 +784,7 @@ func TestOCICluster_CreateDefault(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := gomega.NewWithT(t)
-			test.c.Default()
+			(&OCIClusterWebhook{}).Default(context.Background(), test.c)
 			test.expect(g, test.c)
 		})
 	}

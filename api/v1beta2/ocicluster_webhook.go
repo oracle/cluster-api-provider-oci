@@ -20,6 +20,7 @@
 package v1beta2
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/oracle/oci-go-sdk/v65/common"
@@ -34,15 +35,22 @@ import (
 
 var clusterlogger = ctrl.Log.WithName("ocicluster-resource")
 
+type OCIClusterWebhook struct{}
+
 var (
-	_ webhook.Defaulter = &OCICluster{}
-	_ webhook.Validator = &OCICluster{}
+	_ webhook.CustomDefaulter = &OCIClusterWebhook{}
+	_ webhook.CustomValidator = &OCIClusterWebhook{}
 )
 
 // +kubebuilder:webhook:verbs=create;update,path=/validate-infrastructure-cluster-x-k8s-io-v1beta2-ocicluster,mutating=false,failurePolicy=fail,matchPolicy=Equivalent,groups=infrastructure.cluster.x-k8s.io,resources=ociclusters,versions=v1beta2,name=validation.ocicluster.infrastructure.cluster.x-k8s.io,sideEffects=None,admissionReviewVersions=v1beta1
 // +kubebuilder:webhook:verbs=create;update,path=/mutate-infrastructure-cluster-x-k8s-io-v1beta2-ocicluster,mutating=true,failurePolicy=fail,matchPolicy=Equivalent,groups=infrastructure.cluster.x-k8s.io,resources=ociclusters,versions=v1beta2,name=default.ocicluster.infrastructure.cluster.x-k8s.io,sideEffects=None,admissionReviewVersions=v1beta1
 
-func (c *OCICluster) Default() {
+func (*OCIClusterWebhook) Default(_ context.Context, obj runtime.Object) error {
+	c, ok := obj.(*OCICluster)
+	if !ok {
+		return fmt.Errorf("expected an OCICluster object but got %T", c)
+	}
+
 	if c.Spec.OCIResourceIdentifier == "" {
 		c.Spec.OCIResourceIdentifier = string(uuid.NewUUID())
 	}
@@ -50,16 +58,26 @@ func (c *OCICluster) Default() {
 		c.Spec.NetworkSpec.Vcn.Subnets = c.SubnetSpec()
 		c.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List = c.NSGSpec()
 	}
+
+	return nil
 }
 
 func (c *OCICluster) SetupWebhookWithManager(mgr ctrl.Manager) error {
+	w := new(OCIClusterWebhook)
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(c).
+		WithDefaulter(w).
+		WithValidator(w).
 		Complete()
 }
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
-func (c *OCICluster) ValidateCreate() (admission.Warnings, error) {
+func (*OCIClusterWebhook) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
+	c, ok := obj.(*OCICluster)
+	if !ok {
+		return nil, fmt.Errorf("expected an OCICluster object but got %T", c)
+	}
+
 	clusterlogger.Info("validate update cluster", "name", c.Name)
 
 	var allErrs field.ErrorList
@@ -155,21 +173,30 @@ func (c *OCICluster) ValidateCreate() (admission.Warnings, error) {
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
-func (c *OCICluster) ValidateDelete() (admission.Warnings, error) {
+func (*OCIClusterWebhook) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
+	c, ok := obj.(*OCICluster)
+	if !ok {
+		return nil, fmt.Errorf("expected an OCICluster object but got %T", c)
+	}
 	clusterlogger.Info("validate delete cluster", "name", c.Name)
 
 	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (c *OCICluster) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
+func (*OCIClusterWebhook) ValidateUpdate(_ context.Context, oldRaw, newObj runtime.Object) (admission.Warnings, error) {
+	c, ok := newObj.(*OCICluster)
+	if !ok {
+		return nil, fmt.Errorf("expected an OCICluster object but got %T", c)
+	}
+
 	clusterlogger.Info("validate update cluster", "name", c.Name)
 
 	var allErrs field.ErrorList
 
-	oldCluster, ok := old.(*OCICluster)
+	oldCluster, ok := oldRaw.(*OCICluster)
 	if !ok {
-		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected an OCICluster but got a %T", old))
+		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected an OCICluster but got a %T", oldRaw))
 	}
 
 	if c.Spec.Region != oldCluster.Spec.Region {

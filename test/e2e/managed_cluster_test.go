@@ -111,6 +111,7 @@ var _ = Describe("Managed Workload cluster creation", func() {
 			Cluster:           result.Cluster,
 			ClusterProxy:      bootstrapClusterProxy,
 			Namespace:         namespace,
+			ClusterctlConfigPath: clusterctlConfigPath,
 			CancelWatches:     cancelWatches,
 			IntervalsGetter:   e2eConfig.GetIntervals,
 			SkipCleanup:       skipCleanup,
@@ -134,7 +135,7 @@ var _ = Describe("Managed Workload cluster creation", func() {
 				ClusterName:              clusterName,
 				ControlPlaneMachineCount: pointer.Int64(1),
 				WorkerMachineCount:       pointer.Int64(1),
-				KubernetesVersion:        e2eConfig.GetVariable(capi_e2e.KubernetesVersion),
+				KubernetesVersion:        e2eConfig.MustGetVariable(capi_e2e.KubernetesVersion),
 			},
 			WaitForClusterIntervals:      e2eConfig.GetIntervals(specName, "wait-cluster"),
 			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),
@@ -200,7 +201,7 @@ var _ = Describe("Managed Workload cluster creation", func() {
 				ClusterName:              clusterName,
 				ControlPlaneMachineCount: pointer.Int64(1),
 				WorkerMachineCount:       pointer.Int64(1),
-				KubernetesVersion:        e2eConfig.GetVariable(capi_e2e.KubernetesVersion),
+				KubernetesVersion:        e2eConfig.MustGetVariable(capi_e2e.KubernetesVersion),
 			},
 			WaitForClusterIntervals:      e2eConfig.GetIntervals(specName, "wait-cluster"),
 			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),
@@ -242,7 +243,7 @@ var _ = Describe("Managed Workload cluster creation", func() {
 				ClusterName:              clusterName,
 				ControlPlaneMachineCount: pointer.Int64(1),
 				WorkerMachineCount:       pointer.Int64(1),
-				KubernetesVersion:        e2eConfig.GetVariable(capi_e2e.KubernetesVersion),
+				KubernetesVersion:        e2eConfig.MustGetVariable(capi_e2e.KubernetesVersion),
 			},
 			WaitForClusterIntervals:      e2eConfig.GetIntervals(specName, "wait-cluster"),
 			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),
@@ -287,7 +288,7 @@ var _ = Describe("Managed Workload cluster creation", func() {
 				ClusterName:              clusterName,
 				ControlPlaneMachineCount: pointer.Int64(1),
 				WorkerMachineCount:       pointer.Int64(1),
-				KubernetesVersion:        e2eConfig.GetVariable(capi_e2e.KubernetesVersion),
+				KubernetesVersion:        e2eConfig.MustGetVariable(capi_e2e.KubernetesVersion),
 			},
 			WaitForClusterIntervals:      e2eConfig.GetIntervals(specName, "wait-cluster"),
 			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),
@@ -341,7 +342,7 @@ var _ = Describe("Managed Workload cluster creation", func() {
 				ClusterName:              clusterName,
 				ControlPlaneMachineCount: pointer.Int64(1),
 				WorkerMachineCount:       pointer.Int64(1),
-				KubernetesVersion:        e2eConfig.GetVariable(capi_e2e.KubernetesVersion),
+				KubernetesVersion:        e2eConfig.MustGetVariable(capi_e2e.KubernetesVersion),
 			},
 			WaitForClusterIntervals:      e2eConfig.GetIntervals(specName, "wait-cluster"),
 			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),
@@ -403,7 +404,7 @@ func upgradeControlPlaneVersionSpec(ctx context.Context, lister client.Client, c
 	patchHelper, err := patch.NewHelper(controlPlane, lister)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(e2eConfig.Variables).To(HaveKey(ManagedKubernetesUpgradeVersion), "Missing %s variable in the config", ManagedKubernetesUpgradeVersion)
-	managedKubernetesUpgradeVersion := e2eConfig.GetVariable(ManagedKubernetesUpgradeVersion)
+	managedKubernetesUpgradeVersion := e2eConfig.MustGetVariable(ManagedKubernetesUpgradeVersion)
 	Log(fmt.Sprintf("Upgrade test is starting, upgrade version is %s", managedKubernetesUpgradeVersion))
 	controlPlane.Spec.Version = &managedKubernetesUpgradeVersion
 	Expect(patchHelper.Patch(ctx, controlPlane)).To(Succeed())
@@ -430,7 +431,7 @@ func updateMachinePoolVersion(ctx context.Context, cluster *clusterv1.Cluster, c
 	}
 	lister := clusterProxy.GetClient()
 	Expect(machinePool).NotTo(BeNil())
-	managedKubernetesUpgradeVersion := e2eConfig.GetVariable(ManagedKubernetesUpgradeVersion)
+	managedKubernetesUpgradeVersion := e2eConfig.MustGetVariable(ManagedKubernetesUpgradeVersion)
 
 	patchHelper, err := patch.NewHelper(machinePool, lister)
 	Expect(err).ToNot(HaveOccurred())

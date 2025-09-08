@@ -17,6 +17,7 @@ limitations under the License.
 package v1beta2
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 
@@ -32,15 +33,22 @@ import (
 
 var managedclusterlogger = ctrl.Log.WithName("ocimanagedcluster-resource")
 
+type OCIManagedClusterWebhook struct{}
+
 var (
-	_ webhook.Defaulter = &OCIManagedCluster{}
-	_ webhook.Validator = &OCIManagedCluster{}
+	_ webhook.CustomDefaulter = &OCIManagedClusterWebhook{}
+	_ webhook.CustomValidator = &OCIManagedClusterWebhook{}
 )
 
 // +kubebuilder:webhook:verbs=create;update,path=/validate-infrastructure-cluster-x-k8s-io-v1beta2-ocimanagedcluster,mutating=false,failurePolicy=fail,matchPolicy=Equivalent,groups=infrastructure.cluster.x-k8s.io,resources=ocimanagedclusters,versions=v1beta2,name=validation.ocimanagedcluster.infrastructure.cluster.x-k8s.io,sideEffects=None,admissionReviewVersions=v1beta1
 // +kubebuilder:webhook:verbs=create;update,path=/mutate-infrastructure-cluster-x-k8s-io-v1beta2-ocimanagedcluster,mutating=true,failurePolicy=fail,matchPolicy=Equivalent,groups=infrastructure.cluster.x-k8s.io,resources=ocimanagedclusters,versions=v1beta2,name=default.ocimanagedcluster.infrastructure.cluster.x-k8s.io,sideEffects=None,admissionReviewVersions=v1beta1
 
-func (c *OCIManagedCluster) Default() {
+func (*OCIManagedClusterWebhook) Default(_ context.Context, obj runtime.Object) error {
+	c, ok := obj.(*OCIManagedCluster)
+	if !ok {
+		return fmt.Errorf("expected an OCIManagedCluster object but got %T", c)
+	}
+
 	if c.Spec.OCIResourceIdentifier == "" {
 		c.Spec.OCIResourceIdentifier = string(uuid.NewUUID())
 	}
@@ -106,16 +114,25 @@ func (c *OCIManagedCluster) Default() {
 			c.Spec.NetworkSpec.Vcn.CIDR = VcnDefaultCidr
 		}
 	}
+
+	return nil
 }
 
 func (c *OCIManagedCluster) SetupWebhookWithManager(mgr ctrl.Manager) error {
+	w := new(OCIManagedClusterWebhook)
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(c).
+		WithDefaulter(w).
+		WithValidator(w).
 		Complete()
 }
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
-func (c *OCIManagedCluster) ValidateCreate() (admission.Warnings, error) {
+func (*OCIManagedClusterWebhook) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
+	c, ok := obj.(*OCIManagedCluster)
+	if !ok {
+		return nil, fmt.Errorf("expected an OCIManagedCluster object but got %T", c)
+	}
 	managedclusterlogger.Info("validate create cluster", "name", c.Name)
 
 	var allErrs field.ErrorList
@@ -130,21 +147,31 @@ func (c *OCIManagedCluster) ValidateCreate() (admission.Warnings, error) {
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
-func (c *OCIManagedCluster) ValidateDelete() (admission.Warnings, error) {
+func (*OCIManagedClusterWebhook) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
+	c, ok := obj.(*OCIManagedCluster)
+	if !ok {
+		return nil, fmt.Errorf("expected an OCIManagedCluster object but got %T", c)
+	}
+
 	managedclusterlogger.Info("validate delete cluster", "name", c.Name)
 
 	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (c *OCIManagedCluster) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
+func (*OCIManagedClusterWebhook) ValidateUpdate(_ context.Context, oldRaw, newObj runtime.Object) (admission.Warnings, error) {
+	c, ok := newObj.(*OCIManagedCluster)
+	if !ok {
+		return nil, fmt.Errorf("expected an OCIManagedCluster object but got %T", c)
+	}
+
 	managedclusterlogger.Info("validate update cluster", "name", c.Name)
 
 	var allErrs field.ErrorList
 
-	oldCluster, ok := old.(*OCIManagedCluster)
+	oldCluster, ok := oldRaw.(*OCIManagedCluster)
 	if !ok {
-		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected an OCIManagedCluster but got a %T", old))
+		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected an OCIManagedCluster but got a %T", oldRaw))
 	}
 
 	if c.Spec.Region != oldCluster.Spec.Region {
