@@ -348,9 +348,9 @@ func (m *MachineScope) getMachineFromOCID(ctx context.Context, instanceID *strin
 
 // GetMachineByDisplayName returns the machine from the compartment if there is a matching DisplayName,
 // and it was created by the cluster
+// nolint:nilnil
 func (m *MachineScope) GetMachineByDisplayName(ctx context.Context, name string) (*core.Instance, error) {
 	var page *string
-	var err error
 	for {
 		req := core.ListInstancesRequest{DisplayName: common.String(name),
 			CompartmentId: common.String(m.getCompartmentId()), Page: page}
@@ -359,11 +359,11 @@ func (m *MachineScope) GetMachineByDisplayName(ctx context.Context, name string)
 			return nil, err
 		}
 		if len(resp.Items) == 0 {
-			return nil, err
+			return nil, nil
 		}
 		for _, instance := range resp.Items {
 			if m.IsResourceCreatedByClusterAPI(instance.FreeformTags) {
-				return &instance, err
+				return &instance, nil
 			}
 		}
 
@@ -373,7 +373,7 @@ func (m *MachineScope) GetMachineByDisplayName(ctx context.Context, name string)
 			page = resp.OpcNextPage
 		}
 	}
-	return nil, err
+	return nil, nil
 }
 
 // PatchObject persists the cluster configuration and status.

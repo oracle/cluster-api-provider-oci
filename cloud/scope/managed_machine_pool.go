@@ -161,9 +161,9 @@ func (m *ManagedMachinePoolScope) IsResourceCreatedByClusterAPI(resourceFreeForm
 }
 
 // FindNodePool attempts to find the node pool by id if the id exists or by name. It checks to make sure
-// the node pool was created by the cluster before returning the correct pool
+// the node pool was created by the cluster before returning the correct pool.
+// nolint:nilnil
 func (m *ManagedMachinePoolScope) FindNodePool(ctx context.Context) (*oke.NodePool, error) {
-	var err error
 	if m.OCIManagedMachinePool.Spec.ID != nil {
 		response, err := m.ContainerEngineClient.GetNodePool(ctx, oke.GetNodePoolRequest{
 			NodePoolId: m.OCIManagedMachinePool.Spec.ID,
@@ -202,7 +202,7 @@ func (m *ManagedMachinePoolScope) FindNodePool(ctx context.Context) (*oke.NodePo
 			page = response.OpcNextPage
 		}
 	}
-	return nil, err
+	return nil, nil
 }
 
 func (m *ManagedMachinePoolScope) getNodePoolName() string {

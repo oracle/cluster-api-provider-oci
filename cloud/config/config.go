@@ -156,11 +156,11 @@ func NewConfigurationProvider(cfg *AuthConfig) (common.ConfigurationProvider, er
 	}
 }
 
+// nolint:nilnil
 func NewConfigurationProviderWithUserPrincipal(cfg *AuthConfig) (common.ConfigurationProvider, error) {
 	var conf common.ConfigurationProvider
-	var err error
 	if cfg == nil {
-		return nil, err
+		return nil, nil
 	}
 	conf = common.NewRawConfigurationProvider(
 		cfg.TenancyID,

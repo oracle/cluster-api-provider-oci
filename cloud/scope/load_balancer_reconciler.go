@@ -259,8 +259,8 @@ func (s *ClusterScope) IsLBEqual(actual *loadbalancer.LoadBalancer, desired infr
 // 1. the OCICluster's spec LoadBalancerId
 //
 // 2. Listing the LoadBalancers for the Compartment (by ID) and DisplayName then filtering by tag
+// nolint:nilnil
 func (s *ClusterScope) GetLoadBalancers(ctx context.Context) (*loadbalancer.LoadBalancer, error) {
-	var err error
 	lbOcid := s.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerId
 	if lbOcid != nil {
 		resp, err := s.LoadBalancerClient.GetLoadBalancer(ctx, loadbalancer.GetLoadBalancerRequest{
@@ -306,5 +306,5 @@ func (s *ClusterScope) GetLoadBalancers(ctx context.Context) (*loadbalancer.Load
 			page = lbs.OpcNextPage
 		}
 	}
-	return nil, err
+	return nil, nil
 }

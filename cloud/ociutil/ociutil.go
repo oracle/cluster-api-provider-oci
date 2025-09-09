@@ -49,6 +49,8 @@ var ErrNotFound = errors.New("not found")
 
 // IsNotFound returns true if the given error indicates that a resource could
 // not be found.
+// nolint:nilaway // We don't need to check if serviceErr is nil, because once ok is true,
+// serviceErr is non-nil and will not have any issue in accesing GetHTTPStatusCode() field
 func IsNotFound(err error) bool {
 	if err == nil {
 		return false
@@ -58,10 +60,8 @@ func IsNotFound(err error) bool {
 	}
 	err = errors.Cause(err)
 	serviceErr, ok := common.IsServiceError(err)
-	if serviceErr != nil {
-		return ok && serviceErr.GetHTTPStatusCode() == http.StatusNotFound
-	}
-	return false
+
+	return ok && serviceErr.GetHTTPStatusCode() == http.StatusNotFound
 }
 
 // AwaitNLBWorkRequest waits for the LB work request to either succeed, fail. See k8s.io/apimachinery/pkg/util/wait

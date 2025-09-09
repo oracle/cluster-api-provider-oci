@@ -312,9 +312,9 @@ func (s *ManagedControlPlaneScope) getOKEClusterFromOCID(ctx context.Context, cl
 	return &resp.Cluster, nil
 }
 
+// nolint:nilnil
 func (s *ManagedControlPlaneScope) getOKEClusterByDisplayName(ctx context.Context, name string) (*oke.Cluster, error) {
 	var page *string
-	var err error
 	for {
 		req := oke.ListClustersRequest{
 			Name:          common.String(name),
@@ -326,7 +326,7 @@ func (s *ManagedControlPlaneScope) getOKEClusterByDisplayName(ctx context.Contex
 			return nil, err
 		}
 		if len(resp.Items) == 0 {
-			return nil, err
+			return nil, nil
 		}
 		for _, cluster := range resp.Items {
 			if s.isResourceCreatedByClusterAPI(cluster.FreeformTags) {
@@ -339,7 +339,7 @@ func (s *ManagedControlPlaneScope) getOKEClusterByDisplayName(ctx context.Contex
 			page = resp.OpcNextPage
 		}
 	}
-	return nil, err
+	return nil, nil
 }
 
 func (s *ManagedControlPlaneScope) isResourceCreatedByClusterAPI(resourceFreeFormTags map[string]string) bool {
@@ -634,8 +634,10 @@ func (s *ManagedControlPlaneScope) updateCAPIKubeconfigSecret(ctx context.Contex
 	}
 
 	userName := getKubeConfigUserName(*okeCluster.Name, false)
-	if config.AuthInfos[userName] != nil {
-		config.AuthInfos[userName].Token = token
+	if authInfo := config.AuthInfos[userName]; authInfo != nil {
+		authInfo.Token = token
+	} else {
+		return fmt.Errorf("user %s not found in config", userName)
 	}
 
 	out, err := clientcmd.Write(*config)

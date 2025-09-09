@@ -158,8 +158,8 @@ func (s *ClusterScope) createRPC(ctx context.Context, drgId *string, displayName
 	return &response.RemotePeeringConnection, nil
 }
 
+// nolint:nilnil
 func (s *ClusterScope) lookupRPC(ctx context.Context, drgId *string, rpcId *string, vcnClient vcn.Client) (*core.RemotePeeringConnection, error) {
-	var err error
 	if rpcId != nil {
 		attachment, err := s.getRPC(ctx, rpcId, vcnClient)
 		if err != nil {
@@ -199,11 +199,11 @@ func (s *ClusterScope) lookupRPC(ctx context.Context, drgId *string, rpcId *stri
 		}
 
 		if len(rpcs) == 0 {
-			return nil, err
+			return nil, nil
 		} else if len(rpcs) > 1 {
 			return nil, errors.New("found more than one attachment with same display name")
 		} else {
-			return &rpcs[0], err
+			return &rpcs[0], nil
 		}
 	}
 }

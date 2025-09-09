@@ -524,8 +524,8 @@ func (m *MachinePoolScope) ListInstancePoolSummaries(ctx context.Context, req co
 
 // FindInstancePool attempts to find the instance pool by name and checks to make sure
 // the instance pool was created by the cluster before returning the correct pool
+// nolint:nilnil
 func (m *MachinePoolScope) FindInstancePool(ctx context.Context) (*core.InstancePool, error) {
-	var err error
 	if m.OCIMachinePool.Spec.OCID != nil {
 		response, err := m.ComputeManagementClient.GetInstancePool(ctx, core.GetInstancePoolRequest{
 			InstancePoolId: m.OCIMachinePool.Spec.OCID,
@@ -557,7 +557,7 @@ func (m *MachinePoolScope) FindInstancePool(ctx context.Context) (*core.Instance
 	}
 	if instancePoolSummary == nil {
 		m.Info("No machine pool found created by this cluster", "machinepool-name", m.OCIMachinePool.GetName())
-		return nil, err
+		return nil, nil
 	}
 
 	reqGet := core.GetInstancePoolRequest{
@@ -879,8 +879,8 @@ func (m *MachinePoolScope) getWorkerMachineNSGs() []string {
 }
 
 // GetInstanceConfiguration returns the instance configuration associated with the instance pool
+// nolint:nilnil
 func (m *MachinePoolScope) GetInstanceConfiguration(ctx context.Context) (*core.InstanceConfiguration, error) {
-	var err error
 	instanceConfigurationId := m.GetInstanceConfigurationId()
 	if instanceConfigurationId != nil {
 		return m.getInstanceConfigurationFromOCID(ctx, instanceConfigurationId)
@@ -893,7 +893,7 @@ func (m *MachinePoolScope) GetInstanceConfiguration(ctx context.Context) (*core.
 	if len(ids) > 0 {
 		return m.getInstanceConfigurationFromOCID(ctx, ids[0])
 	}
-	return nil, err
+	return nil, nil
 }
 
 func (m *MachinePoolScope) CleanupInstanceConfiguration(ctx context.Context, instancePool *core.InstancePool) error {

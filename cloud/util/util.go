@@ -58,6 +58,7 @@ var (
 )
 
 // GetClusterIdentityFromRef returns the OCIClusterIdentity referenced by the OCICluster.
+// nolint:nilnil
 func GetClusterIdentityFromRef(ctx context.Context, c client.Client, ociClusterNamespace string, ref *corev1.ObjectReference) (*infrastructurev1beta2.OCIClusterIdentity, error) {
 	identity := &infrastructurev1beta2.OCIClusterIdentity{}
 	if ref != nil {
@@ -71,7 +72,7 @@ func GetClusterIdentityFromRef(ctx context.Context, c client.Client, ociClusterN
 		}
 		return identity, nil
 	}
-	return nil, errors.New("Cluster Identity not found")
+	return nil, nil
 }
 
 // getOCIClientCertFromSecret returns the cert referenced by the OCICluster.
@@ -113,6 +114,7 @@ func getOCIClientCertPool(ctx context.Context, c client.Client, namespace string
 }
 
 // GetOrBuildClientFromIdentity creates ClientProvider from OCIClusterIdentity object
+// nolint:nilaway
 func GetOrBuildClientFromIdentity(ctx context.Context, c client.Client, identity *infrastructurev1beta2.OCIClusterIdentity, defaultRegion string, clientOverrides *infrastructurev1beta2.ClientOverrides, namespace string) (*scope.ClientProvider, error) {
 	logger := log.FromContext(ctx)
 	if !reflect.DeepEqual(identity.Spec, v1beta2.OCIClusterIdentitySpec{}) && identity.Spec.Type == infrastructurev1beta2.UserPrincipal {
@@ -319,9 +321,10 @@ func InitClientsAndRegion(ctx context.Context, client client.Client, defaultRegi
 }
 
 // CreateClientProviderFromClusterIdentity creates scope.ClientProvider from Cluster Identity
+// nolint:nilaway
 func CreateClientProviderFromClusterIdentity(ctx context.Context, client client.Client, namespace string, defaultRegion string, clusterAccessor scope.OCIClusterAccessor, identityRef *corev1.ObjectReference) (*scope.ClientProvider, error) {
 	identity, err := GetClusterIdentityFromRef(ctx, client, namespace, identityRef)
-	if err != nil || identity == nil {
+	if err != nil {
 		return nil, err
 	}
 
@@ -463,7 +466,7 @@ func DeleteOrphanedMachinePoolMachines(ctx context.Context, params MachineParams
 func getRegionInfoFromInstanceMetadataServiceProd() ([]byte, error) {
 	request, err := http.NewRequest(http.MethodGet, instanceMetadataRegionInfoURLV2, nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to make http request")
+		return nil, err
 	}
 	request.Header.Add("Authorization", "Bearer Oracle")
 

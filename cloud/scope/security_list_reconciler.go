@@ -255,8 +255,8 @@ func (s *ClusterScope) IsSecurityListExitsByRole(role infrastructurev1beta2.Role
 	return false
 }
 
+// nolint:nilnil
 func (s *ClusterScope) GetSecurityList(ctx context.Context, spec infrastructurev1beta2.SecurityList) (*core.SecurityList, error) {
-	var err error
 	securityListOcid := spec.ID
 	if securityListOcid != nil {
 		resp, err := s.VCNClient.GetSecurityList(ctx, core.GetSecurityListRequest{
@@ -286,5 +286,5 @@ func (s *ClusterScope) GetSecurityList(ctx context.Context, spec infrastructurev
 			return &securityList, nil
 		}
 	}
-	return nil, err
+	return nil, nil
 }
