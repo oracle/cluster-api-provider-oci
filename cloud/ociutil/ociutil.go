@@ -60,7 +60,6 @@ func IsNotFound(err error) bool {
 	}
 	err = errors.Cause(err)
 	serviceErr, ok := common.IsServiceError(err)
-
 	return ok && serviceErr.GetHTTPStatusCode() == http.StatusNotFound
 }
 

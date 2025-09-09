@@ -450,16 +450,16 @@ func (s *ManagedControlPlaneScope) createCAPIKubeconfigSecret(ctx context.Contex
 		return err
 	}
 	if reflect.DeepEqual(rawConfig, api.Config{}) {
-		return err
+		return errors.Wrap(err, "failed to create kubeconfig")
 	}
 	userName := getKubeConfigUserName(*okeCluster.Name, false)
 	currentContext := rawConfig.Contexts[rawConfig.CurrentContext]
 	if currentContext == nil {
-		return err
+		return errors.Wrap(err, "failed to create context")
 	}
 	currentCluster := rawConfig.Clusters[currentContext.Cluster]
 	if currentCluster == nil {
-		return err
+		return errors.Wrap(err, "failed to create cluster")
 	}
 	cfg, err := createBaseKubeConfig(userName, currentCluster, currentContext.Cluster, rawConfig.CurrentContext)
 	if err != nil {
@@ -572,15 +572,15 @@ func (s *ManagedControlPlaneScope) ReconcileBootstrapSecret(ctx context.Context,
 			return err
 		}
 		if reflect.DeepEqual(rawConfig, api.Config{}) {
-			return err
+			return errors.Wrap(err, "failed to create kubeconfig")
 		}
 		currentContext := rawConfig.Contexts[rawConfig.CurrentContext]
 		if currentContext == nil {
-			return err
+			return errors.Wrap(err, "failed to create context")
 		}
 		currentCluster := rawConfig.Clusters[currentContext.Cluster]
 		if currentCluster == nil {
-			return err
+			return errors.Wrap(err, "failed to create cluster")
 		}
 		certData := base64.StdEncoding.EncodeToString(currentCluster.CertificateAuthorityData)
 

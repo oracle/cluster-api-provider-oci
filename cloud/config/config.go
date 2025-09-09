@@ -160,7 +160,7 @@ func NewConfigurationProvider(cfg *AuthConfig) (common.ConfigurationProvider, er
 func NewConfigurationProviderWithUserPrincipal(cfg *AuthConfig) (common.ConfigurationProvider, error) {
 	var conf common.ConfigurationProvider
 	if cfg == nil {
-		return nil, nil
+		return nil, errors.New("cfg cannot be nil")
 	}
 	conf = common.NewRawConfigurationProvider(
 		cfg.TenancyID,

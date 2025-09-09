@@ -102,7 +102,7 @@ func getOCIClientCertPool(ctx context.Context, c client.Client, namespace string
 		}
 		pool = x509.NewCertPool()
 		if cert == nil {
-			return nil, errors.New("Cert Secret didn't contain 'cert' data")
+			return nil, errors.New("Cert Secret is nil")
 		}
 		if cert, ok := cert.Data["cert"]; ok {
 			pool.AppendCertsFromPEM(cert)
