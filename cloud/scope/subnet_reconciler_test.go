@@ -911,3 +911,162 @@ func isSubnetsEqual(desiredSubnets []*infrastructurev1beta2.Subnet, actualSubnet
 	}
 	return true
 }
+
+func TestClusterScope_IsSubnetsEqual(t *testing.T) {
+	s := &ClusterScope{}
+	secID := common.String("secid")
+
+	tests := []struct {
+		name    string
+		actual  core.Subnet
+		desired infrastructurev1beta2.Subnet
+		want    bool
+	}{
+		{
+			name: "equal without security list",
+			actual: core.Subnet{
+				DisplayName: common.String("name"),
+				CidrBlock:   common.String("10.0.0.0/24"),
+			},
+			desired: infrastructurev1beta2.Subnet{
+				Name: "name",
+				CIDR: "10.0.0.0/24",
+			},
+			want: true,
+		},
+		{
+			name: "actual nil DisplayName",
+			actual: core.Subnet{
+				DisplayName: nil,
+				CidrBlock:   common.String("10.0.0.0/24"),
+			},
+			desired: infrastructurev1beta2.Subnet{
+				Name: "",
+				CIDR: "10.0.0.0/24",
+			},
+			want: true,
+		},
+		{
+			name: "actual nil CidrBlock",
+			actual: core.Subnet{
+				DisplayName: common.String("name"),
+				CidrBlock:   nil,
+			},
+			desired: infrastructurev1beta2.Subnet{
+				Name: "name",
+				CIDR: "",
+			},
+			want: true,
+		},
+		{
+			name: "name mismatch",
+			actual: core.Subnet{
+				DisplayName: common.String("other"),
+				CidrBlock:   common.String("10.0.0.0/24"),
+			},
+			desired: infrastructurev1beta2.Subnet{
+				Name: "name",
+				CIDR: "10.0.0.0/24",
+			},
+			want: false,
+		},
+		{
+			name: "cidr mismatch",
+			actual: core.Subnet{
+				DisplayName: common.String("name"),
+				CidrBlock:   common.String("10.0.1.0/24"),
+			},
+			desired: infrastructurev1beta2.Subnet{
+				Name: "name",
+				CIDR: "10.0.0.0/24",
+			},
+			want: false,
+		},
+		{
+			name: "equal with matching security list first id",
+			actual: core.Subnet{
+				DisplayName:     common.String("name"),
+				CidrBlock:       common.String("10.0.0.0/24"),
+				SecurityListIds: []string{"secid", "other"},
+			},
+			desired: infrastructurev1beta2.Subnet{
+				Name: "name",
+				CIDR: "10.0.0.0/24",
+				SecurityList: &infrastructurev1beta2.SecurityList{
+					ID: secID,
+				},
+			},
+			want: true,
+		},
+		{
+			name: "desired security list id nil",
+			actual: core.Subnet{
+				DisplayName:     common.String("name"),
+				CidrBlock:       common.String("10.0.0.0/24"),
+				SecurityListIds: []string{"secid"},
+			},
+			desired: infrastructurev1beta2.Subnet{
+				Name:         "name",
+				CIDR:         "10.0.0.0/24",
+				SecurityList: &infrastructurev1beta2.SecurityList{
+					// ID intentionally nil
+				},
+			},
+			want: false,
+		},
+		{
+			name: "desired security list present but actual has none",
+			actual: core.Subnet{
+				DisplayName: common.String("name"),
+				CidrBlock:   common.String("10.0.0.0/24"),
+			},
+			desired: infrastructurev1beta2.Subnet{
+				Name: "name",
+				CIDR: "10.0.0.0/24",
+				SecurityList: &infrastructurev1beta2.SecurityList{
+					ID: secID,
+				},
+			},
+			want: false,
+		},
+		{
+			name: "security list id mismatch with first element",
+			// we should find the second item in the list
+			actual: core.Subnet{
+				DisplayName:     common.String("name"),
+				CidrBlock:       common.String("10.0.0.0/24"),
+				SecurityListIds: []string{"different", "secid"},
+			},
+			desired: infrastructurev1beta2.Subnet{
+				Name: "name",
+				CIDR: "10.0.0.0/24",
+				SecurityList: &infrastructurev1beta2.SecurityList{
+					ID: secID,
+				},
+			},
+			want: true,
+		},
+		{
+			name: "desired security list nil but actual has ids",
+			actual: core.Subnet{
+				DisplayName:     common.String("name"),
+				CidrBlock:       common.String("10.0.0.0/24"),
+				SecurityListIds: []string{"any"},
+			},
+			desired: infrastructurev1beta2.Subnet{
+				Name: "name",
+				CIDR: "10.0.0.0/24",
+			},
+			want: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := s.IsSubnetsEqual(&tt.actual, tt.desired)
+			if got != tt.want {
+				t.Errorf("IsSubnetsEqual() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

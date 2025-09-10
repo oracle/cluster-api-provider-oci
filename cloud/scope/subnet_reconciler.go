@@ -20,10 +20,12 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"slices"
 	"strings"
 
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
+	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/pkg/errors"
@@ -297,19 +299,18 @@ func (s *ClusterScope) GetSubnetsSpec() []*infrastructurev1beta2.Subnet {
 }
 
 func (s *ClusterScope) IsSubnetsEqual(actual *core.Subnet, desired infrastructurev1beta2.Subnet) bool {
-	if desired.Name != *actual.DisplayName {
+	if desired.Name != ptr.ToString(actual.DisplayName) {
 		return false
 	}
-	if desired.CIDR != *actual.CidrBlock {
+	if desired.CIDR != ptr.ToString(actual.CidrBlock) {
 		return false
 	}
-	if desired.SecurityList != nil && desired.SecurityList.ID != nil {
-		for _, securityListId := range actual.SecurityListIds {
-			if *desired.SecurityList.ID == securityListId {
-				return true
-			}
+	if desired.SecurityList != nil {
+		if desired.SecurityList.ID == nil {
+			return false
 		}
-		return false
+
+		return slices.Contains(actual.SecurityListIds, ptr.ToString(desired.SecurityList.ID))
 	}
 	return true
 }
