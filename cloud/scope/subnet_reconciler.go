@@ -175,6 +175,11 @@ func (s *ClusterScope) UpdateSubnet(ctx context.Context, spec infrastructurev1be
 		CidrBlock:   common.String(spec.CIDR),
 	}
 	if spec.SecurityList != nil {
+		if spec.SecurityList.ID == nil {
+			err := errors.New("SecurityListID required")
+			s.Logger.Error(err, "failed updating subnet")
+			return err
+		}
 		updateSubnetDetails.SecurityListIds = []string{*spec.SecurityList.ID}
 	}
 	subnetResponse, err := s.VCNClient.UpdateSubnet(ctx, core.UpdateSubnetRequest{
@@ -297,10 +302,13 @@ func (s *ClusterScope) IsSubnetsEqual(actual *core.Subnet, desired infrastructur
 	if desired.CIDR != *actual.CidrBlock {
 		return false
 	}
-	if desired.SecurityList != nil {
-		if *desired.SecurityList.ID != actual.SecurityListIds[0] {
-			return false
+	if desired.SecurityList != nil && desired.SecurityList.ID != nil {
+		for _, securityListId := range actual.SecurityListIds {
+			if *desired.SecurityList.ID == securityListId {
+				return true
+			}
 		}
+		return false
 	}
 	return true
 }

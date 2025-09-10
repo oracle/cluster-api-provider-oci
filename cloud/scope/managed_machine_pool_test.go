@@ -789,7 +789,7 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 		{
 			name:          "nodepool no worker subnets",
 			errorExpected: true,
-			matchError: errors.New(fmt.Sprintf("worker subnet with name %s is not present in spec",
+			matchError: errors.New(fmt.Sprintf("worker subnet %s is not present in placementConfigs spec",
 				"worker-subnet-invalid")),
 			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
