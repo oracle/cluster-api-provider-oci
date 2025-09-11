@@ -101,12 +101,16 @@ func NewClientProvider(params ClientProviderParams) (*ClientProvider, error) {
 }
 
 // GetAuthProvider returns the client provider auth config
+// nolint:nilaway
 func (c *ClientProvider) GetAuthProvider() common.ConfigurationProvider {
 	return c.ociAuthConfigProvider
 }
 
 // GetOrBuildClient if the OCIClients exist for the region they are returned, if not clients will build them
 func (c *ClientProvider) GetOrBuildClient(region string) (OCIClients, error) {
+	if c == nil || c.ociClients == nil {
+		return OCIClients{}, errors.New("Client provider is not initialized")
+	}
 	if len(region) <= 0 {
 		return OCIClients{}, errors.New("ClientProvider.GetOrBuildClient region can not be empty")
 	}

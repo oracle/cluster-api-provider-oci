@@ -94,6 +94,7 @@ func (s *ClusterScope) adjustNSGRulesSpec(desiredNSG *infrastructurev1beta2.NSG,
 	desiredNSG.EgressRules = egressRules
 }
 
+// nolint:nilnil
 func (s *ClusterScope) GetNSG(ctx context.Context, spec infrastructurev1beta2.NSG) (*core.NetworkSecurityGroup, error) {
 	nsgOCID := spec.ID
 	if nsgOCID != nil {

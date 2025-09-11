@@ -221,6 +221,7 @@ func (s *ClusterScope) DeleteSubnets(ctx context.Context) error {
 	return nil
 }
 
+// nolint:nilnil
 func (s *ClusterScope) GetSubnet(ctx context.Context, spec infrastructurev1beta2.Subnet) (*core.Subnet, error) {
 	subnetOcid := spec.ID
 	if subnetOcid != nil {

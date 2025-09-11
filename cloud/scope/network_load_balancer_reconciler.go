@@ -274,6 +274,7 @@ func (s *ClusterScope) IsNLBEqual(actual *networkloadbalancer.NetworkLoadBalance
 // 1. the OCICluster's spec LoadBalancerId
 //
 // 2. Listing the NetworkLoadBalancers for the Compartment (by ID) and DisplayName then filtering by tag
+// nolint:nilnil
 func (s *ClusterScope) GetNetworkLoadBalancers(ctx context.Context) (*networkloadbalancer.NetworkLoadBalancer, error) {
 	nlbOcid := s.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerId
 	if nlbOcid != nil {

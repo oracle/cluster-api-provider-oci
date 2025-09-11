@@ -348,6 +348,7 @@ func (m *MachineScope) getMachineFromOCID(ctx context.Context, instanceID *strin
 
 // GetMachineByDisplayName returns the machine from the compartment if there is a matching DisplayName,
 // and it was created by the cluster
+// nolint:nilnil
 func (m *MachineScope) GetMachineByDisplayName(ctx context.Context, name string) (*core.Instance, error) {
 	var page *string
 	for {

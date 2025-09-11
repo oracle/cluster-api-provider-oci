@@ -75,6 +75,7 @@ func (s *ClusterScope) GetVcnCidrs() []string {
 	return []string{VcnDefaultCidr}
 }
 
+// nolint:nilnil
 func (s *ClusterScope) GetVCN(ctx context.Context) (*core.Vcn, error) {
 	vcnId := s.getVcnId()
 	if vcnId != nil {

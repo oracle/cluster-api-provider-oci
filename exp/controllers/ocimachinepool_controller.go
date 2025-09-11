@@ -253,6 +253,7 @@ func machinePoolToInfrastructureMapFunc(gvk schema.GroupVersionKind, logger logr
 }
 
 // getOwnerMachinePool returns the MachinePool object owning the current resource.
+// nolint:nilnil
 func getOwnerMachinePool(ctx context.Context, c client.Client, obj metav1.ObjectMeta) (*expclusterv1.MachinePool, error) {
 	for _, ref := range obj.OwnerReferences {
 		if ref.Kind != "MachinePool" {

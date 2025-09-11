@@ -146,6 +146,9 @@ func getConfigFromDir(path string) (*AuthConfig, error) {
 }
 
 func NewConfigurationProvider(cfg *AuthConfig) (common.ConfigurationProvider, error) {
+	if cfg == nil {
+		return nil, errors.New("auth config must not be nil")
+	}
 	if cfg.UseInstancePrincipals {
 		return auth.InstancePrincipalConfigurationProvider()
 	} else {
@@ -153,19 +156,20 @@ func NewConfigurationProvider(cfg *AuthConfig) (common.ConfigurationProvider, er
 	}
 }
 
+// nolint:nilnil
 func NewConfigurationProviderWithUserPrincipal(cfg *AuthConfig) (common.ConfigurationProvider, error) {
 	var conf common.ConfigurationProvider
-	if cfg != nil {
-		conf = common.NewRawConfigurationProvider(
-			cfg.TenancyID,
-			cfg.UserID,
-			cfg.Region,
-			cfg.Fingerprint,
-			cfg.PrivateKey,
-			common.String(cfg.Passphrase))
-		return conf, nil
+	if cfg == nil {
+		return nil, errors.New("cfg cannot be nil")
 	}
-	return nil, nil
+	conf = common.NewRawConfigurationProvider(
+		cfg.TenancyID,
+		cfg.UserID,
+		cfg.Region,
+		cfg.Fingerprint,
+		cfg.PrivateKey,
+		common.String(cfg.Passphrase))
+	return conf, nil
 }
 
 func ReadFile(path string, key string) (string, error) {

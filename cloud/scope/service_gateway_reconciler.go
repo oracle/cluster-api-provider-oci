@@ -113,6 +113,7 @@ func (s *ClusterScope) DeleteServiceGateway(ctx context.Context) error {
 	return nil
 }
 
+// nolint:nilnil
 func (s *ClusterScope) GetServiceGateway(ctx context.Context) (*core.ServiceGateway, error) {
 	sgwId := s.OCIClusterAccessor.GetNetworkSpec().Vcn.ServiceGateway.Id
 	if sgwId != nil {

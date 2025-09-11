@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/config"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
@@ -57,6 +58,7 @@ var (
 )
 
 // GetClusterIdentityFromRef returns the OCIClusterIdentity referenced by the OCICluster.
+// nolint:nilnil
 func GetClusterIdentityFromRef(ctx context.Context, c client.Client, ociClusterNamespace string, ref *corev1.ObjectReference) (*infrastructurev1beta2.OCIClusterIdentity, error) {
 	identity := &infrastructurev1beta2.OCIClusterIdentity{}
 	if ref != nil {
@@ -88,7 +90,7 @@ func getOCIClientCertFromSecret(ctx context.Context, c client.Client, ociCluster
 		}
 		return secret, nil
 	}
-	return nil, nil
+	return nil, errors.New("OCI Client Cert not found")
 }
 
 func getOCIClientCertPool(ctx context.Context, c client.Client, namespace string, clientOverrides *infrastructurev1beta2.ClientOverrides) (*x509.CertPool, error) {
@@ -99,6 +101,9 @@ func getOCIClientCertPool(ctx context.Context, c client.Client, namespace string
 			return nil, errors.Wrap(err, "Unable to fetch CertOverrideSecret")
 		}
 		pool = x509.NewCertPool()
+		if cert == nil {
+			return nil, errors.New("Cert Secret is nil")
+		}
 		if cert, ok := cert.Data["cert"]; ok {
 			pool.AppendCertsFromPEM(cert)
 		} else {
@@ -109,9 +114,10 @@ func getOCIClientCertPool(ctx context.Context, c client.Client, namespace string
 }
 
 // GetOrBuildClientFromIdentity creates ClientProvider from OCIClusterIdentity object
+// nolint:nilaway
 func GetOrBuildClientFromIdentity(ctx context.Context, c client.Client, identity *infrastructurev1beta2.OCIClusterIdentity, defaultRegion string, clientOverrides *infrastructurev1beta2.ClientOverrides, namespace string) (*scope.ClientProvider, error) {
 	logger := log.FromContext(ctx)
-	if identity.Spec.Type == infrastructurev1beta2.UserPrincipal {
+	if !reflect.DeepEqual(identity.Spec, v1beta2.OCIClusterIdentitySpec{}) && identity.Spec.Type == infrastructurev1beta2.UserPrincipal {
 		secretRef := identity.Spec.PrincipalSecret
 		key := types.NamespacedName{
 			Namespace: secretRef.Namespace,
@@ -315,16 +321,17 @@ func InitClientsAndRegion(ctx context.Context, client client.Client, defaultRegi
 }
 
 // CreateClientProviderFromClusterIdentity creates scope.ClientProvider from Cluster Identity
+// nolint:nilaway
 func CreateClientProviderFromClusterIdentity(ctx context.Context, client client.Client, namespace string, defaultRegion string, clusterAccessor scope.OCIClusterAccessor, identityRef *corev1.ObjectReference) (*scope.ClientProvider, error) {
 	identity, err := GetClusterIdentityFromRef(ctx, client, namespace, identityRef)
 	if err != nil {
 		return nil, err
 	}
+
 	if !IsClusterNamespaceAllowed(ctx, client, identity.Spec.AllowedNamespaces, namespace) {
 		clusterAccessor.MarkConditionFalse(infrastructurev1beta2.ClusterReadyCondition, infrastructurev1beta2.NamespaceNotAllowedByIdentity, clusterv1.ConditionSeverityError, "")
 		return nil, errors.Errorf("OCIClusterIdentity list of allowed namespaces doesn't include current cluster namespace %s", namespace)
 	}
-
 	clientProvider, err := GetOrBuildClientFromIdentity(ctx, client, identity, defaultRegion, clusterAccessor.GetClientOverrides(), namespace)
 	if err != nil {
 		return nil, err
@@ -458,6 +465,9 @@ func DeleteOrphanedMachinePoolMachines(ctx context.Context, params MachineParams
 }
 func getRegionInfoFromInstanceMetadataServiceProd() ([]byte, error) {
 	request, err := http.NewRequest(http.MethodGet, instanceMetadataRegionInfoURLV2, nil)
+	if err != nil {
+		return nil, err
+	}
 	request.Header.Add("Authorization", "Bearer Oracle")
 
 	client := &http.Client{

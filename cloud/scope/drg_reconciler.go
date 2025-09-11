@@ -64,6 +64,7 @@ func (s *ClusterScope) ReconcileDRG(ctx context.Context) error {
 // 1. the OCICluster's spec Drg
 //
 // 2. Listing the Drgs for the Compartment (by ID) and filtering by tag
+// nolint:nilnil
 func (s *ClusterScope) GetDRG(ctx context.Context) (*core.Drg, error) {
 	drgId := s.getDRG().ID
 	if drgId != nil {

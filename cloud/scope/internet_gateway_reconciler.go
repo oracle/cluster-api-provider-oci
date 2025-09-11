@@ -58,6 +58,7 @@ func (s *ClusterScope) ReconcileInternetGateway(ctx context.Context) error {
 // 1. the OCICluster's spec InternetGatewayId
 //
 // 2. Listing the Internet Gateways for the Compartment (by ID) and filtering by tag
+// nolint:nilnil
 func (s *ClusterScope) GetInternetGateway(ctx context.Context) (*core.InternetGateway, error) {
 	gwId := s.OCIClusterAccessor.GetNetworkSpec().Vcn.InternetGateway.Id
 	if gwId != nil {

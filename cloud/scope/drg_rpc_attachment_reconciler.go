@@ -158,6 +158,7 @@ func (s *ClusterScope) createRPC(ctx context.Context, drgId *string, displayName
 	return &response.RemotePeeringConnection, nil
 }
 
+// nolint:nilnil
 func (s *ClusterScope) lookupRPC(ctx context.Context, drgId *string, rpcId *string, vcnClient vcn.Client) (*core.RemotePeeringConnection, error) {
 	if rpcId != nil {
 		attachment, err := s.getRPC(ctx, rpcId, vcnClient)
