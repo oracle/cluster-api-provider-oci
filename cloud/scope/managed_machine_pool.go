@@ -28,6 +28,7 @@ import (
 	"github.com/go-logr/logr"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
+	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/computemanagement"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/containerengine"
 	expinfra1 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
@@ -556,8 +557,8 @@ func (m *ManagedMachinePoolScope) buildPlacementConfig(configs []expinfra1.Place
 	for _, config := range configs {
 		subnetId := m.getWorkerMachineSubnet(config.SubnetName)
 		if subnetId == nil {
-			return nil, errors.New(fmt.Sprintf("worker subnet with name %s is not present in spec",
-				*config.SubnetName))
+			return nil, errors.New(fmt.Sprintf("worker subnet %s is not present in placementConfigs spec",
+				ptr.ToString(config.SubnetName)))
 		}
 		placementConfigs = append(placementConfigs, oke.NodePoolPlacementConfigDetails{
 			AvailabilityDomain:    config.AvailabilityDomain,
@@ -582,7 +583,7 @@ func (m *ManagedMachinePoolScope) getInitialNodeKeyValuePairs() []oke.KeyValue {
 
 func (m *ManagedMachinePoolScope) getWorkerMachineSubnet(name *string) *string {
 	for _, subnet := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets {
-		if subnet != nil && subnet.ID != nil && subnet.Name == *name {
+		if subnet != nil && subnet.ID != nil && subnet.Name == ptr.ToString(name) {
 			return subnet.ID
 		}
 	}
