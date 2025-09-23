@@ -674,8 +674,12 @@ func (s *ManagedControlPlaneScope) UpdateControlPlane(ctx context.Context, okeCl
 	setControlPlaneSpecDefaults(spec)
 
 	actual := s.getSpecFromActual(okeCluster)
+
+	// Check for tag-only changes (tags live on OCIManagedCluster, not in control plane spec)
+	tagsChanged := s.hasClusterTagChanges(okeCluster)
+
 	// Log the actual and desired specs
-	if !s.compareSpecs(spec, actual) {
+	if tagsChanged || !s.compareSpecs(spec, actual) {
 		controlPlaneSpec := s.OCIManagedControlPlane.Spec
 		updateOptions := oke.UpdateClusterOptionsDetails{}
 		if controlPlaneSpec.ClusterOption.AdmissionControllerOptions != nil {
@@ -734,6 +738,8 @@ func (s *ManagedControlPlaneScope) UpdateControlPlane(ctx context.Context, okeCl
 			Name:              common.String(s.GetClusterName()),
 			KubernetesVersion: controlPlaneSpec.Version,
 			Options:           &updateOptions,
+			FreeformTags:      s.getFreeFormTags(),
+			DefinedTags:       s.getDefinedTags(),
 		}
 		if controlPlaneSpec.ImagePolicyConfig != nil {
 			details.ImagePolicyConfig = &oke.UpdateImagePolicyConfigDetails{
@@ -888,6 +894,18 @@ func (s *ManagedControlPlaneScope) getSpecFromActual(cluster *oke.Cluster) *infr
 		}
 	}
 	return &spec
+}
+
+func (s *ManagedControlPlaneScope) hasClusterTagChanges(okeCluster *oke.Cluster) bool {
+	desiredFF := s.getFreeFormTags()
+	desiredDT := s.getDefinedTags()
+	actualFF := okeCluster.FreeformTags
+	actualDT := map[string]map[string]interface{}{}
+	if okeCluster.DefinedTags != nil {
+		actualDT = okeCluster.DefinedTags
+	}
+	tagsChanged := !cmp.Equal(desiredFF, actualFF, cmpopts.EquateEmpty()) || !cmp.Equal(desiredDT, actualDT, cmpopts.EquateEmpty())
+	return tagsChanged
 }
 
 // ReconcileAddons reconciles addons which have been specified in the spec on the OKE cluster

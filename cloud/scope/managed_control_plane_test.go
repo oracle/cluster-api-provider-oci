@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"maps"
 	"strings"
 	"testing"
 
@@ -351,6 +352,10 @@ func TestControlPlaneUpdation(t *testing.T) {
 		},
 	}
 
+	tagsUpdated := maps.Clone(tags)
+	tagsUpdated["test-tag1"] = "tag1"
+	tagsUpdated["test-tag2"] = "tag2"
+
 	definedTagsInterface := make(map[string]map[string]interface{})
 	for ns, mapNs := range definedTags {
 		mapValues := make(map[string]interface{})
@@ -358,6 +363,18 @@ func TestControlPlaneUpdation(t *testing.T) {
 			mapValues[k] = v
 		}
 		definedTagsInterface[ns] = mapValues
+	}
+
+	definedTagsUpdated := maps.Clone(definedTags)
+	definedTagsUpdated["Operations"] = map[string]string{"Environment": "Production"}
+
+	definedTagsUpdatedInterface := make(map[string]map[string]interface{})
+	for ns, mapNs := range definedTagsUpdated {
+		mapValues := make(map[string]interface{})
+		for k, v := range mapNs {
+			mapValues[k] = v
+		}
+		definedTagsUpdatedInterface[ns] = mapValues
 	}
 
 	setup := func(t *testing.T, g *WithT) {
@@ -516,6 +533,110 @@ func TestControlPlaneUpdation(t *testing.T) {
 			},
 		},
 		{
+			name:          "control plane no change - cluster tags change",
+			errorExpected: false,
+			testSpecificSetup: func(cs *ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
+				cs.OCIManagedControlPlane.Spec = infrastructurev1beta2.OCIManagedControlPlaneSpec{
+					ClusterPodNetworkOptions: []infrastructurev1beta2.ClusterPodNetworkOptions{
+						{
+							CniType: infrastructurev1beta2.FlannelCNI,
+						},
+					},
+					ImagePolicyConfig: &infrastructurev1beta2.ImagePolicyConfig{
+						IsPolicyEnabled: common.Bool(true),
+						KeyDetails: []infrastructurev1beta2.KeyDetails{{
+							KmsKeyId: common.String("kms-key-id"),
+						}},
+					},
+					ClusterOption: infrastructurev1beta2.ClusterOptions{
+						AdmissionControllerOptions: &infrastructurev1beta2.AdmissionControllerOptions{
+							IsPodSecurityPolicyEnabled: common.Bool(true),
+						},
+						AddOnOptions: &infrastructurev1beta2.AddOnOptions{
+							IsKubernetesDashboardEnabled: common.Bool(true),
+							IsTillerEnabled:              common.Bool(false),
+						},
+					},
+					KmsKeyId: common.String("etcd-kms-key-id"),
+					Version:  common.String("v1.24.5"),
+				}
+				// Deliberately change tags in the OCIManagedCluster to trigger a tag diff.
+				cs.OCIClusterAccessor.(OCIManagedCluster).OCIManagedCluster.Spec.FreeformTags = tagsUpdated
+				cs.OCIClusterAccessor.(OCIManagedCluster).OCIManagedCluster.Spec.DefinedTags = definedTagsUpdated
+				// The UpdateCluster should be called, we don't care about all details so use gomock.Any().
+				okeClient.EXPECT().UpdateCluster(gomock.Any(), gomock.Eq(oke.UpdateClusterRequest{
+					ClusterId: common.String("id"),
+					UpdateClusterDetails: oke.UpdateClusterDetails{
+						Name:              common.String("test"),
+						KubernetesVersion: common.String("v1.24.5"),
+						Options: &oke.UpdateClusterOptionsDetails{
+							AdmissionControllerOptions: &oke.AdmissionControllerOptions{
+								IsPodSecurityPolicyEnabled: common.Bool(true),
+							},
+						},
+						FreeformTags: tagsUpdated, // This is the only update
+						DefinedTags:  definedTagsUpdatedInterface,
+						ImagePolicyConfig: &oke.UpdateImagePolicyConfigDetails{
+							IsPolicyEnabled: common.Bool(true),
+							KeyDetails: []oke.KeyDetails{{
+								KmsKeyId: common.String("kms-key-id"),
+							}},
+						},
+					},
+				})).
+					Return(oke.UpdateClusterResponse{
+						OpcWorkRequestId: common.String("opc-work-request-id"),
+					}, nil).Times(1)
+			},
+			okeCluster: oke.Cluster{
+				Id:                common.String("id"),
+				Name:              common.String("test"),
+				CompartmentId:     common.String("test-compartment"),
+				VcnId:             common.String("vcn-id"),
+				KubernetesVersion: common.String("v1.24.5"),
+				Type:              oke.ClusterTypeBasicCluster,
+				FreeformTags:      tags,
+				DefinedTags:       definedTagsInterface,
+				EndpointConfig: &oke.ClusterEndpointConfig{
+					SubnetId:          common.String("subnet-id"),
+					NsgIds:            []string{"nsg-id"},
+					IsPublicIpEnabled: common.Bool(true),
+				},
+				ClusterPodNetworkOptions: []oke.ClusterPodNetworkOptionDetails{
+					oke.FlannelOverlayClusterPodNetworkOptionDetails{},
+				},
+				Options: &oke.ClusterCreateOptions{
+					ServiceLbSubnetIds: []string{"lb-subnet-id"},
+					KubernetesNetworkConfig: &oke.KubernetesNetworkConfig{
+						PodsCidr:     common.String("1.2.3.4/5"),
+						ServicesCidr: common.String("5.6.7.8/9"),
+					},
+					AddOns: &oke.AddOnOptions{
+						IsKubernetesDashboardEnabled: common.Bool(true),
+						IsTillerEnabled:              common.Bool(false),
+					},
+					AdmissionControllerOptions: &oke.AdmissionControllerOptions{
+						IsPodSecurityPolicyEnabled: common.Bool(true),
+					},
+					PersistentVolumeConfig: &oke.PersistentVolumeConfigDetails{
+						FreeformTags: tags,
+						DefinedTags:  definedTagsInterface,
+					},
+					ServiceLbConfig: &oke.ServiceLbConfigDetails{
+						FreeformTags: tags,
+						DefinedTags:  definedTagsInterface,
+					},
+				},
+				ImagePolicyConfig: &oke.ImagePolicyConfig{
+					IsPolicyEnabled: common.Bool(true),
+					KeyDetails: []oke.KeyDetails{{
+						KmsKeyId: common.String("kms-key-id"),
+					}},
+				},
+				KmsKeyId: common.String("etcd-kms-key-id"),
+			},
+		},
+		{
 			name:          "control plane change",
 			errorExpected: false,
 			testSpecificSetup: func(cs *ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
@@ -557,6 +678,8 @@ func TestControlPlaneUpdation(t *testing.T) {
 								IsPodSecurityPolicyEnabled: common.Bool(true),
 							},
 						},
+						FreeformTags: tags,
+						DefinedTags:  definedTagsInterface,
 						ImagePolicyConfig: &oke.UpdateImagePolicyConfigDetails{
 							IsPolicyEnabled: common.Bool(true),
 							KeyDetails: []oke.KeyDetails{{
