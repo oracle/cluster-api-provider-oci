@@ -22,6 +22,7 @@ import (
 
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
+	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
 	"github.com/pkg/errors"
@@ -175,8 +176,8 @@ func (s *ClusterScope) CreateNLB(ctx context.Context, lb infrastructurev1beta2.L
 	}
 
 	var controlPlaneEndpointSubnets []string
-	for _, subnet := range s.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets {
-		if subnet != nil && subnet.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
+	for _, subnet := range ptr.ToSubnetSlice(s.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets) {
+		if subnet.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
 			if subnet.ID != nil {
 				controlPlaneEndpointSubnets = append(controlPlaneEndpointSubnets, *subnet.ID)
 			}
@@ -200,8 +201,8 @@ func (s *ClusterScope) CreateNLB(ctx context.Context, lb infrastructurev1beta2.L
 		DefinedTags:   s.GetDefinedTags(),
 	}
 	nsgs := make([]string, 0)
-	for _, nsg := range s.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List {
-		if nsg != nil && nsg.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
+	for _, nsg := range ptr.ToNSGSlice(s.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List) {
+		if nsg.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
 			if nsg.ID != nil {
 				nsgs = append(nsgs, *nsg.ID)
 			}

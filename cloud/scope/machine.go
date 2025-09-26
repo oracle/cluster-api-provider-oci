@@ -28,6 +28,7 @@ import (
 	"github.com/go-logr/logr"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
+	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/compute"
 	lb "github.com/oracle/cluster-api-provider-oci/cloud/services/loadbalancer"
 	nlb "github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer"
@@ -743,8 +744,8 @@ func (m *MachineScope) getCompartmentId() string {
 }
 
 func (m *MachineScope) getGetControlPlaneMachineSubnet() *string {
-	for _, subnet := range m.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets {
-		if subnet != nil && subnet.Role == infrastructurev1beta2.ControlPlaneRole {
+	for _, subnet := range ptr.ToSubnetSlice(m.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets) {
+		if subnet.Role == infrastructurev1beta2.ControlPlaneRole {
 			return subnet.ID
 		}
 	}
@@ -753,8 +754,8 @@ func (m *MachineScope) getGetControlPlaneMachineSubnet() *string {
 
 func (m *MachineScope) getGetControlPlaneMachineNSGs() []string {
 	nsgs := make([]string, 0)
-	for _, nsg := range m.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List {
-		if nsg != nil && nsg.Role == infrastructurev1beta2.ControlPlaneRole {
+	for _, nsg := range ptr.ToNSGSlice(m.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List) {
+		if nsg.Role == infrastructurev1beta2.ControlPlaneRole {
 			if nsg.ID != nil {
 				nsgs = append(nsgs, *nsg.ID)
 			}
@@ -766,8 +767,8 @@ func (m *MachineScope) getGetControlPlaneMachineNSGs() []string {
 // getMachineSubnet iterates through the OCICluster Vcn subnets
 // and returns the subnet ID if the name matches
 func (m *MachineScope) getMachineSubnet(name string) (*string, error) {
-	for _, subnet := range m.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets {
-		if subnet != nil && subnet.Name == name {
+	for _, subnet := range ptr.ToSubnetSlice(m.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets) {
+		if subnet.Name == name {
 			return subnet.ID, nil
 		}
 	}
@@ -775,8 +776,8 @@ func (m *MachineScope) getMachineSubnet(name string) (*string, error) {
 }
 
 func (m *MachineScope) getWorkerMachineSubnet() *string {
-	for _, subnet := range m.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets {
-		if subnet != nil && subnet.Role == infrastructurev1beta2.WorkerRole {
+	for _, subnet := range ptr.ToSubnetSlice(m.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets) {
+		if subnet.Role == infrastructurev1beta2.WorkerRole {
 			// if a subnet name is defined, use the correct subnet
 			if m.OCIMachine.Spec.SubnetName != "" {
 				if m.OCIMachine.Spec.SubnetName == subnet.Name {
@@ -794,8 +795,8 @@ func (m *MachineScope) getWorkerMachineNSGs() []string {
 	if len(m.OCIMachine.Spec.NetworkDetails.NsgNames) > 0 {
 		nsgs := make([]string, 0)
 		for _, nsgName := range m.OCIMachine.Spec.NetworkDetails.NsgNames {
-			for _, nsg := range m.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List {
-				if nsg != nil && nsg.Name == nsgName {
+			for _, nsg := range ptr.ToNSGSlice(m.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List) {
+				if nsg.Name == nsgName {
 					if nsg.ID != nil {
 						nsgs = append(nsgs, *nsg.ID)
 					}
@@ -805,8 +806,8 @@ func (m *MachineScope) getWorkerMachineNSGs() []string {
 		return nsgs
 	} else {
 		nsgs := make([]string, 0)
-		for _, nsg := range m.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List {
-			if nsg != nil && nsg.Role == infrastructurev1beta2.WorkerRole {
+		for _, nsg := range ptr.ToNSGSlice(m.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List) {
+			if nsg.Role == infrastructurev1beta2.WorkerRole {
 				if nsg.ID != nil {
 					nsgs = append(nsgs, *nsg.ID)
 				}
