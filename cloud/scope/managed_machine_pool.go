@@ -171,6 +171,7 @@ func (m *ManagedMachinePoolScope) FindNodePool(ctx context.Context) (*oke.NodePo
 		if err != nil {
 			return nil, err
 		}
+		// This effectively breaks the use case of bring your own node pool, as it will need to also have the freeform tag
 		if m.IsResourceCreatedByClusterAPI(response.FreeformTags) {
 			return &response.NodePool, nil
 		} else {
@@ -281,20 +282,24 @@ func (m *ManagedMachinePoolScope) CreateNodePool(ctx context.Context) (*oke.Node
 		BootVolumeSizeInGBs: machinePool.Spec.NodeSourceViaImage.BootVolumeSizeInGBs,
 	}
 	podNetworkOptions := machinePool.Spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails
-	if podNetworkOptions != nil {
-		if podNetworkOptions.CniType == infrastructurev1beta2.VCNNativeCNI {
-			npnDetails := oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
-				PodSubnetIds: m.getPodSubnets(podNetworkOptions.VcnIpNativePodNetworkOptions.SubnetNames),
-				PodNsgIds:    m.getPodNSGs(podNetworkOptions.VcnIpNativePodNetworkOptions.NSGNames),
+		if podNetworkOptions != nil {
+			m.setDefaultCNIType(podNetworkOptions)
+			switch podNetworkOptions.CniType {
+			case infrastructurev1beta2.VCNNativeCNI:
+				npnDetails := oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
+					PodSubnetIds: m.getPodSubnets(podNetworkOptions.VcnIpNativePodNetworkOptions.SubnetNames),
+					PodNsgIds:    m.getPodNSGs(podNetworkOptions.VcnIpNativePodNetworkOptions.NSGNames),
+				}
+				if podNetworkOptions.VcnIpNativePodNetworkOptions.MaxPodsPerNode != nil {
+					npnDetails.MaxPodsPerNode = podNetworkOptions.VcnIpNativePodNetworkOptions.MaxPodsPerNode
+				}
+				nodeConfigDetails.NodePoolPodNetworkOptionDetails = npnDetails
+			case infrastructurev1beta2.FlannelCNI:
+				nodeConfigDetails.NodePoolPodNetworkOptionDetails = oke.FlannelOverlayNodePoolPodNetworkOptionDetails{}
+			default:
+				return nil, errors.New("unexpected CniType")
 			}
-			if podNetworkOptions.VcnIpNativePodNetworkOptions.MaxPodsPerNode != nil {
-				npnDetails.MaxPodsPerNode = podNetworkOptions.VcnIpNativePodNetworkOptions.MaxPodsPerNode
-			}
-			nodeConfigDetails.NodePoolPodNetworkOptionDetails = npnDetails
-		} else if podNetworkOptions.CniType == infrastructurev1beta2.FlannelCNI {
-			nodeConfigDetails.NodePoolPodNetworkOptionDetails = oke.FlannelOverlayNodePoolPodNetworkOptionDetails{}
 		}
-	}
 	nodePoolDetails := oke.CreateNodePoolDetails{
 		CompartmentId:     common.String(m.OCIManagedCluster.Spec.CompartmentId),
 		ClusterId:         m.OCIManagedControlPlane.Spec.ID,
@@ -305,7 +310,7 @@ func (m *ManagedMachinePoolScope) CreateNodePool(ctx context.Context) (*oke.Node
 		NodeSourceDetails: &sourceDetails,
 		FreeformTags:      m.getFreeFormTags(),
 		DefinedTags:       m.getDefinedTags(),
-		SshPublicKey:      common.String(m.OCIManagedMachinePool.Spec.SshPublicKey),
+		SshPublicKey:      m.OCIManagedMachinePool.Spec.SshPublicKey,
 		NodeConfigDetails: &nodeConfigDetails,
 		NodeMetadata:      m.OCIManagedMachinePool.Spec.NodeMetadata,
 	}
@@ -360,7 +365,11 @@ func (m *ManagedMachinePoolScope) CreateNodePool(ctx context.Context) (*oke.Node
 }
 
 func (m *ManagedMachinePoolScope) setNodepoolImageId(ctx context.Context) error {
-	imageId := m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId
+	var imageId *string
+	if m.OCIManagedMachinePool.Spec.NodeSourceViaImage != nil {
+		imageId = m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId
+	}
+
 	if imageId != nil && *imageId != "" {
 		return nil
 	}
@@ -405,7 +414,11 @@ func (m *ManagedMachinePoolScope) setNodepoolImageId(ctx context.Context) error 
 				}
 				if strings.Contains(sourceName, k8sVersion) {
 					m.Info("Image being used", "Name", sourceName, "OCID", *image.ImageId)
-					m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId = image.ImageId
+					if m.OCIManagedMachinePool.Spec.NodeSourceViaImage != nil {
+						m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId = image.ImageId
+					} else {
+						m.OCIManagedMachinePool.Spec.NodeSourceViaImage = &infrav2exp.NodeSourceViaImage{ImageId: image.ImageId}
+					}
 					return nil
 				}
 			}
@@ -533,6 +546,12 @@ func (m *ManagedMachinePoolScope) getPodSubnets(subnets []string) []string {
 				}
 			}
 		}
+	} else {
+		for _, subnet := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets {
+			if subnet != nil && subnet.Role == infrastructurev1beta2.PodRole {
+				subnetList = append(subnetList, *subnet.ID)
+			}
+		}
 	}
 	return subnetList
 }
@@ -545,6 +564,12 @@ func (m *ManagedMachinePoolScope) getPodNSGs(nsgs []string) []string {
 				if nsg != nil && nsg.ID != nil && nsg.Name == nsgName {
 					nsgList = append(nsgList, *nsg.ID)
 				}
+			}
+		}
+	} else {
+		for _, nsg := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
+			if nsg != nil && nsg.Role == infrastructurev1beta2.PodRole {
+				nsgList = append(nsgList, *nsg.ID)
 			}
 		}
 	}
@@ -600,6 +625,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 		nodePoolSizeUpdateRequired = true
 	}
 	actual := m.getSpecFromAPIObject(pool)
+	setSpecFromActual(spec, actual)
 	if !reflect.DeepEqual(spec, actual) ||
 		m.getNodePoolName() != *pool.Name || nodePoolSizeUpdateRequired {
 		m.Logger.Info("Updating node pool")
@@ -667,7 +693,9 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 
 		podNetworkOptions := spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails
 		if podNetworkOptions != nil {
-			if podNetworkOptions.CniType == infrastructurev1beta2.VCNNativeCNI {
+			m.setDefaultCNIType(podNetworkOptions)
+			switch podNetworkOptions.CniType {
+			case infrastructurev1beta2.VCNNativeCNI:
 				npnDetails := oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
 					PodSubnetIds: m.getPodSubnets(podNetworkOptions.VcnIpNativePodNetworkOptions.SubnetNames),
 					PodNsgIds:    m.getPodNSGs(podNetworkOptions.VcnIpNativePodNetworkOptions.NSGNames),
@@ -676,8 +704,10 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 					npnDetails.MaxPodsPerNode = podNetworkOptions.VcnIpNativePodNetworkOptions.MaxPodsPerNode
 				}
 				nodeConfigDetails.NodePoolPodNetworkOptionDetails = npnDetails
-			} else if podNetworkOptions.CniType == infrastructurev1beta2.FlannelCNI {
+			case infrastructurev1beta2.FlannelCNI:
 				nodeConfigDetails.NodePoolPodNetworkOptionDetails = oke.FlannelOverlayNodePoolPodNetworkOptionDetails{}
+			default:
+				return false, errors.New("unexpected CniType")
 			}
 		}
 		nodePoolDetails := oke.UpdateNodePoolDetails{
@@ -686,7 +716,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 			NodeShape:         common.String(m.OCIManagedMachinePool.Spec.NodeShape),
 			NodeShapeConfig:   &nodeShapeConfig,
 			NodeSourceDetails: &sourceDetails,
-			SshPublicKey:      common.String(m.OCIManagedMachinePool.Spec.SshPublicKey),
+			SshPublicKey:      m.OCIManagedMachinePool.Spec.SshPublicKey,
 			NodeConfigDetails: &nodeConfigDetails,
 			NodeMetadata:      spec.NodeMetadata,
 		}
@@ -727,6 +757,81 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 	return false, nil
 }
 
+func (m *ManagedMachinePoolScope) setDefaultCNIType(podNetworkOptions *infrav2exp.NodePoolPodNetworkOptionDetails) {
+	if podNetworkOptions.CniType == "" && len(m.OCIManagedControlPlane.Spec.ClusterPodNetworkOptions) > 0 {
+		podNetworkOptions.CniType = m.OCIManagedControlPlane.Spec.ClusterPodNetworkOptions[0].CniType
+	}
+}
+
+// The main reconciliation loop for the node pool is triggered by reflect.DeepEqual(spec, actual). While it's correct to update a node pool if the spec has changed,
+// this can lead to an infinite update loop for some parameters that are not specified in spec, but they are returned by the actual state of the node pool.
+// To solve this, spec is updated before the reflect.DeepEqual(spec, actual) only for those problematic parameters
+func setSpecFromActual(spec *infrav2exp.OCIManagedMachinePoolSpec, actual *expinfra1.OCIManagedMachinePoolSpec) {
+	if spec.NodeEvictionNodePoolSettings != nil && actual.NodeEvictionNodePoolSettings != nil {
+		if spec.NodeEvictionNodePoolSettings.EvictionGraceDuration == nil {
+			spec.NodeEvictionNodePoolSettings.EvictionGraceDuration = actual.NodeEvictionNodePoolSettings.EvictionGraceDuration
+		}
+		if spec.NodeEvictionNodePoolSettings.IsForceDeleteAfterGraceDuration == nil {
+			spec.NodeEvictionNodePoolSettings.IsForceDeleteAfterGraceDuration = actual.NodeEvictionNodePoolSettings.IsForceDeleteAfterGraceDuration
+		}
+	} else {
+		spec.NodeEvictionNodePoolSettings = actual.NodeEvictionNodePoolSettings
+	}
+	if spec.NodePoolCyclingDetails != nil && actual.NodePoolCyclingDetails != nil {
+		if spec.NodePoolCyclingDetails.IsNodeCyclingEnabled == nil {
+			spec.NodePoolCyclingDetails.IsNodeCyclingEnabled = actual.NodePoolCyclingDetails.IsNodeCyclingEnabled
+		}
+		if spec.NodePoolCyclingDetails.MaximumSurge == nil {
+			spec.NodePoolCyclingDetails.MaximumSurge = actual.NodePoolCyclingDetails.MaximumSurge
+		}
+		if spec.NodePoolCyclingDetails.MaximumUnavailable == nil {
+			spec.NodePoolCyclingDetails.MaximumUnavailable = actual.NodePoolCyclingDetails.MaximumUnavailable
+		}
+	} else {
+		spec.NodePoolCyclingDetails = actual.NodePoolCyclingDetails
+	}
+	if spec.NodePoolNodeConfig != nil && actual.NodePoolNodeConfig != nil {
+		// Someone has removed NsgNames from the spec, the new defaults becomes the currently attached NSGs
+		if spec.NodePoolNodeConfig.NsgNames == nil {
+			spec.NodePoolNodeConfig.NsgNames = actual.NodePoolNodeConfig.NsgNames
+		}
+		if spec.NodePoolNodeConfig.IsPvEncryptionInTransitEnabled == nil {
+			spec.NodePoolNodeConfig.IsPvEncryptionInTransitEnabled = actual.NodePoolNodeConfig.IsPvEncryptionInTransitEnabled
+		}
+		if spec.NodePoolNodeConfig.KmsKeyId == nil {
+			spec.NodePoolNodeConfig.KmsKeyId = actual.NodePoolNodeConfig.KmsKeyId
+		}
+		if spec.NodePoolNodeConfig.PlacementConfigs == nil {
+			spec.NodePoolNodeConfig.PlacementConfigs = actual.NodePoolNodeConfig.PlacementConfigs
+		}
+
+		if nodePoolPodNetwork := spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails; nodePoolPodNetwork != nil {
+			if actualNodePoolNetwork := actual.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails; actualNodePoolNetwork != nil {
+				if nodePoolPodNetwork.VcnIpNativePodNetworkOptions.SubnetNames == nil {
+					nodePoolPodNetwork.VcnIpNativePodNetworkOptions.SubnetNames = actualNodePoolNetwork.VcnIpNativePodNetworkOptions.SubnetNames
+				}
+				if nodePoolPodNetwork.VcnIpNativePodNetworkOptions.NSGNames == nil {
+					nodePoolPodNetwork.VcnIpNativePodNetworkOptions.NSGNames = actualNodePoolNetwork.VcnIpNativePodNetworkOptions.NSGNames
+				}
+			}
+		}
+
+	} else {
+		spec.NodePoolNodeConfig = actual.NodePoolNodeConfig
+	}
+	if spec.NodeSourceViaImage != nil && actual.NodeSourceViaImage != nil {
+		if spec.NodeSourceViaImage.BootVolumeSizeInGBs == nil {
+			spec.NodeSourceViaImage.BootVolumeSizeInGBs = actual.NodeSourceViaImage.BootVolumeSizeInGBs
+		}
+	} else {
+		spec.NodeSourceViaImage = actual.NodeSourceViaImage
+	}
+
+	if spec.SshPublicKey == nil {
+		spec.SshPublicKey = actual.SshPublicKey
+	}
+}
+
 // setMachinePoolSpecDefaults sets the defaults in the spec as returned by OKE API. We need to set defaults here rather than webhook as
 // there is a chance user will edit the cluster
 func setMachinePoolSpecDefaults(spec *infrav2exp.OCIManagedMachinePoolSpec) {
@@ -744,8 +849,15 @@ func setMachinePoolSpecDefaults(spec *infrav2exp.OCIManagedMachinePoolSpec) {
 	podNetworkOptions := spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails
 	if podNetworkOptions != nil {
 		if podNetworkOptions.CniType == infrastructurev1beta2.VCNNativeCNI {
-			// 31 is the default max pods per node returned by OKE API
-			spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails.VcnIpNativePodNetworkOptions.MaxPodsPerNode = common.Int(31)
+			if podNetworkOptions.VcnIpNativePodNetworkOptions.MaxPodsPerNode == nil {
+				// 31 is the default max pods per node returned by OKE API
+				spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails.VcnIpNativePodNetworkOptions.MaxPodsPerNode = common.Int(31)
+			}
+		} else {
+			// Default value for VcnIpNativePodNetworkOptions should be an empty struct if vcn native CNI is not specified
+			if !reflect.DeepEqual(podNetworkOptions.VcnIpNativePodNetworkOptions, infrav2exp.VcnIpNativePodNetworkOptions{}) {
+				podNetworkOptions.VcnIpNativePodNetworkOptions = infrav2exp.VcnIpNativePodNetworkOptions{}
+			}
 		}
 	}
 }
@@ -800,7 +912,7 @@ func (m *ManagedMachinePoolScope) getSpecFromAPIObject(pool *oke.NodePool) *expi
 		}
 	}
 	if pool.SshPublicKey != nil {
-		spec.SshPublicKey = *pool.SshPublicKey
+		spec.SshPublicKey = pool.SshPublicKey
 	}
 	if pool.NodeShapeConfig != nil {
 		nodeShapeConfig := expinfra1.NodeShapeConfig{}

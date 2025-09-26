@@ -756,7 +756,7 @@ func getOCIManagedMachinePool() *infrav2exp.OCIManagedMachinePool {
 			NodeSourceViaImage: &infrav2exp.NodeSourceViaImage{
 				ImageId: common.String("test-image-id"),
 			},
-			SshPublicKey: "test-ssh-public-key",
+			SshPublicKey: common.String("test-ssh-public-key"),
 			NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
 				PlacementConfigs: []infrav2exp.PlacementConfig{
 					{

@@ -1043,6 +1043,10 @@ type NetworkSpec struct {
 	// VCNPeering configuration.
 	// +optional
 	VCNPeering *VCNPeering `json:"vcnPeering,omitempty"`
+
+	// CompartmentId where to provision network resources
+	// +optional
+	CompartmentId string `json:"compartmentId,omitempty"`
 }
 
 // VCNPeering defines the VCN peering details of the workload cluster VCN.

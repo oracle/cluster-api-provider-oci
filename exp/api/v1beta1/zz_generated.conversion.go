@@ -1037,7 +1037,7 @@ func autoConvert_v1beta1_OCIManagedMachinePoolSpec_To_v1beta2_OCIManagedMachineP
 	out.NodeShape = in.NodeShape
 	out.NodeShapeConfig = (*v1beta2.NodeShapeConfig)(unsafe.Pointer(in.NodeShapeConfig))
 	out.NodeSourceViaImage = (*v1beta2.NodeSourceViaImage)(unsafe.Pointer(in.NodeSourceViaImage))
-	out.SshPublicKey = in.SshPublicKey
+	out.SshPublicKey = (*string)(unsafe.Pointer(in.SshPublicKey))
 	out.NodeMetadata = *(*map[string]string)(unsafe.Pointer(&in.NodeMetadata))
 	out.InitialNodeLabels = *(*[]v1beta2.KeyValue)(unsafe.Pointer(&in.InitialNodeLabels))
 	out.ProviderIDList = *(*[]string)(unsafe.Pointer(&in.ProviderIDList))
@@ -1058,7 +1058,7 @@ func autoConvert_v1beta2_OCIManagedMachinePoolSpec_To_v1beta1_OCIManagedMachineP
 	out.NodeShape = in.NodeShape
 	out.NodeShapeConfig = (*NodeShapeConfig)(unsafe.Pointer(in.NodeShapeConfig))
 	out.NodeSourceViaImage = (*NodeSourceViaImage)(unsafe.Pointer(in.NodeSourceViaImage))
-	out.SshPublicKey = in.SshPublicKey
+	out.SshPublicKey = (*string)(unsafe.Pointer(in.SshPublicKey))
 	out.NodeMetadata = *(*map[string]string)(unsafe.Pointer(&in.NodeMetadata))
 	out.InitialNodeLabels = *(*[]KeyValue)(unsafe.Pointer(&in.InitialNodeLabels))
 	// WARNING: in.NodePoolCyclingDetails requires manual conversion: does not exist in peer-type

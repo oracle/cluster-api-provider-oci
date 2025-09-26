@@ -112,7 +112,7 @@ func (s *ClusterScope) GetNSG(ctx context.Context, spec infrastructurev1beta2.NS
 		}
 	}
 	nsgs, err := s.VCNClient.ListNetworkSecurityGroups(ctx, core.ListNetworkSecurityGroupsRequest{
-		CompartmentId: common.String(s.GetCompartmentId()),
+		CompartmentId: common.String(s.GetNetworkCompartmentId()),
 		VcnId:         s.getVcnId(),
 		DisplayName:   common.String(spec.Name),
 	})
@@ -424,7 +424,7 @@ func (s *ClusterScope) AddNSGSecurityRules(ctx context.Context, nsgId *string, i
 
 func (s *ClusterScope) CreateNSG(ctx context.Context, nsg infrastructurev1beta2.NSG) (*string, error) {
 	createNetworkSecurityGroupDetails := core.CreateNetworkSecurityGroupDetails{
-		CompartmentId: common.String(s.GetCompartmentId()),
+		CompartmentId: common.String(s.GetNetworkCompartmentId()),
 		VcnId:         s.getVcnId(),
 		DefinedTags:   s.GetDefinedTags(),
 		DisplayName:   common.String(nsg.Name),

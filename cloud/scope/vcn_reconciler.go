@@ -93,7 +93,7 @@ func (s *ClusterScope) GetVCN(ctx context.Context) (*core.Vcn, error) {
 		}
 	}
 	vcns, err := s.VCNClient.ListVcns(ctx, core.ListVcnsRequest{
-		CompartmentId: common.String(s.GetCompartmentId()),
+		CompartmentId: common.String(s.GetNetworkCompartmentId()),
 		DisplayName:   common.String(s.GetVcnName()),
 	})
 	if err != nil {
@@ -127,7 +127,7 @@ func (s *ClusterScope) UpdateVCN(ctx context.Context, vcn infrastructurev1beta2.
 
 func (s *ClusterScope) CreateVCN(ctx context.Context, spec infrastructurev1beta2.VCN) (*string, error) {
 	vcnDetails := core.CreateVcnDetails{
-		CompartmentId: common.String(s.GetCompartmentId()),
+		CompartmentId: common.String(s.GetNetworkCompartmentId()),
 		DisplayName:   common.String(s.GetVcnName()),
 		CidrBlocks:    s.GetVcnCidrs(),
 		FreeformTags:  s.GetFreeFormTags(),

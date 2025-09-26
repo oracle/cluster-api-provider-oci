@@ -70,7 +70,7 @@ func (s *ClusterScope) CreateSecurityList(ctx context.Context, secList infrastru
 	}
 	securityListDetails := core.CreateSecurityListDetails{
 		VcnId:                s.getVcnId(),
-		CompartmentId:        common.String(s.GetCompartmentId()),
+		CompartmentId:        common.String(s.GetNetworkCompartmentId()),
 		DisplayName:          common.String(secList.Name),
 		EgressSecurityRules:  egressRules,
 		IngressSecurityRules: ingressRules,
@@ -273,7 +273,7 @@ func (s *ClusterScope) GetSecurityList(ctx context.Context, spec infrastructurev
 		}
 	}
 	securityLists, err := s.VCNClient.ListSecurityLists(ctx, core.ListSecurityListsRequest{
-		CompartmentId: common.String(s.GetCompartmentId()),
+		CompartmentId: common.String(s.GetNetworkCompartmentId()),
 		VcnId:         s.getVcnId(),
 		DisplayName:   common.String(spec.Name),
 	})

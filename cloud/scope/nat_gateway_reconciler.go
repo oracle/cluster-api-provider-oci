@@ -73,7 +73,7 @@ func (s *ClusterScope) GetNatGateway(ctx context.Context) (*core.NatGateway, err
 		}
 	}
 	ngws, err := s.VCNClient.ListNatGateways(ctx, core.ListNatGatewaysRequest{
-		CompartmentId: common.String(s.GetCompartmentId()),
+		CompartmentId: common.String(s.GetNetworkCompartmentId()),
 		VcnId:         s.getVcnId(),
 		DisplayName:   common.String(NatGatewayName),
 	})
@@ -110,7 +110,7 @@ func (s *ClusterScope) UpdateNatGateway(ctx context.Context) error {
 // CreateNatGateway creates the NAT Gateway for the cluster based on the ClusterScope
 func (s *ClusterScope) CreateNatGateway(ctx context.Context) (*string, error) {
 	ngwDetails := core.CreateNatGatewayDetails{
-		CompartmentId: common.String(s.GetCompartmentId()),
+		CompartmentId: common.String(s.GetNetworkCompartmentId()),
 		DisplayName:   common.String(NatGatewayName),
 		VcnId:         s.getVcnId(),
 		FreeformTags:  s.GetFreeFormTags(),
