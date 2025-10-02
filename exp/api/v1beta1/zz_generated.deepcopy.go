@@ -22,7 +22,7 @@ package v1beta1
 
 import (
 	cluster_api_provider_ociapiv1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
-	"k8s.io/apimachinery/pkg/runtime"
+	runtime "k8s.io/apimachinery/pkg/runtime"
 	apiv1beta1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/errors"
 )
