@@ -169,8 +169,8 @@ func TestOCIManagedClusterReconciler_reconcile(t *testing.T) {
 			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionTrue, "", ""},
 			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCIManagedCluster) {
 				cs.EXPECT().SetRegionCode(context.Background()).Return(nil)
-				cs.EXPECT().ReconcileDRG(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileVCN(context.Background()).Return(nil)
+				cs.EXPECT().ReconcileDRG(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileInternetGateway(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileNatGateway(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileServiceGateway(context.Background()).Return(nil)
@@ -190,6 +190,7 @@ func TestOCIManagedClusterReconciler_reconcile(t *testing.T) {
 			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta2.DrgReconciliationFailedReason},
 			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCIManagedCluster) {
 				cs.EXPECT().SetRegionCode(context.Background()).Return(nil)
+				cs.EXPECT().ReconcileVCN(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileDRG(context.Background()).Return(errors.New("some error"))
 			},
 		},
@@ -201,7 +202,6 @@ func TestOCIManagedClusterReconciler_reconcile(t *testing.T) {
 			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta2.VcnReconciliationFailedReason},
 			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCIManagedCluster) {
 				cs.EXPECT().SetRegionCode(context.Background()).Return(nil)
-				cs.EXPECT().ReconcileDRG(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileVCN(context.Background()).Return(errors.New("some error"))
 			},
 		},

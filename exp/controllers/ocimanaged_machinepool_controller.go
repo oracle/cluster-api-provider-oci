@@ -156,6 +156,7 @@ func (r *OCIManagedMachinePoolReconciler) Reconcile(ctx context.Context, req ctr
 		OCIManagedMachinePool:   ociManagedMachinePool,
 		ContainerEngineClient:   clients.ContainerEngineClient,
 		OCIManagedControlPlane:  controlPlane,
+		VCNClient:               clients.VCNClient,
 	})
 	if err != nil {
 		return ctrl.Result{}, errors.Errorf("failed to create scope: %+v", err)

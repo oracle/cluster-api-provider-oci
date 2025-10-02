@@ -41,6 +41,11 @@ func (s *ClusterScope) ReconcileVCN(ctx context.Context) error {
 	}
 	if vcn != nil {
 		s.OCIClusterAccessor.GetNetworkSpec().Vcn.ID = vcn.Id
+		// Someone has updated the network compartment ID, or the VCN was moved. Return an error
+		if vcn.CompartmentId != nil && *vcn.CompartmentId != s.GetNetworkCompartmentId() {
+			return errors.New("CompartmentId of the VCN is not the same as the one specified in the spec")
+		}
+
 		if s.IsVcnEquals(vcn) {
 			s.Logger.Info("No Reconciliation Required for VCN", "vcn", s.getVcnId())
 			return nil

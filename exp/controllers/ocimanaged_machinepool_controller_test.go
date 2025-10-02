@@ -26,6 +26,7 @@ import (
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/containerengine/mock_containerengine"
+	mock_vcn "github.com/oracle/cluster-api-provider-oci/cloud/services/vcn/mock_vcn"
 	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
@@ -146,6 +147,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 		recorder              *record.FakeRecorder
 		ociManagedMachinePool *infrav2exp.OCIManagedMachinePool
 		okeClient             *mock_containerengine.MockClient
+		vcnClient             *mock_vcn.MockClient
 		ms                    *scope.ManagedMachinePoolScope
 		k8sClient             client.WithWatch
 	)
@@ -159,6 +161,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 		mockCtrl = gomock.NewController(t)
 		k8sClient = interceptor.NewClient(fake.NewClientBuilder().WithObjects(getSecret()).Build(), interceptor.Funcs{})
 		okeClient = mock_containerengine.NewMockClient(mockCtrl)
+		vcnClient = mock_vcn.NewMockClient(mockCtrl)
 		machinePool := getMachinePool()
 		ociManagedMachinePool = getOCIManagedMachinePool()
 		ociCluster := getOCIManagedClusterWithOwner()
@@ -172,6 +175,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 		}
 		ms, err = scope.NewManagedMachinePoolScope(scope.ManagedMachinePoolScopeParams{
 			ContainerEngineClient:  okeClient,
+			VCNClient:              vcnClient,
 			OCIManagedCluster:      ociCluster,
 			Cluster:                getCluster(),
 			Client:                 k8sClient,

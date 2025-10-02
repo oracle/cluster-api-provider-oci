@@ -250,7 +250,7 @@ func (s *ClusterScope) GetCompartmentId() string {
 	return s.OCIClusterAccessor.GetCompartmentId()
 }
 
-// GetCompartmentId returns the CompartmentId defined in OCICluster's spec
+// GetNetworkCompartmentId returns the CompartmentId defined for the network otherwise returns the compartment defined in the OCICluster's spec
 func (s *ClusterScope) GetNetworkCompartmentId() string {
 	if s.OCIClusterAccessor.GetNetworkCompartmentId() == "" {
 		return s.GetCompartmentId()

@@ -1044,7 +1044,7 @@ type NetworkSpec struct {
 	// +optional
 	VCNPeering *VCNPeering `json:"vcnPeering,omitempty"`
 
-	// CompartmentId where to provision network resources
+	// CompartmentId where to provision network resources. Will default to cluster compartment if empty or not specified.
 	// +optional
 	CompartmentId string `json:"compartmentId,omitempty"`
 }
