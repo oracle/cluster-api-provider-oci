@@ -1995,6 +1995,7 @@ func autoConvert_v1beta1_NetworkSpec_To_v1beta2_NetworkSpec(in *NetworkSpec, out
 		return err
 	}
 	out.VCNPeering = (*v1beta2.VCNPeering)(unsafe.Pointer(in.VCNPeering))
+	out.CompartmentId = in.CompartmentId
 	return nil
 }
 
@@ -2012,6 +2013,7 @@ func autoConvert_v1beta2_NetworkSpec_To_v1beta1_NetworkSpec(in *v1beta2.NetworkS
 		return err
 	}
 	out.VCNPeering = (*VCNPeering)(unsafe.Pointer(in.VCNPeering))
+	out.CompartmentId = in.CompartmentId
 	return nil
 }
 

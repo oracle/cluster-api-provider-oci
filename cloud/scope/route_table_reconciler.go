@@ -97,7 +97,7 @@ func (s *ClusterScope) getRouteTable(ctx context.Context, routeTableType string)
 	}
 
 	rts, err := s.VCNClient.ListRouteTables(ctx, core.ListRouteTablesRequest{
-		CompartmentId: common.String(s.GetCompartmentId()),
+		CompartmentId: common.String(s.GetNetworkCompartmentId()),
 		VcnId:         vcnId,
 		DisplayName:   common.String(routeTableName),
 	})
@@ -171,7 +171,7 @@ func (s *ClusterScope) CreateRouteTable(ctx context.Context, routeTableType stri
 	vcnId := s.getVcnId()
 	routeTableDetails := core.CreateRouteTableDetails{
 		VcnId:         vcnId,
-		CompartmentId: common.String(s.GetCompartmentId()),
+		CompartmentId: common.String(s.GetNetworkCompartmentId()),
 		DisplayName:   common.String(routeTableName),
 		RouteRules:    routeRules,
 		FreeformTags:  s.GetFreeFormTags(),

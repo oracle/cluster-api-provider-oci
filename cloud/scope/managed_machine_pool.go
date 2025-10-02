@@ -31,6 +31,7 @@ import (
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/computemanagement"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/containerengine"
+	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
 	expinfra1 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	"github.com/oracle/oci-go-sdk/v65/common"
@@ -59,6 +60,7 @@ type ManagedMachinePoolScopeParams struct {
 	OCIManagedControlPlane  *infrastructurev1beta2.OCIManagedControlPlane
 	OCIManagedMachinePool   *expinfra1.OCIManagedMachinePool
 	ContainerEngineClient   containerengine.Client
+	VCNClient               vcn.Client
 }
 
 type ManagedMachinePoolScope struct {
@@ -72,6 +74,7 @@ type ManagedMachinePoolScope struct {
 	OCIManagedMachinePool   *expinfra1.OCIManagedMachinePool
 	ContainerEngineClient   containerengine.Client
 	OCIManagedControlPlane  *infrastructurev1beta2.OCIManagedControlPlane
+	VCNClient               vcn.Client
 }
 
 // NewManagedMachinePoolScope creates a ManagedMachinePoolScope given the ManagedMachinePoolScopeParams
@@ -104,6 +107,7 @@ func NewManagedMachinePoolScope(params ManagedMachinePoolScopeParams) (*ManagedM
 		OCIManagedMachinePool:   params.OCIManagedMachinePool,
 		ContainerEngineClient:   params.ContainerEngineClient,
 		OCIManagedControlPlane:  params.OCIManagedControlPlane,
+		VCNClient:               params.VCNClient,
 	}, nil
 }
 
@@ -171,6 +175,7 @@ func (m *ManagedMachinePoolScope) FindNodePool(ctx context.Context) (*oke.NodePo
 		if err != nil {
 			return nil, err
 		}
+		// This effectively breaks the use case of bring your own node pool, as it will need to also have the freeform tag
 		if m.IsResourceCreatedByClusterAPI(response.FreeformTags) {
 			return &response.NodePool, nil
 		} else {
@@ -237,13 +242,13 @@ func (m *ManagedMachinePoolScope) CreateNodePool(ctx context.Context) (*oke.Node
 	if len(m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.NsgNames) == 0 {
 		m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.NsgNames = m.getWorkerMachineNSGList()
 	}
-	placementConfig, err := m.buildPlacementConfig(placementConfigs)
+	placementConfig, err := m.buildPlacementConfig(placementConfigs, nil)
 	if err != nil {
 		return nil, err
 	}
 	nodeConfigDetails := oke.CreateNodePoolNodeConfigDetails{
 		Size:                           common.Int(int(*m.MachinePool.Spec.Replicas)),
-		NsgIds:                         m.getWorkerMachineNSGs(),
+		NsgIds:                         m.getWorkerMachineNSGs(nil),
 		PlacementConfigs:               placementConfig,
 		IsPvEncryptionInTransitEnabled: m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.IsPvEncryptionInTransitEnabled,
 		FreeformTags:                   m.getFreeFormTags(),
@@ -282,17 +287,25 @@ func (m *ManagedMachinePoolScope) CreateNodePool(ctx context.Context) (*oke.Node
 	}
 	podNetworkOptions := machinePool.Spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails
 	if podNetworkOptions != nil {
-		if podNetworkOptions.CniType == infrastructurev1beta2.VCNNativeCNI {
+		m.setDefaultCNIType(podNetworkOptions)
+		switch podNetworkOptions.CniType {
+		case infrastructurev1beta2.VCNNativeCNI:
+			podSubnetIds, err := m.getPodSubnets(ctx, podNetworkOptions.VcnIpNativePodNetworkOptions.SubnetNames, nil)
+			if err != nil {
+				return nil, err
+			}
 			npnDetails := oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
-				PodSubnetIds: m.getPodSubnets(podNetworkOptions.VcnIpNativePodNetworkOptions.SubnetNames),
-				PodNsgIds:    m.getPodNSGs(podNetworkOptions.VcnIpNativePodNetworkOptions.NSGNames),
+				PodSubnetIds: podSubnetIds,
+				PodNsgIds:    m.getPodNSGs(podNetworkOptions.VcnIpNativePodNetworkOptions.NSGNames, nil),
 			}
 			if podNetworkOptions.VcnIpNativePodNetworkOptions.MaxPodsPerNode != nil {
 				npnDetails.MaxPodsPerNode = podNetworkOptions.VcnIpNativePodNetworkOptions.MaxPodsPerNode
 			}
 			nodeConfigDetails.NodePoolPodNetworkOptionDetails = npnDetails
-		} else if podNetworkOptions.CniType == infrastructurev1beta2.FlannelCNI {
+		case infrastructurev1beta2.FlannelCNI:
 			nodeConfigDetails.NodePoolPodNetworkOptionDetails = oke.FlannelOverlayNodePoolPodNetworkOptionDetails{}
+		default:
+			return nil, errors.New("unexpected CniType")
 		}
 	}
 	nodePoolDetails := oke.CreateNodePoolDetails{
@@ -305,7 +318,7 @@ func (m *ManagedMachinePoolScope) CreateNodePool(ctx context.Context) (*oke.Node
 		NodeSourceDetails: &sourceDetails,
 		FreeformTags:      m.getFreeFormTags(),
 		DefinedTags:       m.getDefinedTags(),
-		SshPublicKey:      common.String(m.OCIManagedMachinePool.Spec.SshPublicKey),
+		SshPublicKey:      m.OCIManagedMachinePool.Spec.SshPublicKey,
 		NodeConfigDetails: &nodeConfigDetails,
 		NodeMetadata:      m.OCIManagedMachinePool.Spec.NodeMetadata,
 	}
@@ -360,7 +373,11 @@ func (m *ManagedMachinePoolScope) CreateNodePool(ctx context.Context) (*oke.Node
 }
 
 func (m *ManagedMachinePoolScope) setNodepoolImageId(ctx context.Context) error {
-	imageId := m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId
+	var imageId *string
+	if m.OCIManagedMachinePool.Spec.NodeSourceViaImage != nil {
+		imageId = m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId
+	}
+
 	if imageId != nil && *imageId != "" {
 		return nil
 	}
@@ -405,7 +422,11 @@ func (m *ManagedMachinePoolScope) setNodepoolImageId(ctx context.Context) error 
 				}
 				if strings.Contains(sourceName, k8sVersion) {
 					m.Info("Image being used", "Name", sourceName, "OCID", *image.ImageId)
-					m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId = image.ImageId
+					if m.OCIManagedMachinePool.Spec.NodeSourceViaImage != nil {
+						m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId = image.ImageId
+					} else {
+						m.OCIManagedMachinePool.Spec.NodeSourceViaImage = &infrav2exp.NodeSourceViaImage{ImageId: image.ImageId}
+					}
 					return nil
 				}
 			}
@@ -492,7 +513,7 @@ func (m *ManagedMachinePoolScope) getWorkerMachineSubnets() []string {
 	return subnetList
 }
 
-func (m *ManagedMachinePoolScope) getWorkerMachineNSGs() []string {
+func (m *ManagedMachinePoolScope) getWorkerMachineNSGs(pool *oke.NodePool) []string {
 	nsgList := make([]string, 0)
 	specNsgNames := m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.NsgNames
 	if len(specNsgNames) > 0 {
@@ -510,6 +531,10 @@ func (m *ManagedMachinePoolScope) getWorkerMachineNSGs() []string {
 			}
 		}
 	}
+	// If no NSGs found and we have an existing node pool, use the NSGs from the node pool
+	if len(nsgList) == 0 && pool != nil && pool.NodeConfigDetails != nil {
+		nsgList = pool.NodeConfigDetails.NsgIds
+	}
 	return nsgList
 }
 
@@ -523,21 +548,55 @@ func (m *ManagedMachinePoolScope) getWorkerMachineNSGList() []string {
 	return nsgList
 }
 
-func (m *ManagedMachinePoolScope) getPodSubnets(subnets []string) []string {
+func (m *ManagedMachinePoolScope) getNetworkCompartmentId() string {
+	if m.OCIManagedCluster.Spec.NetworkSpec.CompartmentId == "" {
+		return m.OCIManagedCluster.Spec.CompartmentId
+	}
+	return m.OCIManagedCluster.Spec.NetworkSpec.CompartmentId
+}
+
+func (m *ManagedMachinePoolScope) getPodSubnets(ctx context.Context, subnets []string, pool *oke.NodePool) ([]string, error) {
 	subnetList := make([]string, 0)
 	if len(subnets) > 0 {
 		for _, subnetName := range subnets {
 			for _, subnet := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets {
+				// If ID is specified and is one of the subnet specified in NetworkSpec, then add it. Maybe we could think to simplify this and only require the subnetId
 				if subnet != nil && subnet.ID != nil && subnet.Name == subnetName {
 					subnetList = append(subnetList, *subnet.ID)
 				}
+				if subnet != nil && subnet.ID == nil && subnet.Name == subnetName {
+					subnetId, err := GetSubnetIdFromName(ctx, m.VCNClient, m.getNetworkCompartmentId(), subnet.Name)
+					if err != nil {
+						return nil, err
+					}
+					subnetList = append(subnetList, subnetId)
+				}
+			}
+		}
+	} else {
+		for _, subnet := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets {
+			if subnet != nil && subnet.Role == infrastructurev1beta2.PodRole {
+				if subnet.ID == nil {
+					subnetId, err := GetSubnetIdFromName(ctx, m.VCNClient, m.getNetworkCompartmentId(), subnet.Name)
+					if err != nil {
+						return nil, err
+					}
+					subnet.ID = &subnetId
+				}
+				subnetList = append(subnetList, *subnet.ID)
 			}
 		}
 	}
-	return subnetList
+	// If no subnets found and we have an existing node pool, use the subnets from the node pool
+	if len(subnetList) == 0 && pool != nil && pool.NodeConfigDetails != nil {
+		if podDetails, ok := pool.NodeConfigDetails.NodePoolPodNetworkOptionDetails.(oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails); ok {
+			subnetList = podDetails.PodSubnetIds
+		}
+	}
+	return subnetList, nil
 }
 
-func (m *ManagedMachinePoolScope) getPodNSGs(nsgs []string) []string {
+func (m *ManagedMachinePoolScope) getPodNSGs(nsgs []string, pool *oke.NodePool) []string {
 	nsgList := make([]string, 0)
 	if len(nsgs) > 0 {
 		for _, nsgName := range nsgs {
@@ -547,14 +606,26 @@ func (m *ManagedMachinePoolScope) getPodNSGs(nsgs []string) []string {
 				}
 			}
 		}
+	} else {
+		for _, nsg := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
+			if nsg != nil && nsg.Role == infrastructurev1beta2.PodRole && nsg.ID != nil {
+				nsgList = append(nsgList, *nsg.ID)
+			}
+		}
+	}
+	// If no NSGs found and we have an existing node pool, use the NSGs from the node pool
+	if len(nsgList) == 0 && pool != nil && pool.NodeConfigDetails != nil {
+		if podDetails, ok := pool.NodeConfigDetails.NodePoolPodNetworkOptionDetails.(oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails); ok {
+			nsgList = podDetails.PodNsgIds
+		}
 	}
 	return nsgList
 }
 
-func (m *ManagedMachinePoolScope) buildPlacementConfig(configs []expinfra1.PlacementConfig) ([]oke.NodePoolPlacementConfigDetails, error) {
+func (m *ManagedMachinePoolScope) buildPlacementConfig(configs []expinfra1.PlacementConfig, pool *oke.NodePool) ([]oke.NodePoolPlacementConfigDetails, error) {
 	placementConfigs := make([]oke.NodePoolPlacementConfigDetails, 0)
 	for _, config := range configs {
-		subnetId := m.getWorkerMachineSubnet(config.SubnetName)
+		subnetId := m.getWorkerMachineSubnet(config.SubnetName, pool)
 		if subnetId == nil {
 			return nil, errors.New(fmt.Sprintf("worker subnet %s is not present in placementConfigs spec",
 				ptr.ToString(config.SubnetName)))
@@ -580,10 +651,17 @@ func (m *ManagedMachinePoolScope) getInitialNodeKeyValuePairs() []oke.KeyValue {
 	return keyValues
 }
 
-func (m *ManagedMachinePoolScope) getWorkerMachineSubnet(name *string) *string {
+func (m *ManagedMachinePoolScope) getWorkerMachineSubnet(name *string, pool *oke.NodePool) *string {
 	for _, subnet := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets {
-		if subnet != nil && subnet.ID != nil && subnet.Name == ptr.ToString(name) {
+		if subnet != nil && subnet.ID != nil && subnet.Name == ptr.ToString(name) && subnet.Role == infrastructurev1beta2.WorkerRole {
 			return subnet.ID
+		}
+	}
+	if pool != nil && pool.NodeConfigDetails != nil {
+		for _, config := range pool.NodeConfigDetails.PlacementConfigs {
+			if GetSubnetNameFromId(config.SubnetId, m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets, m.VCNClient) == ptr.ToString(name) {
+				return config.SubnetId
+			}
 		}
 	}
 	return nil
@@ -600,6 +678,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 		nodePoolSizeUpdateRequired = true
 	}
 	actual := m.getSpecFromAPIObject(pool)
+	setSpecFromActual(spec, actual)
 	if !reflect.DeepEqual(spec, actual) ||
 		m.getNodePoolName() != *pool.Name || nodePoolSizeUpdateRequired {
 		m.Logger.Info("Updating node pool")
@@ -615,7 +694,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 		m.Logger.Info("Node pool", "spec", jsonSpec, "actual", jsonActual)
 
 		nodeConfigDetails := oke.UpdateNodePoolNodeConfigDetails{
-			NsgIds:                         m.getWorkerMachineNSGs(),
+			NsgIds:                         m.getWorkerMachineNSGs(pool),
 			IsPvEncryptionInTransitEnabled: spec.NodePoolNodeConfig.IsPvEncryptionInTransitEnabled,
 			KmsKeyId:                       spec.NodePoolNodeConfig.KmsKeyId,
 		}
@@ -623,7 +702,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 		// placement config and recycle config cannot be sent at the same time, and most use cases will
 		// be to update kubernetes version in which case, placement config is not required to be sent
 		if !reflect.DeepEqual(spec.NodePoolNodeConfig.PlacementConfigs, actual.NodePoolNodeConfig.PlacementConfigs) {
-			placementConfig, err := m.buildPlacementConfig(spec.NodePoolNodeConfig.PlacementConfigs)
+			placementConfig, err := m.buildPlacementConfig(spec.NodePoolNodeConfig.PlacementConfigs, pool)
 			if err != nil {
 				return false, err
 			}
@@ -667,17 +746,25 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 
 		podNetworkOptions := spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails
 		if podNetworkOptions != nil {
-			if podNetworkOptions.CniType == infrastructurev1beta2.VCNNativeCNI {
+			m.setDefaultCNIType(podNetworkOptions)
+			switch podNetworkOptions.CniType {
+			case infrastructurev1beta2.VCNNativeCNI:
+				podSubnetIds, err := m.getPodSubnets(ctx, podNetworkOptions.VcnIpNativePodNetworkOptions.SubnetNames, pool)
+				if err != nil {
+					return false, err
+				}
 				npnDetails := oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
-					PodSubnetIds: m.getPodSubnets(podNetworkOptions.VcnIpNativePodNetworkOptions.SubnetNames),
-					PodNsgIds:    m.getPodNSGs(podNetworkOptions.VcnIpNativePodNetworkOptions.NSGNames),
+					PodSubnetIds: podSubnetIds,
+					PodNsgIds:    m.getPodNSGs(podNetworkOptions.VcnIpNativePodNetworkOptions.NSGNames, pool),
 				}
 				if podNetworkOptions.VcnIpNativePodNetworkOptions.MaxPodsPerNode != nil {
 					npnDetails.MaxPodsPerNode = podNetworkOptions.VcnIpNativePodNetworkOptions.MaxPodsPerNode
 				}
 				nodeConfigDetails.NodePoolPodNetworkOptionDetails = npnDetails
-			} else if podNetworkOptions.CniType == infrastructurev1beta2.FlannelCNI {
+			case infrastructurev1beta2.FlannelCNI:
 				nodeConfigDetails.NodePoolPodNetworkOptionDetails = oke.FlannelOverlayNodePoolPodNetworkOptionDetails{}
+			default:
+				return false, errors.New("unexpected CniType")
 			}
 		}
 		nodePoolDetails := oke.UpdateNodePoolDetails{
@@ -686,7 +773,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 			NodeShape:         common.String(m.OCIManagedMachinePool.Spec.NodeShape),
 			NodeShapeConfig:   &nodeShapeConfig,
 			NodeSourceDetails: &sourceDetails,
-			SshPublicKey:      common.String(m.OCIManagedMachinePool.Spec.SshPublicKey),
+			SshPublicKey:      m.OCIManagedMachinePool.Spec.SshPublicKey,
 			NodeConfigDetails: &nodeConfigDetails,
 			NodeMetadata:      spec.NodeMetadata,
 		}
@@ -727,6 +814,81 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 	return false, nil
 }
 
+func (m *ManagedMachinePoolScope) setDefaultCNIType(podNetworkOptions *infrav2exp.NodePoolPodNetworkOptionDetails) {
+	if podNetworkOptions.CniType == "" && len(m.OCIManagedControlPlane.Spec.ClusterPodNetworkOptions) > 0 {
+		podNetworkOptions.CniType = m.OCIManagedControlPlane.Spec.ClusterPodNetworkOptions[0].CniType
+	}
+}
+
+// The main reconciliation loop for the node pool is triggered by reflect.DeepEqual(spec, actual). While it's correct to update a node pool if the spec has changed,
+// this can lead to an infinite update loop for some parameters that are not specified in spec, but they are returned by the actual state of the node pool.
+// To solve this, spec is updated before the reflect.DeepEqual(spec, actual) only for those problematic parameters
+func setSpecFromActual(spec *infrav2exp.OCIManagedMachinePoolSpec, actual *expinfra1.OCIManagedMachinePoolSpec) {
+	if spec.NodeEvictionNodePoolSettings != nil && actual.NodeEvictionNodePoolSettings != nil {
+		if spec.NodeEvictionNodePoolSettings.EvictionGraceDuration == nil {
+			spec.NodeEvictionNodePoolSettings.EvictionGraceDuration = actual.NodeEvictionNodePoolSettings.EvictionGraceDuration
+		}
+		if spec.NodeEvictionNodePoolSettings.IsForceDeleteAfterGraceDuration == nil {
+			spec.NodeEvictionNodePoolSettings.IsForceDeleteAfterGraceDuration = actual.NodeEvictionNodePoolSettings.IsForceDeleteAfterGraceDuration
+		}
+	} else {
+		spec.NodeEvictionNodePoolSettings = actual.NodeEvictionNodePoolSettings
+	}
+	if spec.NodePoolCyclingDetails != nil && actual.NodePoolCyclingDetails != nil {
+		if spec.NodePoolCyclingDetails.IsNodeCyclingEnabled == nil {
+			spec.NodePoolCyclingDetails.IsNodeCyclingEnabled = actual.NodePoolCyclingDetails.IsNodeCyclingEnabled
+		}
+		if spec.NodePoolCyclingDetails.MaximumSurge == nil {
+			spec.NodePoolCyclingDetails.MaximumSurge = actual.NodePoolCyclingDetails.MaximumSurge
+		}
+		if spec.NodePoolCyclingDetails.MaximumUnavailable == nil {
+			spec.NodePoolCyclingDetails.MaximumUnavailable = actual.NodePoolCyclingDetails.MaximumUnavailable
+		}
+	} else {
+		spec.NodePoolCyclingDetails = actual.NodePoolCyclingDetails
+	}
+	if spec.NodePoolNodeConfig != nil && actual.NodePoolNodeConfig != nil {
+		// Someone has removed NsgNames from the spec, the new defaults becomes the currently attached NSGs
+		if spec.NodePoolNodeConfig.NsgNames == nil {
+			spec.NodePoolNodeConfig.NsgNames = actual.NodePoolNodeConfig.NsgNames
+		}
+		if spec.NodePoolNodeConfig.IsPvEncryptionInTransitEnabled == nil {
+			spec.NodePoolNodeConfig.IsPvEncryptionInTransitEnabled = actual.NodePoolNodeConfig.IsPvEncryptionInTransitEnabled
+		}
+		if spec.NodePoolNodeConfig.KmsKeyId == nil {
+			spec.NodePoolNodeConfig.KmsKeyId = actual.NodePoolNodeConfig.KmsKeyId
+		}
+		if spec.NodePoolNodeConfig.PlacementConfigs == nil {
+			spec.NodePoolNodeConfig.PlacementConfigs = actual.NodePoolNodeConfig.PlacementConfigs
+		}
+
+		if nodePoolPodNetwork := spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails; nodePoolPodNetwork != nil {
+			if actualNodePoolNetwork := actual.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails; actualNodePoolNetwork != nil {
+				if nodePoolPodNetwork.VcnIpNativePodNetworkOptions.SubnetNames == nil {
+					nodePoolPodNetwork.VcnIpNativePodNetworkOptions.SubnetNames = actualNodePoolNetwork.VcnIpNativePodNetworkOptions.SubnetNames
+				}
+				if nodePoolPodNetwork.VcnIpNativePodNetworkOptions.NSGNames == nil {
+					nodePoolPodNetwork.VcnIpNativePodNetworkOptions.NSGNames = actualNodePoolNetwork.VcnIpNativePodNetworkOptions.NSGNames
+				}
+			}
+		}
+
+	} else {
+		spec.NodePoolNodeConfig = actual.NodePoolNodeConfig
+	}
+	if spec.NodeSourceViaImage != nil && actual.NodeSourceViaImage != nil {
+		if spec.NodeSourceViaImage.BootVolumeSizeInGBs == nil {
+			spec.NodeSourceViaImage.BootVolumeSizeInGBs = actual.NodeSourceViaImage.BootVolumeSizeInGBs
+		}
+	} else {
+		spec.NodeSourceViaImage = actual.NodeSourceViaImage
+	}
+
+	if spec.SshPublicKey == nil {
+		spec.SshPublicKey = actual.SshPublicKey
+	}
+}
+
 // setMachinePoolSpecDefaults sets the defaults in the spec as returned by OKE API. We need to set defaults here rather than webhook as
 // there is a chance user will edit the cluster
 func setMachinePoolSpecDefaults(spec *infrav2exp.OCIManagedMachinePoolSpec) {
@@ -744,8 +906,15 @@ func setMachinePoolSpecDefaults(spec *infrav2exp.OCIManagedMachinePoolSpec) {
 	podNetworkOptions := spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails
 	if podNetworkOptions != nil {
 		if podNetworkOptions.CniType == infrastructurev1beta2.VCNNativeCNI {
-			// 31 is the default max pods per node returned by OKE API
-			spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails.VcnIpNativePodNetworkOptions.MaxPodsPerNode = common.Int(31)
+			if podNetworkOptions.VcnIpNativePodNetworkOptions.MaxPodsPerNode == nil {
+				// 31 is the default max pods per node returned by OKE API
+				spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails.VcnIpNativePodNetworkOptions.MaxPodsPerNode = common.Int(31)
+			}
+		} else {
+			// Default value for VcnIpNativePodNetworkOptions should be an empty struct if vcn native CNI is not specified
+			if !reflect.DeepEqual(podNetworkOptions.VcnIpNativePodNetworkOptions, infrav2exp.VcnIpNativePodNetworkOptions{}) {
+				podNetworkOptions.VcnIpNativePodNetworkOptions = infrav2exp.VcnIpNativePodNetworkOptions{}
+			}
 		}
 	}
 }
@@ -800,7 +969,7 @@ func (m *ManagedMachinePoolScope) getSpecFromAPIObject(pool *oke.NodePool) *expi
 		}
 	}
 	if pool.SshPublicKey != nil {
-		spec.SshPublicKey = *pool.SshPublicKey
+		spec.SshPublicKey = pool.SshPublicKey
 	}
 	if pool.NodeShapeConfig != nil {
 		nodeShapeConfig := expinfra1.NodeShapeConfig{}
@@ -846,7 +1015,7 @@ func (m *ManagedMachinePoolScope) buildPlacementConfigFromActual(actualConfigs [
 			AvailabilityDomain:    config.AvailabilityDomain,
 			FaultDomains:          config.FaultDomains,
 			CapacityReservationId: config.CapacityReservationId,
-			SubnetName:            common.String(GetSubnetNameFromId(config.SubnetId, m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets)),
+			SubnetName:            common.String(GetSubnetNameFromId(config.SubnetId, m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets, m.VCNClient)),
 		})
 	}
 	return configs

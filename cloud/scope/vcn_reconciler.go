@@ -41,6 +41,11 @@ func (s *ClusterScope) ReconcileVCN(ctx context.Context) error {
 	}
 	if vcn != nil {
 		s.OCIClusterAccessor.GetNetworkSpec().Vcn.ID = vcn.Id
+		// Someone has updated the network compartment ID, or the VCN was moved. Return an error
+		if vcn.CompartmentId != nil && *vcn.CompartmentId != s.GetNetworkCompartmentId() {
+			return errors.New("CompartmentId of the VCN is not the same as the one specified in the spec")
+		}
+
 		if s.IsVcnEquals(vcn) {
 			s.Logger.Info("No Reconciliation Required for VCN", "vcn", s.getVcnId())
 			return nil
@@ -93,7 +98,7 @@ func (s *ClusterScope) GetVCN(ctx context.Context) (*core.Vcn, error) {
 		}
 	}
 	vcns, err := s.VCNClient.ListVcns(ctx, core.ListVcnsRequest{
-		CompartmentId: common.String(s.GetCompartmentId()),
+		CompartmentId: common.String(s.GetNetworkCompartmentId()),
 		DisplayName:   common.String(s.GetVcnName()),
 	})
 	if err != nil {
@@ -127,7 +132,7 @@ func (s *ClusterScope) UpdateVCN(ctx context.Context, vcn infrastructurev1beta2.
 
 func (s *ClusterScope) CreateVCN(ctx context.Context, spec infrastructurev1beta2.VCN) (*string, error) {
 	vcnDetails := core.CreateVcnDetails{
-		CompartmentId: common.String(s.GetCompartmentId()),
+		CompartmentId: common.String(s.GetNetworkCompartmentId()),
 		DisplayName:   common.String(s.GetVcnName()),
 		CidrBlocks:    s.GetVcnCidrs(),
 		FreeformTags:  s.GetFreeFormTags(),

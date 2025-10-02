@@ -559,7 +559,7 @@ func (m *VirtualMachinePoolScope) getSpecFromAPIObject(pool *oke.VirtualNodePool
 			Shape: pool.PodConfiguration.Shape,
 		}
 		podConfiguration.NsgNames = GetNsgNamesFromId(pool.PodConfiguration.NsgIds, m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List)
-		podConfiguration.SubnetName = common.String(GetSubnetNameFromId(pool.PodConfiguration.SubnetId, m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets))
+		podConfiguration.SubnetName = common.String(GetSubnetNameFromId(pool.PodConfiguration.SubnetId, m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets, nil))
 		spec.PodConfiguration = podConfiguration
 	}
 	spec.PlacementConfigs = m.buildPlacementConfigFromActual(pool.PlacementConfigurations)
@@ -604,7 +604,7 @@ func (m *VirtualMachinePoolScope) buildPlacementConfigFromActual(actualConfigs [
 		configs = append(configs, expinfra1.VirtualNodepoolPlacementConfig{
 			AvailabilityDomain: config.AvailabilityDomain,
 			FaultDomains:       config.FaultDomain,
-			SubnetName:         common.String(GetSubnetNameFromId(config.SubnetId, m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets)),
+			SubnetName:         common.String(GetSubnetNameFromId(config.SubnetId, m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets, nil)),
 		})
 	}
 	return configs

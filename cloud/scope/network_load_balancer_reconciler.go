@@ -190,7 +190,7 @@ func (s *ClusterScope) CreateNLB(ctx context.Context, lb infrastructurev1beta2.L
 		return nil, nil, errors.New("cannot have more than 1 control plane endpoint subnet")
 	}
 	nlbDetails := networkloadbalancer.CreateNetworkLoadBalancerDetails{
-		CompartmentId: common.String(s.GetCompartmentId()),
+		CompartmentId: common.String(s.GetNetworkCompartmentId()),
 		DisplayName:   common.String(lb.Name),
 		SubnetId:      common.String(controlPlaneEndpointSubnets[0]),
 		IsPrivate:     common.Bool(s.isControlPlaneEndpointSubnetPrivate()),
@@ -292,7 +292,7 @@ func (s *ClusterScope) GetNetworkLoadBalancers(ctx context.Context) (*networkloa
 		}
 	}
 	nlbs, err := s.NetworkLoadBalancerClient.ListNetworkLoadBalancers(ctx, networkloadbalancer.ListNetworkLoadBalancersRequest{
-		CompartmentId: common.String(s.GetCompartmentId()),
+		CompartmentId: common.String(s.GetNetworkCompartmentId()),
 		DisplayName:   common.String(s.GetControlPlaneLoadBalancerName()),
 	})
 	if err != nil {
