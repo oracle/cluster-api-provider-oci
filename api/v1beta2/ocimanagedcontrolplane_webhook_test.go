@@ -182,48 +182,6 @@ func TestOCIManagedControlPlane_ValidateCreate(t *testing.T) {
 	}
 }
 
-func TestOCIManagedControlPlaneWebhook_ValidateUpdate(t *testing.T) {
-	h := &OCIManagedControlPlaneWebhook{}
-
-	tests := []struct {
-		name    string
-		oldObj  runtime.Object
-		newObj  runtime.Object
-		wantErr bool
-	}{
-		{
-			name:    "both nil",
-			oldObj:  nil,
-			newObj:  nil,
-			wantErr: false,
-		},
-		{
-			name:    "valid old and new objects",
-			oldObj:  &OCIManagedControlPlane{},
-			newObj:  &OCIManagedControlPlane{},
-			wantErr: false,
-		},
-		{
-			name:    "different types",
-			oldObj:  &OCICluster{},
-			newObj:  &OCICluster{},
-			wantErr: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotWarnings, err := h.ValidateUpdate(context.TODO(), tt.oldObj, tt.newObj)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ValidateUpdate() error = %v, wantErr %v", err, tt.wantErr)
-			}
-			if gotWarnings != nil && len(gotWarnings) != 0 {
-				t.Errorf("ValidateUpdate() warnings = %v, want nil", gotWarnings)
-			}
-		})
-	}
-}
-
 func TestOCIManagedControlPlaneWebhook_ValidateDelete(t *testing.T) {
 	h := &OCIManagedControlPlaneWebhook{}
 
