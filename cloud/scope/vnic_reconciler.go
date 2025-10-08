@@ -19,6 +19,7 @@ package scope
 import (
 	"context"
 	"fmt"
+
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
@@ -41,7 +42,7 @@ func (m *MachineScope) ReconcileVnicAttachments(ctx context.Context) error {
 		vnicId, err := m.createVnicAttachment(ctx, vnicAttachment)
 		if err != nil {
 			msg := fmt.Sprintf("Error creating VnicAttachment %s for cluster %s",
-				*vnicAttachment.DisplayName, m.Cluster.Name)
+				ociutil.DerefString(vnicAttachment.DisplayName), m.Cluster.Name)
 			m.Logger.Error(err, msg)
 			return err
 		}
