@@ -18,6 +18,7 @@ package scope
 
 import (
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
 )
 
 const (
@@ -31,8 +32,8 @@ func GetNsgNamesFromId(ids []string, nsgs []*infrastructurev1beta2.NSG) []string
 	}
 	names := make([]string, 0)
 	for _, id := range ids {
-		for _, nsg := range nsgs {
-			if nsg != nil && nsg.ID != nil && id == *nsg.ID {
+		for _, nsg := range ptr.ToNSGSlice(nsgs) {
+			if nsg.ID != nil && id == *nsg.ID {
 				names = append(names, nsg.Name)
 			}
 		}
@@ -42,8 +43,8 @@ func GetNsgNamesFromId(ids []string, nsgs []*infrastructurev1beta2.NSG) []string
 
 // GetSubnetNameFromId returns the name of the Subnet with the provided ID
 func GetSubnetNameFromId(id *string, subnets []*infrastructurev1beta2.Subnet) string {
-	for _, subnet := range subnets {
-		if subnet != nil && subnet.ID != nil && *id == *subnet.ID {
+	for _, subnet := range ptr.ToSubnetSlice(subnets) {
+		if subnet.ID != nil && *id == *subnet.ID {
 			return subnet.Name
 		}
 	}
@@ -54,8 +55,8 @@ func GetSubnetNameFromId(id *string, subnets []*infrastructurev1beta2.Subnet) st
 func GetSubnetNamesFromId(ids []string, subnets []*infrastructurev1beta2.Subnet) []string {
 	names := make([]string, 0)
 	for _, id := range ids {
-		for _, subnet := range subnets {
-			if subnet != nil && subnet.ID != nil && id == *subnet.ID {
+		for _, subnet := range ptr.ToSubnetSlice(subnets) {
+			if subnet.ID != nil && id == *subnet.ID {
 				names = append(names, subnet.Name)
 			}
 		}

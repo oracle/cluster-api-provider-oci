@@ -29,6 +29,7 @@ import (
 	"github.com/go-logr/logr"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
+	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/computemanagement"
 	expinfra1 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
@@ -146,8 +147,8 @@ func (m *MachinePoolScope) SetReplicaCount(count int32) {
 
 // GetWorkerMachineSubnet returns the WorkerRole core.Subnet id for the cluster
 func (m *MachinePoolScope) GetWorkerMachineSubnet() *string {
-	for _, subnet := range m.OCIClusterAccesor.GetNetworkSpec().Vcn.Subnets {
-		if subnet != nil && subnet.Role == infrastructurev1beta2.WorkerRole {
+	for _, subnet := range ptr.ToSubnetSlice(m.OCIClusterAccesor.GetNetworkSpec().Vcn.Subnets) {
+		if subnet.Role == infrastructurev1beta2.WorkerRole {
 			return subnet.ID
 		}
 	}
@@ -243,8 +244,8 @@ func (m *MachinePoolScope) GetBootstrapData() (string, error) {
 
 // GetWorkerMachineNSG returns the worker role core.NetworkSecurityGroup id for the cluster
 func (m *MachinePoolScope) GetWorkerMachineNSG() *string {
-	for _, nsg := range m.OCIClusterAccesor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List {
-		if nsg != nil && nsg.Role == infrastructurev1beta2.WorkerRole {
+	for _, nsg := range ptr.ToNSGSlice(m.OCIClusterAccesor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List) {
+		if nsg.Role == infrastructurev1beta2.WorkerRole {
 			return nsg.ID
 		}
 	}
@@ -859,8 +860,8 @@ func (m *MachinePoolScope) getWorkerMachineNSGs() []string {
 	if instanceVnicConfiguration != nil && len(instanceVnicConfiguration.NsgNames) > 0 {
 		nsgs := make([]string, 0)
 		for _, nsgName := range instanceVnicConfiguration.NsgNames {
-			for _, nsg := range m.OCIClusterAccesor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List {
-				if nsg != nil && nsg.ID != nil && nsg.Name == nsgName {
+			for _, nsg := range ptr.ToNSGSlice(m.OCIClusterAccesor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List) {
+				if nsg.ID != nil && nsg.Name == nsgName {
 					nsgs = append(nsgs, *nsg.ID)
 				}
 			}
@@ -868,8 +869,8 @@ func (m *MachinePoolScope) getWorkerMachineNSGs() []string {
 		return nsgs
 	} else {
 		nsgs := make([]string, 0)
-		for _, nsg := range m.OCIClusterAccesor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List {
-			if nsg != nil && nsg.ID != nil && nsg.Role == infrastructurev1beta2.WorkerRole {
+		for _, nsg := range ptr.ToNSGSlice(m.OCIClusterAccesor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List) {
+			if nsg.ID != nil && nsg.Role == infrastructurev1beta2.WorkerRole {
 				nsgs = append(nsgs, *nsg.ID)
 			}
 		}

@@ -128,8 +128,8 @@ func (m *ManagedMachinePoolScope) SetReplicaCount(count int32) {
 
 // GetWorkerMachineSubnet returns the WorkerRole core.Subnet id for the cluster
 func (m *ManagedMachinePoolScope) GetWorkerMachineSubnet() *string {
-	for _, subnet := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets {
-		if subnet != nil && subnet.Role == infrastructurev1beta2.WorkerRole {
+	for _, subnet := range ptr.ToSubnetSlice(m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets) {
+		if subnet.Role == infrastructurev1beta2.WorkerRole {
 			return subnet.ID
 		}
 	}
@@ -484,8 +484,8 @@ func (m *ManagedMachinePoolScope) getFreeFormTags() map[string]string {
 
 func (m *ManagedMachinePoolScope) getWorkerMachineSubnets() []string {
 	subnetList := make([]string, 0)
-	for _, subnet := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets {
-		if subnet != nil && subnet.Role == infrastructurev1beta2.WorkerRole {
+	for _, subnet := range ptr.ToSubnetSlice(m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets) {
+		if subnet.Role == infrastructurev1beta2.WorkerRole {
 			subnetList = append(subnetList, subnet.Name)
 		}
 	}
@@ -497,15 +497,15 @@ func (m *ManagedMachinePoolScope) getWorkerMachineNSGs() []string {
 	specNsgNames := m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.NsgNames
 	if len(specNsgNames) > 0 {
 		for _, nsgName := range specNsgNames {
-			for _, nsg := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
-				if nsg != nil && nsg.ID != nil && nsg.Name == nsgName {
+			for _, nsg := range ptr.ToNSGSlice(m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List) {
+				if nsg.ID != nil && nsg.Name == nsgName {
 					nsgList = append(nsgList, *nsg.ID)
 				}
 			}
 		}
 	} else {
-		for _, nsg := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
-			if nsg != nil && nsg.ID != nil && nsg.Role == infrastructurev1beta2.WorkerRole {
+		for _, nsg := range ptr.ToNSGSlice(m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List) {
+			if nsg.ID != nil && nsg.Role == infrastructurev1beta2.WorkerRole {
 				nsgList = append(nsgList, *nsg.ID)
 			}
 		}
@@ -515,8 +515,8 @@ func (m *ManagedMachinePoolScope) getWorkerMachineNSGs() []string {
 
 func (m *ManagedMachinePoolScope) getWorkerMachineNSGList() []string {
 	nsgList := make([]string, 0)
-	for _, nsg := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
-		if nsg != nil && nsg.Role == infrastructurev1beta2.WorkerRole {
+	for _, nsg := range ptr.ToNSGSlice(m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List) {
+		if nsg.Role == infrastructurev1beta2.WorkerRole {
 			nsgList = append(nsgList, nsg.Name)
 		}
 	}
@@ -527,8 +527,8 @@ func (m *ManagedMachinePoolScope) getPodSubnets(subnets []string) []string {
 	subnetList := make([]string, 0)
 	if len(subnets) > 0 {
 		for _, subnetName := range subnets {
-			for _, subnet := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets {
-				if subnet != nil && subnet.ID != nil && subnet.Name == subnetName {
+			for _, subnet := range ptr.ToSubnetSlice(m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets) {
+				if subnet.ID != nil && subnet.Name == subnetName {
 					subnetList = append(subnetList, *subnet.ID)
 				}
 			}
@@ -541,8 +541,8 @@ func (m *ManagedMachinePoolScope) getPodNSGs(nsgs []string) []string {
 	nsgList := make([]string, 0)
 	if len(nsgs) > 0 {
 		for _, nsgName := range nsgs {
-			for _, nsg := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
-				if nsg != nil && nsg.ID != nil && nsg.Name == nsgName {
+			for _, nsg := range ptr.ToNSGSlice(m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List) {
+				if nsg.ID != nil && nsg.Name == nsgName {
 					nsgList = append(nsgList, *nsg.ID)
 				}
 			}
@@ -581,8 +581,8 @@ func (m *ManagedMachinePoolScope) getInitialNodeKeyValuePairs() []oke.KeyValue {
 }
 
 func (m *ManagedMachinePoolScope) getWorkerMachineSubnet(name *string) *string {
-	for _, subnet := range m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets {
-		if subnet != nil && subnet.ID != nil && subnet.Name == ptr.ToString(name) {
+	for _, subnet := range ptr.ToSubnetSlice(m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets) {
+		if subnet.ID != nil && subnet.Name == ptr.ToString(name) {
 			return subnet.ID
 		}
 	}
