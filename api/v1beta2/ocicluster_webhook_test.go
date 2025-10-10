@@ -358,6 +358,66 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 			expectErr:             true,
 		},
 		{
+			name: "shouldn't allow empty NSG egress destination",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
+				Spec: OCIClusterSpec{
+					CompartmentId:         "ocid",
+					OCIResourceIdentifier: "uuid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							NetworkSecurityGroup: NetworkSecurityGroup{
+								List: []*NSG{{
+									Role: Custom,
+									EgressRules: []EgressSecurityRuleForNSG{{
+										EgressSecurityRule: EgressSecurityRule{
+											Destination:     nil,
+											DestinationType: EgressSecurityRuleDestinationTypeCidrBlock,
+											Protocol:        common.String("all"),
+										},
+									}},
+								}},
+							},
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "invalid egressRules: Destination may not be empty",
+			expectErr:             true,
+		},
+		{
+			name: "shouldn't allow empty NSG egress protocol",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
+				Spec: OCIClusterSpec{
+					CompartmentId:         "ocid",
+					OCIResourceIdentifier: "uuid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							NetworkSecurityGroup: NetworkSecurityGroup{
+								List: []*NSG{{
+									Role: Custom,
+									EgressRules: []EgressSecurityRuleForNSG{{
+										EgressSecurityRule: EgressSecurityRule{
+											Destination:     common.String("10.0.0.0/15"),
+											DestinationType: EgressSecurityRuleDestinationTypeCidrBlock,
+											Protocol:        nil,
+										},
+									}},
+								}},
+							},
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "invalid egressRules: Protocol may not be empty",
+			expectErr:             true,
+		},
+		{
 			name: "shouldn't allow bad NSG ingress cidr",
 			c: &OCICluster{
 				ObjectMeta: metav1.ObjectMeta{
@@ -381,6 +441,66 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 				},
 			},
 			errorMgsShouldContain: "invalid ingressRule CIDR format",
+			expectErr:             true,
+		},
+		{
+			name: "shouldn't allow empty NSG ingress protocol",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
+				Spec: OCIClusterSpec{
+					CompartmentId:         "ocid",
+					OCIResourceIdentifier: "uuid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							NetworkSecurityGroup: NetworkSecurityGroup{
+								List: []*NSG{{
+									Role: Custom,
+									IngressRules: []IngressSecurityRuleForNSG{{
+										IngressSecurityRule: IngressSecurityRule{
+											Source:     common.String("10.0.0.0/15"),
+											SourceType: IngressSecurityRuleSourceTypeCidrBlock,
+											Protocol:   nil,
+										},
+									}},
+								}},
+							},
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "invalid ingressRules: Protocol may not be empty",
+			expectErr:             true,
+		},
+		{
+			name: "shouldn't allow empty NSG ingress source",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
+				Spec: OCIClusterSpec{
+					CompartmentId:         "ocid",
+					OCIResourceIdentifier: "uuid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							NetworkSecurityGroup: NetworkSecurityGroup{
+								List: []*NSG{{
+									Role: Custom,
+									IngressRules: []IngressSecurityRuleForNSG{{
+										IngressSecurityRule: IngressSecurityRule{
+											Source:     nil,
+											SourceType: IngressSecurityRuleSourceTypeCidrBlock,
+											Protocol:   common.String("all"),
+										},
+									}},
+								}},
+							},
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "invalid ingressRules: Source may not be empty",
 			expectErr:             true,
 		},
 		{
