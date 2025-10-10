@@ -389,7 +389,7 @@ func (s *ManagedControlPlaneScope) getServiceLbSubnets() []string {
 	subnets := make([]string, 0)
 	for _, subnet := range ptr.ToSubnetSlice(s.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets) {
 		if subnet.Role == infrastructurev1beta2.ServiceLoadBalancerRole {
-			subnets = append(subnets, *subnet.ID)
+			subnets = append(subnets, ptr.ToString(subnet.ID))
 		}
 	}
 	return subnets

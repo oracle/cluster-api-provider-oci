@@ -861,8 +861,8 @@ func (m *MachinePoolScope) getWorkerMachineNSGs() []string {
 		nsgs := make([]string, 0)
 		for _, nsgName := range instanceVnicConfiguration.NsgNames {
 			for _, nsg := range ptr.ToNSGSlice(m.OCIClusterAccesor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List) {
-				if nsg.ID != nil && nsg.Name == nsgName {
-					nsgs = append(nsgs, *nsg.ID)
+				if nsg.Name == nsgName {
+					nsgs = append(nsgs, ptr.ToString(nsg.ID))
 				}
 			}
 		}
@@ -870,8 +870,8 @@ func (m *MachinePoolScope) getWorkerMachineNSGs() []string {
 	} else {
 		nsgs := make([]string, 0)
 		for _, nsg := range ptr.ToNSGSlice(m.OCIClusterAccesor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List) {
-			if nsg.ID != nil && nsg.Role == infrastructurev1beta2.WorkerRole {
-				nsgs = append(nsgs, *nsg.ID)
+			if nsg.Role == infrastructurev1beta2.WorkerRole {
+				nsgs = append(nsgs, ptr.ToString(nsg.ID))
 			}
 		}
 		return nsgs

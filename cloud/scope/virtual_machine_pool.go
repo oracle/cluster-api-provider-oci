@@ -393,15 +393,15 @@ func (m *VirtualMachinePoolScope) getWorkerMachineNSGs() []string {
 	if len(specNsgNames) > 0 {
 		for _, nsgName := range specNsgNames {
 			for _, nsg := range ptr.ToNSGSlice(m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List) {
-				if nsg.ID != nil && nsg.Name == nsgName {
-					nsgList = append(nsgList, *nsg.ID)
+				if nsg.Name == nsgName {
+					nsgList = append(nsgList, ptr.ToString(nsg.ID))
 				}
 			}
 		}
 	} else {
 		for _, nsg := range ptr.ToNSGSlice(m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List) {
-			if nsg.ID != nil && nsg.Role == infrastructurev1beta2.WorkerRole {
-				nsgList = append(nsgList, *nsg.ID)
+			if nsg.Role == infrastructurev1beta2.WorkerRole {
+				nsgList = append(nsgList, ptr.ToString(nsg.ID))
 			}
 		}
 	}
@@ -423,8 +423,8 @@ func (m *VirtualMachinePoolScope) getPodNSGs(nsgs []string) []string {
 	if len(nsgs) > 0 {
 		for _, nsgName := range nsgs {
 			for _, nsg := range ptr.ToNSGSlice(m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List) {
-				if nsg.ID != nil && nsg.Name == nsgName {
-					nsgList = append(nsgList, *nsg.ID)
+				if nsg.Name == nsgName {
+					nsgList = append(nsgList, ptr.ToString(nsg.ID))
 				}
 			}
 		}
