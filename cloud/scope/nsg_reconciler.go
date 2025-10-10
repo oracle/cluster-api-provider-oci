@@ -36,8 +36,8 @@ func (s *ClusterScope) ReconcileNSG(ctx context.Context) error {
 		return nil
 	}
 	desiredNSGs := s.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup
-	for _, desiredNSG := range ptr.ToNSGSlice(desiredNSGs.List) {
-		nsg, err := s.GetNSG(ctx, desiredNSG)
+	for _, desiredNSG := range desiredNSGs.List {
+		nsg, err := s.GetNSG(ctx, *desiredNSG)
 		if err != nil {
 			s.Logger.Error(err, "error to get nsg")
 			return err
@@ -45,8 +45,8 @@ func (s *ClusterScope) ReconcileNSG(ctx context.Context) error {
 		if nsg != nil {
 			nsgOCID := nsg.Id
 			desiredNSG.ID = nsgOCID
-			if !s.IsNSGEqual(nsg, desiredNSG) {
-				err = s.UpdateNSG(ctx, desiredNSG)
+			if !s.IsNSGEqual(nsg, *desiredNSG) {
+				err = s.UpdateNSG(ctx, *desiredNSG)
 				if err != nil {
 					return err
 				}
@@ -55,7 +55,7 @@ func (s *ClusterScope) ReconcileNSG(ctx context.Context) error {
 			continue
 		}
 		s.Logger.Info("Creating the network security list")
-		nsgID, err := s.CreateNSG(ctx, desiredNSG)
+		nsgID, err := s.CreateNSG(ctx, *desiredNSG)
 		if err != nil {
 			return err
 		}
@@ -135,8 +135,8 @@ func (s *ClusterScope) DeleteNSGs(ctx context.Context) error {
 		return nil
 	}
 	desiredNSGs := s.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup
-	for _, desiredNSG := range ptr.ToNSGSlice(desiredNSGs.List) {
-		nsg, err := s.GetNSG(ctx, desiredNSG)
+	for _, desiredNSG := range desiredNSGs.List {
+		nsg, err := s.GetNSG(ctx, *desiredNSG)
 		if err != nil && !ociutil.IsNotFound(err) {
 			return err
 		}
@@ -484,9 +484,10 @@ func getProtocolOptionsForSpec(icmp *core.IcmpOptions, tcp *core.TcpOptions, udp
 }
 
 func getNsgIdFromName(nsgName *string, list []*infrastructurev1beta2.NSG) *string {
-	for _, nsg := range ptr.ToNSGSlice(list) {
-		if nsg.Name == *nsgName {
-			return nsg.ID
+	nsgSlice := ptr.ToNSGSlice(list)
+	for i := range nsgSlice {
+		if nsgSlice[i].Name == *nsgName {
+			return nsgSlice[i].ID
 		}
 	}
 	return nil
@@ -496,7 +497,10 @@ func getNsgNameFromId(nsgId *string, list []*infrastructurev1beta2.NSG) *string 
 	if nsgId == nil {
 		return nil
 	}
-	for _, nsg := range ptr.ToNSGSlice(list) {
+
+	nsgSlice := ptr.ToNSGSlice(list)
+	for i := range nsgSlice {
+		nsg := &nsgSlice[i]
 		if nsg.ID != nil && reflect.DeepEqual(nsg.ID, nsgId) {
 			return &nsg.Name
 		}
