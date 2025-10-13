@@ -21,13 +21,17 @@ package v1beta2
 
 import (
 	"context"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/onsi/gomega"
 	. "github.com/onsi/gomega"
 	"github.com/oracle/oci-go-sdk/v65/common"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
 func TestOCICluster_ValidateCreate(t *testing.T) {
@@ -614,6 +618,55 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 	}
 }
 
+func TestOCIClusterWebhook_ValidateDelete(t *testing.T) {
+	tests := []struct {
+		name    string
+		obj     runtime.Object
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name:    "valid OCICluster object",
+			obj:     &OCICluster{ObjectMeta: metav1.ObjectMeta{Name: "test-cluster"}},
+			wantErr: false,
+		},
+		{
+			name:    "invalid object type",
+			obj:     &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "not-a-cluster"}},
+			wantErr: true,
+			errMsg:  "expected an OCICluster object",
+		},
+		{
+			name:    "nil object",
+			obj:     nil,
+			wantErr: true,
+			errMsg:  "expected an OCICluster object",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := &OCIClusterWebhook{}
+			warnings, err := w.ValidateDelete(context.Background(), tt.obj)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("expected error but got nil")
+				} else if !strings.Contains(err.Error(), tt.errMsg) {
+					t.Errorf("expected error containing %q but got %q", tt.errMsg, err.Error())
+				}
+			} else if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+
+			// In both cases warnings should be nil
+			if warnings != nil {
+				t.Errorf("expected no warnings but got: %v", warnings)
+			}
+		})
+	}
+}
+
 func TestOCICluster_ValidateUpdate(t *testing.T) {
 	goodSubnets := []*Subnet{
 		&Subnet{
@@ -906,6 +959,117 @@ func TestOCICluster_CreateDefault(t *testing.T) {
 			g := gomega.NewWithT(t)
 			(&OCIClusterWebhook{}).Default(context.Background(), test.c)
 			test.expect(g, test.c)
+		})
+	}
+}
+
+func TestOCICluster_GetConditions(t *testing.T) {
+	tests := []struct {
+		name    string
+		cluster *OCICluster
+		want    clusterv1.Conditions
+	}{
+		{
+			name: "no conditions set, returns empty",
+			cluster: &OCICluster{
+				Status: OCIClusterStatus{
+					Conditions: nil,
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "returns existing conditions",
+			cluster: &OCICluster{
+				Status: OCIClusterStatus{
+					Conditions: clusterv1.Conditions{
+						{
+							Type:   clusterv1.ReadyCondition,
+							Status: corev1.ConditionTrue,
+						},
+					},
+				},
+			},
+			want: clusterv1.Conditions{
+				{
+					Type:   clusterv1.ReadyCondition,
+					Status: corev1.ConditionTrue,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.cluster.GetConditions(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetConditions() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestOCICluster_SetConditions(t *testing.T) {
+	tests := []struct {
+		name       string
+		conditions clusterv1.Conditions
+	}{
+		{
+			name: "set single condition",
+			conditions: clusterv1.Conditions{
+				{
+					Type:   "Ready",
+					Status: corev1.ConditionTrue,
+				},
+			},
+		},
+		{
+			name:       "set empty conditions",
+			conditions: clusterv1.Conditions{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &OCICluster{}
+			c.SetConditions(tt.conditions)
+
+			if !reflect.DeepEqual(c.Status.Conditions, tt.conditions) {
+				t.Errorf("SetConditions() got = %v, want %v", c.Status.Conditions, tt.conditions)
+			}
+		})
+	}
+}
+
+func TestOCICluster_GetOCIResourceIdentifier(t *testing.T) {
+	tests := []struct {
+		name string
+		spec OCIClusterSpec
+		want string
+	}{
+		{
+			name: "with resource identifier",
+			spec: OCIClusterSpec{
+				OCIResourceIdentifier: "resource-123",
+			},
+			want: "resource-123",
+		},
+		{
+			name: "empty resource identifier",
+			spec: OCIClusterSpec{
+				OCIResourceIdentifier: "",
+			},
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &OCICluster{
+				Spec: tt.spec,
+			}
+			if got := c.GetOCIResourceIdentifier(); got != tt.want {
+				t.Errorf("GetOCIResourceIdentifier() = %v, want %v", got, tt.want)
+			}
 		})
 	}
 }

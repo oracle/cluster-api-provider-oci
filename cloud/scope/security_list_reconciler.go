@@ -21,6 +21,7 @@ import (
 	"reflect"
 
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
+	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
 
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/oci-go-sdk/v65/common"
@@ -29,7 +30,7 @@ import (
 )
 
 func (s *ClusterScope) DeleteSecurityLists(ctx context.Context) error {
-	desiredSubnets := s.GetSubnetsSpec()
+	desiredSubnets := ptr.ToSubnetSlice(s.GetSubnetsSpec())
 	for _, desiredSubnet := range desiredSubnets {
 		if desiredSubnet.SecurityList != nil {
 			securityList, err := s.GetSecurityList(ctx, *desiredSubnet.SecurityList)
@@ -245,8 +246,8 @@ func getProtocolOptions(icmp *infrastructurev1beta2.IcmpOptions, tcp *infrastruc
 }
 
 func (s *ClusterScope) IsSecurityListExitsByRole(role infrastructurev1beta2.Role) bool {
-	for _, subnet := range s.GetSubnetsSpec() {
-		if subnet != nil && role == subnet.Role {
+	for _, subnet := range ptr.ToSubnetSlice(s.GetSubnetsSpec()) {
+		if role == subnet.Role {
 			if subnet.SecurityList != nil {
 				return true
 			}

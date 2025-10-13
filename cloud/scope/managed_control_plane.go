@@ -29,6 +29,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
+	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
 	baseclient "github.com/oracle/cluster-api-provider-oci/cloud/services/base"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/containerengine"
 	"github.com/oracle/oci-go-sdk/v65/common"
@@ -386,8 +387,8 @@ func (s *ManagedControlPlaneScope) getFreeFormTags() map[string]string {
 
 func (s *ManagedControlPlaneScope) getServiceLbSubnets() []string {
 	subnets := make([]string, 0)
-	for _, subnet := range s.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets {
-		if subnet != nil && subnet.Role == infrastructurev1beta2.ServiceLoadBalancerRole {
+	for _, subnet := range ptr.ToSubnetSlice(s.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets) {
+		if subnet.Role == infrastructurev1beta2.ServiceLoadBalancerRole {
 			subnets = append(subnets, *subnet.ID)
 		}
 	}
@@ -395,8 +396,8 @@ func (s *ManagedControlPlaneScope) getServiceLbSubnets() []string {
 }
 
 func (s *ManagedControlPlaneScope) getControlPlaneEndpointSubnet() *string {
-	for _, subnet := range s.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets {
-		if subnet != nil && subnet.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
+	for _, subnet := range ptr.ToSubnetSlice(s.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets) {
+		if subnet.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
 			return subnet.ID
 		}
 	}
@@ -405,8 +406,8 @@ func (s *ManagedControlPlaneScope) getControlPlaneEndpointSubnet() *string {
 
 func (s *ManagedControlPlaneScope) getControlPlaneEndpointNSGList() []string {
 	nsgs := make([]string, 0)
-	for _, nsg := range s.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List {
-		if nsg != nil && nsg.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
+	for _, nsg := range ptr.ToNSGSlice(s.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List) {
+		if nsg.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
 			nsgs = append(nsgs, *nsg.ID)
 		}
 	}
@@ -415,8 +416,8 @@ func (s *ManagedControlPlaneScope) getControlPlaneEndpointNSGList() []string {
 
 // IsControlPlaneEndpointSubnetPublic returns true if the control plane endpoint subnet is public
 func (s *ManagedControlPlaneScope) IsControlPlaneEndpointSubnetPublic() bool {
-	for _, subnet := range s.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets {
-		if subnet != nil && subnet.Role == infrastructurev1beta2.ControlPlaneEndpointRole && subnet.Type == infrastructurev1beta2.Public {
+	for _, subnet := range ptr.ToSubnetSlice(s.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets) {
+		if subnet.Role == infrastructurev1beta2.ControlPlaneEndpointRole && subnet.Type == infrastructurev1beta2.Public {
 			return true
 		}
 	}
