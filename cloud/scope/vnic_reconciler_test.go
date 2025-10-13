@@ -159,6 +159,49 @@ func TestReconcileVnicAttachment(t *testing.T) {
 			},
 		},
 		{
+			name:          "Crete vnic attachment - no display name",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				ms.OCIMachine.Spec.InstanceId = common.String("test")
+
+				// Make sure the DisplayName is in fact nil
+				ms.OCIMachine.Spec.VnicAttachments[0].DisplayName = nil
+
+				computeClient.EXPECT().ListVnicAttachments(gomock.Any(), gomock.Eq(core.ListVnicAttachmentsRequest{
+					InstanceId:    common.String("test"),
+					CompartmentId: common.String("testCompartment"),
+				})).
+					Return(core.ListVnicAttachmentsResponse{
+						Items: []core.VnicAttachment{
+							{
+								InstanceId:  common.String("test"),
+								DisplayName: common.String("existing-vnic"),
+							},
+						},
+					}, nil)
+
+				computeClient.EXPECT().AttachVnic(gomock.Any(), gomock.Eq(core.AttachVnicRequest{
+					AttachVnicDetails: core.AttachVnicDetails{
+						NicIndex:   common.Int(0),
+						InstanceId: common.String("test"),
+						CreateVnicDetails: &core.CreateVnicDetails{
+							// explicitly check DisplayName is nil
+							DisplayName:    nil,
+							AssignPublicIp: common.Bool(false),
+							DefinedTags:    map[string]map[string]interface{}{},
+							FreeformTags: map[string]string{
+								ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,
+								ociutil.ClusterResourceIdentifier: "resource_uid",
+							},
+							NsgIds: make([]string, 0),
+						},
+					}})).
+					Return(core.AttachVnicResponse{
+						VnicAttachment: core.VnicAttachment{Id: common.String("vnic.id")},
+					}, nil)
+			},
+		},
+		{
 			name:          "Crete vnic attachment error",
 			errorExpected: true,
 			matchError:    fmt.Errorf("could not attach to nic 10"),
