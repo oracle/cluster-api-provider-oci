@@ -80,6 +80,7 @@ providers:
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-machine-with-ipv6.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-with-paravirt-bv.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-self-manage-nsg.yaml"
+          - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-managed-network-compartment.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/metadata.yaml"
 
 variables:
@@ -111,6 +112,7 @@ variables:
   EXTERNAL_VCN_CPE_SUBNET: "${EXTERNAL_VCN_CPE_SUBNET}"
   EXTERNAL_VCN_WORKER_SUBNET: "${EXTERNAL_VCN_WORKER_SUBNET}"
   EXTERNAL_VCN_CP_SUBNET: "${EXTERNAL_VCN_CP_SUBNET}"
+  OCI_NETWORK_COMPARTMENT_ID: "${OCI_NETWORK_COMPARTMENT_ID}"
 
 intervals:
   default/wait-controllers: ["3m", "10s"]
