@@ -32,10 +32,50 @@ const (
 	// can't use: \/"'[]:|<>+=;,.?*@&, Can't start with underscore. Can't end with period or hyphen.
 	// not using . in the name to avoid issues when the name is part of DNS name.
 	clusterNameRegex = `^[a-z0-9][a-z0-9-]{0,42}[a-z0-9]$`
+
+	// Rule type constants for error messages
+	egressRulesType  = "egressRules"
+	ingressRulesType = "ingressRules"
+
+	// Error message formats for NSG security rule validation
+	udpDestinationPortRangeMaxRequiredFormat = "invalid %s: UdpOptions DestinationPortRange Max may not be empty"
+	udpDestinationPortRangeMinRequiredFormat = "invalid %s: UdpOptions DestinationPortRange Min may not be empty"
+	udpSourcePortRangeMaxRequiredFormat      = "invalid %s: UdpOptions SourcePortRange Max may not be empty"
+	udpSourcePortRangeMinRequiredFormat      = "invalid %s: UdpOptions SourcePortRange Min may not be empty"
+	tcpDestinationPortRangeMaxRequiredFormat = "invalid %s: TcpOptions DestinationPortRange Max may not be empty"
+	tcpDestinationPortRangeMinRequiredFormat = "invalid %s: TcpOptions DestinationPortRange Min may not be empty"
+	tcpSourcePortRangeMaxRequiredFormat      = "invalid %s: TcpOptions SourcePortRange Max may not be empty"
+	tcpSourcePortRangeMinRequiredFormat      = "invalid %s: TcpOptions SourcePortRange Min may not be empty"
+	icmpTypeRequiredFormat                   = "invalid %s: IcmpOptions Type may not be empty"
+	destinationRequiredFormat                = "invalid %s: Destination may not be empty"
+	sourceRequiredFormat                     = "invalid %s: Source may not be empty"
+	protocolRequiredFormat                   = "invalid %s: Protocol may not be empty"
+	invalidCIDRFormatFormat                  = "invalid %s: CIDR format"
 )
 
 // invalidNameRegex is a broad regex used to validate allows names in OCI
 var invalidNameRegex = regexp.MustCompile("\\s")
+
+// validatePortRange validates that both Min and Max are set for a port range
+func validatePortRange(portRange *PortRange, fldPath *field.Path, maxMsg, minMsg string) field.ErrorList {
+	var allErrs field.ErrorList
+	if portRange.Max == nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, portRange.Max, maxMsg))
+	}
+	if portRange.Min == nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, portRange.Min, minMsg))
+	}
+	return allErrs
+}
+
+// validateCIDR validates a CIDR string
+func validateCIDR(cidr *string, fldPath *field.Path, errorMsg string) field.ErrorList {
+	var allErrs field.ErrorList
+	if _, _, err := net.ParseCIDR(ociutil.DerefString(cidr)); err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, cidr, errorMsg))
+	}
+	return allErrs
+}
 
 // ValidOcid is a simple pre-flight
 // we will let the serverside handle the more complex and compete validation
@@ -73,15 +113,18 @@ func ValidateNetworkSpec(validRoles []Role, networkSpec NetworkSpec, old Network
 	var allErrs field.ErrorList
 
 	if len(networkSpec.Vcn.CIDR) > 0 {
-		allErrs = append(allErrs, validateVCNCIDR(networkSpec.Vcn.CIDR, fldPath.Child("cidr"))...)
+		vcnErrors := validateVCNCIDR(networkSpec.Vcn.CIDR, fldPath.Child("cidr"))
+		allErrs = append(allErrs, vcnErrors...)
 	}
 
 	if networkSpec.Vcn.Subnets != nil {
-		allErrs = append(allErrs, validateSubnets(validRoles, networkSpec.Vcn.Subnets, networkSpec.Vcn, fldPath.Child("subnets"))...)
+		subnetErrors := validateSubnets(validRoles, networkSpec.Vcn.Subnets, networkSpec.Vcn, fldPath.Child("subnets"))
+		allErrs = append(allErrs, subnetErrors...)
 	}
 
 	if networkSpec.Vcn.NetworkSecurityGroup.List != nil {
-		allErrs = append(allErrs, validateNSGs(validRoles, networkSpec.Vcn.NetworkSecurityGroup.List, fldPath.Child("networkSecurityGroups"))...)
+		nsgErrors := validateNSGs(validRoles, networkSpec.Vcn.NetworkSecurityGroup.List, fldPath.Child("networkSecurityGroups"))
+		allErrs = append(allErrs, nsgErrors...)
 	}
 
 	if len(allErrs) == 0 {
@@ -153,59 +196,199 @@ func validateNSGs(validRoles []Role, networkSecurityGroups []*NSG, fldPath *fiel
 		if err := validateRole(validRoles, nsg.Role, fldPath.Index(i).Child("role"), "networkSecurityGroup role invalid"); err != nil {
 			allErrs = append(allErrs, err)
 		}
-		allErrs = append(allErrs, validateEgressSecurityRuleForNSG(nsg.EgressRules, fldPath.Index(i).Child("egressRules"))...)
-		allErrs = append(allErrs, validateIngressSecurityRuleForNSG(nsg.IngressRules, fldPath.Index(i).Child("ingressRules"))...)
+		egressErrors := validateEgressSecurityRuleForNSG(nsg.EgressRules, fldPath.Index(i).Child("egressRules"))
+		allErrs = append(allErrs, egressErrors...)
+		ingressErrors := validateIngressSecurityRuleForNSG(nsg.IngressRules, fldPath.Index(i).Child("ingressRules"))
+		allErrs = append(allErrs, ingressErrors...)
 	}
 
 	return allErrs
 }
 
-// validateEgressSecurityRuleForNSG validates the Egress Security Rule of a Subnet.
+// validateEgressSecurityRuleForNSG validates the Egress Security Rules for NSG.
 func validateEgressSecurityRuleForNSG(egressRules []EgressSecurityRuleForNSG, fldPath *field.Path) field.ErrorList {
 	var allErrs field.ErrorList
 
-	for _, r := range egressRules {
+	for i, r := range egressRules {
+		rulePath := fldPath.Index(i)
 		rule := r.EgressSecurityRule
 
-		// nsg_reconciler will set the service destination if not set for `SERVICE_CIDR_BLOCK` destination type
-		if rule.DestinationType != EgressSecurityRuleDestinationTypeServiceCidrBlock && rule.Destination == nil {
-			allErrs = append(allErrs, field.Invalid(fldPath, rule.Destination, "invalid egressRules: Destination may not be empty"))
-		}
-
-		if rule.Protocol == nil {
-			allErrs = append(allErrs, field.Invalid(fldPath, rule.Protocol, "invalid egressRules: Protocol may not be empty"))
-		}
-
-		if rule.DestinationType == EgressSecurityRuleDestinationTypeCidrBlock && rule.Destination != nil {
-			if _, _, err := net.ParseCIDR(ociutil.DerefString(rule.Destination)); err != nil {
-				allErrs = append(allErrs, field.Invalid(fldPath, rule.Destination, "invalid egressRules CIDR format"))
+		// Validate UDP options port ranges
+		if udpOptions := rule.UdpOptions; udpOptions != nil {
+			if udpOptions.DestinationPortRange != nil {
+				portRangeErrors := validatePortRange(
+					udpOptions.DestinationPortRange,
+					rulePath.Child("udpOptions").Child("destinationPortRange"),
+					fmt.Sprintf(udpDestinationPortRangeMaxRequiredFormat, egressRulesType),
+					fmt.Sprintf(udpDestinationPortRangeMinRequiredFormat, egressRulesType),
+				)
+				allErrs = append(allErrs, portRangeErrors...)
 			}
+
+			if udpOptions.SourcePortRange != nil {
+				portRangeErrors := validatePortRange(
+					udpOptions.SourcePortRange,
+					rulePath.Child("udpOptions").Child("sourcePortRange"),
+					fmt.Sprintf(udpSourcePortRangeMaxRequiredFormat, egressRulesType),
+					fmt.Sprintf(udpSourcePortRangeMinRequiredFormat, egressRulesType),
+				)
+				allErrs = append(allErrs, portRangeErrors...)
+			}
+		}
+
+		// Validate TCP options port ranges
+		if tcpOptions := rule.TcpOptions; tcpOptions != nil {
+			if tcpOptions.DestinationPortRange != nil {
+				portRangeErrors := validatePortRange(
+					tcpOptions.DestinationPortRange,
+					rulePath.Child("tcpOptions").Child("destinationPortRange"),
+					fmt.Sprintf(tcpDestinationPortRangeMaxRequiredFormat, egressRulesType),
+					fmt.Sprintf(tcpDestinationPortRangeMinRequiredFormat, egressRulesType),
+				)
+				allErrs = append(allErrs, portRangeErrors...)
+			}
+
+			if tcpOptions.SourcePortRange != nil {
+				portRangeErrors := validatePortRange(
+					tcpOptions.SourcePortRange,
+					rulePath.Child("tcpOptions").Child("sourcePortRange"),
+					fmt.Sprintf(tcpSourcePortRangeMaxRequiredFormat, egressRulesType),
+					fmt.Sprintf(tcpSourcePortRangeMinRequiredFormat, egressRulesType),
+				)
+				allErrs = append(allErrs, portRangeErrors...)
+			}
+		}
+
+		// Validate ICMP options
+		if rule.IcmpOptions != nil && rule.IcmpOptions.Type == nil {
+			allErrs = append(allErrs, field.Invalid(
+				rulePath.Child("icmpOptions").Child("type"),
+				rule.IcmpOptions.Type,
+				fmt.Sprintf(icmpTypeRequiredFormat, egressRulesType),
+			))
+		}
+
+		// Validate destination is required (except for SERVICE_CIDR_BLOCK type)
+		if rule.DestinationType != EgressSecurityRuleDestinationTypeServiceCidrBlock && rule.Destination == nil {
+			allErrs = append(allErrs, field.Invalid(
+				rulePath.Child("destination"),
+				rule.Destination,
+				fmt.Sprintf(destinationRequiredFormat, egressRulesType),
+			))
+		}
+
+		// Validate protocol is required
+		if rule.Protocol == nil {
+			allErrs = append(allErrs, field.Invalid(
+				rulePath.Child("protocol"),
+				rule.Protocol,
+				fmt.Sprintf(protocolRequiredFormat, egressRulesType),
+			))
+		}
+
+		// Validate CIDR format for CIDR_BLOCK destination type
+		if rule.DestinationType == EgressSecurityRuleDestinationTypeCidrBlock && rule.Destination != nil {
+			cidrErrors := validateCIDR(
+				rule.Destination,
+				rulePath.Child("destination"),
+				fmt.Sprintf(invalidCIDRFormatFormat, egressRulesType),
+			)
+			allErrs = append(allErrs, cidrErrors...)
 		}
 	}
 
 	return allErrs
 }
 
-// validateEgressSecurityRuleForNSG validates the Egress Security Rule of a Subnet.
-func validateIngressSecurityRuleForNSG(egressRules []IngressSecurityRuleForNSG, fldPath *field.Path) field.ErrorList {
+// validateIngressSecurityRuleForNSG validates the Ingress Security Rules for NSG.
+func validateIngressSecurityRuleForNSG(ingressRules []IngressSecurityRuleForNSG, fldPath *field.Path) field.ErrorList {
 	var allErrs field.ErrorList
 
-	for _, r := range egressRules {
+	for i, r := range ingressRules {
+		rulePath := fldPath.Index(i)
 		rule := r.IngressSecurityRule
 
-		// nsg_reconciler will set the service source if not set for `SERVICE_CIDR_BLOCK` destination type
-		if rule.SourceType != IngressSecurityRuleSourceTypeServiceCidrBlock && rule.Source == nil {
-			allErrs = append(allErrs, field.Invalid(fldPath, rule.Source, "invalid ingressRules: Source may not be empty"))
-		}
-
-		if rule.Protocol == nil {
-			allErrs = append(allErrs, field.Invalid(fldPath, rule.Protocol, "invalid ingressRules: Protocol may not be empty"))
-		}
-
-		if rule.SourceType == IngressSecurityRuleSourceTypeCidrBlock && rule.Source != nil {
-			if _, _, err := net.ParseCIDR(ociutil.DerefString(rule.Source)); err != nil {
-				allErrs = append(allErrs, field.Invalid(fldPath, rule.Source, "invalid ingressRule CIDR format"))
+		// Validate UDP options port ranges
+		if udpOptions := rule.UdpOptions; udpOptions != nil {
+			if udpOptions.DestinationPortRange != nil {
+				portRangeErrors := validatePortRange(
+					udpOptions.DestinationPortRange,
+					rulePath.Child("udpOptions").Child("destinationPortRange"),
+					fmt.Sprintf(udpDestinationPortRangeMaxRequiredFormat, ingressRulesType),
+					fmt.Sprintf(udpDestinationPortRangeMinRequiredFormat, ingressRulesType),
+				)
+				allErrs = append(allErrs, portRangeErrors...)
 			}
+
+			if udpOptions.SourcePortRange != nil {
+				portRangeErrors := validatePortRange(
+					udpOptions.SourcePortRange,
+					rulePath.Child("udpOptions").Child("sourcePortRange"),
+					fmt.Sprintf(udpSourcePortRangeMaxRequiredFormat, ingressRulesType),
+					fmt.Sprintf(udpSourcePortRangeMinRequiredFormat, ingressRulesType),
+				)
+				allErrs = append(allErrs, portRangeErrors...)
+			}
+		}
+
+		// Validate TCP options port ranges
+		if tcpOptions := rule.TcpOptions; tcpOptions != nil {
+			if tcpOptions.DestinationPortRange != nil {
+				portRangeErrors := validatePortRange(
+					tcpOptions.DestinationPortRange,
+					rulePath.Child("tcpOptions").Child("destinationPortRange"),
+					fmt.Sprintf(tcpDestinationPortRangeMaxRequiredFormat, ingressRulesType),
+					fmt.Sprintf(tcpDestinationPortRangeMinRequiredFormat, ingressRulesType),
+				)
+				allErrs = append(allErrs, portRangeErrors...)
+			}
+
+			if tcpOptions.SourcePortRange != nil {
+				portRangeErrors := validatePortRange(
+					tcpOptions.SourcePortRange,
+					rulePath.Child("tcpOptions").Child("sourcePortRange"),
+					fmt.Sprintf(tcpSourcePortRangeMaxRequiredFormat, ingressRulesType),
+					fmt.Sprintf(tcpSourcePortRangeMinRequiredFormat, ingressRulesType),
+				)
+				allErrs = append(allErrs, portRangeErrors...)
+			}
+		}
+
+		// Validate ICMP options
+		if rule.IcmpOptions != nil && rule.IcmpOptions.Type == nil {
+			allErrs = append(allErrs, field.Invalid(
+				rulePath.Child("icmpOptions").Child("type"),
+				rule.IcmpOptions.Type,
+				fmt.Sprintf(icmpTypeRequiredFormat, ingressRulesType),
+			))
+		}
+
+		// Validate source is required (except for SERVICE_CIDR_BLOCK type)
+		if rule.SourceType != IngressSecurityRuleSourceTypeServiceCidrBlock && rule.Source == nil {
+			allErrs = append(allErrs, field.Invalid(
+				rulePath.Child("source"),
+				rule.Source,
+				fmt.Sprintf(sourceRequiredFormat, ingressRulesType),
+			))
+		}
+
+		// Validate protocol is required
+		if rule.Protocol == nil {
+			allErrs = append(allErrs, field.Invalid(
+				rulePath.Child("protocol"),
+				rule.Protocol,
+				fmt.Sprintf(protocolRequiredFormat, ingressRulesType),
+			))
+		}
+
+		// Validate CIDR format for CIDR_BLOCK source type
+		if rule.SourceType == IngressSecurityRuleSourceTypeCidrBlock && rule.Source != nil {
+			cidrErrors := validateCIDR(
+				rule.Source,
+				rulePath.Child("source"),
+				fmt.Sprintf(invalidCIDRFormatFormat, ingressRulesType),
+			)
+			allErrs = append(allErrs, cidrErrors...)
 		}
 	}
 
@@ -232,7 +415,8 @@ func validateSubnets(validRoles []Role, subnets []*Subnet, vcn VCN, fldPath *fie
 			allErrs = append(allErrs, err)
 		}
 
-		allErrs = append(allErrs, validateSubnetCIDR(subnet.CIDR, vcn.CIDR, fldPath.Index(i).Child("cidr"))...)
+		subnetCIDRErrors := validateSubnetCIDR(subnet.CIDR, vcn.CIDR, fldPath.Index(i).Child("cidr"))
+		allErrs = append(allErrs, subnetCIDRErrors...)
 	}
 
 	return allErrs
