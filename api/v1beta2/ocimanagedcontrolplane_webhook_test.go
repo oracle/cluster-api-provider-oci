@@ -18,6 +18,7 @@ package v1beta2
 
 import (
 	"context"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -25,7 +26,10 @@ import (
 
 	"github.com/onsi/gomega"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
 func TestOCIManagedControlPlane_CreateDefault(t *testing.T) {
@@ -175,5 +179,116 @@ func TestOCIManagedControlPlane_ValidateCreate(t *testing.T) {
 				g.Expect(err).To(gomega.Succeed())
 			}
 		})
+	}
+}
+
+func TestOCIManagedControlPlaneWebhook_ValidateDelete(t *testing.T) {
+	h := &OCIManagedControlPlaneWebhook{}
+
+	tests := []struct {
+		name    string
+		obj     runtime.Object
+		wantErr bool
+	}{
+		{
+			name:    "nil object",
+			obj:     nil,
+			wantErr: false,
+		},
+		{
+			name:    "some OCIManagedControlPlane object",
+			obj:     &OCIManagedControlPlane{}, // assuming you have this type
+			wantErr: false,
+		},
+		{
+			name:    "other type",
+			obj:     &OCICluster{}, // passing a different type should still return nil
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotWarnings, err := h.ValidateDelete(context.TODO(), tt.obj)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateDelete() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if gotWarnings != nil && len(gotWarnings) != 0 {
+				t.Errorf("ValidateDelete() warnings = %v, want nil", gotWarnings)
+			}
+		})
+	}
+}
+
+func TestOCIManagedControlPlane_GetConditions(t *testing.T) {
+	want := clusterv1.Conditions{
+		{Type: "Ready", Status: corev1.ConditionTrue},
+	}
+	c := &OCIManagedControlPlane{
+		Status: OCIManagedControlPlaneStatus{
+			Conditions: want,
+		},
+	}
+
+	got := c.GetConditions()
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("GetConditions() = %v, want %v", got, want)
+	}
+}
+
+func TestOCIManagedControlPlane_SetConditions(t *testing.T) {
+	cond := clusterv1.Conditions{
+		{Type: "Updated", Status: corev1.ConditionFalse},
+	}
+	c := &OCIManagedControlPlane{}
+
+	c.SetConditions(cond)
+	if !reflect.DeepEqual(c.Status.Conditions, cond) {
+		t.Errorf("SetConditions() failed, got %v, want %v", c.Status.Conditions, cond)
+	}
+}
+
+func TestOCIManagedControlPlane_SetAddonStatus(t *testing.T) {
+	version := "v1.0.0"
+	state := "Installed"
+	message := "Addon installed successfully"
+
+	status := AddonStatus{
+		CurrentlyInstalledVersion: &version,
+		LifecycleState:            &state,
+		AddonError: &AddonError{
+			Message: &message,
+		},
+	}
+
+	c := &OCIManagedControlPlane{}
+
+	// Add first addon
+	c.SetAddonStatus("metrics-server", status)
+	got := c.Status.AddonStatus["metrics-server"]
+
+	if got.CurrentlyInstalledVersion == nil || *got.CurrentlyInstalledVersion != version {
+		t.Errorf("SetAddonStatus() CurrentlyInstalledVersion = %v, want %v", got.CurrentlyInstalledVersion, version)
+	}
+	if got.LifecycleState == nil || *got.LifecycleState != state {
+		t.Errorf("SetAddonStatus() LifecycleState = %v, want %v", got.LifecycleState, state)
+	}
+	if got.AddonError == nil || got.AddonError.Message == nil || *got.AddonError.Message != message {
+		t.Errorf("SetAddonStatus() AddonError.Message = %v, want %v", got.AddonError.Message, message)
+	}
+
+	// Add second addon to test map initialization and multiple entries
+	secondVersion := "v2.0.0"
+	secondStatus := AddonStatus{
+		CurrentlyInstalledVersion: &secondVersion,
+	}
+	c.SetAddonStatus("logging", secondStatus)
+
+	if len(c.Status.AddonStatus) != 2 {
+		t.Errorf("Expected 2 addon statuses, got %d", len(c.Status.AddonStatus))
+	}
+	got2 := c.Status.AddonStatus["logging"]
+	if got2.CurrentlyInstalledVersion == nil || *got2.CurrentlyInstalledVersion != secondVersion {
+		t.Errorf("SetAddonStatus() second addon CurrentlyInstalledVersion = %v, want %v", got2.CurrentlyInstalledVersion, secondVersion)
 	}
 }

@@ -116,3 +116,45 @@ func TestToNSGSlice(t *testing.T) {
 		})
 	}
 }
+
+func TestToSubnetSlice(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []*infrastructurev1beta2.Subnet
+		want  []infrastructurev1beta2.Subnet
+	}{
+		{
+			name:  "nil slice",
+			input: nil,
+			want:  []infrastructurev1beta2.Subnet{},
+		},
+		{
+			name:  "empty slice",
+			input: []*infrastructurev1beta2.Subnet{},
+			want:  []infrastructurev1beta2.Subnet{},
+		},
+		{
+			name:  "slice with nil elements",
+			input: []*infrastructurev1beta2.Subnet{nil, nil},
+			want:  []infrastructurev1beta2.Subnet{{}, {}},
+		},
+		{
+			name:  "slice with non-nil elements",
+			input: []*infrastructurev1beta2.Subnet{&infrastructurev1beta2.Subnet{}, &infrastructurev1beta2.Subnet{}},
+			want:  []infrastructurev1beta2.Subnet{{}, {}},
+		},
+		{
+			name:  "slice with mixed nil and non-nil elements",
+			input: []*infrastructurev1beta2.Subnet{nil, &infrastructurev1beta2.Subnet{}, nil},
+			want:  []infrastructurev1beta2.Subnet{{}, {}, {}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ToSubnetSlice(tt.input); len(got) != len(tt.want) {
+				t.Errorf("ToSubnetlice() length = %v, want %v", len(got), len(tt.want))
+			}
+		})
+	}
+}

@@ -18,11 +18,17 @@ package v1beta2
 
 import (
 	"context"
+	"reflect"
 	"strings"
 	"testing"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+
 	"github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 var tests = []struct {
@@ -111,6 +117,61 @@ func TestOCIMachineTemplate_ValidateCreate(t *testing.T) {
 	}
 }
 
+func TestOCIMachineTemplateWebhook_ValidateDelete(t *testing.T) {
+	tests := []struct {
+		name    string
+		obj     runtime.Object
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name:    "valid OCIMachineTemplate object",
+			obj:     &OCIMachineTemplate{ObjectMeta: metav1.ObjectMeta{Name: "test-machine-template"}},
+			wantErr: false,
+		},
+		{
+			name:    "invalid object type (Pod)",
+			obj:     &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "not-a-machine-template"}},
+			wantErr: true,
+			errMsg:  "expected a OCIMachineTemplate",
+		},
+		{
+			name:    "nil object",
+			obj:     nil,
+			wantErr: true,
+			errMsg:  "expected a OCIMachineTemplate",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := &OCIMachineTemplateWebhook{}
+			warnings, err := w.ValidateDelete(context.Background(), tt.obj)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("expected error but got nil")
+				} else {
+					// check it's an API error and contains the expected message
+					if !apierrors.IsBadRequest(err) {
+						t.Errorf("expected BadRequest error but got %T", err)
+					}
+					if !strings.Contains(err.Error(), tt.errMsg) {
+						t.Errorf("expected error containing %q but got %q", tt.errMsg, err.Error())
+					}
+				}
+			} else if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+
+			// warnings should always be nil
+			if warnings != nil {
+				t.Errorf("expected no warnings but got: %v", warnings)
+			}
+		})
+	}
+}
+
 func TestOCIMachineTemplate_ValidateUpdate(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -123,6 +184,81 @@ func TestOCIMachineTemplate_ValidateUpdate(t *testing.T) {
 			} else {
 				_, err := (&OCIMachineTemplateWebhook{}).ValidateUpdate(context.Background(), nil, test.inputTemplate)
 				g.Expect(err).To(gomega.Succeed())
+			}
+		})
+	}
+}
+
+func TestOCIMachine_GetConditions(t *testing.T) {
+	tests := []struct {
+		name       string
+		conditions clusterv1.Conditions
+	}{
+		{
+			name: "non-empty conditions",
+			conditions: clusterv1.Conditions{
+				{
+					Type:   "Ready",
+					Status: corev1.ConditionTrue,
+				},
+				{
+					Type:   "Provisioned",
+					Status: corev1.ConditionFalse,
+				},
+			},
+		},
+		{
+			name:       "empty conditions",
+			conditions: clusterv1.Conditions{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &OCIMachine{
+				Status: OCIMachineStatus{
+					Conditions: tt.conditions,
+				},
+			}
+
+			if got := m.GetConditions(); !reflect.DeepEqual(got, tt.conditions) {
+				t.Errorf("GetConditions() = %v, want %v", tt.conditions, tt.conditions)
+			}
+		})
+	}
+}
+
+func TestOCIMachine_SetConditions(t *testing.T) {
+	tests := []struct {
+		name       string
+		conditions clusterv1.Conditions
+	}{
+		{
+			name: "set non-empty conditions",
+			conditions: clusterv1.Conditions{
+				{
+					Type:   "Ready",
+					Status: corev1.ConditionTrue,
+				},
+				{
+					Type:   "Provisioned",
+					Status: corev1.ConditionFalse,
+				},
+			},
+		},
+		{
+			name:       "set empty conditions",
+			conditions: clusterv1.Conditions{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &OCIMachine{}
+			m.SetConditions(tt.conditions)
+
+			if !reflect.DeepEqual(m.Status.Conditions, tt.conditions) {
+				t.Errorf("SetConditions() = %v, want %v", m.Status.Conditions, tt.conditions)
 			}
 		})
 	}

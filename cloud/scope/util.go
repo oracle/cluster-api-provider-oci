@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
@@ -37,8 +38,8 @@ func GetNsgNamesFromId(ids []string, nsgs []*infrastructurev1beta2.NSG) []string
 	}
 	names := make([]string, 0)
 	for _, id := range ids {
-		for _, nsg := range nsgs {
-			if nsg != nil && nsg.ID != nil && id == *nsg.ID {
+		for _, nsg := range ptr.ToNSGSlice(nsgs) {
+			if nsg.ID != nil && id == *nsg.ID {
 				names = append(names, nsg.Name)
 			}
 		}
@@ -47,9 +48,9 @@ func GetNsgNamesFromId(ids []string, nsgs []*infrastructurev1beta2.NSG) []string
 }
 
 // GetSubnetNameFromId returns the name of the Subnet with the provided ID
-func GetSubnetNameFromId(id *string, subnets []*infrastructurev1beta2.Subnet, client vcn.Client) string {
-	for _, subnet := range subnets {
-		if subnet != nil && subnet.ID != nil && *id == *subnet.ID {
+func GetSubnetNameFromId(id *string, subnets []*infrastructurev1beta2.Subnet) string {
+	for _, subnet := range ptr.ToSubnetSlice(subnets) {
+		if subnet.ID != nil && *id == *subnet.ID {
 			return subnet.Name
 		}
 	}
@@ -66,8 +67,8 @@ func GetSubnetNameFromId(id *string, subnets []*infrastructurev1beta2.Subnet, cl
 func GetSubnetNamesFromId(ids []string, subnets []*infrastructurev1beta2.Subnet) []string {
 	names := make([]string, 0)
 	for _, id := range ids {
-		for _, subnet := range subnets {
-			if subnet != nil && subnet.ID != nil && id == *subnet.ID {
+		for _, subnet := range ptr.ToSubnetSlice(subnets) {
+			if subnet.ID != nil && id == *subnet.ID {
 				names = append(names, subnet.Name)
 			}
 		}

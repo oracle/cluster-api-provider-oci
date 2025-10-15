@@ -167,6 +167,15 @@ func validateEgressSecurityRuleForNSG(egressRules []EgressSecurityRuleForNSG, fl
 	for _, r := range egressRules {
 		rule := r.EgressSecurityRule
 
+		// nsg_reconciler will set the service destination if not set for `SERVICE_CIDR_BLOCK` destination type
+		if rule.DestinationType != EgressSecurityRuleDestinationTypeServiceCidrBlock && rule.Destination == nil {
+			allErrs = append(allErrs, field.Invalid(fldPath, rule.Destination, "invalid egressRules: Destination may not be empty"))
+		}
+
+		if rule.Protocol == nil {
+			allErrs = append(allErrs, field.Invalid(fldPath, rule.Protocol, "invalid egressRules: Protocol may not be empty"))
+		}
+
 		if rule.DestinationType == EgressSecurityRuleDestinationTypeCidrBlock && rule.Destination != nil {
 			if _, _, err := net.ParseCIDR(ociutil.DerefString(rule.Destination)); err != nil {
 				allErrs = append(allErrs, field.Invalid(fldPath, rule.Destination, "invalid egressRules CIDR format"))
@@ -183,6 +192,15 @@ func validateIngressSecurityRuleForNSG(egressRules []IngressSecurityRuleForNSG, 
 
 	for _, r := range egressRules {
 		rule := r.IngressSecurityRule
+
+		// nsg_reconciler will set the service source if not set for `SERVICE_CIDR_BLOCK` destination type
+		if rule.SourceType != IngressSecurityRuleSourceTypeServiceCidrBlock && rule.Source == nil {
+			allErrs = append(allErrs, field.Invalid(fldPath, rule.Source, "invalid ingressRules: Source may not be empty"))
+		}
+
+		if rule.Protocol == nil {
+			allErrs = append(allErrs, field.Invalid(fldPath, rule.Protocol, "invalid ingressRules: Protocol may not be empty"))
+		}
 
 		if rule.SourceType == IngressSecurityRuleSourceTypeCidrBlock && rule.Source != nil {
 			if _, _, err := net.ParseCIDR(ociutil.DerefString(rule.Source)); err != nil {

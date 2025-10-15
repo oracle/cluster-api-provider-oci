@@ -310,6 +310,112 @@ func TestInstanceConfigCreate(t *testing.T) {
 			},
 		},
 		{
+			name:          "instance config create - LaunchInstanceAgentConfig contains nil",
+			errorExpected: false,
+			testSpecificSetup: func(ms *MachinePoolScope) {
+				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+					Shape: common.String("test-shape"),
+					ShapeConfig: &infrav2exp.ShapeConfig{
+						Ocpus:                   common.String("2"),
+						MemoryInGBs:             common.String("65"),
+						BaselineOcpuUtilization: "BASELINE_1_1",
+						Nvmes:                   common.Int(5),
+					},
+					InstanceVnicConfiguration: &infrastructurev1beta2.NetworkDetails{
+						AssignPublicIp:         true,
+						SubnetName:             "worker-subnet",
+						SkipSourceDestCheck:    common.Bool(true),
+						NsgNames:               []string{"worker-nsg"},
+						HostnameLabel:          common.String("test"),
+						DisplayName:            common.String("test-display"),
+						AssignPrivateDnsRecord: common.Bool(true),
+					},
+					PlatformConfig: &infrastructurev1beta2.PlatformConfig{
+						PlatformConfigType: infrastructurev1beta2.PlatformConfigTypeAmdvm,
+						AmdVmPlatformConfig: infrastructurev1beta2.AmdVmPlatformConfig{
+							IsMeasuredBootEnabled:          common.Bool(false),
+							IsTrustedPlatformModuleEnabled: common.Bool(true),
+							IsSecureBootEnabled:            common.Bool(true),
+							IsMemoryEncryptionEnabled:      common.Bool(true),
+						},
+					},
+					AgentConfig: &infrastructurev1beta2.LaunchInstanceAgentConfig{
+						IsMonitoringDisabled:  nil,
+						IsManagementDisabled:  nil,
+						AreAllPluginsDisabled: nil,
+						PluginsConfig: []infrastructurev1beta2.InstanceAgentPluginConfig{
+							{
+								Name:         nil,
+								DesiredState: infrastructurev1beta2.InstanceAgentPluginConfigDetailsDesiredStateEnabled,
+							},
+						},
+					},
+				}
+				computeManagementClient.EXPECT().ListInstanceConfigurations(gomock.Any(), gomock.Any()).
+					Return(core.ListInstanceConfigurationsResponse{}, nil)
+
+				computeManagementClient.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Eq(core.CreateInstanceConfigurationRequest{
+					CreateInstanceConfiguration: core.CreateInstanceConfigurationDetails{
+						DefinedTags:   definedTagsInterface,
+						DisplayName:   common.String("test-20"),
+						FreeformTags:  tags,
+						CompartmentId: common.String("test-compartment"),
+						InstanceDetails: core.ComputeInstanceDetails{
+							LaunchDetails: &core.InstanceConfigurationLaunchInstanceDetails{
+								DefinedTags:   definedTagsInterface,
+								FreeformTags:  tags,
+								DisplayName:   common.String("test"),
+								CompartmentId: common.String("test-compartment"),
+								CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+									DefinedTags:            definedTagsInterface,
+									FreeformTags:           tags,
+									NsgIds:                 []string{"nsg-id"},
+									AssignPublicIp:         common.Bool(true),
+									SkipSourceDestCheck:    common.Bool(true),
+									SubnetId:               common.String("subnet-id"),
+									HostnameLabel:          common.String("test"),
+									DisplayName:            common.String("test-display"),
+									AssignPrivateDnsRecord: common.Bool(true),
+								},
+								PlatformConfig: core.AmdVmPlatformConfig{
+									IsMeasuredBootEnabled:          common.Bool(false),
+									IsTrustedPlatformModuleEnabled: common.Bool(true),
+									IsSecureBootEnabled:            common.Bool(true),
+									IsMemoryEncryptionEnabled:      common.Bool(true),
+								},
+								Metadata: map[string]string{"user_data": "dGVzdA=="},
+								Shape:    common.String("test-shape"),
+								ShapeConfig: &core.InstanceConfigurationLaunchInstanceShapeConfigDetails{
+									Ocpus:                   common.Float32(2),
+									MemoryInGBs:             common.Float32(65),
+									BaselineOcpuUtilization: "BASELINE_1_1",
+									Nvmes:                   common.Int(5),
+								},
+								AgentConfig: &core.InstanceConfigurationLaunchInstanceAgentConfigDetails{
+									IsMonitoringDisabled:  nil,
+									IsManagementDisabled:  nil,
+									AreAllPluginsDisabled: nil,
+									PluginsConfig: []core.InstanceAgentPluginConfigDetails{
+										{
+											Name:         nil,
+											DesiredState: core.InstanceAgentPluginConfigDetailsDesiredStateEnabled,
+										},
+									},
+								},
+								SourceDetails: core.InstanceConfigurationInstanceSourceViaImageDetails{},
+							},
+						},
+					},
+				})).
+					Return(core.CreateInstanceConfigurationResponse{
+						InstanceConfiguration: core.InstanceConfiguration{
+							Id: common.String("id"),
+						},
+					}, nil)
+
+			},
+		},
+		{
 			name:          "instance config update",
 			errorExpected: false,
 			testSpecificSetup: func(ms *MachinePoolScope) {

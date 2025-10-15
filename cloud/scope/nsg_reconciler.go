@@ -24,6 +24,7 @@ import (
 
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
+	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/pkg/errors"
@@ -35,8 +36,8 @@ func (s *ClusterScope) ReconcileNSG(ctx context.Context) error {
 		return nil
 	}
 	desiredNSGs := s.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup
-	for _, desiredNSG := range desiredNSGs.List {
-		nsg, err := s.GetNSG(ctx, *desiredNSG)
+	for _, desiredNSG := range ptr.ToNSGSlice(desiredNSGs.List) {
+		nsg, err := s.GetNSG(ctx, desiredNSG)
 		if err != nil {
 			s.Logger.Error(err, "error to get nsg")
 			return err
@@ -44,8 +45,8 @@ func (s *ClusterScope) ReconcileNSG(ctx context.Context) error {
 		if nsg != nil {
 			nsgOCID := nsg.Id
 			desiredNSG.ID = nsgOCID
-			if !s.IsNSGEqual(nsg, *desiredNSG) {
-				err = s.UpdateNSG(ctx, *desiredNSG)
+			if !s.IsNSGEqual(nsg, desiredNSG) {
+				err = s.UpdateNSG(ctx, desiredNSG)
 				if err != nil {
 					return err
 				}
@@ -54,7 +55,7 @@ func (s *ClusterScope) ReconcileNSG(ctx context.Context) error {
 			continue
 		}
 		s.Logger.Info("Creating the network security list")
-		nsgID, err := s.CreateNSG(ctx, *desiredNSG)
+		nsgID, err := s.CreateNSG(ctx, desiredNSG)
 		if err != nil {
 			return err
 		}
@@ -134,8 +135,8 @@ func (s *ClusterScope) DeleteNSGs(ctx context.Context) error {
 		return nil
 	}
 	desiredNSGs := s.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup
-	for _, desiredNSG := range desiredNSGs.List {
-		nsg, err := s.GetNSG(ctx, *desiredNSG)
+	for _, desiredNSG := range ptr.ToNSGSlice(desiredNSGs.List) {
+		nsg, err := s.GetNSG(ctx, desiredNSG)
 		if err != nil && !ociutil.IsNotFound(err) {
 			return err
 		}
@@ -483,8 +484,8 @@ func getProtocolOptionsForSpec(icmp *core.IcmpOptions, tcp *core.TcpOptions, udp
 }
 
 func getNsgIdFromName(nsgName *string, list []*infrastructurev1beta2.NSG) *string {
-	for _, nsg := range list {
-		if nsg != nil && nsg.Name == *nsgName {
+	for _, nsg := range ptr.ToNSGSlice(list) {
+		if nsg.Name == *nsgName {
 			return nsg.ID
 		}
 	}
@@ -495,8 +496,8 @@ func getNsgNameFromId(nsgId *string, list []*infrastructurev1beta2.NSG) *string 
 	if nsgId == nil {
 		return nil
 	}
-	for _, nsg := range list {
-		if nsg != nil && nsg.ID != nil && reflect.DeepEqual(nsg.ID, nsgId) {
+	for _, nsg := range ptr.ToNSGSlice(list) {
+		if nsg.ID != nil && reflect.DeepEqual(nsg.ID, nsgId) {
 			return &nsg.Name
 		}
 	}

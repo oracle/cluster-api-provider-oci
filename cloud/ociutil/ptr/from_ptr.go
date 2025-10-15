@@ -38,3 +38,17 @@ func ToNSGSlice(vs []*infrastructurev1beta2.NSG) []infrastructurev1beta2.NSG {
 
 	return ps
 }
+
+// ToSubnetSlice returns a slice of Subnet values, that are
+// dereferenced if the passed in pointer was not nil. Returns an empty slice
+// zero value if the pointer was nil.
+func ToSubnetSlice(vs []*infrastructurev1beta2.Subnet) []infrastructurev1beta2.Subnet {
+	ps := make([]infrastructurev1beta2.Subnet, len(vs))
+	for i, v := range vs {
+		if v != nil {
+			ps[i] = *v
+		}
+	}
+
+	return ps
+}

@@ -671,6 +671,7 @@ func TestInstanceReconciliation(t *testing.T) {
 					SourceDetails: core.InstanceSourceViaImageDetails{
 						ImageId:             common.String("image"),
 						BootVolumeSizeInGBs: common.Int64(120),
+						KmsKeyId:            nil,
 					},
 					CreateVnicDetails: &core.CreateVnicDetails{
 						SubnetId:       common.String("nodesubnet"),
@@ -682,6 +683,11 @@ func TestInstanceReconciliation(t *testing.T) {
 							ociutil.ClusterResourceIdentifier: "resource_uid",
 						},
 						NsgIds: make([]string, 0),
+						// Explicitly calling out nil checks here
+						HostnameLabel:          nil,
+						SkipSourceDestCheck:    nil,
+						DisplayName:            nil,
+						AssignPrivateDnsRecord: nil,
 					},
 					Metadata: map[string]string{
 						"user_data": base64.StdEncoding.EncodeToString([]byte("test")),
@@ -1204,6 +1210,41 @@ func TestInstanceReconciliation(t *testing.T) {
 			},
 		},
 		{
+			name:          "agent config - LaunchInstanceAgentConfigDetails has nil properties",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				setupAllParams(ms)
+				ms.OCIMachine.Spec.AgentConfig = &infrastructurev1beta2.LaunchInstanceAgentConfig{
+					IsMonitoringDisabled:  nil,
+					IsManagementDisabled:  nil,
+					AreAllPluginsDisabled: nil,
+					PluginsConfig: []infrastructurev1beta2.InstanceAgentPluginConfig{
+						{
+							Name:         nil,
+							DesiredState: infrastructurev1beta2.InstanceAgentPluginConfigDetailsDesiredStateEnabled,
+						},
+					},
+				}
+				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
+					DisplayName:   common.String("name"),
+					CompartmentId: common.String("test"),
+				})).Return(core.ListInstancesResponse{}, nil)
+				computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
+					return agentConfigMatcher(request, &core.LaunchInstanceAgentConfigDetails{
+						IsMonitoringDisabled:  nil,
+						IsManagementDisabled:  nil,
+						AreAllPluginsDisabled: nil,
+						PluginsConfig: []core.InstanceAgentPluginConfigDetails{
+							{
+								Name:         nil,
+								DesiredState: core.InstanceAgentPluginConfigDetailsDesiredStateEnabled,
+							},
+						},
+					})
+				})).Return(core.LaunchInstanceResponse{}, nil)
+			},
+		},
+		{
 			name:          "launch options",
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
@@ -1231,6 +1272,32 @@ func TestInstanceReconciliation(t *testing.T) {
 			},
 		},
 		{
+			name:          "launch options - without IsConsistentVolumeNamingEnabled",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				setupAllParams(ms)
+				ms.OCIMachine.Spec.LaunchOptions = &infrastructurev1beta2.LaunchOptions{
+					BootVolumeType:       infrastructurev1beta2.LaunchOptionsBootVolumeTypeIde,
+					Firmware:             infrastructurev1beta2.LaunchOptionsFirmwareUefi64,
+					NetworkType:          infrastructurev1beta2.LaunchOptionsNetworkTypeVfio,
+					RemoteDataVolumeType: infrastructurev1beta2.LaunchOptionsRemoteDataVolumeTypeIde,
+				}
+				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
+					DisplayName:   common.String("name"),
+					CompartmentId: common.String("test"),
+				})).Return(core.ListInstancesResponse{}, nil)
+				computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
+					return launchOptionsMatcher(request, &core.LaunchOptions{
+						BootVolumeType:                  core.LaunchOptionsBootVolumeTypeIde,
+						Firmware:                        core.LaunchOptionsFirmwareUefi64,
+						NetworkType:                     core.LaunchOptionsNetworkTypeVfio,
+						RemoteDataVolumeType:            core.LaunchOptionsRemoteDataVolumeTypeIde,
+						IsConsistentVolumeNamingEnabled: nil,
+					})
+				})).Return(core.LaunchInstanceResponse{}, nil)
+			},
+		},
+		{
 			name:          "instance options",
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
@@ -1245,6 +1312,25 @@ func TestInstanceReconciliation(t *testing.T) {
 				computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
 					return instanceOptionsMatcher(request, &core.InstanceOptions{
 						AreLegacyImdsEndpointsDisabled: common.Bool(true),
+					})
+				})).Return(core.LaunchInstanceResponse{}, nil)
+			},
+		},
+		{
+			name:          "instance options - AreLegacyImdsEndpointsDisabled is nil",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				setupAllParams(ms)
+				ms.OCIMachine.Spec.InstanceOptions = &infrastructurev1beta2.InstanceOptions{
+					AreLegacyImdsEndpointsDisabled: nil,
+				}
+				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
+					DisplayName:   common.String("name"),
+					CompartmentId: common.String("test"),
+				})).Return(core.ListInstancesResponse{}, nil)
+				computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
+					return instanceOptionsMatcher(request, &core.InstanceOptions{
+						AreLegacyImdsEndpointsDisabled: nil,
 					})
 				})).Return(core.LaunchInstanceResponse{}, nil)
 			},
@@ -1271,6 +1357,27 @@ func TestInstanceReconciliation(t *testing.T) {
 			},
 		},
 		{
+			name:          "availability config - IsLiveMigrationPreferred nil",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				setupAllParams(ms)
+				ms.OCIMachine.Spec.AvailabilityConfig = &infrastructurev1beta2.LaunchInstanceAvailabilityConfig{
+					IsLiveMigrationPreferred: nil,
+					RecoveryAction:           infrastructurev1beta2.LaunchInstanceAvailabilityConfigDetailsRecoveryActionRestoreInstance,
+				}
+				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
+					DisplayName:   common.String("name"),
+					CompartmentId: common.String("test"),
+				})).Return(core.ListInstancesResponse{}, nil)
+				computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
+					return avalabilityConfigMatcher(request, &core.LaunchInstanceAvailabilityConfigDetails{
+						IsLiveMigrationPreferred: nil,
+						RecoveryAction:           core.LaunchInstanceAvailabilityConfigDetailsRecoveryActionRestoreInstance,
+					})
+				})).Return(core.LaunchInstanceResponse{}, nil)
+			},
+		},
+		{
 			name:          "preemtible config",
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
@@ -1288,6 +1395,48 @@ func TestInstanceReconciliation(t *testing.T) {
 					return preemtibleConfigMatcher(request, &core.PreemptibleInstanceConfigDetails{
 						PreemptionAction: core.TerminatePreemptionAction{
 							PreserveBootVolume: common.Bool(true),
+						},
+					})
+				})).Return(core.LaunchInstanceResponse{}, nil)
+			},
+		},
+		{
+			name:          "preemtible config - TerminatePreemptionAction nil",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				setupAllParams(ms)
+				ms.OCIMachine.Spec.PreemptibleInstanceConfig = &infrastructurev1beta2.PreemptibleInstanceConfig{
+					TerminatePreemptionAction: nil,
+				}
+				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
+					DisplayName:   common.String("name"),
+					CompartmentId: common.String("test"),
+				})).Return(core.ListInstancesResponse{}, nil)
+				computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
+					return preemtibleConfigMatcher(request, &core.PreemptibleInstanceConfigDetails{
+						PreemptionAction: nil,
+					})
+				})).Return(core.LaunchInstanceResponse{}, nil)
+			},
+		},
+		{
+			name:          "preemtible config - TerminatePreemptionAction.PreserveBootVolume nil",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				setupAllParams(ms)
+				ms.OCIMachine.Spec.PreemptibleInstanceConfig = &infrastructurev1beta2.PreemptibleInstanceConfig{
+					TerminatePreemptionAction: &infrastructurev1beta2.TerminatePreemptionAction{
+						PreserveBootVolume: nil,
+					},
+				}
+				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
+					DisplayName:   common.String("name"),
+					CompartmentId: common.String("test"),
+				})).Return(core.ListInstancesResponse{}, nil)
+				computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
+					return preemtibleConfigMatcher(request, &core.PreemptibleInstanceConfigDetails{
+						PreemptionAction: core.TerminatePreemptionAction{
+							PreserveBootVolume: nil,
 						},
 					})
 				})).Return(core.LaunchInstanceResponse{}, nil)

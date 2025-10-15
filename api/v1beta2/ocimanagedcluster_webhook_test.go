@@ -23,11 +23,15 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/onsi/gomega"
 	. "github.com/onsi/gomega"
 	"github.com/oracle/oci-go-sdk/v65/common"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
 func TestOCIManagedCluster_ValidateCreate(t *testing.T) {
@@ -522,6 +526,58 @@ func TestOCIManagedCluster_ValidateCreate(t *testing.T) {
 	}
 }
 
+func TestOCIManagedCluster_ValidateDelete(t *testing.T) {
+	tests := []struct {
+		name    string
+		obj     runtime.Object
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name:    "valid OCIManagedCluster object",
+			obj:     &OCIManagedCluster{ObjectMeta: metav1.ObjectMeta{Name: "test-managed-cluster"}},
+			wantErr: false,
+		},
+		{
+			name:    "invalid object type (Pod)",
+			obj:     &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "not-a-managed-cluster"}},
+			wantErr: true,
+			errMsg:  "expected an OCIManagedCluster",
+		},
+		{
+			name:    "nil object",
+			obj:     nil,
+			wantErr: true,
+			errMsg:  "expected an OCIManagedCluster",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := &OCIManagedClusterWebhook{}
+			warnings, err := w.ValidateDelete(context.Background(), tt.obj)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("expected error but got nil")
+				} else {
+					// check error contains the expected message
+					if !strings.Contains(err.Error(), tt.errMsg) {
+						t.Errorf("expected error containing %q but got %q", tt.errMsg, err.Error())
+					}
+				}
+			} else if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+
+			// warnings should always be nil
+			if warnings != nil {
+				t.Errorf("expected no warnings but got: %v", warnings)
+			}
+		})
+	}
+}
+
 func TestOCIManagedCluster_ValidateUpdate(t *testing.T) {
 	goodSubnets := []*Subnet{
 		&Subnet{
@@ -766,5 +822,50 @@ func TestOCIManagedCluster_CreateDefault(t *testing.T) {
 			(&OCIManagedClusterWebhook{}).Default(context.Background(), test.c)
 			test.expect(g, test.c)
 		})
+	}
+}
+
+func TestOCIManagedCluster_GetConditions(t *testing.T) {
+	cond := clusterv1.Condition{
+		Type:               "Ready",
+		Status:             corev1.ConditionTrue,
+		LastTransitionTime: metav1.NewTime(time.Now()),
+		Reason:             "TestReason",
+		Message:            "TestMessage",
+	}
+
+	cluster := &OCIManagedCluster{
+		Status: OCIManagedClusterStatus{
+			Conditions: clusterv1.Conditions{cond},
+		},
+	}
+
+	got := cluster.GetConditions()
+	if len(got) != 1 {
+		t.Errorf("GetConditions returned wrong length, got %d, want 1", len(got))
+	}
+	if got[0].Type != cond.Type || got[0].Status != cond.Status || got[0].Reason != cond.Reason || got[0].Message != cond.Message {
+		t.Errorf("GetConditions returned %+v, want %+v", got[0], cond)
+	}
+}
+
+func TestOCIManagedCluster_SetConditions(t *testing.T) {
+	cond := clusterv1.Condition{
+		Type:               "Ready",
+		Status:             corev1.ConditionTrue,
+		LastTransitionTime: metav1.NewTime(time.Now()),
+		Reason:             "TestReason",
+		Message:            "TestMessage",
+	}
+
+	cluster := &OCIManagedCluster{}
+
+	cluster.SetConditions(clusterv1.Conditions{cond})
+
+	if len(cluster.Status.Conditions) != 1 {
+		t.Errorf("SetConditions failed, expected 1 condition, got %d", len(cluster.Status.Conditions))
+	}
+	if cluster.Status.Conditions[0].Type != cond.Type || cluster.Status.Conditions[0].Status != cond.Status {
+		t.Errorf("SetConditions stored wrong condition %+v, want %+v", cluster.Status.Conditions[0], cond)
 	}
 }
