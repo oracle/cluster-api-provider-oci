@@ -48,7 +48,7 @@ func GetNsgNamesFromId(ids []string, nsgs []*infrastructurev1beta2.NSG) []string
 }
 
 // GetSubnetNameFromId returns the name of the Subnet with the provided ID
-func GetSubnetNameFromId(id *string, subnets []*infrastructurev1beta2.Subnet) string {
+func GetSubnetNameFromId(id *string, subnets []*infrastructurev1beta2.Subnet, client vcn.Client) string {
 	for _, subnet := range ptr.ToSubnetSlice(subnets) {
 		if subnet.ID != nil && *id == *subnet.ID {
 			return subnet.Name

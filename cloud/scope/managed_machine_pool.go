@@ -650,7 +650,7 @@ func (m *ManagedMachinePoolScope) getInitialNodeKeyValuePairs() []oke.KeyValue {
 	return keyValues
 }
 
-func (m *ManagedMachinePoolScope) getWorkerMachineSubnet(name *string) *string {
+func (m *ManagedMachinePoolScope) getWorkerMachineSubnet(name *string, pool *oke.NodePool) *string {
 	for _, subnet := range ptr.ToSubnetSlice(m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets) {
 		if subnet.ID != nil && subnet.Name == ptr.ToString(name) {
 			return subnet.ID
