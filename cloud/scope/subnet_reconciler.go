@@ -144,7 +144,7 @@ func (s *ClusterScope) CreateSubnet(ctx context.Context, spec infrastructurev1be
 	}
 
 	createSubnetDetails := core.CreateSubnetDetails{
-		CompartmentId:           common.String(s.GetCompartmentId()),
+		CompartmentId:           common.String(s.GetNetworkCompartmentId()),
 		CidrBlock:               common.String(spec.CIDR),
 		VcnId:                   s.getVcnId(),
 		DisplayName:             common.String(spec.Name),
@@ -241,7 +241,7 @@ func (s *ClusterScope) GetSubnet(ctx context.Context, spec infrastructurev1beta2
 		}
 	}
 	subnets, err := s.VCNClient.ListSubnets(ctx, core.ListSubnetsRequest{
-		CompartmentId: common.String(s.GetCompartmentId()),
+		CompartmentId: common.String(s.GetNetworkCompartmentId()),
 		VcnId:         s.getVcnId(),
 		DisplayName:   common.String(spec.Name),
 	})
@@ -307,7 +307,8 @@ func (s *ClusterScope) IsSubnetsEqual(actual *core.Subnet, desired infrastructur
 	}
 	if desired.SecurityList != nil {
 		if desired.SecurityList.ID == nil {
-			return false
+			// If nobody has specified a security list, reconciliation must not happen
+			return true
 		}
 
 		return slices.Contains(actual.SecurityListIds, ptr.ToString(desired.SecurityList.ID))

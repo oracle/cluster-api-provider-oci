@@ -189,7 +189,7 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 						ImageId:             common.String("test-image-id"),
 						BootVolumeSizeInGBs: common.Int64(75),
 					},
-					SshPublicKey: "test-ssh-public-key",
+					SshPublicKey: common.String("test-ssh-public-key"),
 					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
 						PlacementConfigs: []infrav2exp.PlacementConfig{
 							{
@@ -314,7 +314,7 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 					NodeSourceViaImage: &infrav2exp.NodeSourceViaImage{
 						BootVolumeSizeInGBs: common.Int64(75),
 					},
-					SshPublicKey: "test-ssh-public-key",
+					SshPublicKey: common.String("test-ssh-public-key"),
 					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
 						PlacementConfigs: []infrav2exp.PlacementConfig{
 							{
@@ -461,7 +461,7 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 					NodeSourceViaImage: &infrav2exp.NodeSourceViaImage{
 						BootVolumeSizeInGBs: common.Int64(75),
 					},
-					SshPublicKey: "test-ssh-public-key",
+					SshPublicKey: common.String("test-ssh-public-key"),
 					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
 						PlacementConfigs: []infrav2exp.PlacementConfig{
 							{
@@ -610,7 +610,7 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 					NodeSourceViaImage: &infrav2exp.NodeSourceViaImage{
 						BootVolumeSizeInGBs: common.Int64(75),
 					},
-					SshPublicKey: "test-ssh-public-key",
+					SshPublicKey: common.String("test-ssh-public-key"),
 					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
 						PlacementConfigs: []infrav2exp.PlacementConfig{
 							{
@@ -681,7 +681,7 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 					NodeSourceViaImage: &infrav2exp.NodeSourceViaImage{
 						ImageId: common.String("test-image-id"),
 					},
-					SshPublicKey: "test-ssh-public-key",
+					SshPublicKey: common.String("test-ssh-public-key"),
 					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
 						NsgNames:                       []string{"worker-nsg"},
 						KmsKeyId:                       common.String("kms-key-id"),
@@ -794,7 +794,7 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
 				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
-					SshPublicKey: "test-ssh-public-key",
+					SshPublicKey: common.String("test-ssh-public-key"),
 					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
 						PlacementConfigs: []infrav2exp.PlacementConfig{
 							{
@@ -984,7 +984,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 					NodeSourceViaImage: &infrav2exp.NodeSourceViaImage{
 						ImageId: common.String("test-image-id"),
 					},
-					SshPublicKey: "test-ssh-public-key",
+					SshPublicKey: common.String("test-ssh-public-key"),
 					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
 						PlacementConfigs: []infrav2exp.PlacementConfig{
 							{
@@ -1082,7 +1082,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 					NodeSourceViaImage: &infrav2exp.NodeSourceViaImage{
 						ImageId: common.String("test-image-id"),
 					},
-					SshPublicKey: "test-ssh-public-key",
+					SshPublicKey: common.String("test-ssh-public-key"),
 					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
 						PlacementConfigs: []infrav2exp.PlacementConfig{
 							{
@@ -1223,7 +1223,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 					NodeSourceViaImage: &infrav2exp.NodeSourceViaImage{
 						ImageId: common.String("test-image-id"),
 					},
-					SshPublicKey: "test-ssh-public-key",
+					SshPublicKey: common.String("test-ssh-public-key"),
 					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
 						PlacementConfigs: []infrav2exp.PlacementConfig{
 							{
@@ -1321,7 +1321,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 					NodeSourceViaImage: &infrav2exp.NodeSourceViaImage{
 						ImageId: common.String("test-image-id"),
 					},
-					SshPublicKey: "test-ssh-public-key",
+					SshPublicKey: common.String("test-ssh-public-key"),
 					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
 						PlacementConfigs: []infrav2exp.PlacementConfig{
 							{
@@ -1457,7 +1457,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 					NodeSourceViaImage: &infrav2exp.NodeSourceViaImage{
 						ImageId: common.String("test-image-id"),
 					},
-					SshPublicKey: "test-ssh-public-key",
+					SshPublicKey: common.String("test-ssh-public-key"),
 					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
 						PlacementConfigs: []infrav2exp.PlacementConfig{
 							{
@@ -1607,7 +1607,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 						MaximumSurge:         common.String("20%"),
 						MaximumUnavailable:   common.String("10%"),
 					},
-					SshPublicKey: "test-ssh-public-key",
+					SshPublicKey: common.String("test-ssh-public-key"),
 					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
 						PlacementConfigs: []infrav2exp.PlacementConfig{
 							{
@@ -1724,6 +1724,11 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 				NodeEvictionNodePoolSettings: &oke.NodeEvictionNodePoolSettings{
 					EvictionGraceDuration:           common.String("PT30M"),
 					IsForceDeleteAfterGraceDuration: common.Bool(true),
+				},
+				NodePoolCyclingDetails: &oke.NodePoolCyclingDetails{
+					IsNodeCyclingEnabled: common.Bool(true),
+					MaximumSurge:         common.String("20%"),
+					MaximumUnavailable:   common.String("10%"),
 				},
 			},
 		},

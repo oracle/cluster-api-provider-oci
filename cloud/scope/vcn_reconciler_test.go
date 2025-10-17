@@ -732,6 +732,327 @@ func TestClusterScope_ReconcileVCN(t *testing.T) {
 	}
 }
 
+func TestClusterScope_GetNetworkCompartmentId(t *testing.T) {
+	tests := []struct {
+		name               string
+		mainCompartmentId  string
+		networkCompartment string
+		expected           string
+	}{
+		{
+			name:               "network compartment specified",
+			mainCompartmentId:  "main-compartment",
+			networkCompartment: "network-compartment",
+			expected:           "network-compartment",
+		},
+		{
+			name:              "network compartment not specified, fallback to main",
+			mainCompartmentId: "main-compartment",
+			expected:          "main-compartment",
+		},
+		{
+			name:               "network compartment empty string, fallback to main",
+			mainCompartmentId:  "main-compartment",
+			networkCompartment: "",
+			expected:           "main-compartment",
+		},
+	}
+	l := log.FromContext(context.Background())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			spec := infrastructurev1beta2.OCIClusterSpec{
+				CompartmentId: tt.mainCompartmentId,
+			}
+			if tt.networkCompartment != "" {
+				spec.NetworkSpec.CompartmentId = tt.networkCompartment
+			}
+			ociClusterAccessor := OCISelfManagedCluster{
+				&infrastructurev1beta2.OCICluster{
+					Spec: spec,
+					ObjectMeta: metav1.ObjectMeta{
+						UID: "cluster_uid",
+					},
+				},
+			}
+			s := &ClusterScope{
+				OCIClusterAccessor: ociClusterAccessor,
+				Logger:             &l,
+			}
+			if got := s.GetNetworkCompartmentId(); got != tt.expected {
+				t.Errorf("GetNetworkCompartmentId() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestClusterScope_ReconcileVCN_NetworkCompartment(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	vcnClient := mock_vcn.NewMockClient(mockCtrl)
+
+	tags := make(map[string]string)
+	tags[ociutil.CreatedBy] = ociutil.OCIClusterAPIProvider
+	tags[ociutil.ClusterResourceIdentifier] = "resource_uid"
+
+	// Test case: VCN exists but in wrong network compartment
+	vcnClient.EXPECT().GetVcn(gomock.Any(), gomock.Eq(core.GetVcnRequest{
+		VcnId: common.String("vcn_wrong_compartment"),
+	})).
+		Return(core.GetVcnResponse{
+			Vcn: core.Vcn{
+				Id:            common.String("vcn_wrong_compartment"),
+				CompartmentId: common.String("wrong-compartment"),
+				FreeformTags:  tags,
+				DisplayName:   common.String("test-vcn"),
+			},
+		}, nil)
+
+	// Test case: VCN creation in network compartment
+	vcnClient.EXPECT().ListVcns(gomock.Any(), gomock.Eq(core.ListVcnsRequest{
+		CompartmentId: common.String("network-compartment"),
+		DisplayName:   common.String("test-vcn"),
+	})).Return(
+		core.ListVcnsResponse{
+			Items: []core.Vcn{},
+		}, nil)
+
+	vcnClient.EXPECT().CreateVcn(gomock.Any(), Eq(func(request interface{}) error {
+		r, ok := request.(core.CreateVcnRequest)
+		if !ok {
+			return errors.New("expecting CreateVcnRequest type")
+		}
+		if *r.CreateVcnDetails.CompartmentId != "network-compartment" {
+			return errors.New(fmt.Sprintf("expecting CompartmentId as network-compartment, got %s", *r.CreateVcnDetails.CompartmentId))
+		}
+		return nil
+	})).
+		Return(core.CreateVcnResponse{
+			Vcn: core.Vcn{
+				Id: common.String("created_vcn_id"),
+			},
+		}, nil)
+
+	tests := []struct {
+		name          string
+		spec          infrastructurev1beta2.OCIClusterSpec
+		wantErr       bool
+		expectedError string
+	}{
+		{
+			name: "vcn exists in wrong network compartment",
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				CompartmentId: "main-compartment",
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					CompartmentId: "network-compartment",
+					Vcn: infrastructurev1beta2.VCN{
+						ID:   common.String("vcn_wrong_compartment"),
+						Name: "test-vcn",
+					},
+				},
+			},
+			wantErr:       true,
+			expectedError: "CompartmentId of the VCN is not the same as the one specified in the spec",
+		},
+		{
+			name: "vcn creation uses network compartment",
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				CompartmentId: "main-compartment",
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					CompartmentId: "network-compartment",
+					Vcn: infrastructurev1beta2.VCN{
+						Name: "test-vcn",
+					},
+				},
+			},
+			wantErr: false,
+		},
+	}
+	l := log.FromContext(context.Background())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ociClusterAccessor := OCISelfManagedCluster{
+				&infrastructurev1beta2.OCICluster{
+					Spec: tt.spec,
+					ObjectMeta: metav1.ObjectMeta{
+						UID: "cluster_uid",
+					},
+				},
+			}
+			ociClusterAccessor.OCICluster.Spec.OCIResourceIdentifier = "resource_uid"
+			s := &ClusterScope{
+				VCNClient:          vcnClient,
+				OCIClusterAccessor: ociClusterAccessor,
+				Cluster: &clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						UID: "resource_uid",
+					},
+				},
+				Logger: &l,
+			}
+			err := s.ReconcileVCN(context.Background())
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ReconcileVCN() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if err != nil && tt.expectedError != "" {
+				if err.Error() != tt.expectedError {
+					t.Errorf("ReconcileVCN() expected error = %s, actual error %s", tt.expectedError, err.Error())
+				}
+			}
+		})
+	}
+}
+
+func TestClusterScope_GetVCN_NetworkCompartment(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	vcnClient := mock_vcn.NewMockClient(mockCtrl)
+
+	tags := make(map[string]string)
+	tags[ociutil.CreatedBy] = ociutil.OCIClusterAPIProvider
+	tags[ociutil.ClusterResourceIdentifier] = "resource_uid"
+
+	// Test case: List VCNs in network compartment
+	vcnClient.EXPECT().ListVcns(gomock.Any(), gomock.Eq(core.ListVcnsRequest{
+		CompartmentId: common.String("network-compartment"),
+		DisplayName:   common.String("test-vcn"),
+	})).Return(
+		core.ListVcnsResponse{
+			Items: []core.Vcn{
+				{
+					Id:           common.String("vcn_id"),
+					FreeformTags: tags,
+				},
+			},
+		}, nil)
+
+	tests := []struct {
+		name string
+		spec infrastructurev1beta2.OCIClusterSpec
+		want *core.Vcn
+	}{
+		{
+			name: "find vcn by name in network compartment",
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				CompartmentId: "main-compartment",
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					CompartmentId: "network-compartment",
+					Vcn: infrastructurev1beta2.VCN{
+						Name: "test-vcn",
+					},
+				},
+			},
+			want: &core.Vcn{
+				Id:           common.String("vcn_id"),
+				FreeformTags: tags,
+			},
+		},
+	}
+	l := log.FromContext(context.Background())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ociClusterAccessor := OCISelfManagedCluster{
+				&infrastructurev1beta2.OCICluster{
+					Spec: tt.spec,
+					ObjectMeta: metav1.ObjectMeta{
+						UID: "cluster_uid",
+					},
+				},
+			}
+			ociClusterAccessor.OCICluster.Spec.OCIResourceIdentifier = "resource_uid"
+			s := &ClusterScope{
+				VCNClient:          vcnClient,
+				OCIClusterAccessor: ociClusterAccessor,
+				Cluster: &clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						UID: "resource_uid",
+					},
+				},
+				Logger: &l,
+			}
+			got, err := s.GetVCN(context.Background())
+			if err != nil {
+				t.Errorf("GetVCN() error = %v", err)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetVCN() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestClusterScope_CreateVCN_NetworkCompartment(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	vcnClient := mock_vcn.NewMockClient(mockCtrl)
+
+	vcnClient.EXPECT().CreateVcn(gomock.Any(), Eq(func(request interface{}) error {
+		r, ok := request.(core.CreateVcnRequest)
+		if !ok {
+			return errors.New("expecting CreateVcnRequest type")
+		}
+		if *r.CreateVcnDetails.CompartmentId != "network-compartment" {
+			return errors.New(fmt.Sprintf("expecting CompartmentId as network-compartment, got %s", *r.CreateVcnDetails.CompartmentId))
+		}
+		return nil
+	})).
+		Return(core.CreateVcnResponse{
+			Vcn: core.Vcn{
+				Id: common.String("vcn_id"),
+			},
+		}, nil)
+
+	tests := []struct {
+		name string
+		spec infrastructurev1beta2.OCIClusterSpec
+	}{
+		{
+			name: "create vcn in network compartment",
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				CompartmentId: "main-compartment",
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					CompartmentId: "network-compartment",
+					Vcn: infrastructurev1beta2.VCN{
+						Name: "test-vcn",
+					},
+				},
+			},
+		},
+	}
+	l := log.FromContext(context.Background())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ociClusterAccessor := OCISelfManagedCluster{
+				&infrastructurev1beta2.OCICluster{
+					Spec: tt.spec,
+					ObjectMeta: metav1.ObjectMeta{
+						UID: "cluster_uid",
+					},
+				},
+			}
+			tt.spec.OCIResourceIdentifier = "resource_uid"
+			s := &ClusterScope{
+				VCNClient:          vcnClient,
+				OCIClusterAccessor: ociClusterAccessor,
+				Cluster: &clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						UID: "cluster_uid",
+					},
+				},
+				Logger: &l,
+			}
+			got, err := s.CreateVCN(context.Background(), tt.spec.NetworkSpec.Vcn)
+			if err != nil {
+				t.Errorf("CreateVCN() error = %v", err)
+				return
+			}
+			if *got != "vcn_id" {
+				t.Errorf("CreateVCN() got = %v, want vcn_id", got)
+			}
+		})
+	}
+}
+
 func vcnMatcher(request interface{}, displayName string, dnsLabel *string, cidrs []string) error {
 	r, ok := request.(core.CreateVcnRequest)
 	if !ok {

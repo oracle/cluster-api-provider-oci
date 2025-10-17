@@ -49,7 +49,7 @@ type OCIManagedMachinePoolSpec struct {
 
 	// SshPublicKey defines the SSH public key on each node in the node pool on launch.
 	// +optional
-	SshPublicKey string `json:"sshPublicKey,omitempty"`
+	SshPublicKey *string `json:"sshPublicKey,omitempty"`
 
 	// NodeMetadata defines a list of key/value pairs to add to each underlying OCI instance in the node pool on launch.
 	// +optional
