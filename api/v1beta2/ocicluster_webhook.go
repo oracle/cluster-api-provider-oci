@@ -833,7 +833,7 @@ func (c *OCICluster) GetControlPlaneEndpointDefaultEgressRules() []EgressSecurit
 
 func (c *OCICluster) GetControlPlaneEndpointSubnet() *Subnet {
 	for _, subnet := range c.Spec.NetworkSpec.Vcn.Subnets {
-		if subnet.Role == ControlPlaneEndpointRole {
+		if subnet != nil && subnet.Role == ControlPlaneEndpointRole {
 			return subnet
 		}
 	}
@@ -842,7 +842,7 @@ func (c *OCICluster) GetControlPlaneEndpointSubnet() *Subnet {
 
 func (c *OCICluster) GetControlPlaneMachineSubnet() *Subnet {
 	for _, subnet := range c.Spec.NetworkSpec.Vcn.Subnets {
-		if subnet.Role == ControlPlaneRole {
+		if subnet != nil && subnet.Role == ControlPlaneRole {
 			return subnet
 		}
 	}
@@ -851,7 +851,7 @@ func (c *OCICluster) GetControlPlaneMachineSubnet() *Subnet {
 
 func (c *OCICluster) GetServiceLoadBalancerSubnet() *Subnet {
 	for _, subnet := range c.Spec.NetworkSpec.Vcn.Subnets {
-		if subnet.Role == ServiceLoadBalancerRole {
+		if subnet != nil && subnet.Role == ServiceLoadBalancerRole {
 			return subnet
 		}
 	}
@@ -861,7 +861,7 @@ func (c *OCICluster) GetServiceLoadBalancerSubnet() *Subnet {
 func (c *OCICluster) GetNodeSubnet() []*Subnet {
 	var nodeSubnets []*Subnet
 	for _, subnet := range c.Spec.NetworkSpec.Vcn.Subnets {
-		if subnet.Role == WorkerRole {
+		if subnet != nil && subnet.Role == WorkerRole {
 			nodeSubnets = append(nodeSubnets, subnet)
 		}
 	}
@@ -870,7 +870,7 @@ func (c *OCICluster) GetNodeSubnet() []*Subnet {
 
 func (c *OCICluster) IsNSGExitsByRole(role Role) bool {
 	for _, nsg := range c.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
-		if role == nsg.Role {
+		if nsg != nil && role == nsg.Role {
 			return true
 		}
 	}
@@ -879,7 +879,7 @@ func (c *OCICluster) IsNSGExitsByRole(role Role) bool {
 
 func (c *OCICluster) IsSecurityListExitsByRole(role Role) bool {
 	for _, subnet := range c.Spec.NetworkSpec.Vcn.Subnets {
-		if role == subnet.Role {
+		if subnet != nil && role == subnet.Role {
 			if subnet.SecurityList != nil {
 				return true
 			}

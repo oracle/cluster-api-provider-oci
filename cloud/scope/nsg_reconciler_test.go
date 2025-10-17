@@ -827,6 +827,23 @@ func TestClusterScope_ReconcileNSG(t *testing.T) {
 			wantErr:       true,
 			expectedError: "failed add nsg security rules: some error",
 		},
+		{
+			name: "nil NSG in list",
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
+						ID: common.String("vcn"),
+						NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
+							List: []*infrastructurev1beta2.NSG{nil},
+						},
+					},
+				},
+			},
+			wantErr: false,
+			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_vcn.MockClient) {
+				// nothing should be called
+			},
+		},
 	}
 	l := log.FromContext(context.Background())
 	for _, tt := range tests {
