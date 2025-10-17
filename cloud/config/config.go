@@ -27,6 +27,9 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// set this way to allow for mocks to be used for testing
+var instancePrincipalProviderFunc = auth.InstancePrincipalConfigurationProvider
+
 const (
 	UseInstancePrincipal = "useInstancePrincipal"
 	Tenancy              = "tenancy"
@@ -150,7 +153,7 @@ func NewConfigurationProvider(cfg *AuthConfig) (common.ConfigurationProvider, er
 		return nil, errors.New("auth config must not be nil")
 	}
 	if cfg.UseInstancePrincipals {
-		return auth.InstancePrincipalConfigurationProvider()
+		return instancePrincipalProviderFunc()
 	} else {
 		return NewConfigurationProviderWithUserPrincipal(cfg)
 	}

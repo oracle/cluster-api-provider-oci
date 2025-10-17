@@ -17,13 +17,50 @@ limitations under the License.
 package config
 
 import (
+	"crypto/rsa"
 	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
 
 	"github.com/oracle/oci-go-sdk/v65/common"
+	"github.com/oracle/oci-go-sdk/v65/common/auth"
 )
+
+// mockConfigurationProvider implements common.ConfigurationProvider for testing
+type mockInstancePrincipalConfigurationProvider struct{}
+
+func (m *mockInstancePrincipalConfigurationProvider) TenancyOCID() (string, error) {
+	return "mock-tenancy", nil
+}
+
+func (m *mockInstancePrincipalConfigurationProvider) UserOCID() (string, error) {
+	return "mock-user", nil
+}
+
+func (m *mockInstancePrincipalConfigurationProvider) KeyID() (string, error) {
+	return "mock-key-id", nil
+}
+
+func (m *mockInstancePrincipalConfigurationProvider) KeyFingerprint() (string, error) {
+	return "mock-fingerprint", nil
+}
+
+func (m *mockInstancePrincipalConfigurationProvider) Key() (string, error) {
+	return "mock-key", nil
+}
+
+func (m *mockInstancePrincipalConfigurationProvider) PrivateRSAKey() (*rsa.PrivateKey, error) {
+	return nil, nil // Mock implementation
+}
+
+func (m *mockInstancePrincipalConfigurationProvider) Region() (string, error) {
+	return "us-phoenix-1", nil
+}
+
+func (m *mockInstancePrincipalConfigurationProvider) AuthType() (common.AuthConfig, error) {
+	return common.AuthConfig{AuthType: "instance_principal"}, nil
+}
 
 func TestFromDir(t *testing.T) {
 	type args struct {
@@ -263,6 +300,8 @@ func TestNewConfigurationProvider(t *testing.T) {
 		name    string
 		args    args
 		wantErr bool
+		setup   func()
+		cleanup func()
 	}{
 		{
 			name:    "nil config",
@@ -275,10 +314,24 @@ func TestNewConfigurationProvider(t *testing.T) {
 				UseInstancePrincipals: true,
 			}},
 			wantErr: false,
+			setup: func() {
+				instancePrincipalProviderFunc = func() (common.ConfigurationProvider, error) {
+					return &mockInstancePrincipalConfigurationProvider{}, nil
+				}
+			},
+			cleanup: func() {
+				instancePrincipalProviderFunc = auth.InstancePrincipalConfigurationProvider
+			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.setup != nil {
+				tt.setup()
+			}
+			if tt.cleanup != nil {
+				defer tt.cleanup()
+			}
 			got, err := NewConfigurationProvider(tt.args.cfg)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewConfigurationProvider() error = %v, wantErr %v", err, tt.wantErr)
