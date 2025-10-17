@@ -37,7 +37,12 @@ func (s *ClusterScope) ReconcileNSG(ctx context.Context) error {
 	}
 	desiredNSGs := s.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup
 	for _, desiredNSG := range desiredNSGs.List {
-		nsg, err := s.GetNSG(ctx, *desiredNSG)
+		if desiredNSG == nil {
+			s.Logger.Info("Skipping nil NSG pointer in spec")
+			continue
+		}
+		desiredNSGPtr := *desiredNSG
+		nsg, err := s.GetNSG(ctx, desiredNSGPtr)
 		if err != nil {
 			s.Logger.Error(err, "error to get nsg")
 			return err
@@ -45,8 +50,8 @@ func (s *ClusterScope) ReconcileNSG(ctx context.Context) error {
 		if nsg != nil {
 			nsgOCID := nsg.Id
 			desiredNSG.ID = nsgOCID
-			if !s.IsNSGEqual(nsg, *desiredNSG) {
-				err = s.UpdateNSG(ctx, *desiredNSG)
+			if !s.IsNSGEqual(nsg, desiredNSGPtr) {
+				err = s.UpdateNSG(ctx, desiredNSGPtr)
 				if err != nil {
 					return err
 				}
@@ -55,7 +60,7 @@ func (s *ClusterScope) ReconcileNSG(ctx context.Context) error {
 			continue
 		}
 		s.Logger.Info("Creating the network security list")
-		nsgID, err := s.CreateNSG(ctx, *desiredNSG)
+		nsgID, err := s.CreateNSG(ctx, desiredNSGPtr)
 		if err != nil {
 			return err
 		}
@@ -64,6 +69,10 @@ func (s *ClusterScope) ReconcileNSG(ctx context.Context) error {
 
 	}
 	for _, desiredNSG := range desiredNSGs.List {
+		if desiredNSG == nil {
+			s.Logger.Info("Skipping nil NSG pointer in spec")
+			continue
+		}
 		s.adjustNSGRulesSpec(desiredNSG, desiredNSGs.List)
 		isNSGUpdated, err := s.UpdateNSGSecurityRulesIfNeeded(ctx, *desiredNSG, desiredNSG.ID)
 		if err != nil {

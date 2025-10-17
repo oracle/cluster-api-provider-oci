@@ -180,5 +180,10 @@ func (s *ClusterScope) DeleteVCN(ctx context.Context) error {
 }
 
 func (s *ClusterScope) getVcnId() *string {
-	return s.OCIClusterAccessor.GetNetworkSpec().Vcn.ID
+	id := s.OCIClusterAccessor.GetNetworkSpec().Vcn.ID
+	if id == nil {
+		s.Logger.Info("VCN ID is nil")
+
+	}
+	return id
 }
