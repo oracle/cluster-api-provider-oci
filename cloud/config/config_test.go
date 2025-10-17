@@ -50,6 +50,7 @@ func (m *mockInstancePrincipalConfigurationProvider) Key() (string, error) {
 	return "mock-key", nil
 }
 
+// nolint:nilnil
 func (m *mockInstancePrincipalConfigurationProvider) PrivateRSAKey() (*rsa.PrivateKey, error) {
 	return nil, nil // Mock implementation
 }
