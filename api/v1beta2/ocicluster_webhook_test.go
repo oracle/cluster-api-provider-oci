@@ -86,10 +86,11 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 	badClusterName := "bad.cluster"
 
 	tests := []struct {
-		name                  string
-		c                     *OCICluster
-		errorMgsShouldContain string
-		expectErr             bool
+		name                          string
+		c                             *OCICluster
+		errorMgsShouldContain         string
+		multipleErrorMgsShouldContain []string
+		expectErr                     bool
 	}{
 		{
 			name: "shouldn't allow spaces in region",
@@ -354,7 +355,7 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 					},
 				},
 			},
-			errorMgsShouldContain: "invalid egressRules CIDR format",
+			errorMgsShouldContain: "invalid egressRules: CIDR format",
 			expectErr:             true,
 		},
 		{
@@ -388,6 +389,39 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 			expectErr:             true,
 		},
 		{
+			name: "shouldn't allow empty NSG egress icmpOptions nil",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
+				Spec: OCIClusterSpec{
+					CompartmentId:         "ocid",
+					OCIResourceIdentifier: "uuid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							NetworkSecurityGroup: NetworkSecurityGroup{
+								List: []*NSG{{
+									Role: Custom,
+									EgressRules: []EgressSecurityRuleForNSG{{
+										EgressSecurityRule: EgressSecurityRule{
+											Destination:     common.String("0.0.0.0/0"),
+											DestinationType: EgressSecurityRuleDestinationTypeCidrBlock,
+											Protocol:        common.String("all"),
+											IcmpOptions: &IcmpOptions{
+												Type: nil,
+											},
+										},
+									}},
+								}},
+							},
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "invalid egressRules: IcmpOptions Type may not be empty",
+			expectErr:             true,
+		},
+		{
 			name: "shouldn't allow empty NSG egress protocol",
 			c: &OCICluster{
 				ObjectMeta: metav1.ObjectMeta{
@@ -418,6 +452,102 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 			expectErr:             true,
 		},
 		{
+			name: "shouldn't allow empty NSG egress udpSource PortRange Max",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
+				Spec: OCIClusterSpec{
+					CompartmentId:         "ocid",
+					OCIResourceIdentifier: "uuid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							NetworkSecurityGroup: NetworkSecurityGroup{
+								List: []*NSG{{
+									Role: Custom,
+									EgressRules: []EgressSecurityRuleForNSG{{
+										EgressSecurityRule: EgressSecurityRule{
+											Destination:     common.String("10.0.0.0/15"),
+											DestinationType: EgressSecurityRuleDestinationTypeCidrBlock,
+											Protocol:        common.String("all"),
+											UdpOptions: &UdpOptions{
+												DestinationPortRange: &PortRange{
+													Max: nil,
+													Min: common.Int(80),
+												},
+											},
+										},
+									}},
+								}},
+							},
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "invalid egressRules: UdpOptions DestinationPortRange Max may not be empty",
+			expectErr:             true,
+		},
+		{
+			name: "shouldn't allow empty NSG egress rule required values for port ranges",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
+				Spec: OCIClusterSpec{
+					CompartmentId:         "ocid",
+					OCIResourceIdentifier: "uuid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							NetworkSecurityGroup: NetworkSecurityGroup{
+								List: []*NSG{{
+									Role: Custom,
+									EgressRules: []EgressSecurityRuleForNSG{{
+										EgressSecurityRule: EgressSecurityRule{
+											Destination:     common.String("10.0.0.0/15"),
+											DestinationType: EgressSecurityRuleDestinationTypeCidrBlock,
+											Protocol:        common.String("all"),
+											UdpOptions: &UdpOptions{
+												DestinationPortRange: &PortRange{
+													Max: nil, // required
+													Min: nil, // required
+												},
+												SourcePortRange: &PortRange{
+													Max: nil, // required
+													Min: nil, // required
+												},
+											},
+											TcpOptions: &TcpOptions{
+												DestinationPortRange: &PortRange{
+													Max: nil, // required
+													Min: nil, // required
+												},
+												SourcePortRange: &PortRange{
+													Max: nil, // required
+													Min: nil, // required
+												},
+											},
+										},
+									}},
+								}},
+							},
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "",
+			multipleErrorMgsShouldContain: []string{
+				"invalid egressRules: UdpOptions DestinationPortRange Max may not be empty",
+				"invalid egressRules: UdpOptions DestinationPortRange Min may not be empty",
+				"invalid egressRules: UdpOptions SourcePortRange Max may not be empty",
+				"invalid egressRules: UdpOptions SourcePortRange Min may not be empty",
+				"invalid egressRules: TcpOptions DestinationPortRange Max may not be empty",
+				"invalid egressRules: TcpOptions DestinationPortRange Min may not be empty",
+				"invalid egressRules: TcpOptions SourcePortRange Max may not be empty",
+				"invalid egressRules: TcpOptions SourcePortRange Min may not be empty",
+			},
+			expectErr: true,
+		},
+		{
 			name: "shouldn't allow bad NSG ingress cidr",
 			c: &OCICluster{
 				ObjectMeta: metav1.ObjectMeta{
@@ -440,7 +570,7 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 					},
 				},
 			},
-			errorMgsShouldContain: "invalid ingressRule CIDR format",
+			errorMgsShouldContain: "invalid ingressRules: CIDR format",
 			expectErr:             true,
 		},
 		{
@@ -502,6 +632,66 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 			},
 			errorMgsShouldContain: "invalid ingressRules: Source may not be empty",
 			expectErr:             true,
+		},
+		{
+			name: "shouldn't allow empty NSG ingress rule required values for port ranges",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
+				Spec: OCIClusterSpec{
+					CompartmentId:         "ocid",
+					OCIResourceIdentifier: "uuid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							NetworkSecurityGroup: NetworkSecurityGroup{
+								List: []*NSG{{
+									Role: Custom,
+									IngressRules: []IngressSecurityRuleForNSG{{
+										IngressSecurityRule: IngressSecurityRule{
+											Source:     common.String("10.0.0.0/15"),
+											SourceType: IngressSecurityRuleSourceTypeCidrBlock,
+											Protocol:   common.String("all"),
+											UdpOptions: &UdpOptions{
+												DestinationPortRange: &PortRange{
+													Max: nil, // required
+													Min: nil, // required
+												},
+												SourcePortRange: &PortRange{
+													Max: nil, // required
+													Min: nil, // required
+												},
+											},
+											TcpOptions: &TcpOptions{
+												DestinationPortRange: &PortRange{
+													Max: nil, // required
+													Min: nil, // required
+												},
+												SourcePortRange: &PortRange{
+													Max: nil, // required
+													Min: nil, // required
+												},
+											},
+										},
+									}},
+								}},
+							},
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "",
+			multipleErrorMgsShouldContain: []string{
+				"invalid ingressRules: UdpOptions DestinationPortRange Max may not be empty",
+				"invalid ingressRules: UdpOptions DestinationPortRange Min may not be empty",
+				"invalid ingressRules: UdpOptions SourcePortRange Max may not be empty",
+				"invalid ingressRules: UdpOptions SourcePortRange Min may not be empty",
+				"invalid ingressRules: TcpOptions DestinationPortRange Max may not be empty",
+				"invalid ingressRules: TcpOptions DestinationPortRange Min may not be empty",
+				"invalid ingressRules: TcpOptions SourcePortRange Max may not be empty",
+				"invalid ingressRules: TcpOptions SourcePortRange Min may not be empty",
+			},
+			expectErr: true,
 		},
 		{
 			name: "shouldn't allow bad NSG role",
@@ -609,7 +799,16 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 			if test.expectErr {
 				_, err := (&OCIClusterWebhook{}).ValidateCreate(context.Background(), test.c)
 				g.Expect(err).NotTo(gomega.Succeed())
-				g.Expect(strings.Contains(err.Error(), test.errorMgsShouldContain)).To(gomega.BeTrue())
+
+				// handle the tests that produce multiple error messages
+				// to help keep the number of tests down
+				if len(test.multipleErrorMgsShouldContain) > 0 {
+					for _, errMgs := range test.multipleErrorMgsShouldContain {
+						g.Expect(strings.Contains(err.Error(), errMgs)).To(gomega.BeTrue())
+					}
+				} else {
+					g.Expect(strings.Contains(err.Error(), test.errorMgsShouldContain)).To(gomega.BeTrue())
+				}
 			} else {
 				_, err := (&OCIClusterWebhook{}).ValidateCreate(context.Background(), test.c)
 				g.Expect(err).To(gomega.Succeed())
