@@ -78,7 +78,7 @@ func GetClusterIdentityFromRef(ctx context.Context, c client.Client, ociClusterN
 // getOCIClientCertFromSecret returns the cert referenced by the OCICluster.
 func getOCIClientCertFromSecret(ctx context.Context, c client.Client, ociClusterNamespace string, overrides *infrastructurev1beta2.ClientOverrides) (*corev1.Secret, error) {
 	secret := &corev1.Secret{}
-	if overrides != nil {
+	if overrides != nil && overrides.CertOverride != nil {
 		certSecretRef := overrides.CertOverride
 		namespace := certSecretRef.Namespace
 		if namespace == "" {
