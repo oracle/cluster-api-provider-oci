@@ -206,3 +206,105 @@ func TestClusterScope_DeleteSecurityLists(t *testing.T) {
 		})
 	}
 }
+
+func TestClusterScope_UpdateSecurityLists(t *testing.T) {
+	type fields struct {
+		// placeholder for future scope fields if needed
+	}
+	type args struct {
+		spec infrastructurev1beta2.SecurityList
+	}
+	tests := []struct {
+		name                 string
+		fields               fields
+		args                 args
+		setupMock            func(t *testing.T, vcn *mock_vcn.MockClient)
+		wantErr              bool
+		expectedErrorMessage string
+	}{
+		{
+			name: "successfully updates security list when ID is set",
+			args: args{
+				spec: infrastructurev1beta2.SecurityList{
+					ID:   common.String("seclist-id"),
+					Name: "example-seclist",
+				},
+			},
+			setupMock: func(t *testing.T, vcn *mock_vcn.MockClient) {
+				vcn.EXPECT().
+					UpdateSecurityList(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(_ context.Context, req core.UpdateSecurityListRequest) (core.UpdateSecurityListResponse, error) {
+						if req.SecurityListId == nil || *req.SecurityListId != "seclist-id" {
+							t.Errorf("expected SecurityListId 'seclist-id', got %v", req.SecurityListId)
+						}
+						return core.UpdateSecurityListResponse{
+							SecurityList: core.SecurityList{Id: common.String("seclist-id")},
+						}, nil
+					})
+			},
+			wantErr: false,
+		},
+		{
+			name: "returns wrapped error when update fails",
+			args: args{
+				spec: infrastructurev1beta2.SecurityList{
+					ID:   common.String("seclist-id"),
+					Name: "example-seclist",
+				},
+			},
+			setupMock: func(t *testing.T, vcn *mock_vcn.MockClient) {
+				vcn.EXPECT().
+					UpdateSecurityList(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(_ context.Context, req core.UpdateSecurityListRequest) (core.UpdateSecurityListResponse, error) {
+						if req.SecurityListId == nil || *req.SecurityListId != "seclist-id" {
+							t.Errorf("expected SecurityListId 'seclist-id', got %v", req.SecurityListId)
+						}
+						return core.UpdateSecurityListResponse{}, errors.New("some update error")
+					})
+			},
+			wantErr:              true,
+			expectedErrorMessage: "failed to reconcile the security list, failed to update: some update error",
+		},
+		{
+			name: "panics when ID is nil",
+			args: args{
+				spec: infrastructurev1beta2.SecurityList{
+					// ID intentionally nil
+					Name: "example-seclist",
+				},
+			},
+			setupMock: func(t *testing.T, vcn *mock_vcn.MockClient) {
+				// no expectation; nil check occurs before client call
+			},
+			wantErr:              true,
+			expectedErrorMessage: "Update Security List failed: unable to update with a nil ID",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+			vcnClient := mock_vcn.NewMockClient(mockCtrl)
+			if tt.setupMock != nil {
+				tt.setupMock(t, vcnClient)
+			}
+
+			l := log.FromContext(context.Background())
+			s := &ClusterScope{
+				VCNClient: vcnClient,
+				Logger:    &l,
+			}
+
+			err := s.UpdateSecurityList(context.Background(), tt.args.spec)
+
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("UpdateSecurityList() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if err != nil && tt.expectedErrorMessage != "" && err.Error() != tt.expectedErrorMessage {
+				t.Fatalf("UpdateSecurityList() expected error = %q, got %q", tt.expectedErrorMessage, err.Error())
+			}
+		})
+	}
+}

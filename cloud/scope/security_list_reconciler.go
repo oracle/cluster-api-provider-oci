@@ -130,6 +130,11 @@ func (s *ClusterScope) IsSecurityListEqual(actual core.SecurityList, desired inf
 func (s *ClusterScope) UpdateSecurityList(ctx context.Context, securityListSpec infrastructurev1beta2.SecurityList) error {
 	var ingressRules []core.IngressSecurityRule
 	var egressRules []core.EgressSecurityRule
+
+	if securityListSpec.ID == nil {
+		return errors.New("Update Security List failed: unable to update with a nil ID")
+	}
+
 	for _, rule := range securityListSpec.EgressRules {
 		egressRules = append(egressRules, convertSecurityListEgressRule(rule))
 	}

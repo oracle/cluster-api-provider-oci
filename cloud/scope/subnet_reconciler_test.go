@@ -512,6 +512,29 @@ func TestClusterScope_ReconcileSubnet(t *testing.T) {
 			},
 		},
 		{
+			name: "create subnet error - nil subnets",
+			spec: infrastructurev1beta2.OCIClusterSpec{
+				CompartmentId: "foo",
+				NetworkSpec: infrastructurev1beta2.NetworkSpec{
+					Vcn: infrastructurev1beta2.VCN{
+						ID: common.String("vcn"),
+						RouteTable: infrastructurev1beta2.RouteTable{
+							PublicRouteTableId: common.String("public"),
+						},
+						Subnets: []*infrastructurev1beta2.Subnet{
+							nil,
+						},
+					},
+				},
+				DefinedTags: definedTags,
+			},
+			wantErr:       true,
+			expectedError: "Skipping Subnet reconciliation: Subnet can't be nil",
+			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_vcn.MockClient) {
+				// nothing should be called
+			},
+		},
+		{
 			name: "create security list error",
 			spec: infrastructurev1beta2.OCIClusterSpec{
 				CompartmentId: "foo",
