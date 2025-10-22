@@ -34,6 +34,9 @@ import (
 func (s *ClusterScope) ReconcileSubnet(ctx context.Context) error {
 	desiredSubnets := s.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets
 	for _, desiredSubnet := range desiredSubnets {
+		if desiredSubnet == nil {
+			return errors.New("Skipping Subnet reconciliation: Subnet can't be nil")
+		}
 		if desiredSubnet.Skip {
 			s.Logger.Info("Skipping Subnet reconciliation as per spec")
 			continue

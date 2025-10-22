@@ -458,6 +458,293 @@ func TestClusterScope_ReconcileRouteTable(t *testing.T) {
 	}
 }
 
+func TestClusterScope_CreateRouteTable(t *testing.T) {
+	type args struct {
+		routeTableType string
+		spec           infrastructurev1beta2.OCIClusterSpec
+		setupMock      func(t *testing.T, vcn *mock_vcn.MockClient)
+	}
+	tests := []struct {
+		name                 string
+		args                 args
+		wantErr              bool
+		expectedErrorMessage string
+	}{
+		{
+			name: "private without peering (NAT + Service routes only)",
+			args: args{
+				routeTableType: infrastructurev1beta2.Private,
+				spec: infrastructurev1beta2.OCIClusterSpec{
+					CompartmentId: "comp",
+					NetworkSpec: infrastructurev1beta2.NetworkSpec{
+						Vcn: infrastructurev1beta2.VCN{
+							ID: common.String("vcn1"),
+							NATGateway: infrastructurev1beta2.NATGateway{
+								Id: common.String("ngw"),
+							},
+							ServiceGateway: infrastructurev1beta2.ServiceGateway{
+								Id: common.String("sgw"),
+							},
+						},
+					},
+				},
+				setupMock: func(t *testing.T, vcn *mock_vcn.MockClient) {
+					_ = core.CreateRouteTableRequest{
+						CreateRouteTableDetails: core.CreateRouteTableDetails{
+							VcnId:         common.String("vcn1"),
+							CompartmentId: common.String("comp"),
+							DisplayName:   common.String(PrivateRouteTableName),
+							FreeformTags:  map[string]string{},
+							DefinedTags:   map[string]map[string]interface{}{},
+							RouteRules: []core.RouteRule{
+								{
+									DestinationType: core.RouteRuleDestinationTypeCidrBlock,
+									Destination:     common.String("0.0.0.0/0"),
+									NetworkEntityId: common.String("ngw"),
+									Description:     common.String("traffic to the internet"),
+								},
+								{
+									DestinationType: core.RouteRuleDestinationTypeServiceCidrBlock,
+									Destination:     common.String("all-iad-services-in-oracle-services-network"),
+									NetworkEntityId: common.String("sgw"),
+									Description:     common.String("traffic to OCI services"),
+								},
+							},
+						},
+					}
+					vcn.EXPECT().
+						CreateRouteTable(gomock.Any(), gomock.Any()).
+						DoAndReturn(func(_ context.Context, req core.CreateRouteTableRequest) (core.CreateRouteTableResponse, error) {
+							// Validate core fields; ignore tags differences
+							if req.CreateRouteTableDetails.VcnId == nil || *req.CreateRouteTableDetails.VcnId != "vcn1" {
+								t.Errorf("expected VcnId=vcn1, got %v", req.CreateRouteTableDetails.VcnId)
+							}
+							if req.CreateRouteTableDetails.CompartmentId == nil || *req.CreateRouteTableDetails.CompartmentId != "comp" {
+								t.Errorf("expected CompartmentId=comp, got %v", req.CreateRouteTableDetails.CompartmentId)
+							}
+							if req.CreateRouteTableDetails.DisplayName == nil || *req.CreateRouteTableDetails.DisplayName != PrivateRouteTableName {
+								t.Errorf("expected DisplayName=%s, got %v", PrivateRouteTableName, req.CreateRouteTableDetails.DisplayName)
+							}
+							rr := req.CreateRouteTableDetails.RouteRules
+							if len(rr) != 2 {
+								t.Fatalf("expected 2 route rules, got %d", len(rr))
+							}
+							// NAT route
+							if rr[0].Destination == nil || *rr[0].Destination != "0.0.0.0/0" {
+								t.Errorf("expected rule[0] dest 0.0.0.0/0, got %v", rr[0].Destination)
+							}
+							if rr[0].NetworkEntityId == nil || *rr[0].NetworkEntityId != "ngw" {
+								t.Errorf("expected rule[0] NEI=ngw, got %v", rr[0].NetworkEntityId)
+							}
+							// Service gateway route
+							if rr[1].Destination == nil || *rr[1].Destination != "all-iad-services-in-oracle-services-network" {
+								t.Errorf("expected rule[1] dest all-iad-services-in-oracle-services-network, got %v", rr[1].Destination)
+							}
+							if rr[1].NetworkEntityId == nil || *rr[1].NetworkEntityId != "sgw" {
+								t.Errorf("expected rule[1] NEI=sgw, got %v", rr[1].NetworkEntityId)
+							}
+							return core.CreateRouteTableResponse{RouteTable: core.RouteTable{Id: common.String("rt")}}, nil
+						})
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "private with peering (adds DRG peer routes)",
+			args: args{
+				routeTableType: infrastructurev1beta2.Private,
+				spec: infrastructurev1beta2.OCIClusterSpec{
+					CompartmentId: "comp",
+					NetworkSpec: infrastructurev1beta2.NetworkSpec{
+						VCNPeering: &infrastructurev1beta2.VCNPeering{
+							DRG: &infrastructurev1beta2.DRG{ID: common.String("drg-id")},
+							PeerRouteRules: []infrastructurev1beta2.PeerRouteRule{
+								{VCNCIDRRange: "10.1.0.0/16"},
+							},
+						},
+						Vcn: infrastructurev1beta2.VCN{
+							ID: common.String("vcn1"),
+							NATGateway: infrastructurev1beta2.NATGateway{
+								Id: common.String("ngw"),
+							},
+							ServiceGateway: infrastructurev1beta2.ServiceGateway{
+								Id: common.String("sgw"),
+							},
+						},
+					},
+				},
+				setupMock: func(t *testing.T, vcn *mock_vcn.MockClient) {
+					_ = core.CreateRouteTableRequest{
+						CreateRouteTableDetails: core.CreateRouteTableDetails{
+							VcnId:         common.String("vcn1"),
+							CompartmentId: common.String("comp"),
+							DisplayName:   common.String(PrivateRouteTableName),
+							FreeformTags:  map[string]string{},
+							DefinedTags:   map[string]map[string]interface{}{},
+							RouteRules: []core.RouteRule{
+								{
+									DestinationType: core.RouteRuleDestinationTypeCidrBlock,
+									Destination:     common.String("0.0.0.0/0"),
+									NetworkEntityId: common.String("ngw"),
+									Description:     common.String("traffic to the internet"),
+								},
+								{
+									DestinationType: core.RouteRuleDestinationTypeServiceCidrBlock,
+									Destination:     common.String("all-iad-services-in-oracle-services-network"),
+									NetworkEntityId: common.String("sgw"),
+									Description:     common.String("traffic to OCI services"),
+								},
+								{
+									DestinationType: core.RouteRuleDestinationTypeCidrBlock,
+									Destination:     common.String("10.1.0.0/16"),
+									NetworkEntityId: common.String("drg-id"),
+									Description:     common.String("traffic to peer DRG"),
+								},
+							},
+						},
+					}
+					vcn.EXPECT().
+						CreateRouteTable(gomock.Any(), gomock.Any()).
+						DoAndReturn(func(_ context.Context, req core.CreateRouteTableRequest) (core.CreateRouteTableResponse, error) {
+							// Validate core fields; ignore tags differences
+							if req.CreateRouteTableDetails.VcnId == nil || *req.CreateRouteTableDetails.VcnId != "vcn1" {
+								t.Errorf("expected VcnId=vcn1, got %v", req.CreateRouteTableDetails.VcnId)
+							}
+							if req.CreateRouteTableDetails.CompartmentId == nil || *req.CreateRouteTableDetails.CompartmentId != "comp" {
+								t.Errorf("expected CompartmentId=comp, got %v", req.CreateRouteTableDetails.CompartmentId)
+							}
+							if req.CreateRouteTableDetails.DisplayName == nil || *req.CreateRouteTableDetails.DisplayName != PrivateRouteTableName {
+								t.Errorf("expected DisplayName=%s, got %v", PrivateRouteTableName, req.CreateRouteTableDetails.DisplayName)
+							}
+							rr := req.CreateRouteTableDetails.RouteRules
+							if len(rr) != 3 {
+								t.Fatalf("expected 3 route rules, got %d", len(rr))
+							}
+							// NAT route
+							if rr[0].Destination == nil || *rr[0].Destination != "0.0.0.0/0" {
+								t.Errorf("expected rule[0] dest 0.0.0.0/0, got %v", rr[0].Destination)
+							}
+							if rr[0].NetworkEntityId == nil || *rr[0].NetworkEntityId != "ngw" {
+								t.Errorf("expected rule[0] NEI=ngw, got %v", rr[0].NetworkEntityId)
+							}
+							// Service gateway route
+							if rr[1].Destination == nil || *rr[1].Destination != "all-iad-services-in-oracle-services-network" {
+								t.Errorf("expected rule[1] dest all-iad-services-in-oracle-services-network, got %v", rr[1].Destination)
+							}
+							if rr[1].NetworkEntityId == nil || *rr[1].NetworkEntityId != "sgw" {
+								t.Errorf("expected rule[1] NEI=sgw, got %v", rr[1].NetworkEntityId)
+							}
+							// DRG peering route
+							if rr[2].Destination == nil || *rr[2].Destination != "10.1.0.0/16" {
+								t.Errorf("expected rule[2] dest 10.1.0.0/16, got %v", rr[2].Destination)
+							}
+							if rr[2].NetworkEntityId == nil || *rr[2].NetworkEntityId != "drg-id" {
+								t.Errorf("expected rule[2] NEI=drg-id, got %v", rr[2].NetworkEntityId)
+							}
+							return core.CreateRouteTableResponse{RouteTable: core.RouteTable{Id: common.String("rt")}}, nil
+						})
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "private with peering but DRG is nil",
+			args: args{
+				routeTableType: infrastructurev1beta2.Private,
+				spec: infrastructurev1beta2.OCIClusterSpec{
+					CompartmentId: "comp",
+					NetworkSpec: infrastructurev1beta2.NetworkSpec{
+						VCNPeering: &infrastructurev1beta2.VCNPeering{
+							DRG:                      nil, // Intentionally set to nil
+							PeerRouteRules:           []infrastructurev1beta2.PeerRouteRule{{VCNCIDRRange: "10.1.0.0/16"}},
+							RemotePeeringConnections: nil,
+						},
+						Vcn: infrastructurev1beta2.VCN{
+							ID: common.String("vcn1"),
+							NATGateway: infrastructurev1beta2.NATGateway{
+								Id: common.String("ngw"),
+							},
+							ServiceGateway: infrastructurev1beta2.ServiceGateway{
+								Id: common.String("sgw"),
+							},
+						},
+					},
+				},
+				setupMock: func(t *testing.T, vcn *mock_vcn.MockClient) {
+					// No CreateRouteTable call expected because we error out before
+					vcn.EXPECT().CreateRouteTable(gomock.Any(), gomock.Any()).Times(0)
+				},
+			},
+			wantErr:              true,
+			expectedErrorMessage: "Create Route Table: DRG has not been specified",
+		},
+		{
+			name: "private with peering but DRG ID is nil",
+			args: args{
+				routeTableType: infrastructurev1beta2.Private,
+				spec: infrastructurev1beta2.OCIClusterSpec{
+					CompartmentId: "comp",
+					NetworkSpec: infrastructurev1beta2.NetworkSpec{
+						VCNPeering: &infrastructurev1beta2.VCNPeering{
+							DRG:            &infrastructurev1beta2.DRG{ID: nil},
+							PeerRouteRules: []infrastructurev1beta2.PeerRouteRule{{VCNCIDRRange: "10.1.0.0/16"}},
+						},
+						Vcn: infrastructurev1beta2.VCN{
+							ID: common.String("vcn1"),
+							NATGateway: infrastructurev1beta2.NATGateway{
+								Id: common.String("ngw"),
+							},
+							ServiceGateway: infrastructurev1beta2.ServiceGateway{
+								Id: common.String("sgw"),
+							},
+						},
+					},
+				},
+				setupMock: func(t *testing.T, vcn *mock_vcn.MockClient) {
+					// No CreateRouteTable call expected because we error out before
+					vcn.EXPECT().CreateRouteTable(gomock.Any(), gomock.Any()).Times(0)
+				},
+			},
+			wantErr:              true,
+			expectedErrorMessage: "Create Route Table: DRG ID has not been set",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+			vcnClient := mock_vcn.NewMockClient(mockCtrl)
+			if tt.args.setupMock != nil {
+				tt.args.setupMock(t, vcnClient)
+			}
+
+			l := log.FromContext(context.Background())
+			ociClusterAccessor := OCISelfManagedCluster{
+				OCICluster: &infrastructurev1beta2.OCICluster{
+					ObjectMeta: metav1.ObjectMeta{UID: "cluster_uid"},
+					Spec:       tt.args.spec,
+				},
+			}
+			s := &ClusterScope{
+				VCNClient:          vcnClient,
+				OCIClusterAccessor: ociClusterAccessor,
+				Logger:             &l,
+				RegionKey:          "iad",
+			}
+
+			_, err := s.CreateRouteTable(context.Background(), tt.args.routeTableType)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("CreateRouteTable() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if err != nil && tt.expectedErrorMessage != "" && err.Error() != tt.expectedErrorMessage {
+				t.Fatalf("CreateRouteTable() expected error = %q, got %q", tt.expectedErrorMessage, err.Error())
+			}
+		})
+	}
+}
+
 func TestClusterScope_DeleteRouteTables(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
