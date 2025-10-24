@@ -206,13 +206,13 @@ func (r *OCIManagedClusterReconciler) reconcile(ctx context.Context, logger logr
 			return ctrl.Result{}, err
 		}
 
-		if err := r.reconcileComponent(ctx, ociManagedCluster, clusterScope.ReconcileDRG, "DRG",
-			infrastructurev1beta2.DrgReconciliationFailedReason, infrastructurev1beta2.DrgEventReady); err != nil {
+		if err := r.reconcileComponent(ctx, ociManagedCluster, clusterScope.ReconcileVCN, "VCN",
+			infrastructurev1beta2.VcnReconciliationFailedReason, infrastructurev1beta2.VcnEventReady); err != nil {
 			return ctrl.Result{}, err
 		}
 
-		if err := r.reconcileComponent(ctx, ociManagedCluster, clusterScope.ReconcileVCN, "VCN",
-			infrastructurev1beta2.VcnReconciliationFailedReason, infrastructurev1beta2.VcnEventReady); err != nil {
+		if err := r.reconcileComponent(ctx, ociManagedCluster, clusterScope.ReconcileDRG, "DRG",
+			infrastructurev1beta2.DrgReconciliationFailedReason, infrastructurev1beta2.DrgEventReady); err != nil {
 			return ctrl.Result{}, err
 		}
 

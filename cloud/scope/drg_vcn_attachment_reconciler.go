@@ -91,7 +91,7 @@ func (s *ClusterScope) GetDRGAttachment(ctx context.Context) (*core.DrgAttachmen
 		DisplayName:    common.String(s.OCIClusterAccessor.GetName()),
 		DrgId:          s.getDrgID(),
 		NetworkId:      s.OCIClusterAccessor.GetNetworkSpec().Vcn.ID,
-		CompartmentId:  common.String(s.GetCompartmentId()),
+		CompartmentId:  common.String(s.GetNetworkCompartmentId()),
 	})
 
 	if err != nil {
