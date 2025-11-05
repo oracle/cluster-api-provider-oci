@@ -1863,6 +1863,7 @@ func autoConvert_v1beta1_NLBSpec_To_v1beta2_NLBSpec(in *NLBSpec, out *v1beta2.NL
 	if err := Convert_v1beta1_BackendSetDetails_To_v1beta2_BackendSetDetails(&in.BackendSetDetails, &out.BackendSetDetails, s); err != nil {
 		return err
 	}
+	out.ReservedIpIds = *(*[]string)(unsafe.Pointer(&in.ReservedIpIds))
 	return nil
 }
 
@@ -1875,6 +1876,7 @@ func autoConvert_v1beta2_NLBSpec_To_v1beta1_NLBSpec(in *v1beta2.NLBSpec, out *NL
 	if err := Convert_v1beta2_BackendSetDetails_To_v1beta1_BackendSetDetails(&in.BackendSetDetails, &out.BackendSetDetails, s); err != nil {
 		return err
 	}
+	out.ReservedIpIds = *(*[]string)(unsafe.Pointer(&in.ReservedIpIds))
 	return nil
 }
 
