@@ -811,7 +811,7 @@ func getOCIManagedClusterWithNoOwner() *infrastructurev1beta2.OCIManagedCluster 
 					ID: common.String("vcn-id"),
 					Subnets: []*infrastructurev1beta2.Subnet{
 						{
-							Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+							Role: infrastructurev1beta2.WorkerRole,
 							ID:   common.String("subnet-id"),
 							Type: infrastructurev1beta2.Private,
 							Name: "worker-subnet",

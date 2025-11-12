@@ -71,7 +71,7 @@ func (s *ClusterScope) CreateServiceGateway(ctx context.Context) (*string, error
 	}
 
 	sgwDetails := core.CreateServiceGatewayDetails{
-		CompartmentId: common.String(s.GetCompartmentId()),
+		CompartmentId: common.String(s.GetNetworkCompartmentId()),
 		DisplayName:   common.String(ServiceGatewayName),
 		VcnId:         s.getVcnId(),
 		Services:      []core.ServiceIdRequestDetails{{ServiceId: common.String(serviceOcid)}},
@@ -131,7 +131,7 @@ func (s *ClusterScope) GetServiceGateway(ctx context.Context) (*core.ServiceGate
 		}
 	}
 	sgws, err := s.VCNClient.ListServiceGateways(ctx, core.ListServiceGatewaysRequest{
-		CompartmentId: common.String(s.GetCompartmentId()),
+		CompartmentId: common.String(s.GetNetworkCompartmentId()),
 		VcnId:         s.getVcnId(),
 	})
 	if err != nil {

@@ -1022,6 +1022,7 @@ func TestClusterScope_IsSubnetsEqual(t *testing.T) {
 			want: true,
 		},
 		{
+			// Modified this test because returning nil was actually a bad logic, causing infinite reconciliation is SecurityListId was not specified
 			name: "desired security list id nil",
 			actual: core.Subnet{
 				DisplayName:     common.String("name"),
@@ -1035,7 +1036,7 @@ func TestClusterScope_IsSubnetsEqual(t *testing.T) {
 					// ID intentionally nil
 				},
 			},
-			want: false,
+			want: true,
 		},
 		{
 			name: "desired security list present but actual has none",

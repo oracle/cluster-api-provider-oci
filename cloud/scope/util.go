@@ -17,8 +17,14 @@ limitations under the License.
 package scope
 
 import (
+	"context"
+	"fmt"
+
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
+	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
+	"github.com/oracle/oci-go-sdk/v65/common"
+	"github.com/oracle/oci-go-sdk/v65/core"
 )
 
 const (
@@ -42,10 +48,16 @@ func GetNsgNamesFromId(ids []string, nsgs []*infrastructurev1beta2.NSG) []string
 }
 
 // GetSubnetNameFromId returns the name of the Subnet with the provided ID
-func GetSubnetNameFromId(id *string, subnets []*infrastructurev1beta2.Subnet) string {
+func GetSubnetNameFromId(id *string, subnets []*infrastructurev1beta2.Subnet, client vcn.Client) string {
 	for _, subnet := range ptr.ToSubnetSlice(subnets) {
 		if ptr.ToString(id) == ptr.ToString(subnet.ID) {
 			return subnet.Name
+		}
+	}
+	if client != nil {
+		resp, err := client.GetSubnet(context.TODO(), core.GetSubnetRequest{SubnetId: id})
+		if err == nil && resp.Subnet.DisplayName != nil {
+			return *resp.Subnet.DisplayName
 		}
 	}
 	return ""
@@ -79,4 +91,20 @@ func ConvertMachineDefinedTags(machineDefinedTags map[string]map[string]string) 
 	}
 
 	return definedTags
+}
+
+// GetSubnetIdFromName returns the OCID of the subnet with the given display name in the specified compartment
+func GetSubnetIdFromName(ctx context.Context, client vcn.Client, compartmentId, subnetName string) (string, error) {
+	resp, err := client.ListSubnets(ctx, core.ListSubnetsRequest{
+		CompartmentId: common.String(compartmentId),
+	})
+	if err != nil {
+		return "", err
+	}
+	for _, subnet := range resp.Items {
+		if subnet.DisplayName != nil && *subnet.DisplayName == subnetName {
+			return *subnet.Id, nil
+		}
+	}
+	return "", fmt.Errorf("subnet with name %s not found in compartment %s", subnetName, compartmentId)
 }

@@ -250,6 +250,14 @@ func (s *ClusterScope) GetCompartmentId() string {
 	return s.OCIClusterAccessor.GetCompartmentId()
 }
 
+// GetNetworkCompartmentId returns the CompartmentId defined for the network otherwise returns the compartment defined in the OCICluster's spec
+func (s *ClusterScope) GetNetworkCompartmentId() string {
+	if s.OCIClusterAccessor.GetNetworkCompartmentId() == "" {
+		return s.GetCompartmentId()
+	}
+	return s.OCIClusterAccessor.GetNetworkCompartmentId()
+}
+
 // APIServerPort returns the APIServerPort to use when creating the load balancer.
 func (s *ClusterScope) APIServerPort() int32 {
 	if s.Cluster.Spec.ClusterNetwork != nil && s.Cluster.Spec.ClusterNetwork.APIServerPort != nil {
