@@ -32,6 +32,10 @@ func (s *ClusterScope) ReconcileDRGVCNAttachment(ctx context.Context) error {
 		return nil
 	}
 
+	if s.getDRG() == nil {
+		return errors.New("DRG is nil")
+	}
+
 	attachment, err := s.GetDRGAttachment(ctx)
 	if err != nil {
 		return err
@@ -65,6 +69,9 @@ func (s *ClusterScope) ReconcileDRGVCNAttachment(ctx context.Context) error {
 
 // nolint:nilnil
 func (s *ClusterScope) GetDRGAttachment(ctx context.Context) (*core.DrgAttachment, error) {
+	if s.getDRG() == nil {
+		return nil, errors.New("DRG is nil")
+	}
 	if s.getDRG().VcnAttachmentId != nil {
 		response, err := s.VCNClient.GetDrgAttachment(ctx, core.GetDrgAttachmentRequest{
 			DrgAttachmentId: s.getDRG().VcnAttachmentId,

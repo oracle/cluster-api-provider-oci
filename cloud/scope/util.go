@@ -39,7 +39,7 @@ func GetNsgNamesFromId(ids []string, nsgs []*infrastructurev1beta2.NSG) []string
 	names := make([]string, 0)
 	for _, id := range ids {
 		for _, nsg := range ptr.ToNSGSlice(nsgs) {
-			if nsg.ID != nil && id == *nsg.ID {
+			if id == ptr.ToString(nsg.ID) {
 				names = append(names, nsg.Name)
 			}
 		}
@@ -50,7 +50,7 @@ func GetNsgNamesFromId(ids []string, nsgs []*infrastructurev1beta2.NSG) []string
 // GetSubnetNameFromId returns the name of the Subnet with the provided ID
 func GetSubnetNameFromId(id *string, subnets []*infrastructurev1beta2.Subnet, client vcn.Client) string {
 	for _, subnet := range ptr.ToSubnetSlice(subnets) {
-		if subnet.ID != nil && *id == *subnet.ID {
+		if ptr.ToString(id) == ptr.ToString(subnet.ID) {
 			return subnet.Name
 		}
 	}
@@ -68,7 +68,7 @@ func GetSubnetNamesFromId(ids []string, subnets []*infrastructurev1beta2.Subnet)
 	names := make([]string, 0)
 	for _, id := range ids {
 		for _, subnet := range ptr.ToSubnetSlice(subnets) {
-			if subnet.ID != nil && id == *subnet.ID {
+			if id == ptr.ToString(subnet.ID) {
 				names = append(names, subnet.Name)
 			}
 		}

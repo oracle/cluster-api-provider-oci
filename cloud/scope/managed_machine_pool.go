@@ -560,8 +560,8 @@ func (m *ManagedMachinePoolScope) getPodSubnets(ctx context.Context, subnets []s
 	if len(subnets) > 0 {
 		for _, subnetName := range subnets {
 			for _, subnet := range ptr.ToSubnetSlice(m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets) {
-				if subnet.ID != nil && subnet.Name == subnetName {
-					subnetList = append(subnetList, *subnet.ID)
+				if subnet.Name == subnetName {
+					subnetList = append(subnetList, ptr.ToString(subnet.ID))
 				}
 				if subnet.ID == nil && subnet.Name == subnetName {
 					subnetId, err := GetSubnetIdFromName(ctx, m.VCNClient, m.getNetworkCompartmentId(), subnet.Name)

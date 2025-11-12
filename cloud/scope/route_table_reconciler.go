@@ -134,6 +134,13 @@ func (s *ClusterScope) CreateRouteTable(ctx context.Context, routeTableType stri
 		}
 		vcnPeering := s.OCIClusterAccessor.GetNetworkSpec().VCNPeering
 		if vcnPeering != nil {
+			if s.getDRG() == nil {
+				return nil, errors.New("Create Route Table: DRG has not been specified")
+			}
+			if s.getDrgID() == nil {
+				return nil, errors.New("Create Route Table: DRG ID has not been set")
+			}
+
 			for _, routeRule := range vcnPeering.PeerRouteRules {
 				routeRules = append(routeRules, core.RouteRule{
 					DestinationType: core.RouteRuleDestinationTypeCidrBlock,

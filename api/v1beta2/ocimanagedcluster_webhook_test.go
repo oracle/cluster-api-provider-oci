@@ -338,7 +338,7 @@ func TestOCIManagedCluster_ValidateCreate(t *testing.T) {
 					},
 				},
 			},
-			errorMgsShouldContain: "invalid egressRules CIDR format",
+			errorMgsShouldContain: "invalid egressRules: CIDR format",
 			expectErr:             true,
 		},
 		{
@@ -364,7 +364,7 @@ func TestOCIManagedCluster_ValidateCreate(t *testing.T) {
 					},
 				},
 			},
-			errorMgsShouldContain: "invalid ingressRule CIDR format",
+			errorMgsShouldContain: "invalid ingressRules: CIDR format",
 			expectErr:             true,
 		},
 		{

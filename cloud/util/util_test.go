@@ -879,3 +879,40 @@ func TestDeleteManagedMachinesIfNotExists(t *testing.T) {
 		})
 	}
 }
+
+func TestGetOCIClientCertFromSecret(t *testing.T) {
+	testCases := []struct {
+		name          string
+		overrides     *infrastructurev1beta2.ClientOverrides
+		objects       []client.Object
+		errorExpected bool
+		errorMessage  string
+	}{
+		{
+			name: "NPE case - nil CertOverride",
+			overrides: &infrastructurev1beta2.ClientOverrides{
+				CertOverride: nil, // This should cause NPE
+			},
+			objects:       []client.Object{},
+			errorExpected: true, // Should panic or return error
+		},
+		// Add more test cases...
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			client := fake.NewClientBuilder().WithObjects(tt.objects...).Build()
+
+			// This should either panic or return an error
+			_, err := getOCIClientCertFromSecret(context.Background(), client, "default", tt.overrides)
+
+			if tt.errorExpected {
+				// Currently this will panic, but after the fix it should return an error
+				g.Expect(err).To(Not(BeNil()))
+			} else {
+				g.Expect(err).To(BeNil())
+			}
+		})
+	}
+}

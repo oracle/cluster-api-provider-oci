@@ -32,13 +32,16 @@ import (
 )
 
 func (s *ClusterScope) ReconcileSubnet(ctx context.Context) error {
-	desiredSubnets := ptr.ToSubnetSlice(s.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets)
+	desiredSubnets := s.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets
 	for _, desiredSubnet := range desiredSubnets {
+		if desiredSubnet == nil {
+			return errors.New("Skipping Subnet reconciliation: Subnet can't be nil")
+		}
 		if desiredSubnet.Skip {
 			s.Logger.Info("Skipping Subnet reconciliation as per spec")
 			continue
 		}
-		subnet, err := s.GetSubnet(ctx, desiredSubnet)
+		subnet, err := s.GetSubnet(ctx, *desiredSubnet)
 		if err != nil {
 			return err
 		}
@@ -69,10 +72,10 @@ func (s *ClusterScope) ReconcileSubnet(ctx context.Context) error {
 					}
 				}
 			}
-			if s.IsSubnetsEqual(subnet, desiredSubnet) {
+			if s.IsSubnetsEqual(subnet, *desiredSubnet) {
 				s.Logger.Info("No Reconciliation Required for Subnet", "subnet", subnetOCID)
 			} else {
-				err = s.UpdateSubnet(ctx, desiredSubnet)
+				err = s.UpdateSubnet(ctx, *desiredSubnet)
 				if err != nil {
 					return err
 				}
@@ -90,7 +93,7 @@ func (s *ClusterScope) ReconcileSubnet(ctx context.Context) error {
 			s.Logger.Info("Created the security list", "ocid", seclistId)
 			desiredSubnet.SecurityList.ID = seclistId
 		}
-		subnetId, err := s.CreateSubnet(ctx, desiredSubnet)
+		subnetId, err := s.CreateSubnet(ctx, *desiredSubnet)
 		if err != nil {
 			return err
 		}
@@ -197,13 +200,13 @@ func (s *ClusterScope) UpdateSubnet(ctx context.Context, spec infrastructurev1be
 }
 
 func (s *ClusterScope) DeleteSubnets(ctx context.Context) error {
-	desiredSubnets := ptr.ToSubnetSlice(s.GetSubnetsSpec())
+	desiredSubnets := s.GetSubnetsSpec()
 	for _, desiredSubnet := range desiredSubnets {
 		if desiredSubnet.Skip {
 			s.Logger.Info("Skipping Subnet reconciliation as per spec")
 			continue
 		}
-		subnet, err := s.GetSubnet(ctx, desiredSubnet)
+		subnet, err := s.GetSubnet(ctx, *desiredSubnet)
 		if err != nil && !ociutil.IsNotFound(err) {
 			return err
 		}
@@ -326,7 +329,9 @@ func (s *ClusterScope) isControlPlaneEndpointSubnetPrivate() bool {
 }
 
 func (s *ClusterScope) GetControlPlaneEndpointSubnetCidr() string {
-	for _, subnet := range ptr.ToSubnetSlice(s.GetSubnetsSpec()) {
+	subnetSlice := ptr.ToSubnetSlice(s.GetSubnetsSpec())
+	for i := range subnetSlice {
+		subnet := &subnetSlice[i]
 		if subnet.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
 			if subnet.CIDR != "" {
 				return subnet.CIDR
@@ -337,7 +342,9 @@ func (s *ClusterScope) GetControlPlaneEndpointSubnetCidr() string {
 }
 
 func (s *ClusterScope) GetServiceLoadBalancerSubnetCidr() string {
-	for _, subnet := range ptr.ToSubnetSlice(s.GetSubnetsSpec()) {
+	subnetSlice := ptr.ToSubnetSlice(s.GetSubnetsSpec())
+	for i := range subnetSlice {
+		subnet := &subnetSlice[i]
 		if subnet.Role == infrastructurev1beta2.ServiceLoadBalancerRole {
 			if subnet.CIDR != "" {
 				return subnet.CIDR
@@ -348,9 +355,10 @@ func (s *ClusterScope) GetServiceLoadBalancerSubnetCidr() string {
 }
 
 func (s *ClusterScope) NodeSubnetCidr() []string {
-	subnets := s.GetNodeSubnet()
 	var nodeCIDR []string
-	for _, subnet := range ptr.ToSubnetSlice(subnets) {
+	subnetSlice := ptr.ToSubnetSlice(s.GetNodeSubnet())
+	for i := range subnetSlice {
+		subnet := &subnetSlice[i]
 		if subnet.CIDR != "" {
 			nodeCIDR = append(nodeCIDR, subnet.CIDR)
 		}
@@ -373,7 +381,9 @@ func (s *ClusterScope) GetControlPlaneMachineSubnetCidr() string {
 
 // IsAllSubnetsPrivate determines if all the ClusterScope's subnets are private
 func (s *ClusterScope) IsAllSubnetsPrivate() bool {
-	for _, subnet := range ptr.ToSubnetSlice(s.GetSubnetsSpec()) {
+	subnetSlice := ptr.ToSubnetSlice(s.GetSubnetsSpec())
+	for i := range subnetSlice {
+		subnet := &subnetSlice[i]
 		if subnet.Type == infrastructurev1beta2.Public {
 			return false
 		}
