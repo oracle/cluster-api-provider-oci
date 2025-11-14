@@ -183,6 +183,12 @@ func (s *ClusterScope) CreateNLB(ctx context.Context, lb infrastructurev1beta2.L
 			}
 		}
 	}
+	var reservedIps []networkloadbalancer.ReservedIp
+	if len(lb.NLBSpec.ReservedIpIds) > 0 {
+		// since max is one we only take the first ip id supplied
+		reservedIps = append(reservedIps, networkloadbalancer.ReservedIp{Id: common.String(lb.NLBSpec.ReservedIpIds[0])})
+	}
+
 	if len(controlPlaneEndpointSubnets) < 1 {
 		return nil, nil, errors.New("control plane endpoint subnet not provided")
 	}
@@ -199,6 +205,7 @@ func (s *ClusterScope) CreateNLB(ctx context.Context, lb infrastructurev1beta2.L
 		BackendSets:   backendSetDetails,
 		FreeformTags:  s.GetFreeFormTags(),
 		DefinedTags:   s.GetDefinedTags(),
+		ReservedIps:   reservedIps,
 	}
 	nsgs := make([]string, 0)
 	for _, nsg := range ptr.ToNSGSlice(s.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List) {

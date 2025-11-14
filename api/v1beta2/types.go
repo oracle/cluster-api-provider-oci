@@ -1001,6 +1001,12 @@ type NLBSpec struct {
 	// BackendSetDetails specifies the configuration of a network load balancer backend set.
 	// +optional
 	BackendSetDetails BackendSetDetails `json:"backendSetDetails,omitempty"`
+
+	// A list of a reserved Ip OCID
+	// Min Items: 0
+	// Max Items: 1
+	// +optional
+	ReservedIpIds []string `json:"reservedIpIds,omitempty"`
 }
 
 // BackendSetDetails specifies the configuration of a network load balancer backend set.
