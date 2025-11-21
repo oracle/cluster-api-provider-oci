@@ -42,4 +42,8 @@ tilt-settings.json
 
 
 # git worktrees
-worktrees/
+worktrees/capoci-example-cluster.kubeconfig
+capoci-example-cluster.yaml
+env.sh
+provider-config-example.yaml
+capoci-example-cluster.kubeconfig

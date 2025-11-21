@@ -83,3 +83,66 @@ func TestAddToDefaultClusterTags(t *testing.T) {
 		}
 	}
 }
+
+func TestIsOutOfHostCapacityError(t *testing.T) {
+	testCases := []struct {
+		name     string
+		err      error
+		expected bool
+	}{
+		{
+			name:     "matches by code",
+			err:      fakeServiceError{code: "OutOfHostCapacity", message: "any"},
+			expected: true,
+		},
+		{
+			name:     "matches by message",
+			err:      fakeServiceError{code: "Other", message: "Instance launch failed due to out of host capacity"},
+			expected: true,
+		},
+		{
+			name:     "non service error",
+			err:      fmt.Errorf("boom"),
+			expected: false,
+		},
+		{
+			name:     "nil error",
+			err:      nil,
+			expected: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := IsOutOfHostCapacityError(tc.err)
+			if actual != tc.expected {
+				t.Fatalf("expected %t but got %t for test %s", tc.expected, actual, tc.name)
+			}
+		})
+	}
+}
+
+type fakeServiceError struct {
+	code    string
+	message string
+}
+
+func (f fakeServiceError) Error() string {
+	return f.message
+}
+
+func (f fakeServiceError) GetHTTPStatusCode() int {
+	return 400
+}
+
+func (f fakeServiceError) GetMessage() string {
+	return f.message
+}
+
+func (f fakeServiceError) GetCode() string {
+	return f.code
+}
+
+func (f fakeServiceError) GetOpcRequestID() string {
+	return ""
+}

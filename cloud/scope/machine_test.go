@@ -321,6 +321,130 @@ func TestInstanceReconciliation(t *testing.T) {
 			},
 		},
 		{
+			name:          "retries alternate fault domains on capacity errors",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				setupAllParams(ms)
+				ociCluster := ms.OCIClusterAccessor.(OCISelfManagedCluster).OCICluster
+				ociCluster.Status.FailureDomains = map[string]clusterv1.FailureDomainSpec{
+					"1": {
+						Attributes: map[string]string{
+							"AvailabilityDomain": "ad1",
+							"FaultDomain":        "FAULT-DOMAIN-1",
+						},
+					},
+					"2": {
+						Attributes: map[string]string{
+							"AvailabilityDomain": "ad1",
+							"FaultDomain":        "FAULT-DOMAIN-2",
+						},
+					},
+				}
+				ms.Machine.Spec.FailureDomain = common.String("1")
+				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
+					DisplayName:   common.String("name"),
+					CompartmentId: common.String("test"),
+				})).Return(core.ListInstancesResponse{}, nil)
+
+				first := computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
+					return faultDomainRequestMatcher(request, "FAULT-DOMAIN-1")
+				})).Return(core.LaunchInstanceResponse{}, newOutOfCapacityServiceError("out of host capacity"))
+
+				second := computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
+					return faultDomainRequestMatcher(request, "FAULT-DOMAIN-2")
+				})).Return(core.LaunchInstanceResponse{
+					Instance: core.Instance{
+						Id: common.String("instance-id"),
+					},
+				}, nil)
+
+				gomock.InOrder(first, second)
+			},
+		},
+		{
+			name:                "returns error after exhausting all fault domains",
+			errorExpected:       true,
+			errorSubStringMatch: true,
+			matchError:          errors.New("out of host capacity"),
+			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				setupAllParams(ms)
+				ociCluster := ms.OCIClusterAccessor.(OCISelfManagedCluster).OCICluster
+				ociCluster.Status.FailureDomains = map[string]clusterv1.FailureDomainSpec{
+					"1": {
+						Attributes: map[string]string{
+							"AvailabilityDomain": "ad1",
+							"FaultDomain":        "FAULT-DOMAIN-1",
+						},
+					},
+					"2": {
+						Attributes: map[string]string{
+							"AvailabilityDomain": "ad1",
+							"FaultDomain":        "FAULT-DOMAIN-2",
+						},
+					},
+				}
+				ms.Machine.Spec.FailureDomain = common.String("1")
+				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
+					DisplayName:   common.String("name"),
+					CompartmentId: common.String("test"),
+				})).Return(core.ListInstancesResponse{}, nil)
+
+				first := computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
+					return faultDomainRequestMatcher(request, "FAULT-DOMAIN-1")
+				})).Return(core.LaunchInstanceResponse{}, newOutOfCapacityServiceError("out of host capacity"))
+
+				second := computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
+					return faultDomainRequestMatcher(request, "FAULT-DOMAIN-2")
+				})).Return(core.LaunchInstanceResponse{}, newOutOfCapacityServiceError("out of host capacity in fd2"))
+
+				gomock.InOrder(first, second)
+			},
+		},
+		{
+			name:          "retries fault domains discovered from availability domain cache",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				setupAllParams(ms)
+				ociCluster := ms.OCIClusterAccessor.(OCISelfManagedCluster).OCICluster
+				ociCluster.Status.FailureDomains = map[string]clusterv1.FailureDomainSpec{
+					"1": {
+						Attributes: map[string]string{
+							"AvailabilityDomain": "ad1",
+						},
+					},
+				}
+				ociCluster.Spec.AvailabilityDomains = map[string]infrastructurev1beta2.OCIAvailabilityDomain{
+					"ad1": {
+						Name:         "ad1",
+						FaultDomains: []string{"FAULT-DOMAIN-1", "FAULT-DOMAIN-2"},
+					},
+				}
+				ms.Machine.Spec.FailureDomain = common.String("1")
+				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
+					DisplayName:   common.String("name"),
+					CompartmentId: common.String("test"),
+				})).Return(core.ListInstancesResponse{}, nil)
+
+				first := computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
+					return faultDomainRequestMatcher(request, "")
+				})).Return(core.LaunchInstanceResponse{}, newOutOfCapacityServiceError("out of host capacity"))
+
+				second := computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
+					return faultDomainRequestMatcher(request, "FAULT-DOMAIN-1")
+				})).Return(core.LaunchInstanceResponse{}, newOutOfCapacityServiceError("out of host capacity"))
+
+				third := computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
+					return faultDomainRequestMatcher(request, "FAULT-DOMAIN-2")
+				})).Return(core.LaunchInstanceResponse{
+					Instance: core.Instance{
+						Id: common.String("instance-id"),
+					},
+				}, nil)
+
+				gomock.InOrder(first, second, third)
+			},
+		},
+		{
 			name:          "check all params together",
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
@@ -1483,6 +1607,26 @@ func instanceCompartmentIDMatcher(request interface{}, matchStr string) error {
 	}
 	if *r.LaunchInstanceDetails.CompartmentId != matchStr {
 		return errors.New(fmt.Sprintf("expecting DisplayName as %s", matchStr))
+	}
+	return nil
+}
+
+func faultDomainRequestMatcher(request interface{}, matchStr string) error {
+	r, ok := request.(core.LaunchInstanceRequest)
+	if !ok {
+		return errors.New("expecting LaunchInstanceRequest type")
+	}
+	if matchStr == "" {
+		if r.LaunchInstanceDetails.FaultDomain != nil {
+			return errors.New("expected fault domain to be nil")
+		}
+		return nil
+	}
+	if r.LaunchInstanceDetails.FaultDomain == nil {
+		return errors.New("fault domain was nil")
+	}
+	if *r.LaunchInstanceDetails.FaultDomain != matchStr {
+		return errors.New(fmt.Sprintf("expecting fault domain %s but got %s", matchStr, *r.LaunchInstanceDetails.FaultDomain))
 	}
 	return nil
 }
@@ -2924,4 +3068,36 @@ func setupAllParams(ms *MachineScope) {
 	ociCluster.UID = "uid"
 	ociCluster.Spec.OCIResourceIdentifier = "resource_uid"
 	ms.OCIMachine.UID = "machineuid"
+}
+
+type testServiceError struct {
+	code    string
+	message string
+}
+
+func newOutOfCapacityServiceError(message string) error {
+	return testServiceError{
+		code:    "OutOfHostCapacity",
+		message: message,
+	}
+}
+
+func (t testServiceError) Error() string {
+	return t.message
+}
+
+func (t testServiceError) GetHTTPStatusCode() int {
+	return 400
+}
+
+func (t testServiceError) GetMessage() string {
+	return t.message
+}
+
+func (t testServiceError) GetCode() string {
+	return t.code
+}
+
+func (t testServiceError) GetOpcRequestID() string {
+	return ""
 }
