@@ -143,6 +143,4 @@ func (f fakeServiceError) GetCode() string {
 	return f.code
 }
 
-func (f fakeServiceError) GetOpcRequestID() string {
-	return ""
-}
+func (f fakeServiceError) GetOpcRequestID() string { return "" }
