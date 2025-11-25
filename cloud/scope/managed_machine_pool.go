@@ -345,7 +345,7 @@ func (m *ManagedMachinePoolScope) CreateNodePool(ctx context.Context) (*oke.Node
 	resources := wrResponse.Resources
 	var nodePoolId *string
 	for _, resource := range resources {
-		if *resource.EntityType == "nodepool" {
+		if ptr.ToString(resource.EntityType) == "nodepool" {
 			nodePoolId = resource.Identifier
 		}
 	}

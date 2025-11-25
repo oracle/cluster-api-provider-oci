@@ -163,7 +163,8 @@ func (s *ClusterScope) CreateRouteTable(ctx context.Context, routeTableType stri
 		}
 		resp, err := s.VCNClient.GetVcn(ctx, core.GetVcnRequest{VcnId: s.getVcnId()})
 		if err != nil {
-			panic(err)
+			s.Logger.Error(err, "failed to get VCN")
+			return nil, errors.Wrap(err, "failed to get VCN for route table creation")
 		}
 		if resp.Vcn.Ipv6CidrBlocks != nil {
 			routeRules = append(routeRules, core.RouteRule{

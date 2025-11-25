@@ -230,7 +230,7 @@ func (s *ClusterScope) getLoadbalancerIp(lb loadbalancer.LoadBalancer) (*string,
 	if len(lb.IpAddresses) < 1 {
 		return nil, errors.New("lb does not have valid ip addresses")
 	}
-	if *lb.IsPrivate {
+	if ptr.ToBool(lb.IsPrivate) {
 		lbIp = lb.IpAddresses[0].IpAddress
 	} else {
 		for _, ip := range lb.IpAddresses {
