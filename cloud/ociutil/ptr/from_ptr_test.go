@@ -33,6 +33,38 @@ func TestToString(t *testing.T) {
 	}
 }
 
+func TestToBool(t *testing.T) {
+	tests := []struct {
+		name  string
+		input *bool
+		want  bool
+	}{
+		{
+			name:  "nil pointer",
+			input: nil,
+			want:  false,
+		},
+		{
+			name:  "pointer to true",
+			input: func() *bool { b := true; return &b }(),
+			want:  true,
+		},
+		{
+			name:  "pointer to false",
+			input: func() *bool { b := false; return &b }(),
+			want:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ToBool(tt.input); got != tt.want {
+				t.Errorf("ToBool() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestToStringSlice(t *testing.T) {
 	tests := []struct {
 		name  string

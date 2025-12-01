@@ -227,8 +227,14 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 			m.Logger.Error(err, "Failure domain should be a value between 1 and 3")
 			return nil, err
 		}
-		faultDomain = m.OCIClusterAccessor.GetFailureDomains()[*failureDomain].Attributes[FaultDomain]
-		availabilityDomain = m.OCIClusterAccessor.GetFailureDomains()[*failureDomain].Attributes[AvailabilityDomain]
+		fd, exists := m.OCIClusterAccessor.GetFailureDomains()[*failureDomain]
+		if !exists {
+			err = errors.New("failure domain not found in cluster failure domains")
+			m.Logger.Error(err, "Failure domain not found", "failure-domain", *failureDomain)
+			return nil, err
+		}
+		faultDomain = fd.Attributes[FaultDomain]
+		availabilityDomain = fd.Attributes[AvailabilityDomain]
 	} else {
 		randomFailureDomain, err := rand.Int(rand.Reader, big.NewInt(3))
 		if err != nil {
@@ -237,8 +243,13 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 		}
 		// the random number generated is between zero and two, whereas we need a number between one and three
 		failureDomain = common.String(strconv.Itoa(int(randomFailureDomain.Int64()) + 1))
-		availabilityDomain = m.OCIClusterAccessor.GetFailureDomains()[*failureDomain].Attributes[AvailabilityDomain]
-		faultDomain = m.OCIClusterAccessor.GetFailureDomains()[*failureDomain].Attributes[FaultDomain]
+		fd, exists := m.OCIClusterAccessor.GetFailureDomains()[*failureDomain]
+		if !exists {
+			err = errors.New("failure domain not found in cluster failure domains")
+			m.Logger.Error(err, "Failure domain not found", "failure-domain", *failureDomain)
+			return nil, err
+		}
+		availabilityDomain = fd.Attributes[AvailabilityDomain]
 	}
 
 	metadata := m.OCIMachine.Spec.Metadata
