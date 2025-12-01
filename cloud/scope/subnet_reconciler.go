@@ -119,7 +119,7 @@ func (s *ClusterScope) CreateSubnet(ctx context.Context, spec infrastructurev1be
 	var ipv6subnetCIDR_Ptr *string
 
 	// Constructing IPv6 Subnet CIDR
-	if resp.Vcn.Ipv6CidrBlocks != nil {
+	if len(resp.Vcn.Ipv6CidrBlocks) > 0 {
 
 		// VCNs can have multiple IPv6 CIDR Blocks, and the CIDR block with IPv6 GUA Allocated by Oracle is the first (index 0) in the list
 		vcnCIDR := resp.Vcn.Ipv6CidrBlocks[0]
@@ -127,7 +127,7 @@ func (s *ClusterScope) CreateSubnet(ctx context.Context, spec infrastructurev1be
 		// Split CIDR block into hextets
 		ip, _, err := net.ParseCIDR(vcnCIDR)
 		if err != nil {
-			panic(err)
+			return nil, errors.Wrap(err, "failed to parse IPv6 CIDR block")
 		}
 		hextets := strings.Split(ip.String(), ":")
 

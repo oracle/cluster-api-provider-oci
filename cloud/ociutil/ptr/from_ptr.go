@@ -13,6 +13,17 @@ func ToString(p *string) (v string) {
 	return *p
 }
 
+// ToBool returns bool value dereferenced if the passed
+// in pointer was not nil. Returns a bool zero value (false) if the
+// pointer was nil.
+func ToBool(p *bool) (v bool) {
+	if p == nil {
+		return v
+	}
+
+	return *p
+}
+
 // ToStringSlice returns a slice of string values, that are
 // dereferenced if the passed in pointer was not nil. Returns a string
 // zero value if the pointer was nil.

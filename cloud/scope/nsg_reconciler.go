@@ -131,7 +131,7 @@ func (s *ClusterScope) GetNSG(ctx context.Context, spec infrastructurev1beta2.NS
 		return nil, errors.Wrap(err, "failed to list network security groups")
 	}
 	for _, nsg := range nsgs.Items {
-		if &nsg != nil && s.IsResourceCreatedByClusterAPI(nsg.FreeformTags) {
+		if s.IsResourceCreatedByClusterAPI(nsg.FreeformTags) {
 			return &nsg, nil
 		}
 	}
