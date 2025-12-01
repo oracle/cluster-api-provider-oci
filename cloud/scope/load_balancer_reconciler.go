@@ -171,7 +171,7 @@ func (s *ClusterScope) CreateLB(ctx context.Context, lb infrastructurev1beta2.Lo
 	}
 
 	lbDetails := loadbalancer.CreateLoadBalancerDetails{
-		CompartmentId: common.String(s.GetCompartmentId()),
+		CompartmentId: common.String(s.GetNetworkCompartmentId()),
 		DisplayName:   common.String(lb.Name),
 		ShapeName:     common.String("flexible"),
 		ShapeDetails: &loadbalancer.ShapeDetails{MinimumBandwidthInMbps: common.Int(10),
@@ -279,7 +279,7 @@ func (s *ClusterScope) GetLoadBalancers(ctx context.Context) (*loadbalancer.Load
 	var page *string
 	for {
 		lbs, err := s.LoadBalancerClient.ListLoadBalancers(ctx, loadbalancer.ListLoadBalancersRequest{
-			CompartmentId: common.String(s.GetCompartmentId()),
+			CompartmentId: common.String(s.GetNetworkCompartmentId()),
 			DisplayName:   common.String(s.GetControlPlaneLoadBalancerName()),
 			Page:          page,
 		})

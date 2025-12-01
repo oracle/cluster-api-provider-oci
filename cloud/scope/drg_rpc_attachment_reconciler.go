@@ -148,7 +148,7 @@ func (s *ClusterScope) createRPC(ctx context.Context, drgId *string, displayName
 			DrgId:         drgId,
 			FreeformTags:  s.GetFreeFormTags(),
 			DefinedTags:   s.GetDefinedTags(),
-			CompartmentId: common.String(s.GetCompartmentId()),
+			CompartmentId: common.String(s.GetNetworkCompartmentId()),
 		},
 	})
 	if err != nil {
@@ -176,7 +176,7 @@ func (s *ClusterScope) lookupRPC(ctx context.Context, drgId *string, rpcId *stri
 			var page *string
 			response, err := vcnClient.ListRemotePeeringConnections(ctx, core.ListRemotePeeringConnectionsRequest{
 				DrgId:         drgId,
-				CompartmentId: common.String(s.GetCompartmentId()),
+				CompartmentId: common.String(s.GetNetworkCompartmentId()),
 				Page:          page,
 			})
 			if err != nil {

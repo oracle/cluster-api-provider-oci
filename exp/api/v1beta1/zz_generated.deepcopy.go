@@ -714,6 +714,11 @@ func (in *OCIManagedMachinePoolSpec) DeepCopyInto(out *OCIManagedMachinePoolSpec
 		*out = new(NodeSourceViaImage)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.SshPublicKey != nil {
+		in, out := &in.SshPublicKey, &out.SshPublicKey
+		*out = new(string)
+		**out = **in
+	}
 	if in.NodeMetadata != nil {
 		in, out := &in.NodeMetadata, &out.NodeMetadata
 		*out = make(map[string]string, len(*in))

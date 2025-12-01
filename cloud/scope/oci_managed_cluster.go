@@ -65,6 +65,10 @@ func (c OCIManagedCluster) GetCompartmentId() string {
 	return c.OCIManagedCluster.Spec.CompartmentId
 }
 
+func (c OCIManagedCluster) GetNetworkCompartmentId() string {
+	return c.OCIManagedCluster.Spec.NetworkSpec.CompartmentId
+}
+
 func (c OCIManagedCluster) GetFreeformTags() map[string]string {
 	return c.OCIManagedCluster.Spec.FreeformTags
 }

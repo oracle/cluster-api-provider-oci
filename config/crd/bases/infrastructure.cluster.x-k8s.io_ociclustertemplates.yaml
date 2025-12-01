@@ -190,6 +190,10 @@ spec:
                                     type: array
                                 type: object
                             type: object
+                          compartmentId:
+                            description: CompartmentId where to provision network
+                              resources
+                            type: string
                           skipNetworkManagement:
                             description: |-
                               SkipNetworkManagement defines if the networking spec(VCN related) specified by the user needs to be reconciled(actioned-upon)
@@ -1296,6 +1300,10 @@ spec:
                                     type: array
                                 type: object
                             type: object
+                          compartmentId:
+                            description: CompartmentId where to provision network
+                              resources
+                            type: string
                           skipNetworkManagement:
                             description: |-
                               SkipNetworkManagement defines if the networking spec(VCN related) specified by the user needs to be reconciled(actioned-upon)

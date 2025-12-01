@@ -34,6 +34,8 @@ type OCIClusterAccessor interface {
 	GetDefinedTags() map[string]map[string]string
 	// GetCompartmentId returns the compartment id of the cluster.
 	GetCompartmentId() string
+	// GetNetworkCompartmentId returns the compartment id where network resources are created
+	GetNetworkCompartmentId() string
 	// GetFreeformTags returns the free form tags of the cluster.
 	GetFreeformTags() map[string]string
 	// GetName returns the name of the cluster.

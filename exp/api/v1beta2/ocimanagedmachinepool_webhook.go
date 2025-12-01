@@ -84,14 +84,14 @@ func (*OCIManagedMachinePoolWebhook) ValidateCreate(_ context.Context, obj runti
 	if len(m.Name) > 31 {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("Name"), m.Name, "Name cannot be more than 31 characters"))
 	}
-	allErrs = m.validateVersion(allErrs)
+	allErrs = m.validate(allErrs)
 	if len(allErrs) == 0 {
 		return nil, nil
 	}
 	return nil, apierrors.NewInvalid(m.GroupVersionKind().GroupKind(), m.Name, allErrs)
 }
 
-func (m *OCIManagedMachinePool) validateVersion(allErrs field.ErrorList) field.ErrorList {
+func (m *OCIManagedMachinePool) validate(allErrs field.ErrorList) field.ErrorList {
 	if m.Spec.Version == nil {
 		allErrs = append(
 			allErrs,
@@ -102,6 +102,16 @@ func (m *OCIManagedMachinePool) validateVersion(allErrs field.ErrorList) field.E
 			allErrs = append(
 				allErrs,
 				field.Invalid(field.NewPath("spec", "version"), m.Spec.Version, "must be a valid semantic version"))
+		}
+	}
+
+	if m.Spec.NodePoolNodeConfig != nil && m.Spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails != nil && m.Spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails.VcnIpNativePodNetworkOptions.MaxPodsPerNode != nil {
+		maxPodsPerNode := *m.Spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails.VcnIpNativePodNetworkOptions.MaxPodsPerNode
+		if maxPodsPerNode <= 0 || maxPodsPerNode > 110 {
+			allErrs = append(
+				allErrs,
+				field.Invalid(field.NewPath("spec", "nodePoolNodeConfig", "nodePoolPodNetworkOptionDetails", "vcnIpNativePodNetworkOptions", "maxPodsPerNode"),
+					m.Spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails.VcnIpNativePodNetworkOptions.MaxPodsPerNode, "maxPodsPerNode must be an integer between 1 and 110"))
 		}
 	}
 	return allErrs
@@ -121,7 +131,7 @@ func (*OCIManagedMachinePoolWebhook) ValidateUpdate(_ context.Context, oldRaw, n
 		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected an OCIManagedMachinePool but got a %T", oldRaw))
 	}
 
-	allErrs = m.validateVersion(allErrs)
+	allErrs = m.validate(allErrs)
 
 	if !reflect.DeepEqual(m.Spec.Version, oldManagedMachinePool.Spec.Version) {
 		newImage := m.getImageId()

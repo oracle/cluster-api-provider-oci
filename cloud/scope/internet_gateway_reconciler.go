@@ -76,7 +76,7 @@ func (s *ClusterScope) GetInternetGateway(ctx context.Context) (*core.InternetGa
 		}
 	}
 	igws, err := s.VCNClient.ListInternetGateways(ctx, core.ListInternetGatewaysRequest{
-		CompartmentId: common.String(s.GetCompartmentId()),
+		CompartmentId: common.String(s.GetNetworkCompartmentId()),
 		VcnId:         s.getVcnId(),
 		DisplayName:   common.String(InternetGatewayName),
 	})
@@ -95,7 +95,7 @@ func (s *ClusterScope) GetInternetGateway(ctx context.Context) (*core.InternetGa
 // CreateInternetGateway creates the Internet Gateway for the cluster based on the ClusterScope
 func (s *ClusterScope) CreateInternetGateway(ctx context.Context) (*string, error) {
 	igwDetails := core.CreateInternetGatewayDetails{
-		CompartmentId: common.String(s.GetCompartmentId()),
+		CompartmentId: common.String(s.GetNetworkCompartmentId()),
 		DisplayName:   common.String(InternetGatewayName),
 		IsEnabled:     common.Bool(true),
 		VcnId:         s.getVcnId(),

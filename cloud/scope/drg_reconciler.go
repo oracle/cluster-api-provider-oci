@@ -85,7 +85,7 @@ func (s *ClusterScope) GetDRG(ctx context.Context) (*core.Drg, error) {
 
 	for {
 		response, err := s.VCNClient.ListDrgs(ctx, core.ListDrgsRequest{
-			CompartmentId: common.String(s.GetCompartmentId()),
+			CompartmentId: common.String(s.GetNetworkCompartmentId()),
 			Page:          page,
 		})
 		if err != nil {
@@ -113,7 +113,7 @@ func (s *ClusterScope) GetDRG(ctx context.Context) (*core.Drg, error) {
 func (s *ClusterScope) createDRG(ctx context.Context) (*core.Drg, error) {
 	response, err := s.VCNClient.CreateDrg(ctx, core.CreateDrgRequest{
 		CreateDrgDetails: core.CreateDrgDetails{
-			CompartmentId: common.String(s.GetCompartmentId()),
+			CompartmentId: common.String(s.GetNetworkCompartmentId()),
 			FreeformTags:  s.GetFreeFormTags(),
 			DefinedTags:   s.GetDefinedTags(),
 			DisplayName:   common.String(s.GetDRGName()),
