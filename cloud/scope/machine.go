@@ -305,8 +305,7 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 	launchDetails.PreemptibleInstanceConfig = m.getPreemptibleInstanceConfig()
 	launchDetails.PlatformConfig = m.getPlatformConfig()
 	launchDetails.LaunchVolumeAttachments = m.getLaunchVolumeAttachments()
-	// Build the list of availability/fault domain combinations we will try
-	// when launching the instance (primary FD first, then fallbacks).
+	// Build the list of availability/fault domain to attempt launch in
 	faultDomains := m.buildFaultDomainLaunchAttempts(availabilityDomain, faultDomain)
 	return m.launchInstanceWithFaultDomainRetry(ctx, launchDetails, faultDomains)
 }
@@ -373,8 +372,7 @@ func (m *MachineScope) buildFaultDomainLaunchAttempts(availabilityDomain, initia
 		return attempts
 	}
 
-	// Prefer fault domains exposed via the Cluster status. This respects
-	// Cluster API's scheduling decisions before falling back to raw OCI data.
+	// Build faultDomainAttempt list
 	failureDomains := m.OCIClusterAccessor.GetFailureDomains()
 	if len(failureDomains) > 0 {
 		keys := make([]string, 0, len(failureDomains))
@@ -400,8 +398,7 @@ func (m *MachineScope) buildFaultDomainLaunchAttempts(availabilityDomain, initia
 	}
 
 	// If the cluster status didn't enumerate any additional fault domains,
-	// fall back to the cached availability-domain data gathered from OCI so we
-	// can still iterate through every physical fault domain in that AD.
+	// fall back to every physical fault domain in that AD.
 	if adMap := m.OCIClusterAccessor.GetAvailabilityDomains(); adMap != nil {
 		if adEntry, ok := adMap[availabilityDomain]; ok {
 			for _, fd := range adEntry.FaultDomains {
