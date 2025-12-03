@@ -206,44 +206,9 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 		}
 	}
 
-	failureDomain := m.Machine.Spec.FailureDomain
-	var faultDomain string
-	var availabilityDomain string
-	if failureDomain != nil {
-		failureDomainIndex, err := strconv.Atoi(*failureDomain)
-		if err != nil {
-			m.Logger.Error(err, "Failure Domain is not a valid integer")
-			return nil, errors.Wrap(err, "invalid failure domain parameter, must be a valid integer")
-		}
-		m.Logger.Info("Failure Domain being used", "failure-domain", failureDomainIndex)
-		if failureDomainIndex < 1 || failureDomainIndex > 3 {
-			err = errors.New("failure domain should be a value between 1 and 3")
-			m.Logger.Error(err, "Failure domain should be a value between 1 and 3")
-			return nil, err
-		}
-		fd, exists := m.OCIClusterAccessor.GetFailureDomains()[*failureDomain]
-		if !exists {
-			err = errors.New("failure domain not found in cluster failure domains")
-			m.Logger.Error(err, "Failure domain not found", "failure-domain", *failureDomain)
-			return nil, err
-		}
-		faultDomain = fd.Attributes[FaultDomain]
-		availabilityDomain = fd.Attributes[AvailabilityDomain]
-	} else {
-		randomFailureDomain, err := rand.Int(rand.Reader, big.NewInt(3))
-		if err != nil {
-			m.Logger.Error(err, "Failed to generate random failure domain")
-			return nil, err
-		}
-		// the random number generated is between zero and two, whereas we need a number between one and three
-		failureDomain = common.String(strconv.Itoa(int(randomFailureDomain.Int64()) + 1))
-		fd, exists := m.OCIClusterAccessor.GetFailureDomains()[*failureDomain]
-		if !exists {
-			err = errors.New("failure domain not found in cluster failure domains")
-			m.Logger.Error(err, "Failure domain not found", "failure-domain", *failureDomain)
-			return nil, err
-		}
-		availabilityDomain = fd.Attributes[AvailabilityDomain]
+	availabilityDomain, faultDomain, retry, err := m.resolveAvailabilityAndFaultDomain()
+	if err != nil {
+		return nil, err
 	}
 
 	metadata := m.OCIMachine.Spec.Metadata
@@ -299,14 +264,97 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 	launchDetails.PreemptibleInstanceConfig = m.getPreemptibleInstanceConfig()
 	launchDetails.PlatformConfig = m.getPlatformConfig()
 	launchDetails.LaunchVolumeAttachments = m.getLaunchVolumeAttachments()
-	req := core.LaunchInstanceRequest{LaunchInstanceDetails: launchDetails,
-		OpcRetryToken: ociutil.GetOPCRetryToken(string(m.OCIMachine.UID))}
-	resp, err := m.ComputeClient.LaunchInstance(ctx, req)
-	if err != nil {
-		return nil, err
-	} else {
-		return &resp.Instance, nil
+	// Build the list of fault domains to attempt launch in
+	faultDomains := m.buildFaultDomainLaunchList(availabilityDomain, faultDomain, retry)
+	return m.launchInstanceWithFaultDomainRetry(ctx, launchDetails, faultDomains)
+}
+
+func (m *MachineScope) launchInstanceWithFaultDomainRetry(ctx context.Context, baseDetails core.LaunchInstanceDetails, faultDomains []string) (*core.Instance, error) {
+	if len(faultDomains) == 0 {
+		faultDomains = []string{ociutil.DerefString(baseDetails.FaultDomain)}
 	}
+	opcRetryToken := ociutil.GetOPCRetryToken(string(m.OCIMachine.UID))
+	var lastErr error
+	for idx, fd := range faultDomains {
+		details := baseDetails
+		if fd != "" {
+			details.FaultDomain = common.String(fd)
+		}
+		resp, err := m.ComputeClient.LaunchInstance(ctx, core.LaunchInstanceRequest{
+			LaunchInstanceDetails: details,
+			OpcRetryToken:         opcRetryToken,
+		})
+		if err == nil {
+			return &resp.Instance, nil
+		}
+		lastAttempt := idx == len(faultDomains)-1
+		if !ociutil.IsOutOfHostCapacity(err) || lastAttempt {
+			return nil, err
+		}
+		lastErr = err
+		m.Logger.Info("Fault domain has run out of host capacity, retrying in a different domain", "faultDomain", fd)
+	}
+	return nil, lastErr
+}
+
+func (m *MachineScope) buildFaultDomainLaunchList(availabilityDomain, initialFaultDomain string, retry bool) []string {
+	attempts := []string{initialFaultDomain}
+	if !retry || availabilityDomain == "" {
+		return attempts
+	}
+
+	for _, fd := range m.faultDomainsForAvailabilityDomain(availabilityDomain) {
+		if fd == initialFaultDomain {
+			continue
+		}
+		attempts = append(attempts, fd)
+	}
+
+	return attempts
+}
+
+func (m *MachineScope) faultDomainsForAvailabilityDomain(availabilityDomain string) []string {
+	if adMap := m.OCIClusterAccessor.GetAvailabilityDomains(); adMap != nil {
+		if adEntry, ok := adMap[availabilityDomain]; ok {
+			return append([]string(nil), adEntry.FaultDomains...)
+		}
+	}
+	return nil
+}
+
+func (m *MachineScope) resolveAvailabilityAndFaultDomain() (string, string, bool, error) {
+	failureDomainKey := m.Machine.Spec.FailureDomain
+	if failureDomainKey == nil {
+		randomFailureDomain, err := rand.Int(rand.Reader, big.NewInt(3))
+		if err != nil {
+			m.Logger.Error(err, "Failed to generate random failure domain")
+			return "", "", false, err
+		}
+		failureDomainKey = common.String(strconv.Itoa(int(randomFailureDomain.Int64()) + 1))
+	}
+
+	failureDomainIndex, err := strconv.Atoi(*failureDomainKey)
+	if err != nil {
+		m.Logger.Error(err, "Failure Domain is not a valid integer")
+		return "", "", false, errors.Wrap(err, "invalid failure domain parameter, must be a valid integer")
+	}
+	if failureDomainIndex < 1 || failureDomainIndex > 3 {
+		err = errors.New("failure domain should be a value between 1 and 3")
+		m.Logger.Error(err, "Failure domain should be a value between 1 and 3")
+		return "", "", false, err
+	}
+	m.Logger.Info("Failure Domain being used", "failure-domain", failureDomainIndex)
+
+	fdEntry, exists := m.OCIClusterAccessor.GetFailureDomains()[*failureDomainKey]
+	if !exists {
+		err := errors.New("failure domain not found in cluster failure domains")
+		m.Logger.Error(err, "Failure domain not found", "failure-domain", *failureDomainKey)
+		return "", "", false, err
+	}
+	availabilityDomain := fdEntry.Attributes[AvailabilityDomain]
+	faultDomain := fdEntry.Attributes[FaultDomain]
+
+	return availabilityDomain, faultDomain, faultDomain != "", nil
 }
 
 func (m *MachineScope) getFreeFormTags() map[string]string {

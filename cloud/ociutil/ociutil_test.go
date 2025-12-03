@@ -83,3 +83,41 @@ func TestAddToDefaultClusterTags(t *testing.T) {
 		}
 	}
 }
+
+func TestIsOutOfHostCapacity(t *testing.T) {
+	testCases := []struct {
+		name     string
+		err      error
+		expected bool
+	}{
+		{
+			name:     "matches exact message",
+			err:      fmt.Errorf(OutOfHostCapacityErr),
+			expected: true,
+		},
+		{
+			name:     "matches substring",
+			err:      fmt.Errorf("Instance launch failed due to %s in chosen fd", OutOfHostCapacityErr),
+			expected: true,
+		},
+		{
+			name:     "non matching message",
+			err:      fmt.Errorf("boom"),
+			expected: false,
+		},
+		{
+			name:     "nil error",
+			err:      nil,
+			expected: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := IsOutOfHostCapacity(tc.err)
+			if actual != tc.expected {
+				t.Fatalf("expected %t but got %t for test %s", tc.expected, actual, tc.name)
+			}
+		})
+	}
+}
