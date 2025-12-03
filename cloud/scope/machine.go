@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"math/big"
 	"net/url"
-	"sort"
 	"strconv"
 
 	"github.com/go-logr/logr"
@@ -81,11 +80,6 @@ type MachineScope struct {
 	NetworkLoadBalancerClient nlb.NetworkLoadBalancerClient
 	LoadBalancerClient        lb.LoadBalancerClient
 	WorkRequestsClient        wr.Client
-}
-
-type faultDomainAttempt struct {
-	AvailabilityDomain string
-	FaultDomain        string
 }
 
 // NewMachineScope creates a MachineScope given the MachineScopeParams
@@ -212,44 +206,9 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 		}
 	}
 
-	failureDomain := m.Machine.Spec.FailureDomain
-	var faultDomain string
-	var availabilityDomain string
-	if failureDomain != nil {
-		failureDomainIndex, err := strconv.Atoi(*failureDomain)
-		if err != nil {
-			m.Logger.Error(err, "Failure Domain is not a valid integer")
-			return nil, errors.Wrap(err, "invalid failure domain parameter, must be a valid integer")
-		}
-		m.Logger.Info("Failure Domain being used", "failure-domain", failureDomainIndex)
-		if failureDomainIndex < 1 || failureDomainIndex > 3 {
-			err = errors.New("failure domain should be a value between 1 and 3")
-			m.Logger.Error(err, "Failure domain should be a value between 1 and 3")
-			return nil, err
-		}
-		fd, exists := m.OCIClusterAccessor.GetFailureDomains()[*failureDomain]
-		if !exists {
-			err = errors.New("failure domain not found in cluster failure domains")
-			m.Logger.Error(err, "Failure domain not found", "failure-domain", *failureDomain)
-			return nil, err
-		}
-		faultDomain = fd.Attributes[FaultDomain]
-		availabilityDomain = fd.Attributes[AvailabilityDomain]
-	} else {
-		randomFailureDomain, err := rand.Int(rand.Reader, big.NewInt(3))
-		if err != nil {
-			m.Logger.Error(err, "Failed to generate random failure domain")
-			return nil, err
-		}
-		// the random number generated is between zero and two, whereas we need a number between one and three
-		failureDomain = common.String(strconv.Itoa(int(randomFailureDomain.Int64()) + 1))
-		fd, exists := m.OCIClusterAccessor.GetFailureDomains()[*failureDomain]
-		if !exists {
-			err = errors.New("failure domain not found in cluster failure domains")
-			m.Logger.Error(err, "Failure domain not found", "failure-domain", *failureDomain)
-			return nil, err
-		}
-		availabilityDomain = fd.Attributes[AvailabilityDomain]
+	availabilityDomain, faultDomain, retry, err := m.resolveAvailabilityAndFaultDomain()
+	if err != nil {
+		return nil, err
 	}
 
 	metadata := m.OCIMachine.Spec.Metadata
@@ -305,27 +264,21 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 	launchDetails.PreemptibleInstanceConfig = m.getPreemptibleInstanceConfig()
 	launchDetails.PlatformConfig = m.getPlatformConfig()
 	launchDetails.LaunchVolumeAttachments = m.getLaunchVolumeAttachments()
-	// Build the list of availability/fault domain to attempt launch in
-	faultDomains := m.buildFaultDomainLaunchAttempts(availabilityDomain, faultDomain)
+	// Build the list of fault domains to attempt launch in
+	faultDomains := m.buildFaultDomainLaunchList(availabilityDomain, faultDomain, retry)
 	return m.launchInstanceWithFaultDomainRetry(ctx, launchDetails, faultDomains)
 }
 
-func (m *MachineScope) launchInstanceWithFaultDomainRetry(ctx context.Context, baseDetails core.LaunchInstanceDetails, attempts []faultDomainAttempt) (*core.Instance, error) {
-	if len(attempts) == 0 {
-		attempts = append(attempts, faultDomainAttempt{
-			AvailabilityDomain: ociutil.DerefString(baseDetails.AvailabilityDomain),
-		})
+func (m *MachineScope) launchInstanceWithFaultDomainRetry(ctx context.Context, baseDetails core.LaunchInstanceDetails, faultDomains []string) (*core.Instance, error) {
+	if len(faultDomains) == 0 {
+		faultDomains = []string{ociutil.DerefString(baseDetails.FaultDomain)}
 	}
-
 	opcRetryToken := ociutil.GetOPCRetryToken(string(m.OCIMachine.UID))
 	var lastErr error
-	for idx, attempt := range attempts {
+	for idx, fd := range faultDomains {
 		details := baseDetails
-		if attempt.AvailabilityDomain != "" {
-			details.AvailabilityDomain = common.String(attempt.AvailabilityDomain)
-		}
-		if attempt.FaultDomain != "" {
-			details.FaultDomain = common.String(attempt.FaultDomain)
+		if fd != "" {
+			details.FaultDomain = common.String(fd)
 		} else {
 			details.FaultDomain = nil
 		}
@@ -337,77 +290,81 @@ func (m *MachineScope) launchInstanceWithFaultDomainRetry(ctx context.Context, b
 		if err == nil {
 			return &resp.Instance, nil
 		}
-		lastAttempt := idx == len(attempts)-1
-		if !ociutil.IsOutOfHostCapacityError(err) || lastAttempt {
+		lastAttempt := idx == len(faultDomains)-1
+		if !ociutil.IsOutOfHostCapacity(err) || lastAttempt {
 			return nil, err
 		}
 		lastErr = err
-		m.Logger.Info("Fault domain has run out of host capacity, retrying in a different domain", "faultDomain", attempt.FaultDomain)
+		m.Logger.Info("Fault domain has run out of host capacity, retrying in a different domain", "faultDomain", fd)
 	}
 	return nil, lastErr
 }
 
-const defaultFaultDomainKey = "__no_fault_domain__"
-
-func (m *MachineScope) buildFaultDomainLaunchAttempts(availabilityDomain, initialFaultDomain string) []faultDomainAttempt {
-	var attempts []faultDomainAttempt
-	seen := make(map[string]bool)
-	addAttempt := func(fd string) {
-		key := fd
-		if fd == "" {
-			key = defaultFaultDomainKey
-		}
-		if seen[key] {
-			return
-		}
-		seen[key] = true
-		attempts = append(attempts, faultDomainAttempt{
-			AvailabilityDomain: availabilityDomain,
-			FaultDomain:        fd,
-		})
-	}
-
-	addAttempt(initialFaultDomain)
-	if availabilityDomain == "" {
+func (m *MachineScope) buildFaultDomainLaunchList(availabilityDomain, initialFaultDomain string, retryAcrossFaultDomains bool) []string {
+	attempts := []string{initialFaultDomain}
+	if !retryAcrossFaultDomains || availabilityDomain == "" {
 		return attempts
 	}
 
-	// Build faultDomainAttempt list
-	failureDomains := m.OCIClusterAccessor.GetFailureDomains()
-	if len(failureDomains) > 0 {
-		keys := make([]string, 0, len(failureDomains))
-		for key := range failureDomains {
-			keys = append(keys, key)
+	for _, fd := range m.faultDomainsForAvailabilityDomain(availabilityDomain) {
+		if fd == initialFaultDomain {
+			continue
 		}
-		sort.Strings(keys)
-		for _, key := range keys {
-			spec := failureDomains[key]
-			if spec.Attributes[AvailabilityDomain] != availabilityDomain {
-				continue
-			}
-			fd := spec.Attributes[FaultDomain]
-			if fd == "" {
-				continue
-			}
-			addAttempt(fd)
-		}
-	}
-
-	if len(attempts) > 1 {
-		return attempts
-	}
-
-	// If the cluster status didn't enumerate any additional fault domains,
-	// fall back to every physical fault domain in that AD.
-	if adMap := m.OCIClusterAccessor.GetAvailabilityDomains(); adMap != nil {
-		if adEntry, ok := adMap[availabilityDomain]; ok {
-			for _, fd := range adEntry.FaultDomains {
-				addAttempt(fd)
-			}
-		}
+		attempts = append(attempts, fd)
 	}
 
 	return attempts
+}
+
+func (m *MachineScope) faultDomainsForAvailabilityDomain(availabilityDomain string) []string {
+	if adMap := m.OCIClusterAccessor.GetAvailabilityDomains(); adMap != nil {
+		if adEntry, ok := adMap[availabilityDomain]; ok {
+			return append([]string(nil), adEntry.FaultDomains...)
+		}
+	}
+	return nil
+}
+
+func (m *MachineScope) resolveAvailabilityAndFaultDomain() (string, string, bool, error) {
+	failureDomainKey := m.Machine.Spec.FailureDomain
+	if failureDomainKey == nil {
+		randomFailureDomain, err := rand.Int(rand.Reader, big.NewInt(3))
+		if err != nil {
+			m.Logger.Error(err, "Failed to generate random failure domain")
+			return "", "", false, err
+		}
+		failureDomainKey = common.String(strconv.Itoa(int(randomFailureDomain.Int64()) + 1))
+	}
+
+	fdEntry, exists := m.OCIClusterAccessor.GetFailureDomains()[*failureDomainKey]
+	if !exists {
+		err := errors.New("failure domain not found in cluster failure domains")
+		m.Logger.Error(err, "Failure domain not found", "failure-domain", *failureDomainKey)
+		return "", "", false, err
+	}
+	availabilityDomain := fdEntry.Attributes[AvailabilityDomain]
+	faultDomain := fdEntry.Attributes[FaultDomain]
+	originalFaultDomain := faultDomain
+
+	// If fault domain is not specified, pick a random one from the availability domain
+	// if faultDomain == "" {
+	// 	fds := m.faultDomainsForAvailabilityDomain(availabilityDomain)
+	// 	if len(fds) == 0 {
+	// 		err := errors.New("no fault domains discovered for availability domain")
+	// 		m.Logger.Error(err, "Fault domain discovery failed", "availability-domain", availabilityDomain)
+	// 		return "", "", false, err
+	// 	}
+
+	// 	randomIndex, err := rand.Int(rand.Reader, big.NewInt(int64(len(fds))))
+	// 	if err != nil {
+	// 		m.Logger.Error(err, "Failed to generate random fallback fault domain")
+	// 		return "", "", false, err
+	// 	}
+	// 	faultDomain = fds[randomIndex.Int64()]
+	// }
+
+	m.Logger.Info("Failure Domain being used", "failure-domain", *failureDomainKey)
+	return availabilityDomain, faultDomain, originalFaultDomain != "", nil
 }
 
 func (m *MachineScope) getFreeFormTags() map[string]string {

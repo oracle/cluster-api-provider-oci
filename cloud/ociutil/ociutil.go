@@ -42,6 +42,7 @@ const (
 	CreatedBy                 = "CreatedBy"
 	OCIClusterAPIProvider     = "OCIClusterAPIProvider"
 	ClusterResourceIdentifier = "ClusterResourceIdentifier"
+	OutOfHostCapacityErr      = "Out of host capacity"
 )
 
 // ErrNotFound is for simulation during testing, OCI SDK does not have a way
@@ -173,38 +174,12 @@ func BuildClusterTags(ClusterResourceUID string) map[string]string {
 	return tags
 }
 
-// NOTE: Currently we only key off the documented "Out of host capacity" error.
-// If OCI starts surfacing additional codes/messages we can expand this list.
-// Reference: https://docs.oracle.com/en-us/iaas/Content/Compute/Tasks/troubleshooting-out-of-host-capacity.htm
-var outOfCapacityErrorCodes = map[string]struct{}{
-	"OUTOFHOSTCAPACITY": {},
-}
-
-var outOfCapacityErrorMessages = []string{
-	"out of host capacity",
-}
-
-// IsOutOfHostCapacityError returns true when the OCI service error indicates that the fault domain ran out of capacity.
-func IsOutOfHostCapacityError(err error) bool {
+// IsOutOfHostCapacity returns true when the error message indicates that the fault domain ran out of capacity.
+func IsOutOfHostCapacity(err error) bool {
 	if err == nil {
 		return false
 	}
-	err = errors.Cause(err)
-	serviceErr, ok := common.IsServiceError(err)
-	if !ok {
-		return false
-	}
-	code := serviceErr.GetCode()
-	if _, found := outOfCapacityErrorCodes[strings.ToUpper(code)]; found {
-		return true
-	}
-	message := strings.ToLower(serviceErr.GetMessage())
-	for _, fragment := range outOfCapacityErrorMessages {
-		if strings.Contains(message, fragment) {
-			return true
-		}
-	}
-	return false
+	return strings.Contains(strings.ToLower(err.Error()), strings.ToLower(OutOfHostCapacityErr))
 }
 
 // DerefString returns the string value if the pointer isn't nil, otherwise returns empty string
