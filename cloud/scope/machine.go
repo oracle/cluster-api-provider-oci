@@ -279,10 +279,7 @@ func (m *MachineScope) launchInstanceWithFaultDomainRetry(ctx context.Context, b
 		details := baseDetails
 		if fd != "" {
 			details.FaultDomain = common.String(fd)
-		} else {
-			details.FaultDomain = nil
 		}
-
 		resp, err := m.ComputeClient.LaunchInstance(ctx, core.LaunchInstanceRequest{
 			LaunchInstanceDetails: details,
 			OpcRetryToken:         opcRetryToken,
@@ -300,9 +297,9 @@ func (m *MachineScope) launchInstanceWithFaultDomainRetry(ctx context.Context, b
 	return nil, lastErr
 }
 
-func (m *MachineScope) buildFaultDomainLaunchList(availabilityDomain, initialFaultDomain string, retryAcrossFaultDomains bool) []string {
+func (m *MachineScope) buildFaultDomainLaunchList(availabilityDomain, initialFaultDomain string, retry bool) []string {
 	attempts := []string{initialFaultDomain}
-	if !retryAcrossFaultDomains || availabilityDomain == "" {
+	if !retry || availabilityDomain == "" {
 		return attempts
 	}
 
@@ -336,6 +333,18 @@ func (m *MachineScope) resolveAvailabilityAndFaultDomain() (string, string, bool
 		failureDomainKey = common.String(strconv.Itoa(int(randomFailureDomain.Int64()) + 1))
 	}
 
+	failureDomainIndex, err := strconv.Atoi(*failureDomainKey)
+	if err != nil {
+		m.Logger.Error(err, "Failure Domain is not a valid integer")
+		return "", "", false, errors.Wrap(err, "invalid failure domain parameter, must be a valid integer")
+	}
+	if failureDomainIndex < 1 || failureDomainIndex > 3 {
+		err = errors.New("failure domain should be a value between 1 and 3")
+		m.Logger.Error(err, "Failure domain should be a value between 1 and 3")
+		return "", "", false, err
+	}
+	m.Logger.Info("Failure Domain being used", "failure-domain", failureDomainIndex)
+
 	fdEntry, exists := m.OCIClusterAccessor.GetFailureDomains()[*failureDomainKey]
 	if !exists {
 		err := errors.New("failure domain not found in cluster failure domains")
@@ -344,27 +353,8 @@ func (m *MachineScope) resolveAvailabilityAndFaultDomain() (string, string, bool
 	}
 	availabilityDomain := fdEntry.Attributes[AvailabilityDomain]
 	faultDomain := fdEntry.Attributes[FaultDomain]
-	originalFaultDomain := faultDomain
 
-	// If fault domain is not specified, pick a random one from the availability domain
-	// if faultDomain == "" {
-	// 	fds := m.faultDomainsForAvailabilityDomain(availabilityDomain)
-	// 	if len(fds) == 0 {
-	// 		err := errors.New("no fault domains discovered for availability domain")
-	// 		m.Logger.Error(err, "Fault domain discovery failed", "availability-domain", availabilityDomain)
-	// 		return "", "", false, err
-	// 	}
-
-	// 	randomIndex, err := rand.Int(rand.Reader, big.NewInt(int64(len(fds))))
-	// 	if err != nil {
-	// 		m.Logger.Error(err, "Failed to generate random fallback fault domain")
-	// 		return "", "", false, err
-	// 	}
-	// 	faultDomain = fds[randomIndex.Int64()]
-	// }
-
-	m.Logger.Info("Failure Domain being used", "failure-domain", *failureDomainKey)
-	return availabilityDomain, faultDomain, originalFaultDomain != "", nil
+	return availabilityDomain, faultDomain, faultDomain != "", nil
 }
 
 func (m *MachineScope) getFreeFormTags() map[string]string {
