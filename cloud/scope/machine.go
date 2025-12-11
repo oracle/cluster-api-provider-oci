@@ -265,7 +265,7 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 	launchDetails.PlatformConfig = m.getPlatformConfig()
 	launchDetails.LaunchVolumeAttachments = m.getLaunchVolumeAttachments()
 	// Build the list of fault domains to attempt launch in
-	faultDomains := m.buildFaultDomainLaunchList(availabilityDomain, faultDomain, retry)
+	faultDomains := m.buildFaultDomainRetryList(availabilityDomain, faultDomain, retry)
 	return m.launchInstanceWithFaultDomainRetry(ctx, launchDetails, faultDomains)
 }
 
@@ -307,7 +307,7 @@ func (m *MachineScope) launchInstanceWithFaultDomainRetry(ctx context.Context, b
 	return nil, lastErr
 }
 
-func (m *MachineScope) buildFaultDomainLaunchList(availabilityDomain, initialFaultDomain string, retry bool) []string {
+func (m *MachineScope) buildFaultDomainRetryList(availabilityDomain, initialFaultDomain string, retry bool) []string {
 	attempts := []string{initialFaultDomain}
 	if !retry || availabilityDomain == "" {
 		return attempts
