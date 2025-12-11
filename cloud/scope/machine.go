@@ -273,17 +273,27 @@ func (m *MachineScope) launchInstanceWithFaultDomainRetry(ctx context.Context, b
 	if len(faultDomains) == 0 {
 		faultDomains = []string{ociutil.DerefString(baseDetails.FaultDomain)}
 	}
-	opcRetryToken := ociutil.GetOPCRetryToken(string(m.OCIMachine.UID))
+	baseRetryToken := ociutil.GetOPCRetryToken(string(m.OCIMachine.UID))
 	var lastErr error
 	for idx, fd := range faultDomains {
 		details := baseDetails
 		if fd != "" {
 			details.FaultDomain = common.String(fd)
 		}
+
+		// Derive a fault-domain-specific retry token to avoid
+		// requests being rejected as duplicates.
+		tokenVal := ociutil.DerefString(baseRetryToken)
+		if fd != "" {
+			tokenVal = tokenVal + "-" + fd
+		}
+		retryToken := common.String(tokenVal)
+
 		resp, err := m.ComputeClient.LaunchInstance(ctx, core.LaunchInstanceRequest{
 			LaunchInstanceDetails: details,
-			OpcRetryToken:         opcRetryToken,
+			OpcRetryToken:         retryToken,
 		})
+
 		if err == nil {
 			return &resp.Instance, nil
 		}
