@@ -269,12 +269,17 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 	return m.launchInstanceWithFaultDomainRetry(ctx, launchDetails, faultDomains)
 }
 
+// launchInstanceWithFaultDomainRetry iterates through the provided fault domains and
+// attempts to launch an instance in each until one succeeds, all fail, or a non-capacity error occurs.
 func (m *MachineScope) launchInstanceWithFaultDomainRetry(ctx context.Context, baseDetails core.LaunchInstanceDetails, faultDomains []string) (*core.Instance, error) {
 	if len(faultDomains) == 0 {
 		faultDomains = []string{ociutil.DerefString(baseDetails.FaultDomain)}
 	}
+
 	baseRetryToken := ociutil.GetOPCRetryToken(string(m.OCIMachine.UID))
 	var lastErr error
+	totalAttempts := len(faultDomains)
+
 	for idx, fd := range faultDomains {
 		details := baseDetails
 		if fd != "" {
@@ -289,6 +294,7 @@ func (m *MachineScope) launchInstanceWithFaultDomainRetry(ctx context.Context, b
 		}
 		retryToken := common.String(tokenVal)
 
+		m.Logger.Info("Attempting instance launch", "faultDomain", fd, "attemptNumber", idx+1, "totalAttempts", totalAttempts)
 		resp, err := m.ComputeClient.LaunchInstance(ctx, core.LaunchInstanceRequest{
 			LaunchInstanceDetails: details,
 			OpcRetryToken:         retryToken,
@@ -302,11 +308,17 @@ func (m *MachineScope) launchInstanceWithFaultDomainRetry(ctx context.Context, b
 			return nil, err
 		}
 		lastErr = err
-		m.Logger.Info("Fault domain has run out of host capacity, retrying in a different domain", "faultDomain", fd)
+		nextFD := ""
+		if !lastAttempt {
+			nextFD = faultDomains[idx+1]
+		}
+		m.Logger.Info("Fault domain has run out of host capacity, retrying in a different domain", "nextFaultDomain", nextFD)
 	}
 	return nil, lastErr
 }
 
+// buildFaultDomainRetryList returns the list of fault domains we should attempt
+// when launching in the given availability domain.
 func (m *MachineScope) buildFaultDomainRetryList(availabilityDomain, initialFaultDomain string, retry bool) []string {
 	attempts := []string{initialFaultDomain}
 	if !retry || availabilityDomain == "" {
@@ -323,6 +335,7 @@ func (m *MachineScope) buildFaultDomainRetryList(availabilityDomain, initialFaul
 	return attempts
 }
 
+// faultDomainsForAvailabilityDomain returns the fault domains for the availability domain.
 func (m *MachineScope) faultDomainsForAvailabilityDomain(availabilityDomain string) []string {
 	if adMap := m.OCIClusterAccessor.GetAvailabilityDomains(); adMap != nil {
 		if adEntry, ok := adMap[availabilityDomain]; ok {
