@@ -276,6 +276,10 @@ func (m *MachineScope) launchInstanceWithFaultDomainRetry(ctx context.Context, b
 		faultDomains = []string{ociutil.DerefString(baseDetails.FaultDomain)}
 	}
 
+	if m.OCIMachine == nil {
+		return nil, errors.New("machine scope is missing OCIMachine")
+	}
+
 	baseRetryToken := ociutil.GetOPCRetryToken(string(m.OCIMachine.UID))
 	var lastErr error
 	totalAttempts := len(faultDomains)
@@ -317,25 +321,25 @@ func (m *MachineScope) launchInstanceWithFaultDomainRetry(ctx context.Context, b
 	return nil, lastErr
 }
 
-// buildFaultDomainRetryList returns the list of fault domains we should attempt
+// buildFaultDomainRetryList returns the list of fault domains we should try
 // when launching in the given availability domain.
 func (m *MachineScope) buildFaultDomainRetryList(availabilityDomain, initialFaultDomain string, retry bool) []string {
-	attempts := []string{initialFaultDomain}
+	faultDomainList := []string{initialFaultDomain}
 	if !retry || availabilityDomain == "" {
-		return attempts
+		return faultDomainList
 	}
 
 	for _, fd := range m.faultDomainsForAvailabilityDomain(availabilityDomain) {
 		if fd == initialFaultDomain {
 			continue
 		}
-		attempts = append(attempts, fd)
+		faultDomainList = append(faultDomainList, fd)
 	}
 
-	return attempts
+	return faultDomainList
 }
 
-// faultDomainsForAvailabilityDomain returns the fault domains for the availability domain.
+// faultDomainsForAvailabilityDomain returns the fault domains for the given availability domain.
 func (m *MachineScope) faultDomainsForAvailabilityDomain(availabilityDomain string) []string {
 	if adMap := m.OCIClusterAccessor.GetAvailabilityDomains(); adMap != nil {
 		if adEntry, ok := adMap[availabilityDomain]; ok {
@@ -346,32 +350,34 @@ func (m *MachineScope) faultDomainsForAvailabilityDomain(availabilityDomain stri
 }
 
 func (m *MachineScope) resolveAvailabilityAndFaultDomain() (string, string, bool, error) {
-	failureDomainKey := m.Machine.Spec.FailureDomain
-	if failureDomainKey == nil {
+	faultDomainKey := m.Machine.Spec.FailureDomain
+
+	// CAPI refers to these IDs as FailureDomains but in OCI they map to FaultDomains.
+	if faultDomainKey == nil {
 		randomFailureDomain, err := rand.Int(rand.Reader, big.NewInt(3))
 		if err != nil {
-			m.Logger.Error(err, "Failed to generate random failure domain")
+			m.Logger.Error(err, "Failed to generate random fault domain")
 			return "", "", false, err
 		}
-		failureDomainKey = common.String(strconv.Itoa(int(randomFailureDomain.Int64()) + 1))
+		faultDomainKey = common.String(strconv.Itoa(int(randomFailureDomain.Int64()) + 1))
 	}
 
-	failureDomainIndex, err := strconv.Atoi(*failureDomainKey)
+	faultDomainIndex, err := strconv.Atoi(*faultDomainKey)
 	if err != nil {
-		m.Logger.Error(err, "Failure Domain is not a valid integer")
-		return "", "", false, errors.Wrap(err, "invalid failure domain parameter, must be a valid integer")
+		m.Logger.Error(err, "Fault domain is not a valid integer")
+		return "", "", false, errors.Wrap(err, "invalid fault domain parameter, must be a valid integer")
 	}
-	if failureDomainIndex < 1 || failureDomainIndex > 3 {
-		err = errors.New("failure domain should be a value between 1 and 3")
-		m.Logger.Error(err, "Failure domain should be a value between 1 and 3")
+	if faultDomainIndex < 1 || faultDomainIndex > 3 {
+		err = errors.New("fault domain should be a value between 1 and 3")
+		m.Logger.Error(err, "Fault domain should be a value between 1 and 3")
 		return "", "", false, err
 	}
-	m.Logger.Info("Failure Domain being used", "failure-domain", failureDomainIndex)
+	m.Logger.Info("Fault Domain being used", "fault-domain", faultDomainIndex)
 
-	fdEntry, exists := m.OCIClusterAccessor.GetFailureDomains()[*failureDomainKey]
+	fdEntry, exists := m.OCIClusterAccessor.GetFailureDomains()[*faultDomainKey]
 	if !exists {
-		err := errors.New("failure domain not found in cluster failure domains")
-		m.Logger.Error(err, "Failure domain not found", "failure-domain", *failureDomainKey)
+		err := errors.New("fault domain not found in cluster failure domains")
+		m.Logger.Error(err, "Fault domain not found", "fault-domain", *faultDomainKey)
 		return "", "", false, err
 	}
 	availabilityDomain := fdEntry.Attributes[AvailabilityDomain]
