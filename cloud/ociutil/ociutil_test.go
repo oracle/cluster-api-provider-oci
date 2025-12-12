@@ -18,6 +18,7 @@ package ociutil
 
 import (
 	"fmt"
+	"net/http"
 	"reflect"
 	"testing"
 
@@ -91,14 +92,19 @@ func TestIsOutOfHostCapacity(t *testing.T) {
 		expected bool
 	}{
 		{
-			name:     "matches exact message",
-			err:      fmt.Errorf(OutOfHostCapacityErr),
+			name:     "service error matches internal code and message",
+			err:      fakeServiceError{status: http.StatusInternalServerError, message: OutOfHostCapacityErr},
 			expected: true,
 		},
 		{
-			name:     "matches substring",
-			err:      fmt.Errorf("Instance launch failed due to %s in chosen fd", OutOfHostCapacityErr),
-			expected: true,
+			name:     "non matching service error status",
+			err:      fakeServiceError{status: http.StatusBadRequest, message: OutOfHostCapacityErr},
+			expected: false,
+		},
+		{
+			name:     "non matching service error message",
+			err:      fakeServiceError{status: http.StatusInternalServerError, message: "other"},
+			expected: false,
 		},
 		{
 			name:     "non matching message",
@@ -120,4 +126,29 @@ func TestIsOutOfHostCapacity(t *testing.T) {
 			}
 		})
 	}
+}
+
+type fakeServiceError struct {
+	status  int
+	message string
+}
+
+func (f fakeServiceError) Error() string {
+	return f.message
+}
+
+func (f fakeServiceError) GetHTTPStatusCode() int {
+	return f.status
+}
+
+func (f fakeServiceError) GetMessage() string {
+	return f.message
+}
+
+func (f fakeServiceError) GetCode() string {
+	return ""
+}
+
+func (f fakeServiceError) GetOpcRequestID() string {
+	return ""
 }

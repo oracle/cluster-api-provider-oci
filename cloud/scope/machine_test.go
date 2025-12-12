@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"net/http"
 	"reflect"
 	"testing"
 
@@ -3144,6 +3145,36 @@ func setupAllParams(ms *MachineScope) {
 	ms.OCIMachine.UID = "machineuid"
 }
 
+type testServiceError struct {
+	status  int
+	code    string
+	message string
+}
+
+func (t testServiceError) Error() string {
+	return t.message
+}
+
+func (t testServiceError) GetHTTPStatusCode() int {
+	return t.status
+}
+
+func (t testServiceError) GetCode() string {
+	return t.code
+}
+
+func (t testServiceError) GetMessage() string {
+	return t.message
+}
+
+func (t testServiceError) GetOpcRequestID() string {
+	return ""
+}
+
 func newOutOfCapacityServiceError(message string) error {
-	return fmt.Errorf("%s: %s", ociutil.OutOfHostCapacityErr, message)
+	return testServiceError{
+		status:  http.StatusInternalServerError,
+		code:    "InternalError",
+		message: fmt.Sprintf("%s: %s", ociutil.OutOfHostCapacityErr, message),
+	}
 }

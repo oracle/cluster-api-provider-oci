@@ -174,12 +174,17 @@ func BuildClusterTags(ClusterResourceUID string) map[string]string {
 	return tags
 }
 
-// IsOutOfHostCapacity returns true when the error message indicates that the fault domain ran out of capacity.
+// IsOutOfHostCapacity returns true when the OCI service error indicates that the fault domain ran out of capacity.
 func IsOutOfHostCapacity(err error) bool {
 	if err == nil {
 		return false
 	}
-	return strings.Contains(strings.ToLower(err.Error()), strings.ToLower(OutOfHostCapacityErr))
+	err = errors.Cause(err)
+	if serviceErr, ok := common.IsServiceError(err); ok {
+		return serviceErr.GetHTTPStatusCode() == http.StatusInternalServerError &&
+			strings.Contains(strings.ToLower(serviceErr.GetMessage()), strings.ToLower(OutOfHostCapacityErr))
+	}
+	return false
 }
 
 // DerefString returns the string value if the pointer isn't nil, otherwise returns empty string

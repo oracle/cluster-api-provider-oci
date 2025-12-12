@@ -350,34 +350,32 @@ func (m *MachineScope) faultDomainsForAvailabilityDomain(availabilityDomain stri
 }
 
 func (m *MachineScope) resolveAvailabilityAndFaultDomain() (string, string, bool, error) {
-	faultDomainKey := m.Machine.Spec.FailureDomain
-
-	// CAPI refers to these IDs as FailureDomains but in OCI they map to FaultDomains.
-	if faultDomainKey == nil {
+	failureDomainKey := m.Machine.Spec.FailureDomain
+	if failureDomainKey == nil {
 		randomFailureDomain, err := rand.Int(rand.Reader, big.NewInt(3))
 		if err != nil {
-			m.Logger.Error(err, "Failed to generate random fault domain")
+			m.Logger.Error(err, "Failed to generate random failure domain")
 			return "", "", false, err
 		}
-		faultDomainKey = common.String(strconv.Itoa(int(randomFailureDomain.Int64()) + 1))
+		failureDomainKey = common.String(strconv.Itoa(int(randomFailureDomain.Int64()) + 1))
 	}
 
-	faultDomainIndex, err := strconv.Atoi(*faultDomainKey)
+	failureDomainIndex, err := strconv.Atoi(*failureDomainKey)
 	if err != nil {
-		m.Logger.Error(err, "Fault domain is not a valid integer")
-		return "", "", false, errors.Wrap(err, "invalid fault domain parameter, must be a valid integer")
+		m.Logger.Error(err, "Failure Domain is not a valid integer")
+		return "", "", false, errors.Wrap(err, "invalid failure domain parameter, must be a valid integer")
 	}
-	if faultDomainIndex < 1 || faultDomainIndex > 3 {
-		err = errors.New("fault domain should be a value between 1 and 3")
-		m.Logger.Error(err, "Fault domain should be a value between 1 and 3")
+	if failureDomainIndex < 1 || failureDomainIndex > 3 {
+		err = errors.New("failure domain should be a value between 1 and 3")
+		m.Logger.Error(err, "Failure domain should be a value between 1 and 3")
 		return "", "", false, err
 	}
-	m.Logger.Info("Fault Domain being used", "fault-domain", faultDomainIndex)
+	m.Logger.Info("Failure Domain being used", "failure-domain", failureDomainIndex)
 
-	fdEntry, exists := m.OCIClusterAccessor.GetFailureDomains()[*faultDomainKey]
+	fdEntry, exists := m.OCIClusterAccessor.GetFailureDomains()[*failureDomainKey]
 	if !exists {
-		err := errors.New("fault domain not found in cluster failure domains")
-		m.Logger.Error(err, "Fault domain not found", "fault-domain", *faultDomainKey)
+		err := errors.New("failure domain not found in cluster failure domains")
+		m.Logger.Error(err, "Failure domain not found", "failure-domain", *failureDomainKey)
 		return "", "", false, err
 	}
 	availabilityDomain := fdEntry.Attributes[AvailabilityDomain]
