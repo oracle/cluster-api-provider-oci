@@ -591,130 +591,266 @@ func (m *ManagedMachinePoolScope) getWorkerMachineSubnet(name *string) *string {
 
 // UpdateNodePool updates a node pool, if needed, based on updated spec
 func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.NodePool) (bool, error) {
-	spec := m.OCIManagedMachinePool.Spec.DeepCopy()
-	setMachinePoolSpecDefaults(spec)
 	nodePoolSizeUpdateRequired := false
 	// if replicas is not managed by cluster autoscaler and if the number of nodes in the spec is not equal to number set in the node pool
 	// update the node pool
 	if !annotations.ReplicasManagedByExternalAutoscaler(m.MachinePool) && (*m.MachinePool.Spec.Replicas != int32(*pool.NodeConfigDetails.Size)) {
 		nodePoolSizeUpdateRequired = true
 	}
-	actual := m.getSpecFromAPIObject(pool)
-	if !reflect.DeepEqual(spec, actual) ||
-		m.getNodePoolName() != *pool.Name || nodePoolSizeUpdateRequired {
-		m.Logger.Info("Updating node pool")
-		// printing json specs will help debug problems when there are spurious/unwanted updates
-		jsonSpec, err := json.Marshal(*spec)
-		if err != nil {
-			return false, err
-		}
-		jsonActual, err := json.Marshal(*actual)
-		if err != nil {
-			return false, err
-		}
-		m.Logger.Info("Node pool", "spec", jsonSpec, "actual", jsonActual)
 
-		nodeConfigDetails := oke.UpdateNodePoolNodeConfigDetails{
-			NsgIds:                         m.getWorkerMachineNSGs(),
-			IsPvEncryptionInTransitEnabled: spec.NodePoolNodeConfig.IsPvEncryptionInTransitEnabled,
-			KmsKeyId:                       spec.NodePoolNodeConfig.KmsKeyId,
+	// Compute minimal desired patch: only user-specified fields that differ from actual
+	needsUpdate := nodePoolSizeUpdateRequired
+	updateDetails := &oke.UpdateNodePoolDetails{}
+	nodeConfigDetails := &oke.UpdateNodePoolNodeConfigDetails{}
+
+	// Name is always set (required field)
+	updateDetails.Name = common.String(m.getNodePoolName())
+
+	// Compare user-specified fields with actual node pool state
+	// Only update if the specified value differs from the actual value
+
+	// KubernetesVersion: compare specified value with actual
+	if m.OCIManagedMachinePool.Spec.Version != nil && *m.OCIManagedMachinePool.Spec.Version != *pool.KubernetesVersion {
+		updateDetails.KubernetesVersion = m.OCIManagedMachinePool.Spec.Version
+		needsUpdate = true
+	}
+
+	// NodeShape: compare specified value with actual
+	if m.OCIManagedMachinePool.Spec.NodeShape != "" && m.OCIManagedMachinePool.Spec.NodeShape != *pool.NodeShape {
+		updateDetails.NodeShape = common.String(m.OCIManagedMachinePool.Spec.NodeShape)
+		needsUpdate = true
+	}
+
+	// NodeShapeConfig: compare specified values with actual
+	if m.OCIManagedMachinePool.Spec.NodeShapeConfig != nil && pool.NodeShapeConfig != nil {
+		nodeShapeConfig := oke.UpdateNodeShapeConfigDetails{}
+		configChanged := false
+
+		if m.OCIManagedMachinePool.Spec.NodeShapeConfig.Ocpus != nil {
+			desiredOcpus, err := strconv.ParseFloat(*m.OCIManagedMachinePool.Spec.NodeShapeConfig.Ocpus, 32)
+			if err != nil {
+				return false, errors.New(fmt.Sprintf("ocpus provided %s is not a valid floating point",
+					*m.OCIManagedMachinePool.Spec.NodeShapeConfig.Ocpus))
+			}
+			if pool.NodeShapeConfig.Ocpus == nil || float32(desiredOcpus) != *pool.NodeShapeConfig.Ocpus {
+				nodeShapeConfig.Ocpus = common.Float32(float32(desiredOcpus))
+				configChanged = true
+			}
 		}
-		// send placement config only if there is an actual change in placement
-		// placement config and recycle config cannot be sent at the same time, and most use cases will
-		// be to update kubernetes version in which case, placement config is not required to be sent
-		if !reflect.DeepEqual(spec.NodePoolNodeConfig.PlacementConfigs, actual.NodePoolNodeConfig.PlacementConfigs) {
-			placementConfig, err := m.buildPlacementConfig(spec.NodePoolNodeConfig.PlacementConfigs)
+
+		if m.OCIManagedMachinePool.Spec.NodeShapeConfig.MemoryInGBs != nil {
+			desiredMemory, err := strconv.ParseFloat(*m.OCIManagedMachinePool.Spec.NodeShapeConfig.MemoryInGBs, 32)
+			if err != nil {
+				return false, errors.New(fmt.Sprintf("memoryInGBs provided %s is not a valid floating point",
+					*m.OCIManagedMachinePool.Spec.NodeShapeConfig.MemoryInGBs))
+			}
+			if pool.NodeShapeConfig.MemoryInGBs == nil || float32(desiredMemory) != *pool.NodeShapeConfig.MemoryInGBs {
+				nodeShapeConfig.MemoryInGBs = common.Float32(float32(desiredMemory))
+				configChanged = true
+			}
+		}
+
+		if configChanged {
+			updateDetails.NodeShapeConfig = &nodeShapeConfig
+			needsUpdate = true
+		}
+	}
+
+	// NodeSourceViaImage: compare specified values with actual
+	if m.OCIManagedMachinePool.Spec.NodeSourceViaImage != nil {
+		actualSource, ok := pool.NodeSourceDetails.(oke.NodeSourceViaImageDetails)
+		if !ok || m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId == nil ||
+			(m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId != nil && *m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId != *actualSource.ImageId) ||
+			(m.OCIManagedMachinePool.Spec.NodeSourceViaImage.BootVolumeSizeInGBs != nil && actualSource.BootVolumeSizeInGBs != nil && *m.OCIManagedMachinePool.Spec.NodeSourceViaImage.BootVolumeSizeInGBs != *actualSource.BootVolumeSizeInGBs) {
+			err := m.setNodepoolImageId(ctx)
 			if err != nil {
 				return false, err
 			}
-			nodeConfigDetails.PlacementConfigs = placementConfig
+			sourceDetails := oke.NodeSourceViaImageDetails{
+				ImageId:             m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId,
+				BootVolumeSizeInGBs: m.OCIManagedMachinePool.Spec.NodeSourceViaImage.BootVolumeSizeInGBs,
+			}
+			updateDetails.NodeSourceDetails = &sourceDetails
+			needsUpdate = true
 		}
-		if nodePoolSizeUpdateRequired {
-			nodeConfigDetails.Size = common.Int(int(*m.MachinePool.Spec.Replicas))
+	}
+
+	// SshPublicKey: compare specified value with actual
+	if m.OCIManagedMachinePool.Spec.SshPublicKey != "" &&
+		(pool.SshPublicKey == nil || m.OCIManagedMachinePool.Spec.SshPublicKey != *pool.SshPublicKey) {
+		updateDetails.SshPublicKey = common.String(m.OCIManagedMachinePool.Spec.SshPublicKey)
+		needsUpdate = true
+	}
+
+	// NodeMetadata: compare specified values with actual
+	if m.OCIManagedMachinePool.Spec.NodeMetadata != nil && len(m.OCIManagedMachinePool.Spec.NodeMetadata) > 0 {
+		if !reflect.DeepEqual(m.OCIManagedMachinePool.Spec.NodeMetadata, pool.NodeMetadata) {
+			updateDetails.NodeMetadata = m.OCIManagedMachinePool.Spec.NodeMetadata
+			needsUpdate = true
 		}
-		nodeShapeConfig := oke.UpdateNodeShapeConfigDetails{}
-		if spec.NodeShapeConfig != nil {
-			ocpuString := spec.NodeShapeConfig.Ocpus
-			if ocpuString != nil {
-				ocpus, err := strconv.ParseFloat(*ocpuString, 32)
+	}
+
+	// NodeEvictionNodePoolSettings: compare specified values with actual
+	if m.OCIManagedMachinePool.Spec.NodeEvictionNodePoolSettings != nil {
+		if pool.NodeEvictionNodePoolSettings == nil ||
+			*m.OCIManagedMachinePool.Spec.NodeEvictionNodePoolSettings.EvictionGraceDuration != *pool.NodeEvictionNodePoolSettings.EvictionGraceDuration ||
+			*m.OCIManagedMachinePool.Spec.NodeEvictionNodePoolSettings.IsForceDeleteAfterGraceDuration != *pool.NodeEvictionNodePoolSettings.IsForceDeleteAfterGraceDuration {
+			updateDetails.NodeEvictionNodePoolSettings = &oke.NodeEvictionNodePoolSettings{
+				EvictionGraceDuration:           m.OCIManagedMachinePool.Spec.NodeEvictionNodePoolSettings.EvictionGraceDuration,
+				IsForceDeleteAfterGraceDuration: m.OCIManagedMachinePool.Spec.NodeEvictionNodePoolSettings.IsForceDeleteAfterGraceDuration,
+			}
+			needsUpdate = true
+		}
+	}
+
+	// InitialNodeLabels: compare specified values with actual
+	if len(m.OCIManagedMachinePool.Spec.InitialNodeLabels) > 0 {
+		actualLabels := getInitialNodeLabels(pool.InitialNodeLabels)
+		if !reflect.DeepEqual(m.OCIManagedMachinePool.Spec.InitialNodeLabels, actualLabels) {
+			updateDetails.InitialNodeLabels = m.getInitialNodeKeyValuePairs()
+			needsUpdate = true
+		}
+	}
+
+	// FreeformTags: compare cluster tags with actual node pool tags
+	expectedFreeformTags := m.getFreeFormTags()
+	if !reflect.DeepEqual(expectedFreeformTags, pool.FreeformTags) {
+		updateDetails.FreeformTags = expectedFreeformTags
+		needsUpdate = true
+	}
+
+	// DefinedTags: compare cluster defined tags with actual node pool tags
+	expectedDefinedTags := m.getDefinedTags()
+	if !reflect.DeepEqual(expectedDefinedTags, pool.DefinedTags) {
+		updateDetails.DefinedTags = expectedDefinedTags
+		needsUpdate = true
+	}
+
+	// NodePoolNodeConfig fields
+	if m.OCIManagedMachinePool.Spec.NodePoolNodeConfig != nil {
+		// NSG names: compare specified values with actual
+		if len(m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.NsgNames) > 0 {
+			actualNsgNames := GetNsgNamesFromId(pool.NodeConfigDetails.NsgIds, m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List)
+			if !reflect.DeepEqual(m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.NsgNames, actualNsgNames) {
+				nodeConfigDetails.NsgIds = m.getWorkerMachineNSGs()
+				needsUpdate = true
+			}
+		}
+
+		// IsPvEncryptionInTransitEnabled: compare specified value with actual
+		if m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.IsPvEncryptionInTransitEnabled != nil &&
+			pool.NodeConfigDetails.IsPvEncryptionInTransitEnabled != nil &&
+			*m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.IsPvEncryptionInTransitEnabled != *pool.NodeConfigDetails.IsPvEncryptionInTransitEnabled {
+			nodeConfigDetails.IsPvEncryptionInTransitEnabled = m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.IsPvEncryptionInTransitEnabled
+			needsUpdate = true
+		}
+
+		// KmsKeyId: compare specified value with actual
+		if m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.KmsKeyId != nil &&
+			(pool.NodeConfigDetails.KmsKeyId == nil || *m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.KmsKeyId != *pool.NodeConfigDetails.KmsKeyId) {
+			nodeConfigDetails.KmsKeyId = m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.KmsKeyId
+			needsUpdate = true
+		}
+
+		// PlacementConfigs: compare specified values with actual
+		if len(m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.PlacementConfigs) > 0 {
+			actualPlacementConfigs := m.buildPlacementConfigFromActual(pool.NodeConfigDetails.PlacementConfigs)
+			if !reflect.DeepEqual(m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.PlacementConfigs, actualPlacementConfigs) {
+				placementConfig, err := m.buildPlacementConfig(m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.PlacementConfigs)
 				if err != nil {
-					return false, errors.New(fmt.Sprintf("ocpus provided %s is not a valid floating point",
-						*ocpuString))
+					return false, err
 				}
-				nodeShapeConfig.Ocpus = common.Float32(float32(ocpus))
+				nodeConfigDetails.PlacementConfigs = placementConfig
+				needsUpdate = true
+			}
+		}
+
+		// NodePoolPodNetworkOptionDetails: compare specified values with actual
+		if m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails != nil {
+			actualPodNetwork := pool.NodeConfigDetails.NodePoolPodNetworkOptionDetails
+			desiredPodNetwork := m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails
+
+			podNetworkChanged := false
+			if desiredPodNetwork.CniType == infrastructurev1beta2.VCNNativeCNI {
+				actualVcnNative, ok := actualPodNetwork.(oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails)
+				if !ok {
+					podNetworkChanged = true
+				} else {
+					desiredSubnets := m.getPodSubnets(desiredPodNetwork.VcnIpNativePodNetworkOptions.SubnetNames)
+					desiredNsgs := m.getPodNSGs(desiredPodNetwork.VcnIpNativePodNetworkOptions.NSGNames)
+
+					if !reflect.DeepEqual(desiredSubnets, actualVcnNative.PodSubnetIds) ||
+						!reflect.DeepEqual(desiredNsgs, actualVcnNative.PodNsgIds) ||
+						(desiredPodNetwork.VcnIpNativePodNetworkOptions.MaxPodsPerNode != nil &&
+							actualVcnNative.MaxPodsPerNode != nil &&
+							*desiredPodNetwork.VcnIpNativePodNetworkOptions.MaxPodsPerNode != *actualVcnNative.MaxPodsPerNode) {
+						podNetworkChanged = true
+					}
+				}
+			} else if desiredPodNetwork.CniType == infrastructurev1beta2.FlannelCNI {
+				_, ok := actualPodNetwork.(oke.FlannelOverlayNodePoolPodNetworkOptionDetails)
+				if !ok {
+					podNetworkChanged = true
+				}
 			}
 
-			memoryInGBsString := spec.NodeShapeConfig.MemoryInGBs
-			if memoryInGBsString != nil {
-				memoryInGBs, err := strconv.ParseFloat(*memoryInGBsString, 32)
-				if err != nil {
-					return false, errors.New(fmt.Sprintf("memoryInGBs provided %s is not a valid floating point",
-						*memoryInGBsString))
+			if podNetworkChanged {
+				if desiredPodNetwork.CniType == infrastructurev1beta2.VCNNativeCNI {
+					npnDetails := oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
+						PodSubnetIds: m.getPodSubnets(desiredPodNetwork.VcnIpNativePodNetworkOptions.SubnetNames),
+						PodNsgIds:    m.getPodNSGs(desiredPodNetwork.VcnIpNativePodNetworkOptions.NSGNames),
+					}
+					if desiredPodNetwork.VcnIpNativePodNetworkOptions.MaxPodsPerNode != nil {
+						npnDetails.MaxPodsPerNode = desiredPodNetwork.VcnIpNativePodNetworkOptions.MaxPodsPerNode
+					}
+					nodeConfigDetails.NodePoolPodNetworkOptionDetails = npnDetails
+				} else if desiredPodNetwork.CniType == infrastructurev1beta2.FlannelCNI {
+					nodeConfigDetails.NodePoolPodNetworkOptionDetails = oke.FlannelOverlayNodePoolPodNetworkOptionDetails{}
 				}
-				nodeShapeConfig.MemoryInGBs = common.Float32(float32(memoryInGBs))
+				needsUpdate = true
 			}
 		}
-		err = m.setNodepoolImageId(ctx)
-		if err != nil {
-			return false, err
+	}
+
+	// NodePoolCyclingDetails: compare specified values with actual
+	if m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails != nil && len(nodeConfigDetails.PlacementConfigs) == 0 {
+		if pool.NodePoolCyclingDetails == nil ||
+			*m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.IsNodeCyclingEnabled != *pool.NodePoolCyclingDetails.IsNodeCyclingEnabled ||
+			*m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.MaximumSurge != *pool.NodePoolCyclingDetails.MaximumSurge ||
+			*m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.MaximumUnavailable != *pool.NodePoolCyclingDetails.MaximumUnavailable {
+			updateDetails.NodePoolCyclingDetails = &oke.NodePoolCyclingDetails{
+				IsNodeCyclingEnabled: m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.IsNodeCyclingEnabled,
+				MaximumSurge:         m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.MaximumSurge,
+				MaximumUnavailable:   m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.MaximumUnavailable,
+			}
+			needsUpdate = true
 		}
-		sourceDetails := oke.NodeSourceViaImageDetails{
-			// use image id from machinepool spec itself as the copy will not have the image set in the
-			// setNodepoolImageId method above
-			ImageId:             m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId,
-			BootVolumeSizeInGBs: spec.NodeSourceViaImage.BootVolumeSizeInGBs,
+	} else if m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails != nil && len(nodeConfigDetails.PlacementConfigs) != 0 {
+		m.Logger.V(LogLevelWarn).Info("Placement configuration has been changed in the update, " +
+			"hence node pool recycling configuration will not be sent with the update request")
+	}
+
+	// Size update for replicas
+	if nodePoolSizeUpdateRequired {
+		nodeConfigDetails.Size = common.Int(int(*m.MachinePool.Spec.Replicas))
+		needsUpdate = true
+	}
+
+	// Only proceed with update if something actually needs to change
+	if needsUpdate {
+		// Only set NodeConfigDetails if it has changes
+		if nodeConfigDetails.NsgIds != nil || nodeConfigDetails.IsPvEncryptionInTransitEnabled != nil ||
+			nodeConfigDetails.KmsKeyId != nil || len(nodeConfigDetails.PlacementConfigs) != 0 ||
+			nodeConfigDetails.NodePoolPodNetworkOptionDetails != nil || nodeConfigDetails.Size != nil {
+			updateDetails.NodeConfigDetails = nodeConfigDetails
 		}
 
-		podNetworkOptions := spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails
-		if podNetworkOptions != nil {
-			if podNetworkOptions.CniType == infrastructurev1beta2.VCNNativeCNI {
-				npnDetails := oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
-					PodSubnetIds: m.getPodSubnets(podNetworkOptions.VcnIpNativePodNetworkOptions.SubnetNames),
-					PodNsgIds:    m.getPodNSGs(podNetworkOptions.VcnIpNativePodNetworkOptions.NSGNames),
-				}
-				if podNetworkOptions.VcnIpNativePodNetworkOptions.MaxPodsPerNode != nil {
-					npnDetails.MaxPodsPerNode = podNetworkOptions.VcnIpNativePodNetworkOptions.MaxPodsPerNode
-				}
-				nodeConfigDetails.NodePoolPodNetworkOptionDetails = npnDetails
-			} else if podNetworkOptions.CniType == infrastructurev1beta2.FlannelCNI {
-				nodeConfigDetails.NodePoolPodNetworkOptionDetails = oke.FlannelOverlayNodePoolPodNetworkOptionDetails{}
-			}
-		}
-		nodePoolDetails := oke.UpdateNodePoolDetails{
-			Name:              common.String(m.getNodePoolName()),
-			KubernetesVersion: m.OCIManagedMachinePool.Spec.Version,
-			NodeShape:         common.String(m.OCIManagedMachinePool.Spec.NodeShape),
-			NodeShapeConfig:   &nodeShapeConfig,
-			NodeSourceDetails: &sourceDetails,
-			SshPublicKey:      common.String(m.OCIManagedMachinePool.Spec.SshPublicKey),
-			NodeConfigDetails: &nodeConfigDetails,
-			NodeMetadata:      spec.NodeMetadata,
-		}
-		recycleConfig := spec.NodePoolCyclingDetails
-		// cannot send recycle config and placement config together
-		if recycleConfig != nil && len(nodeConfigDetails.PlacementConfigs) == 0 {
-			nodePoolDetails.NodePoolCyclingDetails = &oke.NodePoolCyclingDetails{
-				IsNodeCyclingEnabled: recycleConfig.IsNodeCyclingEnabled,
-				MaximumSurge:         recycleConfig.MaximumSurge,
-				MaximumUnavailable:   recycleConfig.MaximumUnavailable,
-			}
-		}
-		if recycleConfig != nil && len(nodeConfigDetails.PlacementConfigs) != 0 {
-			m.Logger.V(LogLevelWarn).Info("Placement configuration has been changed in the update, " +
-				"hence node pool recycling configuration will not be sent with the update request")
-		}
-		if spec.NodeEvictionNodePoolSettings != nil {
-			nodePoolDetails.NodeEvictionNodePoolSettings = &oke.NodeEvictionNodePoolSettings{
-				EvictionGraceDuration:           spec.NodeEvictionNodePoolSettings.EvictionGraceDuration,
-				IsForceDeleteAfterGraceDuration: spec.NodeEvictionNodePoolSettings.IsForceDeleteAfterGraceDuration,
-			}
-		}
-		nodePoolDetails.InitialNodeLabels = m.getInitialNodeKeyValuePairs()
+		m.Logger.Info("Updating node pool - user-specified fields differ from actual state")
 		req := oke.UpdateNodePoolRequest{
 			NodePoolId:            pool.Id,
-			UpdateNodePoolDetails: nodePoolDetails,
+			UpdateNodePoolDetails: *updateDetails,
 		}
-		_, err = m.ContainerEngineClient.UpdateNodePool(ctx, req)
+		_, err := m.ContainerEngineClient.UpdateNodePool(ctx, req)
 		if err != nil {
 			return false, errors.Wrapf(err, "failed to update Node Pool")
 		}
