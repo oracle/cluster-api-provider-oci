@@ -366,7 +366,7 @@ func TestInstanceReconciliation(t *testing.T) {
 			name:                "returns error after exhausting all fault domains",
 			errorExpected:       true,
 			errorSubStringMatch: true,
-			matchError:          errors.New("out of host capacity in fd3"),
+			matchError:          errors.New("failed to launch instance after trying all fault domains"),
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				setupAllParams(ms)
 				ociCluster := ms.OCIClusterAccessor.(OCISelfManagedCluster).OCICluster
@@ -3145,34 +3145,35 @@ func setupAllParams(ms *MachineScope) {
 	ms.OCIMachine.UID = "machineuid"
 }
 
-type testServiceError struct {
+// mockServiceError is a mock error type used to simulate OCI service errors
+type mockServiceError struct {
 	status  int
 	code    string
 	message string
 }
 
-func (t testServiceError) Error() string {
+func (t mockServiceError) Error() string {
 	return t.message
 }
 
-func (t testServiceError) GetHTTPStatusCode() int {
+func (t mockServiceError) GetHTTPStatusCode() int {
 	return t.status
 }
 
-func (t testServiceError) GetCode() string {
+func (t mockServiceError) GetCode() string {
 	return t.code
 }
 
-func (t testServiceError) GetMessage() string {
+func (t mockServiceError) GetMessage() string {
 	return t.message
 }
 
-func (t testServiceError) GetOpcRequestID() string {
+func (t mockServiceError) GetOpcRequestID() string {
 	return ""
 }
 
 func newOutOfCapacityServiceError(message string) error {
-	return testServiceError{
+	return mockServiceError{
 		status:  http.StatusInternalServerError,
 		code:    "InternalError",
 		message: fmt.Sprintf("%s: %s", ociutil.OutOfHostCapacityErr, message),

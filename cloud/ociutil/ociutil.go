@@ -175,7 +175,7 @@ func BuildClusterTags(ClusterResourceUID string) map[string]string {
 }
 
 // IsOutOfHostCapacity returns true when the OCI service error indicates that the fault domain ran out of capacity.
-// Error code: https://docs.public.content.oci.oraclecloud.com/en-us/iaas/Content/Compute/known-issues.htm?utm_source=chatgpt.com#out-of-host-capacity-error-when-creating-compute-instances:~:text=Tag%20Defaults.-,Out%20of%20host%20capacity%20error%20when%20creating%20compute%20instances,-%F0%9F%94%97
+// Error code: https://docs.public.content.oci.oraclecloud.com/en-us/iaas/Content/Compute/known-issues.htm?#out-of-host-capacity-error-when-creating-compute-instances
 func IsOutOfHostCapacity(err error) bool {
 	if err == nil {
 		return false

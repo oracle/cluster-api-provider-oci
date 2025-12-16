@@ -272,10 +272,6 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 // launchInstanceWithFaultDomainRetry iterates through the provided fault domains and
 // attempts to launch an instance in each until one succeeds, all fail, or a non-capacity error occurs.
 func (m *MachineScope) launchInstanceWithFaultDomainRetry(ctx context.Context, baseDetails core.LaunchInstanceDetails, faultDomains []string) (*core.Instance, error) {
-	if len(faultDomains) == 0 {
-		faultDomains = []string{ociutil.DerefString(baseDetails.FaultDomain)}
-	}
-
 	if m.OCIMachine == nil {
 		return nil, errors.New("machine scope is missing OCIMachine")
 	}
@@ -307,28 +303,37 @@ func (m *MachineScope) launchInstanceWithFaultDomainRetry(ctx context.Context, b
 		if err == nil {
 			return &resp.Instance, nil
 		}
-		lastAttempt := idx == len(faultDomains)-1
-		if !ociutil.IsOutOfHostCapacity(err) || lastAttempt {
+
+		// Stop immediately on non-capacity errors
+		if !ociutil.IsOutOfHostCapacity(err) {
 			return nil, err
 		}
-		lastErr = err
-		nextFD := ""
-		if !lastAttempt {
-			nextFD = faultDomains[idx+1]
+
+		// For out-of-capacity errors, only retry if there are more fault domains to try
+		if idx == len(faultDomains)-1 {
+			lastErr = err
+			break
 		}
+
+		lastErr = err
+		nextFD := faultDomains[idx+1]
 		m.Logger.Info("Fault domain has run out of host capacity, retrying in a different domain", "nextFaultDomain", nextFD)
 	}
-	return nil, lastErr
+	return nil, errors.Wrap(lastErr, "failed to launch instance after trying all fault domains")
 }
 
 // buildFaultDomainRetryList returns the list of fault domains we should try
 // when launching in the given availability domain.
+// If retry is false, returns only 1 initialFaultDomain.
+// Otherwise, returns all 3 fault domains for the availability domain.
 func (m *MachineScope) buildFaultDomainRetryList(availabilityDomain, initialFaultDomain string, retry bool) []string {
 	faultDomainList := []string{initialFaultDomain}
 	if !retry || availabilityDomain == "" {
 		return faultDomainList
 	}
 
+	// we call faultDomainsForAvailabilityDomain and append to faultDomainList because we want to make
+	// initialFaultDomain always followed by the other fault domains in order.
 	for _, fd := range m.faultDomainsForAvailabilityDomain(availabilityDomain) {
 		if fd == initialFaultDomain {
 			continue
