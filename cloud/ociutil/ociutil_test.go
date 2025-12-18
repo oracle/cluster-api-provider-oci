@@ -18,6 +18,7 @@ package ociutil
 
 import (
 	"fmt"
+	"net/http"
 	"reflect"
 	"testing"
 
@@ -82,4 +83,72 @@ func TestAddToDefaultClusterTags(t *testing.T) {
 			t.Errorf("Default tags don't match Expected: %s, Actual: %s", defaultTags[key], tags[key])
 		}
 	}
+}
+
+func TestIsOutOfHostCapacity(t *testing.T) {
+	testCases := []struct {
+		name     string
+		err      error
+		expected bool
+	}{
+		{
+			name:     "service error matches internal code and message",
+			err:      fakeServiceError{status: http.StatusInternalServerError, message: OutOfHostCapacityErr},
+			expected: true,
+		},
+		{
+			name:     "non matching service error status",
+			err:      fakeServiceError{status: http.StatusBadRequest, message: OutOfHostCapacityErr},
+			expected: false,
+		},
+		{
+			name:     "non matching service error message",
+			err:      fakeServiceError{status: http.StatusInternalServerError, message: "other"},
+			expected: false,
+		},
+		{
+			name:     "non matching message",
+			err:      fmt.Errorf("boom"),
+			expected: false,
+		},
+		{
+			name:     "nil error",
+			err:      nil,
+			expected: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := IsOutOfHostCapacity(tc.err)
+			if actual != tc.expected {
+				t.Fatalf("expected %t but got %t for test %s", tc.expected, actual, tc.name)
+			}
+		})
+	}
+}
+
+type fakeServiceError struct {
+	status  int
+	message string
+}
+
+func (f fakeServiceError) Error() string {
+	return f.message
+}
+
+func (f fakeServiceError) GetHTTPStatusCode() int {
+	return f.status
+}
+
+func (f fakeServiceError) GetMessage() string {
+	return f.message
+}
+
+func (f fakeServiceError) GetCode() string {
+	return ""
+}
+
+func (f fakeServiceError) GetOpcRequestID() string {
+	return ""
 }

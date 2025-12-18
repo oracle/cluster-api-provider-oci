@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	lb "github.com/oracle/cluster-api-provider-oci/cloud/services/loadbalancer"
@@ -41,6 +42,7 @@ const (
 	CreatedBy                 = "CreatedBy"
 	OCIClusterAPIProvider     = "OCIClusterAPIProvider"
 	ClusterResourceIdentifier = "ClusterResourceIdentifier"
+	OutOfHostCapacityErr      = "Out of host capacity"
 )
 
 // ErrNotFound is for simulation during testing, OCI SDK does not have a way
@@ -170,6 +172,20 @@ func BuildClusterTags(ClusterResourceUID string) map[string]string {
 	tags := GetDefaultClusterTags()
 	tags[ClusterResourceIdentifier] = ClusterResourceUID
 	return tags
+}
+
+// IsOutOfHostCapacity returns true when the OCI service error indicates that the fault domain ran out of capacity.
+// Error code: https://docs.public.content.oci.oraclecloud.com/en-us/iaas/Content/Compute/known-issues.htm?#out-of-host-capacity-error-when-creating-compute-instances
+func IsOutOfHostCapacity(err error) bool {
+	if err == nil {
+		return false
+	}
+	err = errors.Cause(err)
+	if serviceErr, ok := common.IsServiceError(err); ok {
+		return serviceErr.GetHTTPStatusCode() == http.StatusInternalServerError &&
+			strings.Contains(strings.ToLower(serviceErr.GetMessage()), strings.ToLower(OutOfHostCapacityErr))
+	}
+	return false
 }
 
 // DerefString returns the string value if the pointer isn't nil, otherwise returns empty string
