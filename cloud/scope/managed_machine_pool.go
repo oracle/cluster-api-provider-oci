@@ -682,9 +682,16 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 		needsUpdate = true
 	}
 
-	// NodeMetadata: compare specified values with actual
+	// NodeMetadata: check that user-specified metadata exists and matches
 	if m.OCIManagedMachinePool.Spec.NodeMetadata != nil && len(m.OCIManagedMachinePool.Spec.NodeMetadata) > 0 {
-		if !reflect.DeepEqual(m.OCIManagedMachinePool.Spec.NodeMetadata, pool.NodeMetadata) {
+		needsMetadataUpdate := false
+		for userKey, userValue := range m.OCIManagedMachinePool.Spec.NodeMetadata {
+			if actualValue, exists := pool.NodeMetadata[userKey]; !exists || actualValue != userValue {
+				needsMetadataUpdate = true
+				break
+			}
+		}
+		if needsMetadataUpdate {
 			updateDetails.NodeMetadata = m.OCIManagedMachinePool.Spec.NodeMetadata
 			needsUpdate = true
 		}
@@ -703,27 +710,70 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 		}
 	}
 
-	// InitialNodeLabels: compare specified values with actual
+	// InitialNodeLabels: check that user-specified labels exist and match
 	if len(m.OCIManagedMachinePool.Spec.InitialNodeLabels) > 0 {
+		needsLabelsUpdate := false
 		actualLabels := getInitialNodeLabels(pool.InitialNodeLabels)
-		if !reflect.DeepEqual(m.OCIManagedMachinePool.Spec.InitialNodeLabels, actualLabels) {
+		actualLabelsMap := make(map[string]string)
+		for _, label := range actualLabels {
+			if label.Key != nil && label.Value != nil {
+				actualLabelsMap[*label.Key] = *label.Value
+			}
+		}
+		for _, userLabel := range m.OCIManagedMachinePool.Spec.InitialNodeLabels {
+			if userLabel.Key != nil && userLabel.Value != nil {
+				if actualValue, exists := actualLabelsMap[*userLabel.Key]; !exists || actualValue != *userLabel.Value {
+					needsLabelsUpdate = true
+					break
+				}
+			}
+		}
+		if needsLabelsUpdate {
 			updateDetails.InitialNodeLabels = m.getInitialNodeKeyValuePairs()
 			needsUpdate = true
 		}
 	}
 
-	// FreeformTags: compare cluster tags with actual node pool tags
+	// FreeformTags: check that user-specified tags exist and match (allow OCI to add system tags)
 	expectedFreeformTags := m.getFreeFormTags()
-	if !reflect.DeepEqual(expectedFreeformTags, pool.FreeformTags) {
-		updateDetails.FreeformTags = expectedFreeformTags
-		needsUpdate = true
+	if len(expectedFreeformTags) > 0 {
+		needsTagUpdate := false
+		for key, expectedValue := range expectedFreeformTags {
+			if actualValue, exists := pool.FreeformTags[key]; !exists || actualValue != expectedValue {
+				needsTagUpdate = true
+				break
+			}
+		}
+		if needsTagUpdate {
+			updateDetails.FreeformTags = expectedFreeformTags
+			needsUpdate = true
+		}
 	}
 
-	// DefinedTags: compare cluster defined tags with actual node pool tags
+	// DefinedTags: check that user-specified defined tags exist and match (allow OCI to add system-defined tags)
 	expectedDefinedTags := m.getDefinedTags()
-	if !reflect.DeepEqual(expectedDefinedTags, pool.DefinedTags) {
-		updateDetails.DefinedTags = expectedDefinedTags
-		needsUpdate = true
+	if len(expectedDefinedTags) > 0 {
+		needsDefinedTagUpdate := false
+		for namespace, nsTags := range expectedDefinedTags {
+			if actualNSTags, nsExists := pool.DefinedTags[namespace]; !nsExists {
+				needsDefinedTagUpdate = true
+				break
+			} else {
+				for tagKey, expectedValue := range nsTags {
+					if actualValue, tagExists := actualNSTags[tagKey]; !tagExists || actualValue != expectedValue {
+						needsDefinedTagUpdate = true
+						break
+					}
+				}
+				if needsDefinedTagUpdate {
+					break
+				}
+			}
+		}
+		if needsDefinedTagUpdate {
+			updateDetails.DefinedTags = expectedDefinedTags
+			needsUpdate = true
+		}
 	}
 
 	// NodePoolNodeConfig fields
@@ -752,10 +802,33 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 			needsUpdate = true
 		}
 
-		// PlacementConfigs: compare specified values with actual
+		// PlacementConfigs: check that user-specified configs exist and match (allow OCI to add extra configs)
 		if len(m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.PlacementConfigs) > 0 {
 			actualPlacementConfigs := m.buildPlacementConfigFromActual(pool.NodeConfigDetails.PlacementConfigs)
-			if !reflect.DeepEqual(m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.PlacementConfigs, actualPlacementConfigs) {
+			actualConfigsMap := make(map[string]expinfra1.PlacementConfig)
+			for _, config := range actualPlacementConfigs {
+				if config.AvailabilityDomain != nil {
+					actualConfigsMap[*config.AvailabilityDomain] = config
+				}
+			}
+
+			needsPlacementUpdate := false
+			for _, userConfig := range m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.PlacementConfigs {
+				if userConfig.AvailabilityDomain != nil {
+					if actualConfig, exists := actualConfigsMap[*userConfig.AvailabilityDomain]; !exists {
+						needsPlacementUpdate = true
+						break
+					} else {
+						// Check if the config matches (compare relevant fields)
+						if !reflect.DeepEqual(userConfig, actualConfig) {
+							needsPlacementUpdate = true
+							break
+						}
+					}
+				}
+			}
+
+			if needsPlacementUpdate {
 				placementConfig, err := m.buildPlacementConfig(m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.PlacementConfigs)
 				if err != nil {
 					return false, err
