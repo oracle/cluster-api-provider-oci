@@ -1,21 +1,32 @@
-# Argo Workflow to run CAPOCI e2e tests via scripts/ci-e2e.sh
+# Argo WorkflowTemplate to run CAPOCI e2e tests via scripts/ci-e2e.sh
+# - Mirrors the latest argo/capoci-e2e-workflow.yaml behavior
 # - Uses docker-in-docker (dind) sidecar so the Makefile can docker build/push
 # - Installs minimal tooling in the main container (git, make, curl, openssh-client, docker CLI)
 # - Clones this repository and invokes ./scripts/ci-e2e.sh (which does the build and testing)
 # - Maps parameters to environment variables consumed by the script and e2e config
 #
-# Submit directly (no template install needed):
-#   argo submit argo/capoci-e2e-workflow.yaml \
-#     -p oci_compartment_id=ocid1.compartment.oc1..example \
-#     -p oci_image_id=ocid1.image.oc1..example \
-#     -p oci_oracle_linux_image_id=ocid1.image.oc1..example \
-#     -p oci_upgrade_image_id=ocid1.image.oc1..example \
-#     -p oci_managed_node_image_id=ocid1.image.oc1..optional \
-#     -p oci_alternative_region_image_id=ocid1.image.oc1..example \
-#     -p registry=ghcr.io/your-org \
+# Required configs are read from a ConfigMap in the same namespace (Option A = required-only):
+#   ConfigMap name: argo-capoci-e2e-config
+#   Required keys:
+#     - oci_compartment_id
+#     - oci_image_id
+#     - oci_oracle_linux_image_id
+#     - oci_upgrade_image_id
+#     - oci_alternative_region_image_id
+#     - oci_managed_node_image_id
+#   Additional key (optional):
+#     - registry
+#
+# Example to create the ConfigMap (adjust values as appropriate):
+#   kubectl apply -f argo/capoci-e2e-configmap.yaml
+#
+# Install the template:
+#   kubectl apply -f argo/capoci-e2e-workflowtemplate.yaml
+#
+# Run a workflow from this template (override any defaults with -p):
+#   argo submit --from workflowtemplate/capoci-e2e -n argo \
 #     -p use_instance_principal=true \
-#     -p use_instance_principal_b64=dHJ1ZQ== \
-#     -p oci_ssh_key="ssh-rsa AAAA... your-key"
+#     -p use_instance_principal_b64=dHJ1ZQ==
 #
 # Notes:
 # - USE_INSTANCE_PRINCIPAL_B64 commonly needs "dHJ1ZQ==" for true, "ZmFsc2U=" for false (base64).
@@ -24,12 +35,13 @@
 # - git_ref defaults to main
 # - git_repo defaults to https://github.com/oracle/cluster-api-provider-oci.git
 # - ginkgo_focus can be used to run a single test
+# - Due to Argo parameter constraints, registry cannot be sourced as a parameter from a Secret; instead it is read via container env (REGISTRY_CM) from the ConfigMap and overrides the parameter if present.
 
 apiVersion: argoproj.io/v1alpha1
-kind: Workflow
+kind: WorkflowTemplate
 metadata:
   namespace: argo
-  generateName: capoci-e2e-
+  name: capoci-e2e
 spec:
   entrypoint: run
   serviceAccountName: argo
@@ -51,19 +63,37 @@ spec:
       - name: registry
         value: ghcr.io/oracle
 
-      # REQUIRED by scripts/ci-e2e.sh
+      # REQUIRED by scripts/ci-e2e.sh (sourced from ConfigMap argo-capoci-e2e-config)
       - name: oci_compartment_id
-        value: ""
+        valueFrom:
+          configMapKeyRef:
+            name: argo-capoci-e2e-config
+            key: oci_compartment_id
       - name: oci_image_id
-        value: ""
+        valueFrom:
+          configMapKeyRef:
+            name: argo-capoci-e2e-config
+            key: oci_image_id
       - name: oci_oracle_linux_image_id
-        value: ""
+        valueFrom:
+          configMapKeyRef:
+            name: argo-capoci-e2e-config
+            key: oci_oracle_linux_image_id
       - name: oci_upgrade_image_id
-        value: ""
+        valueFrom:
+          configMapKeyRef:
+            name: argo-capoci-e2e-config
+            key: oci_upgrade_image_id
       - name: oci_alternative_region_image_id
-        value: ""
+        valueFrom:
+          configMapKeyRef:
+            name: argo-capoci-e2e-config
+            key: oci_alternative_region_image_id
       - name: oci_managed_node_image_id
-        value: ""
+        valueFrom:
+          configMapKeyRef:
+            name: argo-capoci-e2e-config
+            key: oci_managed_node_image_id
 
       # Optional image IDs
       - name: oci_windows_image_id
@@ -159,11 +189,11 @@ spec:
           runAsUser: 0
         resources:
           requests:
+            cpu: "2"
+            memory: "4Gi"
+          limits:
             cpu: "4"
             memory: "8Gi"
-          limits:
-            cpu: "8"
-            memory: "16Gi"
         env:
           # Docker socket via dind sidecar
           - name: DOCKER_HOST
@@ -172,6 +202,12 @@ spec:
           # Registry for docker build/push from the Makefile
           - name: REGISTRY
             value: "{{workflow.parameters.registry}}"
+          - name: REGISTRY_CM
+            valueFrom:
+              configMapKeyRef:
+                name: argo-capoci-e2e-config
+                key: registry
+                optional: true
 
           # Required envs for scripts/ci-e2e.sh
           - name: OCI_COMPARTMENT_ID
@@ -232,7 +268,7 @@ spec:
           - name: OCIR_REGION
             value: "{{workflow.parameters.ocir_region}}"
           - name: OCIR_REGION_SHORT_CODE
-            value: "{{workflow.parameters.ocir_region}}"
+            value: "{{workflow.parameters.ocir_region_short_code}}"
           - name: KIND_CGROUP_DRIVER
             value: "cgroupfs"
 
@@ -262,6 +298,11 @@ spec:
             done
             docker version
 
+            # Override REGISTRY from ConfigMap if present
+            if [ -n "${REGISTRY_CM:-}" ]; then
+              export REGISTRY="${REGISTRY_CM}"
+            fi
+
             # Ensure binaries installed by the Makefile are on PATH (kustomize, ginkgo, etc.)
             export PATH="/workspace/bin:${PATH}"
             # Also provide kustomize in a standard location for tools that exec 'kustomize' by name.
@@ -283,15 +324,15 @@ spec:
 
             oci --version || true
 
-            # Setup OCIR token and login
+            # Setup OCIR token and login using instance principal
             echo "Generating the ocir token"
             echo "https://{{workflow.parameters.ocir_region}}.ocir.io/20180419/docker/token"
             OCIR_TOKEN=$(oci raw-request \
-            --http-method GET \
-            --target-uri "https://{{workflow.parameters.ocir_region}}.ocir.io/20180419/docker/token" \
-            --auth instance_principal \
-            --region "{{workflow.parameters.ocir_region}}" \
-            --profile DEFAULT | jq -r .data.token)
+              --http-method GET \
+              --target-uri "https://{{workflow.parameters.ocir_region}}.ocir.io/20180419/docker/token" \
+              --auth instance_principal \
+              --region "{{workflow.parameters.ocir_region}}" \
+              --profile DEFAULT | jq -r .data.token)
 
             echo "docker login"
             echo "${OCIR_TOKEN}" | docker login -u BEARER_TOKEN --password-stdin "{{workflow.parameters.ocir_region_short_code}}.ocir.io"
@@ -315,7 +356,6 @@ spec:
               & echo $! > /tmp/capoci_watch_pid
 
             # Run the e2e test harness
-            # This builds and runs the actual test. Everything else is package install and setup or reporting
             ./scripts/ci-e2e.sh
 
             # Stop watcher if running
