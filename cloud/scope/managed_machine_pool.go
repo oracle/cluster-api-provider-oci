@@ -933,17 +933,45 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 		}
 	}
 
-	// NodePoolCyclingDetails: compare specified values with actual
+	// NodePoolCyclingDetails: check individual user-specified fields
 	if m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails != nil && len(nodeConfigDetails.PlacementConfigs) == 0 {
-		if pool.NodePoolCyclingDetails == nil ||
-			*m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.IsNodeCyclingEnabled != *pool.NodePoolCyclingDetails.IsNodeCyclingEnabled ||
-			*m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.MaximumSurge != *pool.NodePoolCyclingDetails.MaximumSurge ||
-			*m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.MaximumUnavailable != *pool.NodePoolCyclingDetails.MaximumUnavailable {
-			updateDetails.NodePoolCyclingDetails = &oke.NodePoolCyclingDetails{
-				IsNodeCyclingEnabled: m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.IsNodeCyclingEnabled,
-				MaximumSurge:         m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.MaximumSurge,
-				MaximumUnavailable:   m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.MaximumUnavailable,
+		needsCyclingUpdate := false
+
+		if pool.NodePoolCyclingDetails == nil {
+			// OCI has no cycling details but spec does - update needed
+			needsCyclingUpdate = true
+		} else {
+			// Check individual fields that user specified (avoid nil dereference)
+			if m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.IsNodeCyclingEnabled != nil &&
+				(pool.NodePoolCyclingDetails.IsNodeCyclingEnabled == nil ||
+					*m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.IsNodeCyclingEnabled != *pool.NodePoolCyclingDetails.IsNodeCyclingEnabled) {
+				needsCyclingUpdate = true
 			}
+			if m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.MaximumSurge != nil &&
+				(pool.NodePoolCyclingDetails.MaximumSurge == nil ||
+					*m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.MaximumSurge != *pool.NodePoolCyclingDetails.MaximumSurge) {
+				needsCyclingUpdate = true
+			}
+			if m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.MaximumUnavailable != nil &&
+				(pool.NodePoolCyclingDetails.MaximumUnavailable == nil ||
+					*m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.MaximumUnavailable != *pool.NodePoolCyclingDetails.MaximumUnavailable) {
+				needsCyclingUpdate = true
+			}
+		}
+
+		if needsCyclingUpdate {
+			// Only set fields that user specified (partial update)
+			update := &oke.NodePoolCyclingDetails{}
+			if m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.IsNodeCyclingEnabled != nil {
+				update.IsNodeCyclingEnabled = m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.IsNodeCyclingEnabled
+			}
+			if m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.MaximumSurge != nil {
+				update.MaximumSurge = m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.MaximumSurge
+			}
+			if m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.MaximumUnavailable != nil {
+				update.MaximumUnavailable = m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.MaximumUnavailable
+			}
+			updateDetails.NodePoolCyclingDetails = update
 			needsUpdate = true
 		}
 	} else if m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails != nil && len(nodeConfigDetails.PlacementConfigs) != 0 {
