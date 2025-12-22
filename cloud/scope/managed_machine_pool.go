@@ -610,41 +610,49 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 	// Only update if the specified value differs from the actual value
 
 	// KubernetesVersion: compare specified value with actual
-	if m.OCIManagedMachinePool.Spec.Version != nil && *m.OCIManagedMachinePool.Spec.Version != *pool.KubernetesVersion {
+	if m.OCIManagedMachinePool.Spec.Version != nil &&
+		(pool.KubernetesVersion == nil || *m.OCIManagedMachinePool.Spec.Version != *pool.KubernetesVersion) {
 		updateDetails.KubernetesVersion = m.OCIManagedMachinePool.Spec.Version
 		needsUpdate = true
 	}
 
-	// NodeShape: compare specified value with actual
-	if m.OCIManagedMachinePool.Spec.NodeShape != "" && m.OCIManagedMachinePool.Spec.NodeShape != *pool.NodeShape {
+	// NodeShape: only update if user specified a non-empty value
+	if m.OCIManagedMachinePool.Spec.NodeShape != "" &&
+		(pool.NodeShape == nil || m.OCIManagedMachinePool.Spec.NodeShape != *pool.NodeShape) {
 		updateDetails.NodeShape = common.String(m.OCIManagedMachinePool.Spec.NodeShape)
 		needsUpdate = true
 	}
 
-	// NodeShapeConfig: compare specified values with actual
-	if m.OCIManagedMachinePool.Spec.NodeShapeConfig != nil && pool.NodeShapeConfig != nil {
+	// NodeShapeConfig: check individual user-specified fields
+	if m.OCIManagedMachinePool.Spec.NodeShapeConfig != nil {
 		nodeShapeConfig := oke.UpdateNodeShapeConfigDetails{}
 		configChanged := false
 
+		// Check Ocpus field
 		if m.OCIManagedMachinePool.Spec.NodeShapeConfig.Ocpus != nil {
 			desiredOcpus, err := strconv.ParseFloat(*m.OCIManagedMachinePool.Spec.NodeShapeConfig.Ocpus, 32)
 			if err != nil {
 				return false, errors.New(fmt.Sprintf("ocpus provided %s is not a valid floating point",
 					*m.OCIManagedMachinePool.Spec.NodeShapeConfig.Ocpus))
 			}
-			if pool.NodeShapeConfig.Ocpus == nil || float32(desiredOcpus) != *pool.NodeShapeConfig.Ocpus {
+
+			// Check if OCI has shape config and if values differ
+			if pool.NodeShapeConfig == nil || pool.NodeShapeConfig.Ocpus == nil || float32(desiredOcpus) != *pool.NodeShapeConfig.Ocpus {
 				nodeShapeConfig.Ocpus = common.Float32(float32(desiredOcpus))
 				configChanged = true
 			}
 		}
 
+		// Check MemoryInGBs field
 		if m.OCIManagedMachinePool.Spec.NodeShapeConfig.MemoryInGBs != nil {
 			desiredMemory, err := strconv.ParseFloat(*m.OCIManagedMachinePool.Spec.NodeShapeConfig.MemoryInGBs, 32)
 			if err != nil {
 				return false, errors.New(fmt.Sprintf("memoryInGBs provided %s is not a valid floating point",
 					*m.OCIManagedMachinePool.Spec.NodeShapeConfig.MemoryInGBs))
 			}
-			if pool.NodeShapeConfig.MemoryInGBs == nil || float32(desiredMemory) != *pool.NodeShapeConfig.MemoryInGBs {
+
+			// Check if OCI has shape config and if values differ
+			if pool.NodeShapeConfig == nil || pool.NodeShapeConfig.MemoryInGBs == nil || float32(desiredMemory) != *pool.NodeShapeConfig.MemoryInGBs {
 				nodeShapeConfig.MemoryInGBs = common.Float32(float32(desiredMemory))
 				configChanged = true
 			}
@@ -656,12 +664,11 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 		}
 	}
 
-	// NodeSourceViaImage: compare specified values with actual
+	// NodeSourceViaImage: check individual user-specified fields
 	if m.OCIManagedMachinePool.Spec.NodeSourceViaImage != nil {
 		actualSource, ok := pool.NodeSourceDetails.(oke.NodeSourceViaImageDetails)
-		if !ok || m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId == nil ||
-			(m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId != nil && *m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId != *actualSource.ImageId) ||
-			(m.OCIManagedMachinePool.Spec.NodeSourceViaImage.BootVolumeSizeInGBs != nil && actualSource.BootVolumeSizeInGBs != nil && *m.OCIManagedMachinePool.Spec.NodeSourceViaImage.BootVolumeSizeInGBs != *actualSource.BootVolumeSizeInGBs) {
+		if !ok {
+			// OCI doesn't have image source details - update needed
 			err := m.setNodepoolImageId(ctx)
 			if err != nil {
 				return false, err
@@ -672,6 +679,27 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 			}
 			updateDetails.NodeSourceDetails = &sourceDetails
 			needsUpdate = true
+		} else {
+			// Check if values differ
+			imageChanged := m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId != nil &&
+				*actualSource.ImageId != *m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId
+
+			bootVolumeChanged := m.OCIManagedMachinePool.Spec.NodeSourceViaImage.BootVolumeSizeInGBs != nil &&
+				(actualSource.BootVolumeSizeInGBs == nil ||
+					*actualSource.BootVolumeSizeInGBs != *m.OCIManagedMachinePool.Spec.NodeSourceViaImage.BootVolumeSizeInGBs)
+
+			if imageChanged || bootVolumeChanged {
+				err := m.setNodepoolImageId(ctx)
+				if err != nil {
+					return false, err
+				}
+				sourceDetails := oke.NodeSourceViaImageDetails{
+					ImageId:             m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId,
+					BootVolumeSizeInGBs: m.OCIManagedMachinePool.Spec.NodeSourceViaImage.BootVolumeSizeInGBs,
+				}
+				updateDetails.NodeSourceDetails = &sourceDetails
+				needsUpdate = true
+			}
 		}
 	}
 
@@ -697,15 +725,35 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 		}
 	}
 
-	// NodeEvictionNodePoolSettings: compare specified values with actual
+	// NodeEvictionNodePoolSettings: check individual user-specified fields
 	if m.OCIManagedMachinePool.Spec.NodeEvictionNodePoolSettings != nil {
-		if pool.NodeEvictionNodePoolSettings == nil ||
-			*m.OCIManagedMachinePool.Spec.NodeEvictionNodePoolSettings.EvictionGraceDuration != *pool.NodeEvictionNodePoolSettings.EvictionGraceDuration ||
-			*m.OCIManagedMachinePool.Spec.NodeEvictionNodePoolSettings.IsForceDeleteAfterGraceDuration != *pool.NodeEvictionNodePoolSettings.IsForceDeleteAfterGraceDuration {
-			updateDetails.NodeEvictionNodePoolSettings = &oke.NodeEvictionNodePoolSettings{
-				EvictionGraceDuration:           m.OCIManagedMachinePool.Spec.NodeEvictionNodePoolSettings.EvictionGraceDuration,
-				IsForceDeleteAfterGraceDuration: m.OCIManagedMachinePool.Spec.NodeEvictionNodePoolSettings.IsForceDeleteAfterGraceDuration,
+		needsEvictionUpdate := false
+
+		if pool.NodeEvictionNodePoolSettings == nil {
+			// OCI has no settings but spec does - update needed
+			needsEvictionUpdate = true
+		} else {
+			// Check individual fields that user specified (avoid nil dereference)
+			if m.OCIManagedMachinePool.Spec.NodeEvictionNodePoolSettings.EvictionGraceDuration != nil &&
+				*m.OCIManagedMachinePool.Spec.NodeEvictionNodePoolSettings.EvictionGraceDuration != *pool.NodeEvictionNodePoolSettings.EvictionGraceDuration {
+				needsEvictionUpdate = true
 			}
+			if m.OCIManagedMachinePool.Spec.NodeEvictionNodePoolSettings.IsForceDeleteAfterGraceDuration != nil &&
+				*m.OCIManagedMachinePool.Spec.NodeEvictionNodePoolSettings.IsForceDeleteAfterGraceDuration != *pool.NodeEvictionNodePoolSettings.IsForceDeleteAfterGraceDuration {
+				needsEvictionUpdate = true
+			}
+		}
+
+		if needsEvictionUpdate {
+			// Only set fields that user specified (partial update)
+			update := &oke.NodeEvictionNodePoolSettings{}
+			if m.OCIManagedMachinePool.Spec.NodeEvictionNodePoolSettings.EvictionGraceDuration != nil {
+				update.EvictionGraceDuration = m.OCIManagedMachinePool.Spec.NodeEvictionNodePoolSettings.EvictionGraceDuration
+			}
+			if m.OCIManagedMachinePool.Spec.NodeEvictionNodePoolSettings.IsForceDeleteAfterGraceDuration != nil {
+				update.IsForceDeleteAfterGraceDuration = m.OCIManagedMachinePool.Spec.NodeEvictionNodePoolSettings.IsForceDeleteAfterGraceDuration
+			}
+			updateDetails.NodeEvictionNodePoolSettings = update
 			needsUpdate = true
 		}
 	}
@@ -789,8 +837,8 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 
 		// IsPvEncryptionInTransitEnabled: compare specified value with actual
 		if m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.IsPvEncryptionInTransitEnabled != nil &&
-			pool.NodeConfigDetails.IsPvEncryptionInTransitEnabled != nil &&
-			*m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.IsPvEncryptionInTransitEnabled != *pool.NodeConfigDetails.IsPvEncryptionInTransitEnabled {
+			(pool.NodeConfigDetails.IsPvEncryptionInTransitEnabled == nil ||
+				*m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.IsPvEncryptionInTransitEnabled != *pool.NodeConfigDetails.IsPvEncryptionInTransitEnabled) {
 			nodeConfigDetails.IsPvEncryptionInTransitEnabled = m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.IsPvEncryptionInTransitEnabled
 			needsUpdate = true
 		}
