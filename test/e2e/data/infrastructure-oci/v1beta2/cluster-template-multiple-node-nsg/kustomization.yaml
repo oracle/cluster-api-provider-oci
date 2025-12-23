@@ -1,8 +1,8 @@
 bases:
 - ../bases/cluster.yaml
-- ../bases/md.yaml
 - ../../bases/crs.yaml
 - ../../bases/ccm.yaml
-- ./md.yaml
+- ./md-1.yaml
+- ./md-2.yaml
 patchesStrategicMerge:
   - ./cluster.yaml
