@@ -67,8 +67,9 @@ KUBECTL := $(TOOLS_BIN_DIR)/$(KUBECTL_BIN)-$(KUBECTL_VER)
 
 BIN_DIR=$(shell pwd)/bin
 
+KUSTOMIZE_VER := v4.5.2
 KUSTOMIZE_BIN := kustomize
-KUSTOMIZE := $(BIN_DIR)/$(KUSTOMIZE_BIN)
+KUSTOMIZE := $(TOOLS_BIN_DIR)/$(KUSTOMIZE_BIN)-$(KUSTOMIZE_VER)
 
 GOLANGCI_LINT_BIN := golangci-lint
 GOLANGCI_LINT := $(BIN_DIR)/$(GOLANGCI_LINT_BIN)
@@ -373,6 +374,7 @@ install-tools: $(ENVSUBST) $(KUSTOMIZE) $(KUBECTL)
 
 envsubst: $(ENVSUBST) ## Build a local copy of envsubst.
 kubectl: $(KUBECTL) ## Build a local copy of kubectl.
+kustomize: $(KUSTOMIZE) ## Build a local copy of kustomize.
 
 $(CONTROLLER_GEN): ## Download controller-gen locally if necessary.
 	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) sigs.k8s.io/controller-tools/cmd/controller-gen $(CONTROLLER_GEN_BIN) v0.16.1
@@ -381,7 +383,7 @@ $(CONVERSION_GEN): ## Download controller-gen locally if necessary.
 	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) k8s.io/code-generator/cmd/conversion-gen $(CONVERSION_GEN_BIN) v0.31.0
 
 $(KUSTOMIZE): ## Download kustomize locally if necessary.
-	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) sigs.k8s.io/kustomize/kustomize/v4 $(KUSTOMIZE_BIN) v4.5.2
+	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) sigs.k8s.io/kustomize/kustomize/v4 $(KUSTOMIZE_BIN) v4.5.2
 
 $(GINKGO): ## Build ginkgo.
 	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) github.com/onsi/ginkgo/v2/ginkgo $(GINKGO_BIN) v2.23.3
@@ -402,6 +404,9 @@ $(KUBECTL): ## Build kubectl from tools folder.
 
 .PHONY: $(ENVSUBST_BIN)
 $(ENVSUBST_BIN): $(ENVSUBST)
+
+.PHONY: $(KUSTOMIZE_BIN)
+$(KUSTOMIZE_BIN): $(KUSTOMIZE)
 
 .PHONY: $(KUBECTL_BIN)
 $(KUBECTL_BIN): $(KUBECTL)
