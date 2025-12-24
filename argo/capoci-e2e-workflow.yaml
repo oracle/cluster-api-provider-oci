@@ -24,6 +24,7 @@
 # - git_ref defaults to main
 # - git_repo defaults to https://github.com/oracle/cluster-api-provider-oci.git
 # - ginkgo_focus can be used to run a single test
+# - ginkgo_skip can be used to update tests that get skipped. Default is "Bare Metal|Multi-Region|VCNPeering" 
 
 apiVersion: argoproj.io/v1alpha1
 kind: Workflow
@@ -92,6 +93,8 @@ spec:
       - name: ginkgo_nodes
         value: "3"
       - name: ginkgo_focus
+        value: ""
+      - name: ginkgo_skip
         value: ""
       - name: kind_node_image
         value: "kindest/node:v1.29.6"
@@ -215,6 +218,8 @@ spec:
             value: "{{workflow.parameters.ginkgo_nodes}}"
           - name: GINKGO_FOCUS_PARAM
             value: "{{workflow.parameters.ginkgo_focus}}"
+          - name: GINKGO_SKIP_PARAM
+            value: "{{workflow.parameters.ginkgo_skip}}"
           - name: KIND_NODE_IMAGE
             value: "{{workflow.parameters.kind_node_image}}"
           - name: KIND_IMAGE
@@ -302,6 +307,11 @@ spec:
             # Optional Ginkgo focus override
             if [ -n "${GINKGO_FOCUS_PARAM:-}" ]; then
               export GINKGO_FOCUS="${GINKGO_FOCUS_PARAM}"
+            fi
+            
+            # Optional Ginkgo skip override
+            if [ -n "${GINKGO_SKIP_PARAM:-}" ]; then
+              export GINKGO_SKIP="${GINKGO_SKIP_PARAM}"
             fi
 
             # Preflight: show which Kind node image will be used
