@@ -141,13 +141,8 @@ func normalizeLaunchDetailsForHash(in *core.InstanceConfigurationLaunchInstanceD
 		return nil
 	}
 
-	// Shallow copy the struct
 	out := *in
-
-	// Fields we DON'T want to trigger recreation:
 	out.DisplayName = nil
-
-	// Tags should NOT force IC recreation (they’re mutable/operational)
 	out.DefinedTags = nil
 	out.FreeformTags = nil
 	out.SecurityAttributes = nil
@@ -158,8 +153,7 @@ func normalizeLaunchDetailsForHash(in *core.InstanceConfigurationLaunchInstanceD
 	// Normalize CreateVnicDetails
 	if out.CreateVnicDetails != nil {
 		v := *out.CreateVnicDetails
-
-		// Tags should NOT force IC recreation
+		v.DisplayName = nil
 		v.DefinedTags = nil
 		v.FreeformTags = nil
 		v.SecurityAttributes = nil
@@ -530,7 +524,7 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context) e
 	// 5) If annotation missing, backfill it
 	storedHash := m.getInstanceConfigurationHashAnnotation()
 	if storedHash == "" {
-		m.Info("No stored hash annotation; backfilling", "actualHash", actualHash)
+		m.Info("No stored hash annotation, backfilling", "actualHash", actualHash)
 		m.setInstanceConfigurationHashAnnotation(actualHash)
 		if err := m.PatchObject(ctx); err != nil {
 			return err
@@ -542,7 +536,7 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context) e
 	// 6) Decide based on desired vs stored/actual (stored is our controller state; actual is reality check)
 	// Primary gate: desiredHash vs actualHash (prevents recreate loops if annotation drifted)
 	if desiredHash == actualHash {
-		m.Info("Instance configuration is up-to-date; no recreate", "hash", desiredHash)
+		m.Info("Instance configuration is up-to-date, no recreate", "hash", desiredHash)
 		// keep annotation consistent
 		if storedHash != desiredHash {
 			m.Info("Updating stored hash annotation to match", "from", storedHash, "to", desiredHash)
@@ -553,7 +547,7 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context) e
 	}
 
 	// 7) Hash changed -> create new IC, set new ID + annotation, patch, cleanup old ones
-	m.Info("Instance configuration changed; creating new one", "from", actualHash, "to", desiredHash)
+	m.Info("Instance configuration changed, creating new one", "from", actualHash, "to", desiredHash)
 	if err := m.createInstanceConfiguration(ctx, desiredLaunch, freeFormTags, definedTags, desiredHash); err != nil {
 		return err
 	}
@@ -588,7 +582,7 @@ func (m *MachinePoolScope) createInstanceConfiguration(
 	ctx context.Context,
 	launchDetails *core.InstanceConfigurationLaunchInstanceDetails,
 	freeFormTags map[string]string,
-	definedTags map[string]map[string]interface{},
+	definedTags map[string]map[string]any,
 	desiredHash string,
 ) error {
 	launchInstanceDetails := core.ComputeInstanceDetails{
@@ -1067,16 +1061,6 @@ func (m *MachinePoolScope) GetInstanceConfiguration(ctx context.Context) (*core.
 		return m.getInstanceConfigurationFromOCID(ctx, ids[0])
 	}
 	return nil, nil
-}
-
-func stringPtrEqual(a, b *string) bool {
-	if a == nil && b == nil {
-		return true
-	}
-	if a == nil || b == nil {
-		return false
-	}
-	return *a == *b
 }
 
 func (m *MachinePoolScope) CleanupInstanceConfiguration(ctx context.Context, instancePool *core.InstancePool) error {
