@@ -1727,6 +1727,583 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:          "no update when unspecified fields differ from OCI",
+			errorExpected: false,
+			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
+				// Spec only specifies a few fields - unspecified fields should not trigger updates
+				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
+				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
+					Version:   common.String("v1.24.5"),
+					NodeShape: "test-shape",
+					NodeShapeConfig: &infrav2exp.NodeShapeConfig{
+						Ocpus: common.String("2"), // Only specify Ocpus, not MemoryInGBs
+					},
+					// Deliberately NOT specifying: NodeEvictionNodePoolSettings, NodePoolCyclingDetails, etc.
+				}
+				// OCI has different values for unspecified fields - should not trigger update
+			},
+			nodePool: oke.NodePool{
+				ClusterId:         common.String("cluster-id"),
+				Id:                common.String("node-pool-id"),
+				Name:              common.String("test"),
+				CompartmentId:     common.String("test-compartment"),
+				KubernetesVersion: common.String("v1.24.5"),
+				NodeShape:         common.String("test-shape"),
+				NodeShapeConfig: &oke.NodeShapeConfig{
+					Ocpus:       common.Float32(2),
+					MemoryInGBs: common.Float32(32), // Different from spec (which doesn't specify it)
+				},
+				NodeEvictionNodePoolSettings: &oke.NodeEvictionNodePoolSettings{
+					EvictionGraceDuration:           common.String("PT60M"), // Not in spec
+					IsForceDeleteAfterGraceDuration: common.Bool(false),     // Not in spec
+				},
+				NodePoolCyclingDetails: &oke.NodePoolCyclingDetails{
+					IsNodeCyclingEnabled: common.Bool(false),   // Not in spec
+					MaximumSurge:         common.String("25%"), // Not in spec
+					MaximumUnavailable:   common.String("25%"), // Not in spec
+				},
+			},
+		},
+		{
+			name:          "update when user-specified NodeEvictionNodePoolSettings differ",
+			errorExpected: false,
+			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
+				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
+				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
+					Version:   common.String("v1.24.5"),
+					NodeShape: "test-shape",
+					NodeEvictionNodePoolSettings: &infrav2exp.NodeEvictionNodePoolSettings{
+						EvictionGraceDuration: common.String("PT30M"), // User specified
+						// Deliberately NOT specifying IsForceDeleteAfterGraceDuration
+					},
+				}
+				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Eq(oke.UpdateNodePoolRequest{
+					NodePoolId: common.String("node-pool-id"),
+					UpdateNodePoolDetails: oke.UpdateNodePoolDetails{
+						Name:              common.String("test"),
+						KubernetesVersion: common.String("v1.24.5"),
+						NodeShape:         common.String("test-shape"),
+						NodeEvictionNodePoolSettings: &oke.NodeEvictionNodePoolSettings{
+							EvictionGraceDuration: common.String("PT30M"),
+							// IsForceDeleteAfterGraceDuration not included (partial update)
+						},
+					},
+				})).
+					Return(oke.UpdateNodePoolResponse{
+						OpcWorkRequestId: common.String("opc-work-request-id"),
+					}, nil)
+			},
+			nodePool: oke.NodePool{
+				ClusterId:         common.String("cluster-id"),
+				Id:                common.String("node-pool-id"),
+				Name:              common.String("test"),
+				CompartmentId:     common.String("test-compartment"),
+				KubernetesVersion: common.String("v1.24.5"),
+				NodeShape:         common.String("test-shape"),
+				NodeEvictionNodePoolSettings: &oke.NodeEvictionNodePoolSettings{
+					EvictionGraceDuration:           common.String("PT60M"), // Different from spec
+					IsForceDeleteAfterGraceDuration: common.Bool(false),     // Different but not in spec
+				},
+			},
+		},
+		{
+			name:          "update when user-specified NodePoolCyclingDetails differ",
+			errorExpected: false,
+			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
+				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
+				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
+					Version:   common.String("v1.24.5"),
+					NodeShape: "test-shape",
+					NodePoolCyclingDetails: &infrav2exp.NodePoolCyclingDetails{
+						IsNodeCyclingEnabled: common.Bool(true),    // User specified
+						MaximumSurge:         common.String("20%"), // User specified
+						// Deliberately NOT specifying MaximumUnavailable
+					},
+				}
+				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Eq(oke.UpdateNodePoolRequest{
+					NodePoolId: common.String("node-pool-id"),
+					UpdateNodePoolDetails: oke.UpdateNodePoolDetails{
+						Name:              common.String("test"),
+						KubernetesVersion: common.String("v1.24.5"),
+						NodeShape:         common.String("test-shape"),
+						NodePoolCyclingDetails: &oke.NodePoolCyclingDetails{
+							IsNodeCyclingEnabled: common.Bool(true),
+							MaximumSurge:         common.String("20%"),
+							// MaximumUnavailable not included (partial update)
+						},
+					},
+				})).
+					Return(oke.UpdateNodePoolResponse{
+						OpcWorkRequestId: common.String("opc-work-request-id"),
+					}, nil)
+			},
+			nodePool: oke.NodePool{
+				ClusterId:         common.String("cluster-id"),
+				Id:                common.String("node-pool-id"),
+				Name:              common.String("test"),
+				CompartmentId:     common.String("test-compartment"),
+				KubernetesVersion: common.String("v1.24.5"),
+				NodeShape:         common.String("test-shape"),
+				NodePoolCyclingDetails: &oke.NodePoolCyclingDetails{
+					IsNodeCyclingEnabled: common.Bool(false),   // Different from spec
+					MaximumSurge:         common.String("25%"), // Different from spec
+					MaximumUnavailable:   common.String("30%"), // Different but not in spec
+				},
+			},
+		},
+		{
+			name:          "no update when OCI has nil values for unspecified fields",
+			errorExpected: false,
+			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
+				// Spec specifies some fields but OCI has nil for others - should not trigger update
+				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
+				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
+					Version:   common.String("v1.24.5"),
+					NodeShape: "test-shape",
+					NodeEvictionNodePoolSettings: &infrav2exp.NodeEvictionNodePoolSettings{
+						EvictionGraceDuration: common.String("PT30M"), // User specified
+					},
+				}
+			},
+			nodePool: oke.NodePool{
+				ClusterId:         common.String("cluster-id"),
+				Id:                common.String("node-pool-id"),
+				Name:              common.String("test"),
+				CompartmentId:     common.String("test-compartment"),
+				KubernetesVersion: common.String("v1.24.5"),
+				NodeShape:         common.String("test-shape"),
+				NodeEvictionNodePoolSettings: &oke.NodeEvictionNodePoolSettings{
+					EvictionGraceDuration:           common.String("PT30M"), // Same as spec
+					IsForceDeleteAfterGraceDuration: nil,                    // nil in OCI, not specified in spec
+				},
+				NodePoolCyclingDetails: nil, // nil in OCI, not specified in spec
+			},
+		},
+		{
+			name:          "update when OCI nil values differ from user-specified values",
+			errorExpected: false,
+			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
+				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
+				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
+					Version:   common.String("v1.24.5"),
+					NodeShape: "test-shape",
+					NodeEvictionNodePoolSettings: &infrav2exp.NodeEvictionNodePoolSettings{
+						IsForceDeleteAfterGraceDuration: common.Bool(true), // User wants to set this
+					},
+				}
+				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Eq(oke.UpdateNodePoolRequest{
+					NodePoolId: common.String("node-pool-id"),
+					UpdateNodePoolDetails: oke.UpdateNodePoolDetails{
+						Name:              common.String("test"),
+						KubernetesVersion: common.String("v1.24.5"),
+						NodeShape:         common.String("test-shape"),
+						NodeEvictionNodePoolSettings: &oke.NodeEvictionNodePoolSettings{
+							IsForceDeleteAfterGraceDuration: common.Bool(true),
+							// EvictionGraceDuration not included (partial update)
+						},
+					},
+				})).
+					Return(oke.UpdateNodePoolResponse{
+						OpcWorkRequestId: common.String("opc-work-request-id"),
+					}, nil)
+			},
+			nodePool: oke.NodePool{
+				ClusterId:         common.String("cluster-id"),
+				Id:                common.String("node-pool-id"),
+				Name:              common.String("test"),
+				CompartmentId:     common.String("test-compartment"),
+				KubernetesVersion: common.String("v1.24.5"),
+				NodeShape:         common.String("test-shape"),
+				NodeEvictionNodePoolSettings: &oke.NodeEvictionNodePoolSettings{
+					EvictionGraceDuration:           nil, // nil in OCI
+					IsForceDeleteAfterGraceDuration: nil, // nil in OCI, user wants to set it
+				},
+			},
+		},
+		{
+			name:          "update with order-independent NSG comparison",
+			errorExpected: false,
+			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
+				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
+				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
+					Version:   common.String("v1.24.5"),
+					NodeShape: "test-shape",
+					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
+						NsgNames: []string{"worker-nsg", "pod-nsg"}, // Order in spec
+					},
+				}
+				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Eq(oke.UpdateNodePoolRequest{
+					NodePoolId: common.String("node-pool-id"),
+					UpdateNodePoolDetails: oke.UpdateNodePoolDetails{
+						Name:              common.String("test"),
+						KubernetesVersion: common.String("v1.24.5"),
+						NodeShape:         common.String("test-shape"),
+						NodeConfigDetails: &oke.UpdateNodePoolNodeConfigDetails{
+							NsgIds: []string{"nsg-id", "pod-nsg-id"}, // Should be updated to spec order
+						},
+					},
+				})).
+					Return(oke.UpdateNodePoolResponse{
+						OpcWorkRequestId: common.String("opc-work-request-id"),
+					}, nil)
+			},
+			nodePool: oke.NodePool{
+				ClusterId:         common.String("cluster-id"),
+				Id:                common.String("node-pool-id"),
+				Name:              common.String("test"),
+				CompartmentId:     common.String("test-compartment"),
+				KubernetesVersion: common.String("v1.24.5"),
+				NodeShape:         common.String("test-shape"),
+				NodeConfigDetails: &oke.NodePoolNodeConfigDetails{
+					NsgIds: []string{"pod-nsg-id", "nsg-id"}, // Different order in OCI
+				},
+			},
+		},
+		{
+			name:          "no update when NSG lists are equivalent regardless of order",
+			errorExpected: false,
+			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
+				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
+				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
+					Version:   common.String("v1.24.5"),
+					NodeShape: "test-shape",
+					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
+						NsgNames: []string{"worker-nsg", "pod-nsg"}, // Order in spec
+					},
+				}
+				// No UpdateNodePool call expected - lists are equivalent
+			},
+			nodePool: oke.NodePool{
+				ClusterId:         common.String("cluster-id"),
+				Id:                common.String("node-pool-id"),
+				Name:              common.String("test"),
+				CompartmentId:     common.String("test-compartment"),
+				KubernetesVersion: common.String("v1.24.5"),
+				NodeShape:         common.String("test-shape"),
+				NodeConfigDetails: &oke.NodePoolNodeConfigDetails{
+					NsgIds: []string{"nsg-id", "pod-nsg-id"}, // Same elements, different order
+				},
+			},
+		},
+		{
+			name:          "update when user specifies different Kubernetes version",
+			errorExpected: false,
+			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
+				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
+				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
+					Version:   common.String("v1.25.0"), // User specifies v1.25.0
+					NodeShape: "test-shape",
+				}
+				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Eq(oke.UpdateNodePoolRequest{
+					NodePoolId: common.String("node-pool-id"),
+					UpdateNodePoolDetails: oke.UpdateNodePoolDetails{
+						Name:              common.String("test"),
+						KubernetesVersion: common.String("v1.25.0"), // Should update to v1.25.0
+						NodeShape:         common.String("test-shape"),
+					},
+				})).
+					Return(oke.UpdateNodePoolResponse{
+						OpcWorkRequestId: common.String("opc-work-request-id"),
+					}, nil)
+			},
+			nodePool: oke.NodePool{
+				ClusterId:         common.String("cluster-id"),
+				Id:                common.String("node-pool-id"),
+				Name:              common.String("test"),
+				CompartmentId:     common.String("test-compartment"),
+				KubernetesVersion: common.String("v1.24.5"), // OCI has v1.24.5
+				NodeShape:         common.String("test-shape"),
+			},
+		},
+		{
+			name:          "update when user specifies different node shape",
+			errorExpected: false,
+			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
+				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
+				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
+					Version:   common.String("v1.24.5"),
+					NodeShape: "VM.Standard.E4.Flex", // User specifies different shape
+				}
+				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Eq(oke.UpdateNodePoolRequest{
+					NodePoolId: common.String("node-pool-id"),
+					UpdateNodePoolDetails: oke.UpdateNodePoolDetails{
+						Name:              common.String("test"),
+						KubernetesVersion: common.String("v1.24.5"),
+						NodeShape:         common.String("VM.Standard.E4.Flex"), // Should update shape
+					},
+				})).
+					Return(oke.UpdateNodePoolResponse{
+						OpcWorkRequestId: common.String("opc-work-request-id"),
+					}, nil)
+			},
+			nodePool: oke.NodePool{
+				ClusterId:         common.String("cluster-id"),
+				Id:                common.String("node-pool-id"),
+				Name:              common.String("test"),
+				CompartmentId:     common.String("test-compartment"),
+				KubernetesVersion: common.String("v1.24.5"),
+				NodeShape:         common.String("VM.Standard.E3.Flex"), // OCI has different shape
+			},
+		},
+		{
+			name:          "update when user specifies different node shape config",
+			errorExpected: false,
+			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
+				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
+				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
+					Version:   common.String("v1.24.5"),
+					NodeShape: "test-shape",
+					NodeShapeConfig: &infrav2exp.NodeShapeConfig{
+						Ocpus:       common.String("4"),  // User specifies 4 OCPUs
+						MemoryInGBs: common.String("32"), // User specifies 32GB memory
+					},
+				}
+				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Eq(oke.UpdateNodePoolRequest{
+					NodePoolId: common.String("node-pool-id"),
+					UpdateNodePoolDetails: oke.UpdateNodePoolDetails{
+						Name:              common.String("test"),
+						KubernetesVersion: common.String("v1.24.5"),
+						NodeShape:         common.String("test-shape"),
+						NodeShapeConfig: &oke.UpdateNodeShapeConfigDetails{
+							Ocpus:       common.Float32(4),  // Should update to 4 OCPUs
+							MemoryInGBs: common.Float32(32), // Should update to 32GB
+						},
+					},
+				})).
+					Return(oke.UpdateNodePoolResponse{
+						OpcWorkRequestId: common.String("opc-work-request-id"),
+					}, nil)
+			},
+			nodePool: oke.NodePool{
+				ClusterId:         common.String("cluster-id"),
+				Id:                common.String("node-pool-id"),
+				Name:              common.String("test"),
+				CompartmentId:     common.String("test-compartment"),
+				KubernetesVersion: common.String("v1.24.5"),
+				NodeShape:         common.String("test-shape"),
+				NodeShapeConfig: &oke.NodeShapeConfig{
+					Ocpus:       common.Float32(2),  // OCI has 2 OCPUs
+					MemoryInGBs: common.Float32(16), // OCI has 16GB memory
+				},
+			},
+		},
+		{
+			name:          "update when user specifies different SSH key",
+			errorExpected: false,
+			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
+				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
+				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
+					Version:      common.String("v1.24.5"),
+					NodeShape:    "test-shape",
+					SshPublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ new-ssh-key", // User specifies new key
+				}
+				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Eq(oke.UpdateNodePoolRequest{
+					NodePoolId: common.String("node-pool-id"),
+					UpdateNodePoolDetails: oke.UpdateNodePoolDetails{
+						Name:              common.String("test"),
+						KubernetesVersion: common.String("v1.24.5"),
+						NodeShape:         common.String("test-shape"),
+						SshPublicKey:      common.String("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ new-ssh-key"), // Should update SSH key
+					},
+				})).
+					Return(oke.UpdateNodePoolResponse{
+						OpcWorkRequestId: common.String("opc-work-request-id"),
+					}, nil)
+			},
+			nodePool: oke.NodePool{
+				ClusterId:         common.String("cluster-id"),
+				Id:                common.String("node-pool-id"),
+				Name:              common.String("test"),
+				CompartmentId:     common.String("test-compartment"),
+				KubernetesVersion: common.String("v1.24.5"),
+				NodeShape:         common.String("test-shape"),
+				SshPublicKey:      common.String("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ old-ssh-key"), // OCI has old key
+			},
+		},
+		{
+			name:          "update when user specifies different metadata",
+			errorExpected: false,
+			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
+				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
+				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
+					Version:   common.String("v1.24.5"),
+					NodeShape: "test-shape",
+					NodeMetadata: map[string]string{
+						"user.key1": "new-value1", // User specifies new value
+						"user.key2": "value2",     // User specifies new key
+					},
+				}
+				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Eq(oke.UpdateNodePoolRequest{
+					NodePoolId: common.String("node-pool-id"),
+					UpdateNodePoolDetails: oke.UpdateNodePoolDetails{
+						Name:              common.String("test"),
+						KubernetesVersion: common.String("v1.24.5"),
+						NodeShape:         common.String("test-shape"),
+						NodeMetadata: map[string]string{
+							"user.key1": "new-value1", // Should update metadata
+							"user.key2": "value2",
+						},
+					},
+				})).
+					Return(oke.UpdateNodePoolResponse{
+						OpcWorkRequestId: common.String("opc-work-request-id"),
+					}, nil)
+			},
+			nodePool: oke.NodePool{
+				ClusterId:         common.String("cluster-id"),
+				Id:                common.String("node-pool-id"),
+				Name:              common.String("test"),
+				CompartmentId:     common.String("test-compartment"),
+				KubernetesVersion: common.String("v1.24.5"),
+				NodeShape:         common.String("test-shape"),
+				NodeMetadata: map[string]string{
+					"user.key1": "old-value1", // OCI has old value
+					"oci.key":   "oci-value",  // OCI has extra key (should be preserved)
+				},
+			},
+		},
+		{
+			name:          "update when user specifies different initial node labels",
+			errorExpected: false,
+			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
+				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
+				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
+					Version:   common.String("v1.24.5"),
+					NodeShape: "test-shape",
+					InitialNodeLabels: []infrav2exp.KeyValue{
+						{Key: common.String("app"), Value: common.String("web")},  // User specifies new label
+						{Key: common.String("env"), Value: common.String("prod")}, // User specifies new label
+					},
+				}
+				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Eq(oke.UpdateNodePoolRequest{
+					NodePoolId: common.String("node-pool-id"),
+					UpdateNodePoolDetails: oke.UpdateNodePoolDetails{
+						Name:              common.String("test"),
+						KubernetesVersion: common.String("v1.24.5"),
+						NodeShape:         common.String("test-shape"),
+						InitialNodeLabels: []oke.KeyValue{
+							{Key: common.String("app"), Value: common.String("web")}, // Should update labels
+							{Key: common.String("env"), Value: common.String("prod")},
+						},
+					},
+				})).
+					Return(oke.UpdateNodePoolResponse{
+						OpcWorkRequestId: common.String("opc-work-request-id"),
+					}, nil)
+			},
+			nodePool: oke.NodePool{
+				ClusterId:         common.String("cluster-id"),
+				Id:                common.String("node-pool-id"),
+				Name:              common.String("test"),
+				CompartmentId:     common.String("test-compartment"),
+				KubernetesVersion: common.String("v1.24.5"),
+				NodeShape:         common.String("test-shape"),
+				InitialNodeLabels: []oke.KeyValue{
+					{Key: common.String("app"), Value: common.String("api")}, // OCI has different value
+				},
+			},
+		},
+		{
+			name:          "update when user specifies different pod network config",
+			errorExpected: false,
+			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
+				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
+				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
+					Version:   common.String("v1.24.5"),
+					NodeShape: "test-shape",
+					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
+						NodePoolPodNetworkOptionDetails: &infrav2exp.NodePoolPodNetworkOptionDetails{
+							CniType: infrastructurev1beta2.VCNNativeCNI,
+							VcnIpNativePodNetworkOptions: infrav2exp.VcnIpNativePodNetworkOptions{
+								SubnetNames:    []string{"pod-subnet"},           // User specifies different subnet
+								MaxPodsPerNode: common.Int(50),                   // User specifies different max pods
+								NSGNames:       []string{"pod-nsg", "extra-nsg"}, // User specifies different NSGs
+							},
+						},
+					},
+				}
+				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Eq(oke.UpdateNodePoolRequest{
+					NodePoolId: common.String("node-pool-id"),
+					UpdateNodePoolDetails: oke.UpdateNodePoolDetails{
+						Name:              common.String("test"),
+						KubernetesVersion: common.String("v1.24.5"),
+						NodeShape:         common.String("test-shape"),
+						NodeConfigDetails: &oke.UpdateNodePoolNodeConfigDetails{
+							NodePoolPodNetworkOptionDetails: oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
+								PodSubnetIds:   []string{"pod-subnet-id"},              // Should update to new subnet
+								MaxPodsPerNode: common.Int(50),                         // Should update max pods
+								PodNsgIds:      []string{"pod-nsg-id", "extra-nsg-id"}, // Should update NSGs
+							},
+						},
+					},
+				})).
+					Return(oke.UpdateNodePoolResponse{
+						OpcWorkRequestId: common.String("opc-work-request-id"),
+					}, nil)
+			},
+			nodePool: oke.NodePool{
+				ClusterId:         common.String("cluster-id"),
+				Id:                common.String("node-pool-id"),
+				Name:              common.String("test"),
+				CompartmentId:     common.String("test-compartment"),
+				KubernetesVersion: common.String("v1.24.5"),
+				NodeShape:         common.String("test-shape"),
+				NodeConfigDetails: &oke.NodePoolNodeConfigDetails{
+					NodePoolPodNetworkOptionDetails: oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
+						PodSubnetIds:   []string{"old-pod-subnet-id"}, // OCI has old subnet
+						MaxPodsPerNode: common.Int(31),                // OCI has old max pods
+						PodNsgIds:      []string{"old-nsg-id"},        // OCI has old NSGs
+					},
+				},
+			},
+		},
+		{
+			name:          "update when user specifies different freeform tags",
+			errorExpected: false,
+			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
+				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
+				ms.OCIManagedCluster.Spec.FreeformTags = map[string]string{
+					"user.tag1": "new-value1", // User specifies new tag value
+					"user.tag2": "value2",     // User specifies new tag
+				}
+				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
+					Version:   common.String("v1.24.5"),
+					NodeShape: "test-shape",
+				}
+				expectedTags := map[string]string{
+					ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,
+					ociutil.ClusterResourceIdentifier: "resource_uid",
+					"user.tag1":                       "new-value1",
+					"user.tag2":                       "value2",
+				}
+				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Eq(oke.UpdateNodePoolRequest{
+					NodePoolId: common.String("node-pool-id"),
+					UpdateNodePoolDetails: oke.UpdateNodePoolDetails{
+						Name:              common.String("test"),
+						KubernetesVersion: common.String("v1.24.5"),
+						NodeShape:         common.String("test-shape"),
+						FreeformTags:      expectedTags, // Should update to new tags
+					},
+				})).
+					Return(oke.UpdateNodePoolResponse{
+						OpcWorkRequestId: common.String("opc-work-request-id"),
+					}, nil)
+			},
+			nodePool: oke.NodePool{
+				ClusterId:         common.String("cluster-id"),
+				Id:                common.String("node-pool-id"),
+				Name:              common.String("test"),
+				CompartmentId:     common.String("test-compartment"),
+				KubernetesVersion: common.String("v1.24.5"),
+				NodeShape:         common.String("test-shape"),
+				FreeformTags: map[string]string{
+					ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,
+					ociutil.ClusterResourceIdentifier: "resource_uid",
+					"user.tag1":                       "old-value1", // OCI has old tag value
+				},
+			},
+		},
 	}
 
 	for _, tc := range tests {

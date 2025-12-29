@@ -603,27 +603,27 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 	updateDetails := &oke.UpdateNodePoolDetails{}
 	nodeConfigDetails := &oke.UpdateNodePoolNodeConfigDetails{}
 
-	// Name is always set (required field)
+	// Name
 	updateDetails.Name = common.String(m.getNodePoolName())
 
 	// Compare user-specified fields with actual node pool state
 	// Only update if the specified value differs from the actual value
 
-	// KubernetesVersion: compare specified value with actual
+	// KubernetesVersion
 	if m.OCIManagedMachinePool.Spec.Version != nil &&
 		(pool.KubernetesVersion == nil || *m.OCIManagedMachinePool.Spec.Version != *pool.KubernetesVersion) {
 		updateDetails.KubernetesVersion = m.OCIManagedMachinePool.Spec.Version
 		needsUpdate = true
 	}
 
-	// NodeShape: only update if user specified a non-empty value
+	// NodeShape
 	if m.OCIManagedMachinePool.Spec.NodeShape != "" &&
 		(pool.NodeShape == nil || m.OCIManagedMachinePool.Spec.NodeShape != *pool.NodeShape) {
 		updateDetails.NodeShape = common.String(m.OCIManagedMachinePool.Spec.NodeShape)
 		needsUpdate = true
 	}
 
-	// NodeShapeConfig: check individual user-specified fields
+	// NodeShapeConfig
 	if m.OCIManagedMachinePool.Spec.NodeShapeConfig != nil {
 		nodeShapeConfig := oke.UpdateNodeShapeConfigDetails{}
 		configChanged := false
@@ -636,7 +636,6 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 					*m.OCIManagedMachinePool.Spec.NodeShapeConfig.Ocpus))
 			}
 
-			// Check if OCI has shape config and if values differ
 			if pool.NodeShapeConfig == nil || pool.NodeShapeConfig.Ocpus == nil || float32(desiredOcpus) != *pool.NodeShapeConfig.Ocpus {
 				nodeShapeConfig.Ocpus = common.Float32(float32(desiredOcpus))
 				configChanged = true
@@ -651,7 +650,6 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 					*m.OCIManagedMachinePool.Spec.NodeShapeConfig.MemoryInGBs))
 			}
 
-			// Check if OCI has shape config and if values differ
 			if pool.NodeShapeConfig == nil || pool.NodeShapeConfig.MemoryInGBs == nil || float32(desiredMemory) != *pool.NodeShapeConfig.MemoryInGBs {
 				nodeShapeConfig.MemoryInGBs = common.Float32(float32(desiredMemory))
 				configChanged = true
@@ -664,7 +662,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 		}
 	}
 
-	// NodeSourceViaImage: check individual user-specified fields
+	// NodeSourceViaImage
 	if m.OCIManagedMachinePool.Spec.NodeSourceViaImage != nil {
 		actualSource, ok := pool.NodeSourceDetails.(oke.NodeSourceViaImageDetails)
 		if !ok {
@@ -680,7 +678,6 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 			updateDetails.NodeSourceDetails = &sourceDetails
 			needsUpdate = true
 		} else {
-			// Check if values differ
 			imageChanged := m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId != nil &&
 				*actualSource.ImageId != *m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId
 
@@ -703,14 +700,14 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 		}
 	}
 
-	// SshPublicKey: compare specified value with actual
+	// SshPublicKey
 	if m.OCIManagedMachinePool.Spec.SshPublicKey != "" &&
 		(pool.SshPublicKey == nil || m.OCIManagedMachinePool.Spec.SshPublicKey != *pool.SshPublicKey) {
 		updateDetails.SshPublicKey = common.String(m.OCIManagedMachinePool.Spec.SshPublicKey)
 		needsUpdate = true
 	}
 
-	// NodeMetadata: check that user-specified metadata exists and matches
+	// NodeMetadata
 	if m.OCIManagedMachinePool.Spec.NodeMetadata != nil && len(m.OCIManagedMachinePool.Spec.NodeMetadata) > 0 {
 		needsMetadataUpdate := false
 		for userKey, userValue := range m.OCIManagedMachinePool.Spec.NodeMetadata {
@@ -725,27 +722,27 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 		}
 	}
 
-	// NodeEvictionNodePoolSettings: check individual user-specified fields
+	// NodeEvictionNodePoolSettings
 	if m.OCIManagedMachinePool.Spec.NodeEvictionNodePoolSettings != nil {
 		needsEvictionUpdate := false
 
 		if pool.NodeEvictionNodePoolSettings == nil {
-			// OCI has no settings but spec does - update needed
 			needsEvictionUpdate = true
 		} else {
-			// Check individual fields that user specified (avoid nil dereference)
 			if m.OCIManagedMachinePool.Spec.NodeEvictionNodePoolSettings.EvictionGraceDuration != nil &&
-				*m.OCIManagedMachinePool.Spec.NodeEvictionNodePoolSettings.EvictionGraceDuration != *pool.NodeEvictionNodePoolSettings.EvictionGraceDuration {
+				(pool.NodeEvictionNodePoolSettings.EvictionGraceDuration == nil ||
+					*m.OCIManagedMachinePool.Spec.NodeEvictionNodePoolSettings.EvictionGraceDuration != *pool.NodeEvictionNodePoolSettings.EvictionGraceDuration) {
 				needsEvictionUpdate = true
 			}
 			if m.OCIManagedMachinePool.Spec.NodeEvictionNodePoolSettings.IsForceDeleteAfterGraceDuration != nil &&
-				*m.OCIManagedMachinePool.Spec.NodeEvictionNodePoolSettings.IsForceDeleteAfterGraceDuration != *pool.NodeEvictionNodePoolSettings.IsForceDeleteAfterGraceDuration {
+				(pool.NodeEvictionNodePoolSettings.IsForceDeleteAfterGraceDuration == nil ||
+					*m.OCIManagedMachinePool.Spec.NodeEvictionNodePoolSettings.IsForceDeleteAfterGraceDuration != *pool.NodeEvictionNodePoolSettings.IsForceDeleteAfterGraceDuration) {
 				needsEvictionUpdate = true
 			}
 		}
 
 		if needsEvictionUpdate {
-			// Only set fields that user specified (partial update)
+			// Only set fields that user specified
 			update := &oke.NodeEvictionNodePoolSettings{}
 			if m.OCIManagedMachinePool.Spec.NodeEvictionNodePoolSettings.EvictionGraceDuration != nil {
 				update.EvictionGraceDuration = m.OCIManagedMachinePool.Spec.NodeEvictionNodePoolSettings.EvictionGraceDuration
@@ -758,7 +755,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 		}
 	}
 
-	// InitialNodeLabels: check that user-specified labels exist and match
+	// InitialNodeLabels
 	if len(m.OCIManagedMachinePool.Spec.InitialNodeLabels) > 0 {
 		needsLabelsUpdate := false
 		actualLabels := getInitialNodeLabels(pool.InitialNodeLabels)
@@ -782,7 +779,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 		}
 	}
 
-	// FreeformTags: check that user-specified tags exist and match (allow OCI to add system tags)
+	// FreeformTags: allow OCI to add system tags
 	expectedFreeformTags := m.getFreeFormTags()
 	if len(expectedFreeformTags) > 0 {
 		needsTagUpdate := false
@@ -798,7 +795,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 		}
 	}
 
-	// DefinedTags: check that user-specified defined tags exist and match (allow OCI to add system-defined tags)
+	// DefinedTags: allow OCI to add system-defined tags
 	expectedDefinedTags := m.getDefinedTags()
 	if len(expectedDefinedTags) > 0 {
 		needsDefinedTagUpdate := false
@@ -824,12 +821,12 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 		}
 	}
 
-	// NodePoolNodeConfig fields
+	// NodePoolNodeConfig
 	if m.OCIManagedMachinePool.Spec.NodePoolNodeConfig != nil {
-		// NSG names: compare specified values with actual
+		// NSG names: compare specified values with actual (order-independent)
 		if len(m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.NsgNames) > 0 {
 			actualNsgNames := GetNsgNamesFromId(pool.NodeConfigDetails.NsgIds, m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List)
-			if !reflect.DeepEqual(m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.NsgNames, actualNsgNames) {
+			if !stringSlicesEqualIgnoreOrder(m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.NsgNames, actualNsgNames) {
 				nodeConfigDetails.NsgIds = m.getWorkerMachineNSGs()
 				needsUpdate = true
 			}
@@ -886,7 +883,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 			}
 		}
 
-		// NodePoolPodNetworkOptionDetails: compare specified values with actual
+		// NodePoolPodNetworkOptionDetails
 		if m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails != nil {
 			actualPodNetwork := pool.NodeConfigDetails.NodePoolPodNetworkOptionDetails
 			desiredPodNetwork := m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails
@@ -900,8 +897,8 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 					desiredSubnets := m.getPodSubnets(desiredPodNetwork.VcnIpNativePodNetworkOptions.SubnetNames)
 					desiredNsgs := m.getPodNSGs(desiredPodNetwork.VcnIpNativePodNetworkOptions.NSGNames)
 
-					if !reflect.DeepEqual(desiredSubnets, actualVcnNative.PodSubnetIds) ||
-						!reflect.DeepEqual(desiredNsgs, actualVcnNative.PodNsgIds) ||
+					if !stringSlicesEqualIgnoreOrder(desiredSubnets, actualVcnNative.PodSubnetIds) ||
+						!stringSlicesEqualIgnoreOrder(desiredNsgs, actualVcnNative.PodNsgIds) ||
 						(desiredPodNetwork.VcnIpNativePodNetworkOptions.MaxPodsPerNode != nil &&
 							actualVcnNative.MaxPodsPerNode != nil &&
 							*desiredPodNetwork.VcnIpNativePodNetworkOptions.MaxPodsPerNode != *actualVcnNative.MaxPodsPerNode) {
@@ -933,7 +930,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 		}
 	}
 
-	// NodePoolCyclingDetails: check individual user-specified fields
+	// NodePoolCyclingDetails
 	if m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails != nil && len(nodeConfigDetails.PlacementConfigs) == 0 {
 		needsCyclingUpdate := false
 
@@ -941,7 +938,6 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 			// OCI has no cycling details but spec does - update needed
 			needsCyclingUpdate = true
 		} else {
-			// Check individual fields that user specified (avoid nil dereference)
 			if m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.IsNodeCyclingEnabled != nil &&
 				(pool.NodePoolCyclingDetails.IsNodeCyclingEnabled == nil ||
 					*m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.IsNodeCyclingEnabled != *pool.NodePoolCyclingDetails.IsNodeCyclingEnabled) {
@@ -960,7 +956,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 		}
 
 		if needsCyclingUpdate {
-			// Only set fields that user specified (partial update)
+			// Only set fields that user specified
 			update := &oke.NodePoolCyclingDetails{}
 			if m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.IsNodeCyclingEnabled != nil {
 				update.IsNodeCyclingEnabled = m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.IsNodeCyclingEnabled
@@ -1135,4 +1131,42 @@ func (m *ManagedMachinePoolScope) buildPlacementConfigFromActual(actualConfigs [
 		})
 	}
 	return configs
+}
+
+// stringSlicesEqualIgnoreOrder compares two string slices for equality regardless of order
+func stringSlicesEqualIgnoreOrder(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	if len(a) == 0 {
+		return true
+	}
+
+	// Handle nil cases
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+
+	// Create maps to count occurrences
+	countA := make(map[string]int)
+	countB := make(map[string]int)
+
+	for _, item := range a {
+		countA[item]++
+	}
+	for _, item := range b {
+		countB[item]++
+	}
+
+	// Compare counts
+	for key, count := range countA {
+		if countB[key] != count {
+			return false
+		}
+	}
+
+	return true
 }
