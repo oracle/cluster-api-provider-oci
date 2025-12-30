@@ -610,6 +610,7 @@ func (m *MachinePoolScope) createInstanceConfiguration(
 
 	resp, err := m.ComputeManagementClient.CreateInstanceConfiguration(ctx, req)
 	if err != nil {
+		conditions.MarkFalse(m.MachinePool, infrav2exp.LaunchTemplateReadyCondition, infrav2exp.LaunchTemplateCreateFailedReason, clusterv1.ConditionSeverityError, err.Error())
 		m.Info("failed to create instance configuration", "error", err)
 		return err
 	}
