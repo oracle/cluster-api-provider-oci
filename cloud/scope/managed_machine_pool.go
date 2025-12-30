@@ -606,9 +606,6 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 	// Name
 	updateDetails.Name = common.String(m.getNodePoolName())
 
-	// Compare user-specified fields with actual node pool state
-	// Only update if the specified value differs from the actual value
-
 	// KubernetesVersion
 	if m.OCIManagedMachinePool.Spec.Version != nil &&
 		(pool.KubernetesVersion == nil || *m.OCIManagedMachinePool.Spec.Version != *pool.KubernetesVersion) {
@@ -832,7 +829,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 			}
 		}
 
-		// IsPvEncryptionInTransitEnabled: compare specified value with actual
+		// IsPvEncryptionInTransitEnabled
 		if m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.IsPvEncryptionInTransitEnabled != nil &&
 			(pool.NodeConfigDetails.IsPvEncryptionInTransitEnabled == nil ||
 				*m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.IsPvEncryptionInTransitEnabled != *pool.NodeConfigDetails.IsPvEncryptionInTransitEnabled) {
@@ -840,14 +837,14 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 			needsUpdate = true
 		}
 
-		// KmsKeyId: compare specified value with actual
+		// KmsKeyId
 		if m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.KmsKeyId != nil &&
 			(pool.NodeConfigDetails.KmsKeyId == nil || *m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.KmsKeyId != *pool.NodeConfigDetails.KmsKeyId) {
 			nodeConfigDetails.KmsKeyId = m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.KmsKeyId
 			needsUpdate = true
 		}
 
-		// PlacementConfigs: check that user-specified configs exist and match (allow OCI to add extra configs)
+		// PlacementConfigs
 		if len(m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.PlacementConfigs) > 0 {
 			actualPlacementConfigs := m.buildPlacementConfigFromActual(pool.NodeConfigDetails.PlacementConfigs)
 			actualConfigsMap := make(map[string]expinfra1.PlacementConfig)
