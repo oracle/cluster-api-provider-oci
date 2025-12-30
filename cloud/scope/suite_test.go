@@ -24,7 +24,7 @@ import (
 	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 )
 
 func TestMain(m *testing.M) {

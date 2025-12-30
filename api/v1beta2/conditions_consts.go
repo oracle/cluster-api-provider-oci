@@ -16,7 +16,7 @@
 
 package v1beta2
 
-import clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+import clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 
 const (
 	// InstanceReadyCondition Ready indicates the instance is in a Running state.
