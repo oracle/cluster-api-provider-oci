@@ -1739,7 +1739,6 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 					NodeShapeConfig: &infrav2exp.NodeShapeConfig{
 						Ocpus: common.String("2"), // Only specify Ocpus, not MemoryInGBs
 					},
-					// Deliberately NOT specifying: NodeEvictionNodePoolSettings, NodePoolCyclingDetails, etc.
 				}
 				// OCI has different values for unspecified fields - should not trigger update
 			},
@@ -1752,7 +1751,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 				NodeShape:         common.String("test-shape"),
 				NodeShapeConfig: &oke.NodeShapeConfig{
 					Ocpus:       common.Float32(2),
-					MemoryInGBs: common.Float32(32), // Different from spec (which doesn't specify it)
+					MemoryInGBs: common.Float32(32), // Different from spec
 				},
 				NodeEvictionNodePoolSettings: &oke.NodeEvictionNodePoolSettings{
 					EvictionGraceDuration:           common.String("PT60M"), // Not in spec
@@ -1775,7 +1774,6 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 					NodeShape: "test-shape",
 					NodeEvictionNodePoolSettings: &infrav2exp.NodeEvictionNodePoolSettings{
 						EvictionGraceDuration: common.String("PT30M"), // User specified
-						// Deliberately NOT specifying IsForceDeleteAfterGraceDuration
 					},
 				}
 				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Eq(oke.UpdateNodePoolRequest{
@@ -1786,7 +1784,6 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 						NodeShape:         common.String("test-shape"),
 						NodeEvictionNodePoolSettings: &oke.NodeEvictionNodePoolSettings{
 							EvictionGraceDuration: common.String("PT30M"),
-							// IsForceDeleteAfterGraceDuration not included (partial update)
 						},
 					},
 				})).
@@ -1818,7 +1815,6 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 					NodePoolCyclingDetails: &infrav2exp.NodePoolCyclingDetails{
 						IsNodeCyclingEnabled: common.Bool(true),    // User specified
 						MaximumSurge:         common.String("20%"), // User specified
-						// Deliberately NOT specifying MaximumUnavailable
 					},
 				}
 				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Eq(oke.UpdateNodePoolRequest{
@@ -1830,7 +1826,6 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 						NodePoolCyclingDetails: &oke.NodePoolCyclingDetails{
 							IsNodeCyclingEnabled: common.Bool(true),
 							MaximumSurge:         common.String("20%"),
-							// MaximumUnavailable not included (partial update)
 						},
 					},
 				})).
@@ -1900,7 +1895,6 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 						NodeShape:         common.String("test-shape"),
 						NodeEvictionNodePoolSettings: &oke.NodeEvictionNodePoolSettings{
 							IsForceDeleteAfterGraceDuration: common.Bool(true),
-							// EvictionGraceDuration not included (partial update)
 						},
 					},
 				})).
