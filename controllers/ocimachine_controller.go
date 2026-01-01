@@ -91,6 +91,12 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		logger.Info("Machine Controller has not yet set OwnerRef")
 		return ctrl.Result{}, nil
 	}
+	// Convert v1beta2 Machine to v1beta1 for scope compatibility
+	machineV1beta1 := &clusterv1.Machine{}
+	if err := machineV1beta1.ConvertFrom(machine); err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "failed to convert machine to v1beta1")
+	}
+
 	logger = logger.WithValues("machine-name", ociMachine.Name)
 
 	// Fetch the Cluster.
@@ -105,6 +111,11 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if annotations.IsPaused(cluster, ociMachine) {
 		logger.Info("OCIMachine or linked Cluster is marked as paused. Won't reconcile")
 		return ctrl.Result{}, nil
+	}
+	// Convert v1beta2 Cluster to v1beta1 for scope compatibility
+	clusterV1beta1 := &clusterv1.Cluster{}
+	if err := clusterV1beta1.ConvertFrom(cluster); err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "failed to convert cluster to v1beta1")
 	}
 
 	ociCluster := &infrastructurev1beta2.OCICluster{}
@@ -127,8 +138,8 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		// check for oci managed cluster
 		ociManagedCluster := &infrastructurev1beta2.OCIManagedCluster{}
 		ociManagedClusterName := client.ObjectKey{
-			Namespace: cluster.Namespace,
-			Name:      cluster.Spec.InfrastructureRef.Name,
+			Namespace: clusterV1beta1.Namespace,
+			Name:      clusterV1beta1.Spec.InfrastructureRef.Name,
 		}
 		if err := r.Client.Get(ctx, ociManagedClusterName, ociManagedCluster); err != nil {
 
@@ -138,7 +149,7 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 	} else {
 		r.Recorder.Eventf(ociMachine, corev1.EventTypeWarning, "InfrastructureClusterTypeNotSupported", fmt.Sprintf("Infrastructure Cluster Type %s is not supported", cluster.Spec.InfrastructureRef.Kind))
-		return ctrl.Result{}, errors.New(fmt.Sprintf("Infrastructure Cluster Type %s is not supported", cluster.Spec.InfrastructureRef.Kind))
+		return ctrl.Result{}, errors.New(fmt.Sprintf("Infrastructure Cluster Type %s is not supported", clusterV1beta1.Spec.InfrastructureRef.Kind))
 	}
 
 	_, _, clients, err := cloudutil.InitClientsAndRegion(ctx, r.Client, r.Region, clusterAccessor, r.ClientProvider)
@@ -151,9 +162,9 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		Client:                    r.Client,
 		ComputeClient:             clients.ComputeClient,
 		Logger:                    &logger,
-		Cluster:                   cluster,
+		Cluster:                   clusterV1beta1,
 		OCIClusterAccessor:        clusterAccessor,
-		Machine:                   machine,
+		Machine:                   machineV1beta1,
 		OCIMachine:                ociMachine,
 		VCNClient:                 clients.VCNClient,
 		NetworkLoadBalancerClient: clients.NetworkLoadBalancerClient,
