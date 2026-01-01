@@ -1,0 +1,27 @@
+# Declarative ConfigMap for CAPOCI e2e parameters
+# WHAT:
+# - Provides a single manifest to create/update the ConfigMap with the required keys AND the
+#   discovery label so Argo can source WorkflowTemplate parameters from it.
+# WHY:
+# - Avoids multi-step kubectl commands and the chance of forgetting the required label.
+# - Keeps configuration fully declarative and reviewable in Git.
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argo-capoci-e2e-config
+  namespace: argo
+  labels:
+    # Required so Argo Workflows controller can use this ConfigMap for parameters
+    workflows.argoproj.io/configmap-type: Parameter
+data:
+  # REQUIRED keys (replace example values with your real OCIDs)
+  oci_compartment_id: "ocid1.compartment.oc1..example"
+  oci_image_id: "ocid1.image.oc1..example"
+  oci_oracle_linux_image_id: "ocid1.image.oc1..example"
+  oci_upgrade_image_id: "ocid1.image.oc1..example"
+  oci_alternative_region_image_id: "ocid1.image.oc1..example"
+  oci_managed_node_image_id: "ocid1.image.oc1..example"
+
+  # OPTIONAL: registry used by the workflow (container overrides the parameter if this is set)
+  registry: "ghcr.io/oracle"

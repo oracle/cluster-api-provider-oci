@@ -1,0 +1,408 @@
+# Argo WorkflowTemplate to run CAPOCI e2e tests via scripts/ci-e2e.sh
+# - Mirrors the latest argo/capoci-e2e-workflow.yaml behavior
+# - Uses docker-in-docker (dind) sidecar so the Makefile can docker build/push
+# - Installs minimal tooling in the main container (git, make, curl, openssh-client, docker CLI)
+# - Clones this repository and invokes ./scripts/ci-e2e.sh (which does the build and testing)
+# - Maps parameters to environment variables consumed by the script and e2e config
+#
+# Required configs are read from a ConfigMap in the same namespace (Option A = required-only):
+#   ConfigMap name: argo-capoci-e2e-config
+#   Required keys:
+#     - oci_compartment_id
+#     - oci_image_id
+#     - oci_oracle_linux_image_id
+#     - oci_upgrade_image_id
+#     - oci_alternative_region_image_id
+#     - oci_managed_node_image_id
+#   Additional key (optional):
+#     - registry
+#
+# Example to create the ConfigMap (adjust values as appropriate):
+#   kubectl apply -f argo/capoci-e2e-configmap.yaml
+#
+# Install the template:
+#   kubectl apply -f argo/capoci-e2e-workflowtemplate.yaml
+#
+# Run a workflow from this template (override any defaults with -p):
+#   argo submit --from workflowtemplate/capoci-e2e -n argo \
+#     -p use_instance_principal=true \
+#     -p use_instance_principal_b64=dHJ1ZQ==
+#
+# Notes:
+# - USE_INSTANCE_PRINCIPAL_B64 commonly needs "dHJ1ZQ==" for true, "ZmFsc2U=" for false (base64).
+# - If OCI_SSH_KEY is omitted, the script will generate a temporary key.
+# - REGISTRY defaults to ghcr.io/oracle; override if pushing to your org's registry.
+# - git_ref defaults to main
+# - git_repo defaults to https://github.com/oracle/cluster-api-provider-oci.git
+# - ginkgo_focus can be used to run a single test
+# - Due to Argo parameter constraints, registry cannot be sourced as a parameter from a Secret; instead it is read via container env (REGISTRY_CM) from the ConfigMap and overrides the parameter if present.
+
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  namespace: argo
+  name: capoci-e2e
+spec:
+  entrypoint: run
+  serviceAccountName: argo
+  parallelism: 1
+  podGC:
+    strategy: OnWorkflowSuccess
+  ttlStrategy:
+    secondsAfterSuccess: 86400
+    secondsAfterFailure: 604800
+
+  # Default parameter values (override at submit time)
+  arguments:
+    parameters:
+      - name: git_repo
+        value: https://github.com/oracle/cluster-api-provider-oci.git
+      - name: git_ref
+        value: main
+
+      - name: registry
+        value: ghcr.io/oracle
+
+      # REQUIRED by scripts/ci-e2e.sh (sourced from ConfigMap argo-capoci-e2e-config)
+      - name: oci_compartment_id
+        valueFrom:
+          configMapKeyRef:
+            name: argo-capoci-e2e-config
+            key: oci_compartment_id
+      - name: oci_image_id
+        valueFrom:
+          configMapKeyRef:
+            name: argo-capoci-e2e-config
+            key: oci_image_id
+      - name: oci_oracle_linux_image_id
+        valueFrom:
+          configMapKeyRef:
+            name: argo-capoci-e2e-config
+            key: oci_oracle_linux_image_id
+      - name: oci_upgrade_image_id
+        valueFrom:
+          configMapKeyRef:
+            name: argo-capoci-e2e-config
+            key: oci_upgrade_image_id
+      - name: oci_alternative_region_image_id
+        valueFrom:
+          configMapKeyRef:
+            name: argo-capoci-e2e-config
+            key: oci_alternative_region_image_id
+      - name: oci_managed_node_image_id
+        valueFrom:
+          configMapKeyRef:
+            name: argo-capoci-e2e-config
+            key: oci_managed_node_image_id
+
+      # Optional image IDs
+      - name: oci_windows_image_id
+        value: ""
+
+      # Optional SSH public key. If empty, the script generates one.
+      - name: oci_ssh_key
+        value: ""
+
+      # Feature/behavior toggles
+      - name: cluster_topology
+        value: "true"
+      - name: exp_machine_pool
+        value: "true"
+      - name: exp_oke
+        value: "false"
+      - name: use_instance_principal
+        value: "false"
+      # Base64 of "true" or "false". Common values: true=dHJ1ZQ==, false=ZmFsc2U=
+      - name: use_instance_principal_b64
+        value: "dHJ1ZQ=="
+      - name: oci_alternative_region
+        value: "us-sanjose-1"
+
+      # Test execution tuning
+      - name: ginkgo_nodes
+        value: "3"
+      - name: ginkgo_focus
+        value: ""
+      - name: kind_node_image
+        value: "kindest/node:v1.29.6"
+      - name: tag
+        value: ""
+      - name: node_machine_count
+        value: "1"
+      - name: ocir_username
+        value: ""
+      - name: ocir_region
+        value: "us-phoenix-1"
+      - name: ocir_region_short_code
+        value: "phx"
+
+  templates:
+    - name: run
+      outputs:
+        artifacts:
+          - name: e2e-report
+            path: /workspace/report.json
+            optional: true
+          - name: e2e-logs
+            path: /workspace/_artifacts_logs_only
+            optional: true
+          - name: e2e-artifacts
+            path: /workspace/_artifacts
+            optional: true
+      volumes:
+        - name: workspace
+          emptyDir: {}
+        - name: dind-storage
+          emptyDir: {}
+
+      sidecars:
+        - name: dind
+          image: docker.io/library/docker:24-dind
+          args:
+            - "--host=tcp://0.0.0.0:2375"
+            - "--host=unix:///var/run/docker.sock"
+          env:
+            - name: DOCKER_TLS_CERTDIR
+              value: ""
+          readinessProbe:
+            tcpSocket:
+              port: 2375
+            initialDelaySeconds: 2
+            periodSeconds: 2
+          securityContext:
+            privileged: true
+          resources:
+            requests:
+              cpu: "2"
+              memory: "4Gi"
+            limits:
+              cpu: "4"
+              memory: "8Gi"
+          volumeMounts:
+            - name: dind-storage
+              mountPath: /var/lib/docker
+
+      container:
+        image: docker.io/library/golang:1.23-bookworm
+        workingDir: /workspace
+        securityContext:
+          runAsUser: 0
+        resources:
+          requests:
+            cpu: "2"
+            memory: "4Gi"
+          limits:
+            cpu: "4"
+            memory: "8Gi"
+        env:
+          # Docker socket via dind sidecar
+          - name: DOCKER_HOST
+            value: tcp://localhost:2375
+
+          # Registry for docker build/push from the Makefile
+          - name: REGISTRY
+            value: "{{workflow.parameters.registry}}"
+          - name: REGISTRY_CM
+            valueFrom:
+              configMapKeyRef:
+                name: argo-capoci-e2e-config
+                key: registry
+                optional: true
+
+          # Required envs for scripts/ci-e2e.sh
+          - name: OCI_COMPARTMENT_ID
+            value: "{{workflow.parameters.oci_compartment_id}}"
+          - name: OCI_IMAGE_ID
+            value: "{{workflow.parameters.oci_image_id}}"
+          - name: OCI_ORACLE_LINUX_IMAGE_ID
+            value: "{{workflow.parameters.oci_oracle_linux_image_id}}"
+          - name: OCI_UPGRADE_IMAGE_ID
+            value: "{{workflow.parameters.oci_upgrade_image_id}}"
+          - name: OCI_MANAGED_NODE_IMAGE_ID
+            value: "{{workflow.parameters.oci_managed_node_image_id}}"
+          # Also set the variant used by e2e_conf.yaml envsubst.
+          - name: KUBERNETES_UPGRADE_OCI_IMAGE_ID
+            value: "{{workflow.parameters.oci_upgrade_image_id}}"
+          - name: OCI_ALTERNATIVE_REGION_IMAGE_ID
+            value: "{{workflow.parameters.oci_alternative_region_image_id}}"
+
+          # Optional envs used by templates/config
+          - name: OCI_WINDOWS_IMAGE_ID
+            value: "{{workflow.parameters.oci_windows_image_id}}"
+          - name: OCI_SSH_KEY
+            value: "{{workflow.parameters.oci_ssh_key}}"
+          - name: OCI_ALTERNATIVE_REGION
+            value: "{{workflow.parameters.oci_alternative_region}}"
+
+          # Feature gates and behavior flags
+          - name: CLUSTER_TOPOLOGY
+            value: "{{workflow.parameters.cluster_topology}}"
+          - name: EXP_MACHINE_POOL
+            value: "{{workflow.parameters.exp_machine_pool}}"
+          - name: EXP_OKE
+            value: "{{workflow.parameters.exp_oke}}"
+          - name: USE_INSTANCE_PRINCIPAL
+            value: "{{workflow.parameters.use_instance_principal}}"
+          - name: USE_INSTANCE_PRINCIPAL_B64
+            value: "{{workflow.parameters.use_instance_principal_b64}}"
+
+          # Test runner config
+          - name: GINKGO_NODES
+            value: "{{workflow.parameters.ginkgo_nodes}}"
+          - name: GINKGO_FOCUS_PARAM
+            value: "{{workflow.parameters.ginkgo_focus}}"
+          - name: KIND_NODE_IMAGE
+            value: "{{workflow.parameters.kind_node_image}}"
+          - name: KIND_IMAGE
+            value: "{{workflow.parameters.kind_node_image}}"
+          - name: KIND_CLUSTER_IMAGE
+            value: "{{workflow.parameters.kind_node_image}}"
+          - name: KIND_EXPERIMENTAL_IMAGE
+            value: "{{workflow.parameters.kind_node_image}}"
+          - name: TAG
+            value: "{{workflow.parameters.tag}}"
+          - name: NODE_MACHINE_COUNT
+            value: "{{workflow.parameters.node_machine_count}}"
+          - name: OCIR_USERNAME
+            value: "{{workflow.parameters.ocir_username}}"
+          - name: OCIR_REGION
+            value: "{{workflow.parameters.ocir_region}}"
+          - name: OCIR_REGION_SHORT_CODE
+            value: "{{workflow.parameters.ocir_region_short_code}}"
+          - name: KIND_CGROUP_DRIVER
+            value: "cgroupfs"
+
+        command: ["bash", "-ec"]
+        args:
+          - |
+            set -o errexit
+            set -o nounset
+            set -o pipefail
+
+            # Base tooling for the build and e2e scripts
+            apt-get update
+            DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+              git make curl ca-certificates openssh-client jq
+            update-ca-certificates
+
+            # Install docker CLI to talk to dind sidecar
+            # (use static binary to avoid extra package repos)
+            curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-24.0.9.tgz \
+              | tar -xz -C /usr/local/bin --strip-components=1 docker/docker
+            for i in {1..60}; do
+              if docker version >/dev/null 2>&1; then
+                break
+              fi
+              echo "waiting for docker daemon on ${DOCKER_HOST} ..."
+              sleep 2
+            done
+            docker version
+
+            # Override REGISTRY from ConfigMap if present
+            if [ -n "${REGISTRY_CM:-}" ]; then
+              export REGISTRY="${REGISTRY_CM}"
+            fi
+
+            # Ensure binaries installed by the Makefile are on PATH (kustomize, ginkgo, etc.)
+            export PATH="/workspace/bin:${PATH}"
+            # Also provide kustomize in a standard location for tools that exec 'kustomize' by name.
+            ln -sf /workspace/bin/kustomize /usr/local/bin/kustomize || true
+            ln -sf /workspace/bin/ginkgo /usr/local/bin/ginkgo || true
+            ln -sf /workspace/bin/kubectl /usr/local/bin/kubectl || true
+            command -v kustomize || true
+            kustomize version || true
+            command -v kubectl || true
+            kubectl version --client=true --short || true
+
+            # Install OCI CLI for docker authentication to OCIR
+            DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends python3 python3-venv python3-pip unzip curl jq
+            export PATH="/root/.local/bin:${PATH}"
+            python3 -m venv /opt/oci-cli
+            /opt/oci-cli/bin/pip install --upgrade pip
+            /opt/oci-cli/bin/pip install "oci_cli==3.71.1"
+            ln -sf /opt/oci-cli/bin/oci /usr/local/bin/oci
+
+            oci --version || true
+
+            # Setup OCIR token and login using instance principal
+            echo "Generating the ocir token"
+            echo "https://{{workflow.parameters.ocir_region}}.ocir.io/20180419/docker/token"
+            OCIR_TOKEN=$(oci raw-request \
+              --http-method GET \
+              --target-uri "https://{{workflow.parameters.ocir_region}}.ocir.io/20180419/docker/token" \
+              --auth instance_principal \
+              --region "{{workflow.parameters.ocir_region}}" \
+              --profile DEFAULT | jq -r .data.token)
+
+            echo "docker login"
+            echo "${OCIR_TOKEN}" | docker login -u BEARER_TOKEN --password-stdin "{{workflow.parameters.ocir_region_short_code}}.ocir.io"
+
+            # Clone repository and checkout ref
+            git clone --depth 1 --branch "{{workflow.parameters.git_ref}}" "{{workflow.parameters.git_repo}}" /workspace
+
+            # Optional Ginkgo focus override
+            if [ -n "${GINKGO_FOCUS_PARAM:-}" ]; then
+              export GINKGO_FOCUS="${GINKGO_FOCUS_PARAM}"
+            fi
+
+            # Preflight: show which Kind node image will be used
+            echo "KIND_IMAGE=${KIND_IMAGE:-unset}  KIND_NODE_IMAGE=${KIND_NODE_IMAGE:-unset}  KIND_CLUSTER_IMAGE=${KIND_CLUSTER_IMAGE:-unset}  KIND_EXPERIMENTAL_IMAGE=${KIND_EXPERIMENTAL_IMAGE:-unset}"
+
+            # Start capoci-controller-manager log watcher in background (waits until 'kind' exists)
+            export CLUSTER_NAME="${CLUSTER_NAME:-capoci-e2e}"
+            export OUTPUT_DIR="/workspace/_artifacts"
+            ( until command -v kind >/dev/null 2>&1; do echo "waiting for kind binary..."; sleep 2; done; \
+              ./scripts/watch-capoci-controller.sh -n "${CLUSTER_NAME}" -o "${OUTPUT_DIR}" -r 180 -d 5 ) \
+              & echo $! > /tmp/capoci_watch_pid
+
+            # Run the e2e test harness
+            ./scripts/ci-e2e.sh
+
+            # Stop watcher if running
+            if [ -f /tmp/capoci_watch_pid ]; then
+              kill "$(cat /tmp/capoci_watch_pid)" >/dev/null 2>&1 || true
+              rm -f /tmp/capoci_watch_pid
+            fi
+
+            # Build logs-only artifacts (logs + report.json), exclude YAML and other files
+            mkdir -p /workspace/_artifacts_logs_only
+            if [ -d /workspace/_artifacts ]; then
+              find /workspace/_artifacts -type f -name '*.log' -exec cp --parents {} /workspace/_artifacts_logs_only \; || true
+            fi
+            if [ -f /workspace/report.json ]; then
+              cp /workspace/report.json /workspace/_artifacts_logs_only/ || true
+            fi
+
+            # Emit the ginkgo JSON report into logs for easy retrieval
+            if [ -f /workspace/report.json ]; then
+              echo "=== BEGIN report.json ==="
+              cat /workspace/report.json || true
+              echo "=== END report.json ==="
+            fi
+
+            # Best-effort: surface CAPOCI controller logs from the kind mgmt cluster (if still present)
+            if command -v kubectl >/dev/null 2>&1; then
+              echo "=== capoci-controller-manager logs (cluster-api-provider-oci-system) ==="
+              LOG_DIR="/workspace/_artifacts/capoci-controller-manager"
+              mkdir -p "${LOG_DIR}"
+              # Save pod listing and logs to files while also emitting to stdout
+              kubectl --context kind-capoci-e2e -n cluster-api-provider-oci-system get pods -o wide | tee "${LOG_DIR}/pods.txt" || true
+              pods=$(kubectl --context kind-capoci-e2e -n cluster-api-provider-oci-system get pods -l app=capoci-controller-manager -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || true)
+              for p in $pods; do
+                echo "--- logs for pod: $p"
+                kubectl --context kind-capoci-e2e -n cluster-api-provider-oci-system logs "$p" --all-containers=true --tail=-1 | tee "${LOG_DIR}/${p}.log" || true
+              done
+              if [ -z "${pods}" ]; then
+                # Fallback to Deployment name if label not present
+                kubectl --context kind-capoci-e2e -n cluster-api-provider-oci-system logs deploy/capoci-controller-manager --all-containers=true --tail=-1 | tee "${LOG_DIR}/deployment.log" || true
+              fi
+            fi
+
+            # Rebuild logs-only artifacts to include controller logs saved above
+            if [ -d /workspace/_artifacts ]; then
+              find /workspace/_artifacts -type f -name '*.log' -exec cp --parents {} /workspace/_artifacts_logs_only \; || true
+            fi
+
+        volumeMounts:
+          - name: workspace
+            mountPath: /workspace
