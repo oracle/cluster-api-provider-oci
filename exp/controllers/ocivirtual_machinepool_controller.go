@@ -112,11 +112,16 @@ func (r *OCIVirtualMachinePoolReconciler) Reconcile(ctx context.Context, req ctr
 		logger.Info("OCIMachinePool or linked Cluster is marked as paused. Won't reconcile")
 		return ctrl.Result{}, nil
 	}
+	// Convert v1beta2 Cluster to v1beta1 for scope compatibility
+	clusterV1beta1 := &clusterv1.Cluster{}
+	if err := clusterV1beta1.ConvertFrom(cluster); err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "failed to convert cluster to v1beta1")
+	}
 
 	ociManagedCluster := &infrastructurev1beta2.OCIManagedCluster{}
 	ociClusterName := client.ObjectKey{
-		Namespace: cluster.Namespace,
-		Name:      cluster.Spec.InfrastructureRef.Name,
+		Namespace: clusterV1beta1.Namespace,
+		Name:      clusterV1beta1.Spec.InfrastructureRef.Name,
 	}
 
 	if err := r.Client.Get(ctx, ociClusterName, ociManagedCluster); err != nil {
@@ -136,8 +141,8 @@ func (r *OCIVirtualMachinePoolReconciler) Reconcile(ctx context.Context, req ctr
 
 	controlPlane := &infrastructurev1beta2.OCIManagedControlPlane{}
 	controlPlaneRef := types.NamespacedName{
-		Name:      cluster.Spec.ControlPlaneRef.Name,
-		Namespace: cluster.Namespace,
+		Name:      clusterV1beta1.Spec.ControlPlaneRef.Name,
+		Namespace: clusterV1beta1.Namespace,
 	}
 
 	if err := r.Get(ctx, controlPlaneRef, controlPlane); err != nil {
@@ -149,7 +154,7 @@ func (r *OCIVirtualMachinePoolReconciler) Reconcile(ctx context.Context, req ctr
 		Client:                  r.Client,
 		ComputeManagementClient: clients.ComputeManagementClient,
 		Logger:                  &logger,
-		Cluster:                 cluster,
+		Cluster:                 clusterV1beta1,
 		OCIManagedCluster:       ociManagedCluster,
 		MachinePool:             machinePool,
 		OCIVirtualMachinePool:   ociVirtualMachinePool,

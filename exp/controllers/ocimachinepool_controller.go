@@ -113,12 +113,18 @@ func (r *OCIMachinePoolReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		logger.Info("OCIMachinePool or linked Cluster is marked as paused. Won't reconcile")
 		return ctrl.Result{}, nil
 	}
+	// Convert v1beta2 Cluster to v1beta1 for scope compatibility
+	clusterV1beta1 := &clusterv1.Cluster{}
+	if err := clusterV1beta1.ConvertFrom(cluster); err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "failed to convert cluster to v1beta1")
+	}
+
 	var clusterAccessor scope.OCIClusterAccessor
-	if cluster.Spec.InfrastructureRef.Kind == "OCICluster" {
+	if clusterV1beta1.Spec.InfrastructureRef.Kind == "OCICluster" {
 		ociCluster := &infrastructurev1beta2.OCICluster{}
 		ociClusterName := client.ObjectKey{
-			Namespace: cluster.Namespace,
-			Name:      cluster.Spec.InfrastructureRef.Name,
+			Namespace: clusterV1beta1.Namespace,
+			Name:      clusterV1beta1.Spec.InfrastructureRef.Name,
 		}
 		if err := r.Client.Get(ctx, ociClusterName, ociCluster); err != nil {
 			logger.Info("Cluster is not available yet")
@@ -129,11 +135,11 @@ func (r *OCIMachinePoolReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		clusterAccessor = scope.OCISelfManagedCluster{
 			OCICluster: ociCluster,
 		}
-	} else if cluster.Spec.InfrastructureRef.Kind == "OCIManagedCluster" {
+	} else if clusterV1beta1.Spec.InfrastructureRef.Kind == "OCIManagedCluster" {
 		ociManagedCluster := &infrastructurev1beta2.OCIManagedCluster{}
 		ociManagedClusterName := client.ObjectKey{
-			Namespace: cluster.Namespace,
-			Name:      cluster.Spec.InfrastructureRef.Name,
+			Namespace: clusterV1beta1.Namespace,
+			Name:      clusterV1beta1.Spec.InfrastructureRef.Name,
 		}
 		if err := r.Client.Get(ctx, ociManagedClusterName, ociManagedCluster); err != nil {
 			logger.Info("Cluster is not available yet")
@@ -159,7 +165,7 @@ func (r *OCIMachinePoolReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		Client:                  r.Client,
 		ComputeManagementClient: clients.ComputeManagementClient,
 		Logger:                  &logger,
-		Cluster:                 cluster,
+		Cluster:                 clusterV1beta1,
 		OCIClusterAccessor:      clusterAccessor,
 		MachinePool:             machinePool,
 		OCIMachinePool:          ociMachinePool,
