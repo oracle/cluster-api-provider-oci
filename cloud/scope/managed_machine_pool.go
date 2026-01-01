@@ -607,11 +607,11 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 	updateDetails.Name = common.String(m.getNodePoolName())
 
 	// KubernetesVersion
-	if m.OCIManagedMachinePool.Spec.Version != nil &&
-		(pool.KubernetesVersion == nil || *m.OCIManagedMachinePool.Spec.Version != *pool.KubernetesVersion) {
-		updateDetails.KubernetesVersion = m.OCIManagedMachinePool.Spec.Version
-		needsUpdate = true
-	}
+	// if m.OCIManagedMachinePool.Spec.Version != nil &&
+	// 	(pool.KubernetesVersion == nil || *m.OCIManagedMachinePool.Spec.Version != *pool.KubernetesVersion) {
+	// 	updateDetails.KubernetesVersion = m.OCIManagedMachinePool.Spec.Version
+	// 	needsUpdate = true
+	// }
 
 	// NodeShape
 	if m.OCIManagedMachinePool.Spec.NodeShape != "" &&
