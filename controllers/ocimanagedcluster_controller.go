@@ -104,6 +104,11 @@ func (r *OCIManagedClusterReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		logger.Info("OCIManagedCluster or linked Cluster is marked as paused. Won't reconcile")
 		return ctrl.Result{}, nil
 	}
+	// Convert v1beta2 Cluster to v1beta1 for scope compatibility
+	clusterV1beta1 := &clusterv1.Cluster{}
+	if err := clusterV1beta1.ConvertFrom(cluster); err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "failed to convert cluster to v1beta1")
+	}
 
 	clusterAccessor := scope.OCIManagedCluster{
 		OCIManagedCluster: ociCluster,
@@ -121,7 +126,7 @@ func (r *OCIManagedClusterReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	clusterScope, err := scope.NewClusterScope(scope.ClusterScopeParams{
 		Client:             r.Client,
 		Logger:             &logger,
-		Cluster:            cluster,
+		Cluster:            clusterV1beta1,
 		OCIClusterAccessor: clusterAccessor,
 		ClientProvider:     clientProvider,
 		VCNClient:          clients.VCNClient,
@@ -157,7 +162,7 @@ func (r *OCIManagedClusterReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	if err != nil {
 		return reconcile.Result{}, errors.Errorf("failed to create scope: %+v", err)
 	} else {
-		return r.reconcile(ctx, logger, clusterScope, ociCluster, cluster)
+		return r.reconcile(ctx, logger, clusterScope, ociCluster, clusterV1beta1)
 	}
 
 }
