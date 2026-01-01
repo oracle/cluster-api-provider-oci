@@ -135,6 +135,7 @@ func (m *MachinePoolScope) computeInstanceConfigurationHash(ld *core.InstanceCon
 }
 
 // normalizeLaunchDetailsForHash strips fields that should NOT trigger a new InstanceConfiguration
+// we could decide which fields to ignore based on what OCI allows to be updated in an InstanceConfiguration
 func normalizeLaunchDetailsForHash(in *core.InstanceConfigurationLaunchInstanceDetails) *core.InstanceConfigurationLaunchInstanceDetails {
 	if in == nil {
 		return nil
@@ -473,7 +474,7 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context) e
 
 	// 2) Build desired launch details includes everything
 	freeFormTags := m.GetFreeFormTags()
-	definedTags := m.buildDefinedTagsMap()
+	definedTags := m.GetDefinedTags()
 
 	instanceConfigurationSpec := m.OCIMachinePool.Spec.InstanceConfiguration
 	desiredLaunch, err := m.getLaunchInstanceDetails(instanceConfigurationSpec, freeFormTags, definedTags)
@@ -561,8 +562,8 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context) e
 	return nil
 }
 
-// buildDefinedTagsMap builds the defined tags map for InstanceConfiguration creation.
-func (m *MachinePoolScope) buildDefinedTagsMap() map[string]map[string]interface{} {
+// GetDefinedTags builds the defined tags map for InstanceConfiguration creation.
+func (m *MachinePoolScope) GetDefinedTags() map[string]map[string]interface{} {
 	definedTags := make(map[string]map[string]interface{})
 	if m.OCIClusterAccesor.GetDefinedTags() == nil {
 		return definedTags
@@ -577,8 +578,7 @@ func (m *MachinePoolScope) buildDefinedTagsMap() map[string]map[string]interface
 	return definedTags
 }
 
-// createInstanceConfiguration creates a new OCI InstanceConfiguration with a hash-based display name
-// to prevent duplicate creation when immutable instance launch parameters change.
+// createInstanceConfiguration creates a new OCI InstanceConfiguration
 func (m *MachinePoolScope) createInstanceConfiguration(
 	ctx context.Context,
 	launchDetails *core.InstanceConfigurationLaunchInstanceDetails,
