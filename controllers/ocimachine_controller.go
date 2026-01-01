@@ -206,7 +206,7 @@ func (r *OCIMachineReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Ma
 			&clusterv1.Cluster{},
 			handler.EnqueueRequestsFromMapFunc(clusterToObjectFunc),
 			builder.WithPredicates(
-				predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetScheme(), ctrl.LoggerFrom(ctx)),
+				predicates.ClusterPausedTransitionsOrInfrastructureProvisioned(mgr.GetScheme(), ctrl.LoggerFrom(ctx)),
 			),
 		).
 		// don't queue reconcile if resource is paused

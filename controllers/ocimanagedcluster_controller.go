@@ -467,14 +467,14 @@ func OCIManagedControlPlaneToOCIManagedClusterMapper(c client.Client, log logr.L
 		}
 
 		ref := cluster.Spec.InfrastructureRef
-		if ref == nil || ref.Name == "" {
+		if ref.Name == "" {
 			return nil
 		}
 
 		return []ctrl.Request{
 			{
 				NamespacedName: types.NamespacedName{
-					Namespace: ref.Namespace,
+					Namespace: cluster.Namespace,
 					Name:      ref.Name,
 				},
 			},

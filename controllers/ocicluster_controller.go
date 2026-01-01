@@ -34,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1beta2 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
@@ -93,6 +94,11 @@ func (r *OCIClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		logger.Info("Cluster Controller has not yet set OwnerRef")
 		return ctrl.Result{}, nil
 	}
+	// Convert v1beta2 Cluster to v1beta1 for scope compatibility
+	clusterV1beta1 := &clusterv1.Cluster{}
+	if err := clusterV1beta1.ConvertFrom(cluster); err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "failed to convert cluster to v1beta1")
+	}
 
 	// Return early if the object or Cluster is paused.
 	if annotations.IsPaused(cluster, ociCluster) {
@@ -118,7 +124,7 @@ func (r *OCIClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	clusterScope, err = scope.NewClusterScope(scope.ClusterScopeParams{
 		Client:                    r.Client,
 		Logger:                    &logger,
-		Cluster:                   cluster,
+		Cluster:                   clusterV1beta1,
 		OCIClusterAccessor:        clusterAccessor,
 		ClientProvider:            clientProvider,
 		VCNClient:                 clients.VCNClient,

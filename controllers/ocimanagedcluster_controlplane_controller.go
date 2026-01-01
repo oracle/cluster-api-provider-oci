@@ -400,14 +400,14 @@ func OCIManagedClusterToOCIManagedControlPlaneMapper(c client.Client, log logr.L
 		}
 
 		ref := cluster.Spec.ControlPlaneRef
-		if ref == nil || ref.Name == "" {
+		if ref.Name == "" {
 			return nil
 		}
 
 		return []ctrl.Request{
 			{
 				NamespacedName: types.NamespacedName{
-					Namespace: ref.Namespace,
+					Namespace: cluster.Namespace,
 					Name:      ref.Name,
 				},
 			},
@@ -423,14 +423,14 @@ func ClusterToOCIManagedControlPlaneMapper() handler.MapFunc {
 		}
 
 		ref := cluster.Spec.ControlPlaneRef
-		if ref == nil || ref.Name == "" {
+		if ref.Name == "" {
 			return nil
 		}
 
 		return []ctrl.Request{
 			{
 				NamespacedName: types.NamespacedName{
-					Namespace: ref.Namespace,
+					Namespace: cluster.Namespace,
 					Name:      ref.Name,
 				},
 			},
