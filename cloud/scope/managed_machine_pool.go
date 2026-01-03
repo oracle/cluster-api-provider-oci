@@ -641,10 +641,8 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 	versionChanged := m.OCIManagedMachinePool.Spec.Version != nil &&
 		(pool.KubernetesVersion == nil || *m.OCIManagedMachinePool.Spec.Version != *pool.KubernetesVersion)
 
-	// KubernetesVersion (only when node cycling is disabled)
-	if !cyclingEnabled &&
-		m.OCIManagedMachinePool.Spec.Version != nil &&
-		(pool.KubernetesVersion == nil || *m.OCIManagedMachinePool.Spec.Version != *pool.KubernetesVersion) {
+	// KubernetesVersion - always set when version differs, regardless of cycling
+	if versionChanged {
 		updateDetails.KubernetesVersion = m.OCIManagedMachinePool.Spec.Version
 		needsUpdate = true
 	}

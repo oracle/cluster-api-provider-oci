@@ -107,16 +107,16 @@ var _ = Describe("Managed Workload cluster creation", func() {
 		}
 
 		cleanInput := cleanupInput{
-			SpecName:          specName,
-			Cluster:           result.Cluster,
-			ClusterProxy:      bootstrapClusterProxy,
-			Namespace:         namespace,
+			SpecName:             specName,
+			Cluster:              result.Cluster,
+			ClusterProxy:         bootstrapClusterProxy,
+			Namespace:            namespace,
 			ClusterctlConfigPath: clusterctlConfigPath,
-			CancelWatches:     cancelWatches,
-			IntervalsGetter:   e2eConfig.GetIntervals,
-			SkipCleanup:       skipCleanup,
-			AdditionalCleanup: additionalCleanup,
-			ArtifactFolder:    artifactFolder,
+			CancelWatches:        cancelWatches,
+			IntervalsGetter:      e2eConfig.GetIntervals,
+			SkipCleanup:          skipCleanup,
+			AdditionalCleanup:    additionalCleanup,
+			ArtifactFolder:       artifactFolder,
 		}
 		dumpSpecResourcesAndCleanup(ctx, cleanInput)
 	})
@@ -269,6 +269,9 @@ var _ = Describe("Managed Workload cluster creation", func() {
 		}
 
 		clusterctl.ApplyClusterTemplateAndWait(ctx, input, result)
+
+		upgradeControlPlaneVersionSpec(ctx, bootstrapClusterProxy.GetClient(), clusterName, namespace.Name,
+			e2eConfig.GetIntervals(specName, "wait-control-plane"))
 
 		updateMachinePoolVersion(ctx, result.Cluster, bootstrapClusterProxy, result.MachinePools,
 			e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes"))
