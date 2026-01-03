@@ -272,7 +272,7 @@ func (m *ManagedMachinePoolScope) CreateNodePool(ctx context.Context) (*oke.Node
 			nodeShapeConfig.MemoryInGBs = common.Float32(float32(memoryInGBs))
 		}
 	}
-	err = m.setNodepoolImageId(ctx)
+	err = m.setNodepoolImageId(ctx, false)
 	if err != nil {
 		return nil, err
 	}
@@ -359,9 +359,16 @@ func (m *ManagedMachinePoolScope) CreateNodePool(ctx context.Context) (*oke.Node
 	return m.getOKENodePoolFromOCID(ctx, nodePoolId)
 }
 
-func (m *ManagedMachinePoolScope) setNodepoolImageId(ctx context.Context) error {
+func (m *ManagedMachinePoolScope) setNodepoolImageId(ctx context.Context, force bool) error {
 	imageId := m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId
-	if imageId != nil && *imageId != "" {
+	m.Logger.Info("setNodepoolImageId called",
+		"currentImageId", ptrToString(m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId),
+		"specVersion", ptrToString(m.OCIManagedMachinePool.Spec.Version),
+	)
+	if !force && imageId != nil && *imageId != "" {
+		m.Logger.Info("Skipping image lookup because imageId already set",
+			"imageId", *imageId,
+		)
 		return nil
 	}
 	response, err := m.ContainerEngineClient.GetNodePoolOptions(ctx, oke.GetNodePoolOptionsRequest{
@@ -404,6 +411,11 @@ func (m *ManagedMachinePoolScope) setNodepoolImageId(ctx context.Context) error 
 					continue
 				}
 				if strings.Contains(sourceName, k8sVersion) {
+					m.Logger.Info("Matched node pool image",
+						"sourceName", sourceName,
+						"imageId", *image.ImageId,
+						"k8sVersion", k8sVersion,
+					)
 					m.Info("Image being used", "Name", sourceName, "OCID", *image.ImageId)
 					m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId = image.ImageId
 					return nil
@@ -589,6 +601,13 @@ func (m *ManagedMachinePoolScope) getWorkerMachineSubnet(name *string) *string {
 	return nil
 }
 
+func ptrToString(p *string) string {
+	if p == nil {
+		return "<nil>"
+	}
+	return *p
+}
+
 // UpdateNodePool updates a node pool, if needed, based on updated spec
 func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.NodePool) (bool, error) {
 	nodePoolSizeUpdateRequired := false
@@ -602,6 +621,12 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 	needsUpdate := nodePoolSizeUpdateRequired
 	updateDetails := &oke.UpdateNodePoolDetails{}
 	nodeConfigDetails := &oke.UpdateNodePoolNodeConfigDetails{}
+
+	m.Logger.Info("Reconciling NodePool",
+		"nodePool", *pool.Name,
+		"specVersion", ptrToString(m.OCIManagedMachinePool.Spec.Version),
+		"actualVersion", ptrToString(pool.KubernetesVersion),
+	)
 
 	// Name
 	if m.OCIManagedMachinePool.GetName() != *pool.Name {
@@ -674,7 +699,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 	if m.OCIManagedMachinePool.Spec.NodeSourceViaImage != nil {
 		// If cycling is enabled and version changed, we must rotate image (even if user didn't specify ImageId)
 		if cyclingEnabled && versionChanged {
-			if err := m.setNodepoolImageId(ctx); err != nil {
+			if err := m.setNodepoolImageId(ctx, true); err != nil {
 				return false, err
 			}
 		}
@@ -682,7 +707,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 		actualSource, ok := pool.NodeSourceDetails.(oke.NodeSourceViaImageDetails)
 		if !ok {
 			// OCI doesn't have image source details - update needed
-			if err := m.setNodepoolImageId(ctx); err != nil {
+			if err := m.setNodepoolImageId(ctx, false); err != nil {
 				return false, err
 			}
 			sourceDetails := oke.NodeSourceViaImageDetails{
