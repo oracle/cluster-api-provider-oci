@@ -1602,11 +1602,6 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 					NodeSourceViaImage: &infrav2exp.NodeSourceViaImage{
 						ImageId: common.String("test-image-id"),
 					},
-					NodePoolCyclingDetails: &infrav2exp.NodePoolCyclingDetails{
-						IsNodeCyclingEnabled: common.Bool(true),
-						MaximumSurge:         common.String("20%"),
-						MaximumUnavailable:   common.String("10%"),
-					},
 					SshPublicKey: "test-ssh-public-key",
 					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
 						PlacementConfigs: []infrav2exp.PlacementConfig{
@@ -1652,11 +1647,6 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 						NodeSourceDetails: &oke.NodeSourceViaImageDetails{
 							ImageId: common.String("test-image-id"),
 						},
-						NodePoolCyclingDetails: &oke.NodePoolCyclingDetails{
-							IsNodeCyclingEnabled: common.Bool(true),
-							MaximumSurge:         common.String("20%"),
-							MaximumUnavailable:   common.String("10%"),
-						},
 						SshPublicKey: common.String("test-ssh-public-key"),
 						NodeConfigDetails: &oke.UpdateNodePoolNodeConfigDetails{
 							NsgIds:                         []string{"nsg-id"},
@@ -1683,7 +1673,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 				Id:                common.String("node-pool-id"),
 				Name:              common.String("test"),
 				CompartmentId:     common.String("test-compartment"),
-				KubernetesVersion: common.String("v1.23.5"),
+				KubernetesVersion: common.String("v1.24.5"),
 				NodeMetadata:      map[string]string{"key1": "value1"},
 				InitialNodeLabels: []oke.KeyValue{{
 					Key:   common.String("key"),
@@ -1717,7 +1707,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 					DefinedTags:                    definedTagsInterface,
 					NodePoolPodNetworkOptionDetails: oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
 						PodSubnetIds:   []string{"pod-subnet-id"},
-						MaxPodsPerNode: common.Int(15),
+						MaxPodsPerNode: common.Int(31),
 						PodNsgIds:      []string{"pod-nsg-id"},
 					},
 				},

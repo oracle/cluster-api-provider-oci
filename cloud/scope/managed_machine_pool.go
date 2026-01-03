@@ -604,7 +604,10 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 	nodeConfigDetails := &oke.UpdateNodePoolNodeConfigDetails{}
 
 	// Name
-	updateDetails.Name = common.String(m.getNodePoolName())
+	if m.OCIManagedMachinePool.GetName() != *pool.Name {
+		updateDetails.Name = common.String(m.getNodePoolName())
+		needsUpdate = true
+	}
 
 	// KubernetesVersion
 	// if m.OCIManagedMachinePool.Spec.Version != nil &&
