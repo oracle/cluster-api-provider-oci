@@ -609,12 +609,20 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 		needsUpdate = true
 	}
 
-	// KubernetesVersion
-	// if m.OCIManagedMachinePool.Spec.Version != nil &&
-	// 	(pool.KubernetesVersion == nil || *m.OCIManagedMachinePool.Spec.Version != *pool.KubernetesVersion) {
-	// 	updateDetails.KubernetesVersion = m.OCIManagedMachinePool.Spec.Version
-	// 	needsUpdate = true
-	// }
+	cyclingEnabled := m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails != nil &&
+		m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.IsNodeCyclingEnabled != nil &&
+		*m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.IsNodeCyclingEnabled
+
+	versionChanged := m.OCIManagedMachinePool.Spec.Version != nil &&
+		(pool.KubernetesVersion == nil || *m.OCIManagedMachinePool.Spec.Version != *pool.KubernetesVersion)
+
+	// KubernetesVersion (only when node cycling is disabled)
+	if !cyclingEnabled &&
+		m.OCIManagedMachinePool.Spec.Version != nil &&
+		(pool.KubernetesVersion == nil || *m.OCIManagedMachinePool.Spec.Version != *pool.KubernetesVersion) {
+		updateDetails.KubernetesVersion = m.OCIManagedMachinePool.Spec.Version
+		needsUpdate = true
+	}
 
 	// NodeShape
 	if m.OCIManagedMachinePool.Spec.NodeShape != "" &&
@@ -664,11 +672,17 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 
 	// NodeSourceViaImage
 	if m.OCIManagedMachinePool.Spec.NodeSourceViaImage != nil {
+		// If cycling is enabled and version changed, we must rotate image (even if user didn't specify ImageId)
+		if cyclingEnabled && versionChanged {
+			if err := m.setNodepoolImageId(ctx); err != nil {
+				return false, err
+			}
+		}
+
 		actualSource, ok := pool.NodeSourceDetails.(oke.NodeSourceViaImageDetails)
 		if !ok {
 			// OCI doesn't have image source details - update needed
-			err := m.setNodepoolImageId(ctx)
-			if err != nil {
+			if err := m.setNodepoolImageId(ctx); err != nil {
 				return false, err
 			}
 			sourceDetails := oke.NodeSourceViaImageDetails{
@@ -678,18 +692,20 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 			updateDetails.NodeSourceDetails = &sourceDetails
 			needsUpdate = true
 		} else {
-			imageChanged := m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId != nil &&
-				*actualSource.ImageId != *m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId
+			// Desired image id might be nil if user didn’t set it AND cyclingEnabled is false.
+			// But if cyclingEnabled && versionChanged, setNodepoolImageId(ctx) above should populate it.
+			desiredImageID := m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId
+
+			imageChanged := desiredImageID != nil &&
+				(actualSource.ImageId == nil || *actualSource.ImageId != *desiredImageID)
 
 			bootVolumeChanged := m.OCIManagedMachinePool.Spec.NodeSourceViaImage.BootVolumeSizeInGBs != nil &&
 				(actualSource.BootVolumeSizeInGBs == nil ||
 					*actualSource.BootVolumeSizeInGBs != *m.OCIManagedMachinePool.Spec.NodeSourceViaImage.BootVolumeSizeInGBs)
 
+			// ALSO: if cyclingEnabled && versionChanged, even if imageChanged computed false due to nils,
+			// we want to push NodeSourceDetails if desiredImageID is present and differs.
 			if imageChanged || bootVolumeChanged {
-				err := m.setNodepoolImageId(ctx)
-				if err != nil {
-					return false, err
-				}
 				sourceDetails := oke.NodeSourceViaImageDetails{
 					ImageId:             m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId,
 					BootVolumeSizeInGBs: m.OCIManagedMachinePool.Spec.NodeSourceViaImage.BootVolumeSizeInGBs,
@@ -699,6 +715,44 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 			}
 		}
 	}
+
+	// NodeSourceViaImage
+	// if m.OCIManagedMachinePool.Spec.NodeSourceViaImage != nil {
+	// 	actualSource, ok := pool.NodeSourceDetails.(oke.NodeSourceViaImageDetails)
+	// 	if !ok {
+	// 		// OCI doesn't have image source details - update needed
+	// 		err := m.setNodepoolImageId(ctx)
+	// 		if err != nil {
+	// 			return false, err
+	// 		}
+	// 		sourceDetails := oke.NodeSourceViaImageDetails{
+	// 			ImageId:             m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId,
+	// 			BootVolumeSizeInGBs: m.OCIManagedMachinePool.Spec.NodeSourceViaImage.BootVolumeSizeInGBs,
+	// 		}
+	// 		updateDetails.NodeSourceDetails = &sourceDetails
+	// 		needsUpdate = true
+	// 	} else {
+	// 		imageChanged := m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId != nil &&
+	// 			*actualSource.ImageId != *m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId
+
+	// 		bootVolumeChanged := m.OCIManagedMachinePool.Spec.NodeSourceViaImage.BootVolumeSizeInGBs != nil &&
+	// 			(actualSource.BootVolumeSizeInGBs == nil ||
+	// 				*actualSource.BootVolumeSizeInGBs != *m.OCIManagedMachinePool.Spec.NodeSourceViaImage.BootVolumeSizeInGBs)
+
+	// 		if imageChanged || bootVolumeChanged {
+	// 			err := m.setNodepoolImageId(ctx)
+	// 			if err != nil {
+	// 				return false, err
+	// 			}
+	// 			sourceDetails := oke.NodeSourceViaImageDetails{
+	// 				ImageId:             m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId,
+	// 				BootVolumeSizeInGBs: m.OCIManagedMachinePool.Spec.NodeSourceViaImage.BootVolumeSizeInGBs,
+	// 			}
+	// 			updateDetails.NodeSourceDetails = &sourceDetails
+	// 			needsUpdate = true
+	// 		}
+	// 	}
+	// }
 
 	// SshPublicKey
 	if m.OCIManagedMachinePool.Spec.SshPublicKey != "" &&
