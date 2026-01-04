@@ -359,13 +359,13 @@ func (m *ManagedMachinePoolScope) CreateNodePool(ctx context.Context) (*oke.Node
 	return m.getOKENodePoolFromOCID(ctx, nodePoolId)
 }
 
-func (m *ManagedMachinePoolScope) setNodepoolImageId(ctx context.Context, force bool) error {
+func (m *ManagedMachinePoolScope) setNodepoolImageId(ctx context.Context, forceLookup bool) error {
 	imageId := m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId
 	m.Logger.Info("setNodepoolImageId called",
-		"currentImageId", ptrToString(m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId),
-		"specVersion", ptrToString(m.OCIManagedMachinePool.Spec.Version),
+		"currentImageId", ptr.ToString(m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId),
+		"specVersion", ptr.ToString(m.OCIManagedMachinePool.Spec.Version),
 	)
-	if !force && imageId != nil && *imageId != "" {
+	if !forceLookup && imageId != nil && *imageId != "" {
 		m.Logger.Info("Skipping image lookup because imageId already set",
 			"imageId", *imageId,
 		)
@@ -411,12 +411,7 @@ func (m *ManagedMachinePoolScope) setNodepoolImageId(ctx context.Context, force 
 					continue
 				}
 				if strings.Contains(sourceName, k8sVersion) {
-					m.Logger.Info("Matched node pool image",
-						"sourceName", sourceName,
-						"imageId", *image.ImageId,
-						"k8sVersion", k8sVersion,
-					)
-					m.Info("Image being used", "Name", sourceName, "OCID", *image.ImageId)
+					m.Info("Image being used", "Name", sourceName, "OCID", *image.ImageId, "k8sVersion", k8sVersion)
 					m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId = image.ImageId
 					return nil
 				}
@@ -601,13 +596,6 @@ func (m *ManagedMachinePoolScope) getWorkerMachineSubnet(name *string) *string {
 	return nil
 }
 
-func ptrToString(p *string) string {
-	if p == nil {
-		return "<nil>"
-	}
-	return *p
-}
-
 // UpdateNodePool updates a node pool, if needed, based on updated spec
 func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.NodePool) (bool, error) {
 	nodePoolSizeUpdateRequired := false
@@ -624,8 +612,8 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 
 	m.Logger.Info("Reconciling NodePool",
 		"nodePool", *pool.Name,
-		"specVersion", ptrToString(m.OCIManagedMachinePool.Spec.Version),
-		"actualVersion", ptrToString(pool.KubernetesVersion),
+		"specVersion", ptr.ToString(m.OCIManagedMachinePool.Spec.Version),
+		"actualVersion", ptr.ToString(pool.KubernetesVersion),
 	)
 
 	// Name
