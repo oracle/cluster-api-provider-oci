@@ -35,6 +35,7 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/common"
 	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
@@ -506,33 +507,84 @@ func validateMachinePoolMachines(ctx context.Context, cluster *clusterv1.Cluster
 }
 
 // getMachinePoolInstanceVersions returns the Kubernetes versions of the machine pool instances.
-// This method was forked because we need to lookup the kubeconfig with each call
-// as the tokens are refreshed in case of OKE
-func getMachinePoolInstanceVersions(ctx context.Context, clusterProxy framework.ClusterProxy, cluster *clusterv1.Cluster, machinePool *expv1.MachinePool) []string {
+// OKE workload kubeconfig tokens can rotate; refresh workload client ONLY on Unauthorized.
+func getMachinePoolInstanceVersions(
+	ctx context.Context,
+	clusterProxy framework.ClusterProxy,
+	cluster *clusterv1.Cluster,
+	machinePool *expv1.MachinePool,
+) []string {
 	Expect(ctx).NotTo(BeNil(), "ctx is required for getMachinePoolInstanceVersions")
 
 	instances := machinePool.Status.NodeRefs
 	versions := make([]string, len(instances))
+	if len(instances) == 0 {
+		return versions
+	}
+
+	// Helper: get workload cluster client (this may read the kubeconfig Secret from the management cluster).
+	getWorkloadClient := func(ctx context.Context) (client.Client, error) {
+		wc := clusterProxy.GetWorkloadCluster(ctx, cluster.Namespace, cluster.Name)
+		c := wc.GetClient()
+		if c == nil {
+			return nil, errors.New("workload client is nil")
+		}
+		return c, nil
+	}
+
+	// Get client once up front (avoid hammering mgmt API).
+	workloadClient, err := getWorkloadClient(ctx)
+	if err != nil {
+		for i := range versions {
+			versions[i] = fmt.Sprintf("unknown - kubeconfig error: %v", err)
+		}
+		return versions
+	}
+
+	// Allow at most 1 refresh for the whole function (enough for token rotation, prevents loops).
+	refreshedOnce := false
+
 	for i, instance := range instances {
+		nodeName := instance.Name
 		node := &corev1.Node{}
-		var nodeGetError error
-		err := wait.PollUntilContextTimeout(ctx, 2*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
-			nodeGetError = clusterProxy.GetWorkloadCluster(ctx, cluster.Namespace, cluster.Name).
-				GetClient().Get(ctx, client.ObjectKey{Name: instance.Name}, node)
-			if nodeGetError != nil {
+		var lastErr error
+
+		err := wait.PollUntilContextTimeout(ctx, 250*time.Millisecond, 10*time.Second, true, func(ctx context.Context) (bool, error) {
+			lastErr = workloadClient.Get(ctx, client.ObjectKey{Name: nodeName}, node)
+			if lastErr == nil {
+				return true, nil
+			}
+
+			// If Unauthorized, refresh kubeconfig/client ONCE and retry.
+			// (Unauthorized may be wrapped; IsUnauthorized is best-effort, fallback to string match.)
+			if !refreshedOnce && (apierrors.IsUnauthorized(lastErr) ||
+				strings.Contains(strings.ToLower(lastErr.Error()), "unauthorized")) {
+
+				newClient, cerr := getWorkloadClient(ctx)
+				if cerr != nil {
+					// Keep lastErr as the cause; retry will continue until timeout.
+					lastErr = errors.Wrap(cerr, "failed to refresh workload client after Unauthorized")
+					return false, nil //nolint:nilerr
+				}
+				workloadClient = newClient
+				refreshedOnce = true
+				// Retry immediately on next poll tick.
 				return false, nil //nolint:nilerr
 			}
-			return true, nil
+
+			// Keep polling until timeout.
+			return false, nil //nolint:nilerr
 		})
+
 		if err != nil {
 			versions[i] = "unknown"
-			if nodeGetError != nil {
-				// Dump the instance name and error here so that we can log it as part of the version array later on.
-				versions[i] = fmt.Sprintf("%s error: %s", instance.Name, errors.Wrap(err, nodeGetError.Error()))
+			if lastErr != nil {
+				versions[i] = fmt.Sprintf("%s error: %v", nodeName, lastErr)
 			}
-		} else {
-			versions[i] = node.Status.NodeInfo.KubeletVersion
+			continue
 		}
+
+		versions[i] = node.Status.NodeInfo.KubeletVersion
 	}
 
 	return versions
