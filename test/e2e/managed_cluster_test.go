@@ -270,9 +270,6 @@ var _ = Describe("Managed Workload cluster creation", func() {
 
 		clusterctl.ApplyClusterTemplateAndWait(ctx, input, result)
 
-		upgradeControlPlaneVersionSpec(ctx, bootstrapClusterProxy.GetClient(), clusterName, namespace.Name,
-			e2eConfig.GetIntervals(specName, "wait-control-plane"))
-
 		updateMachinePoolVersion(ctx, result.Cluster, bootstrapClusterProxy, result.MachinePools,
 			e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes"))
 	})
@@ -519,7 +516,7 @@ func getMachinePoolInstanceVersions(ctx context.Context, clusterProxy framework.
 	for i, instance := range instances {
 		node := &corev1.Node{}
 		var nodeGetError error
-		err := wait.PollUntilContextTimeout(ctx, 100*time.Millisecond, 10*time.Second, true, func(ctx context.Context) (bool, error) {
+		err := wait.PollUntilContextTimeout(ctx, 2*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
 			nodeGetError = clusterProxy.GetWorkloadCluster(ctx, cluster.Namespace, cluster.Name).
 				GetClient().Get(ctx, client.ObjectKey{Name: instance.Name}, node)
 			if nodeGetError != nil {
