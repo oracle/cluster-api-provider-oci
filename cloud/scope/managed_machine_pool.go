@@ -1032,6 +1032,11 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 			}
 		}
 
+		// Also include cycling details if cycling is enabled and version changed (to trigger cycling)
+		if !needsCyclingUpdate && cyclingEnabled && versionChanged {
+			needsCyclingUpdate = true
+		}
+
 		if needsCyclingUpdate {
 			// Only set fields that user specified
 			update := &oke.NodePoolCyclingDetails{}

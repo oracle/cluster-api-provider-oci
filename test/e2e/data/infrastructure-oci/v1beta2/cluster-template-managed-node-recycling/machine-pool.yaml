@@ -35,4 +35,6 @@ spec:
     ocpus: "1"
   nodePoolCyclingDetails:
     isNodeCyclingEnabled: true
+    maximumSurge: "1"
+    maximumUnavailable: "1"
 ---
