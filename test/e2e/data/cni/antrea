@@ -1,3 +1,5 @@
+# Antrea CNI manifests v2.5.0
+# Source: https://github.com/antrea-io/antrea/releases/tag/v2.5.0
 ---
 # Source: antrea/crds/antreaagentinfo.yaml
 apiVersion: apiextensions.k8s.io/v1
