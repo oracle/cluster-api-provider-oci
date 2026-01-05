@@ -598,6 +598,8 @@ func (m *ManagedMachinePoolScope) getWorkerMachineSubnet(name *string) *string {
 
 // UpdateNodePool updates a node pool, if needed, based on updated spec
 func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.NodePool) (bool, error) {
+	m.Logger.Info("Reconciling NodePool", "nodePool", *pool.Name)
+
 	nodePoolSizeUpdateRequired := false
 	// if replicas is not managed by cluster autoscaler and if the number of nodes in the spec is not equal to number set in the node pool
 	// update the node pool
@@ -609,12 +611,6 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 	needsUpdate := nodePoolSizeUpdateRequired
 	updateDetails := &oke.UpdateNodePoolDetails{}
 	nodeConfigDetails := &oke.UpdateNodePoolNodeConfigDetails{}
-
-	m.Logger.Info("Reconciling NodePool",
-		"nodePool", *pool.Name,
-		"specVersion", ptr.ToString(m.OCIManagedMachinePool.Spec.Version),
-		"actualVersion", ptr.ToString(pool.KubernetesVersion),
-	)
 
 	// Name
 	if m.OCIManagedMachinePool.GetName() != *pool.Name {
@@ -629,7 +625,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 	versionChanged := m.OCIManagedMachinePool.Spec.Version != nil &&
 		(pool.KubernetesVersion == nil || *m.OCIManagedMachinePool.Spec.Version != *pool.KubernetesVersion)
 
-	// KubernetesVersion - always set when version differs, regardless of cycling
+	// KubernetesVersion
 	if versionChanged {
 		updateDetails.KubernetesVersion = m.OCIManagedMachinePool.Spec.Version
 		needsUpdate = true
@@ -683,7 +679,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 
 	// NodeSourceViaImage
 	if m.OCIManagedMachinePool.Spec.NodeSourceViaImage != nil {
-		// If cycling is enabled and version changed, we must rotate image (even if user didn't specify ImageId)
+		// If cycling is enabled and version changed, we must rotate image
 		if cyclingEnabled && versionChanged {
 			if err := m.setNodepoolImageId(ctx, true); err != nil {
 				return false, err
@@ -703,8 +699,6 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 			updateDetails.NodeSourceDetails = &sourceDetails
 			needsUpdate = true
 		} else {
-			// Desired image id might be nil if user didn’t set it AND cyclingEnabled is false.
-			// But if cyclingEnabled && versionChanged, setNodepoolImageId(ctx) above should populate it.
 			desiredImageID := m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId
 
 			imageChanged := desiredImageID != nil &&
@@ -714,8 +708,6 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 				(actualSource.BootVolumeSizeInGBs == nil ||
 					*actualSource.BootVolumeSizeInGBs != *m.OCIManagedMachinePool.Spec.NodeSourceViaImage.BootVolumeSizeInGBs)
 
-			// ALSO: if cyclingEnabled && versionChanged, even if imageChanged computed false due to nils,
-			// we want to push NodeSourceDetails if desiredImageID is present and differs.
 			if imageChanged || bootVolumeChanged {
 				sourceDetails := oke.NodeSourceViaImageDetails{
 					ImageId:             m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId,
@@ -1018,11 +1010,6 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 					*m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.MaximumUnavailable != *pool.NodePoolCyclingDetails.MaximumUnavailable) {
 				needsCyclingUpdate = true
 			}
-		}
-
-		// Also include cycling details if cycling is enabled and version changed (to trigger cycling)
-		if !needsCyclingUpdate && cyclingEnabled && versionChanged {
-			needsCyclingUpdate = true
 		}
 
 		if needsCyclingUpdate {

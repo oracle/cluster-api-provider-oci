@@ -507,7 +507,8 @@ func validateMachinePoolMachines(ctx context.Context, cluster *clusterv1.Cluster
 }
 
 // getMachinePoolInstanceVersions returns the Kubernetes versions of the machine pool instances.
-// OKE workload kubeconfig tokens can rotate; refresh workload client ONLY on Unauthorized.
+// For managed clusters (like OKE), the framework needs to retrieve kubeconfig to access the
+// workload cluster. This function handles kubeconfig rotation by refreshing the client only when necessary.
 func getMachinePoolInstanceVersions(
 	ctx context.Context,
 	clusterProxy framework.ClusterProxy,
@@ -522,7 +523,7 @@ func getMachinePoolInstanceVersions(
 		return versions
 	}
 
-	// Helper: get workload cluster client (this may read the kubeconfig Secret from the management cluster).
+	// Define helper function to get workload cluster client
 	getWorkloadClient := func(ctx context.Context) (client.Client, error) {
 		wc := clusterProxy.GetWorkloadCluster(ctx, cluster.Namespace, cluster.Name)
 		c := wc.GetClient()
@@ -532,18 +533,19 @@ func getMachinePoolInstanceVersions(
 		return c, nil
 	}
 
-	// Get client once up front (avoid hammering mgmt API).
+	// Get initial workload client
 	workloadClient, err := getWorkloadClient(ctx)
 	if err != nil {
+		// If we can't even get the initial client, all nodes are unknown
 		for i := range versions {
 			versions[i] = fmt.Sprintf("unknown - kubeconfig error: %v", err)
 		}
 		return versions
 	}
 
-	// Allow at most 1 refresh for the whole function (enough for token rotation, prevents loops).
 	refreshedOnce := false
 
+	// Query each node in the machine pool
 	for i, instance := range instances {
 		nodeName := instance.Name
 		node := &corev1.Node{}
@@ -552,31 +554,33 @@ func getMachinePoolInstanceVersions(
 		err := wait.PollUntilContextTimeout(ctx, 250*time.Millisecond, 10*time.Second, true, func(ctx context.Context) (bool, error) {
 			lastErr = workloadClient.Get(ctx, client.ObjectKey{Name: nodeName}, node)
 			if lastErr == nil {
-				return true, nil
+				return true, nil // Success - node found
 			}
 
-			// If Unauthorized, refresh kubeconfig/client ONCE and retry.
-			// (Unauthorized may be wrapped; IsUnauthorized is best-effort, fallback to string match.)
+			// Handle authentication errors
 			if !refreshedOnce && (apierrors.IsUnauthorized(lastErr) ||
 				strings.Contains(strings.ToLower(lastErr.Error()), "unauthorized")) {
 
-				newClient, cerr := getWorkloadClient(ctx)
-				if cerr != nil {
-					// Keep lastErr as the cause; retry will continue until timeout.
-					lastErr = errors.Wrap(cerr, "failed to refresh workload client after Unauthorized")
-					return false, nil //nolint:nilerr
+				// Attempt to refresh the workload client with new kubeconfig
+				newClient, e := getWorkloadClient(ctx)
+				if e != nil {
+					// Keep lastErr as the cause, retry will continue until timeout
+					lastErr = errors.Wrap(e, "failed to refresh workload client after Unauthorized")
+					return false, nil
 				}
 				workloadClient = newClient
 				refreshedOnce = true
-				// Retry immediately on next poll tick.
-				return false, nil //nolint:nilerr
+				// Don't return true here - let the next poll iteration retry with new client
+				return false, nil
 			}
 
-			// Keep polling until timeout.
-			return false, nil //nolint:nilerr
+			// For other errors, keep polling until timeout
+			return false, nil
 		})
 
+		// Process results
 		if err != nil {
+			// Timeout or persistent error - mark node as unknown
 			versions[i] = "unknown"
 			if lastErr != nil {
 				versions[i] = fmt.Sprintf("%s error: %v", nodeName, lastErr)
@@ -584,6 +588,7 @@ func getMachinePoolInstanceVersions(
 			continue
 		}
 
+		// Success
 		versions[i] = node.Status.NodeInfo.KubeletVersion
 	}
 
