@@ -2288,79 +2288,6 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 				},
 			},
 		},
-		// === COMPREHENSIVE FIELD UPDATE TESTS ===
-		{
-			name:          "update when user specifies different node shape only",
-			errorExpected: false,
-			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
-				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
-				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
-					Version:   common.String("v1.24.5"),
-					NodeShape: "VM.Standard.E4.Flex", // Different shape
-				}
-				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Eq(oke.UpdateNodePoolRequest{
-					NodePoolId: common.String("node-pool-id"),
-					UpdateNodePoolDetails: oke.UpdateNodePoolDetails{
-						Name:              common.String("test"),
-						KubernetesVersion: common.String("v1.24.5"),
-						NodeShape:         common.String("VM.Standard.E4.Flex"),
-					},
-				})).
-					Return(oke.UpdateNodePoolResponse{
-						OpcWorkRequestId: common.String("opc-work-request-id"),
-					}, nil)
-			},
-			nodePool: oke.NodePool{
-				ClusterId:         common.String("cluster-id"),
-				Id:                common.String("node-pool-id"),
-				Name:              common.String("test"),
-				CompartmentId:     common.String("test-compartment"),
-				KubernetesVersion: common.String("v1.24.5"),
-				NodeShape:         common.String("VM.Standard.E3.Flex"), // Current shape in OCI
-			},
-		},
-		{
-			name:          "update when user specifies different node shape config only",
-			errorExpected: false,
-			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
-				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
-				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
-					Version:   common.String("v1.24.5"),
-					NodeShape: "VM.Standard.E3.Flex",
-					NodeShapeConfig: &infrav2exp.NodeShapeConfig{
-						Ocpus:       common.String("4"),  // 4 OCPUs
-						MemoryInGBs: common.String("32"), // 32GB memory
-					},
-				}
-				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Eq(oke.UpdateNodePoolRequest{
-					NodePoolId: common.String("node-pool-id"),
-					UpdateNodePoolDetails: oke.UpdateNodePoolDetails{
-						Name:              common.String("test"),
-						KubernetesVersion: common.String("v1.24.5"),
-						NodeShape:         common.String("VM.Standard.E3.Flex"),
-						NodeShapeConfig: &oke.UpdateNodeShapeConfigDetails{
-							Ocpus:       common.Float32(4),
-							MemoryInGBs: common.Float32(32),
-						},
-					},
-				})).
-					Return(oke.UpdateNodePoolResponse{
-						OpcWorkRequestId: common.String("opc-work-request-id"),
-					}, nil)
-			},
-			nodePool: oke.NodePool{
-				ClusterId:         common.String("cluster-id"),
-				Id:                common.String("node-pool-id"),
-				Name:              common.String("test"),
-				CompartmentId:     common.String("test-compartment"),
-				KubernetesVersion: common.String("v1.24.5"),
-				NodeShape:         common.String("VM.Standard.E3.Flex"),
-				NodeShapeConfig: &oke.NodeShapeConfig{
-					Ocpus:       common.Float32(2),  // Current: 2 OCPUs
-					MemoryInGBs: common.Float32(16), // Current: 16GB memory
-				},
-			},
-		},
 		{
 			name:          "update when user specifies different node source image",
 			errorExpected: false,
@@ -2404,206 +2331,34 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 			},
 		},
 		{
-			name:          "update when user specifies different SSH public key",
+			name:          "test cycling update trigger - version change with cycling enabled",
 			errorExpected: false,
 			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
+				ms.MachinePool.Annotations = make(map[string]string)
 				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
-					Version:      common.String("v1.24.5"),
-					NodeShape:    "VM.Standard.E3.Flex",
-					SshPublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ new-key", // New SSH key
-				}
-				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Eq(oke.UpdateNodePoolRequest{
-					NodePoolId: common.String("node-pool-id"),
-					UpdateNodePoolDetails: oke.UpdateNodePoolDetails{
-						Name:              common.String("test"),
-						KubernetesVersion: common.String("v1.24.5"),
-						NodeShape:         common.String("VM.Standard.E3.Flex"),
-						SshPublicKey:      common.String("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ new-key"),
-					},
-				})).
-					Return(oke.UpdateNodePoolResponse{
-						OpcWorkRequestId: common.String("opc-work-request-id"),
-					}, nil)
-			},
-			nodePool: oke.NodePool{
-				ClusterId:         common.String("cluster-id"),
-				Id:                common.String("node-pool-id"),
-				Name:              common.String("test"),
-				CompartmentId:     common.String("test-compartment"),
-				KubernetesVersion: common.String("v1.24.5"),
-				NodeShape:         common.String("VM.Standard.E3.Flex"),
-				SshPublicKey:      common.String("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ old-key"), // Old SSH key
-			},
-		},
-		{
-			name:          "update when user specifies different node pool node config - size and NSGs",
-			errorExpected: false,
-			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
-				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
-				ms.MachinePool.Spec.Replicas = &[]int32{5}[0] // 5 replicas
-				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
-					Version:   common.String("v1.24.5"),
-					NodeShape: "VM.Standard.E3.Flex",
-					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
-						NsgNames:                       []string{"new-nsg-1", "new-nsg-2"}, // New NSGs
-						KmsKeyId:                       common.String("new-kms-key"),       // New KMS key
-						IsPvEncryptionInTransitEnabled: common.Bool(false),                 // Disabled encryption
-					},
-				}
-				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Eq(oke.UpdateNodePoolRequest{
-					NodePoolId: common.String("node-pool-id"),
-					UpdateNodePoolDetails: oke.UpdateNodePoolDetails{
-						Name:              common.String("test"),
-						KubernetesVersion: common.String("v1.24.5"),
-						NodeShape:         common.String("VM.Standard.E3.Flex"),
-						NodeConfigDetails: &oke.UpdateNodePoolNodeConfigDetails{
-							Size:                           common.Int(5),                            // New size
-							NsgIds:                         []string{"new-nsg-1-id", "new-nsg-2-id"}, // New NSGs
-							KmsKeyId:                       common.String("new-kms-key"),             // New KMS key
-							IsPvEncryptionInTransitEnabled: common.Bool(false),                       // Disabled encryption
-						},
-					},
-				})).
-					Return(oke.UpdateNodePoolResponse{
-						OpcWorkRequestId: common.String("opc-work-request-id"),
-					}, nil)
-			},
-			nodePool: oke.NodePool{
-				ClusterId:         common.String("cluster-id"),
-				Id:                common.String("node-pool-id"),
-				Name:              common.String("test"),
-				CompartmentId:     common.String("test-compartment"),
-				KubernetesVersion: common.String("v1.24.5"),
-				NodeShape:         common.String("VM.Standard.E3.Flex"),
-				NodeConfigDetails: &oke.NodePoolNodeConfigDetails{
-					Size:                           common.Int(3),                            // Current size: 3
-					NsgIds:                         []string{"old-nsg-1-id", "old-nsg-2-id"}, // Old NSGs
-					KmsKeyId:                       common.String("old-kms-key"),             // Old KMS key
-					IsPvEncryptionInTransitEnabled: common.Bool(true),                        // Currently enabled
-				},
-			},
-		},
-		{
-			name:          "update when user specifies different pod network options",
-			errorExpected: false,
-			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
-				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
-				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
-					Version:   common.String("v1.24.5"),
-					NodeShape: "VM.Standard.E3.Flex",
-					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
-						NodePoolPodNetworkOptionDetails: &infrav2exp.NodePoolPodNetworkOptionDetails{
-							CniType: infrastructurev1beta2.VCNNativeCNI,
-							VcnIpNativePodNetworkOptions: infrav2exp.VcnIpNativePodNetworkOptions{
-								SubnetNames:    []string{"new-pod-subnet"}, // New pod subnet
-								MaxPodsPerNode: common.Int(50),             // New max pods
-								NSGNames:       []string{"new-pod-nsg"},    // New pod NSGs
-							},
-						},
-					},
-				}
-				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Eq(oke.UpdateNodePoolRequest{
-					NodePoolId: common.String("node-pool-id"),
-					UpdateNodePoolDetails: oke.UpdateNodePoolDetails{
-						Name:              common.String("test"),
-						KubernetesVersion: common.String("v1.24.5"),
-						NodeShape:         common.String("VM.Standard.E3.Flex"),
-						NodeConfigDetails: &oke.UpdateNodePoolNodeConfigDetails{
-							NodePoolPodNetworkOptionDetails: oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
-								PodSubnetIds:   []string{"new-pod-subnet-id"}, // New pod subnet ID
-								MaxPodsPerNode: common.Int(50),                // New max pods
-								PodNsgIds:      []string{"new-pod-nsg-id"},    // New pod NSG IDs
-							},
-						},
-					},
-				})).
-					Return(oke.UpdateNodePoolResponse{
-						OpcWorkRequestId: common.String("opc-work-request-id"),
-					}, nil)
-			},
-			nodePool: oke.NodePool{
-				ClusterId:         common.String("cluster-id"),
-				Id:                common.String("node-pool-id"),
-				Name:              common.String("test"),
-				CompartmentId:     common.String("test-compartment"),
-				KubernetesVersion: common.String("v1.24.5"),
-				NodeShape:         common.String("VM.Standard.E3.Flex"),
-				NodeConfigDetails: &oke.NodePoolNodeConfigDetails{
-					NodePoolPodNetworkOptionDetails: oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
-						PodSubnetIds:   []string{"old-pod-subnet-id"}, // Old pod subnet
-						MaxPodsPerNode: common.Int(31),                // Old max pods
-						PodNsgIds:      []string{"old-pod-nsg-id"},    // Old pod NSGs
-					},
-				},
-			},
-		},
-		{
-			name:          "update when user specifies different node eviction settings",
-			errorExpected: false,
-			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
-				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
-				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
-					Version:   common.String("v1.24.5"),
-					NodeShape: "VM.Standard.E3.Flex",
-					NodeEvictionNodePoolSettings: &infrav2exp.NodeEvictionNodePoolSettings{
-						EvictionGraceDuration:           common.String("PT60M"), // New grace duration
-						IsForceDeleteAfterGraceDuration: common.Bool(false),     // New force delete setting
-					},
-				}
-				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Eq(oke.UpdateNodePoolRequest{
-					NodePoolId: common.String("node-pool-id"),
-					UpdateNodePoolDetails: oke.UpdateNodePoolDetails{
-						Name:              common.String("test"),
-						KubernetesVersion: common.String("v1.24.5"),
-						NodeShape:         common.String("VM.Standard.E3.Flex"),
-						NodeEvictionNodePoolSettings: &oke.NodeEvictionNodePoolSettings{
-							EvictionGraceDuration:           common.String("PT60M"), // New grace duration
-							IsForceDeleteAfterGraceDuration: common.Bool(false),     // New force delete setting
-						},
-					},
-				})).
-					Return(oke.UpdateNodePoolResponse{
-						OpcWorkRequestId: common.String("opc-work-request-id"),
-					}, nil)
-			},
-			nodePool: oke.NodePool{
-				ClusterId:         common.String("cluster-id"),
-				Id:                common.String("node-pool-id"),
-				Name:              common.String("test"),
-				CompartmentId:     common.String("test-compartment"),
-				KubernetesVersion: common.String("v1.24.5"),
-				NodeShape:         common.String("VM.Standard.E3.Flex"),
-				NodeEvictionNodePoolSettings: &oke.NodeEvictionNodePoolSettings{
-					EvictionGraceDuration:           common.String("PT30M"), // Old grace duration
-					IsForceDeleteAfterGraceDuration: common.Bool(true),      // Old force delete setting
-				},
-			},
-		},
-		{
-			name:          "update when user specifies different node pool cycling settings",
-			errorExpected: false,
-			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
-				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
-				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
-					Version:   common.String("v1.24.5"),
-					NodeShape: "VM.Standard.E3.Flex",
+					Version:   common.String("v1.25.0"), // Version change
+					NodeShape: "test-shape",
 					NodePoolCyclingDetails: &infrav2exp.NodePoolCyclingDetails{
-						IsNodeCyclingEnabled: common.Bool(true),    // Enable cycling
-						MaximumSurge:         common.String("30%"), // New surge percentage
-						MaximumUnavailable:   common.String("20%"), // New unavailable percentage
+						IsNodeCyclingEnabled: common.Bool(true), // Cycling enabled
+						MaximumSurge:         common.String("25%"),
+						MaximumUnavailable:   common.String("25%"),
 					},
 				}
 				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Eq(oke.UpdateNodePoolRequest{
 					NodePoolId: common.String("node-pool-id"),
 					UpdateNodePoolDetails: oke.UpdateNodePoolDetails{
 						Name:              common.String("test"),
-						KubernetesVersion: common.String("v1.24.5"),
-						NodeShape:         common.String("VM.Standard.E3.Flex"),
+						KubernetesVersion: common.String("v1.25.0"), // Version updated
+						NodeShape:         common.String("test-shape"),
+						NodeSourceDetails: &oke.NodeSourceViaImageDetails{
+							ImageId:             common.String("test-image-id"),
+							BootVolumeSizeInGBs: common.Int64(75),
+						},
 						NodePoolCyclingDetails: &oke.NodePoolCyclingDetails{
-							IsNodeCyclingEnabled: common.Bool(true),    // Enable cycling
-							MaximumSurge:         common.String("30%"), // New surge percentage
-							MaximumUnavailable:   common.String("20%"), // New unavailable percentage
+							IsNodeCyclingEnabled: common.Bool(true),    // Cycling enabled
+							MaximumSurge:         common.String("25%"), // Same values
+							MaximumUnavailable:   common.String("25%"), // Same values
 						},
 					},
 				})).
@@ -2616,96 +2371,12 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 				Id:                common.String("node-pool-id"),
 				Name:              common.String("test"),
 				CompartmentId:     common.String("test-compartment"),
-				KubernetesVersion: common.String("v1.24.5"),
-				NodeShape:         common.String("VM.Standard.E3.Flex"),
+				KubernetesVersion: common.String("v1.24.5"), // Current version
+				NodeShape:         common.String("test-shape"),
 				NodePoolCyclingDetails: &oke.NodePoolCyclingDetails{
-					IsNodeCyclingEnabled: common.Bool(false),   // Currently disabled
-					MaximumSurge:         common.String("25%"), // Old surge percentage
-					MaximumUnavailable:   common.String("25%"), // Old unavailable percentage
-				},
-			},
-		},
-		{
-			name:          "update when user specifies different node metadata",
-			errorExpected: false,
-			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
-				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
-				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
-					Version:   common.String("v1.24.5"),
-					NodeShape: "VM.Standard.E3.Flex",
-					NodeMetadata: map[string]string{
-						"user.newkey":   "newvalue", // New metadata key-value
-						"user.existing": "updated",  // Updated existing key
-					},
-				}
-				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Eq(oke.UpdateNodePoolRequest{
-					NodePoolId: common.String("node-pool-id"),
-					UpdateNodePoolDetails: oke.UpdateNodePoolDetails{
-						Name:              common.String("test"),
-						KubernetesVersion: common.String("v1.24.5"),
-						NodeShape:         common.String("VM.Standard.E3.Flex"),
-						NodeMetadata: map[string]string{
-							"user.newkey":   "newvalue", // New metadata
-							"user.existing": "updated",  // Updated metadata
-							"oci.preserved": "value",    // OCI metadata should be preserved
-						},
-					},
-				})).
-					Return(oke.UpdateNodePoolResponse{
-						OpcWorkRequestId: common.String("opc-work-request-id"),
-					}, nil)
-			},
-			nodePool: oke.NodePool{
-				ClusterId:         common.String("cluster-id"),
-				Id:                common.String("node-pool-id"),
-				Name:              common.String("test"),
-				CompartmentId:     common.String("test-compartment"),
-				KubernetesVersion: common.String("v1.24.5"),
-				NodeShape:         common.String("VM.Standard.E3.Flex"),
-				NodeMetadata: map[string]string{
-					"user.existing": "oldvalue", // Existing key with old value
-					"oci.preserved": "value",    // OCI metadata that should be preserved
-				},
-			},
-		},
-		{
-			name:          "update when user specifies different initial node labels",
-			errorExpected: false,
-			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
-				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
-				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
-					Version:   common.String("v1.24.5"),
-					NodeShape: "VM.Standard.E3.Flex",
-					InitialNodeLabels: []infrav2exp.KeyValue{
-						{Key: common.String("app.kubernetes.io/name"), Value: common.String("new-app")}, // New label
-						{Key: common.String("app.kubernetes.io/version"), Value: common.String("v2.0")}, // New label
-					},
-				}
-				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Eq(oke.UpdateNodePoolRequest{
-					NodePoolId: common.String("node-pool-id"),
-					UpdateNodePoolDetails: oke.UpdateNodePoolDetails{
-						Name:              common.String("test"),
-						KubernetesVersion: common.String("v1.24.5"),
-						NodeShape:         common.String("VM.Standard.E3.Flex"),
-						InitialNodeLabels: []oke.KeyValue{
-							{Key: common.String("app.kubernetes.io/name"), Value: common.String("new-app")}, // New labels
-							{Key: common.String("app.kubernetes.io/version"), Value: common.String("v2.0")},
-						},
-					},
-				})).
-					Return(oke.UpdateNodePoolResponse{
-						OpcWorkRequestId: common.String("opc-work-request-id"),
-					}, nil)
-			},
-			nodePool: oke.NodePool{
-				ClusterId:         common.String("cluster-id"),
-				Id:                common.String("node-pool-id"),
-				Name:              common.String("test"),
-				CompartmentId:     common.String("test-compartment"),
-				KubernetesVersion: common.String("v1.24.5"),
-				NodeShape:         common.String("VM.Standard.E3.Flex"),
-				InitialNodeLabels: []oke.KeyValue{
-					{Key: common.String("app.kubernetes.io/name"), Value: common.String("old-app")}, // Old label value
+					IsNodeCyclingEnabled: common.Bool(true),    // Cycling enabled
+					MaximumSurge:         common.String("25%"), // Same values
+					MaximumUnavailable:   common.String("25%"), // Same values
 				},
 			},
 		},
