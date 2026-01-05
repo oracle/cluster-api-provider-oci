@@ -1012,7 +1012,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 			}
 		}
 
-		if !needsCyclingUpdate && cyclingEnabled && versionChanged {
+		if cyclingEnabled && versionChanged {
 			needsCyclingUpdate = true
 		}
 
