@@ -8,7 +8,7 @@ spec:
       imageId: "${OCI_IMAGE_ID}"
       compartmentId: "${OCI_COMPARTMENT_ID}"
       shape: "${OCI_NODE_MACHINE_TYPE}"
-      isPvEncryptionInTransitEnabled: true
+      subnetName: "worker-subnet-1"
       networkDetails:
         nsgNames:
           - "worker-nsg-1"
@@ -50,5 +50,5 @@ spec:
           kind: KubeadmConfigTemplate
       infrastructureRef:
         name: "${CLUSTER_NAME}-md-0"
-        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
         kind: OCIMachineTemplate
