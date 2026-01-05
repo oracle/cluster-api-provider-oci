@@ -1,17 +1,17 @@
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCIMachineTemplate
 metadata:
-  name: "${CLUSTER_NAME}-md-1"
+  name: "${CLUSTER_NAME}-md-0"
 spec:
   template:
     spec:
       imageId: "${OCI_IMAGE_ID}"
       compartmentId: "${OCI_COMPARTMENT_ID}"
       shape: "${OCI_NODE_MACHINE_TYPE}"
-      subnetName: "worker-subnet-2"
+      isPvEncryptionInTransitEnabled: true
       networkDetails:
         nsgNames:
-          - "worker-nsg-2"
+          - "worker-nsg-1"
       shapeConfig:
         ocpus: "1"
       metadata:
@@ -20,7 +20,7 @@ spec:
 apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
 kind: KubeadmConfigTemplate
 metadata:
-  name: "${CLUSTER_NAME}-md-1"
+  name: "${CLUSTER_NAME}-md-0"
 spec:
   template:
     spec:
@@ -33,7 +33,7 @@ spec:
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineDeployment
 metadata:
-  name: "${CLUSTER_NAME}-md-1"
+  name: "${CLUSTER_NAME}-md-0"
 spec:
   clusterName: "${CLUSTER_NAME}"
   replicas: ${WORKER_MACHINE_COUNT}
@@ -45,10 +45,10 @@ spec:
       version: "${KUBERNETES_VERSION}"
       bootstrap:
         configRef:
-          name: "${CLUSTER_NAME}-md-1"
+          name: "${CLUSTER_NAME}-md-0"
           apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
           kind: KubeadmConfigTemplate
       infrastructureRef:
-        name: "${CLUSTER_NAME}-md-1"
-        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        name: "${CLUSTER_NAME}-md-0"
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
         kind: OCIMachineTemplate
