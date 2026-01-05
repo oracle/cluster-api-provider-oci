@@ -93,7 +93,7 @@ func TestVirtualMachinePoolReconciliation(t *testing.T) {
 			name:          "ocimanagedcluster does not exist",
 			errorExpected: false,
 			objects:       []client.Object{getSecret(), getOCIVirtualMachinePool(), getMachinePool(), getCluster()},
-			expectedEvent: "ClusterNotAvailable",
+			expectedEvent: "ClusterDoesNotExist",
 		},
 	}
 

@@ -554,7 +554,7 @@ func TestInstanceReconciliation(t *testing.T) {
 				}
 				computeClient.EXPECT().LaunchInstance(gomock.Any(), gomock.Eq(core.LaunchInstanceRequest{
 					LaunchInstanceDetails: launchDetails,
-					OpcRetryToken:         ociutil.GetOPCRetryToken("machineuid")})).Return(core.LaunchInstanceResponse{}, nil)
+					OpcRetryToken:         ociutil.GetOPCRetryToken("%s", "machineuid")})).Return(core.LaunchInstanceResponse{}, nil)
 			},
 		},
 		{
@@ -624,7 +624,7 @@ func TestInstanceReconciliation(t *testing.T) {
 				}
 				computeClient.EXPECT().LaunchInstance(gomock.Any(), gomock.Eq(core.LaunchInstanceRequest{
 					LaunchInstanceDetails: launchDetails,
-					OpcRetryToken:         ociutil.GetOPCRetryToken("machineuid")})).Return(core.LaunchInstanceResponse{}, nil)
+					OpcRetryToken:         ociutil.GetOPCRetryToken("%s", "machineuid")})).Return(core.LaunchInstanceResponse{}, nil)
 			},
 		},
 		{
@@ -721,7 +721,7 @@ func TestInstanceReconciliation(t *testing.T) {
 				}
 				computeClient.EXPECT().LaunchInstance(gomock.Any(), gomock.Eq(core.LaunchInstanceRequest{
 					LaunchInstanceDetails: launchDetails,
-					OpcRetryToken:         ociutil.GetOPCRetryToken("machineuid")})).Return(core.LaunchInstanceResponse{}, nil)
+					OpcRetryToken:         ociutil.GetOPCRetryToken("%s", "machineuid")})).Return(core.LaunchInstanceResponse{}, nil)
 			},
 		},
 		{
@@ -820,7 +820,7 @@ func TestInstanceReconciliation(t *testing.T) {
 				}
 				computeClient.EXPECT().LaunchInstance(gomock.Any(), gomock.Eq(core.LaunchInstanceRequest{
 					LaunchInstanceDetails: launchDetails,
-					OpcRetryToken:         ociutil.GetOPCRetryToken("machineuid")})).Return(core.LaunchInstanceResponse{}, nil)
+					OpcRetryToken:         ociutil.GetOPCRetryToken("%s", "machineuid")})).Return(core.LaunchInstanceResponse{}, nil)
 			},
 		},
 		{
@@ -871,7 +871,7 @@ func TestInstanceReconciliation(t *testing.T) {
 				}
 				computeClient.EXPECT().LaunchInstance(gomock.Any(), gomock.Eq(core.LaunchInstanceRequest{
 					LaunchInstanceDetails: launchDetails,
-					OpcRetryToken:         ociutil.GetOPCRetryToken("machineuid")})).Return(core.LaunchInstanceResponse{}, nil)
+					OpcRetryToken:         ociutil.GetOPCRetryToken("%s", "machineuid")})).Return(core.LaunchInstanceResponse{}, nil)
 			},
 		},
 		{
@@ -925,7 +925,7 @@ func TestInstanceReconciliation(t *testing.T) {
 				}
 				computeClient.EXPECT().LaunchInstance(gomock.Any(), gomock.Eq(core.LaunchInstanceRequest{
 					LaunchInstanceDetails: launchDetails,
-					OpcRetryToken:         ociutil.GetOPCRetryToken("machineuid")})).Return(core.LaunchInstanceResponse{}, nil)
+					OpcRetryToken:         ociutil.GetOPCRetryToken("%s", "machineuid")})).Return(core.LaunchInstanceResponse{}, nil)
 			},
 		},
 		{
@@ -981,7 +981,7 @@ func TestInstanceReconciliation(t *testing.T) {
 				}
 				computeClient.EXPECT().LaunchInstance(gomock.Any(), gomock.Eq(core.LaunchInstanceRequest{
 					LaunchInstanceDetails: launchDetails,
-					OpcRetryToken:         ociutil.GetOPCRetryToken("machineuid")})).Return(core.LaunchInstanceResponse{}, nil)
+					OpcRetryToken:         ociutil.GetOPCRetryToken("%s", "machineuid")})).Return(core.LaunchInstanceResponse{}, nil)
 			},
 		},
 		{
@@ -1040,7 +1040,7 @@ func TestInstanceReconciliation(t *testing.T) {
 				}
 				computeClient.EXPECT().LaunchInstance(gomock.Any(), gomock.Eq(core.LaunchInstanceRequest{
 					LaunchInstanceDetails: launchDetails,
-					OpcRetryToken:         ociutil.GetOPCRetryToken("machineuid")})).Return(core.LaunchInstanceResponse{}, nil)
+					OpcRetryToken:         ociutil.GetOPCRetryToken("%s", "machineuid")})).Return(core.LaunchInstanceResponse{}, nil)
 			},
 		},
 		{
@@ -1100,7 +1100,7 @@ func TestInstanceReconciliation(t *testing.T) {
 				}
 				computeClient.EXPECT().LaunchInstance(gomock.Any(), gomock.Eq(core.LaunchInstanceRequest{
 					LaunchInstanceDetails: launchDetails,
-					OpcRetryToken:         ociutil.GetOPCRetryToken("machineuid")})).Return(core.LaunchInstanceResponse{}, nil)
+					OpcRetryToken:         ociutil.GetOPCRetryToken("%s", "machineuid")})).Return(core.LaunchInstanceResponse{}, nil)
 			},
 		},
 		{

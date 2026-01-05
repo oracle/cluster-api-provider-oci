@@ -97,7 +97,7 @@ func TestMachinePoolReconciliation(t *testing.T) {
 			name:          "ocicluster does not exist",
 			errorExpected: false,
 			objects:       []client.Object{getSecret(), getOCIMachinePool(), getMachinePool(), getCluster()},
-			expectedEvent: "ClusterNotAvailable",
+			expectedEvent: "ClusterDoesNotExist",
 		},
 	}
 

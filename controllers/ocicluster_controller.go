@@ -166,7 +166,7 @@ func (r *OCIClusterReconciler) reconcileComponent(ctx context.Context, cluster *
 
 	err := reconciler(ctx)
 	if err != nil {
-		r.Recorder.Event(cluster, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err,
+		r.Recorder.Event(cluster, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "%s",
 			fmt.Sprintf("failed to reconcile %s", componentName)).Error())
 		conditions.MarkFalse(cluster, infrastructurev1beta2.ClusterReadyCondition, failReason, clusterv1.ConditionSeverityError, "")
 		return errors.Wrapf(err, "failed to reconcile %s for OCICluster %s/%s", componentName, cluster.Namespace,

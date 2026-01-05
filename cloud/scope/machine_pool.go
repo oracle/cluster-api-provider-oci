@@ -443,7 +443,7 @@ func (m *MachinePoolScope) createInstanceConfiguration(ctx context.Context, laun
 
 	resp, err := m.ComputeManagementClient.CreateInstanceConfiguration(ctx, req)
 	if err != nil {
-		conditions.MarkFalse(m.MachinePool, infrav2exp.LaunchTemplateReadyCondition, infrav2exp.LaunchTemplateCreateFailedReason, clusterv1.ConditionSeverityError, err.Error())
+		conditions.MarkFalse(m.MachinePool, infrav2exp.LaunchTemplateReadyCondition, infrav2exp.LaunchTemplateCreateFailedReason, clusterv1.ConditionSeverityError, "%s", err.Error())
 		m.Info("failed to create instance configuration")
 		return err
 	}
@@ -487,7 +487,7 @@ func (m *MachinePoolScope) getLaunchInstanceDetails(instanceConfigurationSpec in
 
 	shapeConfig, err := m.buildInstanceConfigurationShapeConfig()
 	if err != nil {
-		conditions.MarkFalse(m.MachinePool, infrav2exp.LaunchTemplateReadyCondition, infrav2exp.LaunchTemplateCreateFailedReason, clusterv1.ConditionSeverityError, err.Error())
+		conditions.MarkFalse(m.MachinePool, infrav2exp.LaunchTemplateReadyCondition, infrav2exp.LaunchTemplateCreateFailedReason, clusterv1.ConditionSeverityError, "%s", err.Error())
 		m.Info("failed to create instance configuration due to shape config")
 		return nil, err
 	}

@@ -25,8 +25,8 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1beta2 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	expclusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
-	//+kubebuilder:scaffold:imports
 )
 
 func TestMain(m *testing.M) {
@@ -39,6 +39,7 @@ func TestMain(m *testing.M) {
 func setup() {
 	utilruntime.Must(infrastructurev1beta2.AddToScheme(scheme.Scheme))
 	utilruntime.Must(clusterv1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(clusterv1beta2.AddToScheme(scheme.Scheme))
 	utilruntime.Must(infrav2exp.AddToScheme(scheme.Scheme))
 	utilruntime.Must(expclusterv1.AddToScheme(scheme.Scheme))
 }
