@@ -107,16 +107,16 @@ var _ = Describe("Managed Workload cluster creation", func() {
 		}
 
 		cleanInput := cleanupInput{
-			SpecName:          specName,
-			Cluster:           result.Cluster,
-			ClusterProxy:      bootstrapClusterProxy,
-			Namespace:         namespace,
+			SpecName:             specName,
+			Cluster:              result.Cluster,
+			ClusterProxy:         bootstrapClusterProxy,
+			Namespace:            namespace,
 			ClusterctlConfigPath: clusterctlConfigPath,
-			CancelWatches:     cancelWatches,
-			IntervalsGetter:   e2eConfig.GetIntervals,
-			SkipCleanup:       skipCleanup,
-			AdditionalCleanup: additionalCleanup,
-			ArtifactFolder:    artifactFolder,
+			CancelWatches:        cancelWatches,
+			IntervalsGetter:      e2eConfig.GetIntervals,
+			SkipCleanup:          skipCleanup,
+			AdditionalCleanup:    additionalCleanup,
+			ArtifactFolder:       artifactFolder,
 		}
 		dumpSpecResourcesAndCleanup(ctx, cleanInput)
 	})
@@ -506,33 +506,73 @@ func validateMachinePoolMachines(ctx context.Context, cluster *clusterv1.Cluster
 }
 
 // getMachinePoolInstanceVersions returns the Kubernetes versions of the machine pool instances.
-// This method was forked because we need to lookup the kubeconfig with each call
-// as the tokens are refreshed in case of OKE
-func getMachinePoolInstanceVersions(ctx context.Context, clusterProxy framework.ClusterProxy, cluster *clusterv1.Cluster, machinePool *expv1.MachinePool) []string {
+// For managed clusters like OKE, we need to lookup the kubeconfig to access the
+// workload cluster. This function handles kubeconfig rotation by refreshing the client only when necessary.
+func getMachinePoolInstanceVersions(
+	ctx context.Context,
+	clusterProxy framework.ClusterProxy,
+	cluster *clusterv1.Cluster,
+	machinePool *expv1.MachinePool,
+) []string {
 	Expect(ctx).NotTo(BeNil(), "ctx is required for getMachinePoolInstanceVersions")
 
 	instances := machinePool.Status.NodeRefs
 	versions := make([]string, len(instances))
+	if len(instances) == 0 {
+		return versions
+	}
+
+	getWorkloadClient := func(ctx context.Context) (client.Client, error) {
+		wc := clusterProxy.GetWorkloadCluster(ctx, cluster.Namespace, cluster.Name)
+		if wc == nil {
+			return nil, errors.New("workload cluster is nil")
+		}
+		c := wc.GetClient()
+		if c == nil {
+			return nil, errors.New("workload client is nil")
+		}
+		return c, nil
+	}
+
+	var workloadClient client.Client
+
 	for i, instance := range instances {
+		nodeName := instance.Name
 		node := &corev1.Node{}
-		var nodeGetError error
+		var lastErr error
+
 		err := wait.PollUntilContextTimeout(ctx, 100*time.Millisecond, 10*time.Second, true, func(ctx context.Context) (bool, error) {
-			nodeGetError = clusterProxy.GetWorkloadCluster(ctx, cluster.Namespace, cluster.Name).
-				GetClient().Get(ctx, client.ObjectKey{Name: instance.Name}, node)
-			if nodeGetError != nil {
-				return false, nil //nolint:nilerr
+			if workloadClient == nil {
+				workloadClient, lastErr = getWorkloadClient(ctx)
+				if lastErr != nil {
+					lastErr = errors.Wrap(lastErr, "failed to get workload client")
+					return false, nil
+				}
 			}
-			return true, nil
+
+			lastErr = workloadClient.Get(ctx, client.ObjectKey{Name: nodeName}, node)
+			if lastErr == nil {
+				return true, nil
+			}
+
+			if apierrors.IsUnauthorized(lastErr) ||
+				strings.Contains(strings.ToLower(lastErr.Error()), "unauthorized") {
+				workloadClient = nil
+				return false, nil
+			}
+
+			return false, nil
 		})
+
 		if err != nil {
 			versions[i] = "unknown"
-			if nodeGetError != nil {
-				// Dump the instance name and error here so that we can log it as part of the version array later on.
-				versions[i] = fmt.Sprintf("%s error: %s", instance.Name, errors.Wrap(err, nodeGetError.Error()))
+			if lastErr != nil {
+				versions[i] = fmt.Sprintf("%s error: %v", nodeName, lastErr)
 			}
-		} else {
-			versions[i] = node.Status.NodeInfo.KubeletVersion
+			continue
 		}
+
+		versions[i] = node.Status.NodeInfo.KubeletVersion
 	}
 
 	return versions
