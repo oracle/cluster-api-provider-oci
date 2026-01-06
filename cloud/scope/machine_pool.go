@@ -125,11 +125,13 @@ func (m *MachinePoolScope) setInstanceConfigurationHashAnnotation(hash string) {
 func (m *MachinePoolScope) computeInstanceConfigurationHash(ld *core.InstanceConfigurationLaunchInstanceDetails) (string, error) {
 	normalized := normalizeLaunchDetailsForHash(ld)
 
+	// sort map keys
 	b, err := json.Marshal(normalized)
 	if err != nil {
 		return "", errors.Wrap(err, "marshal normalized launch details")
 	}
 
+	// computr hash
 	sum := sha256.Sum256(b)
 	return hex.EncodeToString(sum[:]), nil
 }
@@ -197,18 +199,18 @@ func normalizeMetadataForHash(md map[string]string) map[string]string {
 	if md == nil {
 		return nil
 	}
-	out := make(map[string]string, len(md))
+	output := make(map[string]string, len(md))
 	for k, v := range md {
-		// user_data should never drive IC recreation
+		// exclude user_data
 		if k == "user_data" {
 			continue
 		}
-		out[k] = v
+		output[k] = v
 	}
-	if len(out) == 0 {
+	if len(output) == 0 {
 		return nil
 	}
-	return out
+	return output
 }
 
 // PatchObject persists the cluster configuration and status.
@@ -466,13 +468,13 @@ func (m *MachinePoolScope) GetFreeFormTags() map[string]string {
 
 // ReconcileInstanceConfiguration reconciles the InstanceConfiguration resource using hash-based comparison.
 func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context) error {
-	// 1) Fetch existing IC
+	// Fetch existing IC
 	instanceConfiguration, err := m.GetInstanceConfiguration(ctx)
 	if err != nil {
 		return err
 	}
 
-	// 2) Build desired launch details includes everything
+	// Build desired launch details includes everything
 	freeFormTags := m.GetFreeFormTags()
 	definedTags := m.GetDefinedTags()
 
@@ -490,7 +492,7 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context) e
 	m.Info("InstanceConfig desired hash", "hash", desiredHash)
 	m.Info("InstanceConfig desired normalized", "desired", normalizeLaunchDetailsForHash(desiredLaunch))
 
-	// 3) If none exists -> create new one
+	// If none exists, create new one
 	if instanceConfiguration == nil {
 		m.Info("No existing instance configuratio, creating a new one")
 		if err := m.createInstanceConfiguration(ctx, desiredLaunch, freeFormTags, definedTags, desiredHash); err != nil {
@@ -507,10 +509,10 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context) e
 		return nil
 	}
 
-	// 4) Compute existing hash from OCI LaunchDetails
+	// Compute existing hash from OCI LaunchDetails
 	computeDetails, ok := instanceConfiguration.InstanceDetails.(core.ComputeInstanceDetails)
 	if !ok {
-		m.Info("InstanceDetails not ComputeInstanceDetails; skipping hash compare")
+		m.Info("InstanceDetails not ComputeInstanceDetails, skipping hash compare")
 		return nil
 	}
 	actualLaunch := computeDetails.LaunchDetails
@@ -522,7 +524,7 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context) e
 	m.Info("InstanceConfig actual hash", "hash", actualHash)
 	m.Info("InstanceConfig actual normalized", "actual", normalizeLaunchDetailsForHash(actualLaunch))
 
-	// 5) If annotation missing, backfill it
+	// If annotation missing, backfill it from actual hash
 	storedHash := m.getInstanceConfigurationHashAnnotation()
 	if storedHash == "" {
 		m.Info("No stored hash annotation, backfilling", "actualHash", actualHash)
@@ -533,7 +535,7 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context) e
 		storedHash = actualHash
 	}
 
-	// 6) Decide based on desiredHash vs actualHash - same
+	// Decide based on desiredHash vs actualHash - same
 	if desiredHash == actualHash {
 		m.Info("Instance configuration is up-to-date, no recreate", "hash", desiredHash)
 		// keep annotation consistent
@@ -545,7 +547,7 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context) e
 		return nil
 	}
 
-	// 7) Decide based on desiredHash vs actualHash - different
+	// Decide based on desiredHash vs actualHash - different
 	m.Info("Instance configuration changed, creating new one", "from", actualHash, "to", desiredHash)
 	if err := m.createInstanceConfiguration(ctx, desiredLaunch, freeFormTags, definedTags, desiredHash); err != nil {
 		return err
@@ -1065,7 +1067,7 @@ func (m *MachinePoolScope) GetInstanceConfiguration(ctx context.Context) (*core.
 }
 
 // CleanupInstanceConfiguration deletes unused InstanceConfigurations that are no longer referenced
-// by the current MachinePool or InstancePool, keeping only the currently active one.
+// by the current MachinePool, keeping only the currently active one.
 func (m *MachinePoolScope) CleanupInstanceConfiguration(ctx context.Context, instancePool *core.InstancePool) error {
 	m.Info("Cleaning up unused instance configurations")
 
