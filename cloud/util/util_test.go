@@ -32,7 +32,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2/klogr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
-	clusterv1beta2 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	expclusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -470,7 +469,7 @@ func TestCreateManagedMachinesIfNotExists(t *testing.T) {
 		namespace            string
 		client               client.Client
 		machinePool          *expclusterv1.MachinePool
-		cluster              *clusterv1beta2.Cluster
+		cluster              *clusterv1.Cluster
 		clusterAccessor      scope.OCIClusterAccessor
 		clientProvider       *scope.ClientProvider
 		specMachines         []infrav2exp.OCIMachinePoolMachine
@@ -495,7 +494,7 @@ func TestCreateManagedMachinesIfNotExists(t *testing.T) {
 					Name: "test",
 				},
 			},
-			cluster: &clusterv1beta2.Cluster{
+			cluster: &clusterv1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
@@ -552,7 +551,7 @@ func TestCreateManagedMachinesIfNotExists(t *testing.T) {
 					Name: "test",
 				},
 			},
-			cluster: &clusterv1beta2.Cluster{
+			cluster: &clusterv1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
@@ -606,7 +605,7 @@ func TestCreateManagedMachinesIfNotExists(t *testing.T) {
 					Name: "test",
 				},
 			},
-			cluster: &clusterv1beta2.Cluster{
+			cluster: &clusterv1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
@@ -684,7 +683,7 @@ func TestDeleteManagedMachinesIfNotExists(t *testing.T) {
 		namespace            string
 		client               client.Client
 		machinePool          *expclusterv1.MachinePool
-		cluster              *clusterv1beta2.Cluster
+		cluster              *clusterv1.Cluster
 		clusterAccessor      scope.OCIClusterAccessor
 		clientProvider       *scope.ClientProvider
 		specMachines         []infrav2exp.OCIMachinePoolMachine
@@ -709,7 +708,7 @@ func TestDeleteManagedMachinesIfNotExists(t *testing.T) {
 					Name: "test",
 				},
 			},
-			cluster: &clusterv1beta2.Cluster{
+			cluster: &clusterv1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
@@ -737,7 +736,7 @@ func TestDeleteManagedMachinesIfNotExists(t *testing.T) {
 						ProviderID:   common.String("oci://id-1"),
 						MachineType:  infrav2exp.SelfManaged,
 					},
-				}, &clusterv1beta2.Machine{
+				}, &clusterv1.Machine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-machine",
 						Namespace: "default",
@@ -746,7 +745,7 @@ func TestDeleteManagedMachinesIfNotExists(t *testing.T) {
 							clusterv1.MachinePoolNameLabel: "test",
 						},
 					},
-					Spec: clusterv1beta2.MachineSpec{},
+					Spec: clusterv1.MachineSpec{},
 				}).Build(), interceptor.Funcs{
 					Delete: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
 						m := obj.(*clusterv1.Machine)
@@ -771,7 +770,7 @@ func TestDeleteManagedMachinesIfNotExists(t *testing.T) {
 					Name: "test",
 				},
 			},
-			cluster: &clusterv1beta2.Cluster{
+			cluster: &clusterv1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
@@ -819,7 +818,7 @@ func TestDeleteManagedMachinesIfNotExists(t *testing.T) {
 					Name: "test",
 				},
 			},
-			cluster: &clusterv1beta2.Cluster{
+			cluster: &clusterv1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},

@@ -29,7 +29,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/ptr"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
@@ -132,10 +131,10 @@ func TestOCIManagedClusterReconciler_reconcile(t *testing.T) {
 				Namespace: "test",
 			},
 			Spec: clusterv1beta2.ClusterSpec{
-				ControlPlaneRef: clusterv1beta2.ContractVersionedObjectReference{
+				ControlPlaneRef: &corev1.ObjectReference{
 					Name: "test",
 				},
-				Paused: ptr.To(true),
+				Paused: true,
 			},
 		}
 		controlPlane := infrastructurev1beta2.OCIManagedControlPlane{
