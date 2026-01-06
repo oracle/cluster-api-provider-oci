@@ -35,6 +35,7 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/common"
 	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
@@ -506,8 +507,8 @@ func validateMachinePoolMachines(ctx context.Context, cluster *clusterv1.Cluster
 }
 
 // getMachinePoolInstanceVersions returns the Kubernetes versions of the machine pool instances.
-// For managed clusters like OKE, we need to lookup the kubeconfig to access the
-// workload cluster. This function handles kubeconfig rotation by refreshing the client only when necessary.
+// For managed clusters like OKE, we need to lookup the kubeconfig to access the workload cluster.
+// This function handles kubeconfig rotation by refreshing the client only when necessary.
 func getMachinePoolInstanceVersions(
 	ctx context.Context,
 	clusterProxy framework.ClusterProxy,
