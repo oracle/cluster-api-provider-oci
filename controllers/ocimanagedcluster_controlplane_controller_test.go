@@ -33,7 +33,7 @@ import (
 	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
@@ -127,7 +127,7 @@ func TestControlPlaneReconciliation(t *testing.T) {
 			client := fake.NewClientBuilder().WithObjects(tc.objects...).Build()
 			r = OCIManagedClusterControlPlaneReconciler{
 				Client:         client,
-				Scheme:         runtime.NewScheme(),
+				Scheme:   scheme.Scheme,
 				Recorder:       recorder,
 				ClientProvider: clientProvider,
 				Region:         MockTestRegion,
@@ -209,7 +209,7 @@ func TestControlPlaneReconciliationFunction(t *testing.T) {
 		recorder = record.NewFakeRecorder(2)
 		r = OCIManagedClusterControlPlaneReconciler{
 			Client:   client,
-			Scheme:   runtime.NewScheme(),
+			Scheme:   scheme.Scheme,
 			Recorder: recorder,
 		}
 		g.Expect(err).To(BeNil())
@@ -509,7 +509,7 @@ func TestControlPlaneDeletionFunction(t *testing.T) {
 		recorder = record.NewFakeRecorder(2)
 		r = OCIManagedClusterControlPlaneReconciler{
 			Client:   client,
-			Scheme:   runtime.NewScheme(),
+			Scheme:   scheme.Scheme,
 			Recorder: recorder,
 		}
 		g.Expect(err).To(BeNil())

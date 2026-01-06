@@ -27,10 +27,11 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1beta2 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -87,7 +88,7 @@ func TestOCIClusterReconciler_Reconcile(t *testing.T) {
 			client := fake.NewClientBuilder().WithObjects(tc.objects...).Build()
 			r = OCIClusterReconciler{
 				Client:   client,
-				Scheme:   runtime.NewScheme(),
+				Scheme:   scheme.Scheme,
 				Recorder: recorder,
 				Region:   MockTestRegion,
 			}
@@ -130,7 +131,7 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 		client := fake.NewClientBuilder().WithObjects(getSecret()).Build()
 		r = OCIClusterReconciler{
 			Client:   client,
-			Scheme:   runtime.NewScheme(),
+			Scheme:   scheme.Scheme,
 			Recorder: recorder,
 			Region:   MockTestRegion,
 		}
@@ -428,7 +429,7 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 		client := fake.NewClientBuilder().WithObjects(getSecret()).Build()
 		r = OCIClusterReconciler{
 			Client:   client,
-			Scheme:   runtime.NewScheme(),
+			Scheme:   scheme.Scheme,
 			Recorder: recorder,
 		}
 		//cs.EXPECT().GetOCIClusterAccessor().Return(ociClusterAccessor)
@@ -710,16 +711,16 @@ func getOCIClusterWithOwner() *infrastructurev1beta2.OCICluster {
 	return ociCluster
 }
 
-func getPausedInfraCluster() *clusterv1.Cluster {
+func getPausedInfraCluster() *clusterv1beta2.Cluster {
 	infraRef := corev1.ObjectReference{
 		Name: "oci-cluster",
 	}
-	return &clusterv1.Cluster{
+	return &clusterv1beta2.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-cluster",
 			Namespace: "test",
 		},
-		Spec: clusterv1.ClusterSpec{
+		Spec: clusterv1beta2.ClusterSpec{
 			InfrastructureRef: &infraRef,
 			Paused:            true,
 		},

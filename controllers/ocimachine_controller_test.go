@@ -37,10 +37,11 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/workrequests"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1beta2 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -124,7 +125,7 @@ func TestMachineReconciliation(t *testing.T) {
 			client := fake.NewClientBuilder().WithStatusSubresource(tc.objects...).WithObjects(tc.objects...).Build()
 			r = OCIMachineReconciler{
 				Client:         client,
-				Scheme:         runtime.NewScheme(),
+				Scheme:   scheme.Scheme,
 				Recorder:       recorder,
 				ClientProvider: clientProvider,
 				Region:         MockTestRegion,
@@ -195,7 +196,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 		recorder = record.NewFakeRecorder(2)
 		r = OCIMachineReconciler{
 			Client:   client,
-			Scheme:   runtime.NewScheme(),
+			Scheme:   scheme.Scheme,
 			Recorder: recorder,
 		}
 		g.Expect(err).To(BeNil())
@@ -875,7 +876,7 @@ func TestMachineReconciliationDelete(t *testing.T) {
 
 		r = OCIMachineReconciler{
 			Client:         client,
-			Scheme:         runtime.NewScheme(),
+			Scheme:   scheme.Scheme,
 			Recorder:       recorder,
 			ClientProvider: clientProvider,
 			Region:         scope.MockTestRegion,
@@ -960,7 +961,7 @@ func TestMachineReconciliationDeletionNormal(t *testing.T) {
 		recorder = record.NewFakeRecorder(2)
 		r = OCIMachineReconciler{
 			Client:   client,
-			Scheme:   runtime.NewScheme(),
+			Scheme:   scheme.Scheme,
 			Recorder: recorder,
 		}
 		g.Expect(err).To(BeNil())
@@ -1225,30 +1226,30 @@ func getOciMachineWithNoOwner() *infrastructurev1beta2.OCIMachine {
 	return ociMachine
 }
 
-func getCluster() *clusterv1.Cluster {
+func getCluster() *clusterv1beta2.Cluster {
 	infraRef := corev1.ObjectReference{
 		Name: "oci-cluster",
 		Kind: "OCICluster",
 	}
-	return &clusterv1.Cluster{
+	return &clusterv1beta2.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-cluster",
 			Namespace: "test",
 		},
-		Spec: clusterv1.ClusterSpec{
+		Spec: clusterv1beta2.ClusterSpec{
 			InfrastructureRef: &infraRef,
 		},
 	}
 }
 
-func getPausedCluster() *clusterv1.Cluster {
+func getPausedCluster() *clusterv1beta2.Cluster {
 	cluster := getCluster()
 	cluster.Spec.Paused = true
 	return cluster
 }
 
-func getMachine() *clusterv1.Machine {
-	machine := &clusterv1.Machine{
+func getMachine() *clusterv1beta2.Machine {
+	machine := &clusterv1beta2.Machine{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
 			Namespace: "test",

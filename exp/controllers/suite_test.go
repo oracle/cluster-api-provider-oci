@@ -25,8 +25,8 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
-	clusterv1beta2 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	expclusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1beta2 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 )
 
 func TestMain(m *testing.M) {
