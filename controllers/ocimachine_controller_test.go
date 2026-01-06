@@ -37,8 +37,8 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/workrequests"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	clusterv1beta2 "sigs.k8s.io/cluster-api/api/core/v1beta2"
@@ -125,7 +125,7 @@ func TestMachineReconciliation(t *testing.T) {
 			client := fake.NewClientBuilder().WithStatusSubresource(tc.objects...).WithObjects(tc.objects...).Build()
 			r = OCIMachineReconciler{
 				Client:         client,
-				Scheme:   scheme.Scheme,
+				Scheme:         scheme.Scheme,
 				Recorder:       recorder,
 				ClientProvider: clientProvider,
 				Region:         MockTestRegion,
@@ -876,7 +876,7 @@ func TestMachineReconciliationDelete(t *testing.T) {
 
 		r = OCIMachineReconciler{
 			Client:         client,
-			Scheme:   scheme.Scheme,
+			Scheme:         scheme.Scheme,
 			Recorder:       recorder,
 			ClientProvider: clientProvider,
 			Region:         scope.MockTestRegion,
@@ -1226,30 +1226,30 @@ func getOciMachineWithNoOwner() *infrastructurev1beta2.OCIMachine {
 	return ociMachine
 }
 
-func getCluster() *clusterv1beta2.Cluster {
+func getCluster() *clusterv1.Cluster {
 	infraRef := corev1.ObjectReference{
 		Name: "oci-cluster",
 		Kind: "OCICluster",
 	}
-	return &clusterv1beta2.Cluster{
+	return &clusterv1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-cluster",
 			Namespace: "test",
 		},
-		Spec: clusterv1beta2.ClusterSpec{
+		Spec: clusterv1.ClusterSpec{
 			InfrastructureRef: &infraRef,
 		},
 	}
 }
 
-func getPausedCluster() *clusterv1beta2.Cluster {
+func getPausedCluster() *clusterv1.Cluster {
 	cluster := getCluster()
 	cluster.Spec.Paused = true
 	return cluster
 }
 
-func getMachine() *clusterv1beta2.Machine {
-	machine := &clusterv1beta2.Machine{
+func getMachine() *clusterv1.Machine {
+	machine := &clusterv1.Machine{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
 			Namespace: "test",

@@ -27,8 +27,8 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	clusterv1beta2 "sigs.k8s.io/cluster-api/api/core/v1beta2"
@@ -712,7 +712,7 @@ func getOCIClusterWithOwner() *infrastructurev1beta2.OCICluster {
 }
 
 func getPausedInfraCluster() *clusterv1beta2.Cluster {
-	infraRef := corev1.ObjectReference{
+	infraRef := clusterv1beta2.ContractVersionedObjectReference{
 		Name: "oci-cluster",
 	}
 	return &clusterv1beta2.Cluster{
@@ -721,8 +721,8 @@ func getPausedInfraCluster() *clusterv1beta2.Cluster {
 			Namespace: "test",
 		},
 		Spec: clusterv1beta2.ClusterSpec{
-			InfrastructureRef: &infraRef,
-			Paused:            true,
+			InfrastructureRef: infraRef,
+			Paused:            ptr.To(true),
 		},
 	}
 }

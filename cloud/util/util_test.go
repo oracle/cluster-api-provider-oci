@@ -18,6 +18,7 @@ package util
 import (
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -748,13 +749,18 @@ func TestDeleteManagedMachinesIfNotExists(t *testing.T) {
 					Spec: clusterv1.MachineSpec{},
 				}).Build(), interceptor.Funcs{
 					Delete: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
+						fmt.Println("----- deleting 0")
 						m := obj.(*clusterv1.Machine)
+						fmt.Println("----- deleting 1")
+						fmt.Printf("%v/n", m)
 						t.deletePoolMachines = append(t.deletePoolMachines, *m)
+						fmt.Println("----- deleting 2")
 						return nil
 					},
 				})
 			},
 			validate: func(g *WithT, t *test) {
+				fmt.Println("----- validate 0")
 				g.Expect(len(t.deletePoolMachines)).To(Equal(1))
 				g.Expect(t.deletePoolMachines[0].Name).To(Equal("test-machine"))
 			},

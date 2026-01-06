@@ -1,0 +1,13 @@
+# github.com/oracle/cluster-api-provider-oci/controllers [github.com/oracle/cluster-api-provider-oci/controllers.test]
+controllers/ocicluster_controller_test.go:724:23: cannot use &infraRef (value of type *"k8s.io/api/core/v1".ObjectReference) as "sigs.k8s.io/cluster-api/api/core/v1beta2".ContractVersionedObjectReference value in struct literal
+controllers/ocicluster_controller_test.go:725:23: cannot use true (untyped bool constant) as *bool value in struct literal
+controllers/ocimachine_controller_test.go:188:31: cannot use machine (variable of type *"sigs.k8s.io/cluster-api/api/core/v1beta2".Machine) as *"sigs.k8s.io/cluster-api/api/core/v1beta1".Machine value in struct literal
+controllers/ocimachine_controller_test.go:192:13: cannot use getCluster() (value of type *"sigs.k8s.io/cluster-api/api/core/v1beta2".Cluster) as *"sigs.k8s.io/cluster-api/api/core/v1beta1".Cluster value in struct literal
+controllers/ocimachine_controller_test.go:951:19: cannot use machine (variable of type *"sigs.k8s.io/cluster-api/api/core/v1beta2".Machine) as *"sigs.k8s.io/cluster-api/api/core/v1beta1".Machine value in struct literal
+controllers/ocimachine_controller_test.go:955:31: cannot use getCluster() (value of type *"sigs.k8s.io/cluster-api/api/core/v1beta2".Cluster) as *"sigs.k8s.io/cluster-api/api/core/v1beta1".Cluster value in struct literal
+controllers/ocimachine_controller_test.go:1240:23: cannot use &infraRef (value of type *"k8s.io/api/core/v1".ObjectReference) as "sigs.k8s.io/cluster-api/api/core/v1beta2".ContractVersionedObjectReference value in struct literal
+controllers/ocimachine_controller_test.go:1247:24: cannot use true (untyped bool constant) as *bool value in assignment
+controllers/ocimanagedcluster_controller_test.go:134:22: cannot use &corev1.ObjectReference{…} (value of type *"k8s.io/api/core/v1".ObjectReference) as "sigs.k8s.io/cluster-api/api/core/v1beta2".ContractVersionedObjectReference value in struct literal
+controllers/ocimanagedcluster_controller_test.go:137:13: cannot use true (untyped bool constant) as *bool value in struct literal
+controllers/ocimanagedcluster_controller_test.go:137:13: too many errors
+make: *** [test] Error 1

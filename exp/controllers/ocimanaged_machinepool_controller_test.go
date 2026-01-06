@@ -31,8 +31,8 @@ import (
 	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	expclusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
@@ -111,7 +111,7 @@ func TestManagedMachinePoolReconciliation(t *testing.T) {
 			client := fake.NewClientBuilder().WithObjects(tc.objects...).Build()
 			r = OCIManagedMachinePoolReconciler{
 				Client:         client,
-				Scheme:   scheme.Scheme,
+				Scheme:         scheme.Scheme,
 				Recorder:       recorder,
 				ClientProvider: clientProvider,
 				Region:         MockTestRegion,
