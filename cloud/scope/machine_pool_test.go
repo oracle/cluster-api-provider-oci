@@ -471,6 +471,105 @@ func TestInstanceConfigCreate(t *testing.T) {
 					}, nil)
 			},
 		},
+		{
+			name:          "nsg reordering does not trigger new instance configuration",
+			errorExpected: false,
+			testSpecificSetup: func(ms *MachinePoolScope) {
+				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+					Shape:                   common.String("test-shape"),
+					InstanceConfigurationId: common.String("test"),
+					InstanceVnicConfiguration: &infrastructurev1beta2.NetworkDetails{
+						NsgNames: []string{"worker-nsg", "worker-nsg-alt"},
+					},
+				}
+
+				clusterAccessor := ms.OCIClusterAccesor.(OCISelfManagedCluster)
+				clusterAccessor.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List = append(
+					clusterAccessor.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List,
+					&infrastructurev1beta2.NSG{
+						Role: infrastructurev1beta2.WorkerRole,
+						ID:   common.String("nsg-id-alt"),
+						Name: "worker-nsg-alt",
+					},
+				)
+				ms.OCIClusterAccesor = clusterAccessor
+
+				computeManagementClient.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Eq(core.GetInstanceConfigurationRequest{
+					InstanceConfigurationId: common.String("test"),
+				})).
+					Return(core.GetInstanceConfigurationResponse{
+						InstanceConfiguration: core.InstanceConfiguration{
+							Id: common.String("test"),
+							InstanceDetails: core.ComputeInstanceDetails{
+								LaunchDetails: &core.InstanceConfigurationLaunchInstanceDetails{
+									DefinedTags:   definedTagsInterface,
+									FreeformTags:  tags,
+									CompartmentId: common.String("test-compartment"),
+									Shape:         common.String("test-shape"),
+									CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+										FreeformTags:   tags,
+										AssignPublicIp: common.Bool(false),
+										NsgIds:         []string{"nsg-id-alt", "nsg-id"},
+										SubnetId:       common.String("subnet-id"),
+									},
+									SourceDetails: core.InstanceConfigurationInstanceSourceViaImageDetails{},
+									Metadata:      map[string]string{"user_data": "dGVzdA=="},
+								},
+							},
+						},
+					}, nil)
+			},
+		},
+		{
+			name:          "metadata change not user_data triggers new instance configuration",
+			errorExpected: false,
+			testSpecificSetup: func(ms *MachinePoolScope) {
+				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+					Shape:                   common.String("test-shape"),
+					InstanceConfigurationId: common.String("test"),
+					Metadata: map[string]string{
+						"custom": "new-value",
+					},
+				}
+
+				computeManagementClient.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Eq(core.GetInstanceConfigurationRequest{
+					InstanceConfigurationId: common.String("test"),
+				})).
+					Return(core.GetInstanceConfigurationResponse{
+						InstanceConfiguration: core.InstanceConfiguration{
+							Id: common.String("test"),
+							InstanceDetails: core.ComputeInstanceDetails{
+								LaunchDetails: &core.InstanceConfigurationLaunchInstanceDetails{
+									DefinedTags:   definedTagsInterface,
+									FreeformTags:  tags,
+									CompartmentId: common.String("test-compartment"),
+									Shape:         common.String("test-shape"),
+									CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+										FreeformTags: tags,
+										NsgIds:       []string{"nsg-id"},
+										SubnetId:     common.String("subnet-id"),
+									},
+									SourceDetails: core.InstanceConfigurationInstanceSourceViaImageDetails{},
+									Metadata: map[string]string{
+										"user_data": "dGVzdA==",
+										"custom":    "old-value",
+									},
+								},
+							},
+						},
+					}, nil)
+
+				computeManagementClient.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).
+					Return(core.CreateInstanceConfigurationResponse{
+						InstanceConfiguration: core.InstanceConfiguration{
+							Id: common.String("new-id"),
+						},
+					}, nil).Times(1)
+
+				computeManagementClient.EXPECT().ListInstanceConfigurations(gomock.Any(), gomock.Any()).
+					Return(core.ListInstanceConfigurationsResponse{}, nil).Times(1)
+			},
+		},
 	}
 
 	for _, tc := range tests {
