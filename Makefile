@@ -42,7 +42,7 @@ ARTIFACTS ?= $(ROOT_DIR)/_artifacts
 KUBETEST_CONF_PATH ?= $(abspath $(E2E_DATA_DIR)/kubetest/conformance.yaml)
 KUBETEST_FAST_CONF_PATH ?= $(abspath $(E2E_DATA_DIR)/kubetest/conformance-fast.yaml)
 GINKGO_FOCUS ?= "PRBlocking"
-GINKGO_SKIP ?= "Bare Metal|Multi-Region|VCNPeering"
+GINKGO_SKIP ?= 'Bare\ Metal|Multi-Region|VCNPeering'
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
@@ -306,7 +306,7 @@ generate-e2e-templates: $(KUSTOMIZE)
 .PHONY: test-e2e-run
 test-e2e-run: generate-e2e-templates $(GINKGO) $(ENVSUBST) ## Run e2e tests
 	$(ENVSUBST) < $(E2E_CONF_FILE) > $(E2E_CONF_FILE_ENVSUBST) && \
-    $(GINKGO) -v -trace -timeout=4h -tags=e2e -focus="$(GINKGO_FOCUS)" -skip=$(GINKGO_SKIP) -nodes=$(GINKGO_NODES) --no-color=$(GINKGO_NOCOLOR) $(GINKGO_ARGS) ./test/e2e -- \
+    $(GINKGO) -v -trace -timeout=4h -tags=e2e -focus="$(GINKGO_FOCUS)" -skip="$(GINKGO_SKIP)" -nodes=$(GINKGO_NODES) --no-color=$(GINKGO_NOCOLOR) $(GINKGO_ARGS) ./test/e2e -- \
     	-e2e.artifacts-folder="$(ARTIFACTS)" \
     	-e2e.config="$(E2E_CONF_FILE_ENVSUBST)" \
     	-e2e.skip-resource-cleanup=$(SKIP_CLEANUP) -e2e.use-existing-cluster=$(SKIP_CREATE_MGMT_CLUSTER) $(E2E_ARGS)
