@@ -383,7 +383,7 @@ $(CONVERSION_GEN): ## Download controller-gen locally if necessary.
 	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) k8s.io/code-generator/cmd/conversion-gen $(CONVERSION_GEN_BIN) v0.31.0
 
 $(KUSTOMIZE): ## Download kustomize locally if necessary.
-	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) sigs.k8s.io/kustomize/kustomize/v4 $(KUSTOMIZE_BIN) v4.5.2
+	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) sigs.k8s.io/kustomize/kustomize/v4 $(KUSTOMIZE_BIN) $(KUSTOMIZE_VER)
 
 $(GINKGO): ## Build ginkgo.
 	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) github.com/onsi/ginkgo/v2/ginkgo $(GINKGO_BIN) v2.23.3
@@ -393,6 +393,7 @@ $(GOLANGCI_LINT): ## Build golanci-lint.
 	$(GOLANGCI_LINT) custom
 
 $(ENVSUBST): ## Build envsubst from tools folder.
+	mkdir -p $(TOOLS_BIN_DIR)
 	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) github.com/drone/envsubst/v2/cmd/envsubst $(ENVSUBST_BIN) $(ENVSUBST_VER)
 
 $(KUBECTL): ## Build kubectl from tools folder.
