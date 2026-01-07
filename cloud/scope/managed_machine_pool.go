@@ -363,7 +363,7 @@ func (m *ManagedMachinePoolScope) setNodepoolImageId(ctx context.Context, forceL
 	imageId := m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId
 	m.Logger.Info("setNodepoolImageId called",
 		"currentImageId", ptr.ToString(m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId),
-		"specVersion", ptr.ToString(m.OCIManagedMachinePool.Spec.Version),
+		"specK8sVersion", ptr.ToString(m.OCIManagedMachinePool.Spec.Version),
 	)
 	if !forceLookup && imageId != nil && *imageId != "" {
 		m.Logger.Info("Skipping image lookup because imageId already set",
@@ -411,7 +411,7 @@ func (m *ManagedMachinePoolScope) setNodepoolImageId(ctx context.Context, forceL
 					continue
 				}
 				if strings.Contains(sourceName, k8sVersion) {
-					m.Info("Image being used", "Name", sourceName, "OCID", *image.ImageId, "k8sVersion", k8sVersion)
+					m.Info("Image being used", "Name", sourceName, "OCID", *image.ImageId)
 					m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId = image.ImageId
 					return nil
 				}
@@ -719,44 +719,6 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 		}
 	}
 
-	// NodeSourceViaImage
-	// if m.OCIManagedMachinePool.Spec.NodeSourceViaImage != nil {
-	// 	actualSource, ok := pool.NodeSourceDetails.(oke.NodeSourceViaImageDetails)
-	// 	if !ok {
-	// 		// OCI doesn't have image source details - update needed
-	// 		err := m.setNodepoolImageId(ctx)
-	// 		if err != nil {
-	// 			return false, err
-	// 		}
-	// 		sourceDetails := oke.NodeSourceViaImageDetails{
-	// 			ImageId:             m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId,
-	// 			BootVolumeSizeInGBs: m.OCIManagedMachinePool.Spec.NodeSourceViaImage.BootVolumeSizeInGBs,
-	// 		}
-	// 		updateDetails.NodeSourceDetails = &sourceDetails
-	// 		needsUpdate = true
-	// 	} else {
-	// 		imageChanged := m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId != nil &&
-	// 			*actualSource.ImageId != *m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId
-
-	// 		bootVolumeChanged := m.OCIManagedMachinePool.Spec.NodeSourceViaImage.BootVolumeSizeInGBs != nil &&
-	// 			(actualSource.BootVolumeSizeInGBs == nil ||
-	// 				*actualSource.BootVolumeSizeInGBs != *m.OCIManagedMachinePool.Spec.NodeSourceViaImage.BootVolumeSizeInGBs)
-
-	// 		if imageChanged || bootVolumeChanged {
-	// 			err := m.setNodepoolImageId(ctx)
-	// 			if err != nil {
-	// 				return false, err
-	// 			}
-	// 			sourceDetails := oke.NodeSourceViaImageDetails{
-	// 				ImageId:             m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId,
-	// 				BootVolumeSizeInGBs: m.OCIManagedMachinePool.Spec.NodeSourceViaImage.BootVolumeSizeInGBs,
-	// 			}
-	// 			updateDetails.NodeSourceDetails = &sourceDetails
-	// 			needsUpdate = true
-	// 		}
-	// 	}
-	// }
-
 	// SshPublicKey
 	if m.OCIManagedMachinePool.Spec.SshPublicKey != "" &&
 		(pool.SshPublicKey == nil || m.OCIManagedMachinePool.Spec.SshPublicKey != *pool.SshPublicKey) {
@@ -883,7 +845,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 		// NSG names: compare specified values with actual (order-independent)
 		if len(m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.NsgNames) > 0 {
 			actualNsgNames := GetNsgNamesFromId(pool.NodeConfigDetails.NsgIds, m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List)
-			if !stringSlicesEqualIgnoreOrder(m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.NsgNames, actualNsgNames) {
+			if !ociutil.StringSlicesEqualIgnoreOrder(m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.NsgNames, actualNsgNames) {
 				nodeConfigDetails.NsgIds = m.getWorkerMachineNSGs()
 				needsUpdate = true
 			}
@@ -916,6 +878,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 
 			needsPlacementUpdate := false
 			for _, userConfig := range m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.PlacementConfigs {
+				// AvailabilityDomain is the only field that’s guaranteed to be unique per entry
 				if userConfig.AvailabilityDomain != nil {
 					if actualConfig, exists := actualConfigsMap[*userConfig.AvailabilityDomain]; !exists {
 						needsPlacementUpdate = true
@@ -954,8 +917,8 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 					desiredSubnets := m.getPodSubnets(desiredPodNetwork.VcnIpNativePodNetworkOptions.SubnetNames)
 					desiredNsgs := m.getPodNSGs(desiredPodNetwork.VcnIpNativePodNetworkOptions.NSGNames)
 
-					if !stringSlicesEqualIgnoreOrder(desiredSubnets, actualVcnNative.PodSubnetIds) ||
-						!stringSlicesEqualIgnoreOrder(desiredNsgs, actualVcnNative.PodNsgIds) ||
+					if !ociutil.StringSlicesEqualIgnoreOrder(desiredSubnets, actualVcnNative.PodSubnetIds) ||
+						!ociutil.StringSlicesEqualIgnoreOrder(desiredNsgs, actualVcnNative.PodNsgIds) ||
 						(desiredPodNetwork.VcnIpNativePodNetworkOptions.MaxPodsPerNode != nil &&
 							actualVcnNative.MaxPodsPerNode != nil &&
 							*desiredPodNetwork.VcnIpNativePodNetworkOptions.MaxPodsPerNode != *actualVcnNative.MaxPodsPerNode) {
@@ -1192,42 +1155,4 @@ func (m *ManagedMachinePoolScope) buildPlacementConfigFromActual(actualConfigs [
 		})
 	}
 	return configs
-}
-
-// stringSlicesEqualIgnoreOrder compares two string slices for equality regardless of order
-func stringSlicesEqualIgnoreOrder(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	if len(a) == 0 {
-		return true
-	}
-
-	// Handle nil cases
-	if a == nil && b == nil {
-		return true
-	}
-	if a == nil || b == nil {
-		return false
-	}
-
-	// Create maps to count occurrences
-	countA := make(map[string]int)
-	countB := make(map[string]int)
-
-	for _, item := range a {
-		countA[item]++
-	}
-	for _, item := range b {
-		countB[item]++
-	}
-
-	// Compare counts
-	for key, count := range countA {
-		if countB[key] != count {
-			return false
-		}
-	}
-
-	return true
 }

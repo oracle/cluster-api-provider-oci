@@ -35,7 +35,6 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/common"
 	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
@@ -507,89 +506,33 @@ func validateMachinePoolMachines(ctx context.Context, cluster *clusterv1.Cluster
 }
 
 // getMachinePoolInstanceVersions returns the Kubernetes versions of the machine pool instances.
-// For managed clusters (like OKE), the framework needs to retrieve kubeconfig to access the
-// workload cluster. This function handles kubeconfig rotation by refreshing the client only when necessary.
-func getMachinePoolInstanceVersions(
-	ctx context.Context,
-	clusterProxy framework.ClusterProxy,
-	cluster *clusterv1.Cluster,
-	machinePool *expv1.MachinePool,
-) []string {
+// This method was forked because we need to lookup the kubeconfig with each call
+// as the tokens are refreshed in case of OKE
+func getMachinePoolInstanceVersions(ctx context.Context, clusterProxy framework.ClusterProxy, cluster *clusterv1.Cluster, machinePool *expv1.MachinePool) []string {
 	Expect(ctx).NotTo(BeNil(), "ctx is required for getMachinePoolInstanceVersions")
 
 	instances := machinePool.Status.NodeRefs
 	versions := make([]string, len(instances))
-	if len(instances) == 0 {
-		return versions
-	}
-
-	// Define helper function to get workload cluster client
-	getWorkloadClient := func(ctx context.Context) (client.Client, error) {
-		wc := clusterProxy.GetWorkloadCluster(ctx, cluster.Namespace, cluster.Name)
-		c := wc.GetClient()
-		if c == nil {
-			return nil, errors.New("workload client is nil")
-		}
-		return c, nil
-	}
-
-	// Get initial workload client
-	workloadClient, err := getWorkloadClient(ctx)
-	if err != nil {
-		// If we can't even get the initial client, all nodes are unknown
-		for i := range versions {
-			versions[i] = fmt.Sprintf("unknown - kubeconfig error: %v", err)
-		}
-		return versions
-	}
-
-	refreshedOnce := false
-
-	// Query each node in the machine pool
 	for i, instance := range instances {
-		nodeName := instance.Name
 		node := &corev1.Node{}
-		var lastErr error
-
-		err := wait.PollUntilContextTimeout(ctx, 250*time.Millisecond, 10*time.Second, true, func(ctx context.Context) (bool, error) {
-			lastErr = workloadClient.Get(ctx, client.ObjectKey{Name: nodeName}, node)
-			if lastErr == nil {
-				return true, nil // Success - node found
+		var nodeGetError error
+		err := wait.PollUntilContextTimeout(ctx, 100*time.Millisecond, 10*time.Second, true, func(ctx context.Context) (bool, error) {
+			nodeGetError = clusterProxy.GetWorkloadCluster(ctx, cluster.Namespace, cluster.Name).
+				GetClient().Get(ctx, client.ObjectKey{Name: instance.Name}, node)
+			if nodeGetError != nil {
+				return false, nil //nolint:nilerr
 			}
-
-			// Handle authentication errors
-			if !refreshedOnce && (apierrors.IsUnauthorized(lastErr) ||
-				strings.Contains(strings.ToLower(lastErr.Error()), "unauthorized")) {
-
-				// Attempt to refresh the workload client with new kubeconfig
-				newClient, e := getWorkloadClient(ctx)
-				if e != nil {
-					// Keep lastErr as the cause, retry will continue until timeout
-					lastErr = errors.Wrap(e, "failed to refresh workload client after Unauthorized")
-					return false, nil
-				}
-				workloadClient = newClient
-				refreshedOnce = true
-				// Don't return true here - let the next poll iteration retry with new client
-				return false, nil
-			}
-
-			// For other errors, keep polling until timeout
-			return false, nil
+			return true, nil
 		})
-
-		// Process results
 		if err != nil {
-			// Timeout or persistent error - mark node as unknown
 			versions[i] = "unknown"
-			if lastErr != nil {
-				versions[i] = fmt.Sprintf("%s error: %v", nodeName, lastErr)
+			if nodeGetError != nil {
+				// Dump the instance name and error here so that we can log it as part of the version array later on.
+				versions[i] = fmt.Sprintf("%s error: %s", instance.Name, errors.Wrap(err, nodeGetError.Error()))
 			}
-			continue
+		} else {
+			versions[i] = node.Status.NodeInfo.KubeletVersion
 		}
-
-		// Success
-		versions[i] = node.Status.NodeInfo.KubeletVersion
 	}
 
 	return versions
