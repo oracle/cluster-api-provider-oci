@@ -18,13 +18,9 @@ package scope
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/base64"
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"reflect"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -32,6 +28,7 @@ import (
 
 	"github.com/go-logr/logr"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	"github.com/oracle/cluster-api-provider-oci/cloud/hash"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/computemanagement"
@@ -120,98 +117,6 @@ func (m *MachinePoolScope) setInstanceConfigurationHashAnnotation(hash string) {
 		m.OCIMachinePool.Annotations = map[string]string{}
 	}
 	m.OCIMachinePool.Annotations[InstanceConfigurationHashAnnotation] = hash
-}
-
-// computeInstanceConfigurationHash computes a SHA-256 hash of normalized launch details
-func (m *MachinePoolScope) computeInstanceConfigurationHash(ld *core.InstanceConfigurationLaunchInstanceDetails) (string, error) {
-	normalized := normalizeLaunchDetailsForHash(ld)
-
-	// sort map keys
-	b, err := json.Marshal(normalized)
-	if err != nil {
-		return "", errors.Wrap(err, "marshal normalized launch details")
-	}
-
-	// computr hash
-	sum := sha256.Sum256(b)
-	return hex.EncodeToString(sum[:]), nil
-}
-
-// normalizeLaunchDetailsForHash strips fields that should NOT trigger a new InstanceConfiguration
-// we could decide which fields to ignore based on what OCI allows to be updated in an InstanceConfiguration
-func normalizeLaunchDetailsForHash(in *core.InstanceConfigurationLaunchInstanceDetails) *core.InstanceConfigurationLaunchInstanceDetails {
-	if in == nil {
-		return nil
-	}
-
-	output := *in
-	output.DisplayName = nil
-	output.DefinedTags = nil
-	output.FreeformTags = nil
-	output.SecurityAttributes = nil
-
-	// Normalize Metadata: drop user_data
-	output.Metadata = normalizeMetadataForHash(output.Metadata)
-
-	// Normalize CreateVnicDetails
-	if output.CreateVnicDetails != nil {
-		v := *output.CreateVnicDetails
-		v.DisplayName = nil
-		v.DefinedTags = nil
-		v.FreeformTags = nil
-		v.SecurityAttributes = nil
-
-		// Sort NSG IDs to avoid recreates due to ordering differences
-		if len(v.NsgIds) == 0 {
-			v.NsgIds = nil
-		} else {
-			sort.Strings(v.NsgIds)
-		}
-
-		output.CreateVnicDetails = &v
-	}
-
-	// Normalize ShapeConfig
-	if output.ShapeConfig != nil {
-		sc := *output.ShapeConfig
-		// If all fields are empty, treat as nil
-		if sc.Ocpus == nil && sc.MemoryInGBs == nil && sc.Vcpus == nil && sc.Nvmes == nil && sc.BaselineOcpuUtilization == "" {
-			output.ShapeConfig = nil
-		} else {
-			output.ShapeConfig = &sc
-		}
-	}
-
-	// Normalize LicensingConfigs
-	if len(output.LicensingConfigs) == 0 {
-		output.LicensingConfigs = nil
-	}
-
-	// Normalize ExtendedMetadata
-	if output.ExtendedMetadata != nil && len(output.ExtendedMetadata) == 0 {
-		output.ExtendedMetadata = nil
-	}
-
-	return &output
-}
-
-// normalizeMetadataForHash filters instance metadata to exclude fields like user_data
-func normalizeMetadataForHash(md map[string]string) map[string]string {
-	if md == nil {
-		return nil
-	}
-	output := make(map[string]string, len(md))
-	for k, v := range md {
-		// exclude user_data
-		if k == "user_data" {
-			continue
-		}
-		output[k] = v
-	}
-	if len(output) == 0 {
-		return nil
-	}
-	return output
 }
 
 // PatchObject persists the cluster configuration and status.
@@ -484,14 +389,14 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context) e
 	if err != nil {
 		return err
 	}
-	desiredHash, err := m.computeInstanceConfigurationHash(desiredLaunch)
+	desiredHash, err := hash.ComputeHash(desiredLaunch)
 	if err != nil {
 		return errors.Wrap(err, "compute desired instance config hash")
 	}
 
 	// Debug logs
-	m.Info("InstanceConfig desired hash", "hash", desiredHash)
-	m.Info("InstanceConfig desired normalized", "desired", normalizeLaunchDetailsForHash(desiredLaunch))
+	m.Logger.V(1).Info("InstanceConfig desired hash", "hash", desiredHash)
+	m.Logger.V(1).Info("InstanceConfig desired normalized", "desired", hash.NormalizeLaunchDetails(desiredLaunch))
 
 	// If none exists, create new one
 	if instanceConfiguration == nil {
@@ -503,9 +408,9 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context) e
 		if err := m.PatchObject(ctx); err != nil {
 			return err
 		}
-		// cleanup
+		// cleanup - best effort, don't fail reconciliation if cleanup fails
 		if cleanupErr := m.CleanupInstanceConfiguration(ctx, nil); cleanupErr != nil {
-			m.Logger.Error(cleanupErr, "CleanupInstanceConfiguration failed")
+			m.Logger.Error(cleanupErr, "CleanupInstanceConfiguration failed - this is not critical and the instance configuration was successfully created")
 		}
 		return nil
 	}
@@ -517,13 +422,13 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context) e
 		return nil
 	}
 	actualLaunch := computeDetails.LaunchDetails
-	actualHash, err := m.computeInstanceConfigurationHash(actualLaunch)
+	actualHash, err := hash.ComputeHash(actualLaunch)
 	if err != nil {
 		return errors.Wrap(err, "compute actual instance config hash")
 	}
 
-	m.Info("InstanceConfig actual hash", "hash", actualHash)
-	m.Info("InstanceConfig actual normalized", "actual", normalizeLaunchDetailsForHash(actualLaunch))
+	m.Logger.V(1).Info("InstanceConfig actual hash", "hash", actualHash)
+	m.Logger.V(1).Info("InstanceConfig actual normalized", "actual", hash.NormalizeLaunchDetails(actualLaunch))
 
 	// If annotation missing, backfill it from actual hash
 	storedHash := m.getInstanceConfigurationHashAnnotation()
@@ -558,9 +463,9 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context) e
 		return err
 	}
 
-	// cleanup
+	// cleanup - best effort, don't fail reconciliation if cleanup fails
 	if cleanupErr := m.CleanupInstanceConfiguration(ctx, nil); cleanupErr != nil {
-		m.Logger.Error(cleanupErr, "CleanupInstanceConfiguration failed")
+		m.Logger.Error(cleanupErr, "CleanupInstanceConfiguration failed - this is not critical and the instance configuration was successfully updated")
 	}
 	return nil
 }
@@ -594,6 +499,7 @@ func (m *MachinePoolScope) createInstanceConfiguration(
 	}
 
 	// Use hash suffix to avoid creating a new IC every time ResourceVersion changes.
+	// Take first 10 characters of hash for uniqueness while keeping display name reasonably short.
 	suffix := desiredHash
 	if len(suffix) > 10 {
 		suffix = suffix[:10]
@@ -614,11 +520,11 @@ func (m *MachinePoolScope) createInstanceConfiguration(
 	resp, err := m.ComputeManagementClient.CreateInstanceConfiguration(ctx, req)
 	if err != nil {
 		conditions.MarkFalse(m.MachinePool, infrav2exp.LaunchTemplateReadyCondition, infrav2exp.LaunchTemplateCreateFailedReason, clusterv1.ConditionSeverityError, err.Error())
-		m.Info("failed to create instance configuration", "error", err)
+		m.Error(err, "failed to create instance configuration")
 		return err
 	}
 
-	m.Info("Created instance configuration", "id", ptr.ToString(resp.Id), "displayName", displayName, "hash", desiredHash)
+	m.Info("Created instance configuration", "id", ptr.ToString(resp.Id), "displayName", displayName)
 	m.SetInstanceConfigurationIdStatus(*resp.Id)
 	return nil
 }
