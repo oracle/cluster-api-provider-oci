@@ -96,16 +96,16 @@ var _ = Describe("Workload cluster creation", func() {
 		}
 
 		cleanInput := cleanupInput{
-			SpecName:          specName,
-			Cluster:           result.Cluster,
-			ClusterProxy:      bootstrapClusterProxy,
-			Namespace:         namespace,
+			SpecName:             specName,
+			Cluster:              result.Cluster,
+			ClusterProxy:         bootstrapClusterProxy,
+			Namespace:            namespace,
 			ClusterctlConfigPath: clusterctlConfigPath,
-			CancelWatches:     cancelWatches,
-			IntervalsGetter:   e2eConfig.GetIntervals,
-			SkipCleanup:       skipCleanup,
-			AdditionalCleanup: additionalCleanup,
-			ArtifactFolder:    artifactFolder,
+			CancelWatches:        cancelWatches,
+			IntervalsGetter:      e2eConfig.GetIntervals,
+			SkipCleanup:          skipCleanup,
+			AdditionalCleanup:    additionalCleanup,
+			ArtifactFolder:       artifactFolder,
 		}
 		dumpSpecResourcesAndCleanup(ctx, cleanInput)
 	})
@@ -156,7 +156,7 @@ var _ = Describe("Workload cluster creation", func() {
 		validateFailureDomainSpread(namespace.Name, clusterName)
 	})
 
-	It("Antrea as CNI - With 1 control-plane nodes and 1 worker nodes", func() {
+	It("Antrea as CNI - With 1 control-plane nodes and 1 worker nodes [DailyTests]", func() {
 		clusterName = getClusterName(clusterNamePrefix, "antrea")
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
@@ -178,7 +178,7 @@ var _ = Describe("Workload cluster creation", func() {
 		}, result)
 	})
 
-	It("Oracle Linux - With 1 control-plane nodes and 1 worker nodes", func() {
+	It("Oracle Linux - With 1 control-plane nodes and 1 worker nodes [DailyTests]", func() {
 		clusterName = getClusterName(clusterNamePrefix, "oracle-linux")
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
@@ -385,7 +385,7 @@ var _ = Describe("Workload cluster creation", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	It("Custom networking Seclist", func() {
+	It("Custom networking Seclist [DailyTests]", func() {
 		clusterName = getClusterName(clusterNamePrefix, "custom-seclist")
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
@@ -417,7 +417,7 @@ var _ = Describe("Workload cluster creation", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	It("Multiple nsg and subnet", func() {
+	It("Multiple nsg and subnet [DailyTests]", func() {
 		clusterName = getClusterName(clusterNamePrefix, "multi-subnet-nsg")
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
