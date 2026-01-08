@@ -556,6 +556,7 @@ func getMachinePoolInstanceVersions(
 				return true, nil
 			}
 
+			// Reset the workload client to force a fresh client on the next iteration when error occurs
 			if apierrors.IsUnauthorized(lastErr) ||
 				strings.Contains(strings.ToLower(lastErr.Error()), "unauthorized") {
 				workloadClient = nil
