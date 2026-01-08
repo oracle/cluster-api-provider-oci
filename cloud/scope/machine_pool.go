@@ -51,9 +51,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const OCIMachinePoolKind = "OCIMachinePool"
-
-const InstanceConfigurationHashAnnotation = "oci.oraclecloud.com/instance-configuration-hash"
+const (
+	OCIMachinePoolKind                  = "OCIMachinePool"
+	InstanceConfigurationHashAnnotation = "oci.oraclecloud.com/instance-configuration-hash"
+)
 
 // MachinePoolScopeParams defines the params need to create a new MachineScope
 type MachinePoolScopeParams struct {
