@@ -37,10 +37,9 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/workrequests"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	clusterv1beta2 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
@@ -52,6 +51,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
+
 
 func TestMachineReconciliation(t *testing.T) {
 	var (
@@ -89,25 +89,25 @@ func TestMachineReconciliation(t *testing.T) {
 		{
 			name:          "cluster does not exist",
 			errorExpected: false,
-			objects:       []client.Object{getSecret(), getOciMachine(), getMachine()},
+			objects:       []client.Object{getSecret(), getOciMachine(), getMachineV1Beta2()},
 			expectedEvent: "ClusterDoesNotExist",
 		},
 		{
 			name:             "paused cluster",
 			errorExpected:    false,
-			objects:          []client.Object{getSecret(), getOciMachine(), getMachine(), getPausedCluster()},
+			objects:          []client.Object{getSecret(), getOciMachine(), getMachineV1Beta2(), getPausedClusterV1Beta2()},
 			eventNotExpected: "ClusterDoesNotExist",
 		},
 		{
 			name:          "ocicluster does not exist",
 			errorExpected: false,
-			objects:       []client.Object{getSecret(), getOciMachine(), getMachine(), getCluster()},
+			objects:       []client.Object{getSecret(), getOciMachine(), getMachineV1Beta2(), getClusterV1Beta2()},
 			expectedEvent: "ClusterNotAvailable",
 		},
 		{
 			name:          "bootstrap data not available",
 			errorExpected: false,
-			objects:       []client.Object{getSecret(), getOciMachine(), getMachine(), getCluster(), getOCICluster()},
+			objects:       []client.Object{getSecret(), getOciMachine(), getMachineV1Beta2(), getClusterV1Beta2(), getOCICluster()},
 			expectedEvent: infrastructurev1beta2.WaitingForBootstrapDataReason,
 		},
 	}
@@ -867,7 +867,7 @@ func TestMachineReconciliationDelete(t *testing.T) {
 		now := metav1.NewTime(time.Now())
 		ociMachine.DeletionTimestamp = &now
 		controllerutil.AddFinalizer(ociMachine, infrastructurev1beta2.MachineFinalizer)
-		client := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(getSecret(), getMachine(), ociMachine, getCluster(), getOCICluster()).Build()
+		client := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(getSecret(), getMachineV1Beta2(), ociMachine, getClusterV1Beta2(), getOCICluster()).Build()
 		clientProvider, err := scope.MockNewClientProvider(scope.MockOCIClients{
 			ComputeClient: computeClient,
 		})
@@ -1227,6 +1227,38 @@ func getOciMachineWithNoOwner() *infrastructurev1beta2.OCIMachine {
 	return ociMachine
 }
 
+func getClusterV1Beta2() *clusterv1beta2.Cluster {
+	infraRef := clusterv1beta2.ContractVersionedObjectReference{
+		Name: "oci-cluster",
+		Kind: "OCICluster",
+	}
+	return &clusterv1beta2.Cluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-cluster",
+			Namespace: "test",
+		},
+		Spec: clusterv1beta2.ClusterSpec{
+			InfrastructureRef: infraRef,
+		},
+	}
+}
+
+func getPausedClusterV1Beta2() *clusterv1beta2.Cluster {
+	cluster := getClusterV1Beta2()
+	cluster.Spec.Paused = ptr.To(true)
+	return cluster
+}
+
+func getMachineV1Beta2() *clusterv1beta2.Machine {
+	machine := &clusterv1beta2.Machine{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test",
+			Namespace: "test",
+		},
+	}
+	return machine
+}
+
 func getCluster() *clusterv1.Cluster {
 	infraRef := corev1.ObjectReference{
 		Name: "oci-cluster",
@@ -1243,20 +1275,19 @@ func getCluster() *clusterv1.Cluster {
 	}
 }
 
-func getPausedCluster() *clusterv1.Cluster {
-	cluster := getCluster()
-	cluster.Spec.Paused = true
-	return cluster
-}
-
 func getMachine() *clusterv1.Machine {
-	machine := &clusterv1.Machine{
+	return &clusterv1.Machine{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
 			Namespace: "test",
 		},
 	}
-	return machine
+}
+
+func getPausedCluster() *clusterv1.Cluster {
+	cluster := getCluster()
+	cluster.Spec.Paused = true
+	return cluster
 }
 
 func getOCICluster() *infrastructurev1beta2.OCICluster {
