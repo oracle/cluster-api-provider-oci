@@ -27,8 +27,9 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes/scheme"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
@@ -44,6 +45,16 @@ var (
 	MockTestRegion = "us-austin-1"
 )
 
+
+func setupScheme() *runtime.Scheme {
+	s := runtime.NewScheme()
+	_ = clientgoscheme.AddToScheme(s)
+	_ = clusterv1.AddToScheme(s)
+	_ = clusterv1beta2.AddToScheme(s)
+	_ = infrastructurev1beta2.AddToScheme(s)
+	_ = corev1.AddToScheme(s)
+	return s
+}
 func TestOCIClusterReconciler_Reconcile(t *testing.T) {
 	var (
 		r        OCIClusterReconciler
@@ -86,10 +97,10 @@ func TestOCIClusterReconciler_Reconcile(t *testing.T) {
 			defer teardown(t, g)
 			setup(t, g)
 
-			client := fake.NewClientBuilder().WithObjects(tc.objects...).Build()
+			client := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(tc.objects...).Build()
 			r = OCIClusterReconciler{
 				Client:   client,
-				Scheme:   scheme.Scheme,
+				Scheme:   setupScheme(),
 				Recorder: recorder,
 				Region:   MockTestRegion,
 			}
@@ -129,10 +140,10 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 			Status:     infrastructurev1beta2.OCIClusterStatus{},
 		}
 		recorder = record.NewFakeRecorder(20)
-		client := fake.NewClientBuilder().WithObjects(getSecret()).Build()
+		client := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(getSecret()).Build()
 		r = OCIClusterReconciler{
 			Client:   client,
-			Scheme:   scheme.Scheme,
+			Scheme:   setupScheme(),
 			Recorder: recorder,
 			Region:   MockTestRegion,
 		}
@@ -427,10 +438,10 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 			Status:     infrastructurev1beta2.OCIClusterStatus{},
 		}
 		recorder = record.NewFakeRecorder(10)
-		client := fake.NewClientBuilder().WithObjects(getSecret()).Build()
+		client := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(getSecret()).Build()
 		r = OCIClusterReconciler{
 			Client:   client,
-			Scheme:   scheme.Scheme,
+			Scheme:   setupScheme(),
 			Recorder: recorder,
 		}
 		//cs.EXPECT().GetOCIClusterAccessor().Return(ociClusterAccessor)

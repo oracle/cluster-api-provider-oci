@@ -37,10 +37,12 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/workrequests"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes/scheme"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1beta2 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -51,6 +53,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+
+func setupScheme() *runtime.Scheme {
+	s := runtime.NewScheme()
+	_ = clientgoscheme.AddToScheme(s)
+	_ = clusterv1.AddToScheme(s)
+	_ = clusterv1beta2.AddToScheme(s)
+	_ = infrastructurev1beta2.AddToScheme(s)
+	_ = corev1.AddToScheme(s)
+	return s
+}
 func TestMachineReconciliation(t *testing.T) {
 	var (
 		r        OCIMachineReconciler
@@ -168,7 +180,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 	setup := func(t *testing.T, g *WithT) {
 		var err error
 		mockCtrl = gomock.NewController(t)
-		client := fake.NewClientBuilder().WithObjects(getSecret()).Build()
+		client := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(getSecret()).Build()
 		computeClient = mock_compute.NewMockComputeClient(mockCtrl)
 		nlbClient = mock_nlb.NewMockNetworkLoadBalancerClient(mockCtrl)
 		vcnClient = mock_vcn.NewMockClient(mockCtrl)
@@ -195,7 +207,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 		recorder = record.NewFakeRecorder(2)
 		r = OCIMachineReconciler{
 			Client:   client,
-			Scheme:   scheme.Scheme,
+			Scheme:   setupScheme(),
 			Recorder: recorder,
 		}
 		g.Expect(err).To(BeNil())
@@ -459,7 +471,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			expectedEvent:      "invalid lifecycle state TERMINATED",
 			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta2.InstanceProvisionFailedReason}},
 			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient, wrclient *mock_workrequests.MockClient) {
-				fakeClient := fake.NewClientBuilder().WithObjects(getSecret()).Build()
+				fakeClient := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(getSecret()).Build()
 				if machineScope.Machine.ObjectMeta.Annotations == nil {
 					machineScope.Machine.ObjectMeta.Annotations = make(map[string]string)
 				}
@@ -865,7 +877,7 @@ func TestMachineReconciliationDelete(t *testing.T) {
 		now := metav1.NewTime(time.Now())
 		ociMachine.DeletionTimestamp = &now
 		controllerutil.AddFinalizer(ociMachine, infrastructurev1beta2.MachineFinalizer)
-		client := fake.NewClientBuilder().WithObjects(getSecret(), getMachine(), ociMachine, getCluster(), getOCICluster()).Build()
+		client := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(getSecret(), getMachine(), ociMachine, getCluster(), getOCICluster()).Build()
 		clientProvider, err := scope.MockNewClientProvider(scope.MockOCIClients{
 			ComputeClient: computeClient,
 		})
@@ -937,7 +949,7 @@ func TestMachineReconciliationDeletionNormal(t *testing.T) {
 		machine := getMachine()
 		machine.Spec.Bootstrap.DataSecretName = common.String("bootstrap")
 		mockCtrl = gomock.NewController(t)
-		client := fake.NewClientBuilder().WithObjects(getSecret(), machine, ociMachine).Build()
+		client := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(getSecret(), machine, ociMachine).Build()
 		computeClient = mock_compute.NewMockComputeClient(mockCtrl)
 		nlbClient = mock_nlb.NewMockNetworkLoadBalancerClient(mockCtrl)
 		vcnClient = mock_vcn.NewMockClient(mockCtrl)
@@ -960,7 +972,7 @@ func TestMachineReconciliationDeletionNormal(t *testing.T) {
 		recorder = record.NewFakeRecorder(2)
 		r = OCIMachineReconciler{
 			Client:   client,
-			Scheme:   scheme.Scheme,
+			Scheme:   setupScheme(),
 			Recorder: recorder,
 		}
 		g.Expect(err).To(BeNil())
