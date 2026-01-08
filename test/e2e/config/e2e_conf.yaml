@@ -100,7 +100,7 @@ variables:
   IP_FAMILY: "IPv4"
   CLUSTER_TOPOLOGY: "true"
   NSG_CLUSTER_PATH: "${PWD}/test/e2e/data/infrastructure-oci/v1beta1/cluster-template-custom-networking-nsg/cluster.yaml"
-  SECLIST_CLUSTER_PATH: "${PWD}/test/e2e/data/infrastructure-oci/v1beta1/cluster-template-custom-networking-seclist/cluster.yaml"
+  SECLIST_CLUSTER_PATH: "${PWD}/test/e2e/data/infrastructure-oci/v1beta2/cluster-template-custom-networking-seclist/cluster.yaml"
   LOCAL_DRG_ID: "${LOCAL_DRG_ID}"
   PEER_DRG_ID: "${PEER_DRG_ID}"
   PEER_REGION_NAME: "${PEER_REGION_NAME}"
