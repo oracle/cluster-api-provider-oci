@@ -45,7 +45,6 @@ var (
 	MockTestRegion = "us-austin-1"
 )
 
-
 func setupScheme() *runtime.Scheme {
 	s := runtime.NewScheme()
 	_ = clientgoscheme.AddToScheme(s)

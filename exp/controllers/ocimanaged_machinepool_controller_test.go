@@ -31,10 +31,12 @@ import (
 	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes/scheme"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1beta2 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	expclusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	"sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -43,6 +45,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
+
 
 func TestManagedMachinePoolReconciliation(t *testing.T) {
 	var (
@@ -108,10 +111,10 @@ func TestManagedMachinePoolReconciliation(t *testing.T) {
 			defer teardown(t, g)
 			setup(t, g)
 
-			client := fake.NewClientBuilder().WithObjects(tc.objects...).Build()
+			client := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(tc.objects...).Build()
 			r = OCIManagedMachinePoolReconciler{
 				Client:         client,
-				Scheme:         scheme.Scheme,
+				Scheme:         setupScheme(),
 				Recorder:       recorder,
 				ClientProvider: clientProvider,
 				Region:         MockTestRegion,
@@ -157,7 +160,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 	setup := func(t *testing.T, g *WithT) {
 		var err error
 		mockCtrl = gomock.NewController(t)
-		k8sClient = interceptor.NewClient(fake.NewClientBuilder().WithObjects(getSecret()).Build(), interceptor.Funcs{})
+		k8sClient = interceptor.NewClient(fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(getSecret()).Build(), interceptor.Funcs{})
 		okeClient = mock_containerengine.NewMockClient(mockCtrl)
 		machinePool := getMachinePool()
 		ociManagedMachinePool = getOCIManagedMachinePool()
@@ -183,7 +186,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 		recorder = record.NewFakeRecorder(2)
 		r = OCIManagedMachinePoolReconciler{
 			Client:   k8sClient,
-			Scheme:   scheme.Scheme,
+			Scheme:   setupScheme(),
 			Recorder: recorder,
 		}
 		g.Expect(err).To(BeNil())
@@ -210,7 +213,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			conditionAssertion: []conditionAssertion{{infrav2exp.NodePoolReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityInfo, infrav2exp.NodePoolNotReadyReason}},
 			testSpecificSetup: func(t *test, machinePoolScope *scope.ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				t.createPoolMachines = make([]infrav2exp.OCIMachinePoolMachine, 0)
-				r.Client = interceptor.NewClient(fake.NewClientBuilder().WithObjects(getSecret()).Build(), interceptor.Funcs{
+				r.Client = interceptor.NewClient(fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(getSecret()).Build(), interceptor.Funcs{
 					Create: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
 						m := obj.(*infrav2exp.OCIMachinePoolMachine)
 						t.createPoolMachines = append(t.createPoolMachines, *m)
@@ -248,7 +251,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			conditionAssertion: []conditionAssertion{{infrav2exp.NodePoolReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityInfo, infrav2exp.NodePoolNotReadyReason}},
 			testSpecificSetup: func(t *test, machinePoolScope *scope.ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				t.createPoolMachines = make([]infrav2exp.OCIMachinePoolMachine, 0)
-				fakeClient := fake.NewClientBuilder().WithObjects(&infrav2exp.OCIMachinePoolMachine{
+				fakeClient := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(&infrav2exp.OCIMachinePoolMachine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "test",
@@ -564,7 +567,7 @@ func TestDeletionFunction(t *testing.T) {
 	setup := func(t *testing.T, g *WithT) {
 		var err error
 		mockCtrl = gomock.NewController(t)
-		client := fake.NewClientBuilder().WithObjects(getSecret()).Build()
+		client := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(getSecret()).Build()
 		okeClient = mock_containerengine.NewMockClient(mockCtrl)
 		machinePool := getMachinePool()
 		ociManagedMachinePool = getOCIManagedMachinePool()
@@ -590,7 +593,7 @@ func TestDeletionFunction(t *testing.T) {
 		recorder = record.NewFakeRecorder(2)
 		r = OCIManagedMachinePoolReconciler{
 			Client:   client,
-			Scheme:   scheme.Scheme,
+			Scheme:   setupScheme(),
 			Recorder: recorder,
 		}
 		g.Expect(err).To(BeNil())

@@ -33,13 +33,15 @@ import (
 	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes/scheme"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	expclusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1beta2 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -124,10 +126,10 @@ func TestControlPlaneReconciliation(t *testing.T) {
 			defer teardown(t, g)
 			setup(t, g)
 
-			client := fake.NewClientBuilder().WithObjects(tc.objects...).Build()
+			client := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(tc.objects...).Build()
 			r = OCIManagedClusterControlPlaneReconciler{
 				Client:         client,
-				Scheme:         scheme.Scheme,
+				Scheme:         setupScheme(),
 				Recorder:       recorder,
 				ClientProvider: clientProvider,
 				Region:         MockTestRegion,
@@ -189,7 +191,7 @@ func TestControlPlaneReconciliationFunction(t *testing.T) {
 	setup := func(t *testing.T, g *WithT) {
 		var err error
 		mockCtrl = gomock.NewController(t)
-		client := fake.NewClientBuilder().WithObjects(getSecret(), getBootstrapSecret()).Build()
+		client := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(getSecret(), getBootstrapSecret()).Build()
 		okeClient = mock_containerengine.NewMockClient(mockCtrl)
 		baseClient = mock_base.NewMockBaseClient(mockCtrl)
 		ociManagedControlPlane = getOCIManagedControlPlane()
@@ -209,7 +211,7 @@ func TestControlPlaneReconciliationFunction(t *testing.T) {
 		recorder = record.NewFakeRecorder(2)
 		r = OCIManagedClusterControlPlaneReconciler{
 			Client:   client,
-			Scheme:   scheme.Scheme,
+			Scheme:   setupScheme(),
 			Recorder: recorder,
 		}
 		g.Expect(err).To(BeNil())
@@ -489,7 +491,7 @@ func TestControlPlaneDeletionFunction(t *testing.T) {
 	setup := func(t *testing.T, g *WithT) {
 		var err error
 		mockCtrl = gomock.NewController(t)
-		client := fake.NewClientBuilder().WithObjects(getSecret()).Build()
+		client := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(getSecret()).Build()
 		okeClient = mock_containerengine.NewMockClient(mockCtrl)
 		baseClient = mock_base.NewMockBaseClient(mockCtrl)
 		ociManagedControlPlane = getOCIManagedControlPlane()
@@ -509,7 +511,7 @@ func TestControlPlaneDeletionFunction(t *testing.T) {
 		recorder = record.NewFakeRecorder(2)
 		r = OCIManagedClusterControlPlaneReconciler{
 			Client:   client,
-			Scheme:   scheme.Scheme,
+			Scheme:   setupScheme(),
 			Recorder: recorder,
 		}
 		g.Expect(err).To(BeNil())

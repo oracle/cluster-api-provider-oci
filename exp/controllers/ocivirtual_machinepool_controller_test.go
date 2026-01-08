@@ -31,10 +31,12 @@ import (
 	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes/scheme"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1beta2 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	expclusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	"sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -44,17 +46,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func TestVirtualMachinePoolReconciliation(t *testing.T) {
-	var (
-		r        OCIVirtualMachinePoolReconciler
-		mockCtrl *gomock.Controller
-		req      reconcile.Request
-		recorder *record.FakeRecorder
-	)
 
-	setup := func(t *testing.T, g *WithT) {
-		mockCtrl = gomock.NewController(t)
-		recorder = record.NewFakeRecorder(2)
 	}
 	teardown := func(t *testing.T, g *WithT) {
 		mockCtrl.Finish()
@@ -108,10 +100,10 @@ func TestVirtualMachinePoolReconciliation(t *testing.T) {
 			defer teardown(t, g)
 			setup(t, g)
 
-			client := fake.NewClientBuilder().WithObjects(tc.objects...).Build()
+			client := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(tc.objects...).Build()
 			r = OCIVirtualMachinePoolReconciler{
 				Client:         client,
-				Scheme:         scheme.Scheme,
+				Scheme:         setupScheme(),
 				Recorder:       recorder,
 				ClientProvider: clientProvider,
 				Region:         MockTestRegion,
@@ -156,7 +148,7 @@ func TestNormalReconciliationFunctionForVirtualMP(t *testing.T) {
 	setup := func(t *testing.T, g *WithT) {
 		var err error
 		mockCtrl = gomock.NewController(t)
-		client := fake.NewClientBuilder().WithObjects(getSecret()).Build()
+		client := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(getSecret()).Build()
 		okeClient = mock_containerengine.NewMockClient(mockCtrl)
 		machinePool := getMachinePool()
 		ociVirtualMachinePool = getOCIVirtualMachinePool()
@@ -182,7 +174,7 @@ func TestNormalReconciliationFunctionForVirtualMP(t *testing.T) {
 		recorder = record.NewFakeRecorder(2)
 		r = OCIVirtualMachinePoolReconciler{
 			Client:   client,
-			Scheme:   scheme.Scheme,
+			Scheme:   setupScheme(),
 			Recorder: recorder,
 		}
 		g.Expect(err).To(BeNil())
@@ -255,7 +247,7 @@ func TestNormalReconciliationFunctionForVirtualMP(t *testing.T) {
 			errorExpected:      false,
 			conditionAssertion: []conditionAssertion{{infrav2exp.VirtualNodePoolReadyCondition, corev1.ConditionTrue, "", ""}},
 			testSpecificSetup: func(t *test, machinePoolScope *scope.VirtualMachinePoolScope, okeClient *mock_containerengine.MockClient) {
-				r.Client = interceptor.NewClient(fake.NewClientBuilder().WithObjects(getSecret(), ociVirtualMachinePool).Build(), interceptor.Funcs{
+				r.Client = interceptor.NewClient(fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(getSecret(), ociVirtualMachinePool).Build(), interceptor.Funcs{
 					Create: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
 						m := obj.(*infrav2exp.OCIMachinePoolMachine)
 						t.createPoolMachines = append(t.createPoolMachines, *m)
@@ -328,7 +320,7 @@ func TestNormalReconciliationFunctionForVirtualMP(t *testing.T) {
 			errorExpected:      false,
 			conditionAssertion: []conditionAssertion{{infrav2exp.VirtualNodePoolReadyCondition, corev1.ConditionTrue, "", ""}},
 			testSpecificSetup: func(t *test, machinePoolScope *scope.VirtualMachinePoolScope, okeClient *mock_containerengine.MockClient) {
-				fakeClient := fake.NewClientBuilder().WithObjects(&infrav2exp.OCIMachinePoolMachine{
+				fakeClient := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(&infrav2exp.OCIMachinePoolMachine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "test",
@@ -566,7 +558,7 @@ func TestVMPDeletionFunction(t *testing.T) {
 	setup := func(t *testing.T, g *WithT) {
 		var err error
 		mockCtrl = gomock.NewController(t)
-		client := fake.NewClientBuilder().WithObjects(getSecret()).Build()
+		client := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(getSecret()).Build()
 		okeClient = mock_containerengine.NewMockClient(mockCtrl)
 		machinePool := getMachinePool()
 		ociVirtualMachinePool = getOCIVirtualMachinePool()
@@ -592,7 +584,7 @@ func TestVMPDeletionFunction(t *testing.T) {
 		recorder = record.NewFakeRecorder(2)
 		r = OCIVirtualMachinePoolReconciler{
 			Client:   client,
-			Scheme:   scheme.Scheme,
+			Scheme:   setupScheme(),
 			Recorder: recorder,
 		}
 		g.Expect(err).To(BeNil())

@@ -53,16 +53,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-
-func setupScheme() *runtime.Scheme {
-	s := runtime.NewScheme()
-	_ = clientgoscheme.AddToScheme(s)
-	_ = clusterv1.AddToScheme(s)
-	_ = clusterv1beta2.AddToScheme(s)
-	_ = infrastructurev1beta2.AddToScheme(s)
-	_ = corev1.AddToScheme(s)
-	return s
-}
 func TestMachineReconciliation(t *testing.T) {
 	var (
 		r        OCIMachineReconciler
@@ -136,7 +126,7 @@ func TestMachineReconciliation(t *testing.T) {
 			client := fake.NewClientBuilder().WithStatusSubresource(tc.objects...).WithObjects(tc.objects...).Build()
 			r = OCIMachineReconciler{
 				Client:         client,
-				Scheme:         scheme.Scheme,
+				Scheme:         setupScheme(),
 				Recorder:       recorder,
 				ClientProvider: clientProvider,
 				Region:         MockTestRegion,
@@ -887,7 +877,7 @@ func TestMachineReconciliationDelete(t *testing.T) {
 
 		r = OCIMachineReconciler{
 			Client:         client,
-			Scheme:         scheme.Scheme,
+			Scheme:         setupScheme(),
 			Recorder:       recorder,
 			ClientProvider: clientProvider,
 			Region:         scope.MockTestRegion,
