@@ -92,8 +92,8 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, nil
 	}
 	// Convert v1beta2 Machine to v1beta1 for scope compatibility
-	machineV1beta1 := &clusterv1.Machine{}
-	if err := machineV1beta1.ConvertFrom(machine); err != nil {
+	machineV1beta1, err := cloudutil.ConvertMachineV1Beta2ToV1Beta1(machine)
+	if err != nil {
 		return ctrl.Result{}, errors.Wrap(err, "failed to convert machine to v1beta1")
 	}
 
@@ -113,8 +113,8 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, nil
 	}
 	// Convert v1beta2 Cluster to v1beta1 for scope compatibility
-	clusterV1beta1 := &clusterv1.Cluster{}
-	if err := clusterV1beta1.ConvertFrom(cluster); err != nil {
+	clusterV1beta1, err := cloudutil.ConvertClusterV1Beta2ToV1Beta1(cluster)
+	if err != nil {
 		return ctrl.Result{}, errors.Wrap(err, "failed to convert cluster to v1beta1")
 	}
 

@@ -32,7 +32,6 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
-	clusterv1beta2 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -125,12 +124,12 @@ func TestOCIManagedClusterReconciler_reconcile(t *testing.T) {
 			Spec:       infrastructurev1beta2.OCIManagedClusterSpec{},
 			Status:     infrastructurev1beta2.OCIManagedClusterStatus{},
 		}
-		cluster = &clusterv1beta2.Cluster{
+		cluster = &clusterv1.Cluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test-cluster",
 				Namespace: "test",
 			},
-			Spec: clusterv1beta2.ClusterSpec{
+			Spec: clusterv1.ClusterSpec{
 				ControlPlaneRef: &corev1.ObjectReference{
 					Name: "test",
 				},

@@ -114,8 +114,8 @@ func (r *OCIMachinePoolReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, nil
 	}
 	// Convert v1beta2 Cluster to v1beta1 for scope compatibility
-	clusterV1beta1 := &clusterv1.Cluster{}
-	if err := clusterV1beta1.ConvertFrom(cluster); err != nil {
+	clusterV1beta1, err := cloudutil.ConvertClusterV1Beta2ToV1Beta1(cluster)
+	if err != nil {
 		return ctrl.Result{}, errors.Wrap(err, "failed to convert cluster to v1beta1")
 	}
 
