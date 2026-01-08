@@ -598,7 +598,6 @@ func (m *ManagedMachinePoolScope) getWorkerMachineSubnet(name *string) *string {
 
 // UpdateNodePool updates a node pool, if needed, based on updated spec
 func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.NodePool) (bool, error) {
-	m.Logger.Info("Reconciling NodePool", "nodePool", *pool.Name)
 
 	nodePoolSizeUpdateRequired := false
 	// if replicas is not managed by cluster autoscaler and if the number of nodes in the spec is not equal to number set in the node pool
@@ -613,19 +612,15 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 	nodeConfigDetails := &oke.UpdateNodePoolNodeConfigDetails{}
 
 	// Name
-	if m.OCIManagedMachinePool.GetName() != *pool.Name {
-		updateDetails.Name = common.String(m.getNodePoolName())
+	desiredName := m.getNodePoolName()
+	if pool.Name == nil || *pool.Name != desiredName {
+		updateDetails.Name = common.String(desiredName)
 		needsUpdate = true
 	}
 
-	cyclingEnabled := m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails != nil &&
-		m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.IsNodeCyclingEnabled != nil &&
-		*m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.IsNodeCyclingEnabled
-
+	// KubernetesVersion
 	versionChanged := m.OCIManagedMachinePool.Spec.Version != nil &&
 		(pool.KubernetesVersion == nil || *m.OCIManagedMachinePool.Spec.Version != *pool.KubernetesVersion)
-
-	// KubernetesVersion
 	if versionChanged {
 		updateDetails.KubernetesVersion = m.OCIManagedMachinePool.Spec.Version
 		needsUpdate = true
@@ -678,6 +673,10 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 	}
 
 	// NodeSourceViaImage
+	cyclingEnabled := m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails != nil &&
+		m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.IsNodeCyclingEnabled != nil &&
+		*m.OCIManagedMachinePool.Spec.NodePoolCyclingDetails.IsNodeCyclingEnabled
+
 	if m.OCIManagedMachinePool.Spec.NodeSourceViaImage != nil {
 		// If cycling is enabled and version changed, we must rotate image
 		if cyclingEnabled && versionChanged {
@@ -844,10 +843,17 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 	if m.OCIManagedMachinePool.Spec.NodePoolNodeConfig != nil {
 		// NSG names: compare specified values with actual (order-independent)
 		if len(m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.NsgNames) > 0 {
-			actualNsgNames := GetNsgNamesFromId(pool.NodeConfigDetails.NsgIds, m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List)
-			if !ociutil.StringSlicesEqualIgnoreOrder(m.OCIManagedMachinePool.Spec.NodePoolNodeConfig.NsgNames, actualNsgNames) {
+			if pool.NodeConfigDetails == nil {
 				nodeConfigDetails.NsgIds = m.getWorkerMachineNSGs()
 				needsUpdate = true
+			} else {
+				desiredIds := m.getWorkerMachineNSGs()
+				actualIds := pool.NodeConfigDetails.NsgIds
+
+				if !ociutil.StringSlicesEqualIgnoreOrder(desiredIds, actualIds) {
+					nodeConfigDetails.NsgIds = desiredIds
+					needsUpdate = true
+				}
 			}
 		}
 
@@ -885,7 +891,18 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 						break
 					} else {
 						// Check if the config matches (compare relevant fields)
+						m.Logger.Info(
+							"comparing placement configs",
+							"availabilityDomain", ociutil.DerefString(userConfig.AvailabilityDomain),
+							"userConfig", userConfig,
+							"actualConfig", actualConfig,
+						)
+
 						if !reflect.DeepEqual(userConfig, actualConfig) {
+							m.Logger.Info(
+								"placement config differs",
+								"availabilityDomain", ociutil.DerefString(userConfig.AvailabilityDomain),
+							)
 							needsPlacementUpdate = true
 							break
 						}
