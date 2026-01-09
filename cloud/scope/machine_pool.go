@@ -400,7 +400,7 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context) e
 
 	// If none exists, create new one
 	if instanceConfiguration == nil {
-		m.Info("No existing instance configuratio, creating a new one")
+		m.Info("No existing instance configuration, creating a new one")
 		if err := m.createInstanceConfiguration(ctx, desiredLaunch, freeFormTags, definedTags, desiredHash); err != nil {
 			return err
 		}
@@ -410,7 +410,7 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context) e
 		}
 		// cleanup - best effort, don't fail reconciliation if cleanup fails
 		if cleanupErr := m.CleanupInstanceConfiguration(ctx, nil); cleanupErr != nil {
-			m.Logger.Error(cleanupErr, "CleanupInstanceConfiguration failed - this is not critical and the instance configuration was successfully created")
+			m.Logger.Error(cleanupErr, "Cleanup InstanceConfiguration failed, instance config could be full.")
 		}
 		return nil
 	}
@@ -463,9 +463,9 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context) e
 		return err
 	}
 
-	// cleanup - best effort, don't fail reconciliation if cleanup fails
+	// cleanup
 	if cleanupErr := m.CleanupInstanceConfiguration(ctx, nil); cleanupErr != nil {
-		m.Logger.Error(cleanupErr, "CleanupInstanceConfiguration failed - this is not critical and the instance configuration was successfully updated")
+		m.Logger.Error(cleanupErr, "Cleanup InstanceConfiguration failed, instance config could be full.")
 	}
 	return nil
 }
