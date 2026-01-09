@@ -258,7 +258,7 @@ func TestReconciliationFunction(t *testing.T) {
 		testSpecificSetup       func(t *test, machinePoolScope *scope.MachinePoolScope, computeManagementClient *mock_computemanagement.MockClient)
 		expectedFailureMessages []string
 		createPoolMachines      []infrav2exp.OCIMachinePoolMachine
-		deletePoolMachines      []clusterv1.Machine
+		deletePoolMachines      []clusterv1beta2.Machine
 		validate                func(g *WithT, t *test)
 	}
 	tests := []test{
@@ -416,7 +416,7 @@ func TestReconciliationFunction(t *testing.T) {
 						ProviderID:   common.String("id-2"),
 						MachineType:  infrav2exp.Managed,
 					},
-				}, &clusterv1.Machine{
+				}, &clusterv1beta2.Machine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "test",
@@ -425,9 +425,9 @@ func TestReconciliationFunction(t *testing.T) {
 							clusterv1.MachinePoolNameLabel: "test",
 						},
 					},
-					Spec: clusterv1.MachineSpec{},
+					Spec: clusterv1beta2.MachineSpec{},
 				}).Build()
-				t.deletePoolMachines = make([]clusterv1.Machine, 0)
+				t.deletePoolMachines = make([]clusterv1beta2.Machine, 0)
 				r.Client = interceptor.NewClient(fakeClient, interceptor.Funcs{
 					Create: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
 						m := obj.(*infrav2exp.OCIMachinePoolMachine)
@@ -435,7 +435,7 @@ func TestReconciliationFunction(t *testing.T) {
 						return nil
 					},
 					Delete: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
-						m := obj.(*clusterv1.Machine)
+						m := obj.(*clusterv1beta2.Machine)
 						t.deletePoolMachines = append(t.deletePoolMachines, *m)
 						return nil
 					},

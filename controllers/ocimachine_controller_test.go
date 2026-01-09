@@ -52,7 +52,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-
 func TestMachineReconciliation(t *testing.T) {
 	var (
 		r        OCIMachineReconciler
