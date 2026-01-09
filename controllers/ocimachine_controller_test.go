@@ -912,8 +912,8 @@ func TestMachineReconciliationDelete(t *testing.T) {
 				}, nil)
 
 			_, err := r.Reconcile(context.Background(), req)
-			// delete throws reconcile error when scope is closed
-			g.Expect(err.Error()).To(ContainSubstring("not found"))
+			// instance terminated is a successful delete scenario
+			g.Expect(err).To(BeNil())
 		})
 	})
 }

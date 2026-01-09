@@ -38,7 +38,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-
 func TestOCIManagedClusterReconciler_Reconcile(t *testing.T) {
 	var (
 		r        OCIManagedClusterReconciler

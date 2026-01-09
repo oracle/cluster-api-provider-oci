@@ -43,7 +43,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-
 func TestManagedMachinePoolReconciliation(t *testing.T) {
 	var (
 		r        OCIManagedMachinePoolReconciler

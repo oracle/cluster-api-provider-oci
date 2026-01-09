@@ -45,7 +45,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-
 func TestControlPlaneReconciliation(t *testing.T) {
 	var (
 		r        OCIManagedClusterControlPlaneReconciler
@@ -96,19 +95,19 @@ func TestControlPlaneReconciliation(t *testing.T) {
 		{
 			name:             "paused cluster",
 			errorExpected:    false,
-			objects:          []client.Object{getSecret(), getOCIManagedControlPlane(), getPausedCluster()},
+			objects:          []client.Object{getSecret(), getOCIManagedControlPlane(), getPausedClusterV1Beta2()},
 			eventNotExpected: "ClusterDoesNotExist",
 		},
 		{
 			name:          "oci managedcluster does not exist",
 			errorExpected: false,
-			objects:       []client.Object{getSecret(), getOCIManagedControlPlane(), getCluster()},
+			objects:       []client.Object{getSecret(), getOCIManagedControlPlane(), getClusterV1Beta2()},
 			expectedEvent: "ClusterNotAvailable",
 		},
 		{
 			name:          "oci managedcluster is not ready",
 			errorExpected: false,
-			objects:       []client.Object{getSecret(), getOCIManagedControlPlane(), getCluster(), notReadyCluster},
+			objects:       []client.Object{getSecret(), getOCIManagedControlPlane(), getClusterV1Beta2(), notReadyCluster},
 			expectedEvent: "ClusterInfrastructureNotReady",
 		},
 	}
