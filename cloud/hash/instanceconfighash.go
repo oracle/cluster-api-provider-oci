@@ -29,7 +29,7 @@ import (
 
 // ComputeHash computes a SHA-256 hash of normalized launch details
 func ComputeHash(ld *core.InstanceConfigurationLaunchInstanceDetails) (string, error) {
-	normalized := NormalizeLaunchDetails(ld)
+	normalized := normalizeLaunchDetails(ld)
 
 	// sort map keys for consistent hashing
 	b, err := json.Marshal(normalized)
@@ -42,9 +42,9 @@ func ComputeHash(ld *core.InstanceConfigurationLaunchInstanceDetails) (string, e
 	return hex.EncodeToString(sum[:]), nil
 }
 
-// NormalizeLaunchDetails strips fields that should NOT trigger a new InstanceConfiguration
+// normalizeLaunchDetails strips fields that should NOT trigger a new InstanceConfiguration
 // we could decide which fields to ignore based on what OCI allows to be updated in an InstanceConfiguration
-func NormalizeLaunchDetails(in *core.InstanceConfigurationLaunchInstanceDetails) *core.InstanceConfigurationLaunchInstanceDetails {
+func normalizeLaunchDetails(in *core.InstanceConfigurationLaunchInstanceDetails) *core.InstanceConfigurationLaunchInstanceDetails {
 	if in == nil {
 		return nil
 	}
@@ -87,11 +87,6 @@ func NormalizeLaunchDetails(in *core.InstanceConfigurationLaunchInstanceDetails)
 		}
 	}
 
-	// Normalize LicensingConfigs
-	if len(output.LicensingConfigs) == 0 {
-		output.LicensingConfigs = nil
-	}
-
 	// Normalize ExtendedMetadata
 	if output.ExtendedMetadata != nil && len(output.ExtendedMetadata) == 0 {
 		output.ExtendedMetadata = nil
@@ -126,7 +121,7 @@ func hashChanged(hash1, hash2 string) bool {
 
 // launchDetailsEqual returns true if two launch details are equivalent after normalization
 func launchDetailsEqual(ld1, ld2 *core.InstanceConfigurationLaunchInstanceDetails) bool {
-	normalized1 := NormalizeLaunchDetails(ld1)
-	normalized2 := NormalizeLaunchDetails(ld2)
+	normalized1 := normalizeLaunchDetails(ld1)
+	normalized2 := normalizeLaunchDetails(ld2)
 	return reflect.DeepEqual(normalized1, normalized2)
 }

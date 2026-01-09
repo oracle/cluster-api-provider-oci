@@ -400,7 +400,6 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context) e
 
 	// Debug logs
 	m.Logger.V(1).Info("InstanceConfig desired hash", "hash", desiredHash)
-	m.Logger.V(1).Info("InstanceConfig desired normalized", "desired", hash.NormalizeLaunchDetails(desiredLaunch))
 
 	// If none exists, create new one
 	if instanceConfiguration == nil {
@@ -432,7 +431,6 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context) e
 	}
 
 	m.Logger.V(1).Info("InstanceConfig actual hash", "hash", actualHash)
-	m.Logger.V(1).Info("InstanceConfig actual normalized", "actual", hash.NormalizeLaunchDetails(actualLaunch))
 
 	// If annotation missing, backfill it from actual hash
 	storedHash := m.getInstanceConfigurationHashAnnotation()
