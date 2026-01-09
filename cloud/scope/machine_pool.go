@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/record"
 
 	"github.com/go-logr/logr"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
@@ -62,6 +63,7 @@ type MachinePoolScopeParams struct {
 	ComputeManagementClient computemanagement.Client
 	OCIClusterAccessor      OCIClusterAccessor
 	OCIMachinePool          *expinfra1.OCIMachinePool
+	Recorder                record.EventRecorder
 }
 
 type MachinePoolScope struct {
@@ -73,6 +75,7 @@ type MachinePoolScope struct {
 	ComputeManagementClient computemanagement.Client
 	OCIClusterAccesor       OCIClusterAccessor
 	OCIMachinePool          *expinfra1.OCIMachinePool
+	Recorder                record.EventRecorder
 }
 
 // NewMachinePoolScope creates a MachinePoolScope given the MachinePoolScopeParams
@@ -102,6 +105,7 @@ func NewMachinePoolScope(params MachinePoolScopeParams) (*MachinePoolScope, erro
 		patchHelper:             helper,
 		MachinePool:             params.MachinePool,
 		OCIMachinePool:          params.OCIMachinePool,
+		Recorder:                params.Recorder,
 	}, nil
 }
 
@@ -1000,6 +1004,9 @@ func (m *MachinePoolScope) CleanupInstanceConfiguration(ctx context.Context, ins
 		}
 		req := core.DeleteInstanceConfigurationRequest{InstanceConfigurationId: id}
 		if _, err := m.ComputeManagementClient.DeleteInstanceConfiguration(ctx, req); err != nil {
+			if m.Recorder != nil {
+				m.Recorder.Eventf(m.OCIMachinePool, corev1.EventTypeWarning, "CleanupInstanceConfigurationFailed", "Failed to delete old instance configuration %q: %v", ptr.ToString(id), err)
+			}
 			return errors.Wrap(err, "failed to delete expired instance configuration")
 		}
 		m.Info("Deleted old instance configuration", "id", ptr.ToString(id))
