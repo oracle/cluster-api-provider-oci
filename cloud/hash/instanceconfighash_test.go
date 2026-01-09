@@ -170,7 +170,7 @@ func TestNormalizeLaunchDetails_EmptyExtendedMetadata(t *testing.T) {
 
 func TestNormalizeMetadata_NilInput(t *testing.T) {
 	g := NewWithT(t)
-	result := NormalizeMetadata(nil)
+	result := normalizeMetadata(nil)
 	g.Expect(result).To(BeNil())
 }
 
@@ -182,7 +182,7 @@ func TestNormalizeMetadata_ExcludesUserData(t *testing.T) {
 		"other_key":           "other_value",
 	}
 
-	normalized := NormalizeMetadata(original)
+	normalized := normalizeMetadata(original)
 
 	expected := map[string]string{
 		"ssh_authorized_keys": "ssh-key",
@@ -197,7 +197,7 @@ func TestNormalizeMetadata_AllUserData(t *testing.T) {
 		"user_data": "sensitive-data",
 	}
 
-	normalized := NormalizeMetadata(original)
+	normalized := normalizeMetadata(original)
 
 	g.Expect(normalized).To(BeNil())
 }
@@ -209,31 +209,31 @@ func TestNormalizeMetadata_NoUserData(t *testing.T) {
 		"other_key":           "other_value",
 	}
 
-	normalized := NormalizeMetadata(original)
+	normalized := normalizeMetadata(original)
 
 	g.Expect(normalized).To(Equal(original))
 }
 
 func TestHashChanged_SameHashes(t *testing.T) {
 	g := NewWithT(t)
-	g.Expect(HashChanged("hash123", "hash123")).To(BeFalse())
+	g.Expect(hashChanged("hash123", "hash123")).To(BeFalse())
 }
 
 func TestHashChanged_DifferentHashes(t *testing.T) {
 	g := NewWithT(t)
-	g.Expect(HashChanged("hash123", "hash456")).To(BeTrue())
+	g.Expect(hashChanged("hash123", "hash456")).To(BeTrue())
 }
 
 func TestLaunchDetailsEqual_NilInputs(t *testing.T) {
 	g := NewWithT(t)
-	g.Expect(LaunchDetailsEqual(nil, nil)).To(BeTrue())
+	g.Expect(launchDetailsEqual(nil, nil)).To(BeTrue())
 }
 
 func TestLaunchDetailsEqual_OneNil(t *testing.T) {
 	g := NewWithT(t)
 	ld := &core.InstanceConfigurationLaunchInstanceDetails{Shape: common.String("VM.Standard2.1")}
-	g.Expect(LaunchDetailsEqual(ld, nil)).To(BeFalse())
-	g.Expect(LaunchDetailsEqual(nil, ld)).To(BeFalse())
+	g.Expect(launchDetailsEqual(ld, nil)).To(BeFalse())
+	g.Expect(launchDetailsEqual(nil, ld)).To(BeFalse())
 }
 
 func TestLaunchDetailsEqual_EquivalentAfterNormalization(t *testing.T) {
@@ -252,7 +252,7 @@ func TestLaunchDetailsEqual_EquivalentAfterNormalization(t *testing.T) {
 		Metadata:     map[string]string{"user_data": "other-data", "key": "value"}, // user_data ignored
 	}
 
-	g.Expect(LaunchDetailsEqual(ld1, ld2)).To(BeTrue())
+	g.Expect(launchDetailsEqual(ld1, ld2)).To(BeTrue())
 }
 
 func TestLaunchDetailsEqual_DifferentAfterNormalization(t *testing.T) {
@@ -267,7 +267,7 @@ func TestLaunchDetailsEqual_DifferentAfterNormalization(t *testing.T) {
 		Metadata: map[string]string{"key": "value2"}, // different value
 	}
 
-	g.Expect(LaunchDetailsEqual(ld1, ld2)).To(BeFalse())
+	g.Expect(launchDetailsEqual(ld1, ld2)).To(BeFalse())
 }
 
 func TestComputeHash_DifferentInputsProduceDifferentHashes(t *testing.T) {

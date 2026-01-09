@@ -56,7 +56,7 @@ func NormalizeLaunchDetails(in *core.InstanceConfigurationLaunchInstanceDetails)
 	output.SecurityAttributes = nil
 
 	// Normalize Metadata: drop user_data
-	output.Metadata = NormalizeMetadata(output.Metadata)
+	output.Metadata = normalizeMetadata(output.Metadata)
 
 	// Normalize CreateVnicDetails
 	if output.CreateVnicDetails != nil {
@@ -100,8 +100,8 @@ func NormalizeLaunchDetails(in *core.InstanceConfigurationLaunchInstanceDetails)
 	return &output
 }
 
-// NormalizeMetadata filters instance metadata to exclude fields like user_data
-func NormalizeMetadata(md map[string]string) map[string]string {
+// normalizeMetadata filters instance metadata to exclude fields like user_data
+func normalizeMetadata(md map[string]string) map[string]string {
 	if md == nil {
 		return nil
 	}
@@ -119,13 +119,13 @@ func NormalizeMetadata(md map[string]string) map[string]string {
 	return output
 }
 
-// HashChanged returns true if the two hashes are different, indicating a configuration change
-func HashChanged(hash1, hash2 string) bool {
+// hashChanged returns true if the two hashes are different, indicating a configuration change
+func hashChanged(hash1, hash2 string) bool {
 	return hash1 != hash2
 }
 
-// LaunchDetailsEqual returns true if two launch details are equivalent after normalization
-func LaunchDetailsEqual(ld1, ld2 *core.InstanceConfigurationLaunchInstanceDetails) bool {
+// launchDetailsEqual returns true if two launch details are equivalent after normalization
+func launchDetailsEqual(ld1, ld2 *core.InstanceConfigurationLaunchInstanceDetails) bool {
 	normalized1 := NormalizeLaunchDetails(ld1)
 	normalized2 := NormalizeLaunchDetails(ld2)
 	return reflect.DeepEqual(normalized1, normalized2)
