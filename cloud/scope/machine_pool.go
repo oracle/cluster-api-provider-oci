@@ -386,7 +386,7 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context) e
 
 	// Build desired launch details includes everything
 	freeFormTags := m.GetFreeFormTags()
-	definedTags := m.GetDefinedTags()
+	definedTags := m.getDefinedTags()
 
 	instanceConfigurationSpec := m.OCIMachinePool.Spec.InstanceConfiguration
 	desiredLaunch, err := m.getLaunchInstanceDetails(instanceConfigurationSpec, freeFormTags, definedTags)
@@ -474,8 +474,8 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context) e
 	return nil
 }
 
-// GetDefinedTags builds the defined tags map for InstanceConfiguration creation.
-func (m *MachinePoolScope) GetDefinedTags() map[string]map[string]interface{} {
+// getDefinedTags builds the defined tags map for InstanceConfiguration creation.
+func (m *MachinePoolScope) getDefinedTags() map[string]map[string]interface{} {
 	definedTags := make(map[string]map[string]interface{})
 	if m.OCIClusterAccesor.GetDefinedTags() == nil {
 		return definedTags
