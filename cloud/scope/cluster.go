@@ -309,7 +309,7 @@ func GetRegionCodeFromRegion(ctx context.Context, identityClient identityClient.
 		return "", errors.Wrap(err, "failed to list oci regions")
 	}
 	for _, regionCode := range regionCodes.Items {
-		if *regionCode.Name == region {
+		if regionCode.Name != nil && regionCode.Key != nil && *regionCode.Name == region {
 			return *regionCode.Key, nil
 		}
 	}

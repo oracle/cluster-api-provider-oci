@@ -139,7 +139,7 @@ func (s *ClusterScope) GetServiceGateway(ctx context.Context) (*core.ServiceGate
 		return nil, errors.Wrap(err, "failed to list Service gateways")
 	}
 	for _, sgw := range sgws.Items {
-		if *sgw.DisplayName == ServiceGatewayName {
+		if sgw.DisplayName != nil && *sgw.DisplayName == ServiceGatewayName {
 			if s.IsResourceCreatedByClusterAPI(sgw.FreeformTags) {
 				return &sgw, nil
 			}

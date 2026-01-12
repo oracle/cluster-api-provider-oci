@@ -92,7 +92,7 @@ func (s *ClusterScope) GetDRG(ctx context.Context) (*core.Drg, error) {
 			return nil, err
 		}
 		for _, drg := range response.Items {
-			if *drg.DisplayName == s.getDRG().Name {
+			if drg.DisplayName != nil && *drg.DisplayName == s.getDRG().Name {
 				if s.IsResourceCreatedByClusterAPI(drg.FreeformTags) {
 					return &drg, nil
 				} else {

@@ -262,7 +262,7 @@ func (s *ManagedControlPlaneScope) GetOrCreateControlPlane(ctx context.Context) 
 
 	var clusterId *string
 	for _, resource := range wrResponse.Resources {
-		if *resource.EntityType == "cluster" {
+		if resource.EntityType != nil && *resource.EntityType == "cluster" {
 			clusterId = resource.Identifier
 		}
 	}
@@ -1079,7 +1079,7 @@ func getActualAddonConfigurations(addonConfigurations []oke.AddonConfiguration) 
 
 func getAddon(addons []infrastructurev1beta2.Addon, name string) *infrastructurev1beta2.Addon {
 	for i, addon := range addons {
-		if *addon.Name == name {
+		if addon.Name != nil && *addon.Name == name {
 			return &addons[i]
 		}
 	}

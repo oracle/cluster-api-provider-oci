@@ -314,7 +314,7 @@ func (m *VirtualMachinePoolScope) CreateVirtualNodePool(ctx context.Context) (*o
 	resources := wrResponse.Resources
 	var nodePoolId *string
 	for _, resource := range resources {
-		if *resource.EntityType == "VirtualNodePool" {
+		if resource.EntityType != nil && *resource.EntityType == "VirtualNodePool" {
 			nodePoolId = resource.Identifier
 		}
 	}

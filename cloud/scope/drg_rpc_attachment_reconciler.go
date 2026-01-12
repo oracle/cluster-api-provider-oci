@@ -183,7 +183,7 @@ func (s *ClusterScope) lookupRPC(ctx context.Context, drgId *string, rpcId *stri
 				return nil, err
 			}
 			for _, rpc := range response.Items {
-				if *rpc.DisplayName == s.OCIClusterAccessor.GetName() {
+				if rpc.DisplayName != nil && *rpc.DisplayName == s.OCIClusterAccessor.GetName() {
 					if s.IsResourceCreatedByClusterAPI(rpc.FreeformTags) {
 						rpcs = append(rpcs, rpc)
 					} else {
