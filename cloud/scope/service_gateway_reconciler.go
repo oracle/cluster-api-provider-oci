@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
+	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/pkg/errors"
@@ -139,7 +140,7 @@ func (s *ClusterScope) GetServiceGateway(ctx context.Context) (*core.ServiceGate
 		return nil, errors.Wrap(err, "failed to list Service gateways")
 	}
 	for _, sgw := range sgws.Items {
-		if sgw.DisplayName != nil && *sgw.DisplayName == ServiceGatewayName {
+		if ptr.StringEquals(sgw.DisplayName, ServiceGatewayName) {
 			if s.IsResourceCreatedByClusterAPI(sgw.FreeformTags) {
 				return &sgw, nil
 			}

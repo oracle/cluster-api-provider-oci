@@ -118,7 +118,7 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		if err := r.Client.Get(ctx, ociClusterName, ociCluster); err != nil {
 			logger.Info("Cluster is not available yet")
 			r.Recorder.Eventf(ociMachine, corev1.EventTypeWarning, "ClusterNotAvailable", "Cluster is not available yet")
-			return ctrl.Result{}, nil
+			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 		}
 		clusterAccessor = scope.OCISelfManagedCluster{
 			OCICluster: ociCluster,
@@ -133,7 +133,7 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		if err := r.Client.Get(ctx, ociManagedClusterName, ociManagedCluster); err != nil {
 			logger.Info("Cluster is not available yet")
 			r.Recorder.Eventf(ociMachine, corev1.EventTypeWarning, "ClusterNotAvailable", "Cluster is not available yet")
-			return ctrl.Result{}, nil
+			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 		}
 		clusterAccessor = scope.OCIManagedCluster{
 			OCIManagedCluster: ociManagedCluster,
