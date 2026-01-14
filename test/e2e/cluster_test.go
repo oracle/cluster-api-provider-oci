@@ -178,7 +178,7 @@ var _ = Describe("Workload cluster creation", func() {
 		}, result)
 	})
 
-	It("Oracle Linux - With 1 control-plane nodes and 1 worker nodes", func() {
+	It("Oracle Linux - With 1 control-plane nodes and 1 worker nodes [DailyTests]", func() {
 		clusterName = getClusterName(clusterNamePrefix, "oracle-linux")
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
@@ -468,7 +468,7 @@ var _ = Describe("Workload cluster creation", func() {
 
 	When("Multi-RegionIdentifier workload cluster creation", func() {
 
-		It("Alternative region - With 1 control-plane nodes and 1 worker nodes", func() {
+		It("Alternative region - With 1 control-plane nodes and 1 worker nodes [DailyTests]", func() {
 			clusterName = getClusterName(clusterNamePrefix, "alternative-region")
 			clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 				ClusterProxy: bootstrapClusterProxy,
