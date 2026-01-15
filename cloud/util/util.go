@@ -340,7 +340,7 @@ func CreateClientProviderFromClusterIdentity(ctx context.Context, client client.
 }
 
 // CreateMachinePoolMachinesIfNotExists creates the machine pool machines if not exists. This method lists the existing
-// machines in the clusters and does a diff, and creates any missing machines based ont he spec provided.
+// machines in the clusters and does a diff, and creates any missing machines based on the spec provided.
 func CreateMachinePoolMachinesIfNotExists(ctx context.Context, params MachineParams) error {
 
 	machineList, err := getMachinepoolMachines(ctx, params.Client, params.MachinePool, params.Cluster, params.Namespace)
