@@ -13,6 +13,15 @@ func ToString(p *string) (v string) {
 	return *p
 }
 
+// StringEquals safely checks if a string pointer is non-nil and equals the given value.
+// Returns false if the pointer is nil.
+func StringEquals(p *string, value string) bool {
+	if p == nil {
+		return false
+	}
+	return *p == value
+}
+
 // ToBool returns bool value dereferenced if the passed
 // in pointer was not nil. Returns a bool zero value (false) if the
 // pointer was nil.
