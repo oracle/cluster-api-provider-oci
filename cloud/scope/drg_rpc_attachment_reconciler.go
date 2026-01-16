@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
+	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
 	vcn "github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
@@ -183,7 +184,7 @@ func (s *ClusterScope) lookupRPC(ctx context.Context, drgId *string, rpcId *stri
 				return nil, err
 			}
 			for _, rpc := range response.Items {
-				if *rpc.DisplayName == s.OCIClusterAccessor.GetName() {
+				if ptr.StringEquals(rpc.DisplayName, s.OCIClusterAccessor.GetName()) {
 					if s.IsResourceCreatedByClusterAPI(rpc.FreeformTags) {
 						rpcs = append(rpcs, rpc)
 					} else {
