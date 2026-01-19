@@ -196,3 +196,41 @@ func DerefString(s *string) string {
 
 	return ""
 }
+
+// stringSlicesEqualIgnoreOrder compares two string slices for equality regardless of order
+func StringSlicesEqualIgnoreOrder(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	if len(a) == 0 {
+		return true
+	}
+
+	// Handle nil cases
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+
+	// Create maps to count occurrences
+	countA := make(map[string]int)
+	countB := make(map[string]int)
+
+	for _, item := range a {
+		countA[item]++
+	}
+	for _, item := range b {
+		countB[item]++
+	}
+
+	// Compare counts
+	for key, count := range countA {
+		if countB[key] != count {
+			return false
+		}
+	}
+
+	return true
+}

@@ -1112,36 +1112,8 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Eq(oke.UpdateNodePoolRequest{
 					NodePoolId: common.String("node-pool-id"),
 					UpdateNodePoolDetails: oke.UpdateNodePoolDetails{
-						Name:              common.String("test"),
-						KubernetesVersion: common.String("v1.24.5"),
-						NodeMetadata:      map[string]string{"key1": "value1"},
-						InitialNodeLabels: []oke.KeyValue{{
-							Key:   common.String("key"),
-							Value: common.String("value"),
-						}},
-						NodeShape: common.String("test-shape"),
-						NodeShapeConfig: &oke.UpdateNodeShapeConfigDetails{
-							Ocpus:       common.Float32(2),
-							MemoryInGBs: common.Float32(16),
-						},
-						NodeSourceDetails: &oke.NodeSourceViaImageDetails{
-							ImageId: common.String("test-image-id"),
-						},
-						SshPublicKey: common.String("test-ssh-public-key"),
 						NodeConfigDetails: &oke.UpdateNodePoolNodeConfigDetails{
-							Size:                           common.Int(4),
-							NsgIds:                         []string{"nsg-id"},
-							KmsKeyId:                       common.String("kms-key-id"),
-							IsPvEncryptionInTransitEnabled: common.Bool(true),
-							NodePoolPodNetworkOptionDetails: oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
-								PodSubnetIds:   []string{"pod-subnet-id"},
-								MaxPodsPerNode: common.Int(31),
-								PodNsgIds:      []string{"pod-nsg-id"},
-							},
-						},
-						NodeEvictionNodePoolSettings: &oke.NodeEvictionNodePoolSettings{
-							EvictionGraceDuration:           common.String("PT30M"),
-							IsForceDeleteAfterGraceDuration: common.Bool(true),
+							Size: common.Int(4),
 						},
 					},
 				})).
@@ -1351,36 +1323,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Eq(oke.UpdateNodePoolRequest{
 					NodePoolId: common.String("node-pool-id"),
 					UpdateNodePoolDetails: oke.UpdateNodePoolDetails{
-						Name:              common.String("test"),
 						KubernetesVersion: common.String("v1.24.5"),
-						NodeMetadata:      map[string]string{"key1": "value1"},
-						InitialNodeLabels: []oke.KeyValue{{
-							Key:   common.String("key"),
-							Value: common.String("value"),
-						}},
-						NodeShape: common.String("test-shape"),
-						NodeShapeConfig: &oke.UpdateNodeShapeConfigDetails{
-							Ocpus:       common.Float32(2),
-							MemoryInGBs: common.Float32(16),
-						},
-						NodeSourceDetails: &oke.NodeSourceViaImageDetails{
-							ImageId: common.String("test-image-id"),
-						},
-						SshPublicKey: common.String("test-ssh-public-key"),
-						NodeConfigDetails: &oke.UpdateNodePoolNodeConfigDetails{
-							NsgIds:                         []string{"nsg-id"},
-							KmsKeyId:                       common.String("kms-key-id"),
-							IsPvEncryptionInTransitEnabled: common.Bool(true),
-							NodePoolPodNetworkOptionDetails: oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
-								PodSubnetIds:   []string{"pod-subnet-id"},
-								MaxPodsPerNode: common.Int(31),
-								PodNsgIds:      []string{"pod-nsg-id"},
-							},
-						},
-						NodeEvictionNodePoolSettings: &oke.NodeEvictionNodePoolSettings{
-							EvictionGraceDuration:           common.String("PT30M"),
-							IsForceDeleteAfterGraceDuration: common.Bool(true),
-						},
 					},
 				})).
 					Return(oke.UpdateNodePoolResponse{
@@ -1487,22 +1430,6 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Eq(oke.UpdateNodePoolRequest{
 					NodePoolId: common.String("node-pool-id"),
 					UpdateNodePoolDetails: oke.UpdateNodePoolDetails{
-						Name:              common.String("test"),
-						KubernetesVersion: common.String("v1.24.5"),
-						NodeMetadata:      map[string]string{"key1": "value1"},
-						InitialNodeLabels: []oke.KeyValue{{
-							Key:   common.String("key"),
-							Value: common.String("value"),
-						}},
-						NodeShape: common.String("test-shape"),
-						NodeShapeConfig: &oke.UpdateNodeShapeConfigDetails{
-							Ocpus:       common.Float32(2),
-							MemoryInGBs: common.Float32(16),
-						},
-						NodeSourceDetails: &oke.NodeSourceViaImageDetails{
-							ImageId: common.String("test-image-id"),
-						},
-						SshPublicKey: common.String("test-ssh-public-key"),
 						NodeConfigDetails: &oke.UpdateNodePoolNodeConfigDetails{
 							PlacementConfigs: []oke.NodePoolPlacementConfigDetails{
 								{
@@ -1512,18 +1439,6 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 									FaultDomains:          []string{"fd-1", "fd-2"},
 								},
 							},
-							NsgIds:                         []string{"nsg-id"},
-							KmsKeyId:                       common.String("kms-key-id"),
-							IsPvEncryptionInTransitEnabled: common.Bool(true),
-							NodePoolPodNetworkOptionDetails: oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
-								PodSubnetIds:   []string{"pod-subnet-id"},
-								MaxPodsPerNode: common.Int(31),
-								PodNsgIds:      []string{"pod-nsg-id"},
-							},
-						},
-						NodeEvictionNodePoolSettings: &oke.NodeEvictionNodePoolSettings{
-							EvictionGraceDuration:           common.String("PT30M"),
-							IsForceDeleteAfterGraceDuration: common.Bool(true),
 						},
 					},
 				})).
@@ -1536,7 +1451,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 				Id:                common.String("node-pool-id"),
 				Name:              common.String("test"),
 				CompartmentId:     common.String("test-compartment"),
-				KubernetesVersion: common.String("v1.23.5"),
+				KubernetesVersion: common.String("v1.24.5"),
 				NodeMetadata:      map[string]string{"key1": "value1"},
 				InitialNodeLabels: []oke.KeyValue{{
 					Key:   common.String("key"),
@@ -1570,7 +1485,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 					DefinedTags:                    definedTagsInterface,
 					NodePoolPodNetworkOptionDetails: oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
 						PodSubnetIds:   []string{"pod-subnet-id"},
-						MaxPodsPerNode: common.Int(15),
+						MaxPodsPerNode: common.Int(31),
 						PodNsgIds:      []string{"pod-nsg-id"},
 					},
 				},
@@ -1637,40 +1552,11 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Eq(oke.UpdateNodePoolRequest{
 					NodePoolId: common.String("node-pool-id"),
 					UpdateNodePoolDetails: oke.UpdateNodePoolDetails{
-						Name:              common.String("changed"),
-						KubernetesVersion: common.String("v1.24.5"),
-						NodeMetadata:      map[string]string{"key1": "value1"},
-						InitialNodeLabels: []oke.KeyValue{{
-							Key:   common.String("key"),
-							Value: common.String("value"),
-						}},
-						NodeShape: common.String("test-shape"),
-						NodeShapeConfig: &oke.UpdateNodeShapeConfigDetails{
-							Ocpus:       common.Float32(2),
-							MemoryInGBs: common.Float32(16),
-						},
-						NodeSourceDetails: &oke.NodeSourceViaImageDetails{
-							ImageId: common.String("test-image-id"),
-						},
+						Name: common.String("changed"),
 						NodePoolCyclingDetails: &oke.NodePoolCyclingDetails{
 							IsNodeCyclingEnabled: common.Bool(true),
 							MaximumSurge:         common.String("20%"),
 							MaximumUnavailable:   common.String("10%"),
-						},
-						SshPublicKey: common.String("test-ssh-public-key"),
-						NodeConfigDetails: &oke.UpdateNodePoolNodeConfigDetails{
-							NsgIds:                         []string{"nsg-id"},
-							KmsKeyId:                       common.String("kms-key-id"),
-							IsPvEncryptionInTransitEnabled: common.Bool(true),
-							NodePoolPodNetworkOptionDetails: oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
-								PodSubnetIds:   []string{"pod-subnet-id"},
-								MaxPodsPerNode: common.Int(31),
-								PodNsgIds:      []string{"pod-nsg-id"},
-							},
-						},
-						NodeEvictionNodePoolSettings: &oke.NodeEvictionNodePoolSettings{
-							EvictionGraceDuration:           common.String("PT30M"),
-							IsForceDeleteAfterGraceDuration: common.Bool(true),
 						},
 					},
 				})).
@@ -1683,7 +1569,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 				Id:                common.String("node-pool-id"),
 				Name:              common.String("test"),
 				CompartmentId:     common.String("test-compartment"),
-				KubernetesVersion: common.String("v1.23.5"),
+				KubernetesVersion: common.String("v1.24.5"),
 				NodeMetadata:      map[string]string{"key1": "value1"},
 				InitialNodeLabels: []oke.KeyValue{{
 					Key:   common.String("key"),
@@ -1717,13 +1603,451 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 					DefinedTags:                    definedTagsInterface,
 					NodePoolPodNetworkOptionDetails: oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
 						PodSubnetIds:   []string{"pod-subnet-id"},
-						MaxPodsPerNode: common.Int(15),
+						MaxPodsPerNode: common.Int(31),
 						PodNsgIds:      []string{"pod-nsg-id"},
 					},
 				},
 				NodeEvictionNodePoolSettings: &oke.NodeEvictionNodePoolSettings{
 					EvictionGraceDuration:           common.String("PT30M"),
 					IsForceDeleteAfterGraceDuration: common.Bool(true),
+				},
+			},
+		},
+		{
+			name:          "update due to change in node metadata",
+			errorExpected: false,
+			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
+				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
+				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
+					Version:      common.String("v1.24.5"),
+					ID:           common.String("node-pool-id"),
+					NodeMetadata: map[string]string{"key1": "updated", "key2": "value2"},
+					InitialNodeLabels: []infrav2exp.KeyValue{{
+						Key:   common.String("key"),
+						Value: common.String("value"),
+					}},
+					NodeShape: "test-shape",
+					NodeShapeConfig: &infrav2exp.NodeShapeConfig{
+						Ocpus:       common.String("2"),
+						MemoryInGBs: common.String("16"),
+					},
+					NodeSourceViaImage: &infrav2exp.NodeSourceViaImage{
+						ImageId: common.String("test-image-id"),
+					},
+					SshPublicKey: "test-ssh-public-key",
+					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
+						PlacementConfigs: []infrav2exp.PlacementConfig{
+							{
+								AvailabilityDomain:    common.String("test-ad"),
+								SubnetName:            common.String("worker-subnet"),
+								CapacityReservationId: common.String("cap-id"),
+								FaultDomains:          []string{"fd-1", "fd-2"},
+							},
+						},
+						NsgNames:                       []string{"worker-nsg"},
+						KmsKeyId:                       common.String("kms-key-id"),
+						IsPvEncryptionInTransitEnabled: common.Bool(true),
+						NodePoolPodNetworkOptionDetails: &infrav2exp.NodePoolPodNetworkOptionDetails{
+							CniType: infrastructurev1beta2.VCNNativeCNI,
+							VcnIpNativePodNetworkOptions: infrav2exp.VcnIpNativePodNetworkOptions{
+								SubnetNames:    []string{"pod-subnet"},
+								MaxPodsPerNode: common.Int(31),
+								NSGNames:       []string{"pod-nsg"},
+							},
+						},
+					},
+					NodeEvictionNodePoolSettings: &infrav2exp.NodeEvictionNodePoolSettings{
+						EvictionGraceDuration:           common.String("PT30M"),
+						IsForceDeleteAfterGraceDuration: common.Bool(true),
+					},
+				}
+				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Eq(oke.UpdateNodePoolRequest{
+					NodePoolId: common.String("node-pool-id"),
+					UpdateNodePoolDetails: oke.UpdateNodePoolDetails{
+						NodeMetadata: map[string]string{"key1": "updated", "key2": "value2"},
+					},
+				})).
+					Return(oke.UpdateNodePoolResponse{
+						OpcWorkRequestId: common.String("opc-work-request-id"),
+					}, nil)
+			},
+			nodePool: oke.NodePool{
+				ClusterId:         common.String("cluster-id"),
+				Id:                common.String("node-pool-id"),
+				Name:              common.String("test"),
+				CompartmentId:     common.String("test-compartment"),
+				KubernetesVersion: common.String("v1.24.5"),
+				NodeMetadata:      map[string]string{"key1": "value1"},
+				InitialNodeLabels: []oke.KeyValue{{
+					Key:   common.String("key"),
+					Value: common.String("value"),
+				}},
+				NodeShape: common.String("test-shape"),
+				NodeShapeConfig: &oke.NodeShapeConfig{
+					Ocpus:       common.Float32(2),
+					MemoryInGBs: common.Float32(16),
+				},
+				NodeSourceDetails: oke.NodeSourceViaImageDetails{
+					ImageId: common.String("test-image-id"),
+				},
+				FreeformTags: tags,
+				DefinedTags:  definedTagsInterface,
+				SshPublicKey: common.String("test-ssh-public-key"),
+				NodeConfigDetails: &oke.NodePoolNodeConfigDetails{
+					Size: common.Int(3),
+					PlacementConfigs: []oke.NodePoolPlacementConfigDetails{
+						{
+							AvailabilityDomain:    common.String("test-ad"),
+							SubnetId:              common.String("subnet-id"),
+							CapacityReservationId: common.String("cap-id"),
+							FaultDomains:          []string{"fd-1", "fd-2"},
+						},
+					},
+					NsgIds:                         []string{"nsg-id"},
+					KmsKeyId:                       common.String("kms-key-id"),
+					IsPvEncryptionInTransitEnabled: common.Bool(true),
+					FreeformTags:                   tags,
+					DefinedTags:                    definedTagsInterface,
+					NodePoolPodNetworkOptionDetails: oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
+						PodSubnetIds:   []string{"pod-subnet-id"},
+						MaxPodsPerNode: common.Int(31),
+						PodNsgIds:      []string{"pod-nsg-id"},
+					},
+				},
+				NodeEvictionNodePoolSettings: &oke.NodeEvictionNodePoolSettings{
+					EvictionGraceDuration:           common.String("PT30M"),
+					IsForceDeleteAfterGraceDuration: common.Bool(true),
+				},
+			},
+		},
+		{
+			name:          "update due to change in node pool cycling settings",
+			errorExpected: false,
+			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
+				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
+				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
+					Version:      common.String("v1.24.5"),
+					ID:           common.String("node-pool-id"),
+					NodeMetadata: map[string]string{"key1": "value1"},
+					InitialNodeLabels: []infrav2exp.KeyValue{{
+						Key:   common.String("key"),
+						Value: common.String("value"),
+					}},
+					NodeShape: "test-shape",
+					NodeShapeConfig: &infrav2exp.NodeShapeConfig{
+						Ocpus:       common.String("2"),
+						MemoryInGBs: common.String("16"),
+					},
+					NodeSourceViaImage: &infrav2exp.NodeSourceViaImage{
+						ImageId: common.String("test-image-id"),
+					},
+					NodePoolCyclingDetails: &infrav2exp.NodePoolCyclingDetails{
+						IsNodeCyclingEnabled: common.Bool(true),
+						MaximumSurge:         common.String("30%"),
+						MaximumUnavailable:   common.String("5%"),
+					},
+					SshPublicKey: "test-ssh-public-key",
+					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
+						PlacementConfigs: []infrav2exp.PlacementConfig{
+							{
+								AvailabilityDomain:    common.String("test-ad"),
+								SubnetName:            common.String("worker-subnet"),
+								CapacityReservationId: common.String("cap-id"),
+								FaultDomains:          []string{"fd-1", "fd-2"},
+							},
+						},
+						NsgNames:                       []string{"worker-nsg"},
+						KmsKeyId:                       common.String("kms-key-id"),
+						IsPvEncryptionInTransitEnabled: common.Bool(true),
+						NodePoolPodNetworkOptionDetails: &infrav2exp.NodePoolPodNetworkOptionDetails{
+							CniType: infrastructurev1beta2.VCNNativeCNI,
+							VcnIpNativePodNetworkOptions: infrav2exp.VcnIpNativePodNetworkOptions{
+								SubnetNames:    []string{"pod-subnet"},
+								MaxPodsPerNode: common.Int(31),
+								NSGNames:       []string{"pod-nsg"},
+							},
+						},
+					},
+					NodeEvictionNodePoolSettings: &infrav2exp.NodeEvictionNodePoolSettings{
+						EvictionGraceDuration:           common.String("PT30M"),
+						IsForceDeleteAfterGraceDuration: common.Bool(true),
+					},
+				}
+				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Eq(oke.UpdateNodePoolRequest{
+					NodePoolId: common.String("node-pool-id"),
+					UpdateNodePoolDetails: oke.UpdateNodePoolDetails{
+						NodePoolCyclingDetails: &oke.NodePoolCyclingDetails{
+							IsNodeCyclingEnabled: common.Bool(true),
+							MaximumSurge:         common.String("30%"),
+							MaximumUnavailable:   common.String("5%"),
+						},
+					},
+				})).
+					Return(oke.UpdateNodePoolResponse{
+						OpcWorkRequestId: common.String("opc-work-request-id"),
+					}, nil)
+			},
+			nodePool: oke.NodePool{
+				ClusterId:         common.String("cluster-id"),
+				Id:                common.String("node-pool-id"),
+				Name:              common.String("test"),
+				CompartmentId:     common.String("test-compartment"),
+				KubernetesVersion: common.String("v1.24.5"),
+				NodeMetadata:      map[string]string{"key1": "value1"},
+				InitialNodeLabels: []oke.KeyValue{{
+					Key:   common.String("key"),
+					Value: common.String("value"),
+				}},
+				NodeShape: common.String("test-shape"),
+				NodeShapeConfig: &oke.NodeShapeConfig{
+					Ocpus:       common.Float32(2),
+					MemoryInGBs: common.Float32(16),
+				},
+				NodeSourceDetails: oke.NodeSourceViaImageDetails{
+					ImageId: common.String("test-image-id"),
+				},
+				FreeformTags: tags,
+				DefinedTags:  definedTagsInterface,
+				SshPublicKey: common.String("test-ssh-public-key"),
+				NodeConfigDetails: &oke.NodePoolNodeConfigDetails{
+					Size: common.Int(3),
+					PlacementConfigs: []oke.NodePoolPlacementConfigDetails{
+						{
+							AvailabilityDomain:    common.String("test-ad"),
+							SubnetId:              common.String("subnet-id"),
+							CapacityReservationId: common.String("cap-id"),
+							FaultDomains:          []string{"fd-1", "fd-2"},
+						},
+					},
+					NsgIds:                         []string{"nsg-id"},
+					KmsKeyId:                       common.String("kms-key-id"),
+					IsPvEncryptionInTransitEnabled: common.Bool(true),
+					FreeformTags:                   tags,
+					DefinedTags:                    definedTagsInterface,
+					NodePoolPodNetworkOptionDetails: oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
+						PodSubnetIds:   []string{"pod-subnet-id"},
+						MaxPodsPerNode: common.Int(31),
+						PodNsgIds:      []string{"pod-nsg-id"},
+					},
+				},
+				NodeEvictionNodePoolSettings: &oke.NodeEvictionNodePoolSettings{
+					EvictionGraceDuration:           common.String("PT30M"),
+					IsForceDeleteAfterGraceDuration: common.Bool(true),
+				},
+				NodePoolCyclingDetails: &oke.NodePoolCyclingDetails{
+					IsNodeCyclingEnabled: common.Bool(false),
+					MaximumSurge:         common.String("10%"),
+					MaximumUnavailable:   common.String("10%"),
+				},
+			},
+		},
+		{
+			name:          "no update when NSGs match ignoring order",
+			errorExpected: false,
+			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
+				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
+				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
+					Version: common.String("v1.24.5"),
+					ID:      common.String("node-pool-id"),
+					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
+						NsgNames: []string{"worker-nsg", "pod-nsg"}, // order in spec
+					},
+				}
+
+				// Expect no update call
+				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Any()).Times(0)
+			},
+			nodePool: oke.NodePool{
+				ClusterId:         common.String("cluster-id"),
+				Id:                common.String("node-pool-id"),
+				Name:              common.String("test"),
+				CompartmentId:     common.String("test-compartment"),
+				KubernetesVersion: common.String("v1.24.5"),
+				NodeConfigDetails: &oke.NodePoolNodeConfigDetails{
+					Size:   common.Int(3),
+					NsgIds: []string{"pod-nsg-id", "nsg-id"}, // same set, different order
+				},
+				FreeformTags: tags, // ADD THIS
+				DefinedTags:  definedTagsInterface,
+			},
+		},
+		{
+			name:          "update when NSG set differs (order-independent compare)",
+			errorExpected: false,
+			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
+				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
+					Version: common.String("v1.24.5"),
+					ID:      common.String("node-pool-id"),
+					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
+						NsgNames: []string{"worker-nsg", "pod-nsg"},
+					},
+				}
+
+				okeClient.EXPECT().
+					UpdateNodePool(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(_ context.Context, req oke.UpdateNodePoolRequest) (oke.UpdateNodePoolResponse, error) {
+						if req.UpdateNodePoolDetails.NodeConfigDetails == nil {
+							t.Fatalf("expected NodeConfigDetails set")
+						}
+						got := req.UpdateNodePoolDetails.NodeConfigDetails.NsgIds
+						want := []string{"nsg-id", "pod-nsg-id"} // the desired set
+
+						if !ociutil.StringSlicesEqualIgnoreOrder(got, want) {
+							t.Fatalf("unexpected NsgIds: got=%v want=%v", got, want)
+						}
+
+						return oke.UpdateNodePoolResponse{
+							OpcWorkRequestId: common.String("opc-work-request-id"),
+						}, nil
+					})
+			},
+			nodePool: oke.NodePool{
+				ClusterId:         common.String("cluster-id"),
+				Id:                common.String("node-pool-id"),
+				Name:              common.String("test"),
+				CompartmentId:     common.String("test-compartment"),
+				KubernetesVersion: common.String("v1.24.5"),
+				FreeformTags:      tags,
+				DefinedTags:       definedTagsInterface,
+				NodeConfigDetails: &oke.NodePoolNodeConfigDetails{
+					Size:   common.Int(3),
+					NsgIds: []string{"nsg-id"}, // missing pod-nsg-id, so sets differ
+				},
+			},
+		},
+		{
+			name:          "placement config update suppresses cycling details in update request (based on passing placement test)",
+			errorExpected: false,
+			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
+				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
+				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
+					Version:      common.String("v1.24.5"),
+					ID:           common.String("node-pool-id"),
+					NodeMetadata: map[string]string{"key1": "value1"},
+					InitialNodeLabels: []infrav2exp.KeyValue{{
+						Key:   common.String("key"),
+						Value: common.String("value"),
+					}},
+					NodeShape: "test-shape",
+					NodeShapeConfig: &infrav2exp.NodeShapeConfig{
+						Ocpus:       common.String("2"),
+						MemoryInGBs: common.String("16"),
+					},
+					NodeSourceViaImage: &infrav2exp.NodeSourceViaImage{
+						ImageId: common.String("test-image-id"),
+					},
+
+					// ✅ ADD: spec cycling details (different from actual)
+					NodePoolCyclingDetails: &infrav2exp.NodePoolCyclingDetails{
+						IsNodeCyclingEnabled: common.Bool(true),
+						MaximumSurge:         common.String("30%"),
+						MaximumUnavailable:   common.String("5%"),
+					},
+
+					SshPublicKey: "test-ssh-public-key",
+					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
+						PlacementConfigs: []infrav2exp.PlacementConfig{
+							{
+								AvailabilityDomain:    common.String("test-ad"),
+								SubnetName:            common.String("worker-subnet"),
+								CapacityReservationId: common.String("cap-id"),
+								FaultDomains:          []string{"fd-1", "fd-2"},
+							},
+						},
+						NsgNames:                       []string{"worker-nsg"},
+						KmsKeyId:                       common.String("kms-key-id"),
+						IsPvEncryptionInTransitEnabled: common.Bool(true),
+						NodePoolPodNetworkOptionDetails: &infrav2exp.NodePoolPodNetworkOptionDetails{
+							CniType: infrastructurev1beta2.VCNNativeCNI,
+							VcnIpNativePodNetworkOptions: infrav2exp.VcnIpNativePodNetworkOptions{
+								SubnetNames:    []string{"pod-subnet"},
+								MaxPodsPerNode: common.Int(31),
+								NSGNames:       []string{"pod-nsg"},
+							},
+						},
+					},
+					NodeEvictionNodePoolSettings: &infrav2exp.NodeEvictionNodePoolSettings{
+						EvictionGraceDuration:           common.String("PT30M"),
+						IsForceDeleteAfterGraceDuration: common.Bool(true),
+					},
+				}
+
+				// ✅ EXPECTATION stays exactly the same as the passing placement-only patch:
+				// placement configs included, cycling omitted (suppressed)
+				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Eq(oke.UpdateNodePoolRequest{
+					NodePoolId: common.String("node-pool-id"),
+					UpdateNodePoolDetails: oke.UpdateNodePoolDetails{
+						NodeConfigDetails: &oke.UpdateNodePoolNodeConfigDetails{
+							PlacementConfigs: []oke.NodePoolPlacementConfigDetails{
+								{
+									AvailabilityDomain:    common.String("test-ad"),
+									CapacityReservationId: common.String("cap-id"),
+									SubnetId:              common.String("subnet-id"),
+									FaultDomains:          []string{"fd-1", "fd-2"},
+								},
+							},
+						},
+						// NodePoolCyclingDetails intentionally NOT set
+					},
+				})).
+					Return(oke.UpdateNodePoolResponse{
+						OpcWorkRequestId: common.String("opc-work-request-id"),
+					}, nil)
+			},
+
+			nodePool: oke.NodePool{
+				ClusterId:         common.String("cluster-id"),
+				Id:                common.String("node-pool-id"),
+				Name:              common.String("test"),
+				CompartmentId:     common.String("test-compartment"),
+				KubernetesVersion: common.String("v1.24.5"),
+				NodeMetadata:      map[string]string{"key1": "value1"},
+				InitialNodeLabels: []oke.KeyValue{{
+					Key:   common.String("key"),
+					Value: common.String("value"),
+				}},
+				NodeShape: common.String("test-shape"),
+				NodeShapeConfig: &oke.NodeShapeConfig{
+					Ocpus:       common.Float32(2),
+					MemoryInGBs: common.Float32(16),
+				},
+				NodeSourceDetails: oke.NodeSourceViaImageDetails{
+					ImageId: common.String("test-image-id"),
+				},
+				FreeformTags: tags,
+				DefinedTags:  definedTagsInterface,
+				SshPublicKey: common.String("test-ssh-public-key"),
+				NodeConfigDetails: &oke.NodePoolNodeConfigDetails{
+					Size: common.Int(3),
+					PlacementConfigs: []oke.NodePoolPlacementConfigDetails{
+						{
+							AvailabilityDomain:    common.String("test-ad"),
+							SubnetId:              common.String("subnet-id-to-be-changed"), // differs -> placement patch
+							CapacityReservationId: common.String("cap-id"),
+							FaultDomains:          []string{"fd-1", "fd-2"},
+						},
+					},
+					NsgIds:                         []string{"nsg-id"},
+					KmsKeyId:                       common.String("kms-key-id"),
+					IsPvEncryptionInTransitEnabled: common.Bool(true),
+					FreeformTags:                   tags,
+					DefinedTags:                    definedTagsInterface,
+					NodePoolPodNetworkOptionDetails: oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
+						PodSubnetIds:   []string{"pod-subnet-id"},
+						MaxPodsPerNode: common.Int(31),
+						PodNsgIds:      []string{"pod-nsg-id"},
+					},
+				},
+				NodeEvictionNodePoolSettings: &oke.NodeEvictionNodePoolSettings{
+					EvictionGraceDuration:           common.String("PT30M"),
+					IsForceDeleteAfterGraceDuration: common.Bool(true),
+				},
+
+				// ✅ ADD: actual cycling differs from spec (but must be suppressed due to placement update)
+				NodePoolCyclingDetails: &oke.NodePoolCyclingDetails{
+					IsNodeCyclingEnabled: common.Bool(false),
+					MaximumSurge:         common.String("10%"),
+					MaximumUnavailable:   common.String("10%"),
 				},
 			},
 		},
