@@ -18,9 +18,9 @@ package scope
 
 import (
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	"github.com/oracle/cluster-api-provider-oci/cloud/conditions"
 	corev1 "k8s.io/api/core/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	"sigs.k8s.io/cluster-api/util/conditions"
+	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 )
 
 // OCIManagedCluster is the ClusterAccessor implementation for managed clusters(OKE)
@@ -40,8 +40,8 @@ func (c OCIManagedCluster) GetClientOverrides() *infrastructurev1beta2.ClientOve
 	return c.OCIManagedCluster.Spec.ClientOverrides
 }
 
-func (c OCIManagedCluster) MarkConditionFalse(t clusterv1.ConditionType, reason string, severity clusterv1.ConditionSeverity, messageFormat string, messageArgs ...interface{}) {
-	conditions.MarkFalse(c.OCIManagedCluster, infrastructurev1beta2.ClusterReadyCondition, reason, severity, messageFormat, messageArgs...)
+func (c OCIManagedCluster) MarkConditionFalse(t clusterv1beta1.ConditionType, reason string, severity clusterv1beta1.ConditionSeverity, messageFormat string, messageArgs ...interface{}) {
+	conditions.MarkConditionFalse(c.OCIManagedCluster, infrastructurev1beta2.ClusterReadyCondition, reason, severity, messageFormat, messageArgs...)
 
 }
 
@@ -81,21 +81,21 @@ func (c OCIManagedCluster) GetNetworkSpec() *infrastructurev1beta2.NetworkSpec {
 	return &c.OCIManagedCluster.Spec.NetworkSpec
 }
 
-func (c OCIManagedCluster) SetControlPlaneEndpoint(endpoint clusterv1.APIEndpoint) {
+func (c OCIManagedCluster) SetControlPlaneEndpoint(endpoint clusterv1beta1.APIEndpoint) {
 	c.OCIManagedCluster.Spec.ControlPlaneEndpoint = endpoint
 }
 
-func (c OCIManagedCluster) GetControlPlaneEndpoint() clusterv1.APIEndpoint {
+func (c OCIManagedCluster) GetControlPlaneEndpoint() clusterv1beta1.APIEndpoint {
 	return c.OCIManagedCluster.Spec.ControlPlaneEndpoint
 }
 
-func (c OCIManagedCluster) GetFailureDomains() clusterv1.FailureDomains {
+func (c OCIManagedCluster) GetFailureDomains() clusterv1beta1.FailureDomains {
 	return c.OCIManagedCluster.Status.FailureDomains
 }
 
-func (c OCIManagedCluster) SetFailureDomain(id string, spec clusterv1.FailureDomainSpec) {
+func (c OCIManagedCluster) SetFailureDomain(id string, spec clusterv1beta1.FailureDomainSpec) {
 	if c.OCIManagedCluster.Status.FailureDomains == nil {
-		c.OCIManagedCluster.Status.FailureDomains = make(clusterv1.FailureDomains)
+		c.OCIManagedCluster.Status.FailureDomains = make(clusterv1beta1.FailureDomains)
 	}
 	c.OCIManagedCluster.Status.FailureDomains[id] = spec
 }

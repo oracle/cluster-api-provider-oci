@@ -23,7 +23,7 @@ import (
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -36,5 +36,5 @@ func TestMain(m *testing.M) {
 
 func setup() {
 	utilruntime.Must(infrastructurev1beta2.AddToScheme(scheme.Scheme))
-	utilruntime.Must(clusterv1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(clusterv1beta1.AddToScheme(scheme.Scheme))
 }

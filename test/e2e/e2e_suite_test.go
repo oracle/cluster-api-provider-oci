@@ -47,8 +47,7 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/identity"
 	"k8s.io/apimachinery/pkg/runtime"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	clusterv1exp "sigs.k8s.io/cluster-api/exp/api/v1beta1"
+	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	capi_e2e "sigs.k8s.io/cluster-api/test/e2e"
 	"sigs.k8s.io/cluster-api/test/framework"
 	"sigs.k8s.io/cluster-api/test/framework/bootstrap"
@@ -276,8 +275,7 @@ func initScheme() *runtime.Scheme {
 	Expect(infrastructurev1beta2.AddToScheme(scheme)).To(Succeed())
 	Expect(infrav1exp.AddToScheme(scheme)).To(Succeed())
 	Expect(infrav2exp.AddToScheme(scheme)).To(Succeed())
-	Expect(clusterv1.AddToScheme(scheme)).To(Succeed())
-	Expect(clusterv1exp.AddToScheme(scheme)).To(Succeed())
+	Expect(clusterv1beta1.AddToScheme(scheme)).To(Succeed())
 	return scheme
 }
 

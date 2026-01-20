@@ -140,12 +140,12 @@ manifests: $(CONTROLLER_GEN) ## Generate WebhookConfiguration, ClusterRole and C
 generate: $(CONTROLLER_GEN) $(CONVERSION_GEN) ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./api/..." paths="./exp/api/..."
 	$(CONVERSION_GEN) \
-		--extra-peer-dirs=sigs.k8s.io/cluster-api/api/v1beta1 \
+		--extra-peer-dirs=sigs.k8s.io/cluster-api/api/core/v1beta1 \
 		--output-file=zz_generated.conversion.go \
 		--go-header-file=hack/boilerplate.go.txt \
 		./api/v1beta1
 	$(CONVERSION_GEN) \
-		--extra-peer-dirs=sigs.k8s.io/cluster-api/api/v1beta1 \
+		--extra-peer-dirs=sigs.k8s.io/cluster-api/api/core/v1beta1 \
 		--extra-peer-dirs=github.com/oracle/cluster-api-provider-oci/api/v1beta1 \
 		--output-file=zz_generated.conversion.go \
 		--go-header-file=hack/boilerplate.go.txt \
@@ -378,7 +378,7 @@ $(CONTROLLER_GEN): ## Download controller-gen locally if necessary.
 	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) sigs.k8s.io/controller-tools/cmd/controller-gen $(CONTROLLER_GEN_BIN) v0.16.1
 
 $(CONVERSION_GEN): ## Download controller-gen locally if necessary.
-	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) k8s.io/code-generator/cmd/conversion-gen $(CONVERSION_GEN_BIN) v0.31.0
+	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) k8s.io/code-generator/cmd/conversion-gen $(CONVERSION_GEN_BIN) v0.33.0
 
 $(KUSTOMIZE): ## Download kustomize locally if necessary.
 	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) sigs.k8s.io/kustomize/kustomize/v4 $(KUSTOMIZE_BIN) v4.5.2

@@ -42,7 +42,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/klog/v2/klogr"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	"sigs.k8s.io/cluster-api/util/kubeconfig"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/cluster-api/util/secret"
@@ -59,7 +59,7 @@ const (
 type ManagedControlPlaneScopeParams struct {
 	Logger                 *logr.Logger
 	Client                 client.Client
-	Cluster                *clusterv1.Cluster
+	Cluster                *clusterv1beta1.Cluster
 	ContainerEngineClient  containerengine.Client
 	BaseClient             baseclient.BaseClient
 	ClientProvider         *ClientProvider
@@ -71,7 +71,7 @@ type ManagedControlPlaneScopeParams struct {
 type ManagedControlPlaneScope struct {
 	*logr.Logger
 	client                 client.Client
-	Cluster                *clusterv1.Cluster
+	Cluster                *clusterv1beta1.Cluster
 	ContainerEngineClient  containerengine.Client
 	BaseClient             baseclient.BaseClient
 	ClientProvider         *ClientProvider
@@ -595,7 +595,7 @@ func (s *ManagedControlPlaneScope) ReconcileBootstrapSecret(ctx context.Context,
 				Name:      secretName,
 				Namespace: cluster.Namespace,
 				Labels: map[string]string{
-					clusterv1.ClusterNameLabel: cluster.Name,
+					clusterv1beta1.ClusterNameLabel: cluster.Name,
 				},
 				OwnerReferences: []metav1.OwnerReference{
 					controllerOwnerRef,
@@ -785,7 +785,7 @@ func (s *ManagedControlPlaneScope) compareSpecs(spec1, spec2 *infrastructurev1be
 // setControlPlaneSpecDefaults sets the defaults in the spec as returned by OKE API. We need to set defaults here rather than webhook as well as
 // there is a chance user will edit the cluster
 func setControlPlaneSpecDefaults(spec *infrastructurev1beta2.OCIManagedControlPlaneSpec) {
-	spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{}
+	spec.ControlPlaneEndpoint = clusterv1beta1.APIEndpoint{}
 	if spec.ClusterType == "" {
 		spec.ClusterType = infrastructurev1beta2.BasicClusterType
 	}

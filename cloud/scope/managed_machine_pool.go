@@ -37,8 +37,7 @@ import (
 	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
 	"github.com/pkg/errors"
 	"k8s.io/klog/v2/klogr"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	expclusterv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
+	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -51,8 +50,8 @@ const (
 // ManagedMachinePoolScopeParams defines the params need to create a new ManagedMachinePoolScope
 type ManagedMachinePoolScopeParams struct {
 	Logger                  *logr.Logger
-	Cluster                 *clusterv1.Cluster
-	MachinePool             *expclusterv1.MachinePool
+	Cluster                 *clusterv1beta1.Cluster
+	MachinePool             *clusterv1beta1.MachinePool
 	Client                  client.Client
 	ComputeManagementClient computemanagement.Client
 	OCIManagedCluster       *infrastructurev1beta2.OCIManagedCluster
@@ -65,8 +64,8 @@ type ManagedMachinePoolScope struct {
 	*logr.Logger
 	Client                  client.Client
 	patchHelper             *patch.Helper
-	Cluster                 *clusterv1.Cluster
-	MachinePool             *expclusterv1.MachinePool
+	Cluster                 *clusterv1beta1.Cluster
+	MachinePool             *clusterv1beta1.MachinePool
 	ComputeManagementClient computemanagement.Client
 	OCIManagedCluster       *infrastructurev1beta2.OCIManagedCluster
 	OCIManagedMachinePool   *expinfra1.OCIManagedMachinePool

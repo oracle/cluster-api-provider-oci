@@ -23,6 +23,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	"github.com/oracle/cluster-api-provider-oci/cloud/conditions"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/containerengine/mock_containerengine"
@@ -34,9 +35,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	expclusterv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
-	"sigs.k8s.io/cluster-api/util/conditions"
+	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -199,14 +198,14 @@ func TestNormalReconciliationFunctionForVirtualMP(t *testing.T) {
 		testSpecificSetup       func(t *test, machinePoolScope *scope.VirtualMachinePoolScope, okeClient *mock_containerengine.MockClient)
 		expectedFailureMessages []string
 		createPoolMachines      []infrav2exp.OCIMachinePoolMachine
-		deletePoolMachines      []clusterv1.Machine
+		deletePoolMachines      []clusterv1beta1.Machine
 		validate                func(g *WithT, t *test)
 	}
 	tests := []test{
 		{
 			name:               "virtual node pool in creating state",
 			errorExpected:      false,
-			conditionAssertion: []conditionAssertion{{infrav2exp.VirtualNodePoolReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityInfo, infrav2exp.VirtualNodePoolNotReadyReason}},
+			conditionAssertion: []conditionAssertion{{infrav2exp.VirtualNodePoolReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityInfo, infrav2exp.VirtualNodePoolNotReadyReason}},
 			testSpecificSetup: func(t *test, machinePoolScope *scope.VirtualMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				okeClient.EXPECT().GetVirtualNodePool(gomock.Any(), gomock.Eq(oke.GetVirtualNodePoolRequest{
 					VirtualNodePoolId: common.String("test"),
@@ -224,7 +223,7 @@ func TestNormalReconciliationFunctionForVirtualMP(t *testing.T) {
 			name:               "virtual node pool create",
 			errorExpected:      false,
 			expectedEvent:      "Created new Virtual Node Pool: test",
-			conditionAssertion: []conditionAssertion{{infrav2exp.VirtualNodePoolReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityInfo, infrav2exp.VirtualNodePoolNotReadyReason}},
+			conditionAssertion: []conditionAssertion{{infrav2exp.VirtualNodePoolReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityInfo, infrav2exp.VirtualNodePoolNotReadyReason}},
 			testSpecificSetup: func(t *test, machinePoolScope *scope.VirtualMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				ociVirtualMachinePool.Spec.ID = nil
 				okeClient.EXPECT().ListVirtualNodePools(gomock.Any(), gomock.Any()).
@@ -333,14 +332,14 @@ func TestNormalReconciliationFunctionForVirtualMP(t *testing.T) {
 						Name:      "test",
 						Namespace: "test",
 						Labels: map[string]string{
-							clusterv1.ClusterNameLabel:     "test-cluster",
-							clusterv1.MachinePoolNameLabel: "test",
+							clusterv1beta1.ClusterNameLabel:     "test-cluster",
+							clusterv1beta1.MachinePoolNameLabel: "test",
 						},
 						OwnerReferences: []metav1.OwnerReference{
 							{
 								Kind:       "Machine",
 								Name:       "test",
-								APIVersion: clusterv1.GroupVersion.String(),
+								APIVersion: clusterv1beta1.GroupVersion.String(),
 							},
 						},
 					},
@@ -350,16 +349,16 @@ func TestNormalReconciliationFunctionForVirtualMP(t *testing.T) {
 						ProviderID:   common.String("id-2"),
 						MachineType:  infrav2exp.Managed,
 					},
-				}, &clusterv1.Machine{
+				}, &clusterv1beta1.Machine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "test",
 						Labels: map[string]string{
-							clusterv1.ClusterNameLabel:     "oci-cluster",
-							clusterv1.MachinePoolNameLabel: "test",
+							clusterv1beta1.ClusterNameLabel:     "oci-cluster",
+							clusterv1beta1.MachinePoolNameLabel: "test",
 						},
 					},
-					Spec: clusterv1.MachineSpec{},
+					Spec: clusterv1beta1.MachineSpec{},
 				}).Build()
 				r.Client = interceptor.NewClient(fakeClient, interceptor.Funcs{
 					Create: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
@@ -368,7 +367,7 @@ func TestNormalReconciliationFunctionForVirtualMP(t *testing.T) {
 						return nil
 					},
 					Delete: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
-						m := obj.(*clusterv1.Machine)
+						m := obj.(*clusterv1beta1.Machine)
 						t.deletePoolMachines = append(t.deletePoolMachines, *m)
 						return nil
 					},
@@ -488,7 +487,7 @@ func TestNormalReconciliationFunctionForVirtualMP(t *testing.T) {
 			name:                    "virtual node pool in error state",
 			errorExpected:           true,
 			expectedFailureMessages: []string{"Virtual Node Pool status FAILED is unexpected"},
-			conditionAssertion:      []conditionAssertion{{infrav2exp.VirtualNodePoolReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrav2exp.VirtualNodePoolProvisionFailedReason}},
+			conditionAssertion:      []conditionAssertion{{infrav2exp.VirtualNodePoolReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityError, infrav2exp.VirtualNodePoolProvisionFailedReason}},
 			testSpecificSetup: func(t *test, machinePoolScope *scope.VirtualMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				okeClient.EXPECT().GetVirtualNodePool(gomock.Any(), gomock.Eq(oke.GetVirtualNodePoolRequest{
 					VirtualNodePoolId: common.String("test"),
@@ -612,7 +611,7 @@ func TestVMPDeletionFunction(t *testing.T) {
 		{
 			name:               "virtual node pool to be deleted",
 			errorExpected:      false,
-			conditionAssertion: []conditionAssertion{{infrav2exp.VirtualNodePoolReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityWarning, infrav2exp.VirtualNodePoolDeletionInProgress}},
+			conditionAssertion: []conditionAssertion{{infrav2exp.VirtualNodePoolReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityWarning, infrav2exp.VirtualNodePoolDeletionInProgress}},
 			testSpecificSetup: func(machinePoolScope *scope.VirtualMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				okeClient.EXPECT().GetVirtualNodePool(gomock.Any(), gomock.Eq(oke.GetVirtualNodePoolRequest{
 					VirtualNodePoolId: common.String("test"),
@@ -655,7 +654,7 @@ func TestVMPDeletionFunction(t *testing.T) {
 		{
 			name:               "virtual node pool deleting",
 			errorExpected:      false,
-			conditionAssertion: []conditionAssertion{{infrav2exp.VirtualNodePoolReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityWarning, infrav2exp.VirtualNodePoolDeletionInProgress}},
+			conditionAssertion: []conditionAssertion{{infrav2exp.VirtualNodePoolReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityWarning, infrav2exp.VirtualNodePoolDeletionInProgress}},
 			testSpecificSetup: func(machinePoolScope *scope.VirtualMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				okeClient.EXPECT().GetVirtualNodePool(gomock.Any(), gomock.Eq(oke.GetVirtualNodePoolRequest{
 					VirtualNodePoolId: common.String("test"),
@@ -672,7 +671,7 @@ func TestVMPDeletionFunction(t *testing.T) {
 		{
 			name:               "virtual node pool deleted",
 			errorExpected:      false,
-			conditionAssertion: []conditionAssertion{{infrav2exp.VirtualNodePoolReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityWarning, infrav2exp.VirtualNodePoolDeletedReason}},
+			conditionAssertion: []conditionAssertion{{infrav2exp.VirtualNodePoolReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityWarning, infrav2exp.VirtualNodePoolDeletedReason}},
 			testSpecificSetup: func(machinePoolScope *scope.VirtualMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				okeClient.EXPECT().GetVirtualNodePool(gomock.Any(), gomock.Eq(oke.GetVirtualNodePoolRequest{
 					VirtualNodePoolId: common.String("test"),
@@ -727,18 +726,18 @@ func getOCIVirtualMachinePool() *infrav2exp.OCIVirtualMachinePool {
 			Namespace: "test",
 			UID:       "uid",
 			Labels: map[string]string{
-				clusterv1.ClusterNameLabel: "test-cluster",
+				clusterv1beta1.ClusterNameLabel: "test-cluster",
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					Name:       "test-cluster",
 					Kind:       "Cluster",
-					APIVersion: clusterv1.GroupVersion.String(),
+					APIVersion: clusterv1beta1.GroupVersion.String(),
 				},
 				{
 					Name:       "test",
 					Kind:       "MachinePool",
-					APIVersion: expclusterv1.GroupVersion.String(),
+					APIVersion: clusterv1beta1.GroupVersion.String(),
 				},
 			},
 		},
@@ -788,7 +787,7 @@ func getOCIManagedClusterWithOwner() *infrastructurev1beta2.OCIManagedCluster {
 		{
 			Name:       "test-cluster",
 			Kind:       "Cluster",
-			APIVersion: clusterv1.GroupVersion.String(),
+			APIVersion: clusterv1beta1.GroupVersion.String(),
 		},
 	}
 	return ociCluster
@@ -802,7 +801,7 @@ func getOCIManagedClusterWithNoOwner() *infrastructurev1beta2.OCIManagedCluster 
 		},
 		Spec: infrastructurev1beta2.OCIManagedClusterSpec{
 			CompartmentId: "test",
-			ControlPlaneEndpoint: clusterv1.APIEndpoint{
+			ControlPlaneEndpoint: clusterv1beta1.APIEndpoint{
 				Port: 6443,
 			},
 			OCIResourceIdentifier: "resource_uid",

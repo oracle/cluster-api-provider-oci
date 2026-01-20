@@ -19,7 +19,7 @@ package v1beta2
 import (
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 )
 
 // +kubebuilder:object:generate=true
@@ -199,7 +199,7 @@ type OCIMachinePoolStatus struct {
 
 	// Conditions defines current service state of the OCIMachinePool.
 	// +optional
-	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
+	Conditions clusterv1beta1.Conditions `json:"conditions,omitempty"`
 
 	FailureReason *string `json:"failureReason,omitempty"`
 
@@ -233,12 +233,12 @@ type OCIMachinePoolList struct {
 }
 
 // GetConditions returns the list of conditions for an OCIMachine API object.
-func (m *OCIMachinePool) GetConditions() clusterv1.Conditions {
+func (m *OCIMachinePool) GetConditions() clusterv1beta1.Conditions {
 	return m.Status.Conditions
 }
 
 // SetConditions will set the given conditions on an OCIMachine object.
-func (m *OCIMachinePool) SetConditions(conditions clusterv1.Conditions) {
+func (m *OCIMachinePool) SetConditions(conditions clusterv1beta1.Conditions) {
 	m.Status.Conditions = conditions
 }
 

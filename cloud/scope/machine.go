@@ -27,6 +27,7 @@ import (
 
 	"github.com/go-logr/logr"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	"github.com/oracle/cluster-api-provider-oci/cloud/conditions"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/compute"
@@ -43,9 +44,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2/klogr"
 	"k8s.io/utils/pointer"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	capiUtil "sigs.k8s.io/cluster-api/util"
-	"sigs.k8s.io/cluster-api/util/conditions"
+	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -55,8 +54,8 @@ const OCIMachineKind = "OCIMachine"
 // MachineScopeParams defines the params need to create a new MachineScope
 type MachineScopeParams struct {
 	Logger                    *logr.Logger
-	Cluster                   *clusterv1.Cluster
-	Machine                   *clusterv1.Machine
+	Cluster                   *clusterv1beta1.Cluster
+	Machine                   *clusterv1beta1.Machine
 	Client                    client.Client
 	ComputeClient             compute.ComputeClient
 	OCIClusterAccessor        OCIClusterAccessor
@@ -71,8 +70,8 @@ type MachineScope struct {
 	*logr.Logger
 	Client                    client.Client
 	patchHelper               *patch.Helper
-	Cluster                   *clusterv1.Cluster
-	Machine                   *clusterv1.Machine
+	Cluster                   *clusterv1beta1.Cluster
+	Machine                   *clusterv1beta1.Machine
 	ComputeClient             compute.ComputeClient
 	OCIClusterAccessor        OCIClusterAccessor
 	OCIMachine                *infrastructurev1beta2.OCIMachine
@@ -276,7 +275,7 @@ func (m *MachineScope) launchInstanceWithFaultDomainRetry(ctx context.Context, b
 		return nil, errors.New("machine scope is missing OCIMachine")
 	}
 
-	baseRetryToken := ociutil.GetOPCRetryToken(string(m.OCIMachine.UID))
+	baseRetryToken := ociutil.GetOPCRetryToken("%s", string(m.OCIMachine.UID))
 	var lastErr error
 	totalAttempts := len(faultDomains)
 
@@ -470,7 +469,7 @@ func (m *MachineScope) GetMachineByDisplayName(ctx context.Context, name string)
 
 // PatchObject persists the cluster configuration and status.
 func (m *MachineScope) PatchObject(ctx context.Context) error {
-	conditions.SetSummary(m.OCIMachine)
+	conditions.SetSummaryCondition(m.OCIMachine)
 	return m.patchHelper.Patch(ctx, m.OCIMachine)
 }
 
@@ -552,7 +551,7 @@ func (m *MachineScope) GetMachineIPFromStatus() (string, error) {
 		return "", errors.New("could not find machine IP Address in status object")
 	}
 	for _, ip := range machine.Status.Addresses {
-		if ip.Type == clusterv1.MachineInternalIP {
+		if ip.Type == clusterv1beta1.MachineInternalIP {
 			return ip.Address, nil
 		}
 	}
@@ -825,7 +824,8 @@ func (m *MachineScope) containsLBBackend(backendSet loadbalancer.BackendSet, bac
 
 // IsControlPlane returns true if the machine is a control plane.
 func (m *MachineScope) IsControlPlane() bool {
-	return capiUtil.IsControlPlaneMachine(m.Machine)
+	_, ok := m.Machine.Labels[clusterv1beta1.MachineControlPlaneLabel]
+	return ok
 }
 
 func (m *MachineScope) getCompartmentId() string {

@@ -16,11 +16,11 @@
 
 package v1beta1
 
-import clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+import clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 
 const (
 	// InstanceReadyCondition Ready indicates the instance is in a Running state.
-	InstanceReadyCondition clusterv1.ConditionType = "InstanceReady"
+	InstanceReadyCondition clusterv1beta1.ConditionType = "InstanceReady"
 	// InstanceNotFoundReason used when the instance couldn't be retrieved.
 	InstanceNotFoundReason = "InstanceNotFound"
 	// InstanceTerminatedReason instance is in a terminated state.
@@ -40,7 +40,7 @@ const (
 	// InstanceLBackendAdditionFailedReason used when addition to LB backend fails
 	InstanceLBackendAdditionFailedReason = "BackendAdditionFailed"
 	// ClusterReadyCondition Ready indicates the cluster is Ready.
-	ClusterReadyCondition clusterv1.ConditionType = "ClusterReady"
+	ClusterReadyCondition clusterv1beta1.ConditionType = "ClusterReady"
 	// VcnReconciliationFailedReason used when the vcn reconciliation is failed.
 	VcnReconciliationFailedReason = "VcnReconciliationFailed"
 	// DrgReconciliationFailedReason used when the DRG reconciliation fails.

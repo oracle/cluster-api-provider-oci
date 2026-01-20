@@ -31,7 +31,7 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -438,7 +438,7 @@ func TestClusterScope_ReconcileRouteTable(t *testing.T) {
 				RegionKey:          "iad",
 				VCNClient:          vcnClient,
 				OCIClusterAccessor: ociClusterAccessor,
-				Cluster: &clusterv1.Cluster{
+				Cluster: &clusterv1beta1.Cluster{
 					ObjectMeta: metav1.ObjectMeta{
 						UID: "cluster_uid",
 					},

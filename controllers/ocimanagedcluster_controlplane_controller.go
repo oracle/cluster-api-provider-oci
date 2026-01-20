@@ -23,6 +23,7 @@ import (
 
 	"github.com/go-logr/logr"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	"github.com/oracle/cluster-api-provider-oci/cloud/conditions"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	cloudutil "github.com/oracle/cluster-api-provider-oci/cloud/util"
@@ -33,10 +34,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	"sigs.k8s.io/cluster-api/util"
+	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	"sigs.k8s.io/cluster-api/util/annotations"
-	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -83,7 +82,7 @@ func (r *OCIManagedClusterControlPlaneReconciler) Reconcile(ctx context.Context,
 		return ctrl.Result{}, err
 	}
 	// Fetch the Cluster.
-	cluster, err := util.GetOwnerCluster(ctx, r.Client, controlPlane.ObjectMeta)
+	cluster, err := cloudutil.GetOwnerCluster(ctx, r.Client, controlPlane.ObjectMeta)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -94,7 +93,7 @@ func (r *OCIManagedClusterControlPlaneReconciler) Reconcile(ctx context.Context,
 	}
 
 	// Return early if the object or Cluster is paused.
-	if annotations.IsPaused(cluster, controlPlane) {
+	if cloudutil.IsPaused(cluster, controlPlane) {
 		r.Recorder.Eventf(controlPlane, corev1.EventTypeNormal, "ClusterPaused", "Cluster is paused")
 		logger.Info("OCIManagedCluster or linked Cluster is marked as paused. Won't reconcile")
 		return ctrl.Result{}, nil
@@ -119,7 +118,7 @@ func (r *OCIManagedClusterControlPlaneReconciler) Reconcile(ctx context.Context,
 	}
 
 	// Return early if the object or Cluster is paused.
-	if annotations.IsPaused(cluster, ociManagedCluster) {
+	if cloudutil.IsPaused(cluster, ociManagedCluster) {
 		r.Recorder.Eventf(controlPlane, corev1.EventTypeNormal, "ClusterPaused", "Cluster is paused")
 		logger.Info("OCIManagedCluster or linked Cluster is marked as paused. Won't reconcile")
 		return ctrl.Result{}, nil
@@ -141,7 +140,7 @@ func (r *OCIManagedClusterControlPlaneReconciler) Reconcile(ctx context.Context,
 	// Always close the scope when exiting this function so we can persist any OCIManagedCluster changes.
 	defer func() {
 		logger.Info("Closing control plane scope")
-		conditions.SetSummary(controlPlane)
+		conditions.SetSummaryCondition(controlPlane)
 
 		if err := helper.Patch(ctx, controlPlane); err != nil && reterr == nil {
 			reterr = err
@@ -193,23 +192,23 @@ func (r *OCIManagedClusterControlPlaneReconciler) reconcile(ctx context.Context,
 	switch okeControlPlane.LifecycleState {
 	case containerengine.ClusterLifecycleStateCreating:
 		controlPlaneScope.Info("Managed control plane is pending")
-		conditions.MarkFalse(controlPlane, infrastructurev1beta2.ControlPlaneReadyCondition, infrastructurev1beta2.ControlPlaneNotReadyReason, clusterv1.ConditionSeverityInfo, "")
+		conditions.MarkConditionFalse(controlPlane, infrastructurev1beta2.ControlPlaneReadyCondition, infrastructurev1beta2.ControlPlaneNotReadyReason, clusterv1beta1.ConditionSeverityInfo, "")
 		return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 	case containerengine.ClusterLifecycleStateUpdating:
 		controlPlaneScope.Info("Managed control plane is updating")
 		r.Recorder.Eventf(controlPlane, corev1.EventTypeNormal, "ControlPlaneUpdating",
 			"Managed control plane is in updating state")
-		conditions.MarkTrue(controlPlane, infrastructurev1beta2.ControlPlaneReadyCondition)
+		conditions.MarkConditionTrue(controlPlane, infrastructurev1beta2.ControlPlaneReadyCondition)
 		return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 	case containerengine.ClusterLifecycleStateActive:
 		controlPlaneScope.Info("Managed control plane is active", "endpoints", okeControlPlane.Endpoints)
 		if controlPlaneScope.IsControlPlaneEndpointSubnetPublic() {
-			controlPlane.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
+			controlPlane.Spec.ControlPlaneEndpoint = clusterv1beta1.APIEndpoint{
 				Host: *okeControlPlane.Endpoints.PublicEndpoint,
 				Port: 6443,
 			}
 		} else {
-			controlPlane.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
+			controlPlane.Spec.ControlPlaneEndpoint = clusterv1beta1.APIEndpoint{
 				Host: *okeControlPlane.Endpoints.PrivateEndpoint,
 				Port: 6443,
 			}
@@ -218,7 +217,7 @@ func (r *OCIManagedClusterControlPlaneReconciler) reconcile(ctx context.Context,
 		// record the event only when machine goes from not ready to ready state
 		r.Recorder.Eventf(controlPlane, corev1.EventTypeNormal, "ControlPlaneReady",
 			"Managed control plane is in ready state")
-		conditions.MarkTrue(controlPlane, infrastructurev1beta2.ControlPlaneReadyCondition)
+		conditions.MarkConditionTrue(controlPlane, infrastructurev1beta2.ControlPlaneReadyCondition)
 
 		controlPlaneScope.OCIManagedControlPlane.Status.Ready = true
 		err := controlPlaneScope.ReconcileKubeconfig(ctx, okeControlPlane)
@@ -242,7 +241,7 @@ func (r *OCIManagedClusterControlPlaneReconciler) reconcile(ctx context.Context,
 		}
 		return reconcile.Result{RequeueAfter: 180 * time.Second}, nil
 	default:
-		conditions.MarkFalse(controlPlane, infrastructurev1beta2.ControlPlaneReadyCondition, infrastructurev1beta2.ControlPlaneProvisionFailedReason, clusterv1.ConditionSeverityError, "")
+		conditions.MarkConditionFalse(controlPlane, infrastructurev1beta2.ControlPlaneReadyCondition, infrastructurev1beta2.ControlPlaneProvisionFailedReason, clusterv1beta1.ConditionSeverityError, "")
 		r.Recorder.Eventf(controlPlane, corev1.EventTypeWarning, "ReconcileError",
 			"Managed control plane has invalid lifecycle state %s", okeControlPlane.LifecycleState)
 		return reconcile.Result{}, errors.New(fmt.Sprintf("Control plane has invalid lifecycle state %s", okeControlPlane.LifecycleState))
@@ -264,7 +263,7 @@ func (r *OCIManagedClusterControlPlaneReconciler) SetupWithManager(ctx context.C
 			handler.EnqueueRequestsFromMapFunc(ociManagedClusterMapper),
 		).
 		Watches(
-			&clusterv1.Cluster{},
+			&clusterv1beta1.Cluster{},
 			handler.EnqueueRequestsFromMapFunc(ClusterToOCIManagedControlPlaneMapper()),
 			builder.WithPredicates(
 				predicates.ClusterUnpaused(mgr.GetScheme(), log),
@@ -283,7 +282,7 @@ func (r *OCIManagedClusterControlPlaneReconciler) SetupWithManager(ctx context.C
 // Cluster events and returns reconciliation requests for an infrastructure provider object.
 func (r *OCIManagedClusterControlPlaneReconciler) clusterToInfrastructureMapFunc(log logr.Logger) handler.MapFunc {
 	return func(ctx context.Context, o client.Object) []reconcile.Request {
-		c, ok := o.(*clusterv1.Cluster)
+		c, ok := o.(*clusterv1beta1.Cluster)
 		if !ok {
 			return nil
 		}
@@ -334,7 +333,7 @@ func (r *OCIManagedClusterControlPlaneReconciler) reconcileDelete(ctx context.Co
 		if ociutil.IsNotFound(err) {
 			controllerutil.RemoveFinalizer(controlPlaneScope.OCIManagedControlPlane, infrastructurev1beta2.ControlPlaneFinalizer)
 			controlPlaneScope.Info("Cluster is not found, may have been deleted")
-			conditions.MarkTrue(controlPlaneScope.OCIManagedControlPlane, infrastructurev1beta2.ControlPlaneNotFoundReason)
+			conditions.MarkConditionTrue(controlPlaneScope.OCIManagedControlPlane, infrastructurev1beta2.ControlPlaneNotFoundReason)
 			controlPlaneScope.OCIManagedControlPlane.Status.Ready = false
 			return reconcile.Result{}, nil
 		} else {
@@ -353,12 +352,12 @@ func (r *OCIManagedClusterControlPlaneReconciler) reconcileDelete(ctx context.Co
 	switch cluster.LifecycleState {
 	case containerengine.ClusterLifecycleStateDeleting:
 		controlPlane.Status.Ready = false
-		conditions.MarkFalse(controlPlane, infrastructurev1beta2.ControlPlaneReadyCondition, infrastructurev1beta2.ControlPlaneDeletionInProgress, clusterv1.ConditionSeverityWarning, "")
+		conditions.MarkConditionFalse(controlPlane, infrastructurev1beta2.ControlPlaneReadyCondition, infrastructurev1beta2.ControlPlaneDeletionInProgress, clusterv1beta1.ConditionSeverityWarning, "")
 		r.Recorder.Eventf(controlPlane, corev1.EventTypeWarning, "DeletionInProgress", "Managed control plane deletion in progress")
 		controlPlaneScope.Info("Managed control plane is deleting")
 		return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 	case containerengine.ClusterLifecycleStateDeleted:
-		conditions.MarkFalse(controlPlane, infrastructurev1beta2.ControlPlaneReadyCondition, infrastructurev1beta2.ControlPlaneDeletedReason, clusterv1.ConditionSeverityWarning, "")
+		conditions.MarkConditionFalse(controlPlane, infrastructurev1beta2.ControlPlaneReadyCondition, infrastructurev1beta2.ControlPlaneDeletedReason, clusterv1beta1.ConditionSeverityWarning, "")
 		controllerutil.RemoveFinalizer(controlPlane, infrastructurev1beta2.ControlPlaneFinalizer)
 		controlPlaneScope.Info("Managed control plane is deleted")
 		return reconcile.Result{}, nil
@@ -367,7 +366,7 @@ func (r *OCIManagedClusterControlPlaneReconciler) reconcileDelete(ctx context.Co
 			controlPlaneScope.Error(err, "Error deleting managed control plane")
 			return ctrl.Result{}, errors.Wrapf(err, "error deleting cluster %s", controlPlaneScope.GetClusterName())
 		}
-		conditions.MarkFalse(controlPlane, infrastructurev1beta2.ControlPlaneReadyCondition, infrastructurev1beta2.ControlPlaneDeletionInProgress, clusterv1.ConditionSeverityWarning, "")
+		conditions.MarkConditionFalse(controlPlane, infrastructurev1beta2.ControlPlaneReadyCondition, infrastructurev1beta2.ControlPlaneDeletionInProgress, clusterv1beta1.ConditionSeverityWarning, "")
 		return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 	}
 }
@@ -388,7 +387,7 @@ func OCIManagedClusterToOCIManagedControlPlaneMapper(c client.Client, log logr.L
 			return nil
 		}
 
-		cluster, err := util.GetOwnerCluster(ctx, c, ociCluster.ObjectMeta)
+		cluster, err := cloudutil.GetOwnerCluster(ctx, c, ociCluster.ObjectMeta)
 		if err != nil {
 			log.Error(err, "failed to get the owning cluster")
 			return nil
@@ -417,7 +416,7 @@ func OCIManagedClusterToOCIManagedControlPlaneMapper(c client.Client, log logr.L
 
 func ClusterToOCIManagedControlPlaneMapper() handler.MapFunc {
 	return func(ctx context.Context, o client.Object) []ctrl.Request {
-		cluster, ok := o.(*clusterv1.Cluster)
+		cluster, ok := o.(*clusterv1beta1.Cluster)
 		if !ok {
 			return nil
 		}

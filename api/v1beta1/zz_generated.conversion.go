@@ -29,7 +29,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
-	apiv1beta1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	corev1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 )
 
 func init() {
@@ -2155,7 +2155,7 @@ func Convert_v1beta2_OCIClusterIdentitySpec_To_v1beta1_OCIClusterIdentitySpec(in
 }
 
 func autoConvert_v1beta1_OCIClusterIdentityStatus_To_v1beta2_OCIClusterIdentityStatus(in *OCIClusterIdentityStatus, out *v1beta2.OCIClusterIdentityStatus, s conversion.Scope) error {
-	out.Conditions = *(*apiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
+	out.Conditions = *(*corev1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
 	return nil
 }
 
@@ -2165,7 +2165,7 @@ func Convert_v1beta1_OCIClusterIdentityStatus_To_v1beta2_OCIClusterIdentityStatu
 }
 
 func autoConvert_v1beta2_OCIClusterIdentityStatus_To_v1beta1_OCIClusterIdentityStatus(in *v1beta2.OCIClusterIdentityStatus, out *OCIClusterIdentityStatus, s conversion.Scope) error {
-	out.Conditions = *(*apiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
+	out.Conditions = *(*corev1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
 	return nil
 }
 
@@ -2252,17 +2252,17 @@ func autoConvert_v1beta2_OCIClusterSpec_To_v1beta1_OCIClusterSpec(in *v1beta2.OC
 }
 
 func autoConvert_v1beta1_OCIClusterStatus_To_v1beta2_OCIClusterStatus(in *OCIClusterStatus, out *v1beta2.OCIClusterStatus, s conversion.Scope) error {
-	out.FailureDomains = *(*apiv1beta1.FailureDomains)(unsafe.Pointer(&in.FailureDomains))
+	out.FailureDomains = *(*corev1beta1.FailureDomains)(unsafe.Pointer(&in.FailureDomains))
 	// WARNING: in.AvailabilityDomains requires manual conversion: does not exist in peer-type
 	out.Ready = in.Ready
-	out.Conditions = *(*apiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
+	out.Conditions = *(*corev1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
 	return nil
 }
 
 func autoConvert_v1beta2_OCIClusterStatus_To_v1beta1_OCIClusterStatus(in *v1beta2.OCIClusterStatus, out *OCIClusterStatus, s conversion.Scope) error {
-	out.FailureDomains = *(*apiv1beta1.FailureDomains)(unsafe.Pointer(&in.FailureDomains))
+	out.FailureDomains = *(*corev1beta1.FailureDomains)(unsafe.Pointer(&in.FailureDomains))
 	out.Ready = in.Ready
-	out.Conditions = *(*apiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
+	out.Conditions = *(*corev1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
 	return nil
 }
 
@@ -2541,13 +2541,13 @@ func Convert_v1beta2_OCIMachineSpec_To_v1beta1_OCIMachineSpec(in *v1beta2.OCIMac
 
 func autoConvert_v1beta1_OCIMachineStatus_To_v1beta2_OCIMachineStatus(in *OCIMachineStatus, out *v1beta2.OCIMachineStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
-	out.Addresses = *(*[]apiv1beta1.MachineAddress)(unsafe.Pointer(&in.Addresses))
+	out.Addresses = *(*[]corev1beta1.MachineAddress)(unsafe.Pointer(&in.Addresses))
 	out.FailureReason = (*string)(unsafe.Pointer(in.FailureReason))
 	out.FailureMessage = (*string)(unsafe.Pointer(in.FailureMessage))
 	out.LaunchInstanceWorkRequestId = in.LaunchInstanceWorkRequestId
 	out.CreateBackendWorkRequestId = in.CreateBackendWorkRequestId
 	out.DeleteBackendWorkRequestId = in.DeleteBackendWorkRequestId
-	out.Conditions = *(*apiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
+	out.Conditions = *(*corev1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
 	return nil
 }
 
@@ -2558,13 +2558,13 @@ func Convert_v1beta1_OCIMachineStatus_To_v1beta2_OCIMachineStatus(in *OCIMachine
 
 func autoConvert_v1beta2_OCIMachineStatus_To_v1beta1_OCIMachineStatus(in *v1beta2.OCIMachineStatus, out *OCIMachineStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
-	out.Addresses = *(*[]apiv1beta1.MachineAddress)(unsafe.Pointer(&in.Addresses))
+	out.Addresses = *(*[]corev1beta1.MachineAddress)(unsafe.Pointer(&in.Addresses))
 	out.FailureReason = (*string)(unsafe.Pointer(in.FailureReason))
 	out.FailureMessage = (*string)(unsafe.Pointer(in.FailureMessage))
 	out.LaunchInstanceWorkRequestId = in.LaunchInstanceWorkRequestId
 	out.CreateBackendWorkRequestId = in.CreateBackendWorkRequestId
 	out.DeleteBackendWorkRequestId = in.DeleteBackendWorkRequestId
-	out.Conditions = *(*apiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
+	out.Conditions = *(*corev1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
 	return nil
 }
 
@@ -2799,17 +2799,17 @@ func autoConvert_v1beta2_OCIManagedClusterSpec_To_v1beta1_OCIManagedClusterSpec(
 }
 
 func autoConvert_v1beta1_OCIManagedClusterStatus_To_v1beta2_OCIManagedClusterStatus(in *OCIManagedClusterStatus, out *v1beta2.OCIManagedClusterStatus, s conversion.Scope) error {
-	out.FailureDomains = *(*apiv1beta1.FailureDomains)(unsafe.Pointer(&in.FailureDomains))
+	out.FailureDomains = *(*corev1beta1.FailureDomains)(unsafe.Pointer(&in.FailureDomains))
 	// WARNING: in.AvailabilityDomains requires manual conversion: does not exist in peer-type
 	out.Ready = in.Ready
-	out.Conditions = *(*apiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
+	out.Conditions = *(*corev1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
 	return nil
 }
 
 func autoConvert_v1beta2_OCIManagedClusterStatus_To_v1beta1_OCIManagedClusterStatus(in *v1beta2.OCIManagedClusterStatus, out *OCIManagedClusterStatus, s conversion.Scope) error {
-	out.FailureDomains = *(*apiv1beta1.FailureDomains)(unsafe.Pointer(&in.FailureDomains))
+	out.FailureDomains = *(*corev1beta1.FailureDomains)(unsafe.Pointer(&in.FailureDomains))
 	out.Ready = in.Ready
-	out.Conditions = *(*apiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
+	out.Conditions = *(*corev1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
 	return nil
 }
 
@@ -3043,7 +3043,7 @@ func autoConvert_v1beta2_OCIManagedControlPlaneSpec_To_v1beta1_OCIManagedControl
 
 func autoConvert_v1beta1_OCIManagedControlPlaneStatus_To_v1beta2_OCIManagedControlPlaneStatus(in *OCIManagedControlPlaneStatus, out *v1beta2.OCIManagedControlPlaneStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
-	out.Conditions = *(*apiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
+	out.Conditions = *(*corev1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
 	out.Version = (*string)(unsafe.Pointer(in.Version))
 	out.Initialized = in.Initialized
 	return nil
@@ -3056,7 +3056,7 @@ func Convert_v1beta1_OCIManagedControlPlaneStatus_To_v1beta2_OCIManagedControlPl
 
 func autoConvert_v1beta2_OCIManagedControlPlaneStatus_To_v1beta1_OCIManagedControlPlaneStatus(in *v1beta2.OCIManagedControlPlaneStatus, out *OCIManagedControlPlaneStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
-	out.Conditions = *(*apiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
+	out.Conditions = *(*corev1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
 	out.Version = (*string)(unsafe.Pointer(in.Version))
 	// WARNING: in.AddonStatus requires manual conversion: does not exist in peer-type
 	out.Initialized = in.Initialized

@@ -31,7 +31,7 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -84,14 +84,14 @@ func TestReconcileVnicAttachment(t *testing.T) {
 					},
 				},
 			},
-			Machine: &clusterv1.Machine{
-				Spec: clusterv1.MachineSpec{
-					Bootstrap: clusterv1.Bootstrap{
+			Machine: &clusterv1beta1.Machine{
+				Spec: clusterv1beta1.MachineSpec{
+					Bootstrap: clusterv1beta1.Bootstrap{
 						DataSecretName: common.String("bootstrap"),
 					},
 				},
 			},
-			Cluster: &clusterv1.Cluster{},
+			Cluster: &clusterv1beta1.Cluster{},
 			OCIClusterAccessor: OCISelfManagedCluster{
 				OCICluster: &ociCluster,
 			},
@@ -231,7 +231,7 @@ func TestReconcileVnicAttachment(t *testing.T) {
 			matchError:    fmt.Errorf("cannot attach multiple vnics to ControlPlane machines"),
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				ms.Machine.ObjectMeta.Labels = make(map[string]string)
-				ms.Machine.ObjectMeta.Labels[clusterv1.MachineControlPlaneLabel] = "Test"
+				ms.Machine.ObjectMeta.Labels[clusterv1beta1.MachineControlPlaneLabel] = "Test"
 			},
 		},
 	}

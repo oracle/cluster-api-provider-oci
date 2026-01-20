@@ -18,7 +18,7 @@ package v1beta1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 )
 
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
@@ -155,7 +155,7 @@ type OCIMachineStatus struct {
 	Ready bool `json:"ready,omitempty"`
 
 	// Addresses contains the addresses of the associated OCI instance.
-	Addresses []clusterv1.MachineAddress `json:"addresses,omitempty"`
+	Addresses []clusterv1beta1.MachineAddress `json:"addresses,omitempty"`
 
 	// Error status on the machine.
 	// +optional
@@ -179,7 +179,7 @@ type OCIMachineStatus struct {
 
 	// Conditions defines current service state of the OCIMachine.
 	// +optional
-	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
+	Conditions clusterv1beta1.Conditions `json:"conditions,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -204,12 +204,12 @@ type OCIMachineList struct {
 }
 
 // GetConditions returns the list of conditions for an OCIMachine API object.
-func (m *OCIMachine) GetConditions() clusterv1.Conditions {
+func (m *OCIMachine) GetConditions() clusterv1beta1.Conditions {
 	return m.Status.Conditions
 }
 
 // SetConditions will set the given conditions on an OCIMachine object.
-func (m *OCIMachine) SetConditions(conditions clusterv1.Conditions) {
+func (m *OCIMachine) SetConditions(conditions clusterv1beta1.Conditions) {
 	m.Status.Conditions = conditions
 }
 

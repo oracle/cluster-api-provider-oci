@@ -29,7 +29,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 )
 
 func TestOCIManagedControlPlane_CreateDefault(t *testing.T) {
@@ -221,7 +221,7 @@ func TestOCIManagedControlPlaneWebhook_ValidateDelete(t *testing.T) {
 }
 
 func TestOCIManagedControlPlane_GetConditions(t *testing.T) {
-	want := clusterv1.Conditions{
+	want := clusterv1beta1.Conditions{
 		{Type: "Ready", Status: corev1.ConditionTrue},
 	}
 	c := &OCIManagedControlPlane{
@@ -237,7 +237,7 @@ func TestOCIManagedControlPlane_GetConditions(t *testing.T) {
 }
 
 func TestOCIManagedControlPlane_SetConditions(t *testing.T) {
-	cond := clusterv1.Conditions{
+	cond := clusterv1beta1.Conditions{
 		{Type: "Updated", Status: corev1.ConditionFalse},
 	}
 	c := &OCIManagedControlPlane{}

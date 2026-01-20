@@ -38,10 +38,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	expclusterv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
-	"sigs.k8s.io/cluster-api/util"
+	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	"sigs.k8s.io/cluster-api/util/labels/format"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -56,6 +55,94 @@ const (
 var (
 	currentRegion *string
 )
+
+// GetOwnerCluster returns the Cluster object owning the current resource.
+// This is a v1beta1-compatible version of the CAPI util.GetOwnerCluster function.
+func GetOwnerCluster(ctx context.Context, c client.Client, obj metav1.ObjectMeta) (*clusterv1beta1.Cluster, error) {
+	for _, ref := range obj.GetOwnerReferences() {
+		if ref.Kind != "Cluster" {
+			continue
+		}
+		gv, err := schema.ParseGroupVersion(ref.APIVersion)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		if gv.Group == clusterv1beta1.GroupVersion.Group {
+			return GetClusterByName(ctx, c, obj.Namespace, ref.Name)
+		}
+	}
+	return nil, nil
+}
+
+// GetClusterByName finds and returns a Cluster object using the specified params.
+// This is a v1beta1-compatible version of the CAPI util.GetClusterByName function.
+func GetClusterByName(ctx context.Context, c client.Client, namespace, name string) (*clusterv1beta1.Cluster, error) {
+	cluster := &clusterv1beta1.Cluster{}
+	key := client.ObjectKey{
+		Namespace: namespace,
+		Name:      name,
+	}
+
+	if err := c.Get(ctx, key, cluster); err != nil {
+		return nil, errors.Wrapf(err, "failed to get Cluster/%s", name)
+	}
+
+	return cluster, nil
+}
+
+// GetOwnerMachine returns the Machine object owning the current resource.
+// This is a v1beta1-compatible version of the CAPI util.GetOwnerMachine function.
+func GetOwnerMachine(ctx context.Context, c client.Client, obj metav1.ObjectMeta) (*clusterv1beta1.Machine, error) {
+	for _, ref := range obj.GetOwnerReferences() {
+		gv, err := schema.ParseGroupVersion(ref.APIVersion)
+		if err != nil {
+			return nil, err
+		}
+		if ref.Kind == "Machine" && gv.Group == clusterv1beta1.GroupVersion.Group {
+			return GetMachineByName(ctx, c, obj.Namespace, ref.Name)
+		}
+	}
+	return nil, nil
+}
+
+// GetMachineByName finds and returns a Machine object using the specified params.
+// This is a v1beta1-compatible version of the CAPI util.GetMachineByName function.
+func GetMachineByName(ctx context.Context, c client.Client, namespace, name string) (*clusterv1beta1.Machine, error) {
+	m := &clusterv1beta1.Machine{}
+	key := client.ObjectKey{Name: name, Namespace: namespace}
+	if err := c.Get(ctx, key, m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+// GetClusterFromMetadata returns the Cluster object using the cluster name label.
+// This is a v1beta1-compatible version of the CAPI util.GetClusterFromMetadata function.
+func GetClusterFromMetadata(ctx context.Context, c client.Client, obj metav1.ObjectMeta) (*clusterv1beta1.Cluster, error) {
+	if obj.Labels[clusterv1beta1.ClusterNameLabel] == "" {
+		return nil, errors.New("cluster name label not found")
+	}
+	return GetClusterByName(ctx, c, obj.Namespace, obj.Labels[clusterv1beta1.ClusterNameLabel])
+}
+
+// IsPaused returns true if the Cluster is paused or the object has the `paused` annotation.
+// This is a v1beta1-compatible version of the CAPI annotations.IsPaused function.
+func IsPaused(cluster *clusterv1beta1.Cluster, o metav1.Object) bool {
+	if cluster.Spec.Paused {
+		return true
+	}
+	return HasPaused(o)
+}
+
+// HasPaused returns true if the object has the `paused` annotation.
+func HasPaused(o metav1.Object) bool {
+	annotations := o.GetAnnotations()
+	if annotations == nil {
+		return false
+	}
+	_, ok := annotations[clusterv1beta1.PausedAnnotation]
+	return ok
+}
 
 // GetClusterIdentityFromRef returns the OCIClusterIdentity referenced by the OCICluster.
 // nolint:nilnil
@@ -329,7 +416,7 @@ func CreateClientProviderFromClusterIdentity(ctx context.Context, client client.
 	}
 
 	if !IsClusterNamespaceAllowed(ctx, client, identity.Spec.AllowedNamespaces, namespace) {
-		clusterAccessor.MarkConditionFalse(infrastructurev1beta2.ClusterReadyCondition, infrastructurev1beta2.NamespaceNotAllowedByIdentity, clusterv1.ConditionSeverityError, "")
+		clusterAccessor.MarkConditionFalse(infrastructurev1beta2.ClusterReadyCondition, infrastructurev1beta2.NamespaceNotAllowedByIdentity, clusterv1beta1.ConditionSeverityError, "")
 		return nil, errors.Errorf("OCIClusterIdentity list of allowed namespaces doesn't include current cluster namespace %s", namespace)
 	}
 	clientProvider, err := GetOrBuildClientFromIdentity(ctx, client, identity, defaultRegion, clusterAccessor.GetClientOverrides(), namespace)
@@ -372,8 +459,8 @@ func CreateMachinePoolMachinesIfNotExists(ctx context.Context, params MachinePar
 		}
 
 		labels := map[string]string{
-			clusterv1.ClusterNameLabel:     params.Cluster.Name,
-			clusterv1.MachinePoolNameLabel: format.MustFormatValue(params.MachinePool.Name),
+			clusterv1beta1.ClusterNameLabel:     params.Cluster.Name,
+			clusterv1beta1.MachinePoolNameLabel: format.MustFormatValue(params.MachinePool.Name),
 		}
 		infraMachine := &infrav2exp.OCIMachinePoolMachine{
 			ObjectMeta: metav1.ObjectMeta{
@@ -410,11 +497,11 @@ func CreateMachinePoolMachinesIfNotExists(ctx context.Context, params MachinePar
 	return nil
 }
 
-func getMachinepoolMachines(ctx context.Context, c client.Client, machinePool *expclusterv1.MachinePool, cluster *clusterv1.Cluster, namespace string) (*infrav2exp.OCIMachinePoolMachineList, error) {
+func getMachinepoolMachines(ctx context.Context, c client.Client, machinePool *clusterv1beta1.MachinePool, cluster *clusterv1beta1.Cluster, namespace string) (*infrav2exp.OCIMachinePoolMachineList, error) {
 	machineList := &infrav2exp.OCIMachinePoolMachineList{}
 	labels := map[string]string{
-		clusterv1.ClusterNameLabel:     cluster.Name,
-		clusterv1.MachinePoolNameLabel: format.MustFormatValue(machinePool.Name),
+		clusterv1beta1.ClusterNameLabel:     cluster.Name,
+		clusterv1beta1.MachinePoolNameLabel: format.MustFormatValue(machinePool.Name),
 	}
 	if err := c.List(ctx, machineList, client.InNamespace(namespace), client.MatchingLabels(labels)); err != nil {
 		return nil, err
@@ -441,7 +528,7 @@ func DeleteOrphanedMachinePoolMachines(ctx context.Context, params MachineParams
 		machinePoolMachine := &machineList.Items[i]
 		// lookup if the machinepool machine is not in the spec, if not delete the underlying machine
 		if _, ok := instanceSpecSet[*machinePoolMachine.Spec.OCID]; !ok {
-			machine, err := util.GetOwnerMachine(ctx, params.Client, machinePoolMachine.ObjectMeta)
+			machine, err := GetOwnerMachine(ctx, params.Client, machinePoolMachine.ObjectMeta)
 			if err != nil {
 				if apierrors.IsNotFound(err) {
 					params.Logger.Info("Machinepool machine has not been created", "machine", machinePoolMachine.Name)
@@ -500,8 +587,8 @@ func getRegionInfoFromInstanceMetadataServiceProd() ([]byte, error) {
 // Infra machine pool specifed below refers to OCIManagedMachinePool/OCIMachinePool/OCIVirtualMachinePool
 type MachineParams struct {
 	Client               client.Client                      // the kubernetes client
-	MachinePool          *expclusterv1.MachinePool          // the corresponding machinepool
-	Cluster              *clusterv1.Cluster                 // the corresponding cluster
+	MachinePool          *clusterv1beta1.MachinePool        // the corresponding machinepool
+	Cluster              *clusterv1beta1.Cluster            // the corresponding cluster
 	InfraMachinePoolName string                             // the name of the infra machinepool corresponding(can be managed/self managed/virtual)
 	InfraMachinePoolKind string                             // the kind of infra machinepool(can be managed/self managed/virtual)
 	InfraMachinePoolUID  types.UID                          // the UID of the infra machinepool

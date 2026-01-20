@@ -25,6 +25,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	"github.com/oracle/cluster-api-provider-oci/cloud/conditions"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/compute/mock_compute"
@@ -40,8 +41,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	"sigs.k8s.io/cluster-api/util/conditions"
+	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -209,7 +209,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 		expectedEvent      string
 		eventNotExpected   string
 		conditionAssertion []conditionAssertion
-		deleteMachines     []clusterv1.Machine
+		deleteMachines     []clusterv1beta1.Machine
 		testSpecificSetup  func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient, wrclient *mock_workrequests.MockClient)
 		validate           func(g *WithT, t *test, result ctrl.Result)
 	}
@@ -217,7 +217,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 		{
 			name:               "instance in provisioning state",
 			errorExpected:      false,
-			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityInfo, infrastructurev1beta2.InstanceNotReadyReason}},
+			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityInfo, infrastructurev1beta2.InstanceNotReadyReason}},
 			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient, wrclient *mock_workrequests.MockClient) {
 				computeClient.EXPECT().GetInstance(gomock.Any(), gomock.Eq(core.GetInstanceRequest{
 					InstanceId: common.String("test"),
@@ -235,9 +235,9 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			errorExpected:      false,
 			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionTrue, "", ""}},
 			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient, wrclient *mock_workrequests.MockClient) {
-				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+				machineScope.OCIMachine.Status.Addresses = []clusterv1beta1.MachineAddress{
 					{
-						Type:    clusterv1.MachineInternalIP,
+						Type:    clusterv1beta1.MachineInternalIP,
 						Address: "1.1.1.1",
 					},
 				}
@@ -261,9 +261,9 @@ func TestNormalReconciliationFunction(t *testing.T) {
 					machineScope.Machine.ObjectMeta.Annotations = make(map[string]string)
 				}
 				machineScope.Machine.ObjectMeta.Annotations[infrastructurev1beta2.DeleteMachineOnInstanceTermination] = ""
-				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+				machineScope.OCIMachine.Status.Addresses = []clusterv1beta1.MachineAddress{
 					{
-						Type:    clusterv1.MachineInternalIP,
+						Type:    clusterv1beta1.MachineInternalIP,
 						Address: "1.1.1.1",
 					},
 				}
@@ -287,9 +287,9 @@ func TestNormalReconciliationFunction(t *testing.T) {
 					machineScope.Machine.ObjectMeta.Annotations = make(map[string]string)
 				}
 				machineScope.Machine.ObjectMeta.Annotations[infrastructurev1beta2.DeleteMachineOnInstanceTermination] = ""
-				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+				machineScope.OCIMachine.Status.Addresses = []clusterv1beta1.MachineAddress{
 					{
-						Type:    clusterv1.MachineInternalIP,
+						Type:    clusterv1beta1.MachineInternalIP,
 						Address: "1.1.1.1",
 					},
 				}
@@ -310,7 +310,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 		{
 			name:               "instance in stopped state",
 			errorExpected:      false,
-			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityInfo, infrastructurev1beta2.InstanceNotReadyReason}},
+			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityInfo, infrastructurev1beta2.InstanceNotReadyReason}},
 			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient, wrclient *mock_workrequests.MockClient) {
 				computeClient.EXPECT().GetInstance(gomock.Any(), gomock.Eq(core.GetInstanceRequest{
 					InstanceId: common.String("test"),
@@ -326,7 +326,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 		{
 			name:               "instance in stopping state",
 			errorExpected:      false,
-			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityInfo, infrastructurev1beta2.InstanceNotReadyReason}},
+			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityInfo, infrastructurev1beta2.InstanceNotReadyReason}},
 			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient, wrclient *mock_workrequests.MockClient) {
 				computeClient.EXPECT().GetInstance(gomock.Any(), gomock.Eq(core.GetInstanceRequest{
 					InstanceId: common.String("test"),
@@ -342,7 +342,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 		{
 			name:               "instance in moving state",
 			errorExpected:      false,
-			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityInfo, infrastructurev1beta2.InstanceNotReadyReason}},
+			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityInfo, infrastructurev1beta2.InstanceNotReadyReason}},
 			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient, wrclient *mock_workrequests.MockClient) {
 				computeClient.EXPECT().GetInstance(gomock.Any(), gomock.Eq(core.GetInstanceRequest{
 					InstanceId: common.String("test"),
@@ -359,7 +359,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			name:               "instance in terminating state due to provision failure",
 			errorExpected:      true,
 			expectedEvent:      "No more Ip available in CIDR 1.1.1.1/1",
-			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta2.InstanceProvisionFailedReason}},
+			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityError, infrastructurev1beta2.InstanceProvisionFailedReason}},
 			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient, wrclient *mock_workrequests.MockClient) {
 				computeClient.EXPECT().GetInstance(gomock.Any(), gomock.Eq(core.GetInstanceRequest{
 					InstanceId: common.String("test"),
@@ -409,7 +409,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			name:               "instance in terminated state",
 			errorExpected:      true,
 			expectedEvent:      "invalid lifecycle state TERMINATED",
-			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta2.InstanceProvisionFailedReason}},
+			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityError, infrastructurev1beta2.InstanceProvisionFailedReason}},
 			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient, wrclient *mock_workrequests.MockClient) {
 				computeClient.EXPECT().GetInstance(gomock.Any(), gomock.Eq(core.GetInstanceRequest{
 					InstanceId: common.String("test"),
@@ -457,17 +457,17 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			name:               "instance in terminated state, machine has to be deleted",
 			errorExpected:      true,
 			expectedEvent:      "invalid lifecycle state TERMINATED",
-			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta2.InstanceProvisionFailedReason}},
+			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityError, infrastructurev1beta2.InstanceProvisionFailedReason}},
 			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient, wrclient *mock_workrequests.MockClient) {
 				fakeClient := fake.NewClientBuilder().WithObjects(getSecret()).Build()
 				if machineScope.Machine.ObjectMeta.Annotations == nil {
 					machineScope.Machine.ObjectMeta.Annotations = make(map[string]string)
 				}
 				machineScope.Machine.ObjectMeta.Annotations[infrastructurev1beta2.DeleteMachineOnInstanceTermination] = ""
-				t.deleteMachines = make([]clusterv1.Machine, 0)
+				t.deleteMachines = make([]clusterv1beta1.Machine, 0)
 				machineScope.Client = interceptor.NewClient(fakeClient, interceptor.Funcs{
 					Delete: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
-						m := obj.(*clusterv1.Machine)
+						m := obj.(*clusterv1beta1.Machine)
 						t.deleteMachines = append(t.deleteMachines, *m)
 						return nil
 					},
@@ -518,10 +518,10 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			name:               "control plane backend vnic attachments call error",
 			errorExpected:      true,
 			expectedEvent:      "server error",
-			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta2.InstanceIPAddressNotFound}},
+			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityError, infrastructurev1beta2.InstanceIPAddressNotFound}},
 			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient, wrclient *mock_workrequests.MockClient) {
 				machineScope.Machine.ObjectMeta.Labels = make(map[string]string)
-				machineScope.Machine.ObjectMeta.Labels[clusterv1.MachineControlPlaneLabel] = "true"
+				machineScope.Machine.ObjectMeta.Labels[clusterv1beta1.MachineControlPlaneLabel] = "true"
 				computeClient.EXPECT().GetInstance(gomock.Any(), gomock.Eq(core.GetInstanceRequest{
 					InstanceId: common.String("test"),
 				})).
@@ -544,7 +544,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrclient *mock_workrequests.MockClient) {
 				machineScope.Machine.ObjectMeta.Labels = make(map[string]string)
-				machineScope.Machine.ObjectMeta.Labels[clusterv1.MachineControlPlaneLabel] = "true"
+				machineScope.Machine.ObjectMeta.Labels[clusterv1beta1.MachineControlPlaneLabel] = "true"
 				computeClient.EXPECT().GetInstance(gomock.Any(), gomock.Eq(core.GetInstanceRequest{
 					InstanceId: common.String("test"),
 				})).
@@ -601,7 +601,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrclient *mock_workrequests.MockClient) {
 				machineScope.Machine.ObjectMeta.Labels = make(map[string]string)
-				machineScope.Machine.ObjectMeta.Labels[clusterv1.MachineControlPlaneLabel] = "true"
+				machineScope.Machine.ObjectMeta.Labels[clusterv1beta1.MachineControlPlaneLabel] = "true"
 				computeClient.EXPECT().GetInstance(gomock.Any(), gomock.Eq(core.GetInstanceRequest{
 					InstanceId: common.String("test"),
 				})).
@@ -676,13 +676,13 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrclient *mock_workrequests.MockClient) {
 				machineScope.Machine.ObjectMeta.Labels = make(map[string]string)
-				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+				machineScope.OCIMachine.Status.Addresses = []clusterv1beta1.MachineAddress{
 					{
-						Type:    clusterv1.MachineInternalIP,
+						Type:    clusterv1beta1.MachineInternalIP,
 						Address: "1.1.1.1",
 					},
 				}
-				machineScope.Machine.ObjectMeta.Labels[clusterv1.MachineControlPlaneLabel] = "true"
+				machineScope.Machine.ObjectMeta.Labels[clusterv1beta1.MachineControlPlaneLabel] = "true"
 				computeClient.EXPECT().GetInstance(gomock.Any(), gomock.Eq(core.GetInstanceRequest{
 					InstanceId: common.String("test"),
 				})).
@@ -735,7 +735,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			errorExpected: true,
 			testSpecificSetup: func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrclient *mock_workrequests.MockClient) {
 				machineScope.Machine.ObjectMeta.Labels = make(map[string]string)
-				machineScope.Machine.ObjectMeta.Labels[clusterv1.MachineControlPlaneLabel] = "true"
+				machineScope.Machine.ObjectMeta.Labels[clusterv1beta1.MachineControlPlaneLabel] = "true"
 				computeClient.EXPECT().GetInstance(gomock.Any(), gomock.Eq(core.GetInstanceRequest{
 					InstanceId: common.String("test"),
 				})).
@@ -817,7 +817,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 					},
 				}, nil)
 			},
-			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrastructurev1beta2.InstanceLBBackendAdditionFailedReason}},
+			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityError, infrastructurev1beta2.InstanceLBBackendAdditionFailedReason}},
 		},
 	}
 
@@ -910,8 +910,8 @@ func TestMachineReconciliationDelete(t *testing.T) {
 				}, nil)
 
 			_, err := r.Reconcile(context.Background(), req)
-			// delete throws reconcile error when scope is closed
-			g.Expect(err.Error()).To(ContainSubstring("not found"))
+			// Instance is terminated, reconcile should succeed without error
+			g.Expect(err).To(BeNil())
 		})
 	})
 }
@@ -983,7 +983,7 @@ func TestMachineReconciliationDeletionNormal(t *testing.T) {
 			errorExpected:      false,
 			objects:            []client.Object{getSecret()},
 			expectedEvent:      "InstanceTerminated",
-			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityInfo, infrastructurev1beta2.InstanceTerminatedReason}},
+			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityInfo, infrastructurev1beta2.InstanceTerminatedReason}},
 			testSpecificSetup: func(machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
 				computeClient.EXPECT().GetInstance(gomock.Any(), gomock.Eq(core.GetInstanceRequest{
 					InstanceId: common.String("test"),
@@ -1001,7 +1001,7 @@ func TestMachineReconciliationDeletionNormal(t *testing.T) {
 			errorExpected:      false,
 			objects:            []client.Object{getSecret()},
 			expectedEvent:      "InstanceTerminating",
-			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityInfo, infrastructurev1beta2.InstanceTerminatingReason}},
+			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityInfo, infrastructurev1beta2.InstanceTerminatingReason}},
 			testSpecificSetup: func(machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
 				computeClient.EXPECT().GetInstance(gomock.Any(), gomock.Eq(core.GetInstanceRequest{
 					InstanceId: common.String("test"),
@@ -1027,10 +1027,10 @@ func TestMachineReconciliationDeletionNormal(t *testing.T) {
 			errorExpected:      false,
 			objects:            []client.Object{getSecret()},
 			expectedEvent:      "InstanceTerminating",
-			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityInfo, infrastructurev1beta2.InstanceTerminatingReason}},
+			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityInfo, infrastructurev1beta2.InstanceTerminatingReason}},
 			testSpecificSetup: func(machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
 				machineScope.Machine.ObjectMeta.Labels = make(map[string]string)
-				machineScope.Machine.ObjectMeta.Labels[clusterv1.MachineControlPlaneLabel] = "true"
+				machineScope.Machine.ObjectMeta.Labels[clusterv1beta1.MachineControlPlaneLabel] = "true"
 				computeClient.EXPECT().GetInstance(gomock.Any(), gomock.Eq(core.GetInstanceRequest{
 					InstanceId: common.String("test"),
 				})).
@@ -1091,10 +1091,10 @@ func TestMachineReconciliationDeletionNormal(t *testing.T) {
 			errorExpected:      false,
 			objects:            []client.Object{getSecret()},
 			expectedEvent:      "OCIMachineRemovedFromLB",
-			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityInfo, infrastructurev1beta2.InstanceNotFoundReason}},
+			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityInfo, infrastructurev1beta2.InstanceNotFoundReason}},
 			testSpecificSetup: func(machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
 				machineScope.Machine.ObjectMeta.Labels = make(map[string]string)
-				machineScope.Machine.ObjectMeta.Labels[clusterv1.MachineControlPlaneLabel] = "true"
+				machineScope.Machine.ObjectMeta.Labels[clusterv1beta1.MachineControlPlaneLabel] = "true"
 				computeClient.EXPECT().GetInstance(gomock.Any(), gomock.Eq(core.GetInstanceRequest{
 					InstanceId: common.String("test"),
 				})).
@@ -1161,9 +1161,9 @@ func TestMachineReconciliationDeletionNormal(t *testing.T) {
 }
 
 type conditionAssertion struct {
-	conditionType clusterv1.ConditionType
+	conditionType clusterv1beta1.ConditionType
 	status        corev1.ConditionStatus
-	severity      clusterv1.ConditionSeverity
+	severity      clusterv1beta1.ConditionSeverity
 	reason        string
 }
 
@@ -1198,18 +1198,18 @@ func getOciMachine() *infrastructurev1beta2.OCIMachine {
 			Namespace: "test",
 			UID:       "uid",
 			Labels: map[string]string{
-				clusterv1.ClusterNameLabel: "test-cluster",
+				clusterv1beta1.ClusterNameLabel: "test-cluster",
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					Name:       "test-cluster",
 					Kind:       "Cluster",
-					APIVersion: clusterv1.GroupVersion.String(),
+					APIVersion: clusterv1beta1.GroupVersion.String(),
 				},
 				{
 					Name:       "test",
 					Kind:       "Machine",
-					APIVersion: clusterv1.GroupVersion.String(),
+					APIVersion: clusterv1beta1.GroupVersion.String(),
 				},
 			},
 		},
@@ -1225,30 +1225,30 @@ func getOciMachineWithNoOwner() *infrastructurev1beta2.OCIMachine {
 	return ociMachine
 }
 
-func getCluster() *clusterv1.Cluster {
+func getCluster() *clusterv1beta1.Cluster {
 	infraRef := corev1.ObjectReference{
 		Name: "oci-cluster",
 		Kind: "OCICluster",
 	}
-	return &clusterv1.Cluster{
+	return &clusterv1beta1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-cluster",
 			Namespace: "test",
 		},
-		Spec: clusterv1.ClusterSpec{
+		Spec: clusterv1beta1.ClusterSpec{
 			InfrastructureRef: &infraRef,
 		},
 	}
 }
 
-func getPausedCluster() *clusterv1.Cluster {
+func getPausedCluster() *clusterv1beta1.Cluster {
 	cluster := getCluster()
 	cluster.Spec.Paused = true
 	return cluster
 }
 
-func getMachine() *clusterv1.Machine {
-	machine := &clusterv1.Machine{
+func getMachine() *clusterv1beta1.Machine {
+	machine := &clusterv1beta1.Machine{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
 			Namespace: "test",
@@ -1265,7 +1265,7 @@ func getOCICluster() *infrastructurev1beta2.OCICluster {
 		},
 		Spec: infrastructurev1beta2.OCIClusterSpec{
 			CompartmentId: "test",
-			ControlPlaneEndpoint: clusterv1.APIEndpoint{
+			ControlPlaneEndpoint: clusterv1beta1.APIEndpoint{
 				Port: 6443,
 			},
 		},

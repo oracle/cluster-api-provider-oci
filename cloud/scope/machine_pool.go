@@ -28,6 +28,7 @@ import (
 
 	"github.com/go-logr/logr"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	"github.com/oracle/cluster-api-provider-oci/cloud/conditions"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/computemanagement"
@@ -40,9 +41,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2/klogr"
 	"k8s.io/utils/pointer"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	expclusterv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
-	"sigs.k8s.io/cluster-api/util/conditions"
+	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -52,8 +51,8 @@ const OCIMachinePoolKind = "OCIMachinePool"
 // MachinePoolScopeParams defines the params need to create a new MachineScope
 type MachinePoolScopeParams struct {
 	Logger                  *logr.Logger
-	Cluster                 *clusterv1.Cluster
-	MachinePool             *expclusterv1.MachinePool
+	Cluster                 *clusterv1beta1.Cluster
+	MachinePool             *clusterv1beta1.MachinePool
 	Client                  client.Client
 	ComputeManagementClient computemanagement.Client
 	OCIClusterAccessor      OCIClusterAccessor
@@ -64,8 +63,8 @@ type MachinePoolScope struct {
 	*logr.Logger
 	Client                  client.Client
 	patchHelper             *patch.Helper
-	Cluster                 *clusterv1.Cluster
-	MachinePool             *expclusterv1.MachinePool
+	Cluster                 *clusterv1beta1.Cluster
+	MachinePool             *clusterv1beta1.MachinePool
 	ComputeManagementClient computemanagement.Client
 	OCIClusterAccesor       OCIClusterAccessor
 	OCIMachinePool          *expinfra1.OCIMachinePool
@@ -443,7 +442,7 @@ func (m *MachinePoolScope) createInstanceConfiguration(ctx context.Context, laun
 
 	resp, err := m.ComputeManagementClient.CreateInstanceConfiguration(ctx, req)
 	if err != nil {
-		conditions.MarkFalse(m.MachinePool, infrav2exp.LaunchTemplateReadyCondition, infrav2exp.LaunchTemplateCreateFailedReason, clusterv1.ConditionSeverityError, err.Error())
+		conditions.MarkConditionFalse(m.MachinePool, infrav2exp.LaunchTemplateReadyCondition, infrav2exp.LaunchTemplateCreateFailedReason, clusterv1beta1.ConditionSeverityError, "%s", err.Error())
 		m.Info("failed to create instance configuration")
 		return err
 	}
@@ -487,7 +486,7 @@ func (m *MachinePoolScope) getLaunchInstanceDetails(instanceConfigurationSpec in
 
 	shapeConfig, err := m.buildInstanceConfigurationShapeConfig()
 	if err != nil {
-		conditions.MarkFalse(m.MachinePool, infrav2exp.LaunchTemplateReadyCondition, infrav2exp.LaunchTemplateCreateFailedReason, clusterv1.ConditionSeverityError, err.Error())
+		conditions.MarkConditionFalse(m.MachinePool, infrav2exp.LaunchTemplateReadyCondition, infrav2exp.LaunchTemplateCreateFailedReason, clusterv1beta1.ConditionSeverityError, "%s", err.Error())
 		m.Info("failed to create instance configuration due to shape config")
 		return nil, err
 	}

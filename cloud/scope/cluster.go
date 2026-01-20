@@ -33,7 +33,7 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/identity"
 	"github.com/pkg/errors"
 	"k8s.io/klog/v2/klogr"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -50,7 +50,7 @@ const (
 type ClusterScopeParams struct {
 	Client                    client.Client
 	Logger                    *logr.Logger
-	Cluster                   *clusterv1.Cluster
+	Cluster                   *clusterv1beta1.Cluster
 	VCNClient                 vcn.Client
 	NetworkLoadBalancerClient nlb.NetworkLoadBalancerClient
 	LoadBalancerClient        lb.LoadBalancerClient
@@ -68,7 +68,7 @@ type ClusterScope struct {
 	*logr.Logger
 	client                    client.Client
 	patchHelper               *patch.Helper
-	Cluster                   *clusterv1.Cluster
+	Cluster                   *clusterv1beta1.Cluster
 	VCNClient                 vcn.Client
 	NetworkLoadBalancerClient nlb.NetworkLoadBalancerClient
 	LoadBalancerClient        lb.LoadBalancerClient
@@ -167,7 +167,7 @@ func (s *ClusterScope) setFailureDomains(ctx context.Context) error {
 			if err != nil {
 				return errors.New(fmt.Sprintf("availability domain is not a valid integer: availability domain %s", k))
 			}
-			s.SetFailureDomain(adNumber, clusterv1.FailureDomainSpec{
+			s.SetFailureDomain(adNumber, clusterv1beta1.FailureDomainSpec{
 				ControlPlane: true,
 				Attributes:   map[string]string{AvailabilityDomain: k},
 			})
@@ -176,7 +176,7 @@ func (s *ClusterScope) setFailureDomains(ctx context.Context) error {
 		// only first element is used, hence break at the end
 		for k := range adMap {
 			for i, fd := range adMap[k].FaultDomains {
-				s.SetFailureDomain(strconv.Itoa(i+1), clusterv1.FailureDomainSpec{
+				s.SetFailureDomain(strconv.Itoa(i+1), clusterv1beta1.FailureDomainSpec{
 					ControlPlane: true,
 					Attributes: map[string]string{
 						AvailabilityDomain: k,
@@ -193,7 +193,7 @@ func (s *ClusterScope) setFailureDomains(ctx context.Context) error {
 }
 
 // SetFailureDomain sets the cluster's failure domain in the status
-func (s *ClusterScope) SetFailureDomain(id string, spec clusterv1.FailureDomainSpec) {
+func (s *ClusterScope) SetFailureDomain(id string, spec clusterv1beta1.FailureDomainSpec) {
 	s.OCIClusterAccessor.SetFailureDomain(id, spec)
 }
 

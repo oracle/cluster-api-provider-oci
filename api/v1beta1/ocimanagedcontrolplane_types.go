@@ -18,7 +18,7 @@ package v1beta1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 )
 
 const (
@@ -52,7 +52,7 @@ type OCIManagedControlPlaneSpec struct {
 
 	// ControlPlaneEndpoint represents the endpoint used to communicate with the control plane.
 	// +optional
-	ControlPlaneEndpoint clusterv1.APIEndpoint `json:"controlPlaneEndpoint"`
+	ControlPlaneEndpoint clusterv1beta1.APIEndpoint `json:"controlPlaneEndpoint"`
 
 	// Version represents the version of the Kubernetes Cluster Control Plane.
 	Version *string `json:"version,omitempty"`
@@ -142,7 +142,7 @@ type OCIManagedControlPlaneStatus struct {
 	Ready bool `json:"ready"`
 	// NetworkSpec encapsulates all things related to OCI network.
 	// +optional
-	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
+	Conditions clusterv1beta1.Conditions `json:"conditions,omitempty"`
 
 	// Version represents the current Kubernetes version for the control plane.
 	// +optional
@@ -176,12 +176,12 @@ type OCIManagedControlPlaneList struct {
 }
 
 // GetConditions returns the list of conditions for an OCICluster API object.
-func (c *OCIManagedControlPlane) GetConditions() clusterv1.Conditions {
+func (c *OCIManagedControlPlane) GetConditions() clusterv1beta1.Conditions {
 	return c.Status.Conditions
 }
 
 // SetConditions will set the given conditions on an OCICluster object.
-func (c *OCIManagedControlPlane) SetConditions(conditions clusterv1.Conditions) {
+func (c *OCIManagedControlPlane) SetConditions(conditions clusterv1beta1.Conditions) {
 	c.Status.Conditions = conditions
 }
 

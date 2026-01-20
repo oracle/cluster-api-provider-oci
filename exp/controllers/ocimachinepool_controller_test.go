@@ -23,6 +23,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	"github.com/oracle/cluster-api-provider-oci/cloud/conditions"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/computemanagement/mock_computemanagement"
@@ -34,9 +35,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	expclusterv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
-	"sigs.k8s.io/cluster-api/util/conditions"
+	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -156,18 +155,18 @@ func getOCIMachinePool() *infrav2exp.OCIMachinePool {
 			Namespace: "test",
 			UID:       "uid",
 			Labels: map[string]string{
-				clusterv1.ClusterNameLabel: "test-cluster",
+				clusterv1beta1.ClusterNameLabel: "test-cluster",
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					Name:       "test-cluster",
 					Kind:       "Cluster",
-					APIVersion: clusterv1.GroupVersion.String(),
+					APIVersion: clusterv1beta1.GroupVersion.String(),
 				},
 				{
 					Name:       "test",
 					Kind:       "MachinePool",
-					APIVersion: expclusterv1.GroupVersion.String(),
+					APIVersion: clusterv1beta1.GroupVersion.String(),
 				},
 			},
 		},
@@ -245,14 +244,14 @@ func TestReconciliationFunction(t *testing.T) {
 		testSpecificSetup       func(t *test, machinePoolScope *scope.MachinePoolScope, computeManagementClient *mock_computemanagement.MockClient)
 		expectedFailureMessages []string
 		createPoolMachines      []infrav2exp.OCIMachinePoolMachine
-		deletePoolMachines      []clusterv1.Machine
+		deletePoolMachines      []clusterv1beta1.Machine
 		validate                func(g *WithT, t *test)
 	}
 	tests := []test{
 		{
 			name:               "bootstrap data not ready",
 			errorExpected:      false,
-			conditionAssertion: []conditionAssertion{{infrav2exp.InstancePoolReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityInfo, infrastructurev1beta2.WaitingForBootstrapDataReason}},
+			conditionAssertion: []conditionAssertion{{infrav2exp.InstancePoolReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityInfo, infrastructurev1beta2.WaitingForBootstrapDataReason}},
 			testSpecificSetup: func(t *test, machinePoolScope *scope.MachinePoolScope, computeManagementClient *mock_computemanagement.MockClient) {
 			},
 		},
@@ -386,14 +385,14 @@ func TestReconciliationFunction(t *testing.T) {
 						Name:      "test",
 						Namespace: "test",
 						Labels: map[string]string{
-							clusterv1.ClusterNameLabel:     "test-cluster",
-							clusterv1.MachinePoolNameLabel: "test",
+							clusterv1beta1.ClusterNameLabel:     "test-cluster",
+							clusterv1beta1.MachinePoolNameLabel: "test",
 						},
 						OwnerReferences: []metav1.OwnerReference{
 							{
 								Kind:       "Machine",
 								Name:       "test",
-								APIVersion: clusterv1.GroupVersion.String(),
+								APIVersion: clusterv1beta1.GroupVersion.String(),
 							},
 						},
 					},
@@ -403,18 +402,18 @@ func TestReconciliationFunction(t *testing.T) {
 						ProviderID:   common.String("id-2"),
 						MachineType:  infrav2exp.Managed,
 					},
-				}, &clusterv1.Machine{
+				}, &clusterv1beta1.Machine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "test",
 						Labels: map[string]string{
-							clusterv1.ClusterNameLabel:     "oci-cluster",
-							clusterv1.MachinePoolNameLabel: "test",
+							clusterv1beta1.ClusterNameLabel:     "oci-cluster",
+							clusterv1beta1.MachinePoolNameLabel: "test",
 						},
 					},
-					Spec: clusterv1.MachineSpec{},
+					Spec: clusterv1beta1.MachineSpec{},
 				}).Build()
-				t.deletePoolMachines = make([]clusterv1.Machine, 0)
+				t.deletePoolMachines = make([]clusterv1beta1.Machine, 0)
 				r.Client = interceptor.NewClient(fakeClient, interceptor.Funcs{
 					Create: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
 						m := obj.(*infrav2exp.OCIMachinePoolMachine)
@@ -422,7 +421,7 @@ func TestReconciliationFunction(t *testing.T) {
 						return nil
 					},
 					Delete: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
-						m := obj.(*clusterv1.Machine)
+						m := obj.(*clusterv1beta1.Machine)
 						t.deletePoolMachines = append(t.deletePoolMachines, *m)
 						return nil
 					},
@@ -489,7 +488,7 @@ func TestReconciliationFunction(t *testing.T) {
 		{
 			name:               "instance pool failed",
 			errorExpected:      true,
-			conditionAssertion: []conditionAssertion{{infrav2exp.LaunchTemplateReadyCondition, corev1.ConditionTrue, "", ""}, {infrav2exp.InstancePoolReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityError, infrav2exp.InstancePoolProvisionFailedReason}},
+			conditionAssertion: []conditionAssertion{{infrav2exp.LaunchTemplateReadyCondition, corev1.ConditionTrue, "", ""}, {infrav2exp.InstancePoolReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityError, infrav2exp.InstancePoolProvisionFailedReason}},
 			testSpecificSetup: func(t *test, machinePoolScope *scope.MachinePoolScope, computeManagementClient *mock_computemanagement.MockClient) {
 				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
 					Shape:                   common.String("test-shape"),
@@ -659,7 +658,7 @@ func TestDeleteeconciliationFunction(t *testing.T) {
 		{
 			name:               "instance pool terminated",
 			errorExpected:      false,
-			conditionAssertion: []conditionAssertion{{infrav2exp.InstancePoolReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityWarning, infrav2exp.InstancePoolDeletionInProgress}},
+			conditionAssertion: []conditionAssertion{{infrav2exp.InstancePoolReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityWarning, infrav2exp.InstancePoolDeletionInProgress}},
 			testSpecificSetup: func(machinePoolScope *scope.MachinePoolScope, computeManagementClient *mock_computemanagement.MockClient) {
 				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
 					Shape:                   common.String("test-shape"),
@@ -725,7 +724,7 @@ func getOCIClusterWithOwner() *infrastructurev1beta2.OCICluster {
 		{
 			Name:       "test-cluster",
 			Kind:       "Cluster",
-			APIVersion: clusterv1.GroupVersion.String(),
+			APIVersion: clusterv1beta1.GroupVersion.String(),
 		},
 	}
 	return ociCluster
@@ -739,7 +738,7 @@ func getOCIClusterWithNoOwner() *infrastructurev1beta2.OCICluster {
 		},
 		Spec: infrastructurev1beta2.OCIClusterSpec{
 			CompartmentId: "test-compartment",
-			ControlPlaneEndpoint: clusterv1.APIEndpoint{
+			ControlPlaneEndpoint: clusterv1beta1.APIEndpoint{
 				Port: 6443,
 			},
 			OCIResourceIdentifier: "resource_uid",
@@ -801,9 +800,9 @@ func expectMachinePoolConditions(g *WithT, m *infrav2exp.OCIMachinePool, expecte
 }
 
 type conditionAssertion struct {
-	conditionType clusterv1.ConditionType
+	conditionType clusterv1beta1.ConditionType
 	status        corev1.ConditionStatus
-	severity      clusterv1.ConditionSeverity
+	severity      clusterv1beta1.ConditionSeverity
 	reason        string
 }
 

@@ -30,8 +30,7 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/core"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	expclusterv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
+	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -133,18 +132,18 @@ func TestInstanceConfigCreate(t *testing.T) {
 			OCIClusterAccessor: OCISelfManagedCluster{
 				OCICluster: ociCluster,
 			},
-			Cluster: &clusterv1.Cluster{
-				Spec: clusterv1.ClusterSpec{},
+			Cluster: &clusterv1beta1.Cluster{
+				Spec: clusterv1beta1.ClusterSpec{},
 			},
-			MachinePool: &expclusterv1.MachinePool{
+			MachinePool: &clusterv1beta1.MachinePool{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 				},
-				Spec: expclusterv1.MachinePoolSpec{
+				Spec: clusterv1beta1.MachinePoolSpec{
 					Replicas: &size,
-					Template: clusterv1.MachineTemplateSpec{
-						Spec: clusterv1.MachineSpec{
-							Bootstrap: clusterv1.Bootstrap{
+					Template: clusterv1beta1.MachineTemplateSpec{
+						Spec: clusterv1beta1.MachineSpec{
+							Bootstrap: clusterv1beta1.Bootstrap{
 								DataSecretName: common.String("bootstrap"),
 							},
 						},
@@ -599,18 +598,18 @@ func TestInstancePoolCreate(t *testing.T) {
 			OCIClusterAccessor: OCISelfManagedCluster{
 				OCICluster: ociCluster,
 			},
-			Cluster: &clusterv1.Cluster{
-				Spec: clusterv1.ClusterSpec{},
+			Cluster: &clusterv1beta1.Cluster{
+				Spec: clusterv1beta1.ClusterSpec{},
 			},
-			MachinePool: &expclusterv1.MachinePool{
+			MachinePool: &clusterv1beta1.MachinePool{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 				},
-				Spec: expclusterv1.MachinePoolSpec{
+				Spec: clusterv1beta1.MachinePoolSpec{
 					Replicas: &size,
-					Template: clusterv1.MachineTemplateSpec{
-						Spec: clusterv1.MachineSpec{
-							Bootstrap: clusterv1.Bootstrap{
+					Template: clusterv1beta1.MachineTemplateSpec{
+						Spec: clusterv1beta1.MachineSpec{
+							Bootstrap: clusterv1beta1.Bootstrap{
 								DataSecretName: common.String("bootstrap"),
 							},
 						},
@@ -782,18 +781,18 @@ func TestInstancePoolUpdate(t *testing.T) {
 			OCIClusterAccessor: OCISelfManagedCluster{
 				OCICluster: ociCluster,
 			},
-			Cluster: &clusterv1.Cluster{
-				Spec: clusterv1.ClusterSpec{},
+			Cluster: &clusterv1beta1.Cluster{
+				Spec: clusterv1beta1.ClusterSpec{},
 			},
-			MachinePool: &expclusterv1.MachinePool{
+			MachinePool: &clusterv1beta1.MachinePool{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 				},
-				Spec: expclusterv1.MachinePoolSpec{
+				Spec: clusterv1beta1.MachinePoolSpec{
 					Replicas: &size,
-					Template: clusterv1.MachineTemplateSpec{
-						Spec: clusterv1.MachineSpec{
-							Bootstrap: clusterv1.Bootstrap{
+					Template: clusterv1beta1.MachineTemplateSpec{
+						Spec: clusterv1beta1.MachineSpec{
+							Bootstrap: clusterv1beta1.Bootstrap{
 								DataSecretName: common.String("bootstrap"),
 							},
 						},

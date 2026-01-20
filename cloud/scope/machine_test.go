@@ -41,7 +41,7 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
@@ -87,14 +87,14 @@ func TestInstanceReconciliation(t *testing.T) {
 					CompartmentId: "test",
 				},
 			},
-			Machine: &clusterv1.Machine{
-				Spec: clusterv1.MachineSpec{
-					Bootstrap: clusterv1.Bootstrap{
+			Machine: &clusterv1beta1.Machine{
+				Spec: clusterv1beta1.MachineSpec{
+					Bootstrap: clusterv1beta1.Bootstrap{
 						DataSecretName: common.String("bootstrap"),
 					},
 				},
 			},
-			Cluster: &clusterv1.Cluster{},
+			Cluster: &clusterv1beta1.Cluster{},
 			OCIClusterAccessor: OCISelfManagedCluster{
 				OCICluster: &ociCluster,
 			},
@@ -327,7 +327,7 @@ func TestInstanceReconciliation(t *testing.T) {
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				setupAllParams(ms)
 				ociCluster := ms.OCIClusterAccessor.(OCISelfManagedCluster).OCICluster
-				ociCluster.Status.FailureDomains = map[string]clusterv1.FailureDomainSpec{
+				ociCluster.Status.FailureDomains = map[string]clusterv1beta1.FailureDomainSpec{
 					"1": {
 						Attributes: map[string]string{
 							"AvailabilityDomain": "ad1",
@@ -370,7 +370,7 @@ func TestInstanceReconciliation(t *testing.T) {
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				setupAllParams(ms)
 				ociCluster := ms.OCIClusterAccessor.(OCISelfManagedCluster).OCICluster
-				ociCluster.Status.FailureDomains = map[string]clusterv1.FailureDomainSpec{
+				ociCluster.Status.FailureDomains = map[string]clusterv1beta1.FailureDomainSpec{
 					"1": {
 						Attributes: map[string]string{
 							"AvailabilityDomain": "ad1",
@@ -418,7 +418,7 @@ func TestInstanceReconciliation(t *testing.T) {
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				setupAllParams(ms)
 				ociCluster := ms.OCIClusterAccessor.(OCISelfManagedCluster).OCICluster
-				ociCluster.Status.FailureDomains = map[string]clusterv1.FailureDomainSpec{
+				ociCluster.Status.FailureDomains = map[string]clusterv1beta1.FailureDomainSpec{
 					"1": {
 						Attributes: map[string]string{
 							"AvailabilityDomain": "ad1",
@@ -463,7 +463,7 @@ func TestInstanceReconciliation(t *testing.T) {
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				setupAllParams(ms)
 				ociCluster := ms.OCIClusterAccessor.(OCISelfManagedCluster).OCICluster
-				ociCluster.Status.FailureDomains = map[string]clusterv1.FailureDomainSpec{
+				ociCluster.Status.FailureDomains = map[string]clusterv1beta1.FailureDomainSpec{
 					"1": {
 						Attributes: map[string]string{
 							"AvailabilityDomain": "ad1",
@@ -1790,8 +1790,8 @@ func TestNLBReconciliationCreation(t *testing.T) {
 					CompartmentId: "test",
 				},
 			},
-			Machine: &clusterv1.Machine{},
-			Cluster: &clusterv1.Cluster{},
+			Machine: &clusterv1beta1.Machine{},
+			Cluster: &clusterv1beta1.Cluster{},
 			OCIClusterAccessor: OCISelfManagedCluster{
 				OCICluster: &ociCluster,
 			},
@@ -1824,9 +1824,9 @@ func TestNLBReconciliationCreation(t *testing.T) {
 			name:          "ip exists",
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
-				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+				machineScope.OCIMachine.Status.Addresses = []clusterv1beta1.MachineAddress{
 					{
-						Type:    clusterv1.MachineInternalIP,
+						Type:    clusterv1beta1.MachineInternalIP,
 						Address: "1.1.1.1",
 					},
 				}
@@ -1870,9 +1870,9 @@ func TestNLBReconciliationCreation(t *testing.T) {
 			name:          "work request exists, will retry",
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
-				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+				machineScope.OCIMachine.Status.Addresses = []clusterv1beta1.MachineAddress{
 					{
-						Type:    clusterv1.MachineInternalIP,
+						Type:    clusterv1beta1.MachineInternalIP,
 						Address: "1.1.1.1",
 					},
 				}
@@ -1916,9 +1916,9 @@ func TestNLBReconciliationCreation(t *testing.T) {
 			name:          "backend exists",
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
-				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+				machineScope.OCIMachine.Status.Addresses = []clusterv1beta1.MachineAddress{
 					{
-						Type:    clusterv1.MachineInternalIP,
+						Type:    clusterv1beta1.MachineInternalIP,
 						Address: "1.1.1.1",
 					},
 				}
@@ -1945,9 +1945,9 @@ func TestNLBReconciliationCreation(t *testing.T) {
 			errorExpected: true,
 			matchError:    errors.New("could not create backend"),
 			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
-				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+				machineScope.OCIMachine.Status.Addresses = []clusterv1beta1.MachineAddress{
 					{
-						Type:    clusterv1.MachineInternalIP,
+						Type:    clusterv1beta1.MachineInternalIP,
 						Address: "1.1.1.1",
 					},
 				}
@@ -1984,9 +1984,9 @@ func TestNLBReconciliationCreation(t *testing.T) {
 			errorExpected: true,
 			matchError:    errors.New("could not get nlb"),
 			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
-				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+				machineScope.OCIMachine.Status.Addresses = []clusterv1beta1.MachineAddress{
 					{
-						Type:    clusterv1.MachineInternalIP,
+						Type:    clusterv1beta1.MachineInternalIP,
 						Address: "1.1.1.1",
 					},
 				}
@@ -2002,9 +2002,9 @@ func TestNLBReconciliationCreation(t *testing.T) {
 			errorSubStringMatch: true,
 			matchError:          errors.Errorf("WorkRequest %s failed", "wrid"),
 			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
-				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+				machineScope.OCIMachine.Status.Addresses = []clusterv1beta1.MachineAddress{
 					{
-						Type:    clusterv1.MachineInternalIP,
+						Type:    clusterv1beta1.MachineInternalIP,
 						Address: "1.1.1.1",
 					},
 				}
@@ -2113,8 +2113,8 @@ func TestNLBReconciliationDeletion(t *testing.T) {
 					CompartmentId: "test",
 				},
 			},
-			Machine: &clusterv1.Machine{},
-			Cluster: &clusterv1.Cluster{},
+			Machine: &clusterv1beta1.Machine{},
+			Cluster: &clusterv1beta1.Cluster{},
 			OCIClusterAccessor: OCISelfManagedCluster{
 				OCICluster: &ociCluster,
 			},
@@ -2392,8 +2392,8 @@ func TestLBReconciliationCreation(t *testing.T) {
 					CompartmentId: "test",
 				},
 			},
-			Machine: &clusterv1.Machine{},
-			Cluster: &clusterv1.Cluster{},
+			Machine: &clusterv1beta1.Machine{},
+			Cluster: &clusterv1beta1.Cluster{},
 			OCIClusterAccessor: OCISelfManagedCluster{
 				OCICluster: &ociCluster,
 			},
@@ -2426,9 +2426,9 @@ func TestLBReconciliationCreation(t *testing.T) {
 			name:          "ip exists",
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
-				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+				machineScope.OCIMachine.Status.Addresses = []clusterv1beta1.MachineAddress{
 					{
-						Type:    clusterv1.MachineInternalIP,
+						Type:    clusterv1beta1.MachineInternalIP,
 						Address: "1.1.1.1",
 					},
 				}
@@ -2471,9 +2471,9 @@ func TestLBReconciliationCreation(t *testing.T) {
 			name:          "work request exists, will retry",
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
-				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+				machineScope.OCIMachine.Status.Addresses = []clusterv1beta1.MachineAddress{
 					{
-						Type:    clusterv1.MachineInternalIP,
+						Type:    clusterv1beta1.MachineInternalIP,
 						Address: "1.1.1.1",
 					},
 				}
@@ -2516,9 +2516,9 @@ func TestLBReconciliationCreation(t *testing.T) {
 			name:          "backend exists",
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
-				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+				machineScope.OCIMachine.Status.Addresses = []clusterv1beta1.MachineAddress{
 					{
-						Type:    clusterv1.MachineInternalIP,
+						Type:    clusterv1beta1.MachineInternalIP,
 						Address: "1.1.1.1",
 					},
 				}
@@ -2545,9 +2545,9 @@ func TestLBReconciliationCreation(t *testing.T) {
 			errorExpected: true,
 			matchError:    errors.New("could not create backend"),
 			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
-				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+				machineScope.OCIMachine.Status.Addresses = []clusterv1beta1.MachineAddress{
 					{
-						Type:    clusterv1.MachineInternalIP,
+						Type:    clusterv1beta1.MachineInternalIP,
 						Address: "1.1.1.1",
 					},
 				}
@@ -2583,9 +2583,9 @@ func TestLBReconciliationCreation(t *testing.T) {
 			errorExpected: true,
 			matchError:    errors.New("could not get lb"),
 			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
-				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+				machineScope.OCIMachine.Status.Addresses = []clusterv1beta1.MachineAddress{
 					{
-						Type:    clusterv1.MachineInternalIP,
+						Type:    clusterv1beta1.MachineInternalIP,
 						Address: "1.1.1.1",
 					},
 				}
@@ -2601,9 +2601,9 @@ func TestLBReconciliationCreation(t *testing.T) {
 			errorSubStringMatch: true,
 			matchError:          errors.Errorf("WorkRequest %s failed", "wrid"),
 			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
-				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+				machineScope.OCIMachine.Status.Addresses = []clusterv1beta1.MachineAddress{
 					{
-						Type:    clusterv1.MachineInternalIP,
+						Type:    clusterv1beta1.MachineInternalIP,
 						Address: "1.1.1.1",
 					},
 				}
@@ -2704,8 +2704,8 @@ func TestLBReconciliationDeletion(t *testing.T) {
 					CompartmentId: "test",
 				},
 			},
-			Machine: &clusterv1.Machine{},
-			Cluster: &clusterv1.Cluster{},
+			Machine: &clusterv1beta1.Machine{},
+			Cluster: &clusterv1beta1.Cluster{},
 			OCIClusterAccessor: OCISelfManagedCluster{
 				OCICluster: &ociCluster,
 			},
@@ -2731,9 +2731,9 @@ func TestLBReconciliationDeletion(t *testing.T) {
 			name:          "get lb error",
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
-				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+				machineScope.OCIMachine.Status.Addresses = []clusterv1beta1.MachineAddress{
 					{
-						Type:    clusterv1.MachineInternalIP,
+						Type:    clusterv1beta1.MachineInternalIP,
 						Address: "1.1.1.1",
 					},
 				}
@@ -2748,9 +2748,9 @@ func TestLBReconciliationDeletion(t *testing.T) {
 			errorExpected: true,
 			matchError:    errors.New("could not get lb"),
 			testSpecificSetup: func(machineScope *MachineScope, nlbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
-				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+				machineScope.OCIMachine.Status.Addresses = []clusterv1beta1.MachineAddress{
 					{
-						Type:    clusterv1.MachineInternalIP,
+						Type:    clusterv1beta1.MachineInternalIP,
 						Address: "1.1.1.1",
 					},
 				}
@@ -2775,9 +2775,9 @@ func TestLBReconciliationDeletion(t *testing.T) {
 			errorExpected: false,
 			matchError:    errors.New("could not get lb"),
 			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
-				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+				machineScope.OCIMachine.Status.Addresses = []clusterv1beta1.MachineAddress{
 					{
-						Type:    clusterv1.MachineInternalIP,
+						Type:    clusterv1beta1.MachineInternalIP,
 						Address: "1.1.1.1",
 					},
 				}
@@ -2818,9 +2818,9 @@ func TestLBReconciliationDeletion(t *testing.T) {
 			name:          "backend does not exist",
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
-				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+				machineScope.OCIMachine.Status.Addresses = []clusterv1beta1.MachineAddress{
 					{
-						Type:    clusterv1.MachineInternalIP,
+						Type:    clusterv1beta1.MachineInternalIP,
 						Address: "1.1.1.1",
 					},
 				}
@@ -2843,9 +2843,9 @@ func TestLBReconciliationDeletion(t *testing.T) {
 			errorExpected: false,
 			matchError:    errors.New("could not get lb"),
 			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
-				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+				machineScope.OCIMachine.Status.Addresses = []clusterv1beta1.MachineAddress{
 					{
-						Type:    clusterv1.MachineInternalIP,
+						Type:    clusterv1beta1.MachineInternalIP,
 						Address: "1.1.1.1",
 					},
 				}
@@ -2889,9 +2889,9 @@ func TestLBReconciliationDeletion(t *testing.T) {
 			errorSubStringMatch: true,
 			matchError:          errors.Errorf("WorkRequest %s failed", "wrid"),
 			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
-				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+				machineScope.OCIMachine.Status.Addresses = []clusterv1beta1.MachineAddress{
 					{
-						Type:    clusterv1.MachineInternalIP,
+						Type:    clusterv1beta1.MachineInternalIP,
 						Address: "1.1.1.1",
 					},
 				}
@@ -2938,9 +2938,9 @@ func TestLBReconciliationDeletion(t *testing.T) {
 			errorExpected: true,
 			matchError:    errors.New("backend request failed"),
 			testSpecificSetup: func(machineScope *MachineScope, lbClient *mock_lb.MockLoadBalancerClient, wrClient *mock_workrequests.MockClient) {
-				machineScope.OCIMachine.Status.Addresses = []clusterv1.MachineAddress{
+				machineScope.OCIMachine.Status.Addresses = []clusterv1beta1.MachineAddress{
 					{
-						Type:    clusterv1.MachineInternalIP,
+						Type:    clusterv1beta1.MachineInternalIP,
 						Address: "1.1.1.1",
 					},
 				}
@@ -3013,8 +3013,8 @@ func TestInstanceDeletion(t *testing.T) {
 					InstanceId:    common.String("test"),
 				},
 			},
-			Machine: &clusterv1.Machine{},
-			Cluster: &clusterv1.Cluster{},
+			Machine: &clusterv1beta1.Machine{},
+			Cluster: &clusterv1beta1.Cluster{},
 			OCIClusterAccessor: OCISelfManagedCluster{
 				OCICluster: &ociCluster,
 			},
@@ -3102,7 +3102,7 @@ func setupAllParams(ms *MachineScope) {
 	ms.OCIMachine.Spec.ShapeConfig.BaselineOcpuUtilization = "BASELINE_1_8"
 	ms.OCIMachine.Spec.IsPvEncryptionInTransitEnabled = true
 	ociCluster := ms.OCIClusterAccessor.(OCISelfManagedCluster).OCICluster
-	ociCluster.Status.FailureDomains = map[string]clusterv1.FailureDomainSpec{
+	ociCluster.Status.FailureDomains = map[string]clusterv1beta1.FailureDomainSpec{
 		"1": {
 			Attributes: map[string]string{
 				"AvailabilityDomain": "ad1",
