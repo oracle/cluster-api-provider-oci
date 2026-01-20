@@ -43,9 +43,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2/klogr"
 	"k8s.io/utils/pointer"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	capiUtil "sigs.k8s.io/cluster-api/util"
-	"sigs.k8s.io/cluster-api/util/conditions"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	"sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -276,7 +275,7 @@ func (m *MachineScope) launchInstanceWithFaultDomainRetry(ctx context.Context, b
 		return nil, errors.New("machine scope is missing OCIMachine")
 	}
 
-	baseRetryToken := ociutil.GetOPCRetryToken(string(m.OCIMachine.UID))
+	baseRetryToken := ociutil.GetOPCRetryToken("%s", string(m.OCIMachine.UID))
 	var lastErr error
 	totalAttempts := len(faultDomains)
 
@@ -825,7 +824,8 @@ func (m *MachineScope) containsLBBackend(backendSet loadbalancer.BackendSet, bac
 
 // IsControlPlane returns true if the machine is a control plane.
 func (m *MachineScope) IsControlPlane() bool {
-	return capiUtil.IsControlPlaneMachine(m.Machine)
+	_, ok := m.Machine.Labels[clusterv1.MachineControlPlaneLabel]
+	return ok
 }
 
 func (m *MachineScope) getCompartmentId() string {

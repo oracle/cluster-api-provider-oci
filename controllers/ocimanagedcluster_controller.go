@@ -31,10 +31,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/annotations"
-	"sigs.k8s.io/cluster-api/util/conditions"
+	"sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -104,6 +104,11 @@ func (r *OCIManagedClusterReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		logger.Info("OCIManagedCluster or linked Cluster is marked as paused. Won't reconcile")
 		return ctrl.Result{}, nil
 	}
+	// Convert v1beta2 Cluster to v1beta1 for scope compatibility
+	clusterV1beta1, err := cloudutil.ConvertClusterV1Beta2ToV1Beta1(cluster)
+	if err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "failed to convert cluster to v1beta1")
+	}
 
 	clusterAccessor := scope.OCIManagedCluster{
 		OCIManagedCluster: ociCluster,
@@ -121,7 +126,7 @@ func (r *OCIManagedClusterReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	clusterScope, err := scope.NewClusterScope(scope.ClusterScopeParams{
 		Client:             r.Client,
 		Logger:             &logger,
-		Cluster:            cluster,
+		Cluster:            clusterV1beta1,
 		OCIClusterAccessor: clusterAccessor,
 		ClientProvider:     clientProvider,
 		VCNClient:          clients.VCNClient,
@@ -157,7 +162,7 @@ func (r *OCIManagedClusterReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	if err != nil {
 		return reconcile.Result{}, errors.Errorf("failed to create scope: %+v", err)
 	} else {
-		return r.reconcile(ctx, logger, clusterScope, ociCluster, cluster)
+		return r.reconcile(ctx, logger, clusterScope, ociCluster, clusterV1beta1)
 	}
 
 }
@@ -168,7 +173,7 @@ func (r *OCIManagedClusterReconciler) reconcileComponent(ctx context.Context, cl
 
 	err := reconciler(ctx)
 	if err != nil {
-		r.Recorder.Event(cluster, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err,
+		r.Recorder.Event(cluster, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "%s",
 			fmt.Sprintf("failed to reconcile %s", componentName)).Error())
 		conditions.MarkFalse(cluster, infrastructurev1beta2.ClusterReadyCondition, failReason, clusterv1.ConditionSeverityError, "")
 		return errors.Wrapf(err, "failed to reconcile %s for OCIManagedCluster %s/%s", componentName, cluster.Namespace,
@@ -467,14 +472,14 @@ func OCIManagedControlPlaneToOCIManagedClusterMapper(c client.Client, log logr.L
 		}
 
 		ref := cluster.Spec.InfrastructureRef
-		if ref == nil || ref.Name == "" {
+		if ref.Name == "" {
 			return nil
 		}
 
 		return []ctrl.Request{
 			{
 				NamespacedName: types.NamespacedName{
-					Namespace: ref.Namespace,
+					Namespace: cluster.Namespace,
 					Name:      ref.Name,
 				},
 			},

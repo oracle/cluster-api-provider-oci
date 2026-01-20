@@ -141,12 +141,12 @@ manifests: $(CONTROLLER_GEN) ## Generate WebhookConfiguration, ClusterRole and C
 generate: $(CONTROLLER_GEN) $(CONVERSION_GEN) ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./api/..." paths="./exp/api/..."
 	$(CONVERSION_GEN) \
-		--extra-peer-dirs=sigs.k8s.io/cluster-api/api/v1beta1 \
+		--extra-peer-dirs=sigs.k8s.io/cluster-api/api/core/v1beta1 \
 		--output-file=zz_generated.conversion.go \
 		--go-header-file=hack/boilerplate.go.txt \
 		./api/v1beta1
 	$(CONVERSION_GEN) \
-		--extra-peer-dirs=sigs.k8s.io/cluster-api/api/v1beta1 \
+		--extra-peer-dirs=sigs.k8s.io/cluster-api/api/core/v1beta1 \
 		--extra-peer-dirs=github.com/oracle/cluster-api-provider-oci/api/v1beta1 \
 		--output-file=zz_generated.conversion.go \
 		--go-header-file=hack/boilerplate.go.txt \

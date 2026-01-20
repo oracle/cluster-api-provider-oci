@@ -33,14 +33,13 @@ import (
 	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/client-go/tools/record"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	expclusterv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
-	"sigs.k8s.io/cluster-api/util/conditions"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	expclusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	"sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -96,19 +95,19 @@ func TestControlPlaneReconciliation(t *testing.T) {
 		{
 			name:             "paused cluster",
 			errorExpected:    false,
-			objects:          []client.Object{getSecret(), getOCIManagedControlPlane(), getPausedCluster()},
+			objects:          []client.Object{getSecret(), getOCIManagedControlPlane(), getPausedClusterV1Beta2()},
 			eventNotExpected: "ClusterDoesNotExist",
 		},
 		{
 			name:          "oci managedcluster does not exist",
 			errorExpected: false,
-			objects:       []client.Object{getSecret(), getOCIManagedControlPlane(), getCluster()},
+			objects:       []client.Object{getSecret(), getOCIManagedControlPlane(), getClusterV1Beta2()},
 			expectedEvent: "ClusterNotAvailable",
 		},
 		{
 			name:          "oci managedcluster is not ready",
 			errorExpected: false,
-			objects:       []client.Object{getSecret(), getOCIManagedControlPlane(), getCluster(), notReadyCluster},
+			objects:       []client.Object{getSecret(), getOCIManagedControlPlane(), getClusterV1Beta2(), notReadyCluster},
 			expectedEvent: "ClusterInfrastructureNotReady",
 		},
 	}
@@ -124,10 +123,10 @@ func TestControlPlaneReconciliation(t *testing.T) {
 			defer teardown(t, g)
 			setup(t, g)
 
-			client := fake.NewClientBuilder().WithObjects(tc.objects...).Build()
+			client := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(tc.objects...).Build()
 			r = OCIManagedClusterControlPlaneReconciler{
 				Client:         client,
-				Scheme:         runtime.NewScheme(),
+				Scheme:         setupScheme(),
 				Recorder:       recorder,
 				ClientProvider: clientProvider,
 				Region:         MockTestRegion,
@@ -189,7 +188,7 @@ func TestControlPlaneReconciliationFunction(t *testing.T) {
 	setup := func(t *testing.T, g *WithT) {
 		var err error
 		mockCtrl = gomock.NewController(t)
-		client := fake.NewClientBuilder().WithObjects(getSecret(), getBootstrapSecret()).Build()
+		client := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(getSecret(), getBootstrapSecret()).Build()
 		okeClient = mock_containerengine.NewMockClient(mockCtrl)
 		baseClient = mock_base.NewMockBaseClient(mockCtrl)
 		ociManagedControlPlane = getOCIManagedControlPlane()
@@ -209,7 +208,7 @@ func TestControlPlaneReconciliationFunction(t *testing.T) {
 		recorder = record.NewFakeRecorder(2)
 		r = OCIManagedClusterControlPlaneReconciler{
 			Client:   client,
-			Scheme:   runtime.NewScheme(),
+			Scheme:   setupScheme(),
 			Recorder: recorder,
 		}
 		g.Expect(err).To(BeNil())
@@ -489,7 +488,7 @@ func TestControlPlaneDeletionFunction(t *testing.T) {
 	setup := func(t *testing.T, g *WithT) {
 		var err error
 		mockCtrl = gomock.NewController(t)
-		client := fake.NewClientBuilder().WithObjects(getSecret()).Build()
+		client := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(getSecret()).Build()
 		okeClient = mock_containerengine.NewMockClient(mockCtrl)
 		baseClient = mock_base.NewMockBaseClient(mockCtrl)
 		ociManagedControlPlane = getOCIManagedControlPlane()
@@ -509,7 +508,7 @@ func TestControlPlaneDeletionFunction(t *testing.T) {
 		recorder = record.NewFakeRecorder(2)
 		r = OCIManagedClusterControlPlaneReconciler{
 			Client:   client,
-			Scheme:   runtime.NewScheme(),
+			Scheme:   setupScheme(),
 			Recorder: recorder,
 		}
 		g.Expect(err).To(BeNil())

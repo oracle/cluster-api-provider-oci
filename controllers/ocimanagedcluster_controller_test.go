@@ -28,11 +28,10 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	"sigs.k8s.io/cluster-api/util/conditions"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	"sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -81,10 +80,10 @@ func TestOCIManagedClusterReconciler_Reconcile(t *testing.T) {
 			defer teardown(t, g)
 			setup(t, g)
 
-			client := fake.NewClientBuilder().WithObjects(tc.objects...).Build()
+			client := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(tc.objects...).Build()
 			r = OCIManagedClusterReconciler{
 				Client:   client,
-				Scheme:   runtime.NewScheme(),
+				Scheme:   setupScheme(),
 				Recorder: recorder,
 				Region:   MockTestRegion,
 			}
@@ -144,10 +143,10 @@ func TestOCIManagedClusterReconciler_reconcile(t *testing.T) {
 		}
 
 		recorder = record.NewFakeRecorder(20)
-		client := fake.NewClientBuilder().WithObjects(getSecret(), &controlPlane).Build()
+		client := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(getSecret(), &controlPlane).Build()
 		r = OCIManagedClusterReconciler{
 			Client:   client,
-			Scheme:   runtime.NewScheme(),
+			Scheme:   setupScheme(),
 			Recorder: recorder,
 			Region:   MockTestRegion,
 		}
@@ -409,10 +408,10 @@ func TestOCIManagedClusterReconciler_reconcileDelete(t *testing.T) {
 			Status:     infrastructurev1beta2.OCIManagedClusterStatus{},
 		}
 		recorder = record.NewFakeRecorder(10)
-		client := fake.NewClientBuilder().WithObjects(getSecret()).Build()
+		client := fake.NewClientBuilder().WithScheme(setupScheme()).WithObjects(getSecret()).Build()
 		r = OCIManagedClusterReconciler{
 			Client:   client,
-			Scheme:   runtime.NewScheme(),
+			Scheme:   setupScheme(),
 			Recorder: recorder,
 		}
 		//cs.EXPECT().GetOCIClusterAccessor().Return(ociClusterAccessor)

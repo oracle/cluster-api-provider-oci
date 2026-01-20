@@ -29,7 +29,7 @@ import (
 	v1beta2 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
-	clusterapiapiv1beta1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	corev1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	errors "sigs.k8s.io/cluster-api/errors"
 )
 
@@ -872,7 +872,7 @@ func Convert_v1beta2_OCIMachinePoolMachineSpec_To_v1beta1_OCIMachinePoolMachineS
 
 func autoConvert_v1beta1_OCIMachinePoolMachineStatus_To_v1beta2_OCIMachinePoolMachineStatus(in *OCIMachinePoolMachineStatus, out *v1beta2.OCIMachinePoolMachineStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
-	out.Conditions = *(*clusterapiapiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
+	out.Conditions = *(*corev1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
 	return nil
 }
 
@@ -883,7 +883,7 @@ func Convert_v1beta1_OCIMachinePoolMachineStatus_To_v1beta2_OCIMachinePoolMachin
 
 func autoConvert_v1beta2_OCIMachinePoolMachineStatus_To_v1beta1_OCIMachinePoolMachineStatus(in *v1beta2.OCIMachinePoolMachineStatus, out *OCIMachinePoolMachineStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
-	out.Conditions = *(*clusterapiapiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
+	out.Conditions = *(*corev1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
 	return nil
 }
 
@@ -927,7 +927,7 @@ func Convert_v1beta2_OCIMachinePoolSpec_To_v1beta1_OCIMachinePoolSpec(in *v1beta
 func autoConvert_v1beta1_OCIMachinePoolStatus_To_v1beta2_OCIMachinePoolStatus(in *OCIMachinePoolStatus, out *v1beta2.OCIMachinePoolStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
 	out.Replicas = in.Replicas
-	out.Conditions = *(*clusterapiapiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
+	out.Conditions = *(*corev1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
 	out.FailureReason = (*string)(unsafe.Pointer(in.FailureReason))
 	out.FailureMessage = (*string)(unsafe.Pointer(in.FailureMessage))
 	out.InfrastructureMachineKind = in.InfrastructureMachineKind
@@ -942,7 +942,7 @@ func Convert_v1beta1_OCIMachinePoolStatus_To_v1beta2_OCIMachinePoolStatus(in *OC
 func autoConvert_v1beta2_OCIMachinePoolStatus_To_v1beta1_OCIMachinePoolStatus(in *v1beta2.OCIMachinePoolStatus, out *OCIMachinePoolStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
 	out.Replicas = in.Replicas
-	out.Conditions = *(*clusterapiapiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
+	out.Conditions = *(*corev1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
 	out.FailureReason = (*string)(unsafe.Pointer(in.FailureReason))
 	out.FailureMessage = (*string)(unsafe.Pointer(in.FailureMessage))
 	out.InfrastructureMachineKind = in.InfrastructureMachineKind
@@ -1068,7 +1068,7 @@ func autoConvert_v1beta2_OCIManagedMachinePoolSpec_To_v1beta1_OCIManagedMachineP
 
 func autoConvert_v1beta1_OCIManagedMachinePoolStatus_To_v1beta2_OCIManagedMachinePoolStatus(in *OCIManagedMachinePoolStatus, out *v1beta2.OCIManagedMachinePoolStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
-	out.Conditions = *(*clusterapiapiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
+	out.Conditions = *(*corev1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
 	out.NodepoolLifecycleState = in.NodepoolLifecycleState
 	out.Replicas = in.Replicas
 	out.FailureReason = (*string)(unsafe.Pointer(in.FailureReason))
@@ -1084,7 +1084,7 @@ func Convert_v1beta1_OCIManagedMachinePoolStatus_To_v1beta2_OCIManagedMachinePoo
 
 func autoConvert_v1beta2_OCIManagedMachinePoolStatus_To_v1beta1_OCIManagedMachinePoolStatus(in *v1beta2.OCIManagedMachinePoolStatus, out *OCIManagedMachinePoolStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
-	out.Conditions = *(*clusterapiapiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
+	out.Conditions = *(*corev1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
 	out.NodepoolLifecycleState = in.NodepoolLifecycleState
 	out.Replicas = in.Replicas
 	out.FailureReason = (*errors.MachineStatusError)(unsafe.Pointer(in.FailureReason))
@@ -1308,7 +1308,7 @@ func Convert_v1beta2_OCIVirtualMachinePoolSpec_To_v1beta1_OCIVirtualMachinePoolS
 
 func autoConvert_v1beta1_OCIVirtualMachinePoolStatus_To_v1beta2_OCIVirtualMachinePoolStatus(in *OCIVirtualMachinePoolStatus, out *v1beta2.OCIVirtualMachinePoolStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
-	out.Conditions = *(*clusterapiapiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
+	out.Conditions = *(*corev1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
 	out.Replicas = in.Replicas
 	out.NodepoolLifecycleState = in.NodepoolLifecycleState
 	out.FailureReason = (*errors.MachinePoolStatusFailure)(unsafe.Pointer(in.FailureReason))
@@ -1324,7 +1324,7 @@ func Convert_v1beta1_OCIVirtualMachinePoolStatus_To_v1beta2_OCIVirtualMachinePoo
 
 func autoConvert_v1beta2_OCIVirtualMachinePoolStatus_To_v1beta1_OCIVirtualMachinePoolStatus(in *v1beta2.OCIVirtualMachinePoolStatus, out *OCIVirtualMachinePoolStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
-	out.Conditions = *(*clusterapiapiv1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
+	out.Conditions = *(*corev1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
 	out.Replicas = in.Replicas
 	out.NodepoolLifecycleState = in.NodepoolLifecycleState
 	out.FailureReason = (*errors.MachinePoolStatusFailure)(unsafe.Pointer(in.FailureReason))

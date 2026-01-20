@@ -21,9 +21,9 @@ limitations under the License.
 package v1beta1
 
 import (
-	cluster_api_provider_ociapiv1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	apiv1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
-	apiv1beta1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	corev1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	"sigs.k8s.io/cluster-api/errors"
 )
 
@@ -47,27 +47,27 @@ func (in *InstanceConfiguration) DeepCopyInto(out *InstanceConfiguration) {
 	}
 	if in.InstanceVnicConfiguration != nil {
 		in, out := &in.InstanceVnicConfiguration, &out.InstanceVnicConfiguration
-		*out = new(cluster_api_provider_ociapiv1beta1.NetworkDetails)
+		*out = new(apiv1beta1.NetworkDetails)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.PlatformConfig != nil {
 		in, out := &in.PlatformConfig, &out.PlatformConfig
-		*out = new(cluster_api_provider_ociapiv1beta1.PlatformConfig)
+		*out = new(apiv1beta1.PlatformConfig)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.AgentConfig != nil {
 		in, out := &in.AgentConfig, &out.AgentConfig
-		*out = new(cluster_api_provider_ociapiv1beta1.LaunchInstanceAgentConfig)
+		*out = new(apiv1beta1.LaunchInstanceAgentConfig)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.PreemptibleInstanceConfig != nil {
 		in, out := &in.PreemptibleInstanceConfig, &out.PreemptibleInstanceConfig
-		*out = new(cluster_api_provider_ociapiv1beta1.PreemptibleInstanceConfig)
+		*out = new(apiv1beta1.PreemptibleInstanceConfig)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.AvailabilityConfig != nil {
 		in, out := &in.AvailabilityConfig, &out.AvailabilityConfig
-		*out = new(cluster_api_provider_ociapiv1beta1.LaunchInstanceAvailabilityConfig)
+		*out = new(apiv1beta1.LaunchInstanceAvailabilityConfig)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.DedicatedVmHostId != nil {
@@ -77,12 +77,12 @@ func (in *InstanceConfiguration) DeepCopyInto(out *InstanceConfiguration) {
 	}
 	if in.LaunchOptions != nil {
 		in, out := &in.LaunchOptions, &out.LaunchOptions
-		*out = new(cluster_api_provider_ociapiv1beta1.LaunchOptions)
+		*out = new(apiv1beta1.LaunchOptions)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.InstanceOptions != nil {
 		in, out := &in.InstanceOptions, &out.InstanceOptions
-		*out = new(cluster_api_provider_ociapiv1beta1.InstanceOptions)
+		*out = new(apiv1beta1.InstanceOptions)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.IsPvEncryptionInTransitEnabled != nil {
@@ -532,7 +532,7 @@ func (in *OCIMachinePoolMachineStatus) DeepCopyInto(out *OCIMachinePoolMachineSt
 	*out = *in
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
-		*out = make(apiv1beta1.Conditions, len(*in))
+		*out = make(corev1beta1.Conditions, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
@@ -590,7 +590,7 @@ func (in *OCIMachinePoolStatus) DeepCopyInto(out *OCIMachinePoolStatus) {
 	*out = *in
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
-		*out = make(apiv1beta1.Conditions, len(*in))
+		*out = make(corev1beta1.Conditions, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
@@ -750,7 +750,7 @@ func (in *OCIManagedMachinePoolStatus) DeepCopyInto(out *OCIManagedMachinePoolSt
 	*out = *in
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
-		*out = make(apiv1beta1.Conditions, len(*in))
+		*out = make(corev1beta1.Conditions, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
@@ -988,7 +988,7 @@ func (in *OCIVirtualMachinePoolStatus) DeepCopyInto(out *OCIVirtualMachinePoolSt
 	*out = *in
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
-		*out = make(apiv1beta1.Conditions, len(*in))
+		*out = make(corev1beta1.Conditions, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
