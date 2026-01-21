@@ -368,6 +368,9 @@ GO_INSTALL = ./scripts/go_install.sh
 GOOS    := $(shell go env GOOS)
 GOARCH  := $(shell go env GOARCH)
 
+# Ensure the correct Go toolchain is used as declared by go.mod/toolchain (overrides env like GOTOOLCHAIN=local).
+export GOTOOLCHAIN=auto
+
 .PHONY: install-tools # populate hack/tools/bin
 install-tools: $(ENVSUBST) $(KUSTOMIZE) $(KUBECTL)
 
@@ -384,7 +387,7 @@ $(KUSTOMIZE): ## Download kustomize locally if necessary.
 	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) sigs.k8s.io/kustomize/kustomize/v4 $(KUSTOMIZE_BIN) v4.5.2
 
 $(GINKGO): ## Build ginkgo.
-	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) github.com/onsi/ginkgo/v2/ginkgo $(GINKGO_BIN) v2.23.3
+	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) github.com/onsi/ginkgo/v2/ginkgo $(GINKGO_BIN) v2.23.4
 
 $(GOLANGCI_LINT): ## Build golanci-lint.
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(BIN_DIR) $(GOLANGCI_LINT_VERSION)

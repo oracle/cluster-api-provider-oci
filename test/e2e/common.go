@@ -22,12 +22,13 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"path/filepath"
+
 	. "github.com/onsi/ginkgo/v2"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"path/filepath"
-	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1beta2 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/test/framework"
 )
 
@@ -72,16 +73,16 @@ func setupSpecNamespace(ctx context.Context, namespaceName string, clusterProxy 
 }
 
 type cleanupInput struct {
-	SpecName          string
-	ClusterProxy      framework.ClusterProxy
-	ArtifactFolder    string
+	SpecName             string
+	ClusterProxy         framework.ClusterProxy
+	ArtifactFolder       string
 	ClusterctlConfigPath string
-	Namespace         *corev1.Namespace
-	CancelWatches     context.CancelFunc
-	Cluster           *clusterv1beta1.Cluster
-	IntervalsGetter   func(spec, key string) []interface{}
-	SkipCleanup       bool
-	AdditionalCleanup func()
+	Namespace            *corev1.Namespace
+	CancelWatches        context.CancelFunc
+	Cluster              *clusterv1beta2.Cluster
+	IntervalsGetter      func(spec, key string) []interface{}
+	SkipCleanup          bool
+	AdditionalCleanup    func()
 }
 
 func dumpSpecResourcesAndCleanup(ctx context.Context, input cleanupInput) {
@@ -99,11 +100,11 @@ func dumpSpecResourcesAndCleanup(ctx context.Context, input cleanupInput) {
 	Byf("Dumping all the Cluster API resources in the %q namespace", input.Namespace.Name)
 	// Dump all Cluster API related resources to artifacts before deleting them.
 	framework.DumpAllResources(ctx, framework.DumpAllResourcesInput{
-		Lister:    				input.ClusterProxy.GetClient(),
-		KubeConfigPath: 		 input.ClusterProxy.GetKubeconfigPath(),
-		ClusterctlConfigPath: 	 input.ClusterctlConfigPath,
-		Namespace: 				input.Namespace.Name,
-		LogPath:   				filepath.Join(input.ArtifactFolder, "clusters", input.ClusterProxy.GetName(), "resources"),
+		Lister:               input.ClusterProxy.GetClient(),
+		KubeConfigPath:       input.ClusterProxy.GetKubeconfigPath(),
+		ClusterctlConfigPath: input.ClusterctlConfigPath,
+		Namespace:            input.Namespace.Name,
+		LogPath:              filepath.Join(input.ArtifactFolder, "clusters", input.ClusterProxy.GetName(), "resources"),
 	})
 
 	if input.SkipCleanup {
@@ -115,9 +116,9 @@ func dumpSpecResourcesAndCleanup(ctx context.Context, input cleanupInput) {
 	// that cluster variable is not set even if the cluster exists, so we are calling DeleteAllClustersAndWait
 	// instead of DeleteClusterAndWait
 	framework.DeleteAllClustersAndWait(ctx, framework.DeleteAllClustersAndWaitInput{
-		ClusterProxy:    		input.ClusterProxy,
-		ClusterctlConfigPath: 	 input.ClusterctlConfigPath,
-		Namespace: 				input.Namespace.Name,
+		ClusterProxy:         input.ClusterProxy,
+		ClusterctlConfigPath: input.ClusterctlConfigPath,
+		Namespace:            input.Namespace.Name,
 	}, input.IntervalsGetter(input.SpecName, "wait-delete-cluster")...)
 
 	Byf("Deleting namespace used for hosting the %q test spec", input.SpecName)

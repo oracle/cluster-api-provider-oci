@@ -8,11 +8,11 @@ providers:
   - name: cluster-api
     type: CoreProvider
     versions:
-      - name: v1.10.6
-        value: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.10.6/core-components.yaml
+      - name: v1.11.0
+        value: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.11.0/core-components.yaml
         type: url
         files:
-          - sourcePath: "../data/shared/v1beta1/metadata.yaml"
+          - sourcePath: "../data/shared/v1beta2/metadata.yaml"
         replacements:
           - old: "imagePullPolicy: Always"
             new: "imagePullPolicy: IfNotPresent"
@@ -21,11 +21,11 @@ providers:
   - name: kubeadm
     type: BootstrapProvider
     versions:
-      - name: v1.10.6
-        value: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.10.6/bootstrap-components.yaml
+      - name: v1.11.0
+        value: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.11.0/bootstrap-components.yaml
         type: url
         files:
-          - sourcePath: "../data/shared/v1beta1/metadata.yaml"
+          - sourcePath: "../data/shared/v1beta2/metadata.yaml"
         replacements:
           - old: "imagePullPolicy: Always"
             new: "imagePullPolicy: IfNotPresent"
@@ -34,11 +34,11 @@ providers:
   - name: kubeadm
     type: ControlPlaneProvider
     versions:
-      - name: v1.10.6
-        value: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.10.6/control-plane-components.yaml
+      - name: v1.11.0
+        value: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.11.0/control-plane-components.yaml
         type: url
         files:
-          - sourcePath: "../data/shared/v1beta1/metadata.yaml"
+          - sourcePath: "../data/shared/v1beta2/metadata.yaml"
         replacements:
           - old: "imagePullPolicy: Always"
             new: "imagePullPolicy: IfNotPresent"
@@ -100,7 +100,7 @@ variables:
   IP_FAMILY: "IPv4"
   CLUSTER_TOPOLOGY: "true"
   NSG_CLUSTER_PATH: "${PWD}/test/e2e/data/infrastructure-oci/v1beta1/cluster-template-custom-networking-nsg/cluster.yaml"
-  SECLIST_CLUSTER_PATH: "${PWD}/test/e2e/data/infrastructure-oci/v1beta1/cluster-template-custom-networking-seclist/cluster.yaml"
+  SECLIST_CLUSTER_PATH: "${PWD}/test/e2e/data/infrastructure-oci/v1beta2/cluster-template-custom-networking-seclist/cluster.yaml"
   LOCAL_DRG_ID: "${LOCAL_DRG_ID}"
   PEER_DRG_ID: "${PEER_DRG_ID}"
   PEER_REGION_NAME: "${PEER_REGION_NAME}"

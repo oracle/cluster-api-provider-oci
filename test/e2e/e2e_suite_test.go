@@ -24,13 +24,14 @@ import (
 	"encoding/base64"
 	"flag"
 	"fmt"
-	"k8s.io/klog/v2"
 	"os"
 	"path/filepath"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"strconv"
 	"strings"
 	"testing"
+
+	"k8s.io/klog/v2"
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -47,7 +48,7 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/identity"
 	"k8s.io/apimachinery/pkg/runtime"
-	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1beta2 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	capi_e2e "sigs.k8s.io/cluster-api/test/e2e"
 	"sigs.k8s.io/cluster-api/test/framework"
 	"sigs.k8s.io/cluster-api/test/framework/bootstrap"
@@ -275,7 +276,7 @@ func initScheme() *runtime.Scheme {
 	Expect(infrastructurev1beta2.AddToScheme(scheme)).To(Succeed())
 	Expect(infrav1exp.AddToScheme(scheme)).To(Succeed())
 	Expect(infrav2exp.AddToScheme(scheme)).To(Succeed())
-	Expect(clusterv1beta1.AddToScheme(scheme)).To(Succeed())
+	Expect(clusterv1beta2.AddToScheme(scheme)).To(Succeed())
 	return scheme
 }
 

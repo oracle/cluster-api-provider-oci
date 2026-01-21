@@ -39,7 +39,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
-	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1beta2 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	capi_e2e "sigs.k8s.io/cluster-api/test/e2e"
 	"sigs.k8s.io/cluster-api/test/framework"
 	"sigs.k8s.io/cluster-api/test/framework/clusterctl"
@@ -106,16 +106,16 @@ var _ = Describe("Managed Workload cluster creation", func() {
 		}
 
 		cleanInput := cleanupInput{
-			SpecName:          specName,
-			Cluster:           result.Cluster,
-			ClusterProxy:      bootstrapClusterProxy,
-			Namespace:         namespace,
+			SpecName:             specName,
+			Cluster:              result.Cluster,
+			ClusterProxy:         bootstrapClusterProxy,
+			Namespace:            namespace,
 			ClusterctlConfigPath: clusterctlConfigPath,
-			CancelWatches:     cancelWatches,
-			IntervalsGetter:   e2eConfig.GetIntervals,
-			SkipCleanup:       skipCleanup,
-			AdditionalCleanup: additionalCleanup,
-			ArtifactFolder:    artifactFolder,
+			CancelWatches:        cancelWatches,
+			IntervalsGetter:      e2eConfig.GetIntervals,
+			SkipCleanup:          skipCleanup,
+			AdditionalCleanup:    additionalCleanup,
+			ArtifactFolder:       artifactFolder,
 		}
 		dumpSpecResourcesAndCleanup(ctx, cleanInput)
 	})
@@ -391,7 +391,7 @@ func byClusterOptions(name, namespace string) []client.ListOption {
 	return []client.ListOption{
 		client.InNamespace(namespace),
 		client.MatchingLabels{
-			clusterv1beta1.ClusterNameLabel: name,
+			clusterv1beta2.ClusterNameLabel: name,
 		},
 	}
 }
@@ -420,8 +420,8 @@ func upgradeControlPlaneVersionSpec(ctx context.Context, lister client.Client, c
 	Log("Upgrade test has completed")
 }
 
-func updateMachinePoolVersion(ctx context.Context, cluster *clusterv1beta1.Cluster, clusterProxy framework.ClusterProxy, machinePools []*clusterv1beta1.MachinePool, waitInterval []interface{}) {
-	var machinePool *clusterv1beta1.MachinePool
+func updateMachinePoolVersion(ctx context.Context, cluster *clusterv1beta2.Cluster, clusterProxy framework.ClusterProxy, machinePools []*clusterv1beta2.MachinePool, waitInterval []interface{}) {
+	var machinePool *clusterv1beta2.MachinePool
 	for _, pool := range machinePools {
 		if strings.HasSuffix(pool.Name, "-1") {
 			machinePool = pool
@@ -436,7 +436,7 @@ func updateMachinePoolVersion(ctx context.Context, cluster *clusterv1beta1.Clust
 	Expect(err).ToNot(HaveOccurred())
 	Expect(e2eConfig.Variables).To(HaveKey(ManagedKubernetesUpgradeVersion), "Missing %s variable in the config", ManagedKubernetesUpgradeVersion)
 	Log(fmt.Sprintf("Upgrade test is starting, upgrade version is %s", managedKubernetesUpgradeVersion))
-	machinePool.Spec.Template.Spec.Version = &managedKubernetesUpgradeVersion
+	machinePool.Spec.Template.Spec.Version = managedKubernetesUpgradeVersion
 	Expect(patchHelper.Patch(ctx, machinePool)).To(Succeed())
 
 	ociMachinePool := &infrav2exp.OCIManagedMachinePool{}
@@ -476,14 +476,14 @@ func updateMachinePoolVersion(ctx context.Context, cluster *clusterv1beta1.Clust
 	}, waitInterval...).Should(Equal(1), "Timed out waiting for all MachinePool %s instances to be upgraded to Kubernetes version %s", klog.KObj(machinePool), managedKubernetesUpgradeVersion)
 }
 
-func validateMachinePoolMachines(ctx context.Context, cluster *clusterv1beta1.Cluster, clusterProxy framework.ClusterProxy, machinePools []*clusterv1beta1.MachinePool) {
+func validateMachinePoolMachines(ctx context.Context, cluster *clusterv1beta2.Cluster, clusterProxy framework.ClusterProxy, machinePools []*clusterv1beta2.MachinePool) {
 	Eventually(func() error {
 		lister := clusterProxy.GetClient()
 		for _, pool := range machinePools {
 			machineList := &infrav2exp.OCIMachinePoolMachineList{}
 			labels := map[string]string{
-				clusterv1beta1.ClusterNameLabel:     cluster.Name,
-				clusterv1beta1.MachinePoolNameLabel: pool.Name,
+				clusterv1beta2.ClusterNameLabel:     cluster.Name,
+				clusterv1beta2.MachinePoolNameLabel: pool.Name,
 			}
 			if err := lister.List(ctx, machineList, client.InNamespace(cluster.Namespace), client.MatchingLabels(labels)); err != nil {
 				return err
@@ -507,7 +507,7 @@ func validateMachinePoolMachines(ctx context.Context, cluster *clusterv1beta1.Cl
 // getMachinePoolInstanceVersions returns the Kubernetes versions of the machine pool instances.
 // This method was forked because we need to lookup the kubeconfig with each call
 // as the tokens are refreshed in case of OKE
-func getMachinePoolInstanceVersions(ctx context.Context, clusterProxy framework.ClusterProxy, cluster *clusterv1beta1.Cluster, machinePool *clusterv1beta1.MachinePool) []string {
+func getMachinePoolInstanceVersions(ctx context.Context, clusterProxy framework.ClusterProxy, cluster *clusterv1beta2.Cluster, machinePool *clusterv1beta2.MachinePool) []string {
 	Expect(ctx).NotTo(BeNil(), "ctx is required for getMachinePoolInstanceVersions")
 
 	instances := machinePool.Status.NodeRefs
