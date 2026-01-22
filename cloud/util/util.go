@@ -38,9 +38,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1beta2 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/labels/format"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -94,12 +96,54 @@ func GetClusterByName(ctx context.Context, c client.Client, namespace, name stri
 // This is a v1beta1-compatible version of the CAPI util.GetOwnerMachine function.
 func GetOwnerMachine(ctx context.Context, c client.Client, obj metav1.ObjectMeta) (*clusterv1beta1.Machine, error) {
 	for _, ref := range obj.GetOwnerReferences() {
+		if ref.Kind != "Machine" {
+			continue
+		}
 		gv, err := schema.ParseGroupVersion(ref.APIVersion)
 		if err != nil {
 			return nil, err
 		}
-		if ref.Kind == "Machine" && gv.Group == clusterv1beta1.GroupVersion.Group {
+		// v1beta1 Machine
+		if gv.Group == clusterv1beta1.GroupVersion.Group {
 			return GetMachineByName(ctx, c, obj.Namespace, ref.Name)
+		}
+		// v1beta2 Machine -> read unstructured and project minimal fields into a v1beta1.Machine shim
+		if gv.Group == clusterv1beta2.GroupVersion.Group {
+			u := &unstructured.Unstructured{}
+			u.SetGroupVersionKind(schema.GroupVersionKind{
+				Group:   clusterv1beta2.GroupVersion.Group,
+				Version: clusterv1beta2.GroupVersion.Version,
+				Kind:    "Machine",
+			})
+			if err := c.Get(ctx, types.NamespacedName{Namespace: obj.Namespace, Name: ref.Name}, u); err != nil {
+				return nil, err
+			}
+			m := &clusterv1beta1.Machine{}
+			// ObjectMeta
+			m.Name = ref.Name
+			m.Namespace = obj.Namespace
+			m.Labels = u.GetLabels()
+			m.Annotations = u.GetAnnotations()
+			// Spec.FailureDomain
+			if fd, found, _ := unstructured.NestedString(u.Object, "spec", "failureDomain"); found {
+				m.Spec.FailureDomain = &fd
+			}
+			// Spec.Bootstrap.ConfigRef
+			if av, found, _ := unstructured.NestedString(u.Object, "spec", "bootstrap", "configRef", "apiVersion"); found {
+				if kind, kfound, _ := unstructured.NestedString(u.Object, "spec", "bootstrap", "configRef", "kind"); kfound {
+					if name, nfound, _ := unstructured.NestedString(u.Object, "spec", "bootstrap", "configRef", "name"); nfound {
+						ns, _, _ := unstructured.NestedString(u.Object, "spec", "bootstrap", "configRef", "namespace")
+						m.Spec.Bootstrap.ConfigRef = &corev1.ObjectReference{
+							APIVersion: av,
+							Kind:       kind,
+							Name:       name,
+							Namespace:  ns,
+						}
+					}
+				}
+			}
+			// Note: m.Spec.Bootstrap.DataSecretName intentionally left nil for v1beta2
+			return m, nil
 		}
 	}
 	return nil, nil

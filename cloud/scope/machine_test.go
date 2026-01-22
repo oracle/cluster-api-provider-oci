@@ -169,7 +169,7 @@ func TestInstanceReconciliation(t *testing.T) {
 		{
 			name:          "no bootstrap data",
 			errorExpected: true,
-			matchError:    errors.New("error retrieving bootstrap data: linked Machine's bootstrap.dataSecretName is nil"),
+			matchError:    errors.New("error retrieving bootstrap data: data secret name not available yet"),
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				ms.OCIMachine.Spec.InstanceId = nil
 				ms.OCIMachine.Name = "test"

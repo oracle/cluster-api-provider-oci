@@ -33,9 +33,12 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/record"
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1beta2 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -209,6 +212,18 @@ func (r *OCIMachineReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Ma
 				cloudutil.ClusterUnpausedAndInfrastructureReady(ctrl.LoggerFrom(ctx)),
 			),
 		).
+		Watches(
+			&clusterv1beta2.Machine{},
+			handler.EnqueueRequestsFromMapFunc(util.MachineToInfrastructureMapFunc(infrastructurev1beta2.
+				GroupVersion.WithKind(scope.OCIMachineKind))),
+		).
+		Watches(
+			&clusterv1beta2.Cluster{},
+			handler.EnqueueRequestsFromMapFunc(clusterToObjectFunc),
+			builder.WithPredicates(
+				cloudutil.ClusterUnpausedAndInfrastructureReady(ctrl.LoggerFrom(ctx)),
+			),
+		).
 		// don't queue reconcile if resource is paused
 		Complete(r)
 	if err != nil {
@@ -336,12 +351,25 @@ func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.
 	if annotations != nil {
 		_, deleteMachineOnTermination = annotations[infrastructurev1beta2.DeleteMachineOnInstanceTermination]
 	}
-	// Make sure bootstrap data is available and populated.
+	// Ensure bootstrap data is available and populated (compatible with CAPI v1beta2).
 	if machineScope.Machine.Spec.Bootstrap.DataSecretName == nil {
-		r.Recorder.Event(machine, corev1.EventTypeNormal, infrastructurev1beta2.WaitingForBootstrapDataReason, "Bootstrap data secret reference is not yet available")
-		conditions.MarkConditionFalse(machine, infrastructurev1beta2.InstanceReadyCondition, infrastructurev1beta2.WaitingForBootstrapDataReason, clusterv1beta1.ConditionSeverityInfo, "")
-		logger.Info("Bootstrap data secret reference is not yet available")
-		return ctrl.Result{}, nil
+		ready := false
+		if ref := machineScope.Machine.Spec.Bootstrap.ConfigRef; ref != nil && ref.Name != "" {
+			gvk := schema.FromAPIVersionAndKind(ref.APIVersion, ref.Kind)
+			u := &unstructured.Unstructured{}
+			u.SetGroupVersionKind(gvk)
+			if err := r.Client.Get(ctx, client.ObjectKey{Namespace: machineScope.Machine.Namespace, Name: ref.Name}, u); err == nil {
+				if secretName, found, _ := unstructured.NestedString(u.Object, "status", "dataSecretName"); found && secretName != "" {
+					ready = true
+				}
+			}
+		}
+		if !ready {
+			r.Recorder.Event(machine, corev1.EventTypeNormal, infrastructurev1beta2.WaitingForBootstrapDataReason, "Bootstrap data secret reference is not yet available")
+			conditions.MarkConditionFalse(machine, infrastructurev1beta2.InstanceReadyCondition, infrastructurev1beta2.WaitingForBootstrapDataReason, clusterv1beta1.ConditionSeverityInfo, "")
+			logger.Info("Bootstrap data secret reference is not yet available")
+			return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
+		}
 	}
 
 	instance, err := r.getOrCreate(ctx, machineScope)

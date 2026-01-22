@@ -41,6 +41,8 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2/klogr"
 	"k8s.io/utils/pointer"
@@ -478,14 +480,32 @@ func (m *MachineScope) Close(ctx context.Context) error {
 	return m.PatchObject(ctx)
 }
 
-// GetBootstrapData returns the bootstrap data from the secret in the Machine's bootstrap.dataSecretName.
+// GetBootstrapData returns the bootstrap data from the Secret referenced by the Machine's bootstrap.
+// In CAPI v1beta2, the secret name is exposed via Bootstrap.ConfigRef.status.dataSecretName.
 func (m *MachineScope) GetBootstrapData() (string, error) {
-	if m.Machine.Spec.Bootstrap.DataSecretName == nil {
-		return "", errors.New("error retrieving bootstrap data: linked Machine's bootstrap.dataSecretName is nil")
+	var secretName string
+	// v1beta1-compatible path (deprecated field, still check first if set)
+	if m.Machine.Spec.Bootstrap.DataSecretName != nil && *m.Machine.Spec.Bootstrap.DataSecretName != "" {
+		secretName = *m.Machine.Spec.Bootstrap.DataSecretName
+	} else if ref := m.Machine.Spec.Bootstrap.ConfigRef; ref != nil && ref.Name != "" {
+		// v1beta2 path: read status.dataSecretName from the BootstrapRef object (e.g., KubeadmConfig)
+		gvk := schema.FromAPIVersionAndKind(ref.APIVersion, ref.Kind)
+		u := &unstructured.Unstructured{}
+		u.SetGroupVersionKind(gvk)
+		if err := m.Client.Get(context.TODO(), types.NamespacedName{Namespace: m.Machine.Namespace, Name: ref.Name}, u); err != nil {
+			return "", errors.Wrapf(err, "failed to retrieve bootstrap config %s %s/%s", ref.Kind, m.Machine.Namespace, ref.Name)
+		}
+		if sn, found, _ := unstructured.NestedString(u.Object, "status", "dataSecretName"); found && sn != "" {
+			secretName = sn
+		}
+	}
+
+	if secretName == "" {
+		return "", errors.New("error retrieving bootstrap data: data secret name not available yet")
 	}
 
 	secret := &corev1.Secret{}
-	key := types.NamespacedName{Namespace: m.Machine.Namespace, Name: *m.Machine.Spec.Bootstrap.DataSecretName}
+	key := types.NamespacedName{Namespace: m.Machine.Namespace, Name: secretName}
 	if err := m.Client.Get(context.TODO(), key, secret); err != nil {
 		return "", errors.Wrapf(err, "failed to retrieve bootstrap data secret for OCIMachine %s/%s", m.Machine.Namespace, m.Machine.Name)
 	}
