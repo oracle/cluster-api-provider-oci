@@ -18,11 +18,13 @@ package scope
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	"github.com/oracle/cluster-api-provider-oci/cloud/hash"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/computemanagement/mock_computemanagement"
 	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
@@ -167,12 +169,12 @@ func TestInstanceConfigCreate(t *testing.T) {
 		eventNotExpected    string
 		matchError          error
 		errorSubStringMatch bool
-		testSpecificSetup   func(ms *MachinePoolScope)
+		testSpecificSetup   func(ms *MachinePoolScope, g *WithT)
 	}{
 		{
-			name:          "reuse existing instance config when it matches desired state",
+			name:          "instance config exists",
 			errorExpected: false,
-			testSpecificSetup: func(ms *MachinePoolScope) {
+			testSpecificSetup: func(ms *MachinePoolScope, g *WithT) {
 				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
 					Shape:                   common.String("test-shape"),
 					InstanceConfigurationId: common.String("test"),
@@ -204,9 +206,9 @@ func TestInstanceConfigCreate(t *testing.T) {
 			},
 		},
 		{
-			name:          "create new instance config with hash-based display name when none exists",
+			name:          "instance config create",
 			errorExpected: false,
-			testSpecificSetup: func(ms *MachinePoolScope) {
+			testSpecificSetup: func(ms *MachinePoolScope, g *WithT) {
 				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
 					Shape: common.String("test-shape"),
 					ShapeConfig: &infrav2exp.ShapeConfig{
@@ -246,25 +248,83 @@ func TestInstanceConfigCreate(t *testing.T) {
 					},
 				}
 				computeManagementClient.EXPECT().ListInstanceConfigurations(gomock.Any(), gomock.Any()).
-					Return(core.ListInstanceConfigurationsResponse{}, nil)
+					Return(core.ListInstanceConfigurationsResponse{}, nil).Times(2)
 
-				computeManagementClient.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).
+				expectedLaunch := &core.InstanceConfigurationLaunchInstanceDetails{
+					DefinedTags:   definedTagsInterface,
+					FreeformTags:  tags,
+					DisplayName:   common.String(ms.OCIMachinePool.GetName()),
+					CompartmentId: common.String("test-compartment"),
+					CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+						DefinedTags:            definedTagsInterface,
+						FreeformTags:           tags,
+						NsgIds:                 []string{"nsg-id"},
+						AssignPublicIp:         common.Bool(true),
+						SkipSourceDestCheck:    common.Bool(true),
+						SubnetId:               common.String("subnet-id"),
+						HostnameLabel:          common.String("test"),
+						DisplayName:            common.String("test-display"),
+						AssignPrivateDnsRecord: common.Bool(true),
+					},
+					PlatformConfig: core.AmdVmPlatformConfig{
+						IsMeasuredBootEnabled:          common.Bool(false),
+						IsTrustedPlatformModuleEnabled: common.Bool(true),
+						IsSecureBootEnabled:            common.Bool(true),
+						IsMemoryEncryptionEnabled:      common.Bool(true),
+					},
+					Metadata: map[string]string{"user_data": "dGVzdA=="},
+					Shape:    common.String("test-shape"),
+					ShapeConfig: &core.InstanceConfigurationLaunchInstanceShapeConfigDetails{
+						Ocpus:                   common.Float32(2),
+						MemoryInGBs:             common.Float32(65),
+						BaselineOcpuUtilization: "BASELINE_1_1",
+						Nvmes:                   common.Int(5),
+					},
+					AgentConfig: &core.InstanceConfigurationLaunchInstanceAgentConfigDetails{
+						IsMonitoringDisabled:  common.Bool(false),
+						IsManagementDisabled:  common.Bool(true),
+						AreAllPluginsDisabled: common.Bool(true),
+						PluginsConfig: []core.InstanceAgentPluginConfigDetails{
+							{
+								Name:         common.String("test-plugin"),
+								DesiredState: core.InstanceAgentPluginConfigDetailsDesiredStateEnabled,
+							},
+						},
+					},
+					SourceDetails: core.InstanceConfigurationInstanceSourceViaImageDetails{},
+				}
+
+				launchHash, err := hash.ComputeHash(expectedLaunch)
+				g.Expect(err).To(BeNil())
+				suffix := launchHash
+				if len(suffix) > 10 {
+					suffix = suffix[:10]
+				}
+				expectedDisplayName := fmt.Sprintf("%s-%s", ms.OCIMachinePool.GetName(), suffix)
+
+				computeManagementClient.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Eq(core.CreateInstanceConfigurationRequest{
+					CreateInstanceConfiguration: core.CreateInstanceConfigurationDetails{
+						DefinedTags:   definedTagsInterface,
+						DisplayName:   common.String(expectedDisplayName),
+						FreeformTags:  tags,
+						CompartmentId: common.String("test-compartment"),
+						InstanceDetails: core.ComputeInstanceDetails{
+							LaunchDetails: expectedLaunch,
+						},
+					},
+				})).
 					Return(core.CreateInstanceConfigurationResponse{
 						InstanceConfiguration: core.InstanceConfiguration{
 							Id: common.String("id"),
 						},
-					}, nil).Times(1)
-
-				// Cleanup calls ListInstanceConfigurations
-				computeManagementClient.EXPECT().ListInstanceConfigurations(gomock.Any(), gomock.Any()).
-					Return(core.ListInstanceConfigurationsResponse{}, nil).Times(1)
+					}, nil)
 
 			},
 		},
 		{
-			name:          "create instance config when agent config fields contain nil values",
+			name:          "instance config create - LaunchInstanceAgentConfig contains nil",
 			errorExpected: false,
-			testSpecificSetup: func(ms *MachinePoolScope) {
+			testSpecificSetup: func(ms *MachinePoolScope, g *WithT) {
 				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
 					Shape: common.String("test-shape"),
 					ShapeConfig: &infrav2exp.ShapeConfig{
@@ -304,270 +364,251 @@ func TestInstanceConfigCreate(t *testing.T) {
 					},
 				}
 				computeManagementClient.EXPECT().ListInstanceConfigurations(gomock.Any(), gomock.Any()).
+					Return(core.ListInstanceConfigurationsResponse{}, nil).Times(2)
+
+				expectedLaunch := &core.InstanceConfigurationLaunchInstanceDetails{
+					DefinedTags:   definedTagsInterface,
+					FreeformTags:  tags,
+					DisplayName:   common.String(ms.OCIMachinePool.GetName()),
+					CompartmentId: common.String("test-compartment"),
+					CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+						DefinedTags:            definedTagsInterface,
+						FreeformTags:           tags,
+						NsgIds:                 []string{"nsg-id"},
+						AssignPublicIp:         common.Bool(true),
+						SkipSourceDestCheck:    common.Bool(true),
+						SubnetId:               common.String("subnet-id"),
+						HostnameLabel:          common.String("test"),
+						DisplayName:            common.String("test-display"),
+						AssignPrivateDnsRecord: common.Bool(true),
+					},
+					PlatformConfig: core.AmdVmPlatformConfig{
+						IsMeasuredBootEnabled:          common.Bool(false),
+						IsTrustedPlatformModuleEnabled: common.Bool(true),
+						IsSecureBootEnabled:            common.Bool(true),
+						IsMemoryEncryptionEnabled:      common.Bool(true),
+					},
+					Metadata: map[string]string{"user_data": "dGVzdA=="},
+					Shape:    common.String("test-shape"),
+					ShapeConfig: &core.InstanceConfigurationLaunchInstanceShapeConfigDetails{
+						Ocpus:                   common.Float32(2),
+						MemoryInGBs:             common.Float32(65),
+						BaselineOcpuUtilization: "BASELINE_1_1",
+						Nvmes:                   common.Int(5),
+					},
+					AgentConfig: &core.InstanceConfigurationLaunchInstanceAgentConfigDetails{
+						IsMonitoringDisabled:  nil,
+						IsManagementDisabled:  nil,
+						AreAllPluginsDisabled: nil,
+						PluginsConfig: []core.InstanceAgentPluginConfigDetails{
+							{
+								Name:         nil,
+								DesiredState: core.InstanceAgentPluginConfigDetailsDesiredStateEnabled,
+							},
+						},
+					},
+					SourceDetails: core.InstanceConfigurationInstanceSourceViaImageDetails{},
+				}
+
+				launchHash, err := hash.ComputeHash(expectedLaunch)
+				g.Expect(err).To(BeNil())
+				suffix := launchHash
+				if len(suffix) > 10 {
+					suffix = suffix[:10]
+				}
+				expectedDisplayName := fmt.Sprintf("%s-%s", ms.OCIMachinePool.GetName(), suffix)
+
+				computeManagementClient.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Eq(core.CreateInstanceConfigurationRequest{
+					CreateInstanceConfiguration: core.CreateInstanceConfigurationDetails{
+						DefinedTags:   definedTagsInterface,
+						DisplayName:   common.String(expectedDisplayName),
+						FreeformTags:  tags,
+						CompartmentId: common.String("test-compartment"),
+						InstanceDetails: core.ComputeInstanceDetails{
+							LaunchDetails: expectedLaunch,
+						},
+					},
+				})).
+					Return(core.CreateInstanceConfigurationResponse{
+						InstanceConfiguration: core.InstanceConfiguration{
+							Id: common.String("id"),
+						},
+					}, nil)
+
+			},
+		},
+		{
+			name:          "instance config unchanged when bootstrap data differs",
+			errorExpected: false,
+			testSpecificSetup: func(ms *MachinePoolScope, g *WithT) {
+				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+					Shape:                   common.String("test-shape"),
+					InstanceConfigurationId: common.String("test"),
+				}
+				computeManagementClient.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Eq(core.GetInstanceConfigurationRequest{
+					InstanceConfigurationId: common.String("test"),
+				})).
+					Return(core.GetInstanceConfigurationResponse{
+						InstanceConfiguration: core.InstanceConfiguration{
+							Id: common.String("test"),
+							InstanceDetails: core.ComputeInstanceDetails{
+								LaunchDetails: &core.InstanceConfigurationLaunchInstanceDetails{
+									DefinedTags:   definedTagsInterface,
+									FreeformTags:  tags,
+									CompartmentId: common.String("test-compartment"),
+									Shape:         common.String("test-shape"),
+									CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+										FreeformTags: tags,
+										NsgIds:       []string{"nsg-id"},
+										SubnetId:     common.String("subnet-id"),
+									},
+									SourceDetails: core.InstanceConfigurationInstanceSourceViaImageDetails{},
+									Metadata:      map[string]string{"user_data": "eGVzdA=="},
+								},
+							},
+						},
+					}, nil)
+				computeManagementClient.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).Times(0)
+			},
+		},
+		{
+			name:          "instance config update when shape changes",
+			errorExpected: false,
+			testSpecificSetup: func(ms *MachinePoolScope, g *WithT) {
+				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+					Shape:                   common.String("test-shape"),
+					InstanceConfigurationId: common.String("test"),
+					ShapeConfig: &infrav2exp.ShapeConfig{
+						Ocpus:                   common.String("2"),
+						MemoryInGBs:             common.String("65"),
+						BaselineOcpuUtilization: "BASELINE_1_1",
+						Nvmes:                   common.Int(5),
+					},
+					InstanceVnicConfiguration: &infrastructurev1beta2.NetworkDetails{
+						AssignPublicIp:         true,
+						SubnetName:             "worker-subnet",
+						SkipSourceDestCheck:    common.Bool(true),
+						NsgNames:               []string{"worker-nsg"},
+						HostnameLabel:          common.String("test"),
+						DisplayName:            common.String("test-display"),
+						AssignPrivateDnsRecord: common.Bool(true),
+					},
+					PlatformConfig: &infrastructurev1beta2.PlatformConfig{
+						PlatformConfigType: infrastructurev1beta2.PlatformConfigTypeAmdvm,
+						AmdVmPlatformConfig: infrastructurev1beta2.AmdVmPlatformConfig{
+							IsMeasuredBootEnabled:          common.Bool(false),
+							IsTrustedPlatformModuleEnabled: common.Bool(true),
+							IsSecureBootEnabled:            common.Bool(true),
+							IsMemoryEncryptionEnabled:      common.Bool(true),
+						},
+					},
+					AgentConfig: &infrastructurev1beta2.LaunchInstanceAgentConfig{
+						IsMonitoringDisabled:  common.Bool(false),
+						IsManagementDisabled:  common.Bool(true),
+						AreAllPluginsDisabled: common.Bool(true),
+						PluginsConfig: []infrastructurev1beta2.InstanceAgentPluginConfig{
+							{
+								Name:         common.String("test-plugin"),
+								DesiredState: infrastructurev1beta2.InstanceAgentPluginConfigDetailsDesiredStateEnabled,
+							},
+						},
+					},
+				}
+				computeManagementClient.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Eq(core.GetInstanceConfigurationRequest{
+					InstanceConfigurationId: common.String("test"),
+				})).
+					Return(core.GetInstanceConfigurationResponse{
+						InstanceConfiguration: core.InstanceConfiguration{
+							Id: common.String("test"),
+							InstanceDetails: core.ComputeInstanceDetails{
+								LaunchDetails: &core.InstanceConfigurationLaunchInstanceDetails{
+									DefinedTags:   definedTagsInterface,
+									FreeformTags:  tags,
+									CompartmentId: common.String("test-compartment"),
+									Shape:         common.String("old-test-shape"),
+									CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+										FreeformTags: tags,
+										NsgIds:       []string{"nsg-id"},
+										SubnetId:     common.String("subnet-id"),
+									},
+									SourceDetails: core.InstanceConfigurationInstanceSourceViaImageDetails{},
+									Metadata:      map[string]string{"user_data": "dGVzdA=="},
+								},
+							},
+						},
+					}, nil)
+
+				computeManagementClient.EXPECT().ListInstanceConfigurations(gomock.Any(), gomock.Any()).
 					Return(core.ListInstanceConfigurationsResponse{}, nil)
 
-				computeManagementClient.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).
+				expectedLaunch := &core.InstanceConfigurationLaunchInstanceDetails{
+					DefinedTags:   definedTagsInterface,
+					FreeformTags:  tags,
+					DisplayName:   common.String(ms.OCIMachinePool.GetName()),
+					CompartmentId: common.String("test-compartment"),
+					CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+						DefinedTags:            definedTagsInterface,
+						FreeformTags:           tags,
+						NsgIds:                 []string{"nsg-id"},
+						AssignPublicIp:         common.Bool(true),
+						SkipSourceDestCheck:    common.Bool(true),
+						SubnetId:               common.String("subnet-id"),
+						HostnameLabel:          common.String("test"),
+						DisplayName:            common.String("test-display"),
+						AssignPrivateDnsRecord: common.Bool(true),
+					},
+					PlatformConfig: core.AmdVmPlatformConfig{
+						IsMeasuredBootEnabled:          common.Bool(false),
+						IsTrustedPlatformModuleEnabled: common.Bool(true),
+						IsSecureBootEnabled:            common.Bool(true),
+						IsMemoryEncryptionEnabled:      common.Bool(true),
+					},
+					Metadata: map[string]string{"user_data": "dGVzdA=="},
+					Shape:    common.String("test-shape"),
+					ShapeConfig: &core.InstanceConfigurationLaunchInstanceShapeConfigDetails{
+						Ocpus:                   common.Float32(2),
+						MemoryInGBs:             common.Float32(65),
+						BaselineOcpuUtilization: "BASELINE_1_1",
+						Nvmes:                   common.Int(5),
+					},
+					AgentConfig: &core.InstanceConfigurationLaunchInstanceAgentConfigDetails{
+						IsMonitoringDisabled:  common.Bool(false),
+						IsManagementDisabled:  common.Bool(true),
+						AreAllPluginsDisabled: common.Bool(true),
+						PluginsConfig: []core.InstanceAgentPluginConfigDetails{
+							{
+								Name:         common.String("test-plugin"),
+								DesiredState: core.InstanceAgentPluginConfigDetailsDesiredStateEnabled,
+							},
+						},
+					},
+					SourceDetails: core.InstanceConfigurationInstanceSourceViaImageDetails{},
+				}
+
+				launchHash, err := hash.ComputeHash(expectedLaunch)
+				g.Expect(err).To(BeNil())
+				suffix := launchHash
+				if len(suffix) > 10 {
+					suffix = suffix[:10]
+				}
+				expectedDisplayName := fmt.Sprintf("%s-%s", ms.OCIMachinePool.GetName(), suffix)
+
+				computeManagementClient.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Eq(core.CreateInstanceConfigurationRequest{
+					CreateInstanceConfiguration: core.CreateInstanceConfigurationDetails{
+						DefinedTags:   definedTagsInterface,
+						DisplayName:   common.String(expectedDisplayName),
+						FreeformTags:  tags,
+						CompartmentId: common.String("test-compartment"),
+						InstanceDetails: core.ComputeInstanceDetails{
+							LaunchDetails: expectedLaunch,
+						},
+					},
+				})).
 					Return(core.CreateInstanceConfigurationResponse{
 						InstanceConfiguration: core.InstanceConfiguration{
 							Id: common.String("id"),
 						},
-					}, nil).Times(1)
-
-				// Cleanup calls ListInstanceConfigurations
-				computeManagementClient.EXPECT().ListInstanceConfigurations(gomock.Any(), gomock.Any()).
-					Return(core.ListInstanceConfigurationsResponse{}, nil).Times(1)
-
-			},
-		},
-		{
-			name:          "recreate instance config when immutable fields differ from existing one",
-			errorExpected: false,
-			testSpecificSetup: func(ms *MachinePoolScope) {
-				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
-					Shape:                   common.String("test-shape"),
-					InstanceConfigurationId: common.String("test"),
-				}
-				computeManagementClient.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Eq(core.GetInstanceConfigurationRequest{
-					InstanceConfigurationId: common.String("test"),
-				})).
-					Return(core.GetInstanceConfigurationResponse{
-						InstanceConfiguration: core.InstanceConfiguration{
-							Id: common.String("test"),
-							InstanceDetails: core.ComputeInstanceDetails{
-								LaunchDetails: &core.InstanceConfigurationLaunchInstanceDetails{
-									DefinedTags:   definedTagsInterface,
-									FreeformTags:  tags,
-									CompartmentId: common.String("test-compartment"),
-									Shape:         common.String("different-shape"),
-									CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
-										FreeformTags: tags,
-										NsgIds:       []string{"nsg-id"},
-										SubnetId:     common.String("subnet-id"),
-									},
-									SourceDetails: core.InstanceConfigurationInstanceSourceViaImageDetails{},
-									Metadata:      map[string]string{"user_data": "dGVzdA=="},
-								},
-							},
-						},
 					}, nil)
-				computeManagementClient.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).
-					Return(core.CreateInstanceConfigurationResponse{
-						InstanceConfiguration: core.InstanceConfiguration{
-							Id: common.String("id"),
-						},
-					}, nil).Times(1)
-
-				// Cleanup calls ListInstanceConfigurations
-				computeManagementClient.EXPECT().ListInstanceConfigurations(gomock.Any(), gomock.Any()).
-					Return(core.ListInstanceConfigurationsResponse{}, nil).Times(1)
-			},
-		},
-		{
-			name:          "backfill missing hash annotation when existing instance config is found",
-			errorExpected: false,
-			testSpecificSetup: func(ms *MachinePoolScope) {
-				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
-					Shape:                   common.String("test-shape"),
-					InstanceConfigurationId: common.String("test"),
-				}
-				// Ensure no annotation is set
-				delete(ms.OCIMachinePool.Annotations, InstanceConfigurationHashAnnotation)
-
-				computeManagementClient.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Eq(core.GetInstanceConfigurationRequest{
-					InstanceConfigurationId: common.String("test"),
-				})).
-					Return(core.GetInstanceConfigurationResponse{
-						InstanceConfiguration: core.InstanceConfiguration{
-							Id: common.String("test"),
-							InstanceDetails: core.ComputeInstanceDetails{
-								LaunchDetails: &core.InstanceConfigurationLaunchInstanceDetails{
-									DefinedTags:   definedTagsInterface,
-									FreeformTags:  tags,
-									CompartmentId: common.String("test-compartment"),
-									Shape:         common.String("test-shape"),
-									CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
-										FreeformTags: tags,
-										NsgIds:       []string{"nsg-id"},
-										SubnetId:     common.String("subnet-id"),
-									},
-									SourceDetails: core.InstanceConfigurationInstanceSourceViaImageDetails{},
-									Metadata:      map[string]string{"user_data": "dGVzdA=="},
-								},
-							},
-						},
-					}, nil)
-			},
-		},
-		{
-			name:          "update stored hash annotation when it differs from actual hash",
-			errorExpected: false,
-			testSpecificSetup: func(ms *MachinePoolScope) {
-				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
-					Shape:                   common.String("test-shape"),
-					InstanceConfigurationId: common.String("test"),
-				}
-				// Set incorrect annotation
-				ms.setInstanceConfigurationHashAnnotation("old-hash")
-
-				computeManagementClient.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Eq(core.GetInstanceConfigurationRequest{
-					InstanceConfigurationId: common.String("test"),
-				})).
-					Return(core.GetInstanceConfigurationResponse{
-						InstanceConfiguration: core.InstanceConfiguration{
-							Id: common.String("test"),
-							InstanceDetails: core.ComputeInstanceDetails{
-								LaunchDetails: &core.InstanceConfigurationLaunchInstanceDetails{
-									DefinedTags:   definedTagsInterface,
-									FreeformTags:  tags,
-									CompartmentId: common.String("test-compartment"),
-									Shape:         common.String("test-shape"),
-									CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
-										FreeformTags: tags,
-										NsgIds:       []string{"nsg-id"},
-										SubnetId:     common.String("subnet-id"),
-									},
-									SourceDetails: core.InstanceConfigurationInstanceSourceViaImageDetails{},
-									Metadata:      map[string]string{"user_data": "dGVzdA=="},
-								},
-							},
-						},
-					}, nil)
-			},
-		},
-		{
-			name:          "mutable field change - user_data differs, no recreate",
-			errorExpected: false,
-			testSpecificSetup: func(ms *MachinePoolScope) {
-				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
-					Shape:                   common.String("test-shape"),
-					InstanceConfigurationId: common.String("test"),
-				}
-				// Set correct annotation (same hash as actual)
-				ms.setInstanceConfigurationHashAnnotation("714f248b82cff9f204e5ae86185f11a155ff150bb01b5c793c2e7450befa9c97")
-
-				computeManagementClient.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Eq(core.GetInstanceConfigurationRequest{
-					InstanceConfigurationId: common.String("test"),
-				})).
-					Return(core.GetInstanceConfigurationResponse{
-						InstanceConfiguration: core.InstanceConfiguration{
-							Id: common.String("test"),
-							InstanceDetails: core.ComputeInstanceDetails{
-								LaunchDetails: &core.InstanceConfigurationLaunchInstanceDetails{
-									DefinedTags:   definedTagsInterface,
-									FreeformTags:  tags,
-									CompartmentId: common.String("test-compartment"),
-									Shape:         common.String("test-shape"),
-									CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
-										FreeformTags: tags,
-										NsgIds:       []string{"nsg-id"},
-										SubnetId:     common.String("subnet-id"),
-									},
-									SourceDetails: core.InstanceConfigurationInstanceSourceViaImageDetails{},
-									// Different user_data but same normalized hash
-									Metadata: map[string]string{"user_data": "ZGlmZmVyZW50"},
-								},
-							},
-						},
-					}, nil)
-			},
-		},
-		{
-			name:          "nsg reordering does not trigger new instance configuration",
-			errorExpected: false,
-			testSpecificSetup: func(ms *MachinePoolScope) {
-				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
-					Shape:                   common.String("test-shape"),
-					InstanceConfigurationId: common.String("test"),
-					InstanceVnicConfiguration: &infrastructurev1beta2.NetworkDetails{
-						NsgNames: []string{"worker-nsg", "worker-nsg-alt"},
-					},
-				}
-
-				clusterAccessor := ms.OCIClusterAccesor.(OCISelfManagedCluster)
-				clusterAccessor.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List = append(
-					clusterAccessor.OCICluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List,
-					&infrastructurev1beta2.NSG{
-						Role: infrastructurev1beta2.WorkerRole,
-						ID:   common.String("nsg-id-alt"),
-						Name: "worker-nsg-alt",
-					},
-				)
-				ms.OCIClusterAccesor = clusterAccessor
-
-				computeManagementClient.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Eq(core.GetInstanceConfigurationRequest{
-					InstanceConfigurationId: common.String("test"),
-				})).
-					Return(core.GetInstanceConfigurationResponse{
-						InstanceConfiguration: core.InstanceConfiguration{
-							Id: common.String("test"),
-							InstanceDetails: core.ComputeInstanceDetails{
-								LaunchDetails: &core.InstanceConfigurationLaunchInstanceDetails{
-									DefinedTags:   definedTagsInterface,
-									FreeformTags:  tags,
-									CompartmentId: common.String("test-compartment"),
-									Shape:         common.String("test-shape"),
-									CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
-										FreeformTags:   tags,
-										AssignPublicIp: common.Bool(false),
-										NsgIds:         []string{"nsg-id-alt", "nsg-id"},
-										SubnetId:       common.String("subnet-id"),
-									},
-									SourceDetails: core.InstanceConfigurationInstanceSourceViaImageDetails{},
-									Metadata:      map[string]string{"user_data": "dGVzdA=="},
-								},
-							},
-						},
-					}, nil)
-			},
-		},
-		{
-			name:          "metadata change not user_data triggers new instance configuration",
-			errorExpected: false,
-			testSpecificSetup: func(ms *MachinePoolScope) {
-				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
-					Shape:                   common.String("test-shape"),
-					InstanceConfigurationId: common.String("test"),
-					Metadata: map[string]string{
-						"custom": "new-value",
-					},
-				}
-
-				computeManagementClient.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Eq(core.GetInstanceConfigurationRequest{
-					InstanceConfigurationId: common.String("test"),
-				})).
-					Return(core.GetInstanceConfigurationResponse{
-						InstanceConfiguration: core.InstanceConfiguration{
-							Id: common.String("test"),
-							InstanceDetails: core.ComputeInstanceDetails{
-								LaunchDetails: &core.InstanceConfigurationLaunchInstanceDetails{
-									DefinedTags:   definedTagsInterface,
-									FreeformTags:  tags,
-									CompartmentId: common.String("test-compartment"),
-									Shape:         common.String("test-shape"),
-									CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
-										FreeformTags: tags,
-										NsgIds:       []string{"nsg-id"},
-										SubnetId:     common.String("subnet-id"),
-									},
-									SourceDetails: core.InstanceConfigurationInstanceSourceViaImageDetails{},
-									Metadata: map[string]string{
-										"user_data": "dGVzdA==",
-										"custom":    "old-value",
-									},
-								},
-							},
-						},
-					}, nil)
-
-				computeManagementClient.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).
-					Return(core.CreateInstanceConfigurationResponse{
-						InstanceConfiguration: core.InstanceConfiguration{
-							Id: common.String("new-id"),
-						},
-					}, nil).Times(1)
-
-				computeManagementClient.EXPECT().ListInstanceConfigurations(gomock.Any(), gomock.Any()).
-					Return(core.ListInstanceConfigurationsResponse{}, nil).Times(1)
 			},
 		},
 	}
@@ -577,7 +618,7 @@ func TestInstanceConfigCreate(t *testing.T) {
 			g := NewWithT(t)
 			defer teardown(t, g)
 			setup(t, g)
-			tc.testSpecificSetup(ms)
+			tc.testSpecificSetup(ms, g)
 			err := ms.ReconcileInstanceConfiguration(context.Background())
 			if tc.errorExpected {
 				g.Expect(err).To(Not(BeNil()))
