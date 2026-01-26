@@ -277,7 +277,7 @@ func (m *MachineScope) launchInstanceWithFaultDomainRetry(ctx context.Context, b
 		return nil, errors.New("machine scope is missing OCIMachine")
 	}
 
-	baseRetryToken := ociutil.GetOPCRetryToken("%s", string(m.OCIMachine.UID))
+	baseRetryToken := ociutil.GetOPCRetryToken(string(m.OCIMachine.UID))
 	var lastErr error
 	totalAttempts := len(faultDomains)
 
