@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -360,6 +361,11 @@ func (m *ManagedMachinePoolScope) CreateNodePool(ctx context.Context) (*oke.Node
 }
 
 func (m *ManagedMachinePoolScope) setNodepoolImageId(ctx context.Context) error {
+	// Initialize NodeSourceViaImage if it's nil
+	if m.OCIManagedMachinePool.Spec.NodeSourceViaImage == nil {
+		m.OCIManagedMachinePool.Spec.NodeSourceViaImage = &expinfra1.NodeSourceViaImage{}
+	}
+
 	imageId := m.OCIManagedMachinePool.Spec.NodeSourceViaImage.ImageId
 	if imageId != nil && *imageId != "" {
 		return nil
@@ -393,7 +399,8 @@ func (m *ManagedMachinePoolScope) setNodepoolImageId(ctx context.Context) error 
 	}
 	k8sVersion := (*specVersion)[1:]
 	shape := m.OCIManagedMachinePool.Spec.NodeShape
-	isArmShape := strings.Contains(shape, "A1")
+	armShapeRegex := regexp.MustCompile(`Standard\.A\d+`)
+	isArmShape := armShapeRegex.MatchString(shape)
 	for _, source := range response.Sources {
 		image, ok := source.(oke.NodeSourceViaImageOption)
 		if ok {

@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
+	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/pkg/errors"
@@ -92,7 +93,7 @@ func (s *ClusterScope) GetDRG(ctx context.Context) (*core.Drg, error) {
 			return nil, err
 		}
 		for _, drg := range response.Items {
-			if *drg.DisplayName == s.getDRG().Name {
+			if ptr.StringEquals(drg.DisplayName, s.getDRG().Name) {
 				if s.IsResourceCreatedByClusterAPI(drg.FreeformTags) {
 					return &drg, nil
 				} else {

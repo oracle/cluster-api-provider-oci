@@ -33,6 +33,48 @@ func TestToString(t *testing.T) {
 	}
 }
 
+func TestStringEquals(t *testing.T) {
+	tests := []struct {
+		name  string
+		input *string
+		value string
+		want  bool
+	}{
+		{
+			name:  "nil pointer",
+			input: nil,
+			value: "test",
+			want:  false,
+		},
+		{
+			name:  "non-nil pointer equals value",
+			input: func() *string { s := "test"; return &s }(),
+			value: "test",
+			want:  true,
+		},
+		{
+			name:  "non-nil pointer does not equal value",
+			input: func() *string { s := "test"; return &s }(),
+			value: "different",
+			want:  false,
+		},
+		{
+			name:  "non-nil pointer with empty string equals empty value",
+			input: func() *string { s := ""; return &s }(),
+			value: "",
+			want:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := StringEquals(tt.input, tt.value); got != tt.want {
+				t.Errorf("StringEquals() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestToBool(t *testing.T) {
 	tests := []struct {
 		name  string

@@ -25,6 +25,7 @@ import (
 	"github.com/go-logr/logr"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
+	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
 	identityClient "github.com/oracle/cluster-api-provider-oci/cloud/services/identity"
 	lb "github.com/oracle/cluster-api-provider-oci/cloud/services/loadbalancer"
 	nlb "github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer"
@@ -309,7 +310,7 @@ func GetRegionCodeFromRegion(ctx context.Context, identityClient identityClient.
 		return "", errors.Wrap(err, "failed to list oci regions")
 	}
 	for _, regionCode := range regionCodes.Items {
-		if *regionCode.Name == region {
+		if ptr.StringEquals(regionCode.Name, region) {
 			return *regionCode.Key, nil
 		}
 	}
