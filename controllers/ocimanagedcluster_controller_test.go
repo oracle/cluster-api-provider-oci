@@ -23,7 +23,6 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
-	"github.com/oracle/cluster-api-provider-oci/cloud/conditions"
 	mock_scope "github.com/oracle/cluster-api-provider-oci/cloud/scope/mocks"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/pkg/errors"
@@ -33,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -368,7 +368,7 @@ func TestOCIManagedClusterReconciler_reconcile(t *testing.T) {
 			tc.testSpecificSetup(cs, ociCluster)
 			ctx := context.Background()
 			_, err := r.reconcile(ctx, log.FromContext(ctx), cs, ociCluster, cluster)
-			actual := conditions.Get(ociCluster, tc.conditionAssertion.conditionType)
+			actual := v1beta1conditions.Get(ociCluster, tc.conditionAssertion.conditionType)
 			g.Expect(actual).To(Not(BeNil()))
 			g.Expect(actual.Type).To(Equal(tc.conditionAssertion.conditionType))
 			g.Expect(actual.Status).To(Equal(tc.conditionAssertion.status))
@@ -607,7 +607,7 @@ func TestOCIManagedClusterReconciler_reconcileDelete(t *testing.T) {
 			tc.testSpecificSetup(cs, ociCluster)
 			ctx := context.Background()
 			_, err := r.reconcileDelete(ctx, log.FromContext(ctx), cs, ociCluster)
-			actual := conditions.Get(ociCluster, tc.conditionAssertion.conditionType)
+			actual := v1beta1conditions.Get(ociCluster, tc.conditionAssertion.conditionType)
 			if tc.conditionAssertion != (conditionAssertion{}) {
 				g.Expect(actual).To(Not(BeNil()))
 				g.Expect(actual.Type).To(Equal(tc.conditionAssertion.conditionType))

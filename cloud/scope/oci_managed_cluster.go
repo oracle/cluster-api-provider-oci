@@ -18,9 +18,9 @@ package scope
 
 import (
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
-	"github.com/oracle/cluster-api-provider-oci/cloud/conditions"
 	corev1 "k8s.io/api/core/v1"
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
 )
 
 // OCIManagedCluster is the ClusterAccessor implementation for managed clusters(OKE)
@@ -41,7 +41,7 @@ func (c OCIManagedCluster) GetClientOverrides() *infrastructurev1beta2.ClientOve
 }
 
 func (c OCIManagedCluster) MarkConditionFalse(t clusterv1beta1.ConditionType, reason string, severity clusterv1beta1.ConditionSeverity, messageFormat string, messageArgs ...interface{}) {
-	conditions.MarkConditionFalse(c.OCIManagedCluster, infrastructurev1beta2.ClusterReadyCondition, reason, severity, messageFormat, messageArgs...)
+	v1beta1conditions.MarkFalse(c.OCIManagedCluster, infrastructurev1beta2.ClusterReadyCondition, reason, severity, messageFormat, messageArgs...)
 
 }
 

@@ -18,10 +18,11 @@ package scope
 
 import (
 	"fmt"
+
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
-	"github.com/oracle/cluster-api-provider-oci/cloud/conditions"
 	corev1 "k8s.io/api/core/v1"
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
 )
 
 // OCISelfManagedCluster is the ClusterAccessor implementation for self managed clusters
@@ -46,7 +47,7 @@ func (c OCISelfManagedCluster) GetIdentityRef() *corev1.ObjectReference {
 }
 
 func (c OCISelfManagedCluster) MarkConditionFalse(t clusterv1beta1.ConditionType, reason string, severity clusterv1beta1.ConditionSeverity, messageFormat string, messageArgs ...interface{}) {
-	conditions.MarkConditionFalse(c.OCICluster, infrastructurev1beta2.ClusterReadyCondition, reason, severity, messageFormat, messageArgs...)
+	v1beta1conditions.MarkFalse(c.OCICluster, infrastructurev1beta2.ClusterReadyCondition, reason, severity, messageFormat, messageArgs...)
 }
 
 func (c OCISelfManagedCluster) GetOCIResourceIdentifier() string {
