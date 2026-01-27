@@ -471,6 +471,58 @@ func TestInstanceConfigCreate(t *testing.T) {
 				computeManagementClient.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).Times(0)
 			},
 		},
+
+		{
+			name:          "instance config unchanged when nsg order differs",
+			errorExpected: false,
+			testSpecificSetup: func(ms *MachinePoolScope, g *WithT) {
+				networkSpec := ms.OCIClusterAccesor.GetNetworkSpec()
+				networkSpec.Vcn.NetworkSecurityGroup.List = []*infrastructurev1beta2.NSG{
+					{
+						Role: infrastructurev1beta2.WorkerRole,
+						ID:   common.String("nsg-id"),
+						Name: "worker-nsg",
+					},
+					{
+						Role: infrastructurev1beta2.WorkerRole,
+						ID:   common.String("nsg-id-2"),
+						Name: "worker-nsg-2",
+					},
+				}
+				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+					Shape:                   common.String("test-shape"),
+					InstanceConfigurationId: common.String("test"),
+					InstanceVnicConfiguration: &infrastructurev1beta2.NetworkDetails{
+						NsgNames: []string{"worker-nsg-2", "worker-nsg"},
+					},
+				}
+				computeManagementClient.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Eq(core.GetInstanceConfigurationRequest{
+					InstanceConfigurationId: common.String("test"),
+				})).
+					Return(core.GetInstanceConfigurationResponse{
+						InstanceConfiguration: core.InstanceConfiguration{
+							Id: common.String("test"),
+							InstanceDetails: core.ComputeInstanceDetails{
+								LaunchDetails: &core.InstanceConfigurationLaunchInstanceDetails{
+									DefinedTags:   definedTagsInterface,
+									FreeformTags:  tags,
+									CompartmentId: common.String("test-compartment"),
+									Shape:         common.String("test-shape"),
+									CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+										FreeformTags:   tags,
+										NsgIds:         []string{"nsg-id", "nsg-id-2"},
+										AssignPublicIp: common.Bool(false),
+										SubnetId:       common.String("subnet-id"),
+									},
+									SourceDetails: core.InstanceConfigurationInstanceSourceViaImageDetails{},
+									Metadata:      map[string]string{"user_data": "dGVzdA=="},
+								},
+							},
+						},
+					}, nil)
+				computeManagementClient.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).Times(0)
+			},
+		},
 		{
 			name:          "instance config update when shape changes",
 			errorExpected: false,
