@@ -42,7 +42,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
-	clusterv1beta2 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/labels/format"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -108,11 +108,11 @@ func GetOwnerMachine(ctx context.Context, c client.Client, obj metav1.ObjectMeta
 			return GetMachineByName(ctx, c, obj.Namespace, ref.Name)
 		}
 		// v1beta2 Machine -> read unstructured and project minimal fields into a v1beta1.Machine shim
-		if gv.Group == clusterv1beta2.GroupVersion.Group {
+		if gv.Group == clusterv1.GroupVersion.Group {
 			u := &unstructured.Unstructured{}
 			u.SetGroupVersionKind(schema.GroupVersionKind{
-				Group:   clusterv1beta2.GroupVersion.Group,
-				Version: clusterv1beta2.GroupVersion.Version,
+				Group:   clusterv1.GroupVersion.Group,
+				Version: clusterv1.GroupVersion.Version,
 				Kind:    "Machine",
 			})
 			if err := c.Get(ctx, types.NamespacedName{Namespace: obj.Namespace, Name: ref.Name}, u); err != nil {
