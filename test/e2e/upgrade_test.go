@@ -36,7 +36,7 @@ import (
 	"sigs.k8s.io/cluster-api/test/framework"
 	"sigs.k8s.io/cluster-api/test/framework/clusterctl"
 	"sigs.k8s.io/cluster-api/util"
-	"sigs.k8s.io/cluster-api/util/patch"
+	v1beta1patch "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/patch"
 )
 
 var _ = Describe("Cluster Upgrade Tests", func() {
@@ -88,16 +88,16 @@ var _ = Describe("Cluster Upgrade Tests", func() {
 		}
 
 		cleanInput := cleanupInput{
-			SpecName:          specName,
-			Cluster:           result.Cluster,
-			ClusterProxy:      bootstrapClusterProxy,
-			Namespace:         namespace,
+			SpecName:             specName,
+			Cluster:              result.Cluster,
+			ClusterProxy:         bootstrapClusterProxy,
+			Namespace:            namespace,
 			ClusterctlConfigPath: clusterctlConfigPath,
-			CancelWatches:     cancelWatches,
-			IntervalsGetter:   e2eConfig.GetIntervals,
-			SkipCleanup:       skipCleanup,
-			AdditionalCleanup: additionalCleanup,
-			ArtifactFolder:    artifactFolder,
+			CancelWatches:        cancelWatches,
+			IntervalsGetter:      e2eConfig.GetIntervals,
+			SkipCleanup:          skipCleanup,
+			AdditionalCleanup:    additionalCleanup,
+			ArtifactFolder:       artifactFolder,
 		}
 		dumpSpecResourcesAndCleanup(ctx, cleanInput)
 	})
@@ -133,7 +133,7 @@ var _ = Describe("Cluster Upgrade Tests", func() {
 			Namespace:   namespace.Name,
 			ClusterName: clusterName,
 		})
-		patchHelper, err := patch.NewHelper(controlPlane, bootstrapClusterProxy.GetClient())
+		patchHelper, err := v1beta1patch.NewHelper(controlPlane, bootstrapClusterProxy.GetClient())
 
 		upgradeVersion := e2eConfig.MustGetVariable(capi_e2e.KubernetesVersionUpgradeTo)
 		controlPlane.Spec.MachineTemplate.Spec.InfrastructureRef.Name = newCPMachineTemplateName
@@ -153,7 +153,7 @@ var _ = Describe("Cluster Upgrade Tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 		for _, deployment := range result.MachineDeployments {
 			Log(fmt.Sprintf("Patching the new kubernetes version to Machine Deployment %s/%s", deployment.Namespace, deployment.Name))
-			patchHelper, err := patch.NewHelper(deployment, bootstrapClusterProxy.GetClient())
+			patchHelper, err := v1beta1patch.NewHelper(deployment, bootstrapClusterProxy.GetClient())
 			Expect(err).ToNot(HaveOccurred())
 
 			newWorkerMachineTemplateName := fmt.Sprintf("%s-upgraded", deployment.Name)

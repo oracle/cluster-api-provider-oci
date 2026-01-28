@@ -44,7 +44,7 @@ import (
 	"sigs.k8s.io/cluster-api/test/framework"
 	"sigs.k8s.io/cluster-api/test/framework/clusterctl"
 	"sigs.k8s.io/cluster-api/util"
-	"sigs.k8s.io/cluster-api/util/patch"
+	v1beta1patch "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/kind/pkg/errors"
 )
@@ -400,7 +400,7 @@ func upgradeControlPlaneVersionSpec(ctx context.Context, lister client.Client, c
 	controlPlane := GetOCIManagedControlPlaneByCluster(ctx, lister, clusterName, namespaceName)
 	Expect(controlPlane).NotTo(BeNil())
 
-	patchHelper, err := patch.NewHelper(controlPlane, lister)
+	patchHelper, err := v1beta1patch.NewHelper(controlPlane, lister)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(e2eConfig.Variables).To(HaveKey(ManagedKubernetesUpgradeVersion), "Missing %s variable in the config", ManagedKubernetesUpgradeVersion)
 	managedKubernetesUpgradeVersion := e2eConfig.MustGetVariable(ManagedKubernetesUpgradeVersion)
@@ -432,7 +432,7 @@ func updateMachinePoolVersion(ctx context.Context, cluster *clusterv1.Cluster, c
 	Expect(machinePool).NotTo(BeNil())
 	managedKubernetesUpgradeVersion := e2eConfig.MustGetVariable(ManagedKubernetesUpgradeVersion)
 
-	patchHelper, err := patch.NewHelper(machinePool, lister)
+	patchHelper, err := v1beta1patch.NewHelper(machinePool, lister)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(e2eConfig.Variables).To(HaveKey(ManagedKubernetesUpgradeVersion), "Missing %s variable in the config", ManagedKubernetesUpgradeVersion)
 	Log(fmt.Sprintf("Upgrade test is starting, upgrade version is %s", managedKubernetesUpgradeVersion))
@@ -442,7 +442,7 @@ func updateMachinePoolVersion(ctx context.Context, cluster *clusterv1.Cluster, c
 	ociMachinePool := &infrav2exp.OCIManagedMachinePool{}
 	err = lister.Get(ctx, client.ObjectKey{Name: machinePool.Name, Namespace: cluster.Namespace}, ociMachinePool)
 	Expect(err).To(BeNil())
-	patchHelper, err = patch.NewHelper(ociMachinePool, lister)
+	patchHelper, err = v1beta1patch.NewHelper(ociMachinePool, lister)
 	// to update a node pool, set the version and set the current image to nil so that CAPOCI will
 	// automatically lookup a new version
 	ociMachinePool.Spec.Version = &managedKubernetesUpgradeVersion

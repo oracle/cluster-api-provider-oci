@@ -40,7 +40,7 @@ import (
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	capierrors "sigs.k8s.io/cluster-api/errors"
 	"sigs.k8s.io/cluster-api/util/annotations"
-	"sigs.k8s.io/cluster-api/util/patch"
+	v1beta1patch "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -64,7 +64,7 @@ type VirtualMachinePoolScopeParams struct {
 type VirtualMachinePoolScope struct {
 	*logr.Logger
 	Client                  client.Client
-	patchHelper             *patch.Helper
+	patchHelper             *v1beta1patch.Helper
 	Cluster                 *clusterv1beta1.Cluster
 	MachinePool             *clusterv1beta1.MachinePool
 	ComputeManagementClient computemanagement.Client
@@ -87,7 +87,7 @@ func NewVirtualMachinePoolScope(params VirtualMachinePoolScopeParams) (*VirtualM
 		log := klogr.New()
 		params.Logger = &log
 	}
-	helper, err := patch.NewHelper(params.OCIVirtualMachinePool, params.Client)
+	helper, err := v1beta1patch.NewHelper(params.OCIVirtualMachinePool, params.Client)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init patch helper")
 	}

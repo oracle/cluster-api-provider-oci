@@ -865,7 +865,7 @@ func TestMachineReconciliationDelete(t *testing.T) {
 		now := metav1.NewTime(time.Now())
 		ociMachine.DeletionTimestamp = &now
 		controllerutil.AddFinalizer(ociMachine, infrastructurev1beta2.MachineFinalizer)
-		client := fake.NewClientBuilder().WithObjects(getSecret(), getMachine(), ociMachine, getCluster(), getOCICluster()).Build()
+		client := fake.NewClientBuilder().WithStatusSubresource(ociMachine).WithObjects(getSecret(), getMachine(), ociMachine, getCluster(), getOCICluster()).Build()
 		clientProvider, err := scope.MockNewClientProvider(scope.MockOCIClients{
 			ComputeClient: computeClient,
 		})

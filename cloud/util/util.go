@@ -43,8 +43,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+	v1beta1patch "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/patch"
 	"sigs.k8s.io/cluster-api/util/labels/format"
-	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -489,7 +489,7 @@ func CreateMachinePoolMachinesIfNotExists(ctx context.Context, params MachinePar
 			if !reflect.DeepEqual(specMachine.Status.Ready, actualMachine.Status.Ready) {
 				params.Logger.Info("Setting status of machine to active", "machine", actualMachine.Name)
 
-				helper, err := patch.NewHelper(&actualMachine, params.Client)
+				helper, err := v1beta1patch.NewHelper(&actualMachine, params.Client)
 				if err != nil {
 					return err
 				}

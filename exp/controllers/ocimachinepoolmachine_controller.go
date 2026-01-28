@@ -25,7 +25,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
-	"sigs.k8s.io/cluster-api/util/patch"
+	v1beta1patch "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/patch"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -58,7 +58,7 @@ func (r *OCIMachinePoolMachineReconciler) Reconcile(ctx context.Context, req ctr
 		}
 		return ctrl.Result{}, err
 	}
-	helper, err := patch.NewHelper(ociMachinePoolMachine, r.Client)
+	helper, err := v1beta1patch.NewHelper(ociMachinePoolMachine, r.Client)
 	defer func() {
 		if err := helper.Patch(ctx, ociMachinePoolMachine); err != nil && reterr == nil {
 			reterr = err
