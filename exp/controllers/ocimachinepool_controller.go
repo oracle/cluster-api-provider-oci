@@ -163,6 +163,7 @@ func (r *OCIMachinePoolReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		OCIClusterAccessor:      clusterAccessor,
 		MachinePool:             machinePool,
 		OCIMachinePool:          ociMachinePool,
+		Recorder:                r.Recorder,
 	})
 	if err != nil {
 		return ctrl.Result{}, errors.Errorf("failed to create scope: %+v", err)
