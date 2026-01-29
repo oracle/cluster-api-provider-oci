@@ -24,6 +24,7 @@ import (
 	"github.com/go-logr/logr"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
+	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	cloudutil "github.com/oracle/cluster-api-provider-oci/cloud/util"
 	expV1Beta1 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
@@ -38,7 +39,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/record"
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util"
+	"sigs.k8s.io/cluster-api/util/annotations"
 	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -98,7 +101,7 @@ func (r *OCIMachinePoolReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	logger = logger.WithValues("machinePool", machinePool.Name)
 
 	// Fetch the Cluster.
-	cluster, err := cloudutil.GetClusterFromMetadata(ctx, r.Client, ociMachinePool.ObjectMeta)
+	cluster, err := util.GetClusterFromMetadata(ctx, r.Client, ociMachinePool.ObjectMeta)
 	if err != nil {
 		r.Recorder.Eventf(ociMachinePool, corev1.EventTypeWarning, "ClusterDoesNotExist", "MachinePool is missing cluster label or cluster does not exist")
 		logger.Info("MachinePool is missing cluster label or cluster does not exist")
@@ -107,7 +110,7 @@ func (r *OCIMachinePoolReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	logger = logger.WithValues("cluster", cluster.Name)
 
 	// Return early if the object or Cluster is paused.
-	if cloudutil.IsPaused(cluster, ociMachinePool) {
+	if annotations.IsPaused(cluster, ociMachinePool) {
 		logger.Info("OCIMachinePool or linked Cluster is marked as paused. Won't reconcile")
 		return ctrl.Result{}, nil
 	}
@@ -199,7 +202,7 @@ func (r *OCIMachinePoolReconciler) SetupWithManager(ctx context.Context, mgr ctr
 		WithOptions(options).
 		For(&infrav2exp.OCIMachinePool{}).
 		Watches(
-			&clusterv1beta1.MachinePool{},
+			&clusterv1.MachinePool{},
 			handler.EnqueueRequestsFromMapFunc(machinePoolToInfrastructureMapFunc(infrav2exp.
 				GroupVersion.WithKind(scope.OCIMachinePoolKind), logger)),
 		).
@@ -208,7 +211,7 @@ func (r *OCIMachinePoolReconciler) SetupWithManager(ctx context.Context, mgr ctr
 			handler.EnqueueRequestsFromMapFunc(managedClusterToMachinePoolMap),
 		).
 		Watches(
-			&clusterv1beta1.Cluster{},
+			&clusterv1.Cluster{},
 			handler.EnqueueRequestsFromMapFunc(clusterToObjectFunc),
 			builder.WithPredicates(
 				predicates.ClusterPausedTransitionsOrInfrastructureProvisioned(mgr.GetScheme(), ctrl.LoggerFrom(ctx)),
@@ -225,14 +228,21 @@ func (r *OCIMachinePoolReconciler) SetupWithManager(ctx context.Context, mgr ctr
 
 func machinePoolToInfrastructureMapFunc(gvk schema.GroupVersionKind, logger logr.Logger) handler.MapFunc {
 	return func(ctx context.Context, o client.Object) []reconcile.Request {
-		m, ok := o.(*clusterv1beta1.MachinePool)
+		m, ok := o.(*clusterv1.MachinePool)
 		if !ok {
 			panic(fmt.Sprintf("Expected a MachinePool but got a %T", o))
 		}
 
 		gk := gvk.GroupKind()
+
+		// Make sure the ref is set
+		if !m.Spec.Template.Spec.InfrastructureRef.IsDefined() {
+			logger.V(4).Info("MachinePool does not have an InfrastructureRef, skipping mapping.")
+			return nil
+		}
+
 		// Return early if the GroupKind doesn't match what we expect
-		infraGK := m.Spec.Template.Spec.InfrastructureRef.GroupVersionKind().GroupKind()
+		infraGK := m.Spec.Template.Spec.InfrastructureRef.GroupKind()
 		if gk != infraGK {
 			logger.V(4).Info("gk does not match", "gk", gk, "infraGK", infraGK)
 			return nil
@@ -251,7 +261,7 @@ func machinePoolToInfrastructureMapFunc(gvk schema.GroupVersionKind, logger logr
 
 // getOwnerMachinePool returns the MachinePool object owning the current resource.
 // nolint:nilnil
-func getOwnerMachinePool(ctx context.Context, c client.Client, obj metav1.ObjectMeta) (*clusterv1beta1.MachinePool, error) {
+func getOwnerMachinePool(ctx context.Context, c client.Client, obj metav1.ObjectMeta) (*clusterv1.MachinePool, error) {
 	for _, ref := range obj.OwnerReferences {
 		if ref.Kind != "MachinePool" {
 			continue
@@ -260,7 +270,7 @@ func getOwnerMachinePool(ctx context.Context, c client.Client, obj metav1.Object
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		if gv.Group == clusterv1beta1.GroupVersion.Group {
+		if gv.Group == clusterv1.GroupVersion.Group {
 			return getMachinePoolByName(ctx, c, obj.Namespace, ref.Name)
 		}
 	}
@@ -268,8 +278,8 @@ func getOwnerMachinePool(ctx context.Context, c client.Client, obj metav1.Object
 }
 
 // getMachinePoolByName finds and return a Machine object using the specified params.
-func getMachinePoolByName(ctx context.Context, c client.Client, namespace, name string) (*clusterv1beta1.MachinePool, error) {
-	m := &clusterv1beta1.MachinePool{}
+func getMachinePoolByName(ctx context.Context, c client.Client, namespace, name string) (*clusterv1.MachinePool, error) {
+	m := &clusterv1.MachinePool{}
 	key := client.ObjectKey{Name: name, Namespace: namespace}
 	if err := c.Get(ctx, key, m); err != nil {
 		return nil, err
@@ -294,7 +304,7 @@ func (r *OCIMachinePoolReconciler) reconcileNormal(ctx context.Context, logger l
 		return reconcile.Result{}, err
 	}
 
-	if !machinePoolScope.Cluster.Status.InfrastructureReady {
+	if !ptr.ToBool(machinePoolScope.Cluster.Status.Initialization.InfrastructureProvisioned) {
 		logger.Info("Cluster infrastructure is not ready yet")
 		return reconcile.Result{}, nil
 	}

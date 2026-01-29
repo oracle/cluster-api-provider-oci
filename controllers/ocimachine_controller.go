@@ -32,13 +32,12 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/record"
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util"
+	"sigs.k8s.io/cluster-api/util/annotations"
 	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -84,7 +83,7 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 	// Fetch the Machine.
-	machine, err := cloudutil.GetOwnerMachine(ctx, r.Client, ociMachine.ObjectMeta)
+	machine, err := util.GetOwnerMachine(ctx, r.Client, ociMachine.ObjectMeta)
 
 	if err != nil {
 		return ctrl.Result{}, err
@@ -97,7 +96,7 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	logger = logger.WithValues("machine-name", ociMachine.Name)
 
 	// Fetch the Cluster.
-	cluster, err := cloudutil.GetClusterFromMetadata(ctx, r.Client, ociMachine.ObjectMeta)
+	cluster, err := util.GetClusterFromMetadata(ctx, r.Client, ociMachine.ObjectMeta)
 	if err != nil {
 		r.Recorder.Eventf(ociMachine, corev1.EventTypeWarning, "ClusterDoesNotExist", "Machine is missing cluster label or cluster does not exist")
 		logger.Info("Machine is missing cluster label or cluster does not exist")
@@ -105,7 +104,7 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	// Return early if the object or Cluster is paused.
-	if cloudutil.IsPaused(cluster, ociMachine) {
+	if annotations.IsPaused(cluster, ociMachine) {
 		logger.Info("OCIMachine or linked Cluster is marked as paused. Won't reconcile")
 		return ctrl.Result{}, nil
 	}
@@ -193,7 +192,7 @@ func (r *OCIMachineReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Ma
 		For(&infrastructurev1beta2.OCIMachine{}).
 		WithEventFilter(predicates.ResourceNotPaused(mgr.GetScheme(), ctrl.LoggerFrom(ctx))).
 		Watches(
-			&clusterv1beta1.Machine{},
+			&clusterv1.Machine{},
 			handler.EnqueueRequestsFromMapFunc(util.MachineToInfrastructureMapFunc(infrastructurev1beta2.
 				GroupVersion.WithKind(scope.OCIMachineKind))),
 		).
@@ -206,7 +205,7 @@ func (r *OCIMachineReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Ma
 			handler.EnqueueRequestsFromMapFunc(r.OCIManagedClusterToOCIMachines()),
 		).
 		Watches(
-			&clusterv1beta1.Cluster{},
+			&clusterv1.Cluster{},
 			handler.EnqueueRequestsFromMapFunc(clusterToObjectFunc),
 			builder.WithPredicates(
 				predicates.ClusterPausedTransitionsOrInfrastructureProvisioned(mgr.GetScheme(), ctrl.LoggerFrom(ctx)),
@@ -243,7 +242,7 @@ func (r *OCIMachineReconciler) OCIClusterToOCIMachines() handler.MapFunc {
 			return nil
 		}
 
-		cluster, err := cloudutil.GetOwnerCluster(ctx, r.Client, c.ObjectMeta)
+		cluster, err := util.GetOwnerCluster(ctx, r.Client, c.ObjectMeta)
 		switch {
 		case apierrors.IsNotFound(err) || cluster == nil:
 			return result
@@ -252,8 +251,8 @@ func (r *OCIMachineReconciler) OCIClusterToOCIMachines() handler.MapFunc {
 			return result
 		}
 
-		labels := map[string]string{clusterv1beta1.ClusterNameLabel: cluster.Name}
-		machineList := &clusterv1beta1.MachineList{}
+		labels := map[string]string{clusterv1.ClusterNameLabel: cluster.Name}
+		machineList := &clusterv1.MachineList{}
 		if err := r.List(ctx, machineList, client.InNamespace(c.Namespace), client.MatchingLabels(labels)); err != nil {
 			log.Error(err, "failed to list Machines")
 			return nil
@@ -281,7 +280,7 @@ func (r *OCIMachineReconciler) OCIManagedClusterToOCIMachines() handler.MapFunc 
 			return nil
 		}
 
-		cluster, err := cloudutil.GetOwnerCluster(ctx, r.Client, c.ObjectMeta)
+		cluster, err := util.GetOwnerCluster(ctx, r.Client, c.ObjectMeta)
 		switch {
 		case apierrors.IsNotFound(err) || cluster == nil:
 			return result
@@ -290,8 +289,8 @@ func (r *OCIMachineReconciler) OCIManagedClusterToOCIMachines() handler.MapFunc 
 			return result
 		}
 
-		labels := map[string]string{clusterv1beta1.ClusterNameLabel: cluster.Name}
-		machineList := &clusterv1beta1.MachineList{}
+		labels := map[string]string{clusterv1.ClusterNameLabel: cluster.Name}
+		machineList := &clusterv1.MachineList{}
 		if err := r.List(ctx, machineList, client.InNamespace(c.Namespace), client.MatchingLabels(labels)); err != nil {
 			log.Error(err, "failed to list Machines")
 			return nil
@@ -353,23 +352,10 @@ func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.
 	}
 	// Ensure bootstrap data is available and populated (compatible with CAPI v1beta2).
 	if machineScope.Machine.Spec.Bootstrap.DataSecretName == nil {
-		ready := false
-		if ref := machineScope.Machine.Spec.Bootstrap.ConfigRef; ref != nil && ref.Name != "" {
-			gvk := schema.FromAPIVersionAndKind(ref.APIVersion, ref.Kind)
-			u := &unstructured.Unstructured{}
-			u.SetGroupVersionKind(gvk)
-			if err := r.Client.Get(ctx, client.ObjectKey{Namespace: machineScope.Machine.Namespace, Name: ref.Name}, u); err == nil {
-				if secretName, found, _ := unstructured.NestedString(u.Object, "status", "dataSecretName"); found && secretName != "" {
-					ready = true
-				}
-			}
-		}
-		if !ready {
-			r.Recorder.Event(machine, corev1.EventTypeNormal, infrastructurev1beta2.WaitingForBootstrapDataReason, "Bootstrap data secret reference is not yet available")
-			v1beta1conditions.MarkFalse(machine, infrastructurev1beta2.InstanceReadyCondition, infrastructurev1beta2.WaitingForBootstrapDataReason, clusterv1beta1.ConditionSeverityInfo, "")
-			logger.Info("Bootstrap data secret reference is not yet available")
-			return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
-		}
+		r.Recorder.Event(machine, corev1.EventTypeNormal, infrastructurev1beta2.WaitingForBootstrapDataReason, "Bootstrap data secret reference is not yet available")
+		v1beta1conditions.MarkFalse(machine, infrastructurev1beta2.InstanceReadyCondition, infrastructurev1beta2.WaitingForBootstrapDataReason, clusterv1beta1.ConditionSeverityInfo, "")
+		logger.Info("Bootstrap data secret reference is not yet available")
+		return ctrl.Result{}, nil
 	}
 
 	instance, err := r.getOrCreate(ctx, machineScope)

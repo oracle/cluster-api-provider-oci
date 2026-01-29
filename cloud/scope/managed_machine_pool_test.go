@@ -32,6 +32,7 @@ import (
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -141,11 +142,11 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 				},
 			},
 			OCIManagedCluster: ociManagedCluster,
-			Cluster: &clusterv1beta1.Cluster{
-				Spec: clusterv1beta1.ClusterSpec{},
+			Cluster: &clusterv1.Cluster{
+				Spec: clusterv1.ClusterSpec{},
 			},
-			MachinePool: &clusterv1beta1.MachinePool{
-				Spec: clusterv1beta1.MachinePoolSpec{
+			MachinePool: &clusterv1.MachinePool{
+				Spec: clusterv1.MachinePoolSpec{
 					Replicas: &size,
 				},
 			},
@@ -935,12 +936,12 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 				},
 			},
 			OCIManagedCluster: ociManagedCluster,
-			Cluster: &clusterv1beta1.Cluster{
-				Spec: clusterv1beta1.ClusterSpec{},
+			Cluster: &clusterv1.Cluster{
+				Spec: clusterv1.ClusterSpec{},
 			},
-			MachinePool: &clusterv1beta1.MachinePool{
-				Spec: clusterv1beta1.MachinePoolSpec{
-					Template: clusterv1beta1.MachineTemplateSpec{},
+			MachinePool: &clusterv1.MachinePool{
+				Spec: clusterv1.MachinePoolSpec{
+					Template: clusterv1.MachineTemplateSpec{},
 					Replicas: &size,
 				},
 			},

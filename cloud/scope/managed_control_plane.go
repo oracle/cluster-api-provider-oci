@@ -43,6 +43,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/klog/v2/klogr"
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	v1beta1patch "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/patch"
 	"sigs.k8s.io/cluster-api/util/kubeconfig"
 	"sigs.k8s.io/cluster-api/util/secret"
@@ -59,7 +60,7 @@ const (
 type ManagedControlPlaneScopeParams struct {
 	Logger                 *logr.Logger
 	Client                 client.Client
-	Cluster                *clusterv1beta1.Cluster
+	Cluster                *clusterv1.Cluster
 	ContainerEngineClient  containerengine.Client
 	BaseClient             baseclient.BaseClient
 	ClientProvider         *ClientProvider
@@ -71,7 +72,7 @@ type ManagedControlPlaneScopeParams struct {
 type ManagedControlPlaneScope struct {
 	*logr.Logger
 	client                 client.Client
-	Cluster                *clusterv1beta1.Cluster
+	Cluster                *clusterv1.Cluster
 	ContainerEngineClient  containerengine.Client
 	BaseClient             baseclient.BaseClient
 	ClientProvider         *ClientProvider
@@ -147,17 +148,15 @@ func (s *ManagedControlPlaneScope) GetOrCreateControlPlane(ctx context.Context) 
 			DefinedTags:  s.getDefinedTags(),
 		},
 	}
-	if s.Cluster.Spec.ClusterNetwork != nil {
+	if len(s.Cluster.Spec.ClusterNetwork.Pods.CIDRBlocks) > 0 || len(s.Cluster.Spec.ClusterNetwork.Services.CIDRBlocks) > 0 {
+		// create the networkConfig only if something needs set.
+
 		networkConfig := oke.KubernetesNetworkConfig{}
-		if s.Cluster.Spec.ClusterNetwork.Pods != nil {
-			if len(s.Cluster.Spec.ClusterNetwork.Pods.CIDRBlocks) > 0 {
-				networkConfig.PodsCidr = common.String(s.Cluster.Spec.ClusterNetwork.Pods.CIDRBlocks[0])
-			}
+		if len(s.Cluster.Spec.ClusterNetwork.Pods.CIDRBlocks) > 0 {
+			networkConfig.PodsCidr = common.String(s.Cluster.Spec.ClusterNetwork.Pods.CIDRBlocks[0])
 		}
-		if s.Cluster.Spec.ClusterNetwork.Services != nil {
-			if len(s.Cluster.Spec.ClusterNetwork.Services.CIDRBlocks) > 0 {
-				networkConfig.ServicesCidr = common.String(s.Cluster.Spec.ClusterNetwork.Services.CIDRBlocks[0])
-			}
+		if len(s.Cluster.Spec.ClusterNetwork.Services.CIDRBlocks) > 0 {
+			networkConfig.ServicesCidr = common.String(s.Cluster.Spec.ClusterNetwork.Services.CIDRBlocks[0])
 		}
 		createOptions.KubernetesNetworkConfig = &networkConfig
 	}
@@ -595,7 +594,7 @@ func (s *ManagedControlPlaneScope) ReconcileBootstrapSecret(ctx context.Context,
 				Name:      secretName,
 				Namespace: cluster.Namespace,
 				Labels: map[string]string{
-					clusterv1beta1.ClusterNameLabel: cluster.Name,
+					clusterv1.ClusterNameLabel: cluster.Name,
 				},
 				OwnerReferences: []metav1.OwnerReference{
 					controllerOwnerRef,

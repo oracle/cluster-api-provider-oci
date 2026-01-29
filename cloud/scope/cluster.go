@@ -34,6 +34,7 @@ import (
 	"github.com/pkg/errors"
 	"k8s.io/klog/v2/klogr"
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	v1beta1patch "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -50,7 +51,7 @@ const (
 type ClusterScopeParams struct {
 	Client                    client.Client
 	Logger                    *logr.Logger
-	Cluster                   *clusterv1beta1.Cluster
+	Cluster                   *clusterv1.Cluster
 	VCNClient                 vcn.Client
 	NetworkLoadBalancerClient nlb.NetworkLoadBalancerClient
 	LoadBalancerClient        lb.LoadBalancerClient
@@ -68,7 +69,7 @@ type ClusterScope struct {
 	*logr.Logger
 	client                    client.Client
 	patchHelper               *v1beta1patch.Helper
-	Cluster                   *clusterv1beta1.Cluster
+	Cluster                   *clusterv1.Cluster
 	VCNClient                 vcn.Client
 	NetworkLoadBalancerClient nlb.NetworkLoadBalancerClient
 	LoadBalancerClient        lb.LoadBalancerClient
@@ -252,8 +253,8 @@ func (s *ClusterScope) GetCompartmentId() string {
 
 // APIServerPort returns the APIServerPort to use when creating the load balancer.
 func (s *ClusterScope) APIServerPort() int32 {
-	if s.Cluster.Spec.ClusterNetwork != nil && s.Cluster.Spec.ClusterNetwork.APIServerPort != nil {
-		return *s.Cluster.Spec.ClusterNetwork.APIServerPort
+	if s.Cluster.Spec.ClusterNetwork.APIServerPort != 0 {
+		return s.Cluster.Spec.ClusterNetwork.APIServerPort
 	}
 	return ApiServerPort
 }

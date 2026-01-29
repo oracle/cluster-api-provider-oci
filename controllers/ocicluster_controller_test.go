@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/gomega"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	mock_scope "github.com/oracle/cluster-api-provider-oci/cloud/scope/mocks"
+	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -704,24 +706,24 @@ func getOCIClusterWithOwner() *infrastructurev1beta2.OCICluster {
 		{
 			Name:       "test-cluster",
 			Kind:       "Cluster",
-			APIVersion: clusterv1beta1.GroupVersion.String(),
+			APIVersion: clusterv1.GroupVersion.String(),
 		},
 	}
 	return ociCluster
 }
 
-func getPausedInfraCluster() *clusterv1beta1.Cluster {
-	infraRef := corev1.ObjectReference{
+func getPausedInfraCluster() *clusterv1.Cluster {
+	infraRef := clusterv1.ContractVersionedObjectReference{
 		Name: "oci-cluster",
 	}
-	return &clusterv1beta1.Cluster{
+	return &clusterv1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-cluster",
 			Namespace: "test",
 		},
-		Spec: clusterv1beta1.ClusterSpec{
-			InfrastructureRef: &infraRef,
-			Paused:            true,
+		Spec: clusterv1.ClusterSpec{
+			InfrastructureRef: infraRef,
+			Paused:            common.Bool(true),
 		},
 	}
 }

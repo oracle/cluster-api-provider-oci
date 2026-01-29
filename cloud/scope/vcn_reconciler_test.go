@@ -30,7 +30,7 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -121,7 +121,7 @@ func TestClusterScope_CreateVCN(t *testing.T) {
 			s := &ClusterScope{
 				VCNClient:          vcnClient,
 				OCIClusterAccessor: ociClusterAccessor,
-				Cluster: &clusterv1beta1.Cluster{
+				Cluster: &clusterv1.Cluster{
 					ObjectMeta: metav1.ObjectMeta{
 						UID: "cluster_uid",
 					},
@@ -249,7 +249,7 @@ func TestClusterScope_DeleteVCN(t *testing.T) {
 			s := &ClusterScope{
 				VCNClient:          vcnClient,
 				OCIClusterAccessor: ociClusterAccessor,
-				Cluster: &clusterv1beta1.Cluster{
+				Cluster: &clusterv1.Cluster{
 					ObjectMeta: metav1.ObjectMeta{
 						UID: "cluster_uid",
 					},
@@ -388,7 +388,7 @@ func TestClusterScope_GetVCN(t *testing.T) {
 			s := &ClusterScope{
 				VCNClient:          vcnClient,
 				OCIClusterAccessor: ociClusterAccessor,
-				Cluster: &clusterv1beta1.Cluster{
+				Cluster: &clusterv1.Cluster{
 					ObjectMeta: metav1.ObjectMeta{
 						UID: "resource_uid",
 					},
@@ -537,7 +537,7 @@ func TestClusterScope_IsVcnEquals(t *testing.T) {
 			ociClusterAccessor.OCICluster.Spec.OCIResourceIdentifier = "resource_uid"
 			s := &ClusterScope{
 				OCIClusterAccessor: ociClusterAccessor,
-				Cluster: &clusterv1beta1.Cluster{
+				Cluster: &clusterv1.Cluster{
 					ObjectMeta: metav1.ObjectMeta{
 						UID: "resource_uid",
 					},
@@ -712,7 +712,7 @@ func TestClusterScope_ReconcileVCN(t *testing.T) {
 			s := &ClusterScope{
 				VCNClient:          vcnClient,
 				OCIClusterAccessor: ociClusterAccessor,
-				Cluster: &clusterv1beta1.Cluster{
+				Cluster: &clusterv1.Cluster{
 					ObjectMeta: metav1.ObjectMeta{
 						UID: "resource_uid",
 					},

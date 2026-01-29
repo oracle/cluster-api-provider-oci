@@ -41,6 +41,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -209,7 +210,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 		expectedEvent      string
 		eventNotExpected   string
 		conditionAssertion []conditionAssertion
-		deleteMachines     []clusterv1beta1.Machine
+		deleteMachines     []clusterv1.Machine
 		testSpecificSetup  func(t *test, machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbclient *mock_nlb.MockNetworkLoadBalancerClient, wrclient *mock_workrequests.MockClient)
 		validate           func(g *WithT, t *test, result ctrl.Result)
 	}
@@ -464,10 +465,10 @@ func TestNormalReconciliationFunction(t *testing.T) {
 					machineScope.Machine.ObjectMeta.Annotations = make(map[string]string)
 				}
 				machineScope.Machine.ObjectMeta.Annotations[infrastructurev1beta2.DeleteMachineOnInstanceTermination] = ""
-				t.deleteMachines = make([]clusterv1beta1.Machine, 0)
+				t.deleteMachines = make([]clusterv1.Machine, 0)
 				machineScope.Client = interceptor.NewClient(fakeClient, interceptor.Funcs{
 					Delete: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
-						m := obj.(*clusterv1beta1.Machine)
+						m := obj.(*clusterv1.Machine)
 						t.deleteMachines = append(t.deleteMachines, *m)
 						return nil
 					},
@@ -1198,18 +1199,18 @@ func getOciMachine() *infrastructurev1beta2.OCIMachine {
 			Namespace: "test",
 			UID:       "uid",
 			Labels: map[string]string{
-				clusterv1beta1.ClusterNameLabel: "test-cluster",
+				clusterv1.ClusterNameLabel: "test-cluster",
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					Name:       "test-cluster",
 					Kind:       "Cluster",
-					APIVersion: clusterv1beta1.GroupVersion.String(),
+					APIVersion: clusterv1.GroupVersion.String(),
 				},
 				{
 					Name:       "test",
 					Kind:       "Machine",
-					APIVersion: clusterv1beta1.GroupVersion.String(),
+					APIVersion: clusterv1.GroupVersion.String(),
 				},
 			},
 		},
@@ -1225,30 +1226,30 @@ func getOciMachineWithNoOwner() *infrastructurev1beta2.OCIMachine {
 	return ociMachine
 }
 
-func getCluster() *clusterv1beta1.Cluster {
-	infraRef := corev1.ObjectReference{
+func getCluster() *clusterv1.Cluster {
+	infraRef := clusterv1.ContractVersionedObjectReference{
 		Name: "oci-cluster",
 		Kind: "OCICluster",
 	}
-	return &clusterv1beta1.Cluster{
+	return &clusterv1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-cluster",
 			Namespace: "test",
 		},
-		Spec: clusterv1beta1.ClusterSpec{
-			InfrastructureRef: &infraRef,
+		Spec: clusterv1.ClusterSpec{
+			InfrastructureRef: infraRef,
 		},
 	}
 }
 
-func getPausedCluster() *clusterv1beta1.Cluster {
+func getPausedCluster() *clusterv1.Cluster {
 	cluster := getCluster()
-	cluster.Spec.Paused = true
+	cluster.Spec.Paused = common.Bool(true)
 	return cluster
 }
 
-func getMachine() *clusterv1beta1.Machine {
-	machine := &clusterv1beta1.Machine{
+func getMachine() *clusterv1.Machine {
+	machine := &clusterv1.Machine{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
 			Namespace: "test",

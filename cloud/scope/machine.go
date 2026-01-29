@@ -40,12 +40,11 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2/klogr"
 	"k8s.io/utils/pointer"
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
 	v1beta1patch "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -56,8 +55,8 @@ const OCIMachineKind = "OCIMachine"
 // MachineScopeParams defines the params need to create a new MachineScope
 type MachineScopeParams struct {
 	Logger                    *logr.Logger
-	Cluster                   *clusterv1beta1.Cluster
-	Machine                   *clusterv1beta1.Machine
+	Cluster                   *clusterv1.Cluster
+	Machine                   *clusterv1.Machine
 	Client                    client.Client
 	ComputeClient             compute.ComputeClient
 	OCIClusterAccessor        OCIClusterAccessor
@@ -72,8 +71,8 @@ type MachineScope struct {
 	*logr.Logger
 	Client                    client.Client
 	patchHelper               *v1beta1patch.Helper
-	Cluster                   *clusterv1beta1.Cluster
-	Machine                   *clusterv1beta1.Machine
+	Cluster                   *clusterv1.Cluster
+	Machine                   *clusterv1.Machine
 	ComputeClient             compute.ComputeClient
 	OCIClusterAccessor        OCIClusterAccessor
 	OCIMachine                *infrastructurev1beta2.OCIMachine
@@ -357,16 +356,16 @@ func (m *MachineScope) faultDomainsForAvailabilityDomain(availabilityDomain stri
 
 func (m *MachineScope) resolveAvailabilityAndFaultDomain() (string, string, bool, error) {
 	failureDomainKey := m.Machine.Spec.FailureDomain
-	if failureDomainKey == nil {
+	if failureDomainKey == "" {
 		randomFailureDomain, err := rand.Int(rand.Reader, big.NewInt(3))
 		if err != nil {
 			m.Logger.Error(err, "Failed to generate random failure domain")
 			return "", "", false, err
 		}
-		failureDomainKey = common.String(strconv.Itoa(int(randomFailureDomain.Int64()) + 1))
+		failureDomainKey = strconv.Itoa(int(randomFailureDomain.Int64()) + 1)
 	}
 
-	failureDomainIndex, err := strconv.Atoi(*failureDomainKey)
+	failureDomainIndex, err := strconv.Atoi(failureDomainKey)
 	if err != nil {
 		m.Logger.Error(err, "Failure Domain is not a valid integer")
 		return "", "", false, errors.Wrap(err, "invalid failure domain parameter, must be a valid integer")
@@ -378,10 +377,10 @@ func (m *MachineScope) resolveAvailabilityAndFaultDomain() (string, string, bool
 	}
 	m.Logger.Info("Failure Domain being used", "failure-domain", failureDomainIndex)
 
-	fdEntry, exists := m.OCIClusterAccessor.GetFailureDomains()[*failureDomainKey]
+	fdEntry, exists := m.OCIClusterAccessor.GetFailureDomains()[failureDomainKey]
 	if !exists {
 		err := errors.New("failure domain not found in cluster failure domains")
-		m.Logger.Error(err, "Failure domain not found", "failure-domain", *failureDomainKey)
+		m.Logger.Error(err, "Failure domain not found", "failure-domain", failureDomainKey)
 		return "", "", false, err
 	}
 	availabilityDomain := fdEntry.Attributes[AvailabilityDomain]
@@ -483,29 +482,14 @@ func (m *MachineScope) Close(ctx context.Context) error {
 // GetBootstrapData returns the bootstrap data from the Secret referenced by the Machine's bootstrap.
 // In CAPI v1beta2, the secret name is exposed via Bootstrap.ConfigRef.status.dataSecretName.
 func (m *MachineScope) GetBootstrapData() (string, error) {
-	var secretName string
-	// v1beta1-compatible path (deprecated field, still check first if set)
-	if m.Machine.Spec.Bootstrap.DataSecretName != nil && *m.Machine.Spec.Bootstrap.DataSecretName != "" {
-		secretName = *m.Machine.Spec.Bootstrap.DataSecretName
-	} else if ref := m.Machine.Spec.Bootstrap.ConfigRef; ref != nil && ref.Name != "" {
-		// v1beta2 path: read status.dataSecretName from the BootstrapRef object (e.g., KubeadmConfig)
-		gvk := schema.FromAPIVersionAndKind(ref.APIVersion, ref.Kind)
-		u := &unstructured.Unstructured{}
-		u.SetGroupVersionKind(gvk)
-		if err := m.Client.Get(context.TODO(), types.NamespacedName{Namespace: m.Machine.Namespace, Name: ref.Name}, u); err != nil {
-			return "", errors.Wrapf(err, "failed to retrieve bootstrap config %s %s/%s", ref.Kind, m.Machine.Namespace, ref.Name)
-		}
-		if sn, found, _ := unstructured.NestedString(u.Object, "status", "dataSecretName"); found && sn != "" {
-			secretName = sn
-		}
-	}
 
-	if secretName == "" {
+	// v1beta1-compatible path (deprecated field, still check first if set)
+	if m.Machine.Spec.Bootstrap.DataSecretName == nil {
 		return "", errors.New("error retrieving bootstrap data: data secret name not available yet")
 	}
 
 	secret := &corev1.Secret{}
-	key := types.NamespacedName{Namespace: m.Machine.Namespace, Name: secretName}
+	key := types.NamespacedName{Namespace: m.Machine.Namespace, Name: *m.Machine.Spec.Bootstrap.DataSecretName}
 	if err := m.Client.Get(context.TODO(), key, secret); err != nil {
 		return "", errors.Wrapf(err, "failed to retrieve bootstrap data secret for OCIMachine %s/%s", m.Machine.Namespace, m.Machine.Name)
 	}

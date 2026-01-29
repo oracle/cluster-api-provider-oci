@@ -32,6 +32,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
 	v1beta1patch "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/patch"
@@ -81,7 +83,7 @@ func (r *OCIManagedClusterReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	// Fetch the Cluster.
-	cluster, err := cloudutil.GetOwnerCluster(ctx, r.Client, ociCluster.ObjectMeta)
+	cluster, err := util.GetOwnerCluster(ctx, r.Client, ociCluster.ObjectMeta)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -92,14 +94,14 @@ func (r *OCIManagedClusterReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	// Return early if the object or Cluster is paused.
-	if cloudutil.IsPaused(cluster, ociCluster) {
+	if annotations.IsPaused(cluster, ociCluster) {
 		r.Recorder.Eventf(ociCluster, corev1.EventTypeNormal, "ClusterPaused", "Cluster is paused")
 		logger.Info("OCIManagedCluster or linked Cluster is marked as paused. Won't reconcile")
 		return ctrl.Result{}, nil
 	}
 
 	// Return early if the object or Cluster is paused.
-	if cloudutil.IsPaused(cluster, ociCluster) {
+	if annotations.IsPaused(cluster, ociCluster) {
 		logger.Info("OCIManagedCluster or linked Cluster is marked as paused. Won't reconcile")
 		return ctrl.Result{}, nil
 	}
@@ -181,7 +183,7 @@ func (r *OCIManagedClusterReconciler) reconcileComponent(ctx context.Context, cl
 	return nil
 }
 
-func (r *OCIManagedClusterReconciler) reconcile(ctx context.Context, logger logr.Logger, clusterScope scope.ClusterScopeClient, ociManagedCluster *infrastructurev1beta2.OCIManagedCluster, cluster *clusterv1beta1.Cluster) (ctrl.Result, error) {
+func (r *OCIManagedClusterReconciler) reconcile(ctx context.Context, logger logr.Logger, clusterScope scope.ClusterScopeClient, ociManagedCluster *infrastructurev1beta2.OCIManagedCluster, cluster *clusterv1.Cluster) (ctrl.Result, error) {
 	// If the OCIManagedCluster doesn't have our finalizer, add it.
 	controllerutil.AddFinalizer(ociManagedCluster, infrastructurev1beta2.ManagedClusterFinalizer)
 
@@ -288,7 +290,7 @@ func (r *OCIManagedClusterReconciler) SetupWithManager(ctx context.Context, mgr 
 			handler.EnqueueRequestsFromMapFunc(ociManagedControlPlaneMapper),
 		).
 		Watches(
-			&clusterv1beta1.Cluster{},
+			&clusterv1.Cluster{},
 			handler.EnqueueRequestsFromMapFunc(r.clusterToInfrastructureMapFunc(log)),
 			builder.WithPredicates(
 				predicates.ClusterUnpaused(mgr.GetScheme(), log),
@@ -307,24 +309,24 @@ func (r *OCIManagedClusterReconciler) SetupWithManager(ctx context.Context, mgr 
 // Cluster events and returns reconciliation requests for an infrastructure provider object.
 func (r *OCIManagedClusterReconciler) clusterToInfrastructureMapFunc(log logr.Logger) handler.MapFunc {
 	return func(ctx context.Context, o client.Object) []reconcile.Request {
-		c, ok := o.(*clusterv1beta1.Cluster)
+		c, ok := o.(*clusterv1.Cluster)
 		if !ok {
 			return nil
 		}
 
 		// Make sure the ref is set
-		if c.Spec.InfrastructureRef == nil {
+		if !c.Spec.InfrastructureRef.IsDefined() {
 			log.V(4).Info("Cluster does not have an InfrastructureRef, skipping mapping.")
 			return nil
 		}
 
-		if c.Spec.InfrastructureRef.GroupVersionKind().Kind != "OCIManagedCluster" {
+		if c.Spec.InfrastructureRef.Kind != "OCIManagedCluster" {
 			log.V(4).Info("Cluster has an InfrastructureRef for a different type, skipping mapping.")
 			return nil
 		}
 
 		ociCluster := &infrastructurev1beta2.OCIManagedCluster{}
-		key := types.NamespacedName{Namespace: c.Spec.InfrastructureRef.Namespace, Name: c.Spec.InfrastructureRef.Name}
+		key := types.NamespacedName{Namespace: c.Namespace, Name: c.Spec.InfrastructureRef.Name}
 
 		if err := r.Get(ctx, key, ociCluster); err != nil {
 			log.V(4).Error(err, "Failed to get OCI cluster")
@@ -454,7 +456,7 @@ func OCIManagedControlPlaneToOCIManagedClusterMapper(c client.Client, log logr.L
 			return nil
 		}
 
-		cluster, err := cloudutil.GetOwnerCluster(ctx, c, ociManagedControlPlane.ObjectMeta)
+		cluster, err := util.GetOwnerCluster(ctx, c, ociManagedControlPlane.ObjectMeta)
 		if err != nil {
 			log.Error(err, "failed to get the owning cluster")
 			return nil
@@ -466,14 +468,14 @@ func OCIManagedControlPlaneToOCIManagedClusterMapper(c client.Client, log logr.L
 		}
 
 		ref := cluster.Spec.InfrastructureRef
-		if ref == nil || ref.Name == "" {
+		if ref.Name == "" {
 			return nil
 		}
 
 		return []ctrl.Request{
 			{
 				NamespacedName: types.NamespacedName{
-					Namespace: ref.Namespace,
+					Namespace: cluster.Namespace,
 					Name:      ref.Name,
 				},
 			},

@@ -29,7 +29,7 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -72,7 +72,7 @@ func TestDRGRPCAttachmentReconciliation(t *testing.T) {
 		ociClusterAccessor.OCICluster.Spec.ControlPlaneEndpoint.Port = 6443
 		cs, err = NewClusterScope(ClusterScopeParams{
 			VCNClient:          vcnClient,
-			Cluster:            &clusterv1beta1.Cluster{},
+			Cluster:            &clusterv1.Cluster{},
 			OCIClusterAccessor: ociClusterAccessor,
 			Client:             client,
 			ClientProvider:     mockProvider,
@@ -868,7 +868,7 @@ func TestDRGRPCAttachmentDeletion(t *testing.T) {
 		ociClusterAccessor.OCICluster.Spec.ControlPlaneEndpoint.Port = 6443
 		cs, err = NewClusterScope(ClusterScopeParams{
 			VCNClient:          vcnClient,
-			Cluster:            &clusterv1beta1.Cluster{},
+			Cluster:            &clusterv1.Cluster{},
 			OCIClusterAccessor: ociClusterAccessor,
 			Client:             client,
 			ClientProvider:     mockProvider,

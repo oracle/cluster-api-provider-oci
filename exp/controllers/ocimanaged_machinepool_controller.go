@@ -26,6 +26,7 @@ import (
 	"github.com/go-logr/logr"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
+	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	cloudutil "github.com/oracle/cluster-api-provider-oci/cloud/util"
 	expV1Beta1 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
@@ -40,7 +41,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util"
+	"sigs.k8s.io/cluster-api/util/annotations"
 	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -99,7 +102,7 @@ func (r *OCIManagedMachinePoolReconciler) Reconcile(ctx context.Context, req ctr
 	logger = logger.WithValues("machinePool", machinePool.Name)
 
 	// Fetch the Cluster.
-	cluster, err := cloudutil.GetClusterFromMetadata(ctx, r.Client, ociManagedMachinePool.ObjectMeta)
+	cluster, err := util.GetClusterFromMetadata(ctx, r.Client, ociManagedMachinePool.ObjectMeta)
 	if err != nil {
 		r.Recorder.Eventf(ociManagedMachinePool, corev1.EventTypeWarning, "ClusterDoesNotExist", "MachinePool is missing cluster label or cluster does not exist")
 		logger.Info("MachinePool is missing cluster label or cluster does not exist")
@@ -108,7 +111,7 @@ func (r *OCIManagedMachinePoolReconciler) Reconcile(ctx context.Context, req ctr
 	logger = logger.WithValues("cluster", cluster.Name)
 
 	// Return early if the object or Cluster is paused.
-	if cloudutil.IsPaused(cluster, ociManagedMachinePool) {
+	if annotations.IsPaused(cluster, ociManagedMachinePool) {
 		logger.Info("OCIMachinePool or linked Cluster is marked as paused. Won't reconcile")
 		return ctrl.Result{}, nil
 	}
@@ -192,7 +195,7 @@ func (r *OCIManagedMachinePoolReconciler) SetupWithManager(ctx context.Context, 
 		WithOptions(options).
 		For(&infrav2exp.OCIManagedMachinePool{}).
 		Watches(
-			&clusterv1beta1.MachinePool{},
+			&clusterv1.MachinePool{},
 			handler.EnqueueRequestsFromMapFunc(machinePoolToInfrastructureMapFunc(infrastructurev1beta2.
 				GroupVersion.WithKind(scope.OCIManagedMachinePoolKind), logger)),
 		).
@@ -201,7 +204,7 @@ func (r *OCIManagedMachinePoolReconciler) SetupWithManager(ctx context.Context, 
 			handler.EnqueueRequestsFromMapFunc(managedControlPlaneToManagedMachinePoolMap),
 		).
 		Watches(
-			&clusterv1beta1.Cluster{},
+			&clusterv1.Cluster{},
 			handler.EnqueueRequestsFromMapFunc(clusterToObjectFunc),
 			builder.WithPredicates(
 				predicates.ClusterPausedTransitionsOrInfrastructureProvisioned(mgr.GetScheme(), ctrl.LoggerFrom(ctx)),
@@ -222,7 +225,7 @@ func managedClusterToManagedMachinePoolMapFunc(c client.Client, gvk schema.Group
 			return nil
 		}
 
-		cluster, err := cloudutil.GetOwnerCluster(ctx, c, ociCluster.ObjectMeta)
+		cluster, err := util.GetOwnerCluster(ctx, c, ociCluster.ObjectMeta)
 		if err != nil {
 			log.Error(err, "couldn't get OCIManagedCluster owner ObjectKey")
 			return nil
@@ -233,7 +236,7 @@ func managedClusterToManagedMachinePoolMapFunc(c client.Client, gvk schema.Group
 
 		managedPoolForClusterList := clusterv1beta1.MachinePoolList{}
 		if err := c.List(
-			ctx, &managedPoolForClusterList, client.InNamespace(cluster.Namespace), client.MatchingLabels{clusterv1beta1.ClusterNameLabel: cluster.Name},
+			ctx, &managedPoolForClusterList, client.InNamespace(cluster.Namespace), client.MatchingLabels{clusterv1.ClusterNameLabel: cluster.Name},
 		); err != nil {
 			log.Error(err, "couldn't list pools for cluster")
 			return nil
@@ -256,7 +259,7 @@ func (r *OCIManagedMachinePoolReconciler) reconcileNormal(ctx context.Context, l
 	// If the OCIMachinePool doesn't have our finalizer, add it.
 	controllerutil.AddFinalizer(machinePoolScope.OCIManagedMachinePool, infrav2exp.ManagedMachinePoolFinalizer)
 
-	if !machinePoolScope.Cluster.Status.InfrastructureReady {
+	if !ptr.ToBool(machinePoolScope.Cluster.Status.Initialization.InfrastructureProvisioned) {
 		logger.Info("Cluster infrastructure is not ready yet")
 		return reconcile.Result{}, nil
 	}

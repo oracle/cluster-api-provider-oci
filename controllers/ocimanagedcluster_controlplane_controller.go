@@ -34,6 +34,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
 	v1beta1patch "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/patch"
@@ -82,7 +84,7 @@ func (r *OCIManagedClusterControlPlaneReconciler) Reconcile(ctx context.Context,
 		return ctrl.Result{}, err
 	}
 	// Fetch the Cluster.
-	cluster, err := cloudutil.GetOwnerCluster(ctx, r.Client, controlPlane.ObjectMeta)
+	cluster, err := util.GetOwnerCluster(ctx, r.Client, controlPlane.ObjectMeta)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -93,7 +95,7 @@ func (r *OCIManagedClusterControlPlaneReconciler) Reconcile(ctx context.Context,
 	}
 
 	// Return early if the object or Cluster is paused.
-	if cloudutil.IsPaused(cluster, controlPlane) {
+	if annotations.IsPaused(cluster, controlPlane) {
 		r.Recorder.Eventf(controlPlane, corev1.EventTypeNormal, "ClusterPaused", "Cluster is paused")
 		logger.Info("OCIManagedCluster or linked Cluster is marked as paused. Won't reconcile")
 		return ctrl.Result{}, nil
@@ -118,7 +120,7 @@ func (r *OCIManagedClusterControlPlaneReconciler) Reconcile(ctx context.Context,
 	}
 
 	// Return early if the object or Cluster is paused.
-	if cloudutil.IsPaused(cluster, ociManagedCluster) {
+	if annotations.IsPaused(cluster, ociManagedCluster) {
 		r.Recorder.Eventf(controlPlane, corev1.EventTypeNormal, "ClusterPaused", "Cluster is paused")
 		logger.Info("OCIManagedCluster or linked Cluster is marked as paused. Won't reconcile")
 		return ctrl.Result{}, nil
@@ -263,7 +265,7 @@ func (r *OCIManagedClusterControlPlaneReconciler) SetupWithManager(ctx context.C
 			handler.EnqueueRequestsFromMapFunc(ociManagedClusterMapper),
 		).
 		Watches(
-			&clusterv1beta1.Cluster{},
+			&clusterv1.Cluster{},
 			handler.EnqueueRequestsFromMapFunc(ClusterToOCIManagedControlPlaneMapper()),
 			builder.WithPredicates(
 				predicates.ClusterUnpaused(mgr.GetScheme(), log),
@@ -282,24 +284,24 @@ func (r *OCIManagedClusterControlPlaneReconciler) SetupWithManager(ctx context.C
 // Cluster events and returns reconciliation requests for an infrastructure provider object.
 func (r *OCIManagedClusterControlPlaneReconciler) clusterToInfrastructureMapFunc(log logr.Logger) handler.MapFunc {
 	return func(ctx context.Context, o client.Object) []reconcile.Request {
-		c, ok := o.(*clusterv1beta1.Cluster)
+		c, ok := o.(*clusterv1.Cluster)
 		if !ok {
 			return nil
 		}
 
 		// Make sure the ref is set
-		if c.Spec.InfrastructureRef == nil {
+		if !c.Spec.InfrastructureRef.IsDefined() {
 			log.V(4).Info("Cluster does not have an InfrastructureRef, skipping mapping.")
 			return nil
 		}
 
-		if c.Spec.InfrastructureRef.GroupVersionKind().Kind != "OCIManagedCluster" {
+		if c.Spec.InfrastructureRef.Kind != "OCIManagedCluster" {
 			log.V(4).Info("Cluster has an InfrastructureRef for a different type, skipping mapping.")
 			return nil
 		}
 
 		ociCluster := &infrastructurev1beta2.OCIManagedCluster{}
-		key := types.NamespacedName{Namespace: c.Spec.InfrastructureRef.Namespace, Name: c.Spec.InfrastructureRef.Name}
+		key := types.NamespacedName{Namespace: c.Namespace, Name: c.Spec.InfrastructureRef.Name}
 
 		if err := r.Get(ctx, key, ociCluster); err != nil {
 			log.V(4).Error(err, "Failed to get OCI cluster")
@@ -387,7 +389,7 @@ func OCIManagedClusterToOCIManagedControlPlaneMapper(c client.Client, log logr.L
 			return nil
 		}
 
-		cluster, err := cloudutil.GetOwnerCluster(ctx, c, ociCluster.ObjectMeta)
+		cluster, err := util.GetOwnerCluster(ctx, c, ociCluster.ObjectMeta)
 		if err != nil {
 			log.Error(err, "failed to get the owning cluster")
 			return nil
@@ -399,14 +401,14 @@ func OCIManagedClusterToOCIManagedControlPlaneMapper(c client.Client, log logr.L
 		}
 
 		ref := cluster.Spec.ControlPlaneRef
-		if ref == nil || ref.Name == "" {
+		if ref.Name == "" {
 			return nil
 		}
 
 		return []ctrl.Request{
 			{
 				NamespacedName: types.NamespacedName{
-					Namespace: ref.Namespace,
+					Namespace: cluster.Namespace,
 					Name:      ref.Name,
 				},
 			},
@@ -416,20 +418,20 @@ func OCIManagedClusterToOCIManagedControlPlaneMapper(c client.Client, log logr.L
 
 func ClusterToOCIManagedControlPlaneMapper() handler.MapFunc {
 	return func(ctx context.Context, o client.Object) []ctrl.Request {
-		cluster, ok := o.(*clusterv1beta1.Cluster)
+		cluster, ok := o.(*clusterv1.Cluster)
 		if !ok {
 			return nil
 		}
 
 		ref := cluster.Spec.ControlPlaneRef
-		if ref == nil || ref.Name == "" {
+		if ref.Name == "" {
 			return nil
 		}
 
 		return []ctrl.Request{
 			{
 				NamespacedName: types.NamespacedName{
-					Namespace: ref.Namespace,
+					Namespace: cluster.Namespace,
 					Name:      ref.Name,
 				},
 			},

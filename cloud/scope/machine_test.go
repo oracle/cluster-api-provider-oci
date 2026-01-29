@@ -42,6 +42,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
@@ -87,14 +88,14 @@ func TestInstanceReconciliation(t *testing.T) {
 					CompartmentId: "test",
 				},
 			},
-			Machine: &clusterv1beta1.Machine{
-				Spec: clusterv1beta1.MachineSpec{
-					Bootstrap: clusterv1beta1.Bootstrap{
+			Machine: &clusterv1.Machine{
+				Spec: clusterv1.MachineSpec{
+					Bootstrap: clusterv1.Bootstrap{
 						DataSecretName: common.String("bootstrap"),
 					},
 				},
 			},
-			Cluster: &clusterv1beta1.Cluster{},
+			Cluster: &clusterv1.Cluster{},
 			OCIClusterAccessor: OCISelfManagedCluster{
 				OCICluster: &ociCluster,
 			},
@@ -250,7 +251,7 @@ func TestInstanceReconciliation(t *testing.T) {
 			errorSubStringMatch: true,
 			matchError:          errors.New("invalid failure domain parameter, must be a valid integer"),
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
-				ms.Machine.Spec.FailureDomain = common.String("invalid")
+				ms.Machine.Spec.FailureDomain = "invalid"
 				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
 					DisplayName:   common.String("test"),
 					CompartmentId: common.String("test"),
@@ -262,7 +263,7 @@ func TestInstanceReconciliation(t *testing.T) {
 			errorExpected: true,
 			matchError:    errors.New("failure domain should be a value between 1 and 3"),
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
-				ms.Machine.Spec.FailureDomain = common.String("4")
+				ms.Machine.Spec.FailureDomain = "4"
 				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
 					DisplayName:   common.String("test"),
 					CompartmentId: common.String("test"),
@@ -341,7 +342,7 @@ func TestInstanceReconciliation(t *testing.T) {
 						},
 					},
 				}
-				ms.Machine.Spec.FailureDomain = common.String("1")
+				ms.Machine.Spec.FailureDomain = "1"
 				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
 					DisplayName:   common.String("name"),
 					CompartmentId: common.String("test"),
@@ -390,7 +391,7 @@ func TestInstanceReconciliation(t *testing.T) {
 						},
 					},
 				}
-				ms.Machine.Spec.FailureDomain = common.String("1")
+				ms.Machine.Spec.FailureDomain = "1"
 				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
 					DisplayName:   common.String("name"),
 					CompartmentId: common.String("test"),
@@ -438,7 +439,7 @@ func TestInstanceReconciliation(t *testing.T) {
 						},
 					},
 				}
-				ms.Machine.Spec.FailureDomain = common.String("1")
+				ms.Machine.Spec.FailureDomain = "1"
 				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
 					DisplayName:   common.String("name"),
 					CompartmentId: common.String("test"),
@@ -476,7 +477,7 @@ func TestInstanceReconciliation(t *testing.T) {
 						FaultDomains: []string{"FAULT-DOMAIN-1", "FAULT-DOMAIN-2"},
 					},
 				}
-				ms.Machine.Spec.FailureDomain = common.String("1")
+				ms.Machine.Spec.FailureDomain = "1"
 				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
 					DisplayName:   common.String("name"),
 					CompartmentId: common.String("test"),
@@ -1790,8 +1791,8 @@ func TestNLBReconciliationCreation(t *testing.T) {
 					CompartmentId: "test",
 				},
 			},
-			Machine: &clusterv1beta1.Machine{},
-			Cluster: &clusterv1beta1.Cluster{},
+			Machine: &clusterv1.Machine{},
+			Cluster: &clusterv1.Cluster{},
 			OCIClusterAccessor: OCISelfManagedCluster{
 				OCICluster: &ociCluster,
 			},
@@ -2113,8 +2114,8 @@ func TestNLBReconciliationDeletion(t *testing.T) {
 					CompartmentId: "test",
 				},
 			},
-			Machine: &clusterv1beta1.Machine{},
-			Cluster: &clusterv1beta1.Cluster{},
+			Machine: &clusterv1.Machine{},
+			Cluster: &clusterv1.Cluster{},
 			OCIClusterAccessor: OCISelfManagedCluster{
 				OCICluster: &ociCluster,
 			},
@@ -2392,8 +2393,8 @@ func TestLBReconciliationCreation(t *testing.T) {
 					CompartmentId: "test",
 				},
 			},
-			Machine: &clusterv1beta1.Machine{},
-			Cluster: &clusterv1beta1.Cluster{},
+			Machine: &clusterv1.Machine{},
+			Cluster: &clusterv1.Cluster{},
 			OCIClusterAccessor: OCISelfManagedCluster{
 				OCICluster: &ociCluster,
 			},
@@ -2704,8 +2705,8 @@ func TestLBReconciliationDeletion(t *testing.T) {
 					CompartmentId: "test",
 				},
 			},
-			Machine: &clusterv1beta1.Machine{},
-			Cluster: &clusterv1beta1.Cluster{},
+			Machine: &clusterv1.Machine{},
+			Cluster: &clusterv1.Cluster{},
 			OCIClusterAccessor: OCISelfManagedCluster{
 				OCICluster: &ociCluster,
 			},
@@ -3013,8 +3014,8 @@ func TestInstanceDeletion(t *testing.T) {
 					InstanceId:    common.String("test"),
 				},
 			},
-			Machine: &clusterv1beta1.Machine{},
-			Cluster: &clusterv1beta1.Cluster{},
+			Machine: &clusterv1.Machine{},
+			Cluster: &clusterv1.Cluster{},
 			OCIClusterAccessor: OCISelfManagedCluster{
 				OCICluster: &ociCluster,
 			},
@@ -3133,7 +3134,7 @@ func setupAllParams(ms *MachineScope) {
 			FaultDomains: []string{"FAULT-DOMAIN-1", "FAULT-DOMAIN-2", "FAULT-DOMAIN-3"},
 		},
 	}
-	ms.Machine.Spec.FailureDomain = common.String("2")
+	ms.Machine.Spec.FailureDomain = "2"
 	ociCluster.Spec.NetworkSpec.Vcn.Subnets = []*infrastructurev1beta2.Subnet{
 		{
 			Role: infrastructurev1beta2.WorkerRole,

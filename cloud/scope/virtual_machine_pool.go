@@ -37,7 +37,7 @@ import (
 	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
 	"github.com/pkg/errors"
 	"k8s.io/klog/v2/klogr"
-	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	capierrors "sigs.k8s.io/cluster-api/errors"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	v1beta1patch "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/patch"
@@ -51,8 +51,8 @@ const (
 // VirtualMachinePoolScopeParams defines the params need to create a new VirtualMachinePoolScope
 type VirtualMachinePoolScopeParams struct {
 	Logger                  *logr.Logger
-	Cluster                 *clusterv1beta1.Cluster
-	MachinePool             *clusterv1beta1.MachinePool
+	Cluster                 *clusterv1.Cluster
+	MachinePool             *clusterv1.MachinePool
 	Client                  client.Client
 	ComputeManagementClient computemanagement.Client
 	OCIManagedCluster       *infrastructurev1beta2.OCIManagedCluster
@@ -65,8 +65,8 @@ type VirtualMachinePoolScope struct {
 	*logr.Logger
 	Client                  client.Client
 	patchHelper             *v1beta1patch.Helper
-	Cluster                 *clusterv1beta1.Cluster
-	MachinePool             *clusterv1beta1.MachinePool
+	Cluster                 *clusterv1.Cluster
+	MachinePool             *clusterv1.MachinePool
 	ComputeManagementClient computemanagement.Client
 	OCIManagedCluster       *infrastructurev1beta2.OCIManagedCluster
 	OCIVirtualMachinePool   *expinfra1.OCIVirtualMachinePool
