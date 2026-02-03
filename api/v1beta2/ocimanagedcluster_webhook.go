@@ -52,6 +52,12 @@ func (*OCIManagedClusterWebhook) Default(_ context.Context, obj runtime.Object) 
 	if c.Spec.OCIResourceIdentifier == "" {
 		c.Spec.OCIResourceIdentifier = string(uuid.NewUUID())
 	}
+
+	if *c.Spec.BlockVolumeSpec.IsAutoTuneEnabled {
+		c.Spec.BlockVolumeSpec.AutotunePolicies.AutotuneType = "PERFORMANCE_BASED"
+		c.Spec.BlockVolumeSpec.AutotunePolicies.MaxVPUsPerGB = common.Int64(120)
+	}
+
 	if !c.Spec.NetworkSpec.SkipNetworkManagement {
 		if len(c.Spec.NetworkSpec.Vcn.Subnets) == 0 {
 			subnets := make([]*Subnet, 4)

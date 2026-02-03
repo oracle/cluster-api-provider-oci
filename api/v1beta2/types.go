@@ -96,6 +96,14 @@ type VnicAttachment struct {
 	NicIndex *int `json:"nicIndex,omitempty"`
 }
 
+// BlockVolumeDetails defines the configuration options for the block volume
+type BlockVolumeDetails struct {
+	// VolumeId defines the ID of the block volume to use. This parameter takes priority over VolumeName.
+	VolumeId string `json:"volumeId,omitempty"`
+	// VolumeName defines the block volume name to attach to the instance
+	VolumeName string `json:"volumeName,omitempty"`
+}
+
 // LaunchOptionsBootVolumeTypeEnum Enum with underlying type: string
 type LaunchOptionsBootVolumeTypeEnum string
 
@@ -1195,6 +1203,100 @@ type NetworkSecurityGroup struct {
 	// +listType=map
 	// +listMapKey=name
 	List []*NSG `json:"list,omitempty"`
+}
+type BlockVolumeSpec struct {
+	// The OCID of the compartment that contains the volume.
+	CompartmentId *string `mandatory:"true" json:"compartmentId"`
+
+	// The availability domain of the volume. Omissible for cloning a volume. The new volume will be created in the availability domain of the source volume.
+	// Example: `Uocm:PHX-AD-1`
+	AvailabilityDomain *string `mandatory:"false" json:"availabilityDomain"`
+
+	// If provided, specifies the ID of the volume backup policy to assign to the newly
+	// created volume. If omitted, no policy will be assigned.
+	BackupPolicyId *string `mandatory:"false" json:"backupPolicyId"`
+
+	// A user-friendly name. Does not have to be unique, and it's changeable.
+	// Avoid entering confidential information.
+	DisplayName *string `mandatory:"false" json:"displayName"`
+
+	// The OCID of the Vault service key to assign as the master encryption key
+	// for the volume.
+	KmsKeyId *string `mandatory:"false" json:"kmsKeyId"`
+
+	// The number of volume performance units (VPUs) that will be applied to this volume per GB,
+	// representing the Block Volume service's elastic performance options.
+	// See Block Volume Performance Levels (https://docs.oracle.com/iaas/Content/Block/Concepts/blockvolumeperformance.htm#perf_levels) for more information.
+	// Allowed values:
+	//   * `0`: Represents Lower Cost option.
+	//   * `10`: Represents Balanced option.
+	//   * `20`: Represents Higher Performance option.
+	//   * `30`-`120`: Represents the Ultra High Performance option.
+	// For performance autotune enabled volumes, it would be the Default(Minimum) VPUs/GB.
+	VpusPerGB *int64 `mandatory:"false" json:"vpusPerGB"`
+
+	// The clusterPlacementGroup Id of the volume for volume placement.
+	ClusterPlacementGroupId *string `mandatory:"false" json:"clusterPlacementGroupId"`
+
+	// The size of the volume in GBs.
+	SizeInGBs *int64 `mandatory:"false" json:"sizeInGBs"`
+
+	// VolumeSourceDetails Specifies the volume source details for a new Block volume. The volume source is either another Block volume in the same Availability Domain or a Block volume backup.
+	// This is an optional field. If not specified or set to null, the new Block volume will be empty.
+	// When specified, the new Block volume will contain data from the source volume or backup
+	SourceDetails string `mandatory:"false" json:"sourceDetails"`
+
+	// The OCID of the volume backup from which the data should be restored on the newly created volume.
+	// This field is deprecated. Use the sourceDetails field instead to specify the
+	// backup for the volume.
+	VolumeBackupId *string `mandatory:"false" json:"volumeBackupId"`
+
+	// Specifies whether the auto-tune performance is enabled for this volume. This field is deprecated.
+	// Use the `DetachedVolumeAutotunePolicy` instead to enable the volume for detached autotune.
+	IsAutoTuneEnabled *bool `mandatory:"false" json:"isAutoTuneEnabled"`
+
+	// The list of block volume replicas to be enabled for this volume
+	// in the specified destination availability domains.
+	BlockVolumeReplicas []BlockVolumeReplicaDetails `mandatory:"false" json:"blockVolumeReplicas"`
+
+	// The list of autotune policies to be enabled for this volume.
+	AutotunePolicies *AutotunePolicy `mandatory:"false" json:"autotunePolicies"`
+
+	// The OCID of the Vault service key which is the master encryption key for the block volume cross region backups, which will be used in the destination region to encrypt the backup's encryption keys.
+	// For more information about the Vault service and encryption keys, see
+	// Overview of Vault service (https://docs.oracle.com/iaas/Content/KeyManagement/Concepts/keyoverview.htm) and
+	// Using Keys (https://docs.oracle.com/iaas/Content/KeyManagement/Tasks/usingkeys.htm).
+	XrcKmsKeyId *string `mandatory:"false" json:"xrcKmsKeyId"`
+
+	// When set to true, enables SCSI Persistent Reservation (SCSI PR) for the volume. For more information, see
+	// Persistent Reservations (https://docs.oracle.com/iaas/Content/Block/Concepts/persistent-reservations.htm).
+	IsReservationsEnabled *bool `mandatory:"false" json:"isReservationsEnabled"`
+}
+
+// BlockVolumeReplicaDetails Contains the details for the block volume replica
+type BlockVolumeReplicaDetails struct {
+
+	// The availability domain of the block volume replica.
+	// Example: `Uocm:PHX-AD-1`
+	AvailabilityDomain *string `mandatory:"true" json:"availabilityDomain"`
+
+	// A user-friendly name. Does not have to be unique, and it's changeable.
+	// Avoid entering confidential information.
+	DisplayName *string `mandatory:"false" json:"displayName"`
+
+	// The OCID of the Vault service key which is the master encryption key for the cross region block volume replicas, which will be used in the destination region to encrypt the block volume replica's encryption keys.
+	// For more information about the Vault service and encryption keys, see
+	// Overview of Vault service (https://docs.oracle.com/iaas/Content/KeyManagement/Concepts/keyoverview.htm) and
+	// Using Keys (https://docs.oracle.com/iaas/Content/KeyManagement/Tasks/usingkeys.htm).
+	XrrKmsKeyId *string `mandatory:"false" json:"xrrKmsKeyId"`
+}
+
+type AutotunePolicy struct {
+	// This field can be of type DETACHED_VOLUME or PERFORMANCE_BASED
+	AutotuneType string `mandatory:"true" json:"autotuneType"`
+
+	// This field is needed for PERFORMANCE_BASED
+	MaxVPUsPerGB *int64 `mandatory:"false" json:"maxVpusPerGB"`
 }
 
 type VolumeType string

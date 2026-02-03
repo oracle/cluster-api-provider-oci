@@ -48,6 +48,10 @@ type OCIClusterSpec struct {
 	// +optional
 	NetworkSpec NetworkSpec `json:"networkSpec,omitempty"`
 
+	// BlockVolumeSpec encapsulated all things related to creating block volume before compute
+	// +optional
+	BlockVolumeSpec BlockVolumeSpec `json:"blockvolumeSpec,omitempty"`
+
 	// Free-form tags for this resource.
 	// +optional
 	FreeformTags map[string]string `json:"freeformTags,omitempty"`
@@ -142,6 +146,12 @@ type ClientOverrides struct {
 	// +optional
 	// +nullable
 	ComputeClientUrl *string `json:"computeClientUrl,omitempty"`
+
+	// VolumeClientUrl allows the default volume SDK client URL to be changed.
+	//
+	// +optional
+	// +nullable
+	VolumeClientUrl *string `json:"VolumeClientUrl,omitempty"`
 
 	// ComputeManagementClientUrl allows the default compute management SDK client URL to be changed.
 	//

@@ -125,6 +125,7 @@ func (r *OCIClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		NetworkLoadBalancerClient: clients.NetworkLoadBalancerClient,
 		LoadBalancerClient:        clients.LoadBalancerClient,
 		IdentityClient:            clients.IdentityClient,
+		VolumeClient:              clients.VolumeClient,
 		RegionIdentifier:          clusterRegion,
 	})
 	if err != nil {
@@ -188,6 +189,11 @@ func skipApiserverManagement(o metav1.Object) bool {
 func (r *OCIClusterReconciler) reconcile(ctx context.Context, logger logr.Logger, clusterScope scope.ClusterScopeClient, cluster *infrastructurev1beta2.OCICluster) (ctrl.Result, error) {
 	// If the OCICluster doesn't have our finalizer, add it.
 	controllerutil.AddFinalizer(cluster, infrastructurev1beta2.ClusterFinalizer)
+
+	if err := r.reconcileComponent(ctx, cluster, clusterScope.ReconcileBlockVolume, "BlockVolume",
+		infrastructurev1beta2.BlockVolumeReconciliationFailedReason, infrastructurev1beta2.BlockVolumeEventReady); err != nil {
+		return ctrl.Result{}, err
+	}
 
 	// This below if condition specifies if the network related infrastructure needs to be reconciled. Any new
 	// network related reconcilication should happen in this if condition

@@ -81,6 +81,10 @@ func (c OCIManagedCluster) GetNetworkSpec() *infrastructurev1beta2.NetworkSpec {
 	return &c.OCIManagedCluster.Spec.NetworkSpec
 }
 
+func (c OCIManagedCluster) GetBlockVolumeSpec() *infrastructurev1beta2.BlockVolumeSpec {
+	return &c.OCIManagedCluster.Spec.BlockVolumeSpec
+}
+
 func (c OCIManagedCluster) SetControlPlaneEndpoint(endpoint clusterv1.APIEndpoint) {
 	c.OCIManagedCluster.Spec.ControlPlaneEndpoint = endpoint
 }

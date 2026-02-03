@@ -54,6 +54,10 @@ func (*OCIClusterWebhook) Default(_ context.Context, obj runtime.Object) error {
 	if c.Spec.OCIResourceIdentifier == "" {
 		c.Spec.OCIResourceIdentifier = string(uuid.NewUUID())
 	}
+	if *c.Spec.BlockVolumeSpec.IsAutoTuneEnabled {
+		c.Spec.BlockVolumeSpec.AutotunePolicies.AutotuneType = "PERFORMANCE_BASED"
+		c.Spec.BlockVolumeSpec.AutotunePolicies.MaxVPUsPerGB = common.Int64(120)
+	}
 	if !c.Spec.NetworkSpec.SkipNetworkManagement {
 		c.Spec.NetworkSpec.Vcn.Subnets = c.SubnetSpec()
 		c.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List = c.NSGSpec()

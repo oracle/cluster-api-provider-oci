@@ -18,6 +18,7 @@ package scope
 
 import (
 	"fmt"
+
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	corev1 "k8s.io/api/core/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -79,6 +80,10 @@ func (c OCISelfManagedCluster) GetVCNPeering() *infrastructurev1beta2.VCNPeering
 
 func (c OCISelfManagedCluster) GetNetworkSpec() *infrastructurev1beta2.NetworkSpec {
 	return &c.OCICluster.Spec.NetworkSpec
+}
+
+func (c OCISelfManagedCluster) GetBlockVolumeSpec() *infrastructurev1beta2.BlockVolumeSpec {
+	return &c.OCICluster.Spec.BlockVolumeSpec
 }
 
 func (c OCISelfManagedCluster) SetControlPlaneEndpoint(endpoint clusterv1.APIEndpoint) {

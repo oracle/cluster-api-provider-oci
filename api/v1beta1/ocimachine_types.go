@@ -69,6 +69,9 @@ type OCIMachineSpec struct {
 	// The network bandwidth and number of VNICs scale proportionately with the number of OCPUs.
 	VnicAttachments []VnicAttachment `json:"vnicAttachments,omitempty"`
 
+	// BlockVolumeDetails defines the configuration options for the block volume
+	BlockVolumeDetails BlockVolumeDetails `json:"blockvolumeDetails,omitempty"`
+
 	// LaunchOptions defines the options for tuning the compatibility and performance of VM shapes
 	LaunchOptions *LaunchOptions `json:"launchOptions,omitempty"`
 

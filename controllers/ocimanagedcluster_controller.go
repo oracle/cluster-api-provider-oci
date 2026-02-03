@@ -127,6 +127,7 @@ func (r *OCIManagedClusterReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		VCNClient:          clients.VCNClient,
 		LoadBalancerClient: clients.LoadBalancerClient,
 		IdentityClient:     clients.IdentityClient,
+		VolumeClient:       clients.VolumeClient,
 		RegionIdentifier:   clusterRegion,
 	})
 	if err != nil {
@@ -195,6 +196,11 @@ func (r *OCIManagedClusterReconciler) reconcile(ctx context.Context, logger logr
 	if err := r.Get(ctx, controlPlaneRef, controlPlane); err != nil {
 		logger.Info("Failed to get control plane ref")
 		return reconcile.Result{}, errors.Wrap(err, "failed to get control plane ref")
+	}
+
+	if err := r.reconcileComponent(ctx, ociManagedCluster, clusterScope.ReconcileBlockVolume, "BlockVolume",
+		infrastructurev1beta2.BlockVolumeReconciliationFailedReason, infrastructurev1beta2.BlockVolumeEventReady); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	// This below if condition specifies if the network related infrastructure needs to be reconciled. Any new
