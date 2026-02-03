@@ -232,7 +232,7 @@ func managedClusterToVirtualMachinePoolMapFunc(c client.Client, gvk schema.Group
 			return nil
 		}
 
-		managedPoolForClusterList := clusterv1beta1.MachinePoolList{}
+		managedPoolForClusterList := clusterv1.MachinePoolList{}
 		if err := c.List(
 			ctx, &managedPoolForClusterList, client.InNamespace(cluster.Namespace), client.MatchingLabels{clusterv1.ClusterNameLabel: cluster.Name},
 		); err != nil {
