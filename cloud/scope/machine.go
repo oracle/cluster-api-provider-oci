@@ -480,7 +480,6 @@ func (m *MachineScope) Close(ctx context.Context) error {
 }
 
 // GetBootstrapData returns the bootstrap data from the Secret referenced by the Machine's bootstrap.
-// In CAPI v1beta2, the secret name is exposed via Bootstrap.ConfigRef.status.dataSecretName.
 func (m *MachineScope) GetBootstrapData() (string, error) {
 
 	// v1beta1-compatible path (deprecated field, still check first if set)

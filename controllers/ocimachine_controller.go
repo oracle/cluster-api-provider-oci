@@ -211,18 +211,6 @@ func (r *OCIMachineReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Ma
 				predicates.ClusterPausedTransitionsOrInfrastructureProvisioned(mgr.GetScheme(), ctrl.LoggerFrom(ctx)),
 			),
 		).
-		Watches(
-			&clusterv1.Machine{},
-			handler.EnqueueRequestsFromMapFunc(util.MachineToInfrastructureMapFunc(infrastructurev1beta2.
-				GroupVersion.WithKind(scope.OCIMachineKind))),
-		).
-		Watches(
-			&clusterv1.Cluster{},
-			handler.EnqueueRequestsFromMapFunc(clusterToObjectFunc),
-			builder.WithPredicates(
-				predicates.ClusterPausedTransitionsOrInfrastructureProvisioned(mgr.GetScheme(), ctrl.LoggerFrom(ctx)),
-			),
-		).
 		// don't queue reconcile if resource is paused
 		Complete(r)
 	if err != nil {

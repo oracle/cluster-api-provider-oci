@@ -71,7 +71,6 @@ func init() {
 	utilruntime.Must(clusterv1.AddToScheme(scheme))
 	utilruntime.Must(expV1Beta1.AddToScheme(scheme))
 	utilruntime.Must(expV1Beta2.AddToScheme(scheme))
-	utilruntime.Must(clusterv1beta1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
