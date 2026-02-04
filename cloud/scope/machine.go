@@ -562,7 +562,8 @@ func (m *MachineScope) GetMachineIPFromStatus() (string, error) {
 // GetInstanceIp returns the OCIMachine's instance IP from its primary VNIC attachment.
 //
 // See https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/managingVNICs.htm for more on VNICs
-func (m *MachineScope) GetInstanceIp(ctx context.Context) (*string, error) {
+func (m *MachineScope) GetInstanceIPs(ctx context.Context) ([]clusterv1.MachineAddress, error) {
+	addresses := []clusterv1.MachineAddress{}
 	var page *string
 	for {
 		resp, err := m.ComputeClient.ListVnicAttachments(ctx, core.ListVnicAttachmentsRequest{
@@ -593,7 +594,20 @@ func (m *MachineScope) GetInstanceIp(ctx context.Context) (*string, error) {
 				return nil, err
 			}
 			if vnic.IsPrimary != nil && *vnic.IsPrimary {
-				return vnic.PrivateIp, nil
+				if vnic.PublicIp != nil {
+					publicIP := clusterv1.MachineAddress{
+						Address: *vnic.PublicIp,
+						Type:    clusterv1.MachineExternalIP,
+					}
+					addresses = append(addresses, publicIP)
+					return addresses, nil
+				}
+				privateIP := clusterv1.MachineAddress{
+					Address: *vnic.PrivateIp,
+					Type:    clusterv1.MachineInternalIP,
+				}
+				addresses = append(addresses, privateIP)
+				return addresses, nil
 			}
 		}
 
