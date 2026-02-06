@@ -1289,7 +1289,7 @@ func getOCICluster() *infrastructurev1beta2.OCICluster {
 }
 
 func getManagedCluster() *clusterv1.Cluster {
-	infraRef := corev1.ObjectReference{
+	infraRef := clusterv1.ContractVersionedObjectReference{
 		Name: "oci-managed-cluster",
 		Kind: "OCIManagedCluster",
 	}
@@ -1299,7 +1299,7 @@ func getManagedCluster() *clusterv1.Cluster {
 			Namespace: "test",
 		},
 		Spec: clusterv1.ClusterSpec{
-			InfrastructureRef: &infraRef,
+			InfrastructureRef: infraRef,
 		},
 	}
 }
