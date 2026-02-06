@@ -807,7 +807,7 @@ func (m *MachineScope) ReconcileDeleteInstanceOnLB(ctx context.Context) error {
 
 func (m *MachineScope) containsNLBBackend(backendSet networkloadbalancer.BackendSet, backendName string) bool {
 	for _, backend := range backendSet.Backends {
-		if *backend.Name == backendName {
+		if ptr.StringEquals(backend.Name, backendName) {
 			m.Logger.Info("Instance present in the backend")
 			return true
 		}
@@ -817,7 +817,7 @@ func (m *MachineScope) containsNLBBackend(backendSet networkloadbalancer.Backend
 
 func (m *MachineScope) containsLBBackend(backendSet loadbalancer.BackendSet, backendName string) bool {
 	for _, backend := range backendSet.Backends {
-		if *backend.Name == backendName {
+		if ptr.StringEquals(backend.Name, backendName) {
 			m.Logger.Info("Instance present in the backend")
 			return true
 		}

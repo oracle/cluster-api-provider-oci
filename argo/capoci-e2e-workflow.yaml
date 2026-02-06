@@ -268,11 +268,11 @@ spec:
             docker version
 
             # Ensure binaries installed by the Makefile are on PATH (kustomize, ginkgo, etc.)
-            export PATH="/workspace/bin:${PATH}"
+            export PATH="/workspace/hack/tools/bin:/workspace/bin:${PATH}"
             # Also provide kustomize in a standard location for tools that exec 'kustomize' by name.
-            ln -sf /workspace/bin/kustomize /usr/local/bin/kustomize || true
+            ln -sf /workspace/hack/tools/bin/kustomize /usr/local/bin/kustomize || true
             ln -sf /workspace/bin/ginkgo /usr/local/bin/ginkgo || true
-            ln -sf /workspace/bin/kubectl /usr/local/bin/kubectl || true
+            ln -sf /workspace/hack/tools/bin/kubectl /usr/local/bin/kubectl || true
             command -v kustomize || true
             kustomize version || true
             command -v kubectl || true

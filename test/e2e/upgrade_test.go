@@ -102,7 +102,7 @@ var _ = Describe("Cluster Upgrade Tests", func() {
 		dumpSpecResourcesAndCleanup(ctx, cleanInput)
 	})
 
-	It("Upgrade of control-plane nodes and worker nodes", func() {
+	It("Upgrade of control-plane nodes and worker nodes [DailyTests]", func() {
 		clusterName = getClusterName(clusterNamePrefix, "upgrade")
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,

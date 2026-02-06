@@ -25,9 +25,11 @@ import (
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/record"
 
 	"github.com/go-logr/logr"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	"github.com/oracle/cluster-api-provider-oci/cloud/hash"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/computemanagement"
@@ -47,7 +49,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const OCIMachinePoolKind = "OCIMachinePool"
+const (
+	OCIMachinePoolKind                  = "OCIMachinePool"
+	InstanceConfigurationHashAnnotation = "oci.oraclecloud.com/instance-configuration-hash"
+)
 
 // MachinePoolScopeParams defines the params need to create a new MachineScope
 type MachinePoolScopeParams struct {
@@ -58,6 +63,7 @@ type MachinePoolScopeParams struct {
 	ComputeManagementClient computemanagement.Client
 	OCIClusterAccessor      OCIClusterAccessor
 	OCIMachinePool          *expinfra1.OCIMachinePool
+	Recorder                record.EventRecorder
 }
 
 type MachinePoolScope struct {
@@ -69,6 +75,7 @@ type MachinePoolScope struct {
 	ComputeManagementClient computemanagement.Client
 	OCIClusterAccesor       OCIClusterAccessor
 	OCIMachinePool          *expinfra1.OCIMachinePool
+	Recorder                record.EventRecorder
 }
 
 // NewMachinePoolScope creates a MachinePoolScope given the MachinePoolScopeParams
@@ -98,7 +105,22 @@ func NewMachinePoolScope(params MachinePoolScopeParams) (*MachinePoolScope, erro
 		patchHelper:             helper,
 		MachinePool:             params.MachinePool,
 		OCIMachinePool:          params.OCIMachinePool,
+		Recorder:                params.Recorder,
 	}, nil
+}
+
+func (m *MachinePoolScope) getInstanceConfigurationHashAnnotation() string {
+	if m.OCIMachinePool.Annotations == nil {
+		return ""
+	}
+	return m.OCIMachinePool.Annotations[InstanceConfigurationHashAnnotation]
+}
+
+func (m *MachinePoolScope) setInstanceConfigurationHashAnnotation(hash string) {
+	if m.OCIMachinePool.Annotations == nil {
+		m.OCIMachinePool.Annotations = map[string]string{}
+	}
+	m.OCIMachinePool.Annotations[InstanceConfigurationHashAnnotation] = hash
 }
 
 // PatchObject persists the cluster configuration and status.
@@ -354,87 +376,143 @@ func (m *MachinePoolScope) GetFreeFormTags() map[string]string {
 	return tags
 }
 
-// ReconcileInstanceConfiguration works to try to reconcile the state of the instance configuration for the cluster
+// ReconcileInstanceConfiguration reconciles the InstanceConfiguration resource using hash-based comparison.
 func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context) error {
-	var instanceConfiguration *core.InstanceConfiguration
+	// Fetch existing IC
 	instanceConfiguration, err := m.GetInstanceConfiguration(ctx)
 	if err != nil {
 		return err
 	}
+
+	// Build desired launch details includes everything
 	freeFormTags := m.GetFreeFormTags()
-	definedTags := make(map[string]map[string]interface{})
-	if m.OCIClusterAccesor.GetDefinedTags() != nil {
-		for ns, mapNs := range m.OCIClusterAccesor.GetDefinedTags() {
-			mapValues := make(map[string]interface{})
-			for k, v := range mapNs {
-				mapValues[k] = v
-			}
-			definedTags[ns] = mapValues
-		}
-	}
+	definedTags := m.getDefinedTags()
+
 	instanceConfigurationSpec := m.OCIMachinePool.Spec.InstanceConfiguration
+	desiredLaunch, err := m.getLaunchInstanceDetails(instanceConfigurationSpec, freeFormTags, definedTags)
+	if err != nil {
+		return err
+	}
+	desiredHash, err := hash.ComputeHash(desiredLaunch)
+	if err != nil {
+		return errors.Wrap(err, "compute desired instance config hash")
+	}
+
+	// Debug logs
+	m.Logger.V(1).Info("InstanceConfig desired hash", "hash", desiredHash)
+
+	// If none exists, create new one
 	if instanceConfiguration == nil {
-		m.Info("Create new instance configuration")
-
-		launchDetails, err := m.getLaunchInstanceDetails(instanceConfigurationSpec, freeFormTags, definedTags)
-		if err != nil {
+		m.Info("No existing instance configuration, creating a new one")
+		if err := m.createInstanceConfiguration(ctx, desiredLaunch, freeFormTags, definedTags, desiredHash); err != nil {
 			return err
 		}
-		err = m.createInstanceConfiguration(ctx, launchDetails, freeFormTags, definedTags)
-		if err != nil {
+		m.setInstanceConfigurationHashAnnotation(desiredHash)
+		if err := m.PatchObject(ctx); err != nil {
 			return err
 		}
-		return m.PatchObject(ctx)
-	} else {
-		computeDetails, ok := instanceConfiguration.InstanceDetails.(core.ComputeInstanceDetails)
-		if ok {
-			launchDetailsActual := computeDetails.LaunchDetails
-			launchDetailsSpec, err := m.getLaunchInstanceDetails(instanceConfigurationSpec, freeFormTags, definedTags)
-			if err != nil {
-				return err
-			}
-			// do not compare defined tags
-			launchDetailsSpec.DefinedTags = nil
-			launchDetailsActual.DefinedTags = nil
-
-			if launchDetailsSpec.CreateVnicDetails != nil {
-				launchDetailsSpec.CreateVnicDetails.DefinedTags = nil
-			}
-			if launchDetailsActual.CreateVnicDetails != nil {
-				launchDetailsActual.CreateVnicDetails.DefinedTags = nil
-			}
-			launchDetailsActual.DisplayName = nil
-			launchDetailsSpec.DisplayName = nil
-			if !reflect.DeepEqual(launchDetailsSpec, launchDetailsActual) {
-				m.Logger.Info("Machine pool", "spec", launchDetailsSpec)
-				m.Logger.Info("Machine pool", "actual", launchDetailsActual)
-				// created the launch details pec again as we may have removed certain fields for comparison purposes
-				launchDetailsSpec, err := m.getLaunchInstanceDetails(instanceConfigurationSpec, freeFormTags, definedTags)
-				if err != nil {
-					return err
-				}
-				err = m.createInstanceConfiguration(ctx, launchDetailsSpec, freeFormTags, definedTags)
-				if err != nil {
-					return err
-				}
-				return m.PatchObject(ctx)
-			}
-		} else {
-			m.Logger.Info("Could not read the instance details as ComputeInstanceDetails, please create a github " +
-				"ticket in CAPOCI repository")
+		// cleanup - best effort, don't fail reconciliation if cleanup fails
+		if cleanupErr := m.CleanupInstanceConfiguration(ctx, nil); cleanupErr != nil {
+			m.Logger.Error(cleanupErr, "Cleanup InstanceConfiguration failed, instance config could be full.")
 		}
+		return nil
+	}
+
+	// Compute existing hash from OCI LaunchDetails
+	computeDetails, ok := instanceConfiguration.InstanceDetails.(core.ComputeInstanceDetails)
+	if !ok {
+		m.Info("InstanceDetails not ComputeInstanceDetails, skipping hash compare")
+		return nil
+	}
+	actualLaunch := computeDetails.LaunchDetails
+	actualHash, err := hash.ComputeHash(actualLaunch)
+	if err != nil {
+		return errors.Wrap(err, "compute actual instance config hash")
+	}
+
+	m.Logger.V(1).Info("InstanceConfig actual hash", "hash", actualHash)
+
+	// If annotation missing, backfill it from actual hash
+	storedHash := m.getInstanceConfigurationHashAnnotation()
+	if storedHash == "" {
+		m.Info("No stored hash annotation, backfilling", "actualHash", actualHash)
+		m.setInstanceConfigurationHashAnnotation(actualHash)
+		if err := m.PatchObject(ctx); err != nil {
+			return err
+		}
+		storedHash = actualHash
+	}
+
+	// Decide based on desiredHash vs actualHash - same
+	if desiredHash == actualHash {
+		m.Info("Instance configuration is up-to-date, no recreate", "hash", desiredHash)
+		// keep annotation consistent
+		if storedHash != desiredHash {
+			m.Info("Updating stored hash annotation to match", "from", storedHash, "to", desiredHash)
+			m.setInstanceConfigurationHashAnnotation(desiredHash)
+			return m.PatchObject(ctx)
+		}
+		return nil
+	}
+
+	// Decide based on desiredHash vs actualHash - different
+	m.Info("Instance configuration changed, creating new one", "from", actualHash, "to", desiredHash)
+	if err := m.createInstanceConfiguration(ctx, desiredLaunch, freeFormTags, definedTags, desiredHash); err != nil {
+		return err
+	}
+	m.setInstanceConfigurationHashAnnotation(desiredHash)
+	if err := m.PatchObject(ctx); err != nil {
+		return err
+	}
+
+	// cleanup
+	if cleanupErr := m.CleanupInstanceConfiguration(ctx, nil); cleanupErr != nil {
+		m.Logger.Error(cleanupErr, "Cleanup InstanceConfiguration failed, instance config could be full.")
 	}
 	return nil
 }
 
-func (m *MachinePoolScope) createInstanceConfiguration(ctx context.Context, launchDetails *core.InstanceConfigurationLaunchInstanceDetails, freeFormTags map[string]string, definedTags map[string]map[string]interface{}) error {
+// getDefinedTags builds the defined tags map for InstanceConfiguration creation.
+func (m *MachinePoolScope) getDefinedTags() map[string]map[string]interface{} {
+	definedTags := make(map[string]map[string]interface{})
+	if m.OCIClusterAccesor.GetDefinedTags() == nil {
+		return definedTags
+	}
+	for ns, mapNs := range m.OCIClusterAccesor.GetDefinedTags() {
+		mapValues := make(map[string]interface{})
+		for k, v := range mapNs {
+			mapValues[k] = v
+		}
+		definedTags[ns] = mapValues
+	}
+	return definedTags
+}
+
+// createInstanceConfiguration creates a new OCI InstanceConfiguration
+func (m *MachinePoolScope) createInstanceConfiguration(
+	ctx context.Context,
+	launchDetails *core.InstanceConfigurationLaunchInstanceDetails,
+	freeFormTags map[string]string,
+	definedTags map[string]map[string]any,
+	desiredHash string,
+) error {
 	launchInstanceDetails := core.ComputeInstanceDetails{
 		LaunchDetails: launchDetails,
 	}
+
+	// Use hash suffix to avoid creating a new IC every time ResourceVersion changes.
+	// Take first 10 characters of hash for uniqueness while keeping display name reasonably short.
+	suffix := desiredHash
+	if len(suffix) > 10 {
+		suffix = suffix[:10]
+	}
+
+	displayName := fmt.Sprintf("%s-%s", m.OCIMachinePool.GetName(), suffix)
+
 	req := core.CreateInstanceConfigurationRequest{
 		CreateInstanceConfiguration: core.CreateInstanceConfigurationDetails{
 			CompartmentId:   common.String(m.OCIClusterAccesor.GetCompartmentId()),
-			DisplayName:     common.String(fmt.Sprintf("%s-%s", m.OCIMachinePool.GetName(), m.OCIMachinePool.ResourceVersion)),
+			DisplayName:     common.String(displayName),
 			FreeformTags:    freeFormTags,
 			DefinedTags:     definedTags,
 			InstanceDetails: launchInstanceDetails,
@@ -448,6 +526,7 @@ func (m *MachinePoolScope) createInstanceConfiguration(ctx context.Context, laun
 		return err
 	}
 
+	m.Info("Created instance configuration", "id", ptr.ToString(resp.Id), "displayName", displayName)
 	m.SetInstanceConfigurationIdStatus(*resp.Id)
 	return nil
 }
@@ -896,23 +975,39 @@ func (m *MachinePoolScope) GetInstanceConfiguration(ctx context.Context) (*core.
 	return nil, nil
 }
 
+// CleanupInstanceConfiguration deletes unused InstanceConfigurations that are no longer referenced
+// by the current MachinePool, keeping only the currently active one.
 func (m *MachinePoolScope) CleanupInstanceConfiguration(ctx context.Context, instancePool *core.InstancePool) error {
 	m.Info("Cleaning up unused instance configurations")
+
 	ids, err := m.getInstanceConfigurationsFromDisplayNameSortedTimeCreateDescending(ctx, m.OCIMachinePool.GetName())
 	if err != nil {
 		return err
 	}
-	if len(ids) > 0 {
-		m.Info(fmt.Sprintf("Number of instance configurations found are %d", len(ids)))
-		for _, id := range ids {
-			// if instance pool is nil, delete all configurations associated with the pool
-			if instancePool == nil || !reflect.DeepEqual(id, instancePool.InstanceConfigurationId) {
-				req := core.DeleteInstanceConfigurationRequest{InstanceConfigurationId: id}
-				if _, err := m.ComputeManagementClient.DeleteInstanceConfiguration(ctx, req); err != nil {
-					return errors.Wrap(err, "failed to delete expired instance configuration")
-				}
-			}
+	if len(ids) == 0 {
+		return nil
+	}
+
+	keepID := m.GetInstanceConfigurationId()
+	if instancePool != nil && instancePool.InstanceConfigurationId != nil {
+		keepID = instancePool.InstanceConfigurationId
+	}
+
+	keep := ptr.ToString(keepID)
+	m.Info("Instance configuration cleanup", "found", len(ids), "keep", keep)
+
+	for _, id := range ids {
+		if ptr.ToString(id) == keep {
+			continue
 		}
+		req := core.DeleteInstanceConfigurationRequest{InstanceConfigurationId: id}
+		if _, err := m.ComputeManagementClient.DeleteInstanceConfiguration(ctx, req); err != nil {
+			if m.Recorder != nil {
+				m.Recorder.Eventf(m.OCIMachinePool, corev1.EventTypeWarning, "CleanupInstanceConfigurationFailed", "Failed to delete old instance configuration %q: %v", ptr.ToString(id), err)
+			}
+			return errors.Wrap(err, "failed to delete expired instance configuration")
+		}
+		m.Info("Deleted old instance configuration", "id", ptr.ToString(id))
 	}
 	return nil
 }

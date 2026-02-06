@@ -73,6 +73,7 @@ func TestMachineReconciliation(t *testing.T) {
 		objects          []client.Object
 		expectedEvent    string
 		eventNotExpected string
+		validate         func(g *WithT, result ctrl.Result)
 	}{
 		{
 			name:          "machine does not exist",
@@ -102,6 +103,17 @@ func TestMachineReconciliation(t *testing.T) {
 			errorExpected: false,
 			objects:       []client.Object{getSecret(), getOciMachine(), getMachine(), getCluster()},
 			expectedEvent: "ClusterNotAvailable",
+		},
+		{
+			name:          "ocimanagedcluster does not exist",
+			errorExpected: false,
+			objects:       []client.Object{getSecret(), getOciMachine(), getMachine(), getManagedCluster()},
+			expectedEvent: "ClusterNotAvailable",
+			validate: func(g *WithT, result ctrl.Result) {
+				// Verify that the reconcile returns a result with 10 second requeue time
+				// This is a transient condition - the cluster may become available later.
+				g.Expect(result.RequeueAfter).To(Equal(10 * time.Second))
+			},
 		},
 		{
 			name:          "bootstrap data not available",
@@ -137,7 +149,7 @@ func TestMachineReconciliation(t *testing.T) {
 				},
 			}
 
-			_, err := r.Reconcile(context.Background(), req)
+			result, err := r.Reconcile(context.Background(), req)
 			if tc.errorExpected {
 				g.Expect(err).To(Not(BeNil()))
 			} else {
@@ -148,6 +160,9 @@ func TestMachineReconciliation(t *testing.T) {
 			}
 			if tc.eventNotExpected != "" {
 				g.Eventually(recorder.Events).ShouldNot(Receive(ContainSubstring(tc.eventNotExpected)))
+			}
+			if tc.validate != nil {
+				tc.validate(g, result)
 			}
 		})
 	}
@@ -1269,6 +1284,22 @@ func getOCICluster() *infrastructurev1beta2.OCICluster {
 			ControlPlaneEndpoint: clusterv1beta1.APIEndpoint{
 				Port: 6443,
 			},
+		},
+	}
+}
+
+func getManagedCluster() *clusterv1.Cluster {
+	infraRef := corev1.ObjectReference{
+		Name: "oci-managed-cluster",
+		Kind: "OCIManagedCluster",
+	}
+	return &clusterv1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-cluster",
+			Namespace: "test",
+		},
+		Spec: clusterv1.ClusterSpec{
+			InfrastructureRef: &infraRef,
 		},
 	}
 }

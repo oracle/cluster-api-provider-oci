@@ -453,7 +453,7 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 						Key:   common.String("key"),
 						Value: common.String("value"),
 					}},
-					NodeShape: "test-shape-A1",
+					NodeShape: "VM.Standard.A1.Flex",
 					NodeShapeConfig: &infrav2exp.NodeShapeConfig{
 						Ocpus:       common.String("2"),
 						MemoryInGBs: common.String("16"),
@@ -521,7 +521,7 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 							Key:   common.String("key"),
 							Value: common.String("value"),
 						}},
-						NodeShape: common.String("test-shape-A1"),
+						NodeShape: common.String("VM.Standard.A1.Flex"),
 						NodeShapeConfig: &oke.CreateNodeShapeConfigDetails{
 							Ocpus:       common.Float32(2),
 							MemoryInGBs: common.Float32(16),

@@ -340,7 +340,7 @@ func CreateClientProviderFromClusterIdentity(ctx context.Context, client client.
 }
 
 // CreateMachinePoolMachinesIfNotExists creates the machine pool machines if not exists. This method lists the existing
-// machines in the clusters and does a diff, and creates any missing machines based ont he spec provided.
+// machines in the clusters and does a diff, and creates any missing machines based on the spec provided.
 func CreateMachinePoolMachinesIfNotExists(ctx context.Context, params MachineParams) error {
 
 	machineList, err := getMachinepoolMachines(ctx, params.Client, params.MachinePool, params.Cluster, params.Namespace)
@@ -354,6 +354,9 @@ func CreateMachinePoolMachinesIfNotExists(ctx context.Context, params MachinePar
 	}
 
 	for _, specMachine := range params.SpecInfraMachines {
+		if specMachine.Spec.OCID == nil {
+			continue
+		}
 		if actualMachine, exists := instanceNameToMachinePoolMachine[*specMachine.Spec.OCID]; exists {
 			if !reflect.DeepEqual(specMachine.Status.Ready, actualMachine.Status.Ready) {
 				params.Logger.Info("Setting status of machine to active", "machine", actualMachine.Name)
@@ -434,12 +437,17 @@ func DeleteOrphanedMachinePoolMachines(ctx context.Context, params MachineParams
 	// create a set of instances in the spec, which will be used for lookup later
 	instanceSpecSet := map[string]struct{}{}
 	for _, specMachine := range params.SpecInfraMachines {
-		instanceSpecSet[*specMachine.Spec.OCID] = struct{}{}
+		if specMachine.Spec.OCID != nil {
+			instanceSpecSet[*specMachine.Spec.OCID] = struct{}{}
+		}
 	}
 
 	for i := range machineList.Items {
 		machinePoolMachine := &machineList.Items[i]
 		// lookup if the machinepool machine is not in the spec, if not delete the underlying machine
+		if machinePoolMachine.Spec.OCID == nil {
+			continue
+		}
 		if _, ok := instanceSpecSet[*machinePoolMachine.Spec.OCID]; !ok {
 			machine, err := util.GetOwnerMachine(ctx, params.Client, machinePoolMachine.ObjectMeta)
 			if err != nil {
