@@ -40,13 +40,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	expv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	capi_e2e "sigs.k8s.io/cluster-api/test/e2e"
 	"sigs.k8s.io/cluster-api/test/framework"
 	"sigs.k8s.io/cluster-api/test/framework/clusterctl"
 	"sigs.k8s.io/cluster-api/util"
-	"sigs.k8s.io/cluster-api/util/patch"
+	v1beta1patch "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/kind/pkg/errors"
 )
@@ -402,7 +401,7 @@ func upgradeControlPlaneVersionSpec(ctx context.Context, lister client.Client, c
 	controlPlane := GetOCIManagedControlPlaneByCluster(ctx, lister, clusterName, namespaceName)
 	Expect(controlPlane).NotTo(BeNil())
 
-	patchHelper, err := patch.NewHelper(controlPlane, lister)
+	patchHelper, err := v1beta1patch.NewHelper(controlPlane, lister)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(e2eConfig.Variables).To(HaveKey(ManagedKubernetesUpgradeVersion), "Missing %s variable in the config", ManagedKubernetesUpgradeVersion)
 	managedKubernetesUpgradeVersion := e2eConfig.MustGetVariable(ManagedKubernetesUpgradeVersion)
@@ -422,8 +421,8 @@ func upgradeControlPlaneVersionSpec(ctx context.Context, lister client.Client, c
 	Log("Upgrade test has completed")
 }
 
-func updateMachinePoolVersion(ctx context.Context, cluster *clusterv1.Cluster, clusterProxy framework.ClusterProxy, machinePools []*expv1.MachinePool, waitInterval []interface{}) {
-	var machinePool *expv1.MachinePool
+func updateMachinePoolVersion(ctx context.Context, cluster *clusterv1.Cluster, clusterProxy framework.ClusterProxy, machinePools []*clusterv1.MachinePool, waitInterval []interface{}) {
+	var machinePool *clusterv1.MachinePool
 	for _, pool := range machinePools {
 		if strings.HasSuffix(pool.Name, "-1") {
 			machinePool = pool
@@ -434,17 +433,17 @@ func updateMachinePoolVersion(ctx context.Context, cluster *clusterv1.Cluster, c
 	Expect(machinePool).NotTo(BeNil())
 	managedKubernetesUpgradeVersion := e2eConfig.MustGetVariable(ManagedKubernetesUpgradeVersion)
 
-	patchHelper, err := patch.NewHelper(machinePool, lister)
+	patchHelper, err := v1beta1patch.NewHelper(machinePool, lister)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(e2eConfig.Variables).To(HaveKey(ManagedKubernetesUpgradeVersion), "Missing %s variable in the config", ManagedKubernetesUpgradeVersion)
 	Log(fmt.Sprintf("Upgrade test is starting, upgrade version is %s", managedKubernetesUpgradeVersion))
-	machinePool.Spec.Template.Spec.Version = &managedKubernetesUpgradeVersion
+	machinePool.Spec.Template.Spec.Version = managedKubernetesUpgradeVersion
 	Expect(patchHelper.Patch(ctx, machinePool)).To(Succeed())
 
 	ociMachinePool := &infrav2exp.OCIManagedMachinePool{}
 	err = lister.Get(ctx, client.ObjectKey{Name: machinePool.Name, Namespace: cluster.Namespace}, ociMachinePool)
 	Expect(err).To(BeNil())
-	patchHelper, err = patch.NewHelper(ociMachinePool, lister)
+	patchHelper, err = v1beta1patch.NewHelper(ociMachinePool, lister)
 	// to update a node pool, set the version and set the current image to nil so that CAPOCI will
 	// automatically lookup a new version
 	ociMachinePool.Spec.Version = &managedKubernetesUpgradeVersion
@@ -478,7 +477,7 @@ func updateMachinePoolVersion(ctx context.Context, cluster *clusterv1.Cluster, c
 	}, waitInterval...).Should(Equal(1), "Timed out waiting for all MachinePool %s instances to be upgraded to Kubernetes version %s", klog.KObj(machinePool), managedKubernetesUpgradeVersion)
 }
 
-func validateMachinePoolMachines(ctx context.Context, cluster *clusterv1.Cluster, clusterProxy framework.ClusterProxy, machinePools []*expv1.MachinePool) {
+func validateMachinePoolMachines(ctx context.Context, cluster *clusterv1.Cluster, clusterProxy framework.ClusterProxy, machinePools []*clusterv1.MachinePool) {
 	Eventually(func() error {
 		lister := clusterProxy.GetClient()
 		for _, pool := range machinePools {
@@ -509,12 +508,7 @@ func validateMachinePoolMachines(ctx context.Context, cluster *clusterv1.Cluster
 // getMachinePoolInstanceVersions returns the Kubernetes versions of the machine pool instances.
 // For managed clusters like OKE, we need to lookup the kubeconfig to access the workload cluster.
 // This function handles kubeconfig rotation by refreshing the client only when necessary.
-func getMachinePoolInstanceVersions(
-	ctx context.Context,
-	clusterProxy framework.ClusterProxy,
-	cluster *clusterv1.Cluster,
-	machinePool *expv1.MachinePool,
-) []string {
+func getMachinePoolInstanceVersions(ctx context.Context, clusterProxy framework.ClusterProxy, cluster *clusterv1.Cluster, machinePool *clusterv1.MachinePool) []string {
 	Expect(ctx).NotTo(BeNil(), "ctx is required for getMachinePoolInstanceVersions")
 
 	instances := machinePool.Status.NodeRefs

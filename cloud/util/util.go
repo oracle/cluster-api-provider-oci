@@ -39,11 +39,11 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	expclusterv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
+	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util"
+	v1beta1patch "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/patch"
 	"sigs.k8s.io/cluster-api/util/labels/format"
-	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -329,7 +329,7 @@ func CreateClientProviderFromClusterIdentity(ctx context.Context, client client.
 	}
 
 	if !IsClusterNamespaceAllowed(ctx, client, identity.Spec.AllowedNamespaces, namespace) {
-		clusterAccessor.MarkConditionFalse(infrastructurev1beta2.ClusterReadyCondition, infrastructurev1beta2.NamespaceNotAllowedByIdentity, clusterv1.ConditionSeverityError, "")
+		clusterAccessor.MarkConditionFalse(infrastructurev1beta2.ClusterReadyCondition, infrastructurev1beta2.NamespaceNotAllowedByIdentity, clusterv1beta1.ConditionSeverityError, "")
 		return nil, errors.Errorf("OCIClusterIdentity list of allowed namespaces doesn't include current cluster namespace %s", namespace)
 	}
 	clientProvider, err := GetOrBuildClientFromIdentity(ctx, client, identity, defaultRegion, clusterAccessor.GetClientOverrides(), namespace)
@@ -361,7 +361,7 @@ func CreateMachinePoolMachinesIfNotExists(ctx context.Context, params MachinePar
 			if !reflect.DeepEqual(specMachine.Status.Ready, actualMachine.Status.Ready) {
 				params.Logger.Info("Setting status of machine to active", "machine", actualMachine.Name)
 
-				helper, err := patch.NewHelper(&actualMachine, params.Client)
+				helper, err := v1beta1patch.NewHelper(&actualMachine, params.Client)
 				if err != nil {
 					return err
 				}
@@ -375,8 +375,8 @@ func CreateMachinePoolMachinesIfNotExists(ctx context.Context, params MachinePar
 		}
 
 		labels := map[string]string{
-			clusterv1.ClusterNameLabel:     params.Cluster.Name,
-			clusterv1.MachinePoolNameLabel: format.MustFormatValue(params.MachinePool.Name),
+			clusterv1beta1.ClusterNameLabel:     params.Cluster.Name,
+			clusterv1beta1.MachinePoolNameLabel: format.MustFormatValue(params.MachinePool.Name),
 		}
 		infraMachine := &infrav2exp.OCIMachinePoolMachine{
 			ObjectMeta: metav1.ObjectMeta{
@@ -413,7 +413,7 @@ func CreateMachinePoolMachinesIfNotExists(ctx context.Context, params MachinePar
 	return nil
 }
 
-func getMachinepoolMachines(ctx context.Context, c client.Client, machinePool *expclusterv1.MachinePool, cluster *clusterv1.Cluster, namespace string) (*infrav2exp.OCIMachinePoolMachineList, error) {
+func getMachinepoolMachines(ctx context.Context, c client.Client, machinePool *clusterv1.MachinePool, cluster *clusterv1.Cluster, namespace string) (*infrav2exp.OCIMachinePoolMachineList, error) {
 	machineList := &infrav2exp.OCIMachinePoolMachineList{}
 	labels := map[string]string{
 		clusterv1.ClusterNameLabel:     cluster.Name,
@@ -508,7 +508,7 @@ func getRegionInfoFromInstanceMetadataServiceProd() ([]byte, error) {
 // Infra machine pool specifed below refers to OCIManagedMachinePool/OCIMachinePool/OCIVirtualMachinePool
 type MachineParams struct {
 	Client               client.Client                      // the kubernetes client
-	MachinePool          *expclusterv1.MachinePool          // the corresponding machinepool
+	MachinePool          *clusterv1.MachinePool             // the corresponding machinepool
 	Cluster              *clusterv1.Cluster                 // the corresponding cluster
 	InfraMachinePoolName string                             // the name of the infra machinepool corresponding(can be managed/self managed/virtual)
 	InfraMachinePoolKind string                             // the kind of infra machinepool(can be managed/self managed/virtual)

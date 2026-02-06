@@ -441,6 +441,5 @@ func validateRole(validRoles []Role, subnetRole Role, fldPath *field.Path, error
 			return nil
 		}
 	}
-	return field.Invalid(fldPath, subnetRole,
-		fmt.Sprintf(errorMsg))
+	return field.Invalid(fldPath, subnetRole, errorMsg)
 }

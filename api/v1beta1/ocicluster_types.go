@@ -19,7 +19,7 @@ package v1beta1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 )
 
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
@@ -68,13 +68,13 @@ type OCIClusterSpec struct {
 
 	// ControlPlaneEndpoint represents the endpoint used to communicate with the control plane.
 	// +optional
-	ControlPlaneEndpoint clusterv1.APIEndpoint `json:"controlPlaneEndpoint"`
+	ControlPlaneEndpoint clusterv1beta1.APIEndpoint `json:"controlPlaneEndpoint"`
 }
 
 // OCIClusterStatus defines the observed state of OCICluster
 type OCIClusterStatus struct {
 	// +optional
-	FailureDomains clusterv1.FailureDomains `json:"failureDomains,omitempty"`
+	FailureDomains clusterv1beta1.FailureDomains `json:"failureDomains,omitempty"`
 
 	// AvailabilityDomains encapsulates the clusters Availability Domain (AD) information in a map
 	// where the map key is the AD name and the struct is details about the AD.
@@ -85,7 +85,7 @@ type OCIClusterStatus struct {
 	Ready bool `json:"ready"`
 	// NetworkSpec encapsulates all things related to OCI network.
 	// +optional
-	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
+	Conditions clusterv1beta1.Conditions `json:"conditions,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -120,12 +120,12 @@ type OCIAvailabilityDomain struct {
 }
 
 // GetConditions returns the list of conditions for an OCICluster API object.
-func (c *OCICluster) GetConditions() clusterv1.Conditions {
+func (c *OCICluster) GetConditions() clusterv1beta1.Conditions {
 	return c.Status.Conditions
 }
 
 // SetConditions will set the given conditions on an OCICluster object.
-func (c *OCICluster) SetConditions(conditions clusterv1.Conditions) {
+func (c *OCICluster) SetConditions(conditions clusterv1beta1.Conditions) {
 	c.Status.Conditions = conditions
 }
 

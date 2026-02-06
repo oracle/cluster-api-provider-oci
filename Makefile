@@ -141,12 +141,12 @@ manifests: $(CONTROLLER_GEN) ## Generate WebhookConfiguration, ClusterRole and C
 generate: $(CONTROLLER_GEN) $(CONVERSION_GEN) ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./api/..." paths="./exp/api/..."
 	$(CONVERSION_GEN) \
-		--extra-peer-dirs=sigs.k8s.io/cluster-api/api/v1beta1 \
+		--extra-peer-dirs=sigs.k8s.io/cluster-api/api/core/v1beta1 \
 		--output-file=zz_generated.conversion.go \
 		--go-header-file=hack/boilerplate.go.txt \
 		./api/v1beta1
 	$(CONVERSION_GEN) \
-		--extra-peer-dirs=sigs.k8s.io/cluster-api/api/v1beta1 \
+		--extra-peer-dirs=sigs.k8s.io/cluster-api/api/core/v1beta1 \
 		--extra-peer-dirs=github.com/oracle/cluster-api-provider-oci/api/v1beta1 \
 		--output-file=zz_generated.conversion.go \
 		--go-header-file=hack/boilerplate.go.txt \
@@ -369,6 +369,9 @@ GO_INSTALL = ./scripts/go_install.sh
 GOOS    := $(shell go env GOOS)
 GOARCH  := $(shell go env GOARCH)
 
+# Ensure the correct Go toolchain is used as declared by go.mod/toolchain (overrides env like GOTOOLCHAIN=local).
+export GOTOOLCHAIN=auto
+
 .PHONY: install-tools # populate hack/tools/bin
 install-tools: $(ENVSUBST) $(KUSTOMIZE) $(KUBECTL)
 
@@ -380,13 +383,13 @@ $(CONTROLLER_GEN): ## Download controller-gen locally if necessary.
 	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) sigs.k8s.io/controller-tools/cmd/controller-gen $(CONTROLLER_GEN_BIN) v0.16.1
 
 $(CONVERSION_GEN): ## Download controller-gen locally if necessary.
-	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) k8s.io/code-generator/cmd/conversion-gen $(CONVERSION_GEN_BIN) v0.31.0
+	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) k8s.io/code-generator/cmd/conversion-gen $(CONVERSION_GEN_BIN) v0.33.0
 
 $(KUSTOMIZE): ## Download kustomize locally if necessary.
 	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) sigs.k8s.io/kustomize/kustomize/v4 $(KUSTOMIZE_BIN) $(KUSTOMIZE_VER)
 
 $(GINKGO): ## Build ginkgo.
-	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) github.com/onsi/ginkgo/v2/ginkgo $(GINKGO_BIN) v2.23.3
+	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) github.com/onsi/ginkgo/v2/ginkgo $(GINKGO_BIN) v2.23.4
 
 $(GOLANGCI_LINT): ## Build golanci-lint.
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(BIN_DIR) $(GOLANGCI_LINT_VERSION)

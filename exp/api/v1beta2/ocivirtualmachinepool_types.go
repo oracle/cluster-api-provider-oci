@@ -2,7 +2,7 @@ package v1beta2
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	"sigs.k8s.io/cluster-api/errors"
 )
 
@@ -100,7 +100,7 @@ type OCIVirtualMachinePoolStatus struct {
 	Ready bool `json:"ready"`
 	// NetworkSpec encapsulates all things related to OCI network.
 	// +optional
-	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
+	Conditions clusterv1beta1.Conditions `json:"conditions,omitempty"`
 
 	// Replicas is the most recently observed number of replicas
 	// +optional
@@ -145,12 +145,12 @@ type OCIVirtualMachinePoolList struct {
 }
 
 // GetConditions returns the list of conditions for an OCIMachine API object.
-func (m *OCIVirtualMachinePool) GetConditions() clusterv1.Conditions {
+func (m *OCIVirtualMachinePool) GetConditions() clusterv1beta1.Conditions {
 	return m.Status.Conditions
 }
 
 // SetConditions will set the given conditions on an OCIMachine object.
-func (m *OCIVirtualMachinePool) SetConditions(conditions clusterv1.Conditions) {
+func (m *OCIVirtualMachinePool) SetConditions(conditions clusterv1beta1.Conditions) {
 	m.Status.Conditions = conditions
 }
 

@@ -28,7 +28,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
-	"github.com/oracle/oci-go-sdk/v65/common"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -37,7 +36,7 @@ import (
 	"sigs.k8s.io/cluster-api/test/framework"
 	"sigs.k8s.io/cluster-api/test/framework/clusterctl"
 	"sigs.k8s.io/cluster-api/util"
-	"sigs.k8s.io/cluster-api/util/patch"
+	v1beta1patch "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/patch"
 )
 
 var _ = Describe("Cluster Upgrade Tests", func() {
@@ -89,16 +88,16 @@ var _ = Describe("Cluster Upgrade Tests", func() {
 		}
 
 		cleanInput := cleanupInput{
-			SpecName:          specName,
-			Cluster:           result.Cluster,
-			ClusterProxy:      bootstrapClusterProxy,
-			Namespace:         namespace,
+			SpecName:             specName,
+			Cluster:              result.Cluster,
+			ClusterProxy:         bootstrapClusterProxy,
+			Namespace:            namespace,
 			ClusterctlConfigPath: clusterctlConfigPath,
-			CancelWatches:     cancelWatches,
-			IntervalsGetter:   e2eConfig.GetIntervals,
-			SkipCleanup:       skipCleanup,
-			AdditionalCleanup: additionalCleanup,
-			ArtifactFolder:    artifactFolder,
+			CancelWatches:        cancelWatches,
+			IntervalsGetter:      e2eConfig.GetIntervals,
+			SkipCleanup:          skipCleanup,
+			AdditionalCleanup:    additionalCleanup,
+			ArtifactFolder:       artifactFolder,
 		}
 		dumpSpecResourcesAndCleanup(ctx, cleanInput)
 	})
@@ -134,10 +133,10 @@ var _ = Describe("Cluster Upgrade Tests", func() {
 			Namespace:   namespace.Name,
 			ClusterName: clusterName,
 		})
-		patchHelper, err := patch.NewHelper(controlPlane, bootstrapClusterProxy.GetClient())
+		patchHelper, err := v1beta1patch.NewHelper(controlPlane, bootstrapClusterProxy.GetClient())
 
 		upgradeVersion := e2eConfig.MustGetVariable(capi_e2e.KubernetesVersionUpgradeTo)
-		controlPlane.Spec.MachineTemplate.InfrastructureRef.Name = newCPMachineTemplateName
+		controlPlane.Spec.MachineTemplate.Spec.InfrastructureRef.Name = newCPMachineTemplateName
 		controlPlane.Spec.Version = upgradeVersion
 
 		Expect(err).ToNot(HaveOccurred())
@@ -154,7 +153,7 @@ var _ = Describe("Cluster Upgrade Tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 		for _, deployment := range result.MachineDeployments {
 			Log(fmt.Sprintf("Patching the new kubernetes version to Machine Deployment %s/%s", deployment.Namespace, deployment.Name))
-			patchHelper, err := patch.NewHelper(deployment, bootstrapClusterProxy.GetClient())
+			patchHelper, err := v1beta1patch.NewHelper(deployment, bootstrapClusterProxy.GetClient())
 			Expect(err).ToNot(HaveOccurred())
 
 			newWorkerMachineTemplateName := fmt.Sprintf("%s-upgraded", deployment.Name)
@@ -163,13 +162,13 @@ var _ = Describe("Cluster Upgrade Tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			oldVersion := deployment.Spec.Template.Spec.Version
-			deployment.Spec.Template.Spec.Version = common.String(upgradeVersion)
+			deployment.Spec.Template.Spec.Version = upgradeVersion
 			deployment.Spec.Template.Spec.InfrastructureRef.Name = newWorkerMachineTemplateName
 
 			Expect(patchHelper.Patch(ctx, deployment)).To(Succeed())
 
 			Log(fmt.Sprintf("Waiting for Kubernetes versions of machines in MachineDeployment %s/%s to be upgraded from %s to %s",
-				deployment.Namespace, deployment.Name, *oldVersion, upgradeVersion))
+				deployment.Namespace, deployment.Name, oldVersion, upgradeVersion))
 			framework.WaitForMachineDeploymentMachinesToBeUpgraded(ctx, framework.WaitForMachineDeploymentMachinesToBeUpgradedInput{
 				Lister:                   bootstrapClusterProxy.GetClient(),
 				Cluster:                  result.Cluster,

@@ -31,7 +31,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 )
 
 func TestOCICluster_ValidateCreate(t *testing.T) {
@@ -1166,7 +1166,7 @@ func TestOCICluster_GetConditions(t *testing.T) {
 	tests := []struct {
 		name    string
 		cluster *OCICluster
-		want    clusterv1.Conditions
+		want    clusterv1beta1.Conditions
 	}{
 		{
 			name: "no conditions set, returns empty",
@@ -1181,17 +1181,17 @@ func TestOCICluster_GetConditions(t *testing.T) {
 			name: "returns existing conditions",
 			cluster: &OCICluster{
 				Status: OCIClusterStatus{
-					Conditions: clusterv1.Conditions{
+					Conditions: clusterv1beta1.Conditions{
 						{
-							Type:   clusterv1.ReadyCondition,
+							Type:   clusterv1beta1.ReadyCondition,
 							Status: corev1.ConditionTrue,
 						},
 					},
 				},
 			},
-			want: clusterv1.Conditions{
+			want: clusterv1beta1.Conditions{
 				{
-					Type:   clusterv1.ReadyCondition,
+					Type:   clusterv1beta1.ReadyCondition,
 					Status: corev1.ConditionTrue,
 				},
 			},
@@ -1210,11 +1210,11 @@ func TestOCICluster_GetConditions(t *testing.T) {
 func TestOCICluster_SetConditions(t *testing.T) {
 	tests := []struct {
 		name       string
-		conditions clusterv1.Conditions
+		conditions clusterv1beta1.Conditions
 	}{
 		{
 			name: "set single condition",
-			conditions: clusterv1.Conditions{
+			conditions: clusterv1beta1.Conditions{
 				{
 					Type:   "Ready",
 					Status: corev1.ConditionTrue,
@@ -1223,7 +1223,7 @@ func TestOCICluster_SetConditions(t *testing.T) {
 		},
 		{
 			name:       "set empty conditions",
-			conditions: clusterv1.Conditions{},
+			conditions: clusterv1beta1.Conditions{},
 		},
 	}
 

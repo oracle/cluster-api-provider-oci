@@ -31,8 +31,8 @@ import (
 	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	expclusterv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
+	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -145,8 +145,8 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 			Cluster: &clusterv1.Cluster{
 				Spec: clusterv1.ClusterSpec{},
 			},
-			MachinePool: &expclusterv1.MachinePool{
-				Spec: expclusterv1.MachinePoolSpec{
+			MachinePool: &clusterv1.MachinePool{
+				Spec: clusterv1.MachinePoolSpec{
 					Replicas: &size,
 				},
 			},
@@ -939,8 +939,8 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 			Cluster: &clusterv1.Cluster{
 				Spec: clusterv1.ClusterSpec{},
 			},
-			MachinePool: &expclusterv1.MachinePool{
-				Spec: expclusterv1.MachinePoolSpec{
+			MachinePool: &clusterv1.MachinePool{
+				Spec: clusterv1.MachinePoolSpec{
 					Template: clusterv1.MachineTemplateSpec{},
 					Replicas: &size,
 				},
@@ -1204,7 +1204,7 @@ func TestManagedMachinePoolUpdate(t *testing.T) {
 			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
 				ms.MachinePool.Annotations = make(map[string]string)
-				ms.MachinePool.Annotations[clusterv1.ReplicasManagedByAnnotation] = ""
+				ms.MachinePool.Annotations[clusterv1beta1.ReplicasManagedByAnnotation] = ""
 				newReplicas := int32(4)
 				ms.MachinePool.Spec.Replicas = &newReplicas
 				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{

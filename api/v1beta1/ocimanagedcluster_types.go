@@ -19,7 +19,7 @@ package v1beta1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 )
 
 const (
@@ -64,13 +64,13 @@ type OCIManagedClusterSpec struct {
 
 	// ControlPlaneEndpoint represents the endpoint used to communicate with the control plane. This will not be set by the user, this will be updated by the Cluster Reconciler after OKe cluster has been created and the cluster has an endpoint address
 	// +optional
-	ControlPlaneEndpoint clusterv1.APIEndpoint `json:"controlPlaneEndpoint"`
+	ControlPlaneEndpoint clusterv1beta1.APIEndpoint `json:"controlPlaneEndpoint"`
 }
 
 // OCIManagedClusterStatus defines the observed state of OCICluster
 type OCIManagedClusterStatus struct {
 	// +optional
-	FailureDomains clusterv1.FailureDomains `json:"failureDomains,omitempty"`
+	FailureDomains clusterv1beta1.FailureDomains `json:"failureDomains,omitempty"`
 
 	// AvailabilityDomains encapsulates the clusters Availability Domain (AD) information in a map
 	// where the map key is the AD name and the struct is details about the AD.
@@ -81,7 +81,7 @@ type OCIManagedClusterStatus struct {
 	Ready bool `json:"ready"`
 	// NetworkSpec encapsulates all things related to OCI network.
 	// +optional
-	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
+	Conditions clusterv1beta1.Conditions `json:"conditions,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -106,12 +106,12 @@ type OCIManagedClusterList struct {
 }
 
 // GetConditions returns the list of conditions for an OCICluster API object.
-func (c *OCIManagedCluster) GetConditions() clusterv1.Conditions {
+func (c *OCIManagedCluster) GetConditions() clusterv1beta1.Conditions {
 	return c.Status.Conditions
 }
 
 // SetConditions will set the given conditions on an OCICluster object.
-func (c *OCIManagedCluster) SetConditions(conditions clusterv1.Conditions) {
+func (c *OCIManagedCluster) SetConditions(conditions clusterv1beta1.Conditions) {
 	c.Status.Conditions = conditions
 }
 

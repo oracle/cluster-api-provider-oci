@@ -16,11 +16,11 @@ limitations under the License.
 
 package v1beta1
 
-import clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+import clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 
 const (
 	// InstancePoolReadyCondition reports on current status of the Instance Pool. Ready indicates the group is provisioned.
-	InstancePoolReadyCondition clusterv1.ConditionType = "InstancePoolReady"
+	InstancePoolReadyCondition clusterv1beta1.ConditionType = "InstancePoolReady"
 	// InstancePoolNotFoundReason used when the Instance Pool couldn't be retrieved.
 	InstancePoolNotFoundReason = "InstancePoolNotFound"
 	// InstancePoolProvisionFailedReason used for failures during Instance Pool provisioning.
@@ -31,7 +31,7 @@ const (
 	InstancePoolNotReadyReason = "InstancePoolNotReady"
 
 	// NodePoolReadyCondition reports on current status of the Node Pool. Ready indicates the group is provisioned.
-	NodePoolReadyCondition clusterv1.ConditionType = "NodePoolReady"
+	NodePoolReadyCondition clusterv1beta1.ConditionType = "NodePoolReady"
 	// NodePoolNotFoundReason used when the Node Pool couldn't be retrieved.
 	NodePoolNotFoundReason = "NodePoolNotFound"
 	// NodePoolProvisionFailedReason used for failures during Instance Pool provisioning.
@@ -44,14 +44,14 @@ const (
 	NodePoolDeletedReason = "NodePoolDeleted"
 
 	// LaunchTemplateReadyCondition represents the status of an OCIachinePool's associated Instance Template.
-	LaunchTemplateReadyCondition clusterv1.ConditionType = "LaunchTemplateReady"
+	LaunchTemplateReadyCondition clusterv1beta1.ConditionType = "LaunchTemplateReady"
 	// LaunchTemplateNotFoundReason is used when an associated Launch Template can't be found.
 	LaunchTemplateNotFoundReason = "LaunchTemplateNotFound"
 	// LaunchTemplateCreateFailedReason used for failures during Launch Template creation.
 	LaunchTemplateCreateFailedReason = "LaunchTemplateCreateFailed"
 
 	// ControlPlaneReadyCondition Ready indicates the control plane is in a Running state.
-	ControlPlaneReadyCondition clusterv1.ConditionType = "ControlPlaneReady"
+	ControlPlaneReadyCondition clusterv1beta1.ConditionType = "ControlPlaneReady"
 	// ControlPlaneProvisionFailedReason used for failures during control plane provisioning.
 	ControlPlaneProvisionFailedReason = "ControlPlaneProvisionFailed"
 	// ControlPlaneNotReadyReason used when the control plane is in a pending state.

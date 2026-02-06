@@ -5,6 +5,9 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+# Ensure go uses the toolchain declared in go.mod unless explicitly overridden.
+export GOTOOLCHAIN=${GOTOOLCHAIN:-auto}
+
 REPO_ROOT=$(dirname "${BASH_SOURCE[0]}")/..
 cd "${REPO_ROOT}" || exit 1
 

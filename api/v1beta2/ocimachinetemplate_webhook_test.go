@@ -23,7 +23,7 @@ import (
 	"testing"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 
 	"github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -192,11 +192,11 @@ func TestOCIMachineTemplate_ValidateUpdate(t *testing.T) {
 func TestOCIMachine_GetConditions(t *testing.T) {
 	tests := []struct {
 		name       string
-		conditions clusterv1.Conditions
+		conditions clusterv1beta1.Conditions
 	}{
 		{
 			name: "non-empty conditions",
-			conditions: clusterv1.Conditions{
+			conditions: clusterv1beta1.Conditions{
 				{
 					Type:   "Ready",
 					Status: corev1.ConditionTrue,
@@ -209,7 +209,7 @@ func TestOCIMachine_GetConditions(t *testing.T) {
 		},
 		{
 			name:       "empty conditions",
-			conditions: clusterv1.Conditions{},
+			conditions: clusterv1beta1.Conditions{},
 		},
 	}
 
@@ -231,11 +231,11 @@ func TestOCIMachine_GetConditions(t *testing.T) {
 func TestOCIMachine_SetConditions(t *testing.T) {
 	tests := []struct {
 		name       string
-		conditions clusterv1.Conditions
+		conditions clusterv1beta1.Conditions
 	}{
 		{
 			name: "set non-empty conditions",
-			conditions: clusterv1.Conditions{
+			conditions: clusterv1beta1.Conditions{
 				{
 					Type:   "Ready",
 					Status: corev1.ConditionTrue,
@@ -248,7 +248,7 @@ func TestOCIMachine_SetConditions(t *testing.T) {
 		},
 		{
 			name:       "set empty conditions",
-			conditions: clusterv1.Conditions{},
+			conditions: clusterv1beta1.Conditions{},
 		},
 	}
 

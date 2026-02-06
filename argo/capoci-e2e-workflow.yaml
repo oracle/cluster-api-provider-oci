@@ -156,7 +156,7 @@ spec:
               mountPath: /var/lib/docker
 
       container:
-        image: docker.io/library/golang:1.23-bookworm
+        image: docker.io/library/golang:1.24-bookworm
         workingDir: /workspace
         securityContext:
           runAsUser: 0

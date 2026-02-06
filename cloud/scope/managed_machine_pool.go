@@ -38,10 +38,9 @@ import (
 	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
 	"github.com/pkg/errors"
 	"k8s.io/klog/v2/klogr"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	expclusterv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/annotations"
-	"sigs.k8s.io/cluster-api/util/patch"
+	v1beta1patch "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -53,7 +52,7 @@ const (
 type ManagedMachinePoolScopeParams struct {
 	Logger                  *logr.Logger
 	Cluster                 *clusterv1.Cluster
-	MachinePool             *expclusterv1.MachinePool
+	MachinePool             *clusterv1.MachinePool
 	Client                  client.Client
 	ComputeManagementClient computemanagement.Client
 	OCIManagedCluster       *infrastructurev1beta2.OCIManagedCluster
@@ -65,9 +64,9 @@ type ManagedMachinePoolScopeParams struct {
 type ManagedMachinePoolScope struct {
 	*logr.Logger
 	Client                  client.Client
-	patchHelper             *patch.Helper
+	patchHelper             *v1beta1patch.Helper
 	Cluster                 *clusterv1.Cluster
-	MachinePool             *expclusterv1.MachinePool
+	MachinePool             *clusterv1.MachinePool
 	ComputeManagementClient computemanagement.Client
 	OCIManagedCluster       *infrastructurev1beta2.OCIManagedCluster
 	OCIManagedMachinePool   *expinfra1.OCIManagedMachinePool
@@ -88,7 +87,7 @@ func NewManagedMachinePoolScope(params ManagedMachinePoolScopeParams) (*ManagedM
 		log := klogr.New()
 		params.Logger = &log
 	}
-	helper, err := patch.NewHelper(params.OCIManagedMachinePool, params.Client)
+	helper, err := v1beta1patch.NewHelper(params.OCIManagedMachinePool, params.Client)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init patch helper")
 	}

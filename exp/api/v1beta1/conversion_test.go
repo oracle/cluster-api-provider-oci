@@ -19,13 +19,13 @@ package v1beta1
 import (
 	"testing"
 
-	fuzz "github.com/google/gofuzz"
 	. "github.com/onsi/gomega"
 	"github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	"k8s.io/apimachinery/pkg/api/apitesting/fuzzer"
 	"k8s.io/apimachinery/pkg/runtime"
 	runtimeserializer "k8s.io/apimachinery/pkg/runtime/serializer"
 	utilconversion "sigs.k8s.io/cluster-api/util/conversion"
+	"sigs.k8s.io/randfill"
 )
 
 func fuzzFuncs(_ runtimeserializer.CodecFactory) []interface{} {
@@ -34,8 +34,8 @@ func fuzzFuncs(_ runtimeserializer.CodecFactory) []interface{} {
 	}
 }
 
-func OCIMachinePoolFuzzer(obj *OCIMachinePool, c fuzz.Continue) {
-	c.FuzzNoCustom(obj)
+func OCIMachinePoolFuzzer(obj *OCIMachinePool, c randfill.Continue) {
+	c.FillNoCustom(obj)
 	// nil fields which have been removed so that tests dont fail
 	if obj.Spec.InstanceConfiguration.InstanceVnicConfiguration != nil {
 		obj.Spec.InstanceConfiguration.InstanceVnicConfiguration.NSGId = nil

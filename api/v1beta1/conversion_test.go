@@ -23,14 +23,14 @@ import (
 	"k8s.io/apimachinery/pkg/api/apitesting/fuzzer"
 	"k8s.io/apimachinery/pkg/conversion"
 
-	fuzz "github.com/google/gofuzz"
 	. "github.com/onsi/gomega"
 	"github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"k8s.io/apimachinery/pkg/runtime"
 	runtimeserializer "k8s.io/apimachinery/pkg/runtime/serializer"
-	"sigs.k8s.io/cluster-api/api/v1beta1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	"sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	utilconversion "sigs.k8s.io/cluster-api/util/conversion"
+	"sigs.k8s.io/randfill"
 )
 
 func fuzzFuncs(_ runtimeserializer.CodecFactory) []interface{} {
@@ -43,14 +43,14 @@ func fuzzFuncs(_ runtimeserializer.CodecFactory) []interface{} {
 	}
 }
 
-func OCIMachineFuzzer(obj *OCIMachine, c fuzz.Continue) {
-	c.FuzzNoCustom(obj)
+func OCIMachineFuzzer(obj *OCIMachine, c randfill.Continue) {
+	c.FillNoCustom(obj)
 	// nil fields which have been removed so that tests dont fail
 	obj.Spec.NSGName = ""
 }
 
-func OCIClusterFuzzer(obj *OCICluster, c fuzz.Continue) {
-	c.FuzzNoCustom(obj)
+func OCIClusterFuzzer(obj *OCICluster, c randfill.Continue) {
+	c.FillNoCustom(obj)
 	// nil fields which have been removed so that tests dont fail
 	for _, nsg := range obj.Spec.NetworkSpec.Vcn.NetworkSecurityGroups {
 		if nsg != nil {
@@ -71,8 +71,8 @@ func OCIClusterFuzzer(obj *OCICluster, c fuzz.Continue) {
 	}
 }
 
-func OCIClusterTemplateFuzzer(obj *OCIClusterTemplate, c fuzz.Continue) {
-	c.FuzzNoCustom(obj)
+func OCIClusterTemplateFuzzer(obj *OCIClusterTemplate, c randfill.Continue) {
+	c.FillNoCustom(obj)
 	// nil fields which have been removed so that tests dont fail
 	for _, nsg := range obj.Spec.Template.Spec.NetworkSpec.Vcn.NetworkSecurityGroups {
 		if nsg != nil {
@@ -93,14 +93,14 @@ func OCIClusterTemplateFuzzer(obj *OCIClusterTemplate, c fuzz.Continue) {
 	}
 }
 
-func OCIMachineTemplateFuzzer(obj *OCIMachineTemplate, c fuzz.Continue) {
-	c.FuzzNoCustom(obj)
+func OCIMachineTemplateFuzzer(obj *OCIMachineTemplate, c randfill.Continue) {
+	c.FillNoCustom(obj)
 	// nil fields which ave been removed so that tests dont fail
 	obj.Spec.Template.Spec.NSGName = ""
 }
 
-func OCIManagedClusterFuzzer(obj *OCIManagedCluster, c fuzz.Continue) {
-	c.FuzzNoCustom(obj)
+func OCIManagedClusterFuzzer(obj *OCIManagedCluster, c randfill.Continue) {
+	c.FillNoCustom(obj)
 	// nil fields which have been removed so that tests dont fail
 	for _, nsg := range obj.Spec.NetworkSpec.Vcn.NetworkSecurityGroups {
 		if nsg != nil {
@@ -779,7 +779,7 @@ func TestConvert_v1beta2_OCIManagedControlPlaneSpec_To_v1beta1_OCIManagedControl
 			args: args{
 				in: &v1beta2.OCIManagedControlPlaneSpec{
 					Version: func() *string { s := "v1.29.0"; return &s }(),
-					ControlPlaneEndpoint: clusterv1.APIEndpoint{
+					ControlPlaneEndpoint: clusterv1beta1.APIEndpoint{
 						Host: "1.2.3.4",
 						Port: 6443,
 					},

@@ -32,8 +32,7 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/core"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	expclusterv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -138,11 +137,11 @@ func TestInstanceConfigCreate(t *testing.T) {
 			Cluster: &clusterv1.Cluster{
 				Spec: clusterv1.ClusterSpec{},
 			},
-			MachinePool: &expclusterv1.MachinePool{
+			MachinePool: &clusterv1.MachinePool{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 				},
-				Spec: expclusterv1.MachinePoolSpec{
+				Spec: clusterv1.MachinePoolSpec{
 					Replicas: &size,
 					Template: clusterv1.MachineTemplateSpec{
 						Spec: clusterv1.MachineSpec{
@@ -786,11 +785,11 @@ func TestInstancePoolCreate(t *testing.T) {
 			Cluster: &clusterv1.Cluster{
 				Spec: clusterv1.ClusterSpec{},
 			},
-			MachinePool: &expclusterv1.MachinePool{
+			MachinePool: &clusterv1.MachinePool{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 				},
-				Spec: expclusterv1.MachinePoolSpec{
+				Spec: clusterv1.MachinePoolSpec{
 					Replicas: &size,
 					Template: clusterv1.MachineTemplateSpec{
 						Spec: clusterv1.MachineSpec{
@@ -969,11 +968,11 @@ func TestInstancePoolUpdate(t *testing.T) {
 			Cluster: &clusterv1.Cluster{
 				Spec: clusterv1.ClusterSpec{},
 			},
-			MachinePool: &expclusterv1.MachinePool{
+			MachinePool: &clusterv1.MachinePool{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 				},
-				Spec: expclusterv1.MachinePoolSpec{
+				Spec: clusterv1.MachinePoolSpec{
 					Replicas: &size,
 					Template: clusterv1.MachineTemplateSpec{
 						Spec: clusterv1.MachineSpec{

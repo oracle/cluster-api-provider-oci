@@ -43,10 +43,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2/klogr"
 	"k8s.io/utils/pointer"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	capiUtil "sigs.k8s.io/cluster-api/util"
-	"sigs.k8s.io/cluster-api/util/conditions"
-	"sigs.k8s.io/cluster-api/util/patch"
+	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
+	v1beta1patch "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -70,7 +70,7 @@ type MachineScopeParams struct {
 type MachineScope struct {
 	*logr.Logger
 	Client                    client.Client
-	patchHelper               *patch.Helper
+	patchHelper               *v1beta1patch.Helper
 	Cluster                   *clusterv1.Cluster
 	Machine                   *clusterv1.Machine
 	ComputeClient             compute.ComputeClient
@@ -95,7 +95,7 @@ func NewMachineScope(params MachineScopeParams) (*MachineScope, error) {
 		log := klogr.New()
 		params.Logger = &log
 	}
-	helper, err := patch.NewHelper(params.OCIMachine, params.Client)
+	helper, err := v1beta1patch.NewHelper(params.OCIMachine, params.Client)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init patch helper")
 	}
@@ -276,7 +276,7 @@ func (m *MachineScope) launchInstanceWithFaultDomainRetry(ctx context.Context, b
 		return nil, errors.New("machine scope is missing OCIMachine")
 	}
 
-	baseRetryToken := ociutil.GetOPCRetryToken(string(m.OCIMachine.UID))
+	baseRetryToken := ociutil.GetOPCRetryToken("%s", string(m.OCIMachine.UID))
 	var lastErr error
 	totalAttempts := len(faultDomains)
 
@@ -356,16 +356,16 @@ func (m *MachineScope) faultDomainsForAvailabilityDomain(availabilityDomain stri
 
 func (m *MachineScope) resolveAvailabilityAndFaultDomain() (string, string, bool, error) {
 	failureDomainKey := m.Machine.Spec.FailureDomain
-	if failureDomainKey == nil {
+	if failureDomainKey == "" {
 		randomFailureDomain, err := rand.Int(rand.Reader, big.NewInt(3))
 		if err != nil {
 			m.Logger.Error(err, "Failed to generate random failure domain")
 			return "", "", false, err
 		}
-		failureDomainKey = common.String(strconv.Itoa(int(randomFailureDomain.Int64()) + 1))
+		failureDomainKey = strconv.Itoa(int(randomFailureDomain.Int64()) + 1)
 	}
 
-	failureDomainIndex, err := strconv.Atoi(*failureDomainKey)
+	failureDomainIndex, err := strconv.Atoi(failureDomainKey)
 	if err != nil {
 		m.Logger.Error(err, "Failure Domain is not a valid integer")
 		return "", "", false, errors.Wrap(err, "invalid failure domain parameter, must be a valid integer")
@@ -377,10 +377,10 @@ func (m *MachineScope) resolveAvailabilityAndFaultDomain() (string, string, bool
 	}
 	m.Logger.Info("Failure Domain being used", "failure-domain", failureDomainIndex)
 
-	fdEntry, exists := m.OCIClusterAccessor.GetFailureDomains()[*failureDomainKey]
+	fdEntry, exists := m.OCIClusterAccessor.GetFailureDomains()[failureDomainKey]
 	if !exists {
 		err := errors.New("failure domain not found in cluster failure domains")
-		m.Logger.Error(err, "Failure domain not found", "failure-domain", *failureDomainKey)
+		m.Logger.Error(err, "Failure domain not found", "failure-domain", failureDomainKey)
 		return "", "", false, err
 	}
 	availabilityDomain := fdEntry.Attributes[AvailabilityDomain]
@@ -470,7 +470,7 @@ func (m *MachineScope) GetMachineByDisplayName(ctx context.Context, name string)
 
 // PatchObject persists the cluster configuration and status.
 func (m *MachineScope) PatchObject(ctx context.Context) error {
-	conditions.SetSummary(m.OCIMachine)
+	v1beta1conditions.SetSummary(m.OCIMachine)
 	return m.patchHelper.Patch(ctx, m.OCIMachine)
 }
 
@@ -479,10 +479,12 @@ func (m *MachineScope) Close(ctx context.Context) error {
 	return m.PatchObject(ctx)
 }
 
-// GetBootstrapData returns the bootstrap data from the secret in the Machine's bootstrap.dataSecretName.
+// GetBootstrapData returns the bootstrap data from the Secret referenced by the Machine's bootstrap.
 func (m *MachineScope) GetBootstrapData() (string, error) {
+
+	// v1beta1-compatible path (deprecated field, still check first if set)
 	if m.Machine.Spec.Bootstrap.DataSecretName == nil {
-		return "", errors.New("error retrieving bootstrap data: linked Machine's bootstrap.dataSecretName is nil")
+		return "", errors.New("error retrieving bootstrap data: data secret name not available yet")
 	}
 
 	secret := &corev1.Secret{}
@@ -552,7 +554,7 @@ func (m *MachineScope) GetMachineIPFromStatus() (string, error) {
 		return "", errors.New("could not find machine IP Address in status object")
 	}
 	for _, ip := range machine.Status.Addresses {
-		if ip.Type == clusterv1.MachineInternalIP {
+		if ip.Type == clusterv1beta1.MachineInternalIP {
 			return ip.Address, nil
 		}
 	}
@@ -825,7 +827,8 @@ func (m *MachineScope) containsLBBackend(backendSet loadbalancer.BackendSet, bac
 
 // IsControlPlane returns true if the machine is a control plane.
 func (m *MachineScope) IsControlPlane() bool {
-	return capiUtil.IsControlPlaneMachine(m.Machine)
+	_, ok := m.Machine.Labels[clusterv1beta1.MachineControlPlaneLabel]
+	return ok
 }
 
 func (m *MachineScope) getCompartmentId() string {
