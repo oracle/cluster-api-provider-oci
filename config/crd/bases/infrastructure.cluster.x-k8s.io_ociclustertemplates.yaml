@@ -1185,6 +1185,9 @@ spec:
                       blockvolumeSpec:
                         description: BlockVolumeSpec encapsulates all things related to creating block volume before compute.
                         properties:
+                          numberOfBlockVolumes:
+                            description: Number of Block Volumes to be created to previously use them to attach to machines
+                            type: integer
                           compartmentId:
                             description: The OCID of the compartment that contains the volume.
                             type: string  
@@ -1275,7 +1278,7 @@ spec:
                             description: The list of autotune policies to be enabled for this volume.
                             type: array
                             items:
-                              type: string
+                              type: object
                               required:
                                 - autotuneType
                               properties:
@@ -2652,6 +2655,9 @@ spec:
                       blockvolumeSpec:
                         description: BlockVolumeSpec encapsulates all things related to creating block volume before compute.
                         properties:
+                          numberOfBlockVolumes:
+                            description: Number of Block Volumes to be created to previously use them to attach to machines
+                            type: integer
                           compartmentId:
                             description: The OCID of the compartment that contains the volume.
                             type: string  
@@ -2742,7 +2748,7 @@ spec:
                             description: The list of autotune policies to be enabled for this volume.
                             type: array
                             items:
-                              type: string
+                              type: object
                               required:
                                 - autotuneType
                               properties:

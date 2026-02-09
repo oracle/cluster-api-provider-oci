@@ -359,6 +359,13 @@ func (r *OCIClusterReconciler) reconcileDelete(ctx context.Context, logger logr.
 	// Declare the err variable before the if-else block
 	var err error
 
+	err = clusterScope.DeleteBlockVolumes(ctx)
+	if err != nil {
+		r.Recorder.Event(cluster, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to delete Block Volumes").Error())
+		conditions.MarkFalse(cluster, infrastructurev1beta2.ClusterReadyCondition, infrastructurev1beta2.BlockVolumeReconciliationFailedReason, clusterv1.ConditionSeverityError, "")
+		return ctrl.Result{}, errors.Wrapf(err, "failed to delete Block Volume for OCICluster %s/%s", cluster.Namespace, cluster.Name)
+	}
+
 	if !skipApiserverManagement(cluster) {
 		// Delete API Server LoadBalancer based on the specified LoadBalancerType
 		// If the type is LB, it calls DeleteApiServerLbsLB(),

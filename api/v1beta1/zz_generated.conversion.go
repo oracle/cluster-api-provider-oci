@@ -1283,6 +1283,7 @@ func Convert_v1beta2_BlockVolumeReplicaDetails_To_v1beta1_BlockVolumeReplicaDeta
 }
 
 func autoConvert_v1beta1_BlockVolumeSpec_To_v1beta2_BlockVolumeSpec(in *BlockVolumeSpec, out *v1beta2.BlockVolumeSpec, s conversion.Scope) error {
+	out.NumberOfBlockVolumes = (*int64)(unsafe.Pointer(in.NumberOfBlockVolumes))
 	out.CompartmentId = (*string)(unsafe.Pointer(in.CompartmentId))
 	out.AvailabilityDomain = (*string)(unsafe.Pointer(in.AvailabilityDomain))
 	out.BackupPolicyId = (*string)(unsafe.Pointer(in.BackupPolicyId))
@@ -1295,7 +1296,7 @@ func autoConvert_v1beta1_BlockVolumeSpec_To_v1beta2_BlockVolumeSpec(in *BlockVol
 	out.VolumeBackupId = (*string)(unsafe.Pointer(in.VolumeBackupId))
 	out.IsAutoTuneEnabled = (*bool)(unsafe.Pointer(in.IsAutoTuneEnabled))
 	out.BlockVolumeReplicas = *(*[]v1beta2.BlockVolumeReplicaDetails)(unsafe.Pointer(&in.BlockVolumeReplicas))
-	out.AutotunePolicies = (*v1beta2.AutotunePolicy)(unsafe.Pointer(in.AutotunePolicies))
+	out.AutotunePolicies = *(*[]v1beta2.AutotunePolicy)(unsafe.Pointer(&in.AutotunePolicies))
 	out.XrcKmsKeyId = (*string)(unsafe.Pointer(in.XrcKmsKeyId))
 	out.IsReservationsEnabled = (*bool)(unsafe.Pointer(in.IsReservationsEnabled))
 	return nil
@@ -1307,6 +1308,7 @@ func Convert_v1beta1_BlockVolumeSpec_To_v1beta2_BlockVolumeSpec(in *BlockVolumeS
 }
 
 func autoConvert_v1beta2_BlockVolumeSpec_To_v1beta1_BlockVolumeSpec(in *v1beta2.BlockVolumeSpec, out *BlockVolumeSpec, s conversion.Scope) error {
+	out.NumberOfBlockVolumes = (*int64)(unsafe.Pointer(in.NumberOfBlockVolumes))
 	out.CompartmentId = (*string)(unsafe.Pointer(in.CompartmentId))
 	out.AvailabilityDomain = (*string)(unsafe.Pointer(in.AvailabilityDomain))
 	out.BackupPolicyId = (*string)(unsafe.Pointer(in.BackupPolicyId))
@@ -1319,7 +1321,7 @@ func autoConvert_v1beta2_BlockVolumeSpec_To_v1beta1_BlockVolumeSpec(in *v1beta2.
 	out.VolumeBackupId = (*string)(unsafe.Pointer(in.VolumeBackupId))
 	out.IsAutoTuneEnabled = (*bool)(unsafe.Pointer(in.IsAutoTuneEnabled))
 	out.BlockVolumeReplicas = *(*[]BlockVolumeReplicaDetails)(unsafe.Pointer(&in.BlockVolumeReplicas))
-	out.AutotunePolicies = (*AutotunePolicy)(unsafe.Pointer(in.AutotunePolicies))
+	out.AutotunePolicies = *(*[]AutotunePolicy)(unsafe.Pointer(&in.AutotunePolicies))
 	out.XrcKmsKeyId = (*string)(unsafe.Pointer(in.XrcKmsKeyId))
 	out.IsReservationsEnabled = (*bool)(unsafe.Pointer(in.IsReservationsEnabled))
 	return nil
@@ -2649,6 +2651,7 @@ func autoConvert_v1beta1_OCIMachineSpec_To_v1beta2_OCIMachineSpec(in *OCIMachine
 	out.DedicatedVmHostId = (*string)(unsafe.Pointer(in.DedicatedVmHostId))
 	out.LaunchVolumeAttachment = *(*[]v1beta2.LaunchVolumeAttachment)(unsafe.Pointer(&in.LaunchVolumeAttachment))
 	out.ProviderID = (*string)(unsafe.Pointer(in.ProviderID))
+	out.BlockVolumeAutotuneEnabled = in.BlockVolumeAutotuneEnabled
 	out.IsPvEncryptionInTransitEnabled = in.IsPvEncryptionInTransitEnabled
 	out.BootVolumeSizeInGBs = in.BootVolumeSizeInGBs
 	out.Metadata = *(*map[string]string)(unsafe.Pointer(&in.Metadata))
@@ -2688,6 +2691,7 @@ func autoConvert_v1beta2_OCIMachineSpec_To_v1beta1_OCIMachineSpec(in *v1beta2.OC
 	out.PlatformConfig = (*PlatformConfig)(unsafe.Pointer(in.PlatformConfig))
 	out.DedicatedVmHostId = (*string)(unsafe.Pointer(in.DedicatedVmHostId))
 	out.ProviderID = (*string)(unsafe.Pointer(in.ProviderID))
+	out.BlockVolumeAutotuneEnabled = in.BlockVolumeAutotuneEnabled
 	out.IsPvEncryptionInTransitEnabled = in.IsPvEncryptionInTransitEnabled
 	out.BootVolumeSizeInGBs = in.BootVolumeSizeInGBs
 	out.Metadata = *(*map[string]string)(unsafe.Pointer(&in.Metadata))

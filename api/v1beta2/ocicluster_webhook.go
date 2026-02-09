@@ -54,10 +54,6 @@ func (*OCIClusterWebhook) Default(_ context.Context, obj runtime.Object) error {
 	if c.Spec.OCIResourceIdentifier == "" {
 		c.Spec.OCIResourceIdentifier = string(uuid.NewUUID())
 	}
-	if *c.Spec.BlockVolumeSpec.IsAutoTuneEnabled {
-		c.Spec.BlockVolumeSpec.AutotunePolicies.AutotuneType = "PERFORMANCE_BASED"
-		c.Spec.BlockVolumeSpec.AutotunePolicies.MaxVPUsPerGB = common.Int64(120)
-	}
 	if !c.Spec.NetworkSpec.SkipNetworkManagement {
 		c.Spec.NetworkSpec.Vcn.Subnets = c.SubnetSpec()
 		c.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List = c.NSGSpec()
@@ -81,10 +77,40 @@ func (*OCIClusterWebhook) ValidateCreate(_ context.Context, obj runtime.Object) 
 	if !ok {
 		return nil, fmt.Errorf("expected an OCICluster object but got %T", c)
 	}
+	var allErrs field.ErrorList
+
+	// Check if BlockVolumeSpec exists
+	if *c.Spec.BlockVolumeSpec.IsAutoTuneEnabled {
+
+		// Check if autotune policy is nil
+		if c.Spec.BlockVolumeSpec.AutotunePolicies == nil {
+			allErrs = append(allErrs, field.Invalid(
+				field.NewPath("spec", "blockVolumeSpec", "autotunePolicies"),
+				nil,
+				"autotunePolicies is required when isAutoTuneEnabled is true"))
+		} else {
+
+			// Validate each policy
+			for i, policy := range c.Spec.BlockVolumeSpec.AutotunePolicies {
+				if policy.AutotuneType == "" {
+					allErrs = append(allErrs, field.Invalid(
+						field.NewPath("spec", "blockvolumeSpec", "autotunePolicies").Index(i).Child("autotuneType"),
+						policy.AutotuneType,
+						"autotuneType cannot be empty"))
+				}
+
+				if policy.AutotuneType == "PERFORMANCE_BASED" && policy.MaxVPUsPerGB == nil {
+					allErrs = append(allErrs, field.Invalid(
+						field.NewPath("spec", "blockvolumeSpec", "autotunePolicies").Index(i).Child("maxVpusPerGB"),
+						policy.MaxVPUsPerGB,
+						"maxVpusPerGB is required when autotuneType is PERFORMANCE_BASED"))
+				}
+			}
+		}
+	}
 
 	clusterlogger.Info("validate update cluster", "name", c.Name)
 
-	var allErrs field.ErrorList
 	var ipv6hextets []*string
 	var hextatassigned bool
 
