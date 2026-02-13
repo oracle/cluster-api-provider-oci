@@ -351,7 +351,6 @@ func (r *OCIManagedClusterReconciler) clusterToInfrastructureMapFunc(log logr.Lo
 }
 
 func (r *OCIManagedClusterReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, clusterScope scope.ClusterScopeClient, cluster *infrastructurev1beta2.OCIManagedCluster) (ctrl.Result, error) {
-
 	// This below if condition specifies if the network related infrastructure needs to be reconciled. Any new
 	// network related reconcilication should happen in this if condition
 	if !cluster.Spec.NetworkSpec.SkipNetworkManagement {
