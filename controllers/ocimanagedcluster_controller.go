@@ -127,7 +127,6 @@ func (r *OCIManagedClusterReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		VCNClient:          clients.VCNClient,
 		LoadBalancerClient: clients.LoadBalancerClient,
 		IdentityClient:     clients.IdentityClient,
-		VolumeClient:       clients.VolumeClient,
 		RegionIdentifier:   clusterRegion,
 	})
 	if err != nil {
@@ -196,11 +195,6 @@ func (r *OCIManagedClusterReconciler) reconcile(ctx context.Context, logger logr
 	if err := r.Get(ctx, controlPlaneRef, controlPlane); err != nil {
 		logger.Info("Failed to get control plane ref")
 		return reconcile.Result{}, errors.Wrap(err, "failed to get control plane ref")
-	}
-
-	if err := r.reconcileComponent(ctx, ociManagedCluster, clusterScope.ReconcileBlockVolume, "BlockVolume",
-		infrastructurev1beta2.BlockVolumeReconciliationFailedReason, infrastructurev1beta2.BlockVolumeEventReady); err != nil {
-		return ctrl.Result{}, err
 	}
 
 	// This below if condition specifies if the network related infrastructure needs to be reconciled. Any new
@@ -358,16 +352,10 @@ func (r *OCIManagedClusterReconciler) clusterToInfrastructureMapFunc(log logr.Lo
 
 func (r *OCIManagedClusterReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, clusterScope scope.ClusterScopeClient, cluster *infrastructurev1beta2.OCIManagedCluster) (ctrl.Result, error) {
 
-	err := clusterScope.DeleteBlockVolumes(ctx)
-	if err != nil {
-		r.Recorder.Event(cluster, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to delete Block Volumes").Error())
-		conditions.MarkFalse(cluster, infrastructurev1beta2.ClusterReadyCondition, infrastructurev1beta2.BlockVolumeReconciliationFailedReason, clusterv1.ConditionSeverityError, "")
-		return ctrl.Result{}, errors.Wrapf(err, "failed to delete Block Volume for OCIManagedCluster %s/%s", cluster.Namespace, cluster.Name)
-	}
 	// This below if condition specifies if the network related infrastructure needs to be reconciled. Any new
 	// network related reconcilication should happen in this if condition
 	if !cluster.Spec.NetworkSpec.SkipNetworkManagement {
-		err = clusterScope.DeleteDRGRPCAttachment(ctx)
+		err := clusterScope.DeleteDRGRPCAttachment(ctx)
 		if err != nil {
 			r.Recorder.Event(cluster, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to delete DRG RPC attachment").Error())
 			conditions.MarkFalse(cluster, infrastructurev1beta2.ClusterReadyCondition, infrastructurev1beta2.DRGRPCAttachmentReconciliationFailedReason, clusterv1.ConditionSeverityError, "")

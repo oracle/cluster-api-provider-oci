@@ -44,10 +44,6 @@ type OCIManagedClusterSpec struct {
 	// +optional
 	NetworkSpec NetworkSpec `json:"networkSpec,omitempty"`
 
-	// BlockVolumeSpec encapsulated all things related to creating block volume before compute
-	// +optional
-	BlockVolumeSpec BlockVolumeSpec `json:"blockvolumeSpec,omitempty"`
-
 	// Free-form tags for this resource.
 	// +optional
 	FreeformTags map[string]string `json:"freeformTags,omitempty"`

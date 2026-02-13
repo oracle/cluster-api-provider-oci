@@ -42,7 +42,7 @@ type MockOCIClients struct {
 	NetworkLoadBalancerClient *networkloadbalancer.NetworkLoadBalancerClient
 	LoadBalancerClient        *loadbalancer.LoadBalancerClient
 	IdentityClient            identity.Client
-	VolumeClient              volume.VolumeClient
+	BlockVolumeClient         volume.BlockVolumeClient
 	WorkRequestsClient        *workrequests.WorkRequestClient
 }
 
@@ -57,7 +57,7 @@ func MockNewClientProvider(mockClients MockOCIClients) (*ClientProvider, error) 
 		NetworkLoadBalancerClient: mockClients.NetworkLoadBalancerClient,
 		LoadBalancerClient:        mockClients.LoadBalancerClient,
 		IdentityClient:            mockClients.IdentityClient,
-		VolumeClient:              mockClients.VolumeClient,
+		BlockVolumeClient:         mockClients.BlockVolumeClient,
 		ComputeClient:             mockClients.ComputeClient,
 		WorkRequestsClient:        mockClients.WorkRequestsClient,
 	}}

@@ -96,14 +96,6 @@ type VnicAttachment struct {
 	NicIndex *int `json:"nicIndex,omitempty"`
 }
 
-// BlockVolumeDetails defines the configuration options for the block volume
-type BlockVolumeDetails struct {
-	// VolumeId defines the ID of the block volume to use. This parameter takes priority over VolumeName.
-	VolumeId string `json:"volumeId,omitempty"`
-	// VolumeName defines the block volume name to attach to the instance
-	VolumeName string `json:"volumeName,omitempty"`
-}
-
 // LaunchOptionsBootVolumeTypeEnum Enum with underlying type: string
 type LaunchOptionsBootVolumeTypeEnum string
 

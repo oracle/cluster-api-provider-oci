@@ -5,9 +5,7 @@ import (
 )
 
 type ClusterScopeClient interface {
-	ReconcileBlockVolume(ctx context.Context) error
 	ReconcileVCN(ctx context.Context) error
-	DeleteBlockVolumes(ctx context.Context) error
 	ReconcileInternetGateway(ctx context.Context) error
 	ReconcileNatGateway(ctx context.Context) error
 	ReconcileServiceGateway(ctx context.Context) error

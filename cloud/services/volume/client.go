@@ -22,7 +22,7 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/core"
 )
 
-type VolumeClient interface {
+type BlockVolumeClient interface {
 	CreateVolume(ctx context.Context, request core.CreateVolumeRequest) (response core.CreateVolumeResponse, err error)
 	DeleteVolume(ctx context.Context, request core.DeleteVolumeRequest) (response core.DeleteVolumeResponse, err error)
 	GetVolume(ctx context.Context, request core.GetVolumeRequest) (response core.GetVolumeResponse, err error)

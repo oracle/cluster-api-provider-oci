@@ -33,6 +33,7 @@ import (
 	lb "github.com/oracle/cluster-api-provider-oci/cloud/services/loadbalancer"
 	nlb "github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
+	"github.com/oracle/cluster-api-provider-oci/cloud/services/volume"
 	wr "github.com/oracle/cluster-api-provider-oci/cloud/services/workrequests"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
@@ -59,6 +60,7 @@ type MachineScopeParams struct {
 	Machine                   *clusterv1.Machine
 	Client                    client.Client
 	ComputeClient             compute.ComputeClient
+	BlockVolumeClient         volume.BlockVolumeClient
 	OCIClusterAccessor        OCIClusterAccessor
 	OCIMachine                *infrastructurev1beta2.OCIMachine
 	VCNClient                 vcn.Client
@@ -286,7 +288,11 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 	launchDetails.AvailabilityConfig = m.getAvailabilityConfig()
 	launchDetails.PreemptibleInstanceConfig = m.getPreemptibleInstanceConfig()
 	launchDetails.PlatformConfig = m.getPlatformConfig()
+	// if !m.OCIMachine.Spec.BlockVolumeAutotuneEnabled
+
 	launchDetails.LaunchVolumeAttachments = m.getLaunchVolumeAttachments()
+
+	// else
 	req := core.LaunchInstanceRequest{LaunchInstanceDetails: launchDetails,
 		OpcRetryToken: ociutil.GetOPCRetryToken(string(m.OCIMachine.UID))}
 	resp, err := m.ComputeClient.LaunchInstance(ctx, req)
@@ -990,6 +996,7 @@ func (m *MachineScope) getPlatformConfig() core.PlatformConfig {
 }
 
 func (m *MachineScope) getLaunchVolumeAttachments() []core.LaunchAttachVolumeDetails {
+
 	volumeAttachmentsInSpec := m.OCIMachine.Spec.LaunchVolumeAttachment
 	if len(volumeAttachmentsInSpec) < 0 {
 		return nil
@@ -1008,30 +1015,45 @@ func (m *MachineScope) getLaunchVolumeAttachments() []core.LaunchAttachVolumeDet
 	return volumes
 }
 
-func getIscsiVolumeAttachment(attachment infrastructurev1beta2.LaunchIscsiVolumeAttachment) core.LaunchAttachVolumeDetails {
-	volumeDetails := core.LaunchAttachIScsiVolumeDetails{
-		Device:                       attachment.Device,
-		DisplayName:                  attachment.DisplayName,
-		IsShareable:                  attachment.IsShareable,
-		IsReadOnly:                   attachment.IsReadOnly,
-		VolumeId:                     attachment.VolumeId,
-		UseChap:                      attachment.UseChap,
-		IsAgentAutoIscsiLoginEnabled: attachment.IsAgentAutoIscsiLoginEnabled,
-		EncryptionInTransitType:      getEncryptionType(attachment.EncryptionInTransitType),
-		LaunchCreateVolumeDetails:    getLaunchCreateVolumeDetails(attachment.LaunchCreateVolumeFromAttributes),
+func getIscsiVolumeAttachment(attachment infrastructurev1beta2.LaunchIscsiVolumeAttachment) core.LaunchAttachIScsiVolumeDetails {
+	var volumeDetails core.LaunchAttachIScsiVolumeDetails
+
+	if attachment.VolumeId != nil {
+		volumeDetails = core.LaunchAttachIScsiVolumeDetails{
+			VolumeId: attachment.VolumeId,
+		}
+	} else {
+		volumeDetails = core.LaunchAttachIScsiVolumeDetails{
+			Device:                       attachment.Device,
+			DisplayName:                  attachment.DisplayName,
+			IsShareable:                  attachment.IsShareable,
+			IsReadOnly:                   attachment.IsReadOnly,
+			VolumeId:                     attachment.VolumeId,
+			UseChap:                      attachment.UseChap,
+			IsAgentAutoIscsiLoginEnabled: attachment.IsAgentAutoIscsiLoginEnabled,
+			EncryptionInTransitType:      getEncryptionType(attachment.EncryptionInTransitType),
+			LaunchCreateVolumeDetails:    getLaunchCreateVolumeDetails(attachment.LaunchCreateVolumeFromAttributes),
+		}
 	}
 	return volumeDetails
 }
 
-func getParavirtualizedVolumeAttachment(attachment infrastructurev1beta2.LaunchParavirtualizedVolumeAttachment) core.LaunchAttachVolumeDetails {
-	volumeDetails := core.LaunchAttachParavirtualizedVolumeDetails{
-		Device:                         attachment.Device,
-		DisplayName:                    attachment.DisplayName,
-		IsShareable:                    attachment.IsShareable,
-		IsReadOnly:                     attachment.IsReadOnly,
-		VolumeId:                       attachment.VolumeId,
-		IsPvEncryptionInTransitEnabled: attachment.IsPvEncryptionInTransitEnabled,
-		LaunchCreateVolumeDetails:      getLaunchCreateVolumeDetails(attachment.LaunchCreateVolumeFromAttributes),
+func getParavirtualizedVolumeAttachment(attachment infrastructurev1beta2.LaunchParavirtualizedVolumeAttachment) core.LaunchAttachParavirtualizedVolumeDetails {
+	var volumeDetails core.LaunchAttachParavirtualizedVolumeDetails
+
+	if attachment.VolumeId != nil {
+		volumeDetails = core.LaunchAttachParavirtualizedVolumeDetails{
+			VolumeId: attachment.VolumeId,
+		}
+	} else {
+		volumeDetails = core.LaunchAttachParavirtualizedVolumeDetails{
+			Device:                         attachment.Device,
+			DisplayName:                    attachment.DisplayName,
+			IsShareable:                    attachment.IsShareable,
+			IsReadOnly:                     attachment.IsReadOnly,
+			IsPvEncryptionInTransitEnabled: attachment.IsPvEncryptionInTransitEnabled,
+			LaunchCreateVolumeDetails:      getLaunchCreateVolumeDetails(attachment.LaunchCreateVolumeFromAttributes),
+		}
 	}
 	return volumeDetails
 }

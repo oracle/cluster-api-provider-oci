@@ -413,20 +413,6 @@ func (mr *MockClusterScopeClientMockRecorder) ReconcileVCN(arg0 interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileVCN", reflect.TypeOf((*MockClusterScopeClient)(nil).ReconcileVCN), arg0)
 }
 
-// ReconcileBlockVolume mocks base method.
-func (m *MockClusterScopeClient) ReconcileBlockVolume(arg0 context.Context) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReconcileBlockVolume", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ReconcileBlockVolume indicates an expected call of ReconcileBlockVolume.
-func (mr *MockClusterScopeClientMockRecorder) ReconcileBlockVolume(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileBlockVolume", reflect.TypeOf((*MockClusterScopeClient)(nil).ReconcileBlockVolume), arg0)
-}
-
 // SetRegionKey mocks base method.
 func (m *MockClusterScopeClient) SetRegionKey(arg0 context.Context) error {
 	m.ctrl.T.Helper()

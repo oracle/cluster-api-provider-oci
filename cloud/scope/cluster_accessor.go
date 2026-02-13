@@ -46,8 +46,6 @@ type OCIClusterAccessor interface {
 	GetClientOverrides() *infrastructurev1beta2.ClientOverrides
 	// GetNetworkSpec returns the NetworkSpec of the cluster.
 	GetNetworkSpec() *infrastructurev1beta2.NetworkSpec
-	// GetBlockVolumeSpec returns the BlockVolumeSpec of the cluster.
-	GetBlockVolumeSpec() *infrastructurev1beta2.BlockVolumeSpec
 	// GetControlPlaneEndpoint returns the control plane endpoint of the cluster.
 	GetControlPlaneEndpoint() clusterv1.APIEndpoint
 	// SetControlPlaneEndpoint sets the control plane endpoint of the cluster.

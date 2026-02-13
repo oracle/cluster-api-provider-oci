@@ -69,9 +69,6 @@ type OCIMachineSpec struct {
 	// The network bandwidth and number of VNICs scale proportionately with the number of OCPUs.
 	VnicAttachments []VnicAttachment `json:"vnicAttachments,omitempty"`
 
-	// BlockVolumeDetails defines the configuration options for the block volume
-	BlockVolumeDetails BlockVolumeDetails `json:"blockvolumeDetails,omitempty"`
-
 	// LaunchOptions defines the options for tuning the compatibility and performance of VM shapes
 	LaunchOptions *LaunchOptions `json:"launchOptions,omitempty"`
 
@@ -109,6 +106,10 @@ type OCIMachineSpec struct {
 	// users should set this parameter to true
 	// + optional
 	BlockVolumeAutotuneEnabled bool `json:"blockVolumeAutotuneEnabled,omitempty"`
+
+	// BlockVolumeSpec encapsulated all things related to creating block volume before compute
+	// +optional
+	BlockVolumeSpec BlockVolumeSpec `json:"blockvolumeSpec,omitempty"`
 
 	// Is in transit encryption of volumes required.
 	// +optional
