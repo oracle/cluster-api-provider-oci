@@ -1197,9 +1197,6 @@ type NetworkSecurityGroup struct {
 	List []*NSG `json:"list,omitempty"`
 }
 type BlockVolumeSpec struct {
-	// Number of Block Volumes to be created to previously use them to attach to machines
-	NumberOfBlockVolumes *int64 `json:"numberOfBlockVolumes,omitempty"`
-
 	// The OCID of the compartment that contains the volume.
 	CompartmentId *string `json:"compartmentId,omitempty"`
 
@@ -1266,6 +1263,9 @@ type BlockVolumeSpec struct {
 	// When set to true, enables SCSI Persistent Reservation (SCSI PR) for the volume. For more information, see
 	// Persistent Reservations (https://docs.oracle.com/iaas/Content/Block/Concepts/persistent-reservations.htm).
 	IsReservationsEnabled *bool `json:"isReservationsEnabled,omitempty"`
+
+	// The type of volume attachment used to attach this block volume to the instance
+	VolumeType string `json:"volumeType,omitempty"`
 }
 
 // BlockVolumeReplicaDetails Contains the details for the block volume replica

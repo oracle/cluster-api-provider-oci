@@ -102,11 +102,6 @@ type OCIMachineSpec struct {
 	// +optional
 	ProviderID *string `json:"providerID,omitempty"`
 
-	// If there is needed to have block volume attached with autotune enabled
-	// users should set this parameter to true
-	// + optional
-	BlockVolumeAutotuneEnabled bool `json:"blockVolumeAutotuneEnabled,omitempty"`
-
 	// BlockVolumeSpec encapsulated all things related to creating block volume before compute
 	// +optional
 	BlockVolumeSpec BlockVolumeSpec `json:"blockvolumeSpec,omitempty"`

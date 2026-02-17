@@ -21,9 +21,11 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"log"
 	"math/big"
 	"net/url"
 	"strconv"
+	"time"
 
 	"github.com/go-logr/logr"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
@@ -76,6 +78,7 @@ type MachineScope struct {
 	Cluster                   *clusterv1.Cluster
 	Machine                   *clusterv1.Machine
 	ComputeClient             compute.ComputeClient
+	BlockVolumeClient         volume.BlockVolumeClient
 	OCIClusterAccessor        OCIClusterAccessor
 	OCIMachine                *infrastructurev1beta2.OCIMachine
 	VCNClient                 vcn.Client
@@ -106,6 +109,7 @@ func NewMachineScope(params MachineScopeParams) (*MachineScope, error) {
 		Logger:                    params.Logger,
 		Client:                    params.Client,
 		ComputeClient:             params.ComputeClient,
+		BlockVolumeClient:         params.BlockVolumeClient,
 		Cluster:                   params.Cluster,
 		OCIClusterAccessor:        params.OCIClusterAccessor,
 		patchHelper:               helper,
@@ -288,11 +292,52 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 	launchDetails.AvailabilityConfig = m.getAvailabilityConfig()
 	launchDetails.PreemptibleInstanceConfig = m.getPreemptibleInstanceConfig()
 	launchDetails.PlatformConfig = m.getPlatformConfig()
-	// if !m.OCIMachine.Spec.BlockVolumeAutotuneEnabled
 
-	launchDetails.LaunchVolumeAttachments = m.getLaunchVolumeAttachments()
+	m.Logger.Info("Started block volume creation...")
+	bv, err := m.CreateBlockVolume(ctx)
+	if bv != nil {
 
-	// else
+		// Wait for volume to be available
+		m.Logger.Info("Waiting for volume to be available...")
+		getVolumeReq := core.GetVolumeRequest{
+			VolumeId: common.String(*bv.Id),
+		}
+		for {
+			getVolumeResp, err := m.BlockVolumeClient.GetVolume(ctx, getVolumeReq)
+			if err != nil {
+				log.Fatalf("Failed to get volume: %v", err)
+			}
+			if getVolumeResp.Volume.LifecycleState == core.VolumeLifecycleStateAvailable {
+				m.Logger.Info("Volume is available")
+				break
+			}
+			m.Logger.Info("Volume state: %s, waiting...\n", getVolumeResp.Volume.LifecycleState)
+			time.Sleep(5 * time.Second)
+		}
+
+		m.Logger.Info("Specifying instance attachments...")
+
+		if infrastructurev1beta2.VolumeType(m.OCIMachine.Spec.BlockVolumeSpec.VolumeType) == infrastructurev1beta2.IscsiType {
+			launchDetails.LaunchVolumeAttachments = append(launchDetails.LaunchVolumeAttachments, []core.LaunchAttachVolumeDetails{
+				core.LaunchAttachIScsiVolumeDetails{
+					VolumeId: common.String(*bv.Id),
+				},
+			}...)
+		} else if infrastructurev1beta2.VolumeType(m.OCIMachine.Spec.BlockVolumeSpec.VolumeType) == infrastructurev1beta2.ParavirtualizedType {
+			launchDetails.LaunchVolumeAttachments = append(launchDetails.LaunchVolumeAttachments, []core.LaunchAttachVolumeDetails{
+				core.LaunchAttachParavirtualizedVolumeDetails{
+					VolumeId: common.String(*bv.Id),
+				},
+			}...)
+		} else {
+			m.Logger.Info("Unknown attachment type not supported")
+		}
+
+	}
+
+	launchDetails.LaunchVolumeAttachments = append(launchDetails.LaunchVolumeAttachments, m.getLaunchVolumeAttachments()...)
+
+	m.Logger.Info("Started creating instance...")
 	req := core.LaunchInstanceRequest{LaunchInstanceDetails: launchDetails,
 		OpcRetryToken: ociutil.GetOPCRetryToken(string(m.OCIMachine.UID))}
 	resp, err := m.ComputeClient.LaunchInstance(ctx, req)
@@ -321,11 +366,40 @@ func (m *MachineScope) getFreeFormTags() map[string]string {
 
 // DeleteMachine terminates the instance using InstanceId from the OCIMachine spec and deletes the boot volume
 func (m *MachineScope) DeleteMachine(ctx context.Context, instance *core.Instance) error {
+	getInstanceReq := core.GetInstanceRequest{
+		InstanceId: common.String(*instance.Id),
+	}
+
 	req := core.TerminateInstanceRequest{InstanceId: instance.Id,
 		PreserveBootVolume:                 common.Bool(m.OCIMachine.Spec.PreserveBootVolume),
 		PreserveDataVolumesCreatedAtLaunch: common.Bool(m.OCIMachine.Spec.PreserveDataVolumesCreatedAtLaunch),
 	}
 	_, err := m.ComputeClient.TerminateInstance(ctx, req)
+	m.Logger.Info("Waiting for instance to be terminated...")
+	for {
+		getInstanceResp, err := m.ComputeClient.GetInstance(ctx, getInstanceReq)
+		if err != nil {
+			// Instance not found means it's terminated
+			if serviceErr, ok := err.(common.ServiceError); ok {
+				if serviceErr.GetHTTPStatusCode() == 404 {
+					m.Logger.Info("Instance terminated successfully")
+					break
+				}
+			}
+			m.Logger.Info("Error checking instance state: %v", err)
+			break
+		}
+
+		if getInstanceResp.Instance.LifecycleState == core.InstanceLifecycleStateTerminated {
+			m.Logger.Info("Instance is terminated")
+			break
+		}
+
+		m.Logger.Info("Instance state: %s, waiting...\n", getInstanceResp.Instance.LifecycleState)
+		time.Sleep(5 * time.Second)
+	}
+	time.Sleep(60 * time.Second)
+	err = m.DeleteBlockVolume(ctx)
 	return err
 }
 
@@ -1079,4 +1153,246 @@ func getEncryptionType(transitType infrastructurev1beta2.EncryptionInTransitType
 		return core.EncryptionInTransitTypeBmEncryptionInTransit
 	}
 	return ""
+}
+
+// GetBlockVolume retrieves a core.Volume using either the VolumeId recorded in the
+// spec or by listing volumes by DisplayName within the compartment and ensuring
+// Cluster API ownership via tags.
+// nolint:nilnil
+func (m *MachineScope) GetBlockVolume(ctx context.Context) (*core.Volume, error) {
+	spec := &m.OCIMachine.Spec.BlockVolumeSpec
+	// ADD THIS DEBUG LOGGING
+	m.Logger.Info("GetBlockVolume called",
+		"hasSpec", spec != nil,
+		"spec", spec)
+
+	if spec == nil {
+		return nil, errors.New("BlockVolumeSpec is not set")
+	}
+
+	// search by DisplayName.
+	name := m.GetBlockVolumeName()
+	if name == "" {
+		return nil, nil
+	}
+
+	var page *string
+	for {
+		resp, err := m.BlockVolumeClient.ListVolumes(ctx, core.ListVolumesRequest{
+			CompartmentId: common.String(m.getCompartmentId()),
+			DisplayName:   common.String(name),
+			Page:          page,
+		})
+		if err != nil {
+			return nil, err
+		}
+		for _, v := range resp.Items {
+			if m.IsResourceCreatedByClusterAPI(v.FreeformTags) {
+				return &v, nil
+			}
+		}
+		if resp.OpcNextPage == nil {
+			break
+		}
+		page = resp.OpcNextPage
+	}
+	return nil, nil
+}
+
+// GetBlockVolumeName returns the desired display name for the block volume. If
+// the user hasn't provided one, it derives a sensible default from the cluster name.
+func (m *MachineScope) GetBlockVolumeName() string {
+	spec := &m.OCIMachine.Spec.BlockVolumeSpec
+	if spec == nil {
+		return ""
+	}
+	if spec.DisplayName != nil && *spec.DisplayName != "" {
+		return *spec.DisplayName
+	}
+	return ""
+}
+
+// ToOCIAutotunePolicy converts your AutotunePolicy to the OCI SDK AutotunePolicy interface
+func (m *MachineScope) ToOCIAutotunePolicy() []core.AutotunePolicy {
+	spec := &m.OCIMachine.Spec.BlockVolumeSpec
+	if spec == nil || len(spec.AutotunePolicies) == 0 {
+		return nil
+	}
+
+	policies := make([]core.AutotunePolicy, 0, len(spec.AutotunePolicies))
+
+	for _, a := range spec.AutotunePolicies {
+		switch a.AutotuneType {
+		case "DETACHED_VOLUME":
+			policies = append(policies, core.DetachedVolumeAutotunePolicy{})
+
+		case "PERFORMANCE_BASED":
+			if a.MaxVPUsPerGB == nil {
+				// skip invalid policy
+				continue
+			}
+			policies = append(policies, core.PerformanceBasedAutotunePolicy{
+				MaxVpusPerGB: a.MaxVPUsPerGB,
+			})
+
+		default:
+			// unknown policy type, skip
+			continue
+		}
+	}
+
+	if len(policies) == 0 {
+		return nil
+	}
+
+	return policies
+}
+
+func (m *MachineScope) CreateBlockVolume(ctx context.Context) (*core.Volume, error) {
+	spec := &m.OCIMachine.Spec.BlockVolumeSpec
+	if spec == nil {
+		return nil, errors.New("BlockVolumeSpec is not set")
+	}
+
+	// Default compartment if not provided
+	compartmentId := spec.CompartmentId
+	if compartmentId == nil {
+		compartmentId = common.String(m.getCompartmentId())
+	}
+
+	// DEBUG: Check required fields
+	m.Logger.Info("Debug CreateVolume fields",
+		"AvailabilityDomain", spec.AvailabilityDomain,
+		"AvailabilityDomain_nil", spec.AvailabilityDomain == nil,
+		"CompartmentId", compartmentId,
+		"SizeInGBs", spec.SizeInGBs,
+		"SizeInGBs_nil", spec.SizeInGBs == nil,
+		"VpusPerGB", spec.VpusPerGB,
+		"DisplayName", m.GetBlockVolumeName(),
+	)
+
+	// Validate required fields
+	if spec.AvailabilityDomain == nil || *spec.AvailabilityDomain == "" {
+		return nil, errors.New("AvailabilityDomain is required but not set")
+	}
+
+	if spec.SizeInGBs == nil {
+		return nil, errors.New("SizeInGBs is required but not set")
+	}
+
+	blockVolumeName := m.GetBlockVolumeName()
+	if blockVolumeName == "" {
+		return nil, errors.New("BlockVolume DisplayName cannot be empty")
+	}
+
+	// Build CreateVolumeDetails from spec
+	details := core.CreateVolumeDetails{
+		AvailabilityDomain: spec.AvailabilityDomain,
+		CompartmentId:      compartmentId,
+		DisplayName:        common.String(blockVolumeName),
+		VpusPerGB:          spec.VpusPerGB,
+		SizeInGBs:          spec.SizeInGBs,
+		FreeformTags:       m.getFreeFormTags(),
+		AutotunePolicies:   m.ToOCIAutotunePolicy(),
+	}
+
+	m.Logger.Info("Details created successfully", "details", details)
+
+	// Convert block volume replica details if provided.
+	if len(spec.BlockVolumeReplicas) > 0 {
+		replicas := make([]core.BlockVolumeReplicaDetails, 0, len(spec.BlockVolumeReplicas))
+		for _, r := range spec.BlockVolumeReplicas {
+			replicas = append(replicas, core.BlockVolumeReplicaDetails{
+				AvailabilityDomain: r.AvailabilityDomain,
+				DisplayName:        r.DisplayName,
+				XrrKmsKeyId:        r.XrrKmsKeyId,
+			})
+		}
+		details.BlockVolumeReplicas = replicas
+	}
+
+	m.Logger.Info("About to call CreateVolume")
+
+	// CHECK IF CLIENT IS NIL
+	if m.BlockVolumeClient == nil {
+		return nil, errors.New("CRITICAL: BlockVolumeClient is nil - was not initialized properly")
+	}
+
+	m.Logger.Info("BlockVolumeClient is NOT nil, proceeding with API call")
+
+	resp, err := m.BlockVolumeClient.CreateVolume(ctx, core.CreateVolumeRequest{
+		CreateVolumeDetails: details,
+		OpcRetryToken:       ociutil.GetOPCRetryToken("%s-%s", "create-bv", string(m.OCIMachine.UID)),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	vol := resp.Volume
+	// Sanity: ensure tag ownership
+	if !m.IsResourceCreatedByClusterAPI(vol.FreeformTags) {
+		return nil, errors.New("created block volume missing cluster api ownership tags")
+	}
+	return &vol, nil
+}
+
+// ReconcileBlockVolume ensures a block volume exists as described by the
+// cluster's BlockVolumeSpec. If the volume already exists, it records the ID on
+// the spec and returns without changes.
+func (m *MachineScope) ReconcileBlockVolume(ctx context.Context) error {
+	spec := &m.OCIMachine.Spec.BlockVolumeSpec
+	if spec == nil {
+		m.Logger.Info("BlockVolumeSpec is not set, skipping reconciliation")
+		return nil
+	}
+
+	// If neither an explicit ID nor enough inputs to create is provided, skip.
+	if spec.SourceDetails == "" && spec.SizeInGBs == nil && (spec.DisplayName == nil || *spec.DisplayName == "") {
+		m.Logger.Info("BlockVolumeSpec does not contain an ID, name or size; skipping reconciliation")
+		return nil
+	}
+
+	vol, err := m.GetBlockVolume(ctx)
+	if err != nil {
+		return err
+	}
+	if vol != nil {
+		// Record ID on the spec for downstream consumers.
+		spec.SourceDetails = ociutil.DerefString(vol.Id)
+		m.Logger.Info("No reconciliation required for Block Volume", "volume", vol.Id)
+		return nil
+	}
+
+	vol, err = m.CreateBlockVolume(ctx)
+	if err != nil {
+		return err
+	}
+	spec.SourceDetails = ociutil.DerefString(vol.Id)
+	m.Logger.Info("Successfully created Block Volume", "volume", *vol.Id)
+	return nil
+}
+
+// DeleteBlockVolume attempts to delete the block volume if it exists.
+func (m *MachineScope) DeleteBlockVolume(ctx context.Context) error {
+	spec := &m.OCIMachine.Spec.BlockVolumeSpec
+	if spec == nil {
+		m.Logger.Info("BlockVolumeSpec is not set, skipping deletion")
+		return nil
+	}
+
+	vol, err := m.GetBlockVolume(ctx)
+	if err != nil && !ociutil.IsNotFound(err) {
+		return err
+	}
+	if vol == nil || vol.Id == nil {
+		m.Logger.Info("Block Volume already deleted or not found")
+		return nil
+	}
+
+	_, err = m.BlockVolumeClient.DeleteVolume(ctx, core.DeleteVolumeRequest{VolumeId: vol.Id})
+	if err != nil {
+		return err
+	}
+	m.Logger.Info("Successfully initiated Block Volume deletion", "volume", vol.Id)
+	return nil
 }
