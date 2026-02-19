@@ -1003,18 +1003,32 @@ func TestMachineReconciliationDeletionNormal(t *testing.T) {
 			expectedEvent:      "InstanceTerminating",
 			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.InstanceReadyCondition, corev1.ConditionFalse, clusterv1.ConditionSeverityInfo, infrastructurev1beta2.InstanceTerminatingReason}},
 			testSpecificSetup: func(machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
-				computeClient.EXPECT().GetInstance(gomock.Any(), gomock.Eq(core.GetInstanceRequest{
-					InstanceId: common.String("test"),
-				})).
-					Return(core.GetInstanceResponse{
-						Instance: core.Instance{
-							Id:             common.String("test"),
-							LifecycleState: core.InstanceLifecycleStateRunning,
-							FreeformTags: map[string]string{
-								"CreatedBy":   "OCIClusterAPIProvider",
-								"ClusterUUID": "uid"},
-						},
-					}, nil)
+				gomock.InOrder(
+					computeClient.EXPECT().GetInstance(gomock.Any(), gomock.Eq(core.GetInstanceRequest{
+						InstanceId: common.String("test"),
+					})).
+						Return(core.GetInstanceResponse{
+							Instance: core.Instance{
+								Id:             common.String("test"),
+								LifecycleState: core.InstanceLifecycleStateRunning,
+								FreeformTags: map[string]string{
+									"CreatedBy":   "OCIClusterAPIProvider",
+									"ClusterUUID": "uid"},
+							},
+						}, nil),
+					computeClient.EXPECT().GetInstance(gomock.Any(), gomock.Eq(core.GetInstanceRequest{
+						InstanceId: common.String("test"),
+					})).
+						Return(core.GetInstanceResponse{
+							Instance: core.Instance{
+								Id:             common.String("test"),
+								LifecycleState: core.InstanceLifecycleStateTerminated,
+								FreeformTags: map[string]string{
+									"CreatedBy":   "OCIClusterAPIProvider",
+									"ClusterUUID": "uid"},
+							},
+						}, nil),
+				)
 				computeClient.EXPECT().TerminateInstance(gomock.Any(), gomock.Eq(core.TerminateInstanceRequest{
 					InstanceId:                         common.String("test"),
 					PreserveBootVolume:                 common.Bool(false),
@@ -1031,19 +1045,32 @@ func TestMachineReconciliationDeletionNormal(t *testing.T) {
 			testSpecificSetup: func(machineScope *scope.MachineScope, computeClient *mock_compute.MockComputeClient, vcnClient *mock_vcn.MockClient, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
 				machineScope.Machine.ObjectMeta.Labels = make(map[string]string)
 				machineScope.Machine.ObjectMeta.Labels[clusterv1.MachineControlPlaneLabel] = "true"
-				computeClient.EXPECT().GetInstance(gomock.Any(), gomock.Eq(core.GetInstanceRequest{
-					InstanceId: common.String("test"),
-				})).
-					Return(core.GetInstanceResponse{
-						Instance: core.Instance{
-							Id:             common.String("test"),
-							LifecycleState: core.InstanceLifecycleStateRunning,
-							FreeformTags: map[string]string{
-								"CreatedBy":   "OCIClusterAPIProvider",
-								"ClusterUUID": "uid"},
-						},
-					}, nil)
-
+				gomock.InOrder(
+					computeClient.EXPECT().GetInstance(gomock.Any(), gomock.Eq(core.GetInstanceRequest{
+						InstanceId: common.String("test"),
+					})).
+						Return(core.GetInstanceResponse{
+							Instance: core.Instance{
+								Id:             common.String("test"),
+								LifecycleState: core.InstanceLifecycleStateRunning,
+								FreeformTags: map[string]string{
+									"CreatedBy":   "OCIClusterAPIProvider",
+									"ClusterUUID": "uid"},
+							},
+						}, nil),
+					computeClient.EXPECT().GetInstance(gomock.Any(), gomock.Eq(core.GetInstanceRequest{
+						InstanceId: common.String("test"),
+					})).
+						Return(core.GetInstanceResponse{
+							Instance: core.Instance{
+								Id:             common.String("test"),
+								LifecycleState: core.InstanceLifecycleStateTerminated,
+								FreeformTags: map[string]string{
+									"CreatedBy":   "OCIClusterAPIProvider",
+									"ClusterUUID": "uid"},
+							},
+						}, nil),
+				)
 				nlbClient.EXPECT().GetNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.GetNetworkLoadBalancerRequest{
 					NetworkLoadBalancerId: common.String("nlbid"),
 				})).Return(networkloadbalancer.GetNetworkLoadBalancerResponse{

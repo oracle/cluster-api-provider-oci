@@ -51,10 +51,10 @@ func (mr *MockBlockVolumeClientMockRecorder) DeleteVolume(ctx, request interface
 }
 
 // GetVolume mocks base method.
-func (m *MockBlockVolumeClient) GetVolume(ctx context.Context, request core.GetVolumeRequest) (core.GetVolumeRequest, error) {
+func (m *MockBlockVolumeClient) GetVolume(ctx context.Context, request core.GetVolumeRequest) (core.GetVolumeResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetVolume", ctx, request)
-	ret0, _ := ret[0].(core.GetVolumeRequest)
+	ret0, _ := ret[0].(core.GetVolumeResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -65,19 +65,19 @@ func (mr *MockBlockVolumeClientMockRecorder) GetVolume(ctx, request interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVolume", reflect.TypeOf((*MockBlockVolumeClient)(nil).GetVolume), ctx, request)
 }
 
-// LaunchVolume mocks base method.
-func (m *MockBlockVolumeClient) LaunchVolume(ctx context.Context, request core.CreateVolumeRequest) (core.CreateVolumeRequest, error) {
+// CreateVolume mocks base method.
+func (m *MockBlockVolumeClient) CreateVolume(ctx context.Context, request core.CreateVolumeRequest) (core.CreateVolumeResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "LaunchVolume", ctx, request)
-	ret0, _ := ret[0].(core.CreateVolumeRequest)
+	ret := m.ctrl.Call(m, "CreateVolume", ctx, request)
+	ret0, _ := ret[0].(core.CreateVolumeResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// LaunchVolume indicates an expected call of LaunchVolume.
-func (mr *MockBlockVolumeClientMockRecorder) LaunchVolume(ctx, request interface{}) *gomock.Call {
+// CreateVolume indicates an expected call of LaunchVolume.
+func (mr *MockBlockVolumeClientMockRecorder) CreateVolume(ctx, request interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LaunchVolume", reflect.TypeOf((*MockBlockVolumeClient)(nil).LaunchVolume), ctx, request)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateVolume", reflect.TypeOf((*MockBlockVolumeClient)(nil).CreateVolume), ctx, request)
 }
 
 // ListVolumes mocks base method.

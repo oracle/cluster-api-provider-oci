@@ -16,331 +16,282 @@
 
 package scope
 
-// import (
-// 	"context"
-// 	"fmt"
+import (
+	"context"
 
-// 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
-// 	"github.com/oracle/oci-go-sdk/v65/common"
-// 	"github.com/oracle/oci-go-sdk/v65/core"
-// 	"github.com/pkg/errors"
-// )
+	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
+	"github.com/oracle/oci-go-sdk/v65/common"
+	"github.com/oracle/oci-go-sdk/v65/core"
+	"github.com/pkg/errors"
+)
 
-// func (m *MachineScope) CreateBlockVolumes(ctx context.Context) ([]*core.Volume, error) {
-// 	spec := s.OCIClusterAccessor.GetBlockVolumeSpec()
-// 	// ADD THIS DEBUG LOGGING
-// 	s.Logger.Info("CreateBlockVolume called",
-// 		"hasSpec", spec != nil,
-// 		"spec", spec)
+// GetBlockVolume retrieves a core.Volume using either the VolumeId recorded in the
+// spec or by listing volumes by DisplayName within the compartment and ensuring
+// Cluster API ownership via tags.
+// nolint:nilnil
+func (m *MachineScope) GetBlockVolume(ctx context.Context) (*core.Volume, error) {
+	spec := m.OCIMachine.Spec.BlockVolumeSpec
+	// ADD THIS DEBUG LOGGING
+	m.Logger.Info("GetBlockVolume called",
 
-// 	if spec == nil {
-// 		return nil, errors.New("BlockVolumeSpec is not set")
-// 	}
+		"spec", spec)
 
-// 	// Default compartment if not provided
-// 	compartmentId := spec.CompartmentId
-// 	if compartmentId == nil {
-// 		compartmentId = common.String(s.GetCompartmentId())
-// 	}
+	if spec.AvailabilityDomain == nil {
+		return nil, errors.New("BlockVolumeSpec is not set")
+	}
 
-// 	// Store created volumes
-// 	var createdVolumes []*core.Volume
+	// search by DisplayName.
+	name := m.GetBlockVolumeName()
+	if name == "" {
+		return nil, errors.New("BlockVolume DisplayName cannot be empty")
+	}
 
-// 	for i := 0; i < int(*spec.NumberOfBlockVolumes); i++ {
-// 		volumeName := common.String(fmt.Sprintf("%s-%d", s.GetBlockVolumeName(), i))
+	var page *string
+	for {
+		resp, err := m.BlockVolumeClient.ListVolumes(ctx, core.ListVolumesRequest{
+			CompartmentId: common.String(m.getCompartmentId()),
+			DisplayName:   common.String(name),
+			Page:          page,
+		})
+		if err != nil {
+			return nil, err
+		}
+		for _, v := range resp.Items {
+			if m.IsResourceCreatedByClusterAPI(v.FreeformTags) {
+				return &v, nil
+			}
+		}
+		if resp.OpcNextPage == nil {
+			break
+		}
+		page = resp.OpcNextPage
+	}
+	return nil, nil
+}
 
-// 		// Check if volume already exists
-// 		existingVol, err := s.GetBlockVolume(ctx)
-// 		if err != nil {
-// 			return createdVolumes, fmt.Errorf("failed to check existing volume %s: %w", *volumeName, err)
-// 		}
+// GetBlockVolumeId retrieves the block volume ID by searching for a volume
+// by DisplayName within the compartment and ensuring Cluster API ownership via tags.
+// Returns the volume ID as a string, or empty string if not found.
+func (m *MachineScope) GetBlockVolumeId(ctx context.Context) (string, error) {
+	spec := m.OCIMachine.Spec.BlockVolumeSpec
 
-// 		if existingVol != nil {
-// 			s.Logger.Info("Block Volume already exists, skipping creation",
-// 				"volume", *existingVol.Id,
-// 				"name", *volumeName)
-// 			createdVolumes = append(createdVolumes, existingVol)
-// 			continue
-// 		}
-// 		// Build CreateVolumeDetails from spec
-// 		details := core.CreateVolumeDetails{
-// 			AvailabilityDomain: spec.AvailabilityDomain,
-// 			CompartmentId:      compartmentId,
-// 			DisplayName:        volumeName,
-// 			VpusPerGB:          spec.VpusPerGB,
-// 			SizeInGBs:          spec.SizeInGBs,
-// 			FreeformTags:       s.GetFreeFormTags(),
-// 			AutotunePolicies:   s.ToOCIAutotunePolicy(),
-// 		}
+	m.Logger.Info("GetBlockVolumeId called",
+		"spec", spec)
 
-// 		// Convert block volume replica details if provided.
-// 		if len(spec.BlockVolumeReplicas) > 0 {
-// 			replicas := make([]core.BlockVolumeReplicaDetails, 0, len(spec.BlockVolumeReplicas))
-// 			for _, r := range spec.BlockVolumeReplicas {
-// 				replicas = append(replicas, core.BlockVolumeReplicaDetails{
-// 					AvailabilityDomain: r.AvailabilityDomain,
-// 					DisplayName:        r.DisplayName,
-// 					XrrKmsKeyId:        r.XrrKmsKeyId,
-// 				})
-// 			}
-// 			details.BlockVolumeReplicas = replicas
-// 		}
+	if spec.AvailabilityDomain == nil {
+		return "", errors.New("BlockVolumeSpec is not set")
+	}
 
-// 		resp, err := s.VolumeClient.CreateVolume(ctx, core.CreateVolumeRequest{
-// 			CreateVolumeDetails: details,
-// 			OpcRetryToken:       ociutil.GetOPCRetryToken("%s-%s", "create-bv", common.String(fmt.Sprintf("%s-%d", s.OCIClusterAccessor.GetOCIResourceIdentifier(), i)))})
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		vol := resp.Volume
-// 		// Sanity: ensure tag ownership
-// 		if !s.IsResourceCreatedByClusterAPI(vol.FreeformTags) {
-// 			return nil, errors.New("created block volume missing cluster api ownership tags")
-// 		}
+	// Search by DisplayName
+	name := m.GetBlockVolumeName()
+	if name == "" {
+		return "", errors.New("BlockVolume DisplayName cannot be empty")
+	}
 
-// 		createdVolumes = append(createdVolumes, &vol)
-// 		s.Logger.Info("Successfully created Block Volume", "volume", *vol.Id, "name", *volumeName)
+	var page *string
+	for {
+		resp, err := m.BlockVolumeClient.ListVolumes(ctx, core.ListVolumesRequest{
+			CompartmentId: common.String(m.getCompartmentId()),
+			DisplayName:   common.String(name),
+			Page:          page,
+		})
+		if err != nil {
+			return "", err
+		}
 
-// 	}
-// 	return createdVolumes, nil
-// }
+		for _, v := range resp.Items {
+			if m.IsResourceCreatedByClusterAPI(v.FreeformTags) {
+				return *v.Id, nil
+			}
+		}
 
-// // ReconcileBlockVolume ensures block volumes exist as described by the
-// // cluster's BlockVolumeSpec. If volumes already exist, it records the IDs on
-// // the spec and returns without changes.
-// func (s *ClusterScope) ReconcileBlockVolume(ctx context.Context) error {
-// 	spec := s.OCIClusterAccessor.GetBlockVolumeSpec()
+		if resp.OpcNextPage == nil {
+			break
+		}
+		page = resp.OpcNextPage
+	}
 
-// 	s.Logger.Info("ReconcileBlockVolume called",
-// 		"hasSpec", spec != nil,
-// 		"spec", spec)
+	return "", nil
+}
 
-// 	if spec == nil {
-// 		s.Logger.Info("BlockVolumeSpec is not set, skipping reconciliation")
-// 		return nil
-// 	}
+// GetBlockVolumeName returns the desired display name for the block volume. If
+// the user hasn't provided one, it derives a sensible default from the cluster name.
+func (m *MachineScope) GetBlockVolumeName() string {
+	spec := m.OCIMachine.Spec.BlockVolumeSpec
+	if spec.AvailabilityDomain == nil {
+		return ""
+	}
+	if spec.DisplayName != nil && *spec.DisplayName != "" {
+		return *spec.DisplayName
+	}
+	return ""
+}
 
-// 	// Check if volumes already exist
-// 	existingVols, err := s.GetBlockVolumes(ctx)
-// 	if err != nil {
-// 		return err
-// 	}
+// ToOCIAutotunePolicy converts your AutotunePolicy to the OCI SDK AutotunePolicy interface
+func (m *MachineScope) ToOCIAutotunePolicy() []core.AutotunePolicy {
+	spec := m.OCIMachine.Spec.BlockVolumeSpec
+	if spec.AvailabilityDomain == nil || len(spec.AutotunePolicies) == 0 {
+		return nil
+	}
 
-// 	if len(existingVols) >= int(*spec.NumberOfBlockVolumes) {
-// 		s.Logger.Info("Block volumes already exist", "count", len(existingVols))
-// 		return nil
-// 	}
+	policies := make([]core.AutotunePolicy, 0, len(spec.AutotunePolicies))
 
-// 	// Create volumes
-// 	vols, err := s.CreateBlockVolumes(ctx)
-// 	if err != nil {
-// 		return err
-// 	}
+	for _, a := range spec.AutotunePolicies {
+		switch a.AutotuneType {
+		case "DETACHED_VOLUME":
+			policies = append(policies, core.DetachedVolumeAutotunePolicy{})
 
-// 	s.Logger.Info("Successfully reconciled Block Volumes", "count", len(vols))
-// 	return nil
-// }
+		case "PERFORMANCE_BASED":
+			if a.MaxVPUsPerGB == nil {
+				// skip invalid policy
+				continue
+			}
+			policies = append(policies, core.PerformanceBasedAutotunePolicy{
+				MaxVpusPerGB: a.MaxVPUsPerGB,
+			})
 
-// // DeleteBlockVolumes attempts to delete all block volumes if they exist.
-// func (s *ClusterScope) DeleteBlockVolumes(ctx context.Context) error {
-// 	spec := s.OCIClusterAccessor.GetBlockVolumeSpec()
-// 	if spec == nil {
-// 		s.Logger.Info("BlockVolumeSpec is not set, skipping deletion")
-// 		return nil
-// 	}
+		default:
+			// unknown policy type, skip
+			continue
+		}
+	}
 
-// 	vols, err := s.GetBlockVolumes(ctx)
-// 	if err != nil && !ociutil.IsNotFound(err) {
-// 		return err
-// 	}
+	if len(policies) == 0 {
+		return nil
+	}
 
-// 	if len(vols) == 0 {
-// 		s.Logger.Info("Block Volumes already deleted or not found")
-// 		return nil
-// 	}
+	return policies
+}
 
-// 	// Delete all volumes
-// 	var deletionErrors []error
-// 	for _, vol := range vols {
-// 		s.Logger.Info("Deleting Block Volume", "volume", *vol.Id, "name", *vol.DisplayName)
+func (m *MachineScope) CreateBlockVolume(ctx context.Context) error {
+	spec := m.OCIMachine.Spec.BlockVolumeSpec
+	if spec.AvailabilityDomain == nil {
+		return errors.New("BlockVolumeSpec is not set")
+	}
 
-// 		_, err = s.VolumeClient.DeleteVolume(ctx, core.DeleteVolumeRequest{
-// 			VolumeId: vol.Id,
-// 		})
-// 		if err != nil {
-// 			if ociutil.IsNotFound(err) {
-// 				s.Logger.Info("Block Volume already deleted", "volume", *vol.Id)
-// 				continue
-// 			}
-// 			deletionErrors = append(deletionErrors, fmt.Errorf("failed to delete volume %s: %w", *vol.Id, err))
-// 			continue
-// 		}
+	// Default compartment if not provided
+	compartmentId := spec.CompartmentId
+	if compartmentId == nil {
+		compartmentId = common.String(m.getCompartmentId())
+	}
 
-// 		s.Logger.Info("Successfully initiated Block Volume deletion", "volume", *vol.Id)
-// 	}
+	// Validate required fields
+	if spec.AvailabilityDomain == nil || *spec.AvailabilityDomain == "" {
+		return errors.New("AvailabilityDomain is required but not set")
+	}
 
-// 	// Return combined errors if any occurred
-// 	if len(deletionErrors) > 0 {
-// 		return fmt.Errorf("errors deleting volumes: %v", deletionErrors)
-// 	}
+	if spec.SizeInGBs == nil {
+		return errors.New("SizeInGBs is required but not set")
+	}
 
-// 	return nil
-// }
+	blockVolumeName := m.GetBlockVolumeName()
+	if blockVolumeName == "" {
+		return errors.New("BlockVolume DisplayName cannot be empty")
+	}
 
-// // GetBlockVolumeName returns the desired display name for the block volume. If
-// // the user hasn't provided one, it derives a sensible default from the cluster name.
-// func (s *ClusterScope) GetBlockVolumeName() string {
-// 	spec := s.OCIClusterAccessor.GetBlockVolumeSpec()
-// 	if spec == nil {
-// 		return ""
-// 	}
-// 	if spec.DisplayName != nil && *spec.DisplayName != "" {
-// 		return *spec.DisplayName
-// 	}
-// 	// Default name: <clusterName>-block-volume
-// 	return fmt.Sprintf("%s", s.OCIClusterAccessor.GetName())
-// }
+	// Build CreateVolumeDetails from spec
+	createVolumeDetails := core.CreateVolumeDetails{
+		AvailabilityDomain: spec.AvailabilityDomain,
+		CompartmentId:      compartmentId,
+		DisplayName:        common.String(blockVolumeName),
+		VpusPerGB:          spec.VpusPerGB,
+		SizeInGBs:          spec.SizeInGBs,
+		FreeformTags:       m.getFreeFormTags(),
+		IsAutoTuneEnabled:  spec.IsAutoTuneEnabled,
+		AutotunePolicies:   m.ToOCIAutotunePolicy(),
+	}
 
-// // GetBlockVolume retrieves a core.Volume using either the VolumeId recorded in the
-// // spec or by listing volumes by DisplayName within the compartment and ensuring
-// // Cluster API ownership via tags.
-// // nolint:nilnil
-// func (s *ClusterScope) GetBlockVolume(ctx context.Context) (*core.Volume, error) {
-// 	spec := s.OCIClusterAccessor.GetBlockVolumeSpec()
-// 	if spec == nil {
-// 		return nil, nil
-// 	}
+	// Convert block volume replica details if provided.
+	if len(spec.BlockVolumeReplicas) > 0 {
+		replicas := make([]core.BlockVolumeReplicaDetails, 0, len(spec.BlockVolumeReplicas))
+		for _, r := range spec.BlockVolumeReplicas {
+			replicas = append(replicas, core.BlockVolumeReplicaDetails{
+				AvailabilityDomain: r.AvailabilityDomain,
+				DisplayName:        r.DisplayName,
+				XrrKmsKeyId:        r.XrrKmsKeyId,
+			})
+		}
+		createVolumeDetails.BlockVolumeReplicas = replicas
+	}
 
-// 	// First try by explicit ID if provided
-// 	if spec.SourceDetails != "" {
-// 		resp, err := s.VolumeClient.GetVolume(ctx, core.GetVolumeRequest{VolumeId: common.String(spec.SourceDetails)})
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		vol := resp.Volume
-// 		if s.IsResourceCreatedByClusterAPI(vol.FreeformTags) {
-// 			return &vol, nil
-// 		}
-// 		return nil, errors.New("cluster api tags have been modified out of context")
-// 	}
+	if m.BlockVolumeClient == nil {
+		return errors.New("BlockVolumeClient is nil - was not initialized properly")
+	}
 
-// 	// Otherwise search by DisplayName.
-// 	name := s.GetBlockVolumeName()
-// 	if name == "" {
-// 		return nil, nil
-// 	}
+	m.Logger.Info("BlockVolumeClient is NOT nil, proceeding with API call")
 
-// 	var page *string
-// 	for {
-// 		resp, err := s.VolumeClient.ListVolumes(ctx, core.ListVolumesRequest{
-// 			CompartmentId: common.String(s.GetCompartmentId()),
-// 			DisplayName:   common.String(name),
-// 			Page:          page,
-// 		})
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		for _, v := range resp.Items {
-// 			if s.IsResourceCreatedByClusterAPI(v.FreeformTags) {
-// 				// fetch full details to have consistent return type behavior with GetVolume
-// 				getResp, err := s.VolumeClient.GetVolume(ctx, core.GetVolumeRequest{VolumeId: v.Id})
-// 				if err != nil {
-// 					return nil, err
-// 				}
-// 				vol := getResp.Volume
-// 				return &vol, nil
-// 			}
-// 		}
-// 		if resp.OpcNextPage == nil {
-// 			break
-// 		}
-// 		page = resp.OpcNextPage
-// 	}
-// 	return nil, nil
-// }
+	resp, err := m.BlockVolumeClient.CreateVolume(ctx, core.CreateVolumeRequest{
+		CreateVolumeDetails: createVolumeDetails,
+		OpcRetryToken:       ociutil.GetOPCRetryToken("%s-%s", "create-bv", string(m.OCIMachine.UID)),
+	})
+	if err != nil {
+		return err
+	}
 
-// // GetBlockVolumes retrieves all block volumes associated with this cluster.
-// func (s *ClusterScope) GetBlockVolumes(ctx context.Context) ([]*core.Volume, error) {
-// 	spec := s.OCIClusterAccessor.GetBlockVolumeSpec()
-// 	if spec == nil {
-// 		return nil, nil
-// 	}
+	vol := resp.Volume
+	// Sanity: ensure tag ownership
+	if !m.IsResourceCreatedByClusterAPI(vol.FreeformTags) {
+		return errors.New("created block volume missing cluster api ownership tags")
+	}
+	return nil
+}
 
-// 	// Default compartment if not provided
-// 	compartmentId := spec.CompartmentId
-// 	if compartmentId == nil {
-// 		compartmentId = common.String(s.GetCompartmentId())
-// 	}
+// ReconcileBlockVolume ensures a block volume exists as described by the
+// cluster's BlockVolumeSpec. If the volume already exists, it records the ID on
+// the spec and returns without changes.
+func (m *MachineScope) ReconcileBlockVolume(ctx context.Context) error {
+	spec := m.OCIMachine.Spec.BlockVolumeSpec
+	if spec.AvailabilityDomain == nil {
+		m.Logger.Info("BlockVolumeSpec is not set, skipping reconciliation")
+		return nil
+	}
 
-// 	var volumes []*core.Volume
+	// If neither an explicit ID nor enough inputs to create is provided, skip.
+	if spec.SourceDetails == "" && spec.SizeInGBs == nil && (spec.DisplayName == nil || *spec.DisplayName == "") {
+		m.Logger.Info("BlockVolumeSpec does not contain an ID, name or size; skipping reconciliation")
+		return nil
+	}
 
-// 	// Iterate through expected volume names
-// 	for i := 1; i <= int(*spec.NumberOfBlockVolumes); i++ {
-// 		volumeName := fmt.Sprintf("%s-%d", s.GetBlockVolumeName(), i)
+	vol, err := m.GetBlockVolume(ctx)
+	m.Logger.Info("ReconcileBlockVolume - Debug GetBlockVolume", "GetBlockVolume result", vol)
+	if err != nil {
+		return err
+	}
 
-// 		// List volumes with filter
-// 		req := core.ListVolumesRequest{
-// 			CompartmentId:      compartmentId,
-// 			DisplayName:        common.String(volumeName),
-// 			AvailabilityDomain: spec.AvailabilityDomain,
-// 		}
+	// If there was not found any BlockVolume already created with BlockVolumeSpec configuration, it will create it
+	if vol == nil {
+		m.Logger.Info("Creating Block Volume")
+		err = m.CreateBlockVolume(ctx)
+	}
 
-// 		resp, err := s.VolumeClient.ListVolumes(ctx, req)
-// 		if err != nil {
-// 			return volumes, fmt.Errorf("failed to list volumes for %s: %w", volumeName, err)
-// 		}
+	return err
+}
 
-// 		// Filter by cluster ownership tags
-// 		for _, vol := range resp.Items {
-// 			if s.IsResourceCreatedByClusterAPI(vol.FreeformTags) {
-// 				// Check if volume is in a valid state
-// 				if vol.LifecycleState != core.VolumeLifecycleStateTerminated &&
-// 					vol.LifecycleState != core.VolumeLifecycleStateTerminating {
-// 					volumes = append(volumes, &vol)
-// 					s.Logger.Info("Found Block Volume",
-// 						"volume", *vol.Id,
-// 						"name", *vol.DisplayName,
-// 						"state", vol.LifecycleState)
-// 				}
-// 			}
-// 		}
-// 	}
+// DeleteBlockVolume attempts to delete the block volume if it exists.
+func (m *MachineScope) DeleteBlockVolume(ctx context.Context) error {
+	if m.BlockVolumeClient == nil {
+		m.Logger.Info("BlockVolumeClient is not set, skipping deletion")
+		return nil
+	}
+	spec := m.OCIMachine.Spec.BlockVolumeSpec
+	if spec.AvailabilityDomain == nil {
+		m.Logger.Info("BlockVolumeSpec is not set, skipping deletion")
+		return nil
+	}
 
-// 	return volumes, nil
-// }
+	vol, err := m.GetBlockVolume(ctx)
+	if err != nil && !ociutil.IsNotFound(err) {
+		return err
+	}
+	if vol == nil || vol.Id == nil {
+		m.Logger.Info("Block Volume already deleted or not found")
+		return nil
+	}
 
-// // ToOCIAutotunePolicy converts AutotunePolicies to OCI SDK AutotunePolicy interfaces
-// func (s *ClusterScope) ToOCIAutotunePolicy() []core.AutotunePolicy {
-// 	spec := s.OCIClusterAccessor.GetBlockVolumeSpec()
-// 	if spec == nil || len(spec.AutotunePolicies) == 0 {
-// 		return nil
-// 	}
-
-// 	policies := make([]core.AutotunePolicy, 0, len(spec.AutotunePolicies))
-
-// 	for _, a := range spec.AutotunePolicies {
-// 		switch a.AutotuneType {
-// 		case "DETACHED_VOLUME":
-// 			policies = append(policies, core.DetachedVolumeAutotunePolicy{})
-
-// 		case "PERFORMANCE_BASED":
-// 			if a.MaxVPUsPerGB == nil {
-// 				// skip invalid policy
-// 				continue
-// 			}
-// 			policies = append(policies, core.PerformanceBasedAutotunePolicy{
-// 				MaxVpusPerGB: a.MaxVPUsPerGB,
-// 			})
-
-// 		default:
-// 			// unknown policy type, skip
-// 			continue
-// 		}
-// 	}
-
-// 	if len(policies) == 0 {
-// 		return nil
-// 	}
-
-// 	return policies
-// }
+	_, err = m.BlockVolumeClient.DeleteVolume(ctx, core.DeleteVolumeRequest{VolumeId: vol.Id})
+	if err != nil {
+		return err
+	}
+	m.Logger.Info("Successfully initiated Block Volume deletion", "volume", vol.Id)
+	return nil
+}
