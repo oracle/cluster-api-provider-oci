@@ -29,6 +29,7 @@ import (
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/compute"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/identity"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
+	"github.com/oracle/cluster-api-provider-oci/cloud/services/volume"
 	"github.com/oracle/oci-go-sdk/v65/loadbalancer"
 	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
 	"github.com/oracle/oci-go-sdk/v65/workrequests"
@@ -41,6 +42,7 @@ type MockOCIClients struct {
 	NetworkLoadBalancerClient *networkloadbalancer.NetworkLoadBalancerClient
 	LoadBalancerClient        *loadbalancer.LoadBalancerClient
 	IdentityClient            identity.Client
+	BlockVolumeClient         volume.BlockVolumeClient
 	WorkRequestsClient        *workrequests.WorkRequestClient
 }
 
@@ -55,6 +57,7 @@ func MockNewClientProvider(mockClients MockOCIClients) (*ClientProvider, error) 
 		NetworkLoadBalancerClient: mockClients.NetworkLoadBalancerClient,
 		LoadBalancerClient:        mockClients.LoadBalancerClient,
 		IdentityClient:            mockClients.IdentityClient,
+		BlockVolumeClient:         mockClients.BlockVolumeClient,
 		ComputeClient:             mockClients.ComputeClient,
 		WorkRequestsClient:        mockClients.WorkRequestsClient,
 	}}

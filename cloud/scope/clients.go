@@ -32,6 +32,7 @@ import (
 	lb "github.com/oracle/cluster-api-provider-oci/cloud/services/loadbalancer"
 	nlb "github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
+	"github.com/oracle/cluster-api-provider-oci/cloud/services/volume"
 	wr "github.com/oracle/cluster-api-provider-oci/cloud/services/workrequests"
 	"github.com/oracle/cluster-api-provider-oci/version"
 	"github.com/oracle/oci-go-sdk/v65/common"
@@ -48,6 +49,7 @@ import (
 // OCIClients is the struct of all the needed OCI clients
 type OCIClients struct {
 	ComputeClient             compute.ComputeClient
+	BlockVolumeClient         volume.BlockVolumeClient
 	ComputeManagementClient   computemanagement.Client
 	VCNClient                 vcn.Client
 	NetworkLoadBalancerClient nlb.NetworkLoadBalancerClient
@@ -160,6 +162,10 @@ func (c *ClientProvider) createClients(region string) (OCIClients, error) {
 	if err != nil {
 		return OCIClients{}, err
 	}
+	blockVolumeClient, err := c.createBlockVolumeClient(region, c.ociAuthConfigProvider, c.Logger)
+	if err != nil {
+		return OCIClients{}, err
+	}
 	computeManagementClient, err := c.createComputeManagementClient(region, c.ociAuthConfigProvider, c.Logger)
 	if err != nil {
 		return OCIClients{}, err
@@ -183,6 +189,7 @@ func (c *ClientProvider) createClients(region string) (OCIClients, error) {
 		LoadBalancerClient:        lbClient,
 		IdentityClient:            identityClt,
 		ComputeClient:             computeClient,
+		BlockVolumeClient:         blockVolumeClient,
 		ComputeManagementClient:   computeManagementClient,
 		ContainerEngineClient:     containerEngineClt,
 		WorkRequestsClient:        workrequestsClt,
@@ -260,6 +267,24 @@ func (c *ClientProvider) createIdentityClient(region string, ociAuthConfigProvid
 	identityClt.Interceptor = setVersionHeader()
 
 	return &identityClt, nil
+}
+
+func (c *ClientProvider) createBlockVolumeClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (volume.BlockVolumeClient, error) {
+	blockVolumeClient, err := core.NewBlockstorageClientWithConfigurationProvider(ociAuthConfigProvider)
+	if err != nil {
+		logger.Error(err, "unable to create OCI Compute Client")
+		return nil, err
+	}
+	blockVolumeClient.SetRegion(region)
+	dispatcher := blockVolumeClient.HTTPClient
+	blockVolumeClient.HTTPClient = metrics.NewHttpRequestDispatcherWrapper(dispatcher, region)
+
+	if c.ociClientOverrides != nil && c.ociClientOverrides.VolumeClientUrl != nil {
+		blockVolumeClient.Host = *c.ociClientOverrides.VolumeClientUrl
+	}
+	blockVolumeClient.Interceptor = setVersionHeader()
+
+	return &blockVolumeClient, nil
 }
 
 func (c *ClientProvider) createComputeClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (compute.ComputeClient, error) {

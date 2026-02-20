@@ -143,6 +143,12 @@ type ClientOverrides struct {
 	// +nullable
 	ComputeClientUrl *string `json:"computeClientUrl,omitempty"`
 
+	// VolumeClientUrl allows the default volume SDK client URL to be changed.
+	//
+	// +optional
+	// +nullable
+	VolumeClientUrl *string `json:"VolumeClientUrl,omitempty"`
+
 	// ComputeManagementClientUrl allows the default compute management SDK client URL to be changed.
 	//
 	// +optional

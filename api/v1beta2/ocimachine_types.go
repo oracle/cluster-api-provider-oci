@@ -100,6 +100,10 @@ type OCIMachineSpec struct {
 	// +optional
 	ProviderID *string `json:"providerID,omitempty"`
 
+	// BlockVolumeSpec encapsulated all things related to creating block volume before compute
+	// +optional
+	BlockVolumeSpec BlockVolumeSpec `json:"blockvolumeSpec,omitempty"`
+
 	// Is in transit encryption of volumes required.
 	// +optional
 	IsPvEncryptionInTransitEnabled bool `json:"isPvEncryptionInTransitEnabled,omitempty"`
