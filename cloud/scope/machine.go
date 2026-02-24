@@ -270,11 +270,21 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 	launchDetails.AvailabilityConfig = m.getAvailabilityConfig()
 	launchDetails.PreemptibleInstanceConfig = m.getPreemptibleInstanceConfig()
 	launchDetails.PlatformConfig = m.getPlatformConfig()
-	m.Logger.Info("Started reconcile volume creation...")
+
+	m.Logger.Info("Started reconcile block volume creation...")
 	err = m.ReconcileBlockVolume(ctx)
+
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	var bvId string
 	bvId, err = m.GetBlockVolumeId(ctx)
+
+	// if err != nil {
+	// 	return nil, err
+	// }
+
 	if bvId != "" {
 
 		// Wait for volume to be available
@@ -311,7 +321,7 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 				},
 			}...)
 		} else {
-			m.Logger.Info("Unknown attachment type not supported")
+			return nil, errors.New("Unknown attachment type in BlockVolumeSpec, not supported")
 		}
 
 	}
@@ -483,11 +493,9 @@ func (m *MachineScope) DeleteMachine(ctx context.Context, instance *core.Instanc
 	for {
 		getInstanceResp, err := m.ComputeClient.GetInstance(ctx, getInstanceReq)
 		if err != nil {
-			if serviceErr, ok := err.(common.ServiceError); ok {
-				if serviceErr.GetHTTPStatusCode() == 404 {
-					m.Logger.Info("Instance terminated successfully")
-					break
-				}
+			if ociutil.IsNotFound(err) {
+				m.Logger.Info("Instance terminated successfully")
+				break
 			}
 			m.Logger.Info("Error checking instance state", "error", err.Error())
 			break

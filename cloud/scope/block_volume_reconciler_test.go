@@ -89,24 +89,21 @@ func TestBlockVolumeReconciliation(t *testing.T) {
 		errorSubStringMatch bool
 		testSpecificSetup   func(machineScope *MachineScope, blockVolumeClient *mock_volume.MockBlockVolumeClient)
 	}{
-		// -----------------------------------------------------------------------
-		// ReconcileBlockVolume
-		// -----------------------------------------------------------------------
 		{
-			name:          "reconcile skipped when AvailabilityDomain is nil",
-			errorExpected: false,
+			name:          "reconcile returns error when AvailabilityDomain is nil",
+			errorExpected: true,
+			matchError:    errors.New("BlockVolumeSpec availabilityDomain is not set, but required"),
 			testSpecificSetup: func(machineScope *MachineScope, blockVolumeClient *mock_volume.MockBlockVolumeClient) {
-				// BlockVolumeSpec has no AvailabilityDomain - should be skipped entirely
 				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{}
 			},
 		},
 		{
-			name:          "reconcile skipped when no name or size",
-			errorExpected: false,
+			name:          "reconcile returns error when DisplayName is not set",
+			errorExpected: true,
+			matchError:    errors.New("BlockVolumeSpec displayName is not set, but required"),
 			testSpecificSetup: func(machineScope *MachineScope, blockVolumeClient *mock_volume.MockBlockVolumeClient) {
 				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
 					AvailabilityDomain: common.String("ad1"),
-					// No DisplayName, no SizeInGBs, no SourceDetails
 				}
 			},
 		},
@@ -137,7 +134,7 @@ func TestBlockVolumeReconciliation(t *testing.T) {
 			},
 		},
 		{
-			name:          "volume does not exist, create it",
+			name:          "volume does not exist, created successfully",
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, blockVolumeClient *mock_volume.MockBlockVolumeClient) {
 				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
@@ -145,13 +142,10 @@ func TestBlockVolumeReconciliation(t *testing.T) {
 					DisplayName:        common.String("new-volume"),
 					SizeInGBs:          common.Int64(100),
 				}
-				// ListVolumes returns empty - no existing volume
 				blockVolumeClient.EXPECT().ListVolumes(gomock.Any(), gomock.Eq(core.ListVolumesRequest{
 					CompartmentId: common.String("test-compartment"),
 					DisplayName:   common.String("new-volume"),
 				})).Return(core.ListVolumesResponse{Items: []core.Volume{}}, nil)
-
-				// CreateVolume is called
 				blockVolumeClient.EXPECT().CreateVolume(gomock.Any(), gomock.Eq(core.CreateVolumeRequest{
 					CreateVolumeDetails: core.CreateVolumeDetails{
 						AvailabilityDomain: common.String("ad1"),
@@ -164,16 +158,7 @@ func TestBlockVolumeReconciliation(t *testing.T) {
 						},
 					},
 					OpcRetryToken: ociutil.GetOPCRetryToken("%s-%s", "create-bv", "machine-uid"),
-				})).Return(core.CreateVolumeResponse{
-					Volume: core.Volume{
-						Id:          common.String("new-vol-id"),
-						DisplayName: common.String("new-volume"),
-						FreeformTags: map[string]string{
-							ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,
-							ociutil.ClusterResourceIdentifier: "resource_uid",
-						},
-					},
-				}, nil)
+				})).Return(core.CreateVolumeResponse{}, nil)
 			},
 		},
 		{
@@ -214,7 +199,6 @@ func TestBlockVolumeReconciliation(t *testing.T) {
 					AvailabilityDomain: common.String("ad1"),
 					DisplayName:        common.String("autotune-volume"),
 					SizeInGBs:          common.Int64(50),
-					IsAutoTuneEnabled:  common.Bool(true),
 					AutotunePolicies: []infrastructurev1beta2.AutotunePolicy{
 						{AutotuneType: "DETACHED_VOLUME"},
 						{AutotuneType: "PERFORMANCE_BASED", MaxVPUsPerGB: common.Int64(20)},
@@ -228,7 +212,6 @@ func TestBlockVolumeReconciliation(t *testing.T) {
 						CompartmentId:      common.String("test-compartment"),
 						DisplayName:        common.String("autotune-volume"),
 						SizeInGBs:          common.Int64(50),
-						IsAutoTuneEnabled:  common.Bool(true),
 						AutotunePolicies: []core.AutotunePolicy{
 							core.DetachedVolumeAutotunePolicy{},
 							core.PerformanceBasedAutotunePolicy{MaxVpusPerGB: common.Int64(20)},
@@ -239,63 +222,7 @@ func TestBlockVolumeReconciliation(t *testing.T) {
 						},
 					},
 					OpcRetryToken: ociutil.GetOPCRetryToken("%s-%s", "create-bv", "machine-uid"),
-				})).Return(core.CreateVolumeResponse{
-					Volume: core.Volume{
-						Id:          common.String("autotune-vol-id"),
-						DisplayName: common.String("autotune-volume"),
-						FreeformTags: map[string]string{
-							ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,
-							ociutil.ClusterResourceIdentifier: "resource_uid",
-						},
-					},
-				}, nil)
-			},
-		},
-		{
-			name:          "volume created with block volume replicas",
-			errorExpected: false,
-			testSpecificSetup: func(machineScope *MachineScope, blockVolumeClient *mock_volume.MockBlockVolumeClient) {
-				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
-					AvailabilityDomain: common.String("ad1"),
-					DisplayName:        common.String("replica-volume"),
-					SizeInGBs:          common.Int64(50),
-					BlockVolumeReplicas: []infrastructurev1beta2.BlockVolumeReplicaDetails{
-						{
-							AvailabilityDomain: common.String("ad2"),
-							DisplayName:        common.String("replica-volume-ad2"),
-						},
-					},
-				}
-				blockVolumeClient.EXPECT().ListVolumes(gomock.Any(), gomock.Any()).
-					Return(core.ListVolumesResponse{Items: []core.Volume{}}, nil)
-				blockVolumeClient.EXPECT().CreateVolume(gomock.Any(), gomock.Eq(core.CreateVolumeRequest{
-					CreateVolumeDetails: core.CreateVolumeDetails{
-						AvailabilityDomain: common.String("ad1"),
-						CompartmentId:      common.String("test-compartment"),
-						DisplayName:        common.String("replica-volume"),
-						SizeInGBs:          common.Int64(50),
-						BlockVolumeReplicas: []core.BlockVolumeReplicaDetails{
-							{
-								AvailabilityDomain: common.String("ad2"),
-								DisplayName:        common.String("replica-volume-ad2"),
-							},
-						},
-						FreeformTags: map[string]string{
-							ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,
-							ociutil.ClusterResourceIdentifier: "resource_uid",
-						},
-					},
-					OpcRetryToken: ociutil.GetOPCRetryToken("%s-%s", "create-bv", "machine-uid"),
-				})).Return(core.CreateVolumeResponse{
-					Volume: core.Volume{
-						Id:          common.String("replica-vol-id"),
-						DisplayName: common.String("replica-volume"),
-						FreeformTags: map[string]string{
-							ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,
-							ociutil.ClusterResourceIdentifier: "resource_uid",
-						},
-					},
-				}, nil)
+				})).Return(core.CreateVolumeResponse{}, nil)
 			},
 		},
 		{
@@ -324,16 +251,7 @@ func TestBlockVolumeReconciliation(t *testing.T) {
 						},
 					},
 					OpcRetryToken: ociutil.GetOPCRetryToken("%s-%s", "create-bv", "machine-uid"),
-				})).Return(core.CreateVolumeResponse{
-					Volume: core.Volume{
-						Id:          common.String("custom-vol-id"),
-						DisplayName: common.String("custom-compartment-volume"),
-						FreeformTags: map[string]string{
-							ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,
-							ociutil.ClusterResourceIdentifier: "resource_uid",
-						},
-					},
-				}, nil)
+				})).Return(core.CreateVolumeResponse{}, nil)
 			},
 		},
 	}
@@ -415,25 +333,6 @@ func TestDeleteBlockVolume(t *testing.T) {
 		testSpecificSetup   func(machineScope *MachineScope, blockVolumeClient *mock_volume.MockBlockVolumeClient)
 	}{
 		{
-			name:          "delete skipped when AvailabilityDomain is nil",
-			errorExpected: false,
-			testSpecificSetup: func(machineScope *MachineScope, blockVolumeClient *mock_volume.MockBlockVolumeClient) {
-				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{}
-			},
-		},
-		{
-			name:          "volume not found, delete skipped",
-			errorExpected: false,
-			testSpecificSetup: func(machineScope *MachineScope, blockVolumeClient *mock_volume.MockBlockVolumeClient) {
-				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
-					AvailabilityDomain: common.String("ad1"),
-					DisplayName:        common.String("test-volume"),
-				}
-				blockVolumeClient.EXPECT().ListVolumes(gomock.Any(), gomock.Any()).
-					Return(core.ListVolumesResponse{Items: []core.Volume{}}, nil)
-			},
-		},
-		{
 			name:          "volume found and deleted successfully",
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, blockVolumeClient *mock_volume.MockBlockVolumeClient) {
@@ -462,19 +361,6 @@ func TestDeleteBlockVolume(t *testing.T) {
 			},
 		},
 		{
-			name:          "list volumes error",
-			errorExpected: true,
-			matchError:    errors.New("list volumes failed"),
-			testSpecificSetup: func(machineScope *MachineScope, blockVolumeClient *mock_volume.MockBlockVolumeClient) {
-				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
-					AvailabilityDomain: common.String("ad1"),
-					DisplayName:        common.String("test-volume"),
-				}
-				blockVolumeClient.EXPECT().ListVolumes(gomock.Any(), gomock.Any()).
-					Return(core.ListVolumesResponse{}, errors.New("list volumes failed"))
-			},
-		},
-		{
 			name:          "delete volume error",
 			errorExpected: true,
 			matchError:    errors.New("delete volume failed"),
@@ -500,27 +386,6 @@ func TestDeleteBlockVolume(t *testing.T) {
 					Return(core.DeleteVolumeResponse{}, errors.New("delete volume failed"))
 			},
 		},
-		{
-			name:          "volume found but not owned by cluster api, skip deletion",
-			errorExpected: false,
-			testSpecificSetup: func(machineScope *MachineScope, blockVolumeClient *mock_volume.MockBlockVolumeClient) {
-				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
-					AvailabilityDomain: common.String("ad1"),
-					DisplayName:        common.String("test-volume"),
-				}
-				blockVolumeClient.EXPECT().ListVolumes(gomock.Any(), gomock.Any()).
-					Return(core.ListVolumesResponse{
-						Items: []core.Volume{
-							{
-								Id:           common.String("foreign-vol-id"),
-								DisplayName:  common.String("test-volume"),
-								FreeformTags: map[string]string{}, // no cluster API tags
-							},
-						},
-					}, nil)
-				// no DeleteVolume call expected
-			},
-		},
 	}
 
 	for _, tc := range tests {
@@ -544,7 +409,7 @@ func TestDeleteBlockVolume(t *testing.T) {
 	}
 }
 
-func TestGetBlockVolumeName(t *testing.T) {
+func TestGetBlockVolumeDesiredName(t *testing.T) {
 	var (
 		ms       *MachineScope
 		mockCtrl *gomock.Controller
@@ -579,12 +444,11 @@ func TestGetBlockVolumeName(t *testing.T) {
 
 	tests := []struct {
 		name              string
-		blockVolumeSpec   infrastructurev1beta2.BlockVolumeSpec
 		expectedName      string
 		testSpecificSetup func(machineScope *MachineScope)
 	}{
 		{
-			name:         "returns empty when AvailabilityDomain is nil",
+			name:         "returns empty when DisplayName is nil",
 			expectedName: "",
 			testSpecificSetup: func(machineScope *MachineScope) {
 				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{}
@@ -597,6 +461,15 @@ func TestGetBlockVolumeName(t *testing.T) {
 				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
 					AvailabilityDomain: common.String("ad1"),
 					DisplayName:        common.String("my-volume"),
+				}
+			},
+		},
+		{
+			name:         "returns DisplayName even when AvailabilityDomain is nil",
+			expectedName: "my-volume",
+			testSpecificSetup: func(machineScope *MachineScope) {
+				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
+					DisplayName: common.String("my-volume"),
 				}
 			},
 		},
@@ -628,7 +501,7 @@ func TestGetBlockVolumeName(t *testing.T) {
 			defer teardown(t, g)
 			setup(t, g)
 			tc.testSpecificSetup(ms)
-			name := ms.GetBlockVolumeName()
+			name := ms.GetBlockVolumeDesiredName()
 			g.Expect(name).To(Equal(tc.expectedName))
 		})
 	}

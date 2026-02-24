@@ -1128,6 +1128,7 @@ type RemotePeeringConnection struct {
 	RPCConnectionId *string `json:"rpcConnectionId,omitempty"`
 }
 
+// BlockVolumeSpec is used to create block volumes with autotune enabled configuration that will used as attachments for cluster nodes
 type BlockVolumeSpec struct {
 	// The OCID of the compartment that contains the volume.
 	CompartmentId *string `json:"compartmentId,omitempty"`
@@ -1138,14 +1139,18 @@ type BlockVolumeSpec struct {
 
 	// If provided, specifies the ID of the volume backup policy to assign to the newly
 	// created volume. If omitted, no policy will be assigned.
+	// +optional
 	BackupPolicyId *string `json:"backupPolicyId,omitempty"`
 
 	// A user-friendly name. Does not have to be unique, and it's changeable.
 	// Avoid entering confidential information.
+	// If not specified, a random string name will be assigned to the block volume
+	// +optional
 	DisplayName *string `json:"displayName,omitempty"`
 
 	// The OCID of the Vault service key to assign as the master encryption key
 	// for the volume.
+	// +optional
 	KmsKeyId *string `json:"kmsKeyId,omitempty"`
 
 	// The number of volume performance units (VPUs) that will be applied to this volume per GB,
@@ -1157,72 +1162,42 @@ type BlockVolumeSpec struct {
 	//   * `20`: Represents Higher Performance option.
 	//   * `30`-`120`: Represents the Ultra High Performance option.
 	// For performance autotune enabled volumes, it would be the Default(Minimum) VPUs/GB.
+	// If not specified the default value will be Balanced (VPU/GB:10)
+	// +optional
 	VpusPerGB *int64 `json:"vpusPerGB,omitempty"`
 
-	// The clusterPlacementGroup Id of the volume for volume placement.
-	ClusterPlacementGroupId *string `json:"clusterPlacementGroupId,omitempty"`
-
 	// The size of the volume in GBs.
+	// If not specified default is 50GB
+	// +optional
 	SizeInGBs *int64 `json:"sizeInGBs,omitempty"`
 
 	// VolumeSourceDetails Specifies the volume source details for a new Block volume. The volume source is either another Block volume in the same Availability Domain or a Block volume backup.
 	// This is an optional field. If not specified or set to null, the new Block volume will be empty.
 	// When specified, the new Block volume will contain data from the source volume or backup
+	// +optional
 	SourceDetails string `json:"sourceDetails,omitempty"`
 
-	// The OCID of the volume backup from which the data should be restored on the newly created volume.
-	// This field is deprecated. Use the sourceDetails field instead to specify the
-	// backup for the volume.
-	VolumeBackupId *string `json:"volumeBackupId,omitempty"`
-
-	// Specifies whether the auto-tune performance is enabled for this volume. This field is deprecated.
-	// Use the `DetachedVolumeAutotunePolicy` instead to enable the volume for detached autotune.
-	IsAutoTuneEnabled *bool `json:"isAutoTuneEnabled,omitempty"`
-
-	// The list of block volume replicas to be enabled for this volume
-	// in the specified destination availability domains.
-	BlockVolumeReplicas []BlockVolumeReplicaDetails `json:"blockVolumeReplicas,omitempty"`
-
 	// The list of autotune policies to be enabled for this volume.
+	// +optional
 	AutotunePolicies []AutotunePolicy `json:"autotunePolicies,omitempty"`
-
-	// The OCID of the Vault service key which is the master encryption key for the block volume cross region backups, which will be used in the destination region to encrypt the backup's encryption keys.
-	// For more information about the Vault service and encryption keys, see
-	// Overview of Vault service (https://docs.oracle.com/iaas/Content/KeyManagement/Concepts/keyoverview.htm) and
-	// Using Keys (https://docs.oracle.com/iaas/Content/KeyManagement/Tasks/usingkeys.htm).
-	XrcKmsKeyId *string `json:"xrcKmsKeyId,omitempty"`
 
 	// When set to true, enables SCSI Persistent Reservation (SCSI PR) for the volume. For more information, see
 	// Persistent Reservations (https://docs.oracle.com/iaas/Content/Block/Concepts/persistent-reservations.htm).
+	// +optional
 	IsReservationsEnabled *bool `json:"isReservationsEnabled,omitempty"`
 
 	// The type of volume attachment used to attach this block volume to the instance
+	// If not specified the block volume will be created, but not attached to any instance
 	VolumeType string `json:"volumeType,omitempty"`
-}
-
-// BlockVolumeReplicaDetails Contains the details for the block volume replica
-type BlockVolumeReplicaDetails struct {
-
-	// The availability domain of the block volume replica.
-	// Example: `Uocm:PHX-AD-1`
-	AvailabilityDomain *string `json:"availabilityDomain,omitempty"`
-
-	// A user-friendly name. Does not have to be unique, and it's changeable.
-	// Avoid entering confidential information.
-	DisplayName *string `json:"displayName,omitempty"`
-
-	// The OCID of the Vault service key which is the master encryption key for the cross region block volume replicas, which will be used in the destination region to encrypt the block volume replica's encryption keys.
-	// For more information about the Vault service and encryption keys, see
-	// Overview of Vault service (https://docs.oracle.com/iaas/Content/KeyManagement/Concepts/keyoverview.htm) and
-	// Using Keys (https://docs.oracle.com/iaas/Content/KeyManagement/Tasks/usingkeys.htm).
-	XrrKmsKeyId *string `json:"xrrKmsKeyId,omitempty"`
 }
 
 type AutotunePolicy struct {
 	// This field can be of type DETACHED_VOLUME or PERFORMANCE_BASED
 	AutotuneType string `json:"autotuneType,omitempty"`
 
-	// This field is needed for PERFORMANCE_BASED
+	// This field is required when AutotuneType is PERFORMANCE_BASED.
+	// This will be the maximum VPUs/GB performance level that the volume will be auto-tuned temporarily based on performance monitoring.
+	// + optional
 	MaxVPUsPerGB *int64 `json:"maxVpusPerGB,omitempty"`
 }
 
