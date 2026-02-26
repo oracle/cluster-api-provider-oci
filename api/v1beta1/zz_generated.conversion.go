@@ -26,6 +26,7 @@ import (
 
 	v1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -2489,6 +2490,7 @@ func autoConvert_v1beta1_OCIMachineSpec_To_v1beta2_OCIMachineSpec(in *OCIMachine
 	out.IsPvEncryptionInTransitEnabled = in.IsPvEncryptionInTransitEnabled
 	out.BootVolumeSizeInGBs = in.BootVolumeSizeInGBs
 	out.Metadata = *(*map[string]string)(unsafe.Pointer(&in.Metadata))
+	out.ExtendedMetadata = *(*map[string]apiextensionsv1.JSON)(unsafe.Pointer(&in.ExtendedMetadata))
 	out.FreeformTags = *(*map[string]string)(unsafe.Pointer(&in.FreeformTags))
 	out.DefinedTags = *(*map[string]map[string]string)(unsafe.Pointer(&in.DefinedTags))
 	out.SubnetName = in.SubnetName
@@ -2525,6 +2527,7 @@ func autoConvert_v1beta2_OCIMachineSpec_To_v1beta1_OCIMachineSpec(in *v1beta2.OC
 	out.IsPvEncryptionInTransitEnabled = in.IsPvEncryptionInTransitEnabled
 	out.BootVolumeSizeInGBs = in.BootVolumeSizeInGBs
 	out.Metadata = *(*map[string]string)(unsafe.Pointer(&in.Metadata))
+	out.ExtendedMetadata = *(*map[string]apiextensionsv1.JSON)(unsafe.Pointer(&in.ExtendedMetadata))
 	out.FreeformTags = *(*map[string]string)(unsafe.Pointer(&in.FreeformTags))
 	out.DefinedTags = *(*map[string]map[string]string)(unsafe.Pointer(&in.DefinedTags))
 	out.LaunchVolumeAttachment = *(*[]LaunchVolumeAttachment)(unsafe.Pointer(&in.LaunchVolumeAttachment))

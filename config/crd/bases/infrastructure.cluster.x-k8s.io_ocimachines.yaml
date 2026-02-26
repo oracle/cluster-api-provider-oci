@@ -161,6 +161,14 @@ spec:
                   namespace. For more information, see Resource Tags (https://docs.cloud.oracle.com/iaas/Content/General/Concepts/resourcetags.htm).
                   Example: `{"Operations": {"CostCenter": "42"}}`
                 type: object
+              extendedMetadata:
+                additionalProperties:
+                  x-kubernetes-preserve-unknown-fields: true
+                description: |-
+                  Additional metadata key/value pairs that provide non-string values.
+                  Values support nested JSON objects and arrays and map to OCI LaunchInstanceDetails.extendedMetadata.
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
               freeformTags:
                 additionalProperties:
                   type: string
@@ -1142,6 +1150,14 @@ spec:
                   namespace. For more information, see Resource Tags (https://docs.cloud.oracle.com/iaas/Content/General/Concepts/resourcetags.htm).
                   Example: `{"Operations": {"CostCenter": "42"}}`
                 type: object
+              extendedMetadata:
+                additionalProperties:
+                  x-kubernetes-preserve-unknown-fields: true
+                description: |-
+                  Additional metadata key/value pairs that provide non-string values.
+                  Values support nested JSON objects and arrays and map to OCI LaunchInstanceDetails.extendedMetadata.
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
               freeformTags:
                 additionalProperties:
                   type: string

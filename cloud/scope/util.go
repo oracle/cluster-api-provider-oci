@@ -17,8 +17,11 @@ limitations under the License.
 package scope
 
 import (
+	"encoding/json"
+
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
 const (
@@ -79,4 +82,26 @@ func ConvertMachineDefinedTags(machineDefinedTags map[string]map[string]string) 
 	}
 
 	return definedTags
+}
+
+// ConvertMachineExtendedMetadata converts API extended metadata values into OCI SDK values.
+func ConvertMachineExtendedMetadata(machineExtendedMetadata map[string]apiextensionsv1.JSON) (map[string]interface{}, error) {
+	if len(machineExtendedMetadata) == 0 {
+		return nil, nil
+	}
+
+	extendedMetadata := make(map[string]interface{}, len(machineExtendedMetadata))
+	for k, v := range machineExtendedMetadata {
+		if len(v.Raw) == 0 {
+			extendedMetadata[k] = nil
+			continue
+		}
+		var converted interface{}
+		if err := json.Unmarshal(v.Raw, &converted); err != nil {
+			return nil, err
+		}
+		extendedMetadata[k] = converted
+	}
+
+	return extendedMetadata, nil
 }

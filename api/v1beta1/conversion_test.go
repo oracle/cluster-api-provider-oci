@@ -36,7 +36,9 @@ import (
 func fuzzFuncs(_ runtimeserializer.CodecFactory) []interface{} {
 	return []interface{}{
 		OCIMachineFuzzer,
+		OCIMachineHubFuzzer,
 		OCIMachineTemplateFuzzer,
+		OCIMachineTemplateHubFuzzer,
 		OCIClusterFuzzer,
 		OCIClusterTemplateFuzzer,
 		OCIManagedClusterFuzzer,
@@ -47,6 +49,7 @@ func OCIMachineFuzzer(obj *OCIMachine, c fuzz.Continue) {
 	c.FuzzNoCustom(obj)
 	// nil fields which have been removed so that tests dont fail
 	obj.Spec.NSGName = ""
+	obj.Spec.ExtendedMetadata = nil
 }
 
 func OCIClusterFuzzer(obj *OCICluster, c fuzz.Continue) {
@@ -97,6 +100,17 @@ func OCIMachineTemplateFuzzer(obj *OCIMachineTemplate, c fuzz.Continue) {
 	c.FuzzNoCustom(obj)
 	// nil fields which ave been removed so that tests dont fail
 	obj.Spec.Template.Spec.NSGName = ""
+	obj.Spec.Template.Spec.ExtendedMetadata = nil
+}
+
+func OCIMachineHubFuzzer(obj *v1beta2.OCIMachine, c randfill.Continue) {
+	c.FillNoCustom(obj)
+	obj.Spec.ExtendedMetadata = nil
+}
+
+func OCIMachineTemplateHubFuzzer(obj *v1beta2.OCIMachineTemplate, c randfill.Continue) {
+	c.FillNoCustom(obj)
+	obj.Spec.Template.Spec.ExtendedMetadata = nil
 }
 
 func OCIManagedClusterFuzzer(obj *OCIManagedCluster, c fuzz.Continue) {
