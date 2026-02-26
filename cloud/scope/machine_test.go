@@ -40,6 +40,7 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
@@ -283,6 +284,48 @@ func TestInstanceReconciliation(t *testing.T) {
 				computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
 					return instanceDisplayNameMatcher(request, "name")
 				})).Return(core.LaunchInstanceResponse{}, nil)
+			},
+		},
+		{
+			name:          "launch includes extended metadata",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				setupAllParams(ms)
+				ms.OCIMachine.Spec.ExtendedMetadata = map[string]apiextensionsv1.JSON{
+					"cilium-primary-vnic": {
+						Raw: []byte(`{"ip-count":32,"cidr-blocks":["10.0.0.0/24"]}`),
+					},
+				}
+
+				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
+					DisplayName:   common.String("name"),
+					CompartmentId: common.String("test"),
+				})).Return(core.ListInstancesResponse{}, nil)
+
+				expectedExtendedMetadata := map[string]interface{}{
+					"cilium-primary-vnic": map[string]interface{}{
+						"ip-count":    float64(32),
+						"cidr-blocks": []interface{}{"10.0.0.0/24"},
+					},
+				}
+				computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
+					return extendedMetadataMatcher(request, expectedExtendedMetadata)
+				})).Return(core.LaunchInstanceResponse{}, nil)
+			},
+		},
+		{
+			name:          "launch does not mutate spec metadata",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				setupAllParams(ms)
+				ms.OCIMachine.Spec.Metadata = map[string]string{
+					"managed": "true",
+				}
+				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
+					DisplayName:   common.String("name"),
+					CompartmentId: common.String("test"),
+				})).Return(core.ListInstancesResponse{}, nil)
+				computeClient.EXPECT().LaunchInstance(gomock.Any(), gomock.Any()).Return(core.LaunchInstanceResponse{}, nil)
 			},
 		},
 		{
@@ -1628,6 +1671,9 @@ func TestInstanceReconciliation(t *testing.T) {
 				}
 			} else {
 				g.Expect(err).To(BeNil())
+				if tc.name == "launch does not mutate spec metadata" {
+					g.Expect(ms.OCIMachine.Spec.Metadata).To(Equal(map[string]string{"managed": "true"}))
+				}
 			}
 		})
 	}
@@ -1689,6 +1735,17 @@ func faultDomainRequestWithRetryTokenMatcher(request interface{}, matchStr strin
 	}
 	if *r.OpcRetryToken != expectedToken {
 		return errors.New(fmt.Sprintf("expecting opc retry token %s but got %s", expectedToken, *r.OpcRetryToken))
+	}
+	return nil
+}
+
+func extendedMetadataMatcher(actual interface{}, expected map[string]interface{}) error {
+	r, ok := actual.(core.LaunchInstanceRequest)
+	if !ok {
+		return errors.New("expecting LaunchInstanceRequest type")
+	}
+	if !reflect.DeepEqual(r.LaunchInstanceDetails.ExtendedMetadata, expected) {
+		return errors.New(fmt.Sprintf("expecting extended metadata %v, actual %v", expected, r.LaunchInstanceDetails.ExtendedMetadata))
 	}
 	return nil
 }

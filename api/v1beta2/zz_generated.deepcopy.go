@@ -22,6 +22,7 @@ package v1beta2
 
 import (
 	"k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/cluster-api/api/core/v1beta1"
@@ -2019,6 +2020,13 @@ func (in *OCIMachineSpec) DeepCopyInto(out *OCIMachineSpec) {
 		*out = make(map[string]string, len(*in))
 		for key, val := range *in {
 			(*out)[key] = val
+		}
+	}
+	if in.ExtendedMetadata != nil {
+		in, out := &in.ExtendedMetadata, &out.ExtendedMetadata
+		*out = make(map[string]apiextensionsv1.JSON, len(*in))
+		for key, val := range *in {
+			(*out)[key] = *val.DeepCopy()
 		}
 	}
 	if in.FreeformTags != nil {
