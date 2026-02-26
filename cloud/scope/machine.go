@@ -211,11 +211,15 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 		return nil, err
 	}
 
-	metadata := m.OCIMachine.Spec.Metadata
-	if metadata == nil {
-		metadata = make(map[string]string)
+	metadata := make(map[string]string)
+	for key, value := range m.OCIMachine.Spec.Metadata {
+		metadata[key] = value
 	}
 	metadata["user_data"] = base64.StdEncoding.EncodeToString([]byte(cloudInitData))
+	extendedMetadata, err := ConvertMachineExtendedMetadata(m.OCIMachine.Spec.ExtendedMetadata)
+	if err != nil {
+		return nil, err
+	}
 
 	tags := m.getFreeFormTags()
 
@@ -236,14 +240,14 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 		},
 		ComputeClusterId:               m.OCIMachine.Spec.ComputeClusterId,
 		Metadata:                       metadata,
+		ExtendedMetadata:               extendedMetadata,
 		Shape:                          common.String(m.OCIMachine.Spec.Shape),
 		AvailabilityDomain:             common.String(availabilityDomain),
 		CompartmentId:                  common.String(m.getCompartmentId()),
 		IsPvEncryptionInTransitEnabled: common.Bool(m.OCIMachine.Spec.IsPvEncryptionInTransitEnabled),
 		FreeformTags:                   tags,
 		DefinedTags:                    definedTags,
-		//		ExtendedMetadata:               m.OCIMachine.Spec.ExtendedMetadata,
-		DedicatedVmHostId: m.OCIMachine.Spec.DedicatedVmHostId,
+		DedicatedVmHostId:              m.OCIMachine.Spec.DedicatedVmHostId,
 	}
 	// Compute API does not behave well if the shape config is empty for fixed shapes
 	// hence set it only if it non empty
