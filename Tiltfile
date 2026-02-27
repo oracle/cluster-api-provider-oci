@@ -9,7 +9,8 @@ update_settings(k8s_upsert_timeout_secs = 60)  # on first tilt up, often can tak
 #Add tools to path
 os.putenv("PATH", os.getenv("PATH") + ":" + tools_bin)
 
-keys = ["OCI_TENANCY_ID", "OCI_USER_ID", "OCI_CREDENTIALS_FINGERPRINT", "OCI_REGION", "OCI_CREDENTIALS_KEY_PATH"]
+legacy_auth_keys = ["OCI_TENANCY_ID", "OCI_USER_ID", "OCI_CREDENTIALS_FINGERPRINT", "OCI_REGION", "OCI_CREDENTIALS_KEY"]
+session_auth_keys = ["OCI_TENANCY_ID", "OCI_CREDENTIALS_FINGERPRINT", "OCI_REGION", "OCI_SESSION_TOKEN", "OCI_SESSION_PRIVATE_KEY"]
 
 # set defaults
 settings = {
@@ -19,7 +20,7 @@ settings = {
     "deploy_cert_manager": True,
     "preload_images_for_kind": True,
     "kind_cluster_name": "capoci",
-    "capi_version": "v1.10.7",
+    "capi_version": "v1.11.0",
     "cert_manager_version": "v1.16.2",
     "kubernetes_version": "v1.30.0",
 }
@@ -66,10 +67,104 @@ def validate_auth():
     for sub in substitutions:
         if sub[-4:] == "_B64":
             os.environ[sub[:-4]] = base64_decode(os.environ[sub])
-            print("{} was not specified in tilt-settings.json, attempting to load {}".format(base64_decode(os.environ[sub]), sub))
-    missing = [k for k in keys if not os.environ.get(k)]
+            print("loaded {} from {}".format(sub[:-4], sub))
+
+    if not os.environ.get("OCI_CREDENTIALS_KEY") and os.environ.get("OCI_CREDENTIALS_KEY_PATH"):
+        os.environ["OCI_CREDENTIALS_KEY"] = read_file_from_path(os.environ.get("OCI_CREDENTIALS_KEY_PATH"))
+
+    use_instance_principal = str(os.environ.get("USE_INSTANCE_PRINCIPAL", "false")).strip().lower() == "true"
+    use_session_token = str(os.environ.get("USE_SESSION_TOKEN", "false")).strip().lower() == "true"
+    if not use_instance_principal and not use_session_token and settings.get("oci_session_profile"):
+        # If a session profile is configured, default to session-token mode to avoid silent fallback to API-key auth.
+        use_session_token = True
+        os.environ["USE_SESSION_TOKEN"] = "true"
+        print("oci_session_profile is set; defaulting auth mode to session-token")
+
+    if use_instance_principal:
+        return "instance-principal"
+
+    if use_session_token:
+        apply_session_profile_defaults()
+        missing = [k for k in session_auth_keys if not os.environ.get(k)]
+        if missing:
+            fail("session-token auth selected but missing kustomize_substitutions values for {}".format(missing))
+        return "session-token"
+
+    missing = [k for k in legacy_auth_keys if not os.environ.get(k)]
     if missing:
-        fail("missing kustomize_substitutions keys {} in tilt-setting.json".format(missing))
+        fail("legacy API-key auth selected but missing kustomize_substitutions values for {}. Set USE_SESSION_TOKEN_B64 or USE_INSTANCE_PRINCIPAL_B64 to switch modes.".format(missing))
+    return "legacy-api-key"
+
+def add_session_token_refresh_resource(auth_mode):
+    if auth_mode != "session-token":
+        return
+
+    session_profile = settings.get("oci_session_profile", "DEFAULT")
+    token_path = expand_path(settings.get("oci_session_token_path"))
+    private_key_path = expand_path(settings.get("oci_session_private_key_path"))
+    if not token_path or not private_key_path:
+        local_resource(
+            "oci-session-refresh",
+            cmd = "echo 'Set oci_session_token_path and oci_session_private_key_path in tilt-settings.json for session refresh.' >&2; exit 1",
+            trigger_mode = TRIGGER_MODE_MANUAL,
+            auto_init = False,
+            labels = ["cluster-api"],
+        )
+        return
+
+    refresh_cmd = """set -euo pipefail
+if command -v oci >/dev/null 2>&1; then
+  if ! oci session refresh --profile '{profile}'; then
+    echo "warning: oci session refresh failed for profile '{profile}', continuing with local session files" >&2
+  fi
+fi
+CAPOCI_NAMESPACE="$({kubectl_cmd} get deploy -A -o jsonpath='{{range .items[?(@.metadata.name==\"capoci-controller-manager\") ]}}{{.metadata.namespace}}{{end}}' 2>/dev/null || true)"
+if [ -z "$CAPOCI_NAMESPACE" ]; then
+  CAPOCI_NAMESPACE="cluster-api-provider-oci-system"
+fi
+CAPOCI_AUTH_SECRET_NAME="$({kubectl_cmd} get deploy capoci-controller-manager -n "$CAPOCI_NAMESPACE" -o jsonpath='{{.spec.template.spec.volumes[?(@.name==\"auth-config-dir\")].secret.secretName}}' 2>/dev/null || true)"
+if [ -z "$CAPOCI_AUTH_SECRET_NAME" ]; then
+  CAPOCI_AUTH_SECRET_NAME="capoci-auth-config"
+fi
+export CAPOCI_NAMESPACE
+export CAPOCI_AUTH_SECRET_NAME
+export USE_INSTANCE_PRINCIPAL_B64="ZmFsc2U="
+export USE_SESSION_TOKEN_B64="dHJ1ZQ=="
+export OCI_SESSION_TOKEN_B64="$(base64 < '{token_path}' | tr -d '\\n')"
+export OCI_SESSION_PRIVATE_KEY_B64="$(awk 'BEGIN{{in_key=0}}
+!in_key {{
+  if (match($0, /-----BEGIN [A-Z ]*PRIVATE KEY-----/)) {{
+    in_key=1
+  }} else {{
+    next
+  }}
+}}
+{{
+  line=$0
+  if (match(line, /-----END [A-Z ]*PRIVATE KEY-----/)) {{
+    print substr(line, 1, RSTART + RLENGTH - 1)
+    exit
+  }}
+  print line
+}}' '{private_key_path}' | base64 | tr -d '\\n')"
+{envsubst_cmd} < config/default/credentials.yaml \
+  | sed "s/^  name: auth-config$/  name: $CAPOCI_AUTH_SECRET_NAME/" \
+  | sed "s/^  namespace: system$/  namespace: $CAPOCI_NAMESPACE/" \
+  | {kubectl_cmd} apply -f -
+""".format(
+        profile = session_profile,
+        token_path = token_path,
+        private_key_path = private_key_path,
+        envsubst_cmd = envsubst_cmd,
+        kubectl_cmd = kubectl_cmd,
+    )
+    local_resource(
+        "oci-session-refresh",
+        cmd = refresh_cmd,
+        trigger_mode = TRIGGER_MODE_MANUAL,
+        auto_init = True,
+        labels = ["cluster-api"],
+    )
 
 # Users may define their own Tilt customizations in tilt.d. This directory is excluded from git and these files will
 # not be checked in to version control.
@@ -184,12 +279,117 @@ def base64_encode(to_encode):
     return str(encode_blob)
 
 def base64_encode_file(path_to_encode):
-    encode_blob = local("cat {} | tr -d '\n' | base64 - | tr -d '\n'".format(path_to_encode), quiet = True)
+    encode_blob = local("base64 < {} | tr -d '\n'".format(shell_single_quote(path_to_encode)), quiet = True)
     return str(encode_blob)
 
 def read_file_from_path(path_to_read):
-    str_blob = local("cat {} | tr -d '\n'".format(path_to_read), quiet = True)
+    str_blob = local("cat {}".format(shell_single_quote(path_to_read)), quiet = True)
     return str(str_blob)
+
+def read_private_key_pem_from_path(path_to_read):
+    awk_cmd = """awk 'BEGIN{{in_key=0}}
+!in_key {{
+  if (match($0, /-----BEGIN [A-Z ]*PRIVATE KEY-----/)) {{
+    in_key=1
+  }} else {{
+    next
+  }}
+}}
+{{
+  line=$0
+  if (match(line, /-----END [A-Z ]*PRIVATE KEY-----/)) {{
+    print substr(line, 1, RSTART + RLENGTH - 1)
+    exit
+  }}
+  print line
+}}' {path}""".format(path = shell_single_quote(path_to_read))
+    pem = str(local(awk_cmd, quiet = True, echo_off = True)).strip()
+    if not pem:
+        fail("no PEM private key block found in {}".format(path_to_read))
+    return pem + "\n"
+
+def shell_single_quote(s):
+    return "'" + str(s).replace("'", "'\"'\"'") + "'"
+
+def expand_path(path):
+    if path == None:
+        return ""
+    path_str = str(path).strip()
+    if path_str == "":
+        return ""
+    home = str(os.getenv("HOME", ""))
+    if path_str[0:2] == "~/":
+        return home + path_str[1:]
+    return path_str.replace("$HOME", home).replace("${HOME}", home)
+
+def read_oci_profile_value(profile, key):
+    config_file = expand_path("~/.oci/config")
+    if not config_file:
+        return ""
+    profile_name = str(profile).strip()
+    key_name = str(key).strip()
+    if not profile_name or not key_name:
+        return ""
+    awk_cmd = """awk '
+$0 == "[{profile}]" {{ in_profile=1; next }}
+/^\\[/ {{ in_profile=0 }}
+in_profile && $0 ~ /^[[:space:]]*{key}[[:space:]]*=/ {{
+  line=$0
+  sub(/^[[:space:]]*{key}[[:space:]]*=[[:space:]]*/, "", line)
+  print line
+  exit
+}}
+' {config_file}""".format(
+        profile = profile_name,
+        key = key_name,
+        config_file = shell_single_quote(config_file),
+    )
+    return str(local(awk_cmd, quiet = True, echo_off = True)).strip()
+
+def set_env_if_missing(name, value):
+    if value and not str(os.environ.get(name, "")).strip():
+        os.environ[name] = str(value).strip()
+
+def ensure_env_matches_profile(name, profile_value, profile_name):
+    env_val = str(os.environ.get(name, "")).strip()
+    if not profile_value or not env_val:
+        return
+    if env_val != profile_value:
+        fail("{} in kustomize_substitutions ({}) does not match {} profile {} value ({}).".format(name, env_val, profile_name, name.lower(), profile_value))
+
+def apply_session_profile_defaults():
+    profile = str(settings.get("oci_session_profile", "")).strip()
+    if not profile:
+        return
+
+    profile_tenancy = read_oci_profile_value(profile, "tenancy")
+    profile_region = read_oci_profile_value(profile, "region")
+    profile_fingerprint = read_oci_profile_value(profile, "fingerprint")
+    profile_token_path = read_oci_profile_value(profile, "security_token_file")
+    profile_key_path = read_oci_profile_value(profile, "key_file")
+
+    set_env_if_missing("OCI_TENANCY_ID", profile_tenancy)
+    set_env_if_missing("OCI_REGION", profile_region)
+    set_env_if_missing("OCI_CREDENTIALS_FINGERPRINT", profile_fingerprint)
+
+    ensure_env_matches_profile("OCI_TENANCY_ID", profile_tenancy, profile)
+    ensure_env_matches_profile("OCI_REGION", profile_region, profile)
+    ensure_env_matches_profile("OCI_CREDENTIALS_FINGERPRINT", profile_fingerprint, profile)
+
+    token_path = expand_path(settings.get("oci_session_token_path"))
+    private_key_path = expand_path(settings.get("oci_session_private_key_path"))
+    if not token_path:
+        token_path = expand_path(profile_token_path)
+    if not private_key_path:
+        private_key_path = expand_path(profile_key_path)
+
+    if token_path and not os.environ.get("OCI_SESSION_TOKEN"):
+        os.environ["OCI_SESSION_TOKEN"] = read_file_from_path(token_path)
+    if os.environ.get("OCI_SESSION_TOKEN"):
+        os.environ["OCI_SESSION_TOKEN_B64"] = base64_encode(os.environ["OCI_SESSION_TOKEN"])
+    if private_key_path:
+        os.environ["OCI_SESSION_PRIVATE_KEY"] = read_private_key_pem_from_path(private_key_path)
+        os.environ["OCI_SESSION_PRIVATE_KEY_B64"] = base64_encode(os.environ["OCI_SESSION_PRIVATE_KEY"])
 
 def base64_decode(to_decode):
     # Use -D for macOS (BSD), --decode - for Linux (GNU)
@@ -211,7 +411,8 @@ def kustomizesub(folder):
 # Actual work happens here
 ##############################
 
-validate_auth()
+auth_mode = validate_auth()
+add_session_token_refresh_resource(auth_mode)
 
 include_user_tilt_files()
 
