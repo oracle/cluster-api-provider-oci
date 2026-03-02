@@ -1201,6 +1201,11 @@ spec:
                       URL to be changed.
                     nullable: true
                     type: string
+                  volumeClientUrl:
+                    description: VolumeClientUrl allows the default volume SDK client
+                      URL to be changed.
+                    nullable: true
+                    type: string                    
                   computeManagementClientUrl:
                     description: ComputeManagementClientUrl allows the default compute
                       management SDK client URL to be changed.

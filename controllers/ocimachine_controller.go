@@ -154,6 +154,7 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	machineScope, err := scope.NewMachineScope(scope.MachineScopeParams{
 		Client:                    r.Client,
 		ComputeClient:             clients.ComputeClient,
+		BlockVolumeClient:         clients.BlockVolumeClient,
 		Logger:                    &logger,
 		Cluster:                   cluster,
 		OCIClusterAccessor:        clusterAccessor,

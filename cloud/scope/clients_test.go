@@ -68,6 +68,7 @@ func TestClients_NewClientProviderWithClientOverrides(t *testing.T) {
 		LoadBalancerClientUrl:        common.String("LoadBalancerClientUrl"),
 		NetworkLoadBalancerClientUrl: common.String("NetworkLoadBalancerClientUrl"),
 		IdentityClientUrl:            common.String("IdentityClientUrl"),
+		VolumeClientUrl:              common.String("VolumeClientUrl"),
 		ContainerEngineClientUrl:     common.String("ContainerEngineClientUrl"),
 		WorkrequestClientUrl:         common.String("WorkrequestClientUrl"),
 	}
@@ -104,6 +105,7 @@ func TestClients_NewClientProviderWithMissingOverrides(t *testing.T) {
 
 	clientOverrides := &v1beta2.ClientOverrides{
 		ComputeClientUrl:           common.String("ComputeClientUrl"),
+		VolumeClientUrl:            common.String("VolumeClientUrl"),
 		ComputeManagementClientUrl: common.String("ComputeManagementClientUrl"),
 		//VCNClientUrl is missing,
 		LoadBalancerClientUrl: common.String("LoadBalancerClientUrl"),
