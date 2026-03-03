@@ -989,7 +989,15 @@ type LoadBalancer struct {
 
 // NLBSpec specifies the NLB spec.
 type NLBSpec struct {
+	// BackendSets specifies the canonical list of API server backend sets.
+	// When set, this field takes precedence over the legacy `backendSetDetails` field.
+	// +optional
+	// +listType=map
+	// +listMapKey=name
+	BackendSets []NLBBackendSet `json:"backendSets,omitempty"`
+
 	// BackendSetDetails specifies the configuration of a network load balancer backend set.
+	// Deprecated: use `backendSets` instead.
 	// +optional
 	BackendSetDetails BackendSetDetails `json:"backendSetDetails,omitempty"`
 
@@ -998,6 +1006,16 @@ type NLBSpec struct {
 	// Max Items: 1
 	// +optional
 	ReservedIpIds []string `json:"reservedIpIds,omitempty"`
+}
+
+// NLBBackendSet specifies the configuration for a named network load balancer backend set.
+type NLBBackendSet struct {
+	// Name is the API server backend set identifier.
+	Name string `json:"name"`
+
+	// BackendSetDetails specifies the backend set behavior.
+	// +optional
+	BackendSetDetails BackendSetDetails `json:"backendSetDetails,omitempty"`
 }
 
 // BackendSetDetails specifies the configuration of a network load balancer backend set.
@@ -1029,6 +1047,25 @@ type HealthChecker struct {
 	// Example: `/healthcheck`
 	// Default value is `/healthz`
 	UrlPath *string `json:"urlPath,omitempty"`
+}
+
+// CanonicalBackendSets returns the canonical API server backend set list.
+// Precedence:
+// 1. If `backendSets` is configured, it is used as-is.
+// 2. Otherwise, a single backend set named APIServerLBBackendSetName is synthesized from the legacy `backendSetDetails`.
+func (in *NLBSpec) CanonicalBackendSets() []NLBBackendSet {
+	if len(in.BackendSets) > 0 {
+		return append([]NLBBackendSet(nil), in.BackendSets...)
+	}
+	if in.BackendSetDetails == (BackendSetDetails{}) {
+		return nil
+	}
+	return []NLBBackendSet{
+		{
+			Name:              APIServerLBBackendSetName,
+			BackendSetDetails: in.BackendSetDetails,
+		},
+	}
 }
 
 // NetworkSpec specifies what the OCI networking resources should look like.
