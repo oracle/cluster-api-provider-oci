@@ -144,36 +144,7 @@ func (s *ClusterScope) UpdateNLB(ctx context.Context, nlb infrastructurev1beta2.
 // See https://docs.oracle.com/en-us/iaas/Content/NetworkLoadBalancer/overview.htm for more details on the Network
 // Load Balancer
 func (s *ClusterScope) CreateNLB(ctx context.Context, lb infrastructurev1beta2.LoadBalancer) (*string, *string, error) {
-	isPreserverSourceIp := lb.NLBSpec.BackendSetDetails.IsPreserveSource
-	if isPreserverSourceIp == nil {
-		isPreserverSourceIp = common.Bool(false)
-	}
-	listenerDetails := make(map[string]networkloadbalancer.ListenerDetails)
-	listenerDetails[APIServerLBListener] = networkloadbalancer.ListenerDetails{
-		Protocol:              networkloadbalancer.ListenerProtocolsTcp,
-		Port:                  common.Int(int(s.APIServerPort())),
-		DefaultBackendSetName: common.String(APIServerLBBackendSetName),
-		Name:                  common.String(APIServerLBListener),
-	}
-
-	backendSetDetails := make(map[string]networkloadbalancer.BackendSetDetails)
-	healthCheckUrl := lb.NLBSpec.BackendSetDetails.HealthChecker.UrlPath
-	if healthCheckUrl == nil {
-		healthCheckUrl = common.String("/healthz")
-	}
-	backendSetDetails[APIServerLBBackendSetName] = networkloadbalancer.BackendSetDetails{
-		Policy:                   LoadBalancerPolicy,
-		IsPreserveSource:         isPreserverSourceIp,
-		IsFailOpen:               lb.NLBSpec.BackendSetDetails.IsFailOpen,
-		IsInstantFailoverEnabled: lb.NLBSpec.BackendSetDetails.IsInstantFailoverEnabled,
-		HealthChecker: &networkloadbalancer.HealthChecker{
-			Port:       common.Int(int(s.APIServerPort())),
-			Protocol:   networkloadbalancer.HealthCheckProtocolsHttps,
-			UrlPath:    healthCheckUrl,
-			ReturnCode: common.Int(200),
-		},
-		Backends: []networkloadbalancer.Backend{},
-	}
+	listenerDetails, backendSetDetails := s.buildDesiredNLBListenersAndBackendSets(lb)
 
 	var controlPlaneEndpointSubnets []string
 	for _, subnet := range ptr.ToSubnetSlice(s.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets) {
@@ -246,6 +217,49 @@ func (s *ClusterScope) CreateNLB(ctx context.Context, lb infrastructurev1beta2.L
 
 	s.Logger.Info("Successfully created apiserver lb", "lb", nlb.Id, "ip", nlbIp)
 	return nlb.Id, nlbIp, nil
+}
+
+func (s *ClusterScope) buildDesiredNLBListenersAndBackendSets(lb infrastructurev1beta2.LoadBalancer) (map[string]networkloadbalancer.ListenerDetails, map[string]networkloadbalancer.BackendSetDetails) {
+	canonicalBackendSets := lb.NLBSpec.CanonicalBackendSets()
+	if len(canonicalBackendSets) == 0 {
+		canonicalBackendSets = []infrastructurev1beta2.NLBBackendSet{{Name: APIServerLBBackendSetName}}
+	}
+
+	backendSetDetails := make(map[string]networkloadbalancer.BackendSetDetails, len(canonicalBackendSets))
+	for _, backendSet := range canonicalBackendSets {
+		isPreserveSourceIp := backendSet.BackendSetDetails.IsPreserveSource
+		if isPreserveSourceIp == nil {
+			isPreserveSourceIp = common.Bool(false)
+		}
+		healthCheckURL := backendSet.BackendSetDetails.HealthChecker.UrlPath
+		if healthCheckURL == nil {
+			healthCheckURL = common.String("/healthz")
+		}
+		backendSetDetails[backendSet.Name] = networkloadbalancer.BackendSetDetails{
+			Policy:                   LoadBalancerPolicy,
+			IsPreserveSource:         isPreserveSourceIp,
+			IsFailOpen:               backendSet.BackendSetDetails.IsFailOpen,
+			IsInstantFailoverEnabled: backendSet.BackendSetDetails.IsInstantFailoverEnabled,
+			HealthChecker: &networkloadbalancer.HealthChecker{
+				Port:       common.Int(int(s.APIServerPort())),
+				Protocol:   networkloadbalancer.HealthCheckProtocolsHttps,
+				UrlPath:    healthCheckURL,
+				ReturnCode: common.Int(200),
+			},
+			Backends: []networkloadbalancer.Backend{},
+		}
+	}
+
+	primaryBackendSetName := canonicalBackendSets[0].Name
+	listenerDetails := map[string]networkloadbalancer.ListenerDetails{
+		APIServerLBListener: {
+			Protocol:              networkloadbalancer.ListenerProtocolsTcp,
+			Port:                  common.Int(int(s.APIServerPort())),
+			DefaultBackendSetName: common.String(primaryBackendSetName),
+			Name:                  common.String(APIServerLBListener),
+		},
+	}
+	return listenerDetails, backendSetDetails
 }
 
 func (s *ClusterScope) getNetworkLoadbalancerIp(nlb networkloadbalancer.NetworkLoadBalancer) (*string, error) {

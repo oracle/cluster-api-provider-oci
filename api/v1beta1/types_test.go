@@ -40,6 +40,18 @@ func TestNLBSpecCanonicalBackendSets_Precedence(t *testing.T) {
 			t.Fatalf("expected legacy backend set details to be preserved, got %#v", got[0].BackendSetDetails)
 		}
 	})
+
+	t.Run("defaults to legacy backend set name when empty", func(t *testing.T) {
+		spec := NLBSpec{}
+
+		got := spec.CanonicalBackendSets()
+		if len(got) != 1 {
+			t.Fatalf("expected one synthesized backend set, got %#v", got)
+		}
+		if got[0].Name != APIServerLBBackendSetName {
+			t.Fatalf("expected synthesized backend set name %q, got %q", APIServerLBBackendSetName, got[0].Name)
+		}
+	})
 }
 
 func TestNLBSpecLegacyDecode_ToCanonical(t *testing.T) {

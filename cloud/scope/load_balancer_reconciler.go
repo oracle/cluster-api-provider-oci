@@ -145,21 +145,7 @@ func (s *ClusterScope) UpdateLB(ctx context.Context, lb infrastructurev1beta2.Lo
 // See https://docs.oracle.com/en-us/iaas/Content/LoadBalancer/overview.htm for more details on the Network
 // Load Balancer
 func (s *ClusterScope) CreateLB(ctx context.Context, lb infrastructurev1beta2.LoadBalancer) (*string, *string, error) {
-	listenerDetails := make(map[string]loadbalancer.ListenerDetails)
-	listenerDetails[APIServerLBListener] = loadbalancer.ListenerDetails{
-		Protocol:              common.String("TCP"),
-		Port:                  common.Int(int(s.APIServerPort())),
-		DefaultBackendSetName: common.String(APIServerLBBackendSetName),
-	}
-	backendSetDetails := make(map[string]loadbalancer.BackendSetDetails)
-	backendSetDetails[APIServerLBBackendSetName] = loadbalancer.BackendSetDetails{
-		Policy: common.String("ROUND_ROBIN"),
-		HealthChecker: &loadbalancer.HealthCheckerDetails{
-			Port:     common.Int(int(s.APIServerPort())),
-			Protocol: common.String("TCP"),
-		},
-		Backends: []loadbalancer.BackendDetails{},
-	}
+	listenerDetails, backendSetDetails := s.buildDesiredLBListenersAndBackendSets(lb)
 	var controlPlaneEndpointSubnets []string
 	for _, subnet := range ptr.ToSubnetSlice(s.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets) {
 		if subnet.ID != nil && subnet.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
@@ -223,6 +209,35 @@ func (s *ClusterScope) CreateLB(ctx context.Context, lb infrastructurev1beta2.Lo
 
 	s.Logger.Info("Successfully created apiserver lb", "lb", lbs.Id, "ip", lbIp)
 	return lbs.Id, lbIp, nil
+}
+
+func (s *ClusterScope) buildDesiredLBListenersAndBackendSets(lb infrastructurev1beta2.LoadBalancer) (map[string]loadbalancer.ListenerDetails, map[string]loadbalancer.BackendSetDetails) {
+	canonicalBackendSets := lb.NLBSpec.CanonicalBackendSets()
+	if len(canonicalBackendSets) == 0 {
+		canonicalBackendSets = []infrastructurev1beta2.NLBBackendSet{{Name: APIServerLBBackendSetName}}
+	}
+
+	backendSetDetails := make(map[string]loadbalancer.BackendSetDetails, len(canonicalBackendSets))
+	for _, backendSet := range canonicalBackendSets {
+		backendSetDetails[backendSet.Name] = loadbalancer.BackendSetDetails{
+			Policy: common.String("ROUND_ROBIN"),
+			HealthChecker: &loadbalancer.HealthCheckerDetails{
+				Port:     common.Int(int(s.APIServerPort())),
+				Protocol: common.String("TCP"),
+			},
+			Backends: []loadbalancer.BackendDetails{},
+		}
+	}
+
+	primaryBackendSetName := canonicalBackendSets[0].Name
+	listenerDetails := map[string]loadbalancer.ListenerDetails{
+		APIServerLBListener: {
+			Protocol:              common.String("TCP"),
+			Port:                  common.Int(int(s.APIServerPort())),
+			DefaultBackendSetName: common.String(primaryBackendSetName),
+		},
+	}
+	return listenerDetails, backendSetDetails
 }
 
 func (s *ClusterScope) getLoadbalancerIp(lb loadbalancer.LoadBalancer) (*string, error) {

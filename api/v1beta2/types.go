@@ -1067,9 +1067,6 @@ func (in *NLBSpec) CanonicalBackendSets() []NLBBackendSet {
 	if len(in.BackendSets) > 0 {
 		return append([]NLBBackendSet(nil), in.BackendSets...)
 	}
-	if in.BackendSetDetails == (BackendSetDetails{}) {
-		return nil
-	}
 	return []NLBBackendSet{
 		{
 			Name:              APIServerLBBackendSetName,
