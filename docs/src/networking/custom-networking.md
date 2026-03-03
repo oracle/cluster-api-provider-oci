@@ -300,6 +300,80 @@ spec:
       loadBalancerType: "lb"
 ```
 
+## Configure multiple API-server backend sets and listeners
+
+CAPOCI supports multiple API-server backend sets through `networkSpec.apiServerLoadBalancer.nlbSpec.backendSets`.
+Each backend set can optionally define a dedicated `listenerPort`.
+
+Field precedence and compatibility rules:
+
+1. `backendSets` is the canonical field.
+2. Legacy `backendSetDetails` remains supported for backward compatibility.
+3. If both are set, `backendSets` takes precedence and validation rejects mixed usage.
+4. If only legacy `backendSetDetails` is set, CAPOCI preserves single-backend-set behavior.
+
+Example (NLB default) with multiple listeners:
+
+```yaml
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: OCICluster
+metadata:
+  name: "${CLUSTER_NAME}"
+spec:
+  compartmentId: "${OCI_COMPARTMENT_ID}"
+  networkSpec:
+    apiServerLoadBalancer:
+      nlbSpec:
+        backendSets:
+          - name: apiserver-lb-backendset
+            backendSetDetails:
+              healthChecker:
+                urlPath: /healthz
+          - name: rke2-registration
+            listenerPort: 9345
+            backendSetDetails:
+              healthChecker:
+                urlPath: /v1-rke2/readyz
+```
+
+Equivalent configuration for OCI LBaaS is supported by setting `loadBalancerType: "lb"`:
+
+```yaml
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: OCICluster
+metadata:
+  name: "${CLUSTER_NAME}"
+spec:
+  compartmentId: "${OCI_COMPARTMENT_ID}"
+  networkSpec:
+    apiServerLoadBalancer:
+      loadBalancerType: "lb"
+      nlbSpec:
+        backendSets:
+          - name: apiserver-lb-backendset
+          - name: rke2-registration
+            listenerPort: 9345
+```
+
+### Migration from legacy `backendSetDetails`
+
+Use this sequence:
+
+1. Keep your existing legacy `backendSetDetails` (no behavior change).
+2. Replace it with canonical `backendSets` and include the default set (`apiserver-lb-backendset`) first.
+3. Add additional backend sets with unique names and optional `listenerPort`.
+4. Apply manifests and wait for reconcile to create/update listeners and backend sets.
+5. During rollout, old/new backend sets can coexist; machines are reconciled into active sets.
+6. After transition, remove no-longer-needed backend sets from `backendSets`. CAPOCI garbage-collects stale listeners and stale backend sets when safe (empty/unreferenced).
+
+### Rollout semantics and caveats
+
+- The first canonical backend set remains the primary API-server listener target (`apiserver-lb-listener`).
+- Additional backend sets create additional deterministic listeners for management endpoints.
+- `listenerPort` values must be unique and within `1-65535`.
+- Backend set names must be unique, and match provider constraints (alphanumeric, `-`, `_`).
+- CAPOCI does not require immediate manual migration for old objects; legacy manifests continue to decode.
+
 ## Example spec to use custom role
 
 CAPOCI can be used to create Subnet/NSG in the VCN for custom workloads such as private load balancers,
