@@ -29,6 +29,15 @@ import (
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 )
 
+type lbExtendedClient interface {
+	CreateBackendSet(ctx context.Context, request loadbalancer.CreateBackendSetRequest) (response loadbalancer.CreateBackendSetResponse, err error)
+	UpdateBackendSet(ctx context.Context, request loadbalancer.UpdateBackendSetRequest) (response loadbalancer.UpdateBackendSetResponse, err error)
+	DeleteBackendSet(ctx context.Context, request loadbalancer.DeleteBackendSetRequest) (response loadbalancer.DeleteBackendSetResponse, err error)
+	CreateListener(ctx context.Context, request loadbalancer.CreateListenerRequest) (response loadbalancer.CreateListenerResponse, err error)
+	UpdateListener(ctx context.Context, request loadbalancer.UpdateListenerRequest) (response loadbalancer.UpdateListenerResponse, err error)
+	DeleteListener(ctx context.Context, request loadbalancer.DeleteListenerRequest) (response loadbalancer.DeleteListenerResponse, err error)
+}
+
 // ReconcileApiServerLB tries to move the Load Balancer to the desired OCICluster Spec
 func (s *ClusterScope) ReconcileApiServerLB(ctx context.Context) error {
 	desiredApiServerLb := s.LBSpec()
@@ -134,6 +143,141 @@ func (s *ClusterScope) UpdateLB(ctx context.Context, lb infrastructurev1beta2.Lo
 	if err != nil {
 		s.Logger.Error(err, "failed to reconcile the apiserver LB, failed to update lb")
 		return errors.Wrap(err, "failed to reconcile the apiserver LB, failed to update lb")
+	}
+	if err := s.reconcileLBResources(ctx, lb); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *ClusterScope) reconcileLBResources(ctx context.Context, lb infrastructurev1beta2.LoadBalancer) error {
+	extendedClient, ok := any(s.LoadBalancerClient).(lbExtendedClient)
+	if !ok {
+		s.Logger.Info("LB client does not support extended listener/backend-set reconcile")
+		return nil
+	}
+	lbID := s.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerId
+	actualResp, err := s.LoadBalancerClient.GetLoadBalancer(ctx, loadbalancer.GetLoadBalancerRequest{
+		LoadBalancerId: lbID,
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to get lb for resource reconciliation")
+	}
+	desiredListeners, desiredBackendSets := s.buildDesiredLBListenersAndBackendSets(lb)
+
+	for name, desired := range desiredListeners {
+		actual, exists := actualResp.LoadBalancer.Listeners[name]
+		if !exists {
+			resp, err := extendedClient.CreateListener(ctx, loadbalancer.CreateListenerRequest{
+				LoadBalancerId: lbID,
+				CreateListenerDetails: loadbalancer.CreateListenerDetails{
+					Name:                  common.String(name),
+					DefaultBackendSetName: desired.DefaultBackendSetName,
+					Port:                  desired.Port,
+					Protocol:              desired.Protocol,
+				},
+			})
+			if err != nil {
+				return errors.Wrapf(err, "failed to create lb listener %q", name)
+			}
+			if _, err := ociutil.AwaitLBWorkRequest(ctx, s.LoadBalancerClient, resp.OpcWorkRequestId); err != nil {
+				return errors.Wrapf(err, "failed awaiting create listener %q", name)
+			}
+			continue
+		}
+		if !intPtrEqual(actual.Port, desired.Port) ||
+			!ptr.StringEquals(actual.DefaultBackendSetName, ptr.ToString(desired.DefaultBackendSetName)) ||
+			!ptr.StringEquals(actual.Protocol, ptr.ToString(desired.Protocol)) {
+			resp, err := extendedClient.UpdateListener(ctx, loadbalancer.UpdateListenerRequest{
+				LoadBalancerId: lbID,
+				ListenerName:   common.String(name),
+				UpdateListenerDetails: loadbalancer.UpdateListenerDetails{
+					DefaultBackendSetName: desired.DefaultBackendSetName,
+					Port:                  desired.Port,
+					Protocol:              desired.Protocol,
+				},
+			})
+			if err != nil {
+				return errors.Wrapf(err, "failed to update lb listener %q", name)
+			}
+			if _, err := ociutil.AwaitLBWorkRequest(ctx, s.LoadBalancerClient, resp.OpcWorkRequestId); err != nil {
+				return errors.Wrapf(err, "failed awaiting update listener %q", name)
+			}
+		}
+	}
+	for name := range actualResp.LoadBalancer.Listeners {
+		if _, keep := desiredListeners[name]; keep {
+			continue
+		}
+		resp, err := extendedClient.DeleteListener(ctx, loadbalancer.DeleteListenerRequest{
+			LoadBalancerId: lbID,
+			ListenerName:   common.String(name),
+		})
+		if err != nil {
+			return errors.Wrapf(err, "failed to delete stale lb listener %q", name)
+		}
+		if _, err := ociutil.AwaitLBWorkRequest(ctx, s.LoadBalancerClient, resp.OpcWorkRequestId); err != nil {
+			return errors.Wrapf(err, "failed awaiting delete listener %q", name)
+		}
+	}
+
+	for name, desired := range desiredBackendSets {
+		actual, exists := actualResp.LoadBalancer.BackendSets[name]
+		if !exists {
+			resp, err := extendedClient.CreateBackendSet(ctx, loadbalancer.CreateBackendSetRequest{
+				LoadBalancerId: lbID,
+				CreateBackendSetDetails: loadbalancer.CreateBackendSetDetails{
+					Name:          common.String(name),
+					Policy:        desired.Policy,
+					HealthChecker: desired.HealthChecker,
+				},
+			})
+			if err != nil {
+				return errors.Wrapf(err, "failed to create lb backend set %q", name)
+			}
+			if _, err := ociutil.AwaitLBWorkRequest(ctx, s.LoadBalancerClient, resp.OpcWorkRequestId); err != nil {
+				return errors.Wrapf(err, "failed awaiting create backend set %q", name)
+			}
+			continue
+		}
+		if !ptr.StringEquals(actual.Policy, ptr.ToString(desired.Policy)) ||
+			actual.HealthChecker == nil || desired.HealthChecker == nil ||
+			!intPtrEqual(actual.HealthChecker.Port, desired.HealthChecker.Port) ||
+			!ptr.StringEquals(actual.HealthChecker.Protocol, ptr.ToString(desired.HealthChecker.Protocol)) {
+			resp, err := extendedClient.UpdateBackendSet(ctx, loadbalancer.UpdateBackendSetRequest{
+				LoadBalancerId: lbID,
+				BackendSetName: common.String(name),
+				UpdateBackendSetDetails: loadbalancer.UpdateBackendSetDetails{
+					Policy:        desired.Policy,
+					Backends:      []loadbalancer.BackendDetails{},
+					HealthChecker: desired.HealthChecker,
+				},
+			})
+			if err != nil {
+				return errors.Wrapf(err, "failed to update lb backend set %q", name)
+			}
+			if _, err := ociutil.AwaitLBWorkRequest(ctx, s.LoadBalancerClient, resp.OpcWorkRequestId); err != nil {
+				return errors.Wrapf(err, "failed awaiting update backend set %q", name)
+			}
+		}
+	}
+	for name, actual := range actualResp.LoadBalancer.BackendSets {
+		if _, keep := desiredBackendSets[name]; keep {
+			continue
+		}
+		if len(actual.Backends) > 0 {
+			continue
+		}
+		resp, err := extendedClient.DeleteBackendSet(ctx, loadbalancer.DeleteBackendSetRequest{
+			LoadBalancerId: lbID,
+			BackendSetName: common.String(name),
+		})
+		if err != nil {
+			return errors.Wrapf(err, "failed to delete stale lb backend set %q", name)
+		}
+		if _, err := ociutil.AwaitLBWorkRequest(ctx, s.LoadBalancerClient, resp.OpcWorkRequestId); err != nil {
+			return errors.Wrapf(err, "failed awaiting delete backend set %q", name)
+		}
 	}
 	return nil
 }

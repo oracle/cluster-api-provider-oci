@@ -29,6 +29,15 @@ import (
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 )
 
+type nlbExtendedClient interface {
+	CreateBackendSet(ctx context.Context, request networkloadbalancer.CreateBackendSetRequest) (response networkloadbalancer.CreateBackendSetResponse, err error)
+	UpdateBackendSet(ctx context.Context, request networkloadbalancer.UpdateBackendSetRequest) (response networkloadbalancer.UpdateBackendSetResponse, err error)
+	DeleteBackendSet(ctx context.Context, request networkloadbalancer.DeleteBackendSetRequest) (response networkloadbalancer.DeleteBackendSetResponse, err error)
+	CreateListener(ctx context.Context, request networkloadbalancer.CreateListenerRequest) (response networkloadbalancer.CreateListenerResponse, err error)
+	UpdateListener(ctx context.Context, request networkloadbalancer.UpdateListenerRequest) (response networkloadbalancer.UpdateListenerResponse, err error)
+	DeleteListener(ctx context.Context, request networkloadbalancer.DeleteListenerRequest) (response networkloadbalancer.DeleteListenerResponse, err error)
+}
+
 // ReconcileApiServerNLB tries to move the Network Load Balancer to the desired OCICluster Spec
 func (s *ClusterScope) ReconcileApiServerNLB(ctx context.Context) error {
 	desiredApiServerNLB := s.NLBSpec()
@@ -133,6 +142,171 @@ func (s *ClusterScope) UpdateNLB(ctx context.Context, nlb infrastructurev1beta2.
 	if err != nil {
 		s.Logger.Error(err, "failed to reconcile the apiserver NLB, failed to update nlb")
 		return errors.Wrap(err, "failed to reconcile the apiserver NLB, failed to update nlb")
+	}
+	if err := s.reconcileNLBResources(ctx, nlb); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *ClusterScope) reconcileNLBResources(ctx context.Context, nlb infrastructurev1beta2.LoadBalancer) error {
+	extendedClient, ok := any(s.NetworkLoadBalancerClient).(nlbExtendedClient)
+	if !ok {
+		// Unit tests use minimal mocks without listener/backend-set management methods.
+		s.Logger.Info("NLB client does not support extended listener/backend-set reconcile")
+		return nil
+	}
+	nlbID := s.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerId
+	actualResp, err := s.NetworkLoadBalancerClient.GetNetworkLoadBalancer(ctx, networkloadbalancer.GetNetworkLoadBalancerRequest{
+		NetworkLoadBalancerId: nlbID,
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to get nlb for resource reconciliation")
+	}
+	desiredListeners, desiredBackendSets := s.buildDesiredNLBListenersAndBackendSets(nlb)
+
+	for name, desired := range desiredListeners {
+		actual, exists := actualResp.NetworkLoadBalancer.Listeners[name]
+		if !exists {
+			resp, err := extendedClient.CreateListener(ctx, networkloadbalancer.CreateListenerRequest{
+				NetworkLoadBalancerId: nlbID,
+				CreateListenerDetails: networkloadbalancer.CreateListenerDetails{
+					Name:                  common.String(name),
+					DefaultBackendSetName: desired.DefaultBackendSetName,
+					Port:                  desired.Port,
+					Protocol:              desired.Protocol,
+				},
+			})
+			if err != nil {
+				return errors.Wrapf(err, "failed to create nlb listener %q", name)
+			}
+			if _, err := ociutil.AwaitNLBWorkRequest(ctx, s.NetworkLoadBalancerClient, resp.OpcWorkRequestId); err != nil {
+				return errors.Wrapf(err, "failed awaiting create listener %q", name)
+			}
+			continue
+		}
+		if !intPtrEqual(actual.Port, desired.Port) ||
+			!ptr.StringEquals(actual.DefaultBackendSetName, ptr.ToString(desired.DefaultBackendSetName)) ||
+			actual.Protocol != desired.Protocol {
+			resp, err := extendedClient.UpdateListener(ctx, networkloadbalancer.UpdateListenerRequest{
+				NetworkLoadBalancerId: nlbID,
+				ListenerName:          common.String(name),
+				UpdateListenerDetails: networkloadbalancer.UpdateListenerDetails{
+					DefaultBackendSetName: desired.DefaultBackendSetName,
+					Port:                  desired.Port,
+					Protocol:              desired.Protocol,
+				},
+			})
+			if err != nil {
+				return errors.Wrapf(err, "failed to update nlb listener %q", name)
+			}
+			if _, err := ociutil.AwaitNLBWorkRequest(ctx, s.NetworkLoadBalancerClient, resp.OpcWorkRequestId); err != nil {
+				return errors.Wrapf(err, "failed awaiting update listener %q", name)
+			}
+		}
+	}
+	for name := range actualResp.NetworkLoadBalancer.Listeners {
+		if _, keep := desiredListeners[name]; keep {
+			continue
+		}
+		resp, err := extendedClient.DeleteListener(ctx, networkloadbalancer.DeleteListenerRequest{
+			NetworkLoadBalancerId: nlbID,
+			ListenerName:          common.String(name),
+		})
+		if err != nil {
+			return errors.Wrapf(err, "failed to delete stale nlb listener %q", name)
+		}
+		if _, err := ociutil.AwaitNLBWorkRequest(ctx, s.NetworkLoadBalancerClient, resp.OpcWorkRequestId); err != nil {
+			return errors.Wrapf(err, "failed awaiting delete listener %q", name)
+		}
+	}
+
+	for name, desired := range desiredBackendSets {
+		actual, exists := actualResp.NetworkLoadBalancer.BackendSets[name]
+		if !exists {
+			resp, err := extendedClient.CreateBackendSet(ctx, networkloadbalancer.CreateBackendSetRequest{
+				NetworkLoadBalancerId: nlbID,
+				CreateBackendSetDetails: networkloadbalancer.CreateBackendSetDetails{
+					Name:                    common.String(name),
+					Policy:                  desired.Policy,
+					HealthChecker:           nlbHealthCheckerToDetails(desired.HealthChecker),
+					IsPreserveSource:        desired.IsPreserveSource,
+					IsFailOpen:              desired.IsFailOpen,
+					IsInstantFailoverEnabled: desired.IsInstantFailoverEnabled,
+				},
+			})
+			if err != nil {
+				return errors.Wrapf(err, "failed to create nlb backend set %q", name)
+			}
+			if _, err := ociutil.AwaitNLBWorkRequest(ctx, s.NetworkLoadBalancerClient, resp.OpcWorkRequestId); err != nil {
+				return errors.Wrapf(err, "failed awaiting create backend set %q", name)
+			}
+			continue
+		}
+		if actual.HealthChecker == nil || desired.HealthChecker == nil {
+			// Reconcile nullable health checker by updating if either side is nil.
+			resp, err := extendedClient.UpdateBackendSet(ctx, networkloadbalancer.UpdateBackendSetRequest{
+				NetworkLoadBalancerId: nlbID,
+				BackendSetName:        common.String(name),
+				UpdateBackendSetDetails: networkloadbalancer.UpdateBackendSetDetails{
+					Policy:                   common.String(string(desired.Policy)),
+					HealthChecker:            nlbHealthCheckerToDetails(desired.HealthChecker),
+					IsPreserveSource:         desired.IsPreserveSource,
+					IsFailOpen:               desired.IsFailOpen,
+					IsInstantFailoverEnabled: desired.IsInstantFailoverEnabled,
+				},
+			})
+			if err != nil {
+				return errors.Wrapf(err, "failed to update nlb backend set %q", name)
+			}
+			if _, err := ociutil.AwaitNLBWorkRequest(ctx, s.NetworkLoadBalancerClient, resp.OpcWorkRequestId); err != nil {
+				return errors.Wrapf(err, "failed awaiting update backend set %q", name)
+			}
+			continue
+		}
+		if actual.Policy != desired.Policy ||
+			!boolPtrEqual(actual.IsPreserveSource, desired.IsPreserveSource) ||
+			!boolPtrEqual(actual.IsFailOpen, desired.IsFailOpen) ||
+			!boolPtrEqual(actual.IsInstantFailoverEnabled, desired.IsInstantFailoverEnabled) ||
+			!intPtrEqual(actual.HealthChecker.Port, desired.HealthChecker.Port) ||
+			actual.HealthChecker.Protocol != desired.HealthChecker.Protocol ||
+			!ptr.StringEquals(actual.HealthChecker.UrlPath, ptr.ToString(desired.HealthChecker.UrlPath)) {
+			resp, err := extendedClient.UpdateBackendSet(ctx, networkloadbalancer.UpdateBackendSetRequest{
+				NetworkLoadBalancerId: nlbID,
+				BackendSetName:        common.String(name),
+				UpdateBackendSetDetails: networkloadbalancer.UpdateBackendSetDetails{
+					Policy:                   common.String(string(desired.Policy)),
+					HealthChecker:            nlbHealthCheckerToDetails(desired.HealthChecker),
+					IsPreserveSource:         desired.IsPreserveSource,
+					IsFailOpen:               desired.IsFailOpen,
+					IsInstantFailoverEnabled: desired.IsInstantFailoverEnabled,
+				},
+			})
+			if err != nil {
+				return errors.Wrapf(err, "failed to update nlb backend set %q", name)
+			}
+			if _, err := ociutil.AwaitNLBWorkRequest(ctx, s.NetworkLoadBalancerClient, resp.OpcWorkRequestId); err != nil {
+				return errors.Wrapf(err, "failed awaiting update backend set %q", name)
+			}
+		}
+	}
+	for name, actual := range actualResp.NetworkLoadBalancer.BackendSets {
+		if _, keep := desiredBackendSets[name]; keep {
+			continue
+		}
+		if len(actual.Backends) > 0 {
+			continue
+		}
+		resp, err := extendedClient.DeleteBackendSet(ctx, networkloadbalancer.DeleteBackendSetRequest{
+			NetworkLoadBalancerId: nlbID,
+			BackendSetName:        common.String(name),
+		})
+		if err != nil {
+			return errors.Wrapf(err, "failed to delete stale nlb backend set %q", name)
+		}
+		if _, err := ociutil.AwaitNLBWorkRequest(ctx, s.NetworkLoadBalancerClient, resp.OpcWorkRequestId); err != nil {
+			return errors.Wrapf(err, "failed awaiting delete backend set %q", name)
+		}
 	}
 	return nil
 }
@@ -262,6 +436,38 @@ func (s *ClusterScope) buildDesiredNLBListenersAndBackendSets(lb infrastructurev
 		}
 	}
 	return listenerDetails, backendSetDetails
+}
+
+func boolPtrEqual(a, b *bool) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return *a == *b
+}
+
+func intPtrEqual(a, b *int) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return *a == *b
+}
+
+func nlbHealthCheckerToDetails(in *networkloadbalancer.HealthChecker) *networkloadbalancer.HealthCheckerDetails {
+	if in == nil {
+		return nil
+	}
+	return &networkloadbalancer.HealthCheckerDetails{
+		Protocol:         in.Protocol,
+		Port:             in.Port,
+		Retries:          in.Retries,
+		TimeoutInMillis:  in.TimeoutInMillis,
+		IntervalInMillis: in.IntervalInMillis,
+		UrlPath:          in.UrlPath,
+		ResponseBodyRegex: in.ResponseBodyRegex,
+		ReturnCode:       in.ReturnCode,
+		RequestData:      in.RequestData,
+		ResponseData:     in.ResponseData,
+	}
 }
 
 func (s *ClusterScope) getNetworkLoadbalancerIp(nlb networkloadbalancer.NetworkLoadBalancer) (*string, error) {
