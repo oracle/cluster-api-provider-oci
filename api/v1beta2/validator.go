@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"net"
 	"regexp"
+	"strings"
 
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -51,6 +52,7 @@ const (
 	sourceRequiredFormat                     = "invalid %s: Source may not be empty"
 	protocolRequiredFormat                   = "invalid %s: Protocol may not be empty"
 	invalidCIDRFormatFormat                  = "invalid %s: CIDR format"
+	apiServerBackendSetNameRegex             = `^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$`
 )
 
 // invalidNameRegex is a broad regex used to validate allows names in OCI
@@ -126,10 +128,52 @@ func ValidateNetworkSpec(validRoles []Role, networkSpec NetworkSpec, old Network
 		nsgErrors := validateNSGs(validRoles, networkSpec.Vcn.NetworkSecurityGroup.List, fldPath.Child("networkSecurityGroups"))
 		allErrs = append(allErrs, nsgErrors...)
 	}
+	allErrs = append(allErrs, validateAPIServerLBBackendSets(networkSpec.APIServerLB.NLBSpec, fldPath.Child("apiServerLoadBalancer").Child("nlbSpec"))...)
 
 	if len(allErrs) == 0 {
 		return nil
 	}
+	return allErrs
+}
+
+func validateAPIServerLBBackendSets(spec NLBSpec, fldPath *field.Path) field.ErrorList {
+	var allErrs field.ErrorList
+
+	legacyConfigured := spec.BackendSetDetails != (BackendSetDetails{})
+	if len(spec.BackendSets) > 0 && legacyConfigured {
+		allErrs = append(allErrs, field.Forbidden(
+			fldPath.Child("backendSetDetails"),
+			"cannot be set when backendSets is configured; move legacy backendSetDetails into backendSets",
+		))
+	}
+
+	nameRegex := regexp.MustCompile(apiServerBackendSetNameRegex)
+	seen := map[string]int{}
+	for i, backendSet := range spec.BackendSets {
+		namePath := fldPath.Child("backendSets").Index(i).Child("name")
+		name := strings.TrimSpace(backendSet.Name)
+		if name == "" {
+			allErrs = append(allErrs, field.Required(namePath, "must not be empty"))
+			continue
+		}
+		if !nameRegex.MatchString(name) {
+			allErrs = append(allErrs, field.Invalid(
+				namePath,
+				backendSet.Name,
+				"must match ^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$ (1-32 chars; alphanumeric, '-', '_')",
+			))
+		}
+		if firstIdx, ok := seen[name]; ok {
+			allErrs = append(allErrs, field.Invalid(
+				namePath,
+				backendSet.Name,
+				fmt.Sprintf("duplicate backend set name, already used at backendSets[%d].name", firstIdx),
+			))
+			continue
+		}
+		seen[name] = i
+	}
+
 	return allErrs
 }
 
