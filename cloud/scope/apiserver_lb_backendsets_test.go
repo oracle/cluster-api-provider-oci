@@ -15,7 +15,8 @@ func TestBuildDesiredNLBListenersAndBackendSets(t *testing.T) {
 			BackendSets: []infrastructurev1beta2.NLBBackendSet{
 				{Name: "primary-set"},
 				{
-					Name: "rollout-set",
+					Name:         "rollout-set",
+					ListenerPort: int32Ptr(9345),
 					BackendSetDetails: infrastructurev1beta2.BackendSetDetails{
 						HealthChecker: infrastructurev1beta2.HealthChecker{
 							UrlPath: common.String("/readyz"),
@@ -30,12 +31,23 @@ func TestBuildDesiredNLBListenersAndBackendSets(t *testing.T) {
 	if len(backendSets) != 2 {
 		t.Fatalf("expected two backend sets, got %#v", backendSets)
 	}
+	if len(listeners) != 2 {
+		t.Fatalf("expected two listeners, got %#v", listeners)
+	}
 	if listeners[APIServerLBListener].DefaultBackendSetName == nil || *listeners[APIServerLBListener].DefaultBackendSetName != "primary-set" {
 		t.Fatalf("expected listener to reference first backend set, got %#v", listeners[APIServerLBListener])
+	}
+	secondaryListenerName := desiredAPIServerListenerName(1, 2, "rollout-set")
+	if listeners[secondaryListenerName].Port == nil || *listeners[secondaryListenerName].Port != 9345 {
+		t.Fatalf("expected secondary listener to use custom port, got %#v", listeners[secondaryListenerName])
 	}
 	if backendSets["rollout-set"].HealthChecker == nil || backendSets["rollout-set"].HealthChecker.UrlPath == nil || *backendSets["rollout-set"].HealthChecker.UrlPath != "/readyz" {
 		t.Fatalf("expected rollout backend set health checker override, got %#v", backendSets["rollout-set"])
 	}
+}
+
+func int32Ptr(v int32) *int32 {
+	return &v
 }
 
 func TestBuildDesiredLBListenersAndBackendSets(t *testing.T) {
@@ -52,6 +64,9 @@ func TestBuildDesiredLBListenersAndBackendSets(t *testing.T) {
 	listeners, backendSets := scope.buildDesiredLBListenersAndBackendSets(lb)
 	if len(backendSets) != 2 {
 		t.Fatalf("expected two backend sets, got %#v", backendSets)
+	}
+	if len(listeners) != 2 {
+		t.Fatalf("expected two listeners, got %#v", listeners)
 	}
 	if listeners[APIServerLBListener].DefaultBackendSetName == nil || *listeners[APIServerLBListener].DefaultBackendSetName != "primary-set" {
 		t.Fatalf("expected listener to reference first backend set, got %#v", listeners[APIServerLBListener])

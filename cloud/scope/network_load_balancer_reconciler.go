@@ -250,14 +250,16 @@ func (s *ClusterScope) buildDesiredNLBListenersAndBackendSets(lb infrastructurev
 		}
 	}
 
-	primaryBackendSetName := canonicalBackendSets[0].Name
-	listenerDetails := map[string]networkloadbalancer.ListenerDetails{
-		APIServerLBListener: {
+	listenerDetails := make(map[string]networkloadbalancer.ListenerDetails, len(canonicalBackendSets))
+	for i, backendSet := range canonicalBackendSets {
+		listenerName := desiredAPIServerListenerName(i, len(canonicalBackendSets), backendSet.Name)
+		port := desiredAPIServerListenerPort(s.APIServerPort(), backendSet)
+		listenerDetails[listenerName] = networkloadbalancer.ListenerDetails{
 			Protocol:              networkloadbalancer.ListenerProtocolsTcp,
-			Port:                  common.Int(int(s.APIServerPort())),
-			DefaultBackendSetName: common.String(primaryBackendSetName),
-			Name:                  common.String(APIServerLBListener),
-		},
+			Port:                  common.Int(int(port)),
+			DefaultBackendSetName: common.String(backendSet.Name),
+			Name:                  common.String(listenerName),
+		}
 	}
 	return listenerDetails, backendSetDetails
 }

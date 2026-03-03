@@ -209,6 +209,12 @@ spec:
                                         The value is false by default.
                                       type: boolean
                                   type: object
+                                listenerPort:
+                                  description: |-
+                                    ListenerPort is the load balancer listener port routed to this backend set.
+                                    When omitted, the cluster API server port is used.
+                                  format: int32
+                                  type: integer
                                 name:
                                   description: Name is the API server backend set
                                     identifier.
@@ -1425,6 +1431,12 @@ spec:
                                         The value is false by default.
                                       type: boolean
                                   type: object
+                                listenerPort:
+                                  description: |-
+                                    ListenerPort is the load balancer listener port routed to this backend set.
+                                    When omitted, the cluster API server port is used.
+                                  format: int32
+                                  type: integer
                                 name:
                                   description: Name is the API server backend set
                                     identifier.

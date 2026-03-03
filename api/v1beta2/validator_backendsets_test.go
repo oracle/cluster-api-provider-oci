@@ -95,4 +95,33 @@ func TestValidateNetworkSpec_BackendSets(t *testing.T) {
 			t.Fatalf("expected no validation errors, got %v", errs.ToAggregate())
 		}
 	})
+
+	t.Run("rejects duplicate listener ports", func(t *testing.T) {
+		errs := ValidateNetworkSpec(
+			OCIClusterSubnetRoles,
+			NetworkSpec{
+				APIServerLB: LoadBalancer{
+					NLBSpec: NLBSpec{
+						BackendSets: []NLBBackendSet{
+							{Name: "set-a", ListenerPort: int32Ptr(9345)},
+							{Name: "set-b", ListenerPort: int32Ptr(9345)},
+						},
+					},
+				},
+			},
+			NetworkSpec{},
+			field.NewPath("spec").Child("networkSpec"),
+		)
+
+		if len(errs) == 0 {
+			t.Fatalf("expected validation error for duplicate listener ports")
+		}
+		if !strings.Contains(errs[0].Error(), "duplicate listenerPort") {
+			t.Fatalf("expected duplicate listener port guidance in error, got %q", errs[0].Error())
+		}
+	})
+}
+
+func int32Ptr(v int32) *int32 {
+	return &v
 }

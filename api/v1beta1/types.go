@@ -1013,6 +1013,11 @@ type NLBBackendSet struct {
 	// Name is the API server backend set identifier.
 	Name string `json:"name"`
 
+	// ListenerPort is the load balancer listener port routed to this backend set.
+	// When omitted, the cluster API server port is used.
+	// +optional
+	ListenerPort *int32 `json:"listenerPort,omitempty"`
+
 	// BackendSetDetails specifies the backend set behavior.
 	// +optional
 	BackendSetDetails BackendSetDetails `json:"backendSetDetails,omitempty"`

@@ -229,13 +229,15 @@ func (s *ClusterScope) buildDesiredLBListenersAndBackendSets(lb infrastructurev1
 		}
 	}
 
-	primaryBackendSetName := canonicalBackendSets[0].Name
-	listenerDetails := map[string]loadbalancer.ListenerDetails{
-		APIServerLBListener: {
+	listenerDetails := make(map[string]loadbalancer.ListenerDetails, len(canonicalBackendSets))
+	for i, backendSet := range canonicalBackendSets {
+		listenerName := desiredAPIServerListenerName(i, len(canonicalBackendSets), backendSet.Name)
+		port := desiredAPIServerListenerPort(s.APIServerPort(), backendSet)
+		listenerDetails[listenerName] = loadbalancer.ListenerDetails{
 			Protocol:              common.String("TCP"),
-			Port:                  common.Int(int(s.APIServerPort())),
-			DefaultBackendSetName: common.String(primaryBackendSetName),
-		},
+			Port:                  common.Int(int(port)),
+			DefaultBackendSetName: common.String(backendSet.Name),
+		}
 	}
 	return listenerDetails, backendSetDetails
 }

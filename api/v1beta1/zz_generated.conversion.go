@@ -1872,6 +1872,7 @@ func autoConvert_v1beta2_LoadBalancer_To_v1beta1_LoadBalancer(in *v1beta2.LoadBa
 
 func autoConvert_v1beta1_NLBBackendSet_To_v1beta2_NLBBackendSet(in *NLBBackendSet, out *v1beta2.NLBBackendSet, s conversion.Scope) error {
 	out.Name = in.Name
+	out.ListenerPort = (*int32)(unsafe.Pointer(in.ListenerPort))
 	if err := Convert_v1beta1_BackendSetDetails_To_v1beta2_BackendSetDetails(&in.BackendSetDetails, &out.BackendSetDetails, s); err != nil {
 		return err
 	}
@@ -1885,6 +1886,7 @@ func Convert_v1beta1_NLBBackendSet_To_v1beta2_NLBBackendSet(in *NLBBackendSet, o
 
 func autoConvert_v1beta2_NLBBackendSet_To_v1beta1_NLBBackendSet(in *v1beta2.NLBBackendSet, out *NLBBackendSet, s conversion.Scope) error {
 	out.Name = in.Name
+	out.ListenerPort = (*int32)(unsafe.Pointer(in.ListenerPort))
 	if err := Convert_v1beta2_BackendSetDetails_To_v1beta1_BackendSetDetails(&in.BackendSetDetails, &out.BackendSetDetails, s); err != nil {
 		return err
 	}

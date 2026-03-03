@@ -174,6 +174,28 @@ func validateAPIServerLBBackendSets(spec NLBSpec, fldPath *field.Path) field.Err
 		seen[name] = i
 	}
 
+	usedPorts := map[int32]int{}
+	for i, backendSet := range spec.BackendSets {
+		portPath := fldPath.Child("backendSets").Index(i).Child("listenerPort")
+		if backendSet.ListenerPort == nil {
+			continue
+		}
+		port := *backendSet.ListenerPort
+		if port < 1 || port > 65535 {
+			allErrs = append(allErrs, field.Invalid(portPath, port, "must be between 1 and 65535"))
+			continue
+		}
+		if firstIdx, ok := usedPorts[port]; ok {
+			allErrs = append(allErrs, field.Invalid(
+				portPath,
+				port,
+				fmt.Sprintf("duplicate listenerPort, already used at backendSets[%d].listenerPort", firstIdx),
+			))
+			continue
+		}
+		usedPorts[port] = i
+	}
+
 	return allErrs
 }
 
