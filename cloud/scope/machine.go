@@ -634,9 +634,6 @@ func (m *MachineScope) ReconcileCreateInstanceOnLB(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		// When creating a LB, there is no way to set the backend Name, default backend name is the instance IP and port
-		// So we use default backend name instead of machine name
-		backendName := instanceIp + ":" + strconv.Itoa(int(m.OCIClusterAccessor.GetControlPlaneEndpoint().Port))
 		for _, backendSetName := range m.desiredAPIServerBackendSetNames() {
 			backendSet, ok := lb.BackendSets[backendSetName]
 			if !ok {
@@ -645,6 +642,9 @@ func (m *MachineScope) ReconcileCreateInstanceOnLB(ctx context.Context) error {
 			if backendSet.Name == nil {
 				backendSet.Name = common.String(backendSetName)
 			}
+			backendPort := m.desiredAPIServerBackendPort(backendSetName)
+			// For LBaaS backend names are represented as "<ip>:<port>".
+			backendName := instanceIp + ":" + strconv.Itoa(int(backendPort))
 			if !m.containsLBBackend(backendSet, backendName) {
 				logger := m.Logger.WithValues("backend-set", *backendSet.Name)
 				logger.Info("Checking work request status for create backend")
@@ -657,9 +657,9 @@ func (m *MachineScope) ReconcileCreateInstanceOnLB(ctx context.Context) error {
 					BackendSetName: backendSet.Name,
 					CreateBackendDetails: loadbalancer.CreateBackendDetails{
 						IpAddress: common.String(instanceIp),
-						Port:      common.Int(int(m.OCIClusterAccessor.GetControlPlaneEndpoint().Port)),
+						Port:      common.Int(int(backendPort)),
 					},
-					OpcRetryToken: ociutil.GetOPCRetryToken("%s-%s", "create-backend", string(m.OCIMachine.UID)),
+					OpcRetryToken: m.createBackendRetryToken(backendSetName, backendPort),
 				})
 				if err != nil {
 					return err
@@ -681,7 +681,8 @@ func (m *MachineScope) ReconcileCreateInstanceOnLB(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		for _, backendSetName := range m.desiredAPIServerBackendSetNames() {
+		desiredBackendSetNames := m.desiredAPIServerBackendSetNames()
+		for _, backendSetName := range desiredBackendSetNames {
 			backendSet, ok := lb.BackendSets[backendSetName]
 			if !ok {
 				return errors.Errorf("backend set %q not found on network load balancer", backendSetName)
@@ -689,7 +690,10 @@ func (m *MachineScope) ReconcileCreateInstanceOnLB(ctx context.Context) error {
 			if backendSet.Name == nil {
 				backendSet.Name = common.String(backendSetName)
 			}
-			if !m.containsNLBBackend(backendSet, m.Name()) {
+			desiredBackendName := m.desiredNLBBackendName(backendSetName, desiredBackendSetNames)
+			legacyBackendName := m.Name()
+			backendPort := m.desiredAPIServerBackendPort(backendSetName)
+			if !m.containsNLBBackend(backendSet, desiredBackendName) && !m.containsNLBBackend(backendSet, legacyBackendName) {
 				logger := m.Logger.WithValues("backend-set", *backendSet.Name)
 				logger.Info("Checking work request status for create backend")
 				// we always try to create the backend if it exists during a reconcile loop and wait for the work request
@@ -701,10 +705,10 @@ func (m *MachineScope) ReconcileCreateInstanceOnLB(ctx context.Context) error {
 					BackendSetName:        backendSet.Name,
 					CreateBackendDetails: networkloadbalancer.CreateBackendDetails{
 						IpAddress: common.String(instanceIp),
-						Port:      common.Int(int(m.OCIClusterAccessor.GetControlPlaneEndpoint().Port)),
-						Name:      common.String(m.Name()),
+						Port:      common.Int(int(backendPort)),
+						Name:      common.String(desiredBackendName),
 					},
-					OpcRetryToken: ociutil.GetOPCRetryToken("%s-%s", "create-backend", string(m.OCIMachine.UID)),
+					OpcRetryToken: m.createBackendRetryToken(backendSetName, backendPort),
 				})
 				if err != nil {
 					return err
@@ -755,16 +759,23 @@ func (m *MachineScope) ReconcileDeleteInstanceOnLB(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		backendName := instanceIp + ":" + strconv.Itoa(int(m.OCIClusterAccessor.GetControlPlaneEndpoint().Port))
 		for backendSetName, backendSet := range lb.BackendSets {
 			if backendSet.Name == nil {
 				backendSet.Name = common.String(backendSetName)
 			}
-			if m.containsLBBackend(backendSet, backendName) {
+			desiredBackendName := m.desiredLBBackendName(instanceIp, backendSetName)
+			legacyBackendName := instanceIp + ":" + strconv.Itoa(int(m.OCIClusterAccessor.GetControlPlaneEndpoint().Port))
+			backendNameToDelete := ""
+			if m.containsLBBackend(backendSet, desiredBackendName) {
+				backendNameToDelete = desiredBackendName
+			} else if desiredBackendName != legacyBackendName && m.containsLBBackend(backendSet, legacyBackendName) {
+				backendNameToDelete = legacyBackendName
+			}
+			if backendNameToDelete != "" {
 				logger := m.Logger.WithValues("backend-set", *backendSet.Name)
 				// in OCI CLI, the colon in the backend name is replaced by %3A
 				// replace the colon in the backend name by %3A to avoid the error in PCA
-				escapedBackendName := url.QueryEscape(backendName)
+				escapedBackendName := url.QueryEscape(backendNameToDelete)
 				// we always try to delete the backend if it exists during a reconcile loop and wait for the work request
 				// to complete. If there is a work request in progress, in the rare case, CAPOCI pod restarts during the
 				// work request, the delete backend call may throw an error which is ok, as reconcile will go into
@@ -802,11 +813,20 @@ func (m *MachineScope) ReconcileDeleteInstanceOnLB(ctx context.Context) error {
 			}
 			return err
 		}
+		desiredBackendSetNames := m.desiredAPIServerBackendSetNames()
 		for backendSetName, backendSet := range lb.BackendSets {
 			if backendSet.Name == nil {
 				backendSet.Name = common.String(backendSetName)
 			}
-			if m.containsNLBBackend(backendSet, m.Name()) {
+			desiredBackendName := m.desiredNLBBackendName(backendSetName, desiredBackendSetNames)
+			legacyBackendName := m.Name()
+			backendNameToDelete := ""
+			if m.containsNLBBackend(backendSet, desiredBackendName) {
+				backendNameToDelete = desiredBackendName
+			} else if desiredBackendName != legacyBackendName && m.containsNLBBackend(backendSet, legacyBackendName) {
+				backendNameToDelete = legacyBackendName
+			}
+			if backendNameToDelete != "" {
 				logger := m.Logger.WithValues("backend-set", *backendSet.Name)
 				// we always try to delete the backend if it exists during a reconcile loop and wait for the work request
 				// to complete. If there is a work request in progress, in the rare case, CAPOCI pod restarts during the
@@ -815,7 +835,7 @@ func (m *MachineScope) ReconcileDeleteInstanceOnLB(ctx context.Context) error {
 				resp, err := m.NetworkLoadBalancerClient.DeleteBackend(ctx, networkloadbalancer.DeleteBackendRequest{
 					NetworkLoadBalancerId: loadbalancerId,
 					BackendSetName:        backendSet.Name,
-					BackendName:           common.String(m.Name()),
+					BackendName:           common.String(backendNameToDelete),
 				})
 				if err != nil {
 					return err
@@ -840,6 +860,43 @@ func (m *MachineScope) desiredAPIServerBackendSetNames() []string {
 		names = append(names, backendSet.Name)
 	}
 	return names
+}
+
+func (m *MachineScope) desiredAPIServerBackendPort(backendSetName string) int32 {
+	defaultPort := m.OCIClusterAccessor.GetControlPlaneEndpoint().Port
+	backendSets := m.OCIClusterAccessor.GetNetworkSpec().APIServerLB.NLBSpec.CanonicalBackendSets()
+	for _, backendSet := range backendSets {
+		if backendSet.Name == backendSetName {
+			return desiredAPIServerListenerPort(defaultPort, backendSet)
+		}
+	}
+	return defaultPort
+}
+
+func (m *MachineScope) createBackendRetryToken(backendSetName string, backendPort int32) *string {
+	uid := string(m.OCIMachine.UID)
+	if len(m.desiredAPIServerBackendSetNames()) <= 1 {
+		return ociutil.GetOPCRetryToken("%s-%s", "create-backend", uid)
+	}
+	scope := fmt.Sprintf("%s:%d", backendSetName, backendPort)
+	return ociutil.GetOPCRetryToken("%s-%s-%s", "create-backend", uid, stableShortHash(scope))
+}
+
+func (m *MachineScope) desiredLBBackendName(instanceIP, backendSetName string) string {
+	backendPort := m.desiredAPIServerBackendPort(backendSetName)
+	return instanceIP + ":" + strconv.Itoa(int(backendPort))
+}
+
+func (m *MachineScope) desiredNLBBackendName(backendSetName string, desiredBackendSetNames []string) string {
+	// Preserve current backend naming for all single-backend-set configurations.
+	if len(desiredBackendSetNames) <= 1 {
+		return m.Name()
+	}
+	// Preserve legacy name for the primary/default API server backend set.
+	if backendSetName == APIServerLBBackendSetName {
+		return m.Name()
+	}
+	return fmt.Sprintf("%s-%s", m.Name(), stableShortHash(backendSetName))
 }
 
 func (m *MachineScope) containsNLBBackend(backendSet networkloadbalancer.BackendSet, backendName string) bool {
