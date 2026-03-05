@@ -29,15 +29,6 @@ import (
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 )
 
-type lbExtendedClient interface {
-	CreateBackendSet(ctx context.Context, request loadbalancer.CreateBackendSetRequest) (response loadbalancer.CreateBackendSetResponse, err error)
-	UpdateBackendSet(ctx context.Context, request loadbalancer.UpdateBackendSetRequest) (response loadbalancer.UpdateBackendSetResponse, err error)
-	DeleteBackendSet(ctx context.Context, request loadbalancer.DeleteBackendSetRequest) (response loadbalancer.DeleteBackendSetResponse, err error)
-	CreateListener(ctx context.Context, request loadbalancer.CreateListenerRequest) (response loadbalancer.CreateListenerResponse, err error)
-	UpdateListener(ctx context.Context, request loadbalancer.UpdateListenerRequest) (response loadbalancer.UpdateListenerResponse, err error)
-	DeleteListener(ctx context.Context, request loadbalancer.DeleteListenerRequest) (response loadbalancer.DeleteListenerResponse, err error)
-}
-
 // ReconcileApiServerLB tries to move the Load Balancer to the desired OCICluster Spec
 func (s *ClusterScope) ReconcileApiServerLB(ctx context.Context) error {
 	desiredApiServerLb := s.LBSpec()
@@ -151,11 +142,6 @@ func (s *ClusterScope) UpdateLB(ctx context.Context, lb infrastructurev1beta2.Lo
 }
 
 func (s *ClusterScope) reconcileLBResources(ctx context.Context, lb infrastructurev1beta2.LoadBalancer) error {
-	extendedClient, ok := any(s.LoadBalancerClient).(lbExtendedClient)
-	if !ok {
-		s.Logger.Info("LB client does not support extended listener/backend-set reconcile")
-		return nil
-	}
 	lbID := s.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerId
 	actualResp, err := s.LoadBalancerClient.GetLoadBalancer(ctx, loadbalancer.GetLoadBalancerRequest{
 		LoadBalancerId: lbID,
@@ -168,7 +154,7 @@ func (s *ClusterScope) reconcileLBResources(ctx context.Context, lb infrastructu
 	for name, desired := range desiredListeners {
 		actual, exists := actualResp.LoadBalancer.Listeners[name]
 		if !exists {
-			resp, err := extendedClient.CreateListener(ctx, loadbalancer.CreateListenerRequest{
+			resp, err := s.LoadBalancerClient.CreateListener(ctx, loadbalancer.CreateListenerRequest{
 				LoadBalancerId: lbID,
 				CreateListenerDetails: loadbalancer.CreateListenerDetails{
 					Name:                  common.String(name),
@@ -188,7 +174,7 @@ func (s *ClusterScope) reconcileLBResources(ctx context.Context, lb infrastructu
 		if !intPtrEqual(actual.Port, desired.Port) ||
 			!ptr.StringEquals(actual.DefaultBackendSetName, ptr.ToString(desired.DefaultBackendSetName)) ||
 			!ptr.StringEquals(actual.Protocol, ptr.ToString(desired.Protocol)) {
-			resp, err := extendedClient.UpdateListener(ctx, loadbalancer.UpdateListenerRequest{
+			resp, err := s.LoadBalancerClient.UpdateListener(ctx, loadbalancer.UpdateListenerRequest{
 				LoadBalancerId: lbID,
 				ListenerName:   common.String(name),
 				UpdateListenerDetails: loadbalancer.UpdateListenerDetails{
@@ -209,7 +195,7 @@ func (s *ClusterScope) reconcileLBResources(ctx context.Context, lb infrastructu
 		if _, keep := desiredListeners[name]; keep {
 			continue
 		}
-		resp, err := extendedClient.DeleteListener(ctx, loadbalancer.DeleteListenerRequest{
+		resp, err := s.LoadBalancerClient.DeleteListener(ctx, loadbalancer.DeleteListenerRequest{
 			LoadBalancerId: lbID,
 			ListenerName:   common.String(name),
 		})
@@ -224,7 +210,7 @@ func (s *ClusterScope) reconcileLBResources(ctx context.Context, lb infrastructu
 	for name, desired := range desiredBackendSets {
 		actual, exists := actualResp.LoadBalancer.BackendSets[name]
 		if !exists {
-			resp, err := extendedClient.CreateBackendSet(ctx, loadbalancer.CreateBackendSetRequest{
+			resp, err := s.LoadBalancerClient.CreateBackendSet(ctx, loadbalancer.CreateBackendSetRequest{
 				LoadBalancerId: lbID,
 				CreateBackendSetDetails: loadbalancer.CreateBackendSetDetails{
 					Name:          common.String(name),
@@ -244,7 +230,7 @@ func (s *ClusterScope) reconcileLBResources(ctx context.Context, lb infrastructu
 			actual.HealthChecker == nil || desired.HealthChecker == nil ||
 			!intPtrEqual(actual.HealthChecker.Port, desired.HealthChecker.Port) ||
 			!ptr.StringEquals(actual.HealthChecker.Protocol, ptr.ToString(desired.HealthChecker.Protocol)) {
-			resp, err := extendedClient.UpdateBackendSet(ctx, loadbalancer.UpdateBackendSetRequest{
+			resp, err := s.LoadBalancerClient.UpdateBackendSet(ctx, loadbalancer.UpdateBackendSetRequest{
 				LoadBalancerId: lbID,
 				BackendSetName: common.String(name),
 				UpdateBackendSetDetails: loadbalancer.UpdateBackendSetDetails{
@@ -268,7 +254,7 @@ func (s *ClusterScope) reconcileLBResources(ctx context.Context, lb infrastructu
 		if len(actual.Backends) > 0 {
 			continue
 		}
-		resp, err := extendedClient.DeleteBackendSet(ctx, loadbalancer.DeleteBackendSetRequest{
+		resp, err := s.LoadBalancerClient.DeleteBackendSet(ctx, loadbalancer.DeleteBackendSetRequest{
 			LoadBalancerId: lbID,
 			BackendSetName: common.String(name),
 		})
