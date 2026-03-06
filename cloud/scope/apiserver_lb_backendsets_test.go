@@ -72,3 +72,34 @@ func TestBuildDesiredLBListenersAndBackendSets(t *testing.T) {
 		t.Fatalf("expected listener to reference first backend set, got %#v", listeners[APIServerLBListener])
 	}
 }
+
+func TestLBSpecPreservesBackendSets(t *testing.T) {
+	secondaryPort := int32(9345)
+	scope := &ClusterScope{
+		Cluster: &clusterv1.Cluster{},
+		OCIClusterAccessor: OCISelfManagedCluster{
+			OCICluster: &infrastructurev1beta2.OCICluster{
+				Spec: infrastructurev1beta2.OCIClusterSpec{
+					NetworkSpec: infrastructurev1beta2.NetworkSpec{
+						APIServerLB: infrastructurev1beta2.LoadBalancer{
+							NLBSpec: infrastructurev1beta2.NLBSpec{
+								BackendSets: []infrastructurev1beta2.NLBBackendSet{
+									{Name: APIServerLBBackendSetName},
+									{Name: "apiserver-lb-backendset-2", ListenerPort: &secondaryPort},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	got := scope.LBSpec()
+	if len(got.NLBSpec.BackendSets) != 2 {
+		t.Fatalf("expected backend sets to be preserved, got %#v", got.NLBSpec.BackendSets)
+	}
+	if got.NLBSpec.BackendSets[1].Name != "apiserver-lb-backendset-2" {
+		t.Fatalf("expected secondary backend set to be preserved, got %#v", got.NLBSpec.BackendSets)
+	}
+}

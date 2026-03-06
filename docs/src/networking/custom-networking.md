@@ -338,6 +338,8 @@ spec:
 
 Equivalent configuration for OCI LBaaS is supported by setting `loadBalancerType: "lb"`:
 
+> Note: `nlbSpec` is currently the shared API-server load balancer configuration field for both OCI NLB and OCI LBaaS. The field name is historical; LB multi-backend-set configuration is also defined under `nlbSpec`.
+
 ```yaml
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCICluster

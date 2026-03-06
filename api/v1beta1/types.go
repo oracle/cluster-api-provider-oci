@@ -982,7 +982,8 @@ type LoadBalancer struct {
 	// +optional
 	LoadBalancerId *string `json:"loadBalancerId,omitempty"`
 
-	// The NLB Spec
+	// Shared API server load balancer settings used for both `loadBalancerType: nlb` and `loadBalancerType: lb`.
+	// The field name is historical; it is not limited to the NLB implementation.
 	// +optional
 	NLBSpec NLBSpec `json:"nlbSpec,omitempty"`
 }
