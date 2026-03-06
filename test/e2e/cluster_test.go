@@ -178,7 +178,7 @@ var _ = Describe("Workload cluster creation", func() {
 		}, result)
 	})
 
-	It("Multiple API server backend sets on LB [DailyTests]", func() {
+	It("Multiple API server backend sets on LB [PRBlocking]", func() {
 		clusterName = getClusterName(clusterNamePrefix, "multiple-backends-lb")
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,

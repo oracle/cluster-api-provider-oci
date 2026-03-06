@@ -13,7 +13,7 @@ spec:
             backendSetDetails:
               healthChecker:
                 urlPath: /healthz
-          - name: apiserver-lb-backendset-secondary
+          - name: apiserver-lb-backendset-2
             listenerPort: ${API_SERVER_SECONDARY_LISTENER_PORT:=9345}
             backendSetDetails:
               healthChecker:
