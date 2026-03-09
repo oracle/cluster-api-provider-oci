@@ -321,7 +321,7 @@ spec:
             export CLUSTER_NAME="${CLUSTER_NAME:-capoci-e2e}"
             export OUTPUT_DIR="/workspace/_artifacts"
             ( until command -v kind >/dev/null 2>&1; do echo "waiting for kind binary..."; sleep 2; done; \
-              ./scripts/watch-capoci-controller.sh -n "${CLUSTER_NAME}" -o "${OUTPUT_DIR}" -r 180 -d 5 ) \
+              bash ./scripts/watch-capoci-controller.sh -n "${CLUSTER_NAME}" -o "${OUTPUT_DIR}" -r 180 -d 5 ) \
               & echo $! > /tmp/capoci_watch_pid
 
             # Run the e2e test harness
