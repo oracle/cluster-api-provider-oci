@@ -156,9 +156,10 @@ func (s *ClusterScope) reconcileLBResources(ctx context.Context, lb infrastructu
 	}
 	desiredListeners, desiredBackendSets := s.buildDesiredLBListenersAndBackendSets(lb)
 
-	for name, desired := range desiredBackendSets {
-		actual, exists := actualResp.LoadBalancer.BackendSets[name]
-		if !exists {
+	if err := reconcileNamedResources(
+		actualResp.LoadBalancer.BackendSets,
+		desiredBackendSets,
+		func(name string, desired loadbalancer.BackendSetDetails) error {
 			resp, err := s.LoadBalancerClient.CreateBackendSet(ctx, loadbalancer.CreateBackendSetRequest{
 				LoadBalancerId: lbID,
 				CreateBackendSetDetails: loadbalancer.CreateBackendSetDetails{
@@ -170,19 +171,17 @@ func (s *ClusterScope) reconcileLBResources(ctx context.Context, lb infrastructu
 			if err != nil {
 				if isAlreadyExistsOCIError(err) {
 					s.Logger.Info("LB backend set already exists during reconcile; continuing", "backendSet", name)
-					continue
+					return nil
 				}
 				return errors.Wrapf(err, "failed to create lb backend set %q", name)
 			}
 			if _, err := ociutil.AwaitLBWorkRequest(ctx, s.LoadBalancerClient, resp.OpcWorkRequestId); err != nil {
 				return errors.Wrapf(err, "failed awaiting create backend set %q", name)
 			}
-			continue
-		}
-		if !ptr.StringEquals(actual.Policy, ptr.ToString(desired.Policy)) ||
-			actual.HealthChecker == nil || desired.HealthChecker == nil ||
-			!intPtrEqual(actual.HealthChecker.Port, desired.HealthChecker.Port) ||
-			!ptr.StringEquals(actual.HealthChecker.Protocol, ptr.ToString(desired.HealthChecker.Protocol)) {
+			return nil
+		},
+		lbBackendSetNeedsUpdate,
+		func(name string, desired loadbalancer.BackendSetDetails) error {
 			resp, err := s.LoadBalancerClient.UpdateBackendSet(ctx, loadbalancer.UpdateBackendSetRequest{
 				LoadBalancerId: lbID,
 				BackendSetName: common.String(name),
@@ -198,12 +197,16 @@ func (s *ClusterScope) reconcileLBResources(ctx context.Context, lb infrastructu
 			if _, err := ociutil.AwaitLBWorkRequest(ctx, s.LoadBalancerClient, resp.OpcWorkRequestId); err != nil {
 				return errors.Wrapf(err, "failed awaiting update backend set %q", name)
 			}
-		}
+			return nil
+		},
+	); err != nil {
+		return err
 	}
 
-	for name, desired := range desiredListeners {
-		actual, exists := actualResp.LoadBalancer.Listeners[name]
-		if !exists {
+	if err := reconcileNamedResources(
+		actualResp.LoadBalancer.Listeners,
+		desiredListeners,
+		func(name string, desired loadbalancer.ListenerDetails) error {
 			resp, err := s.LoadBalancerClient.CreateListener(ctx, loadbalancer.CreateListenerRequest{
 				LoadBalancerId: lbID,
 				CreateListenerDetails: loadbalancer.CreateListenerDetails{
@@ -216,18 +219,17 @@ func (s *ClusterScope) reconcileLBResources(ctx context.Context, lb infrastructu
 			if err != nil {
 				if isAlreadyExistsOCIError(err) {
 					s.Logger.Info("LB listener already exists during reconcile; continuing", "listener", name)
-					continue
+					return nil
 				}
 				return errors.Wrapf(err, "failed to create lb listener %q", name)
 			}
 			if _, err := ociutil.AwaitLBWorkRequest(ctx, s.LoadBalancerClient, resp.OpcWorkRequestId); err != nil {
 				return errors.Wrapf(err, "failed awaiting create listener %q", name)
 			}
-			continue
-		}
-		if !intPtrEqual(actual.Port, desired.Port) ||
-			!ptr.StringEquals(actual.DefaultBackendSetName, ptr.ToString(desired.DefaultBackendSetName)) ||
-			!ptr.StringEquals(actual.Protocol, ptr.ToString(desired.Protocol)) {
+			return nil
+		},
+		lbListenerNeedsUpdate,
+		func(name string, desired loadbalancer.ListenerDetails) error {
 			resp, err := s.LoadBalancerClient.UpdateListener(ctx, loadbalancer.UpdateListenerRequest{
 				LoadBalancerId: lbID,
 				ListenerName:   common.String(name),
@@ -243,24 +245,31 @@ func (s *ClusterScope) reconcileLBResources(ctx context.Context, lb infrastructu
 			if _, err := ociutil.AwaitLBWorkRequest(ctx, s.LoadBalancerClient, resp.OpcWorkRequestId); err != nil {
 				return errors.Wrapf(err, "failed awaiting update listener %q", name)
 			}
-		}
+			return nil
+		},
+	); err != nil {
+		return err
 	}
-	staleListenerDeleted := false
-	for name := range actualResp.LoadBalancer.Listeners {
-		if _, keep := desiredListeners[name]; keep {
-			continue
-		}
-		resp, err := s.LoadBalancerClient.DeleteListener(ctx, loadbalancer.DeleteListenerRequest{
-			LoadBalancerId: lbID,
-			ListenerName:   common.String(name),
-		})
-		if err != nil {
-			return errors.Wrapf(err, "failed to delete stale lb listener %q", name)
-		}
-		if _, err := ociutil.AwaitLBWorkRequest(ctx, s.LoadBalancerClient, resp.OpcWorkRequestId); err != nil {
-			return errors.Wrapf(err, "failed awaiting delete listener %q", name)
-		}
-		staleListenerDeleted = true
+	staleListenerDeleted, err := deleteStaleNamedResources(
+		actualResp.LoadBalancer.Listeners,
+		desiredNameSet(desiredListeners),
+		func(loadbalancer.Listener) bool { return true },
+		func(name string, _ loadbalancer.Listener) error {
+			resp, err := s.LoadBalancerClient.DeleteListener(ctx, loadbalancer.DeleteListenerRequest{
+				LoadBalancerId: lbID,
+				ListenerName:   common.String(name),
+			})
+			if err != nil {
+				return errors.Wrapf(err, "failed to delete stale lb listener %q", name)
+			}
+			if _, err := ociutil.AwaitLBWorkRequest(ctx, s.LoadBalancerClient, resp.OpcWorkRequestId); err != nil {
+				return errors.Wrapf(err, "failed awaiting delete listener %q", name)
+			}
+			return nil
+		},
+	)
+	if err != nil {
+		return err
 	}
 	if staleListenerDeleted {
 		actualResp, err = s.LoadBalancerClient.GetLoadBalancer(ctx, loadbalancer.GetLoadBalancerRequest{
@@ -270,23 +279,25 @@ func (s *ClusterScope) reconcileLBResources(ctx context.Context, lb infrastructu
 			return errors.Wrap(err, "failed to refresh lb after stale listener reconciliation")
 		}
 	}
-	for name, actual := range actualResp.LoadBalancer.BackendSets {
-		if _, keep := desiredBackendSets[name]; keep {
-			continue
-		}
-		if len(actual.Backends) > 0 {
-			continue
-		}
-		resp, err := s.LoadBalancerClient.DeleteBackendSet(ctx, loadbalancer.DeleteBackendSetRequest{
-			LoadBalancerId: lbID,
-			BackendSetName: common.String(name),
-		})
-		if err != nil {
-			return errors.Wrapf(err, "failed to delete stale lb backend set %q", name)
-		}
-		if _, err := ociutil.AwaitLBWorkRequest(ctx, s.LoadBalancerClient, resp.OpcWorkRequestId); err != nil {
-			return errors.Wrapf(err, "failed awaiting delete backend set %q", name)
-		}
+	if _, err := deleteStaleNamedResources(
+		actualResp.LoadBalancer.BackendSets,
+		desiredNameSet(desiredBackendSets),
+		func(actual loadbalancer.BackendSet) bool { return len(actual.Backends) == 0 },
+		func(name string, _ loadbalancer.BackendSet) error {
+			resp, err := s.LoadBalancerClient.DeleteBackendSet(ctx, loadbalancer.DeleteBackendSetRequest{
+				LoadBalancerId: lbID,
+				BackendSetName: common.String(name),
+			})
+			if err != nil {
+				return errors.Wrapf(err, "failed to delete stale lb backend set %q", name)
+			}
+			if _, err := ociutil.AwaitLBWorkRequest(ctx, s.LoadBalancerClient, resp.OpcWorkRequestId); err != nil {
+				return errors.Wrapf(err, "failed awaiting delete backend set %q", name)
+			}
+			return nil
+		},
+	); err != nil {
+		return err
 	}
 	return nil
 }
@@ -365,10 +376,7 @@ func (s *ClusterScope) CreateLB(ctx context.Context, lb infrastructurev1beta2.Lo
 }
 
 func (s *ClusterScope) buildDesiredLBListenersAndBackendSets(lb infrastructurev1beta2.LoadBalancer) (map[string]loadbalancer.ListenerDetails, map[string]loadbalancer.BackendSetDetails) {
-	canonicalBackendSets := lb.NLBSpec.CanonicalBackendSets()
-	if len(canonicalBackendSets) == 0 {
-		canonicalBackendSets = []infrastructurev1beta2.NLBBackendSet{{Name: APIServerLBBackendSetName}}
-	}
+	canonicalBackendSets := desiredAPIServerBackendSets(lb)
 
 	backendSetDetails := make(map[string]loadbalancer.BackendSetDetails, len(canonicalBackendSets))
 	for _, backendSet := range canonicalBackendSets {
@@ -431,9 +439,7 @@ func (s *ClusterScope) IsLBEqual(actual *loadbalancer.LoadBalancer, desired infr
 		if !exists {
 			return false
 		}
-		if !intPtrEqual(actualListener.Port, desiredListener.Port) ||
-			!ptr.StringEquals(actualListener.DefaultBackendSetName, ptr.ToString(desiredListener.DefaultBackendSetName)) ||
-			!ptr.StringEquals(actualListener.Protocol, ptr.ToString(desiredListener.Protocol)) {
+		if lbListenerNeedsUpdate(actualListener, desiredListener) {
 			return false
 		}
 	}
@@ -446,15 +452,25 @@ func (s *ClusterScope) IsLBEqual(actual *loadbalancer.LoadBalancer, desired infr
 		if !exists {
 			return false
 		}
-		if !ptr.StringEquals(actualBackendSet.Policy, ptr.ToString(desiredBackendSet.Policy)) ||
-			actualBackendSet.HealthChecker == nil || desiredBackendSet.HealthChecker == nil ||
-			!intPtrEqual(actualBackendSet.HealthChecker.Port, desiredBackendSet.HealthChecker.Port) ||
-			!ptr.StringEquals(actualBackendSet.HealthChecker.Protocol, ptr.ToString(desiredBackendSet.HealthChecker.Protocol)) {
+		if lbBackendSetNeedsUpdate(actualBackendSet, desiredBackendSet) {
 			return false
 		}
 	}
 
 	return true
+}
+
+func lbListenerNeedsUpdate(actual loadbalancer.Listener, desired loadbalancer.ListenerDetails) bool {
+	return !intPtrEqual(actual.Port, desired.Port) ||
+		!ptr.StringEquals(actual.DefaultBackendSetName, ptr.ToString(desired.DefaultBackendSetName)) ||
+		!ptr.StringEquals(actual.Protocol, ptr.ToString(desired.Protocol))
+}
+
+func lbBackendSetNeedsUpdate(actual loadbalancer.BackendSet, desired loadbalancer.BackendSetDetails) bool {
+	return !ptr.StringEquals(actual.Policy, ptr.ToString(desired.Policy)) ||
+		actual.HealthChecker == nil || desired.HealthChecker == nil ||
+		!intPtrEqual(actual.HealthChecker.Port, desired.HealthChecker.Port) ||
+		!ptr.StringEquals(actual.HealthChecker.Protocol, ptr.ToString(desired.HealthChecker.Protocol))
 }
 
 // GetLoadBalancers retrieves the Cluster's loadbalancer.LoadBalancer using the one of the following methods
