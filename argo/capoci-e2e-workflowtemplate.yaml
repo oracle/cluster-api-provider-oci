@@ -25,11 +25,10 @@
 #
 # Run a workflow from this template (override any defaults with -p):
 #   argo submit --from workflowtemplate/capoci-e2e -n argo \
-#     -p use_instance_principal=true \
-#     -p use_instance_principal_b64=dHJ1ZQ==
+#     -p use_instance_principal=true
 #
 # Notes:
-# - USE_INSTANCE_PRINCIPAL_B64 commonly needs "dHJ1ZQ==" for true, "ZmFsc2U=" for false (base64).
+# - This workflow template supports instance principal for OCIR login and the E2E run.
 # - If OCI_SSH_KEY is omitted, the script will generate a temporary key.
 # - REGISTRY defaults to ghcr.io/oracle; override if pushing to your org's registry.
 # - git_ref defaults to main
@@ -112,10 +111,7 @@ spec:
       - name: exp_oke
         value: "false"
       - name: use_instance_principal
-        value: "false"
-      # Base64 of "true" or "false". Common values: true=dHJ1ZQ==, false=ZmFsc2U=
-      - name: use_instance_principal_b64
-        value: "dHJ1ZQ=="
+        value: "true"
       - name: oci_alternative_region
         value: "us-sanjose-1"
 
@@ -247,7 +243,7 @@ spec:
           - name: USE_INSTANCE_PRINCIPAL
             value: "{{workflow.parameters.use_instance_principal}}"
           - name: USE_INSTANCE_PRINCIPAL_B64
-            value: "{{workflow.parameters.use_instance_principal_b64}}"
+            value: ""
 
           # Test runner config
           - name: GINKGO_NODES
@@ -328,6 +324,12 @@ spec:
             ln -sf /opt/oci-cli/bin/oci /usr/local/bin/oci
 
             oci --version || true
+
+            if [ "${USE_INSTANCE_PRINCIPAL}" != "true" ]; then
+              echo "Argo CAPOCI E2E only supports instance principal auth for OCIR login and suite execution." >&2
+              exit 1
+            fi
+            export USE_INSTANCE_PRINCIPAL_B64="$(printf '%s' "${USE_INSTANCE_PRINCIPAL}" | base64 | tr -d '\n')"
 
             # Setup OCIR token and login using instance principal
             echo "Generating the ocir token"

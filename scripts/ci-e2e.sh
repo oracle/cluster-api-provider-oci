@@ -20,20 +20,28 @@ source "${REPO_ROOT}/hack/ensure-kubectl.sh"
 # shellcheck source=hack/ensure-tags.sh
 source "${REPO_ROOT}/hack/ensure-tags.sh"
 
+require_env() {
+    local name="$1"
+    if [ -z "${!name:-}" ]; then
+        echo "Environment variable ${name} is empty or not defined." >&2
+        exit 1
+    fi
+}
+
 # Verify the required Environment Variables are present.
-: "${OCI_COMPARTMENT_ID:?Environment variable empty or not defined.}"
-: "${OCI_IMAGE_ID:?Environment variable empty or not defined.}"
-: "${OCI_ORACLE_LINUX_IMAGE_ID:?Environment variable empty or not defined.}"
-: "${OCI_UPGRADE_IMAGE_ID:?Environment variable empty or not defined.}"
-: "${OCI_ALTERNATIVE_REGION_IMAGE_ID:?Environment variable empty or not defined.}"
-: "${OCI_MANAGED_NODE_IMAGE_ID:?Environment variable empty or not defined.}"
-: OCI_WINDOWS_IMAGE_ID
+require_env OCI_COMPARTMENT_ID
+require_env OCI_IMAGE_ID
+require_env OCI_ORACLE_LINUX_IMAGE_ID
+require_env OCI_UPGRADE_IMAGE_ID
+require_env OCI_ALTERNATIVE_REGION_IMAGE_ID
+require_env OCI_MANAGED_NODE_IMAGE_ID
 
 export LOCAL_ONLY=${LOCAL_ONLY:-"true"}
+export OCI_WINDOWS_IMAGE_ID="${OCI_WINDOWS_IMAGE_ID:-""}"
 
 defaultTag=$(date -u '+%Y%m%d%H%M%S')
-export TAG="${defaultTag:-dev}"
-export GINKGO_NODES=3
+export TAG="${TAG:-${defaultTag}}"
+export GINKGO_NODES="${GINKGO_NODES:-3}"
 
 export OCI_SSH_KEY="${OCI_SSH_KEY:-""}"
 export OCI_CONTROL_PLANE_MACHINE_TYPE="${OCI_CONTROL_PLANE_MACHINE_TYPE:-"VM.Standard.E3.Flex"}"
