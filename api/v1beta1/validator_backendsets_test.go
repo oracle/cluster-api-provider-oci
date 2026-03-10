@@ -126,6 +126,31 @@ func TestValidateNetworkSpec_BackendSets(t *testing.T) {
 		}
 	})
 
+	t.Run("rejects unsupported listener ports", func(t *testing.T) {
+		errs := ValidateNetworkSpec(
+			OCIClusterSubnetRoles,
+			NetworkSpec{
+				APIServerLB: LoadBalancer{
+					NLBSpec: NLBSpec{
+						BackendSets: []NLBBackendSet{
+							{Name: "set-a", ListenerPort: int32Ptr(10250)},
+						},
+					},
+				},
+			},
+			NetworkSpec{},
+			nil,
+			field.NewPath("spec").Child("networkSpec"),
+		)
+
+		if len(errs) == 0 {
+			t.Fatalf("expected validation error for unsupported listener port")
+		}
+		if !strings.Contains(errs[0].Error(), "must be one of 6443, 9345") {
+			t.Fatalf("expected supported-port guidance in error, got %q", errs[0].Error())
+		}
+	})
+
 	t.Run("rejects multiple omitted listener ports even when cluster API server port is unknown", func(t *testing.T) {
 		errs := ValidateNetworkSpec(
 			OCIClusterSubnetRoles,
@@ -223,6 +248,33 @@ func TestValidateNetworkSpec_BackendSets(t *testing.T) {
 
 		if len(errs) != 0 {
 			t.Fatalf("expected no validation errors, got %v", errs.ToAggregate())
+		}
+	})
+
+	t.Run("rejects unsupported listener port when cluster API server port is provided", func(t *testing.T) {
+		apiServerPort := int32(7443)
+		errs := ValidateNetworkSpec(
+			OCIClusterSubnetRoles,
+			NetworkSpec{
+				APIServerLB: LoadBalancer{
+					NLBSpec: NLBSpec{
+						BackendSets: []NLBBackendSet{
+							{Name: "set-a"},
+							{Name: "set-b", ListenerPort: int32Ptr(10250)},
+						},
+					},
+				},
+			},
+			NetworkSpec{},
+			&apiServerPort,
+			field.NewPath("spec").Child("networkSpec"),
+		)
+
+		if len(errs) == 0 {
+			t.Fatalf("expected validation error for unsupported listener port")
+		}
+		if !strings.Contains(errs[0].Error(), "must be one of 6443, 7443, 9345") {
+			t.Fatalf("expected supported-port guidance in error, got %q", errs[0].Error())
 		}
 	})
 

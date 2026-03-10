@@ -39,20 +39,21 @@ const (
 	ingressRulesType = "ingressRules"
 
 	// Error message formats for NSG security rule validation
-	udpDestinationPortRangeMaxRequiredFormat = "invalid %s: UdpOptions DestinationPortRange Max may not be empty"
-	udpDestinationPortRangeMinRequiredFormat = "invalid %s: UdpOptions DestinationPortRange Min may not be empty"
-	udpSourcePortRangeMaxRequiredFormat      = "invalid %s: UdpOptions SourcePortRange Max may not be empty"
-	udpSourcePortRangeMinRequiredFormat      = "invalid %s: UdpOptions SourcePortRange Min may not be empty"
-	tcpDestinationPortRangeMaxRequiredFormat = "invalid %s: TcpOptions DestinationPortRange Max may not be empty"
-	tcpDestinationPortRangeMinRequiredFormat = "invalid %s: TcpOptions DestinationPortRange Min may not be empty"
-	tcpSourcePortRangeMaxRequiredFormat      = "invalid %s: TcpOptions SourcePortRange Max may not be empty"
-	tcpSourcePortRangeMinRequiredFormat      = "invalid %s: TcpOptions SourcePortRange Min may not be empty"
-	icmpTypeRequiredFormat                   = "invalid %s: IcmpOptions Type may not be empty"
-	destinationRequiredFormat                = "invalid %s: Destination may not be empty"
-	sourceRequiredFormat                     = "invalid %s: Source may not be empty"
-	protocolRequiredFormat                   = "invalid %s: Protocol may not be empty"
-	invalidCIDRFormatFormat                  = "invalid %s: CIDR format"
-	apiServerBackendSetNameRegex             = `^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$`
+	udpDestinationPortRangeMaxRequiredFormat       = "invalid %s: UdpOptions DestinationPortRange Max may not be empty"
+	udpDestinationPortRangeMinRequiredFormat       = "invalid %s: UdpOptions DestinationPortRange Min may not be empty"
+	udpSourcePortRangeMaxRequiredFormat            = "invalid %s: UdpOptions SourcePortRange Max may not be empty"
+	udpSourcePortRangeMinRequiredFormat            = "invalid %s: UdpOptions SourcePortRange Min may not be empty"
+	tcpDestinationPortRangeMaxRequiredFormat       = "invalid %s: TcpOptions DestinationPortRange Max may not be empty"
+	tcpDestinationPortRangeMinRequiredFormat       = "invalid %s: TcpOptions DestinationPortRange Min may not be empty"
+	tcpSourcePortRangeMaxRequiredFormat            = "invalid %s: TcpOptions SourcePortRange Max may not be empty"
+	tcpSourcePortRangeMinRequiredFormat            = "invalid %s: TcpOptions SourcePortRange Min may not be empty"
+	icmpTypeRequiredFormat                         = "invalid %s: IcmpOptions Type may not be empty"
+	destinationRequiredFormat                      = "invalid %s: Destination may not be empty"
+	sourceRequiredFormat                           = "invalid %s: Source may not be empty"
+	protocolRequiredFormat                         = "invalid %s: Protocol may not be empty"
+	invalidCIDRFormatFormat                        = "invalid %s: CIDR format"
+	apiServerBackendSetNameRegex                   = `^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$`
+	supportedSecondaryListenerPort           int32 = 9345
 )
 
 // invalidNameRegex is a broad regex used to validate allows names in OCI
@@ -184,6 +185,14 @@ func validateAPIServerLBBackendSets(spec NLBSpec, apiServerPort *int32, fldPath 
 				allErrs = append(allErrs, field.Invalid(portPath, port, "must be between 1 and 65535"))
 				continue
 			}
+			if !isSupportedAPIServerListenerPort(port, apiServerPort) {
+				allErrs = append(allErrs, field.Invalid(
+					portPath,
+					port,
+					fmt.Sprintf("must be one of %s to avoid exposing arbitrary control-plane ports", supportedAPIServerListenerPortsString(apiServerPort)),
+				))
+				continue
+			}
 		}
 
 		port, known := effectiveAPIServerListenerPort(backendSet.ListenerPort, apiServerPort)
@@ -223,6 +232,40 @@ func effectiveAPIServerListenerPort(listenerPort *int32, apiServerPort *int32) (
 	}
 
 	return *apiServerPort, true
+}
+
+func isSupportedAPIServerListenerPort(port int32, apiServerPort *int32) bool {
+	for _, allowedPort := range supportedAPIServerListenerPorts(apiServerPort) {
+		if port == allowedPort {
+			return true
+		}
+	}
+	return false
+}
+
+func supportedAPIServerListenerPorts(apiServerPort *int32) []int32 {
+	ports := []int32{ociutil.DefaultAPIServerPort}
+	if apiServerPort != nil && *apiServerPort != ociutil.DefaultAPIServerPort {
+		ports = append(ports, *apiServerPort)
+	}
+	if supportedSecondaryListenerPort != ociutil.DefaultAPIServerPort {
+		ports = append(ports, supportedSecondaryListenerPort)
+	}
+	return ports
+}
+
+func supportedAPIServerListenerPortsString(apiServerPort *int32) string {
+	values := supportedAPIServerListenerPorts(apiServerPort)
+	parts := make([]string, 0, len(values))
+	seen := map[int32]struct{}{}
+	for _, value := range values {
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		parts = append(parts, fmt.Sprintf("%d", value))
+	}
+	return strings.Join(parts, ", ")
 }
 
 // validateVCNCIDR validates the CIDR of a VNC.
