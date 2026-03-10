@@ -29,15 +29,6 @@ import (
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 )
 
-type nlbExtendedClient interface {
-	CreateBackendSet(ctx context.Context, request networkloadbalancer.CreateBackendSetRequest) (response networkloadbalancer.CreateBackendSetResponse, err error)
-	UpdateBackendSet(ctx context.Context, request networkloadbalancer.UpdateBackendSetRequest) (response networkloadbalancer.UpdateBackendSetResponse, err error)
-	DeleteBackendSet(ctx context.Context, request networkloadbalancer.DeleteBackendSetRequest) (response networkloadbalancer.DeleteBackendSetResponse, err error)
-	CreateListener(ctx context.Context, request networkloadbalancer.CreateListenerRequest) (response networkloadbalancer.CreateListenerResponse, err error)
-	UpdateListener(ctx context.Context, request networkloadbalancer.UpdateListenerRequest) (response networkloadbalancer.UpdateListenerResponse, err error)
-	DeleteListener(ctx context.Context, request networkloadbalancer.DeleteListenerRequest) (response networkloadbalancer.DeleteListenerResponse, err error)
-}
-
 // ReconcileApiServerNLB tries to move the Network Load Balancer to the desired OCICluster Spec
 func (s *ClusterScope) ReconcileApiServerNLB(ctx context.Context) error {
 	desiredApiServerNLB := s.NLBSpec()
@@ -150,12 +141,6 @@ func (s *ClusterScope) UpdateNLB(ctx context.Context, nlb infrastructurev1beta2.
 }
 
 func (s *ClusterScope) reconcileNLBResources(ctx context.Context, nlb infrastructurev1beta2.LoadBalancer) error {
-	extendedClient, ok := any(s.NetworkLoadBalancerClient).(nlbExtendedClient)
-	if !ok {
-		// Unit tests use minimal mocks without listener/backend-set management methods.
-		s.Logger.Info("NLB client does not support extended listener/backend-set reconcile")
-		return nil
-	}
 	nlbID := s.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerId
 	actualResp, err := s.NetworkLoadBalancerClient.GetNetworkLoadBalancer(ctx, networkloadbalancer.GetNetworkLoadBalancerRequest{
 		NetworkLoadBalancerId: nlbID,
@@ -168,7 +153,7 @@ func (s *ClusterScope) reconcileNLBResources(ctx context.Context, nlb infrastruc
 	for name, desired := range desiredListeners {
 		actual, exists := actualResp.NetworkLoadBalancer.Listeners[name]
 		if !exists {
-			resp, err := extendedClient.CreateListener(ctx, networkloadbalancer.CreateListenerRequest{
+			resp, err := s.NetworkLoadBalancerClient.CreateListener(ctx, networkloadbalancer.CreateListenerRequest{
 				NetworkLoadBalancerId: nlbID,
 				CreateListenerDetails: networkloadbalancer.CreateListenerDetails{
 					Name:                  common.String(name),
@@ -192,7 +177,7 @@ func (s *ClusterScope) reconcileNLBResources(ctx context.Context, nlb infrastruc
 		if !intPtrEqual(actual.Port, desired.Port) ||
 			!ptr.StringEquals(actual.DefaultBackendSetName, ptr.ToString(desired.DefaultBackendSetName)) ||
 			actual.Protocol != desired.Protocol {
-			resp, err := extendedClient.UpdateListener(ctx, networkloadbalancer.UpdateListenerRequest{
+			resp, err := s.NetworkLoadBalancerClient.UpdateListener(ctx, networkloadbalancer.UpdateListenerRequest{
 				NetworkLoadBalancerId: nlbID,
 				ListenerName:          common.String(name),
 				UpdateListenerDetails: networkloadbalancer.UpdateListenerDetails{
@@ -214,7 +199,7 @@ func (s *ClusterScope) reconcileNLBResources(ctx context.Context, nlb infrastruc
 		if _, keep := desiredListeners[name]; keep {
 			continue
 		}
-		resp, err := extendedClient.DeleteListener(ctx, networkloadbalancer.DeleteListenerRequest{
+		resp, err := s.NetworkLoadBalancerClient.DeleteListener(ctx, networkloadbalancer.DeleteListenerRequest{
 			NetworkLoadBalancerId: nlbID,
 			ListenerName:          common.String(name),
 		})
@@ -238,7 +223,7 @@ func (s *ClusterScope) reconcileNLBResources(ctx context.Context, nlb infrastruc
 	for name, desired := range desiredBackendSets {
 		actual, exists := actualResp.NetworkLoadBalancer.BackendSets[name]
 		if !exists {
-			resp, err := extendedClient.CreateBackendSet(ctx, networkloadbalancer.CreateBackendSetRequest{
+			resp, err := s.NetworkLoadBalancerClient.CreateBackendSet(ctx, networkloadbalancer.CreateBackendSetRequest{
 				NetworkLoadBalancerId: nlbID,
 				CreateBackendSetDetails: networkloadbalancer.CreateBackendSetDetails{
 					Name:                     common.String(name),
@@ -263,7 +248,7 @@ func (s *ClusterScope) reconcileNLBResources(ctx context.Context, nlb infrastruc
 		}
 		if actual.HealthChecker == nil || desired.HealthChecker == nil {
 			// Reconcile nullable health checker by updating if either side is nil.
-			resp, err := extendedClient.UpdateBackendSet(ctx, networkloadbalancer.UpdateBackendSetRequest{
+			resp, err := s.NetworkLoadBalancerClient.UpdateBackendSet(ctx, networkloadbalancer.UpdateBackendSetRequest{
 				NetworkLoadBalancerId: nlbID,
 				BackendSetName:        common.String(name),
 				UpdateBackendSetDetails: networkloadbalancer.UpdateBackendSetDetails{
@@ -289,7 +274,7 @@ func (s *ClusterScope) reconcileNLBResources(ctx context.Context, nlb infrastruc
 			!intPtrEqual(actual.HealthChecker.Port, desired.HealthChecker.Port) ||
 			actual.HealthChecker.Protocol != desired.HealthChecker.Protocol ||
 			!ptr.StringEquals(actual.HealthChecker.UrlPath, ptr.ToString(desired.HealthChecker.UrlPath)) {
-			resp, err := extendedClient.UpdateBackendSet(ctx, networkloadbalancer.UpdateBackendSetRequest{
+			resp, err := s.NetworkLoadBalancerClient.UpdateBackendSet(ctx, networkloadbalancer.UpdateBackendSetRequest{
 				NetworkLoadBalancerId: nlbID,
 				BackendSetName:        common.String(name),
 				UpdateBackendSetDetails: networkloadbalancer.UpdateBackendSetDetails{
@@ -315,7 +300,7 @@ func (s *ClusterScope) reconcileNLBResources(ctx context.Context, nlb infrastruc
 		if len(actual.Backends) > 0 {
 			continue
 		}
-		resp, err := extendedClient.DeleteBackendSet(ctx, networkloadbalancer.DeleteBackendSetRequest{
+		resp, err := s.NetworkLoadBalancerClient.DeleteBackendSet(ctx, networkloadbalancer.DeleteBackendSetRequest{
 			NetworkLoadBalancerId: nlbID,
 			BackendSetName:        common.String(name),
 		})

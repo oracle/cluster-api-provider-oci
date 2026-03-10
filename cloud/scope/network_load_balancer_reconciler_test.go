@@ -172,50 +172,52 @@ func TestNLBReconciliation(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
 				secondaryPort := int32(9345)
+				secondaryListenerName := desiredAPIServerListenerName(1, 2, "rollout-set")
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerId = common.String("nlb-id")
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().APIServerLB.NLBSpec.BackendSets = []infrastructurev1beta2.NLBBackendSet{
 					{Name: APIServerLBBackendSetName},
 					{Name: "rollout-set", ListenerPort: &secondaryPort},
 				}
-				nlbClient.EXPECT().GetNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.GetNetworkLoadBalancerRequest{
+				getReq := networkloadbalancer.GetNetworkLoadBalancerRequest{
 					NetworkLoadBalancerId: common.String("nlb-id"),
-				})).
-					Return(networkloadbalancer.GetNetworkLoadBalancerResponse{
-						NetworkLoadBalancer: networkloadbalancer.NetworkLoadBalancer{
-							LifecycleState: networkloadbalancer.LifecycleStateActive,
-							Id:             common.String("nlb-id"),
-							FreeformTags:   tags,
-							DefinedTags:    make(map[string]map[string]interface{}),
-							IsPrivate:      common.Bool(false),
-							DisplayName:    common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
-							IpAddresses: []networkloadbalancer.IpAddress{
-								{
-									IpAddress: common.String("2.2.2.2"),
-									IsPublic:  common.Bool(true),
-								},
+				}
+				getResp := networkloadbalancer.GetNetworkLoadBalancerResponse{
+					NetworkLoadBalancer: networkloadbalancer.NetworkLoadBalancer{
+						LifecycleState: networkloadbalancer.LifecycleStateActive,
+						Id:             common.String("nlb-id"),
+						FreeformTags:   tags,
+						DefinedTags:    make(map[string]map[string]interface{}),
+						IsPrivate:      common.Bool(false),
+						DisplayName:    common.String(fmt.Sprintf("%s-%s", "cluster", "apiserver")),
+						IpAddresses: []networkloadbalancer.IpAddress{
+							{
+								IpAddress: common.String("2.2.2.2"),
+								IsPublic:  common.Bool(true),
 							},
-							Listeners: map[string]networkloadbalancer.Listener{
-								APIServerLBListener: {
-									Name:                  common.String(APIServerLBListener),
-									DefaultBackendSetName: common.String(APIServerLBBackendSetName),
-									Port:                  common.Int(6443),
-									Protocol:              networkloadbalancer.ListenerProtocolsTcp,
-								},
+						},
+						Listeners: map[string]networkloadbalancer.Listener{
+							APIServerLBListener: {
+								Name:                  common.String(APIServerLBListener),
+								DefaultBackendSetName: common.String(APIServerLBBackendSetName),
+								Port:                  common.Int(6443),
+								Protocol:              networkloadbalancer.ListenerProtocolsTcp,
 							},
-							BackendSets: map[string]networkloadbalancer.BackendSet{
-								APIServerLBBackendSetName: {
-									Name:             common.String(APIServerLBBackendSetName),
-									Policy:           LoadBalancerPolicy,
-									IsPreserveSource: common.Bool(false),
-									HealthChecker: &networkloadbalancer.HealthChecker{
-										Port:     common.Int(6443),
-										Protocol: networkloadbalancer.HealthCheckProtocolsHttps,
-										UrlPath:  common.String("/healthz"),
-									},
+						},
+						BackendSets: map[string]networkloadbalancer.BackendSet{
+							APIServerLBBackendSetName: {
+								Name:             common.String(APIServerLBBackendSetName),
+								Policy:           LoadBalancerPolicy,
+								IsPreserveSource: common.Bool(false),
+								HealthChecker: &networkloadbalancer.HealthChecker{
+									Port:     common.Int(6443),
+									Protocol: networkloadbalancer.HealthCheckProtocolsHttps,
+									UrlPath:  common.String("/healthz"),
 								},
 							},
 						},
-					}, nil)
+					},
+				}
+				nlbClient.EXPECT().GetNetworkLoadBalancer(gomock.Any(), gomock.Eq(getReq)).Return(getResp, nil)
 				nlbClient.EXPECT().UpdateNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.UpdateNetworkLoadBalancerRequest{
 					NetworkLoadBalancerId: common.String("nlb-id"),
 					UpdateNetworkLoadBalancerDetails: networkloadbalancer.UpdateNetworkLoadBalancerDetails{
@@ -227,6 +229,43 @@ func TestNLBReconciliation(t *testing.T) {
 					}, nil)
 				nlbClient.EXPECT().GetWorkRequest(gomock.Any(), gomock.Eq(networkloadbalancer.GetWorkRequestRequest{
 					WorkRequestId: common.String("wr-nlb-update"),
+				})).Return(networkloadbalancer.GetWorkRequestResponse{
+					WorkRequest: networkloadbalancer.WorkRequest{
+						Status: networkloadbalancer.OperationStatusSucceeded,
+					},
+				}, nil)
+				nlbClient.EXPECT().GetNetworkLoadBalancer(gomock.Any(), gomock.Eq(getReq)).Return(getResp, nil)
+				nlbClient.EXPECT().CreateListener(gomock.Any(), gomock.Eq(networkloadbalancer.CreateListenerRequest{
+					NetworkLoadBalancerId: common.String("nlb-id"),
+					CreateListenerDetails: networkloadbalancer.CreateListenerDetails{
+						Name:                  common.String(secondaryListenerName),
+						DefaultBackendSetName: common.String("rollout-set"),
+						Port:                  common.Int(int(secondaryPort)),
+						Protocol:              networkloadbalancer.ListenerProtocolsTcp,
+					},
+				})).Return(networkloadbalancer.CreateListenerResponse{
+					OpcWorkRequestId: common.String("wr-create-listener"),
+				}, nil)
+				nlbClient.EXPECT().GetWorkRequest(gomock.Any(), gomock.Eq(networkloadbalancer.GetWorkRequestRequest{
+					WorkRequestId: common.String("wr-create-listener"),
+				})).Return(networkloadbalancer.GetWorkRequestResponse{
+					WorkRequest: networkloadbalancer.WorkRequest{
+						Status: networkloadbalancer.OperationStatusSucceeded,
+					},
+				}, nil)
+				nlbClient.EXPECT().CreateBackendSet(gomock.Any(), gomock.Eq(networkloadbalancer.CreateBackendSetRequest{
+					NetworkLoadBalancerId: common.String("nlb-id"),
+					CreateBackendSetDetails: networkloadbalancer.CreateBackendSetDetails{
+						Name:             common.String("rollout-set"),
+						Policy:           LoadBalancerPolicy,
+						IsPreserveSource: common.Bool(false),
+						HealthChecker:    &networkloadbalancer.HealthCheckerDetails{Port: common.Int(6443), Protocol: networkloadbalancer.HealthCheckProtocolsHttps, UrlPath: common.String("/healthz"), ReturnCode: common.Int(200)},
+					},
+				})).Return(networkloadbalancer.CreateBackendSetResponse{
+					OpcWorkRequestId: common.String("wr-create-backendset"),
+				}, nil)
+				nlbClient.EXPECT().GetWorkRequest(gomock.Any(), gomock.Eq(networkloadbalancer.GetWorkRequestRequest{
+					WorkRequestId: common.String("wr-create-backendset"),
 				})).Return(networkloadbalancer.GetWorkRequestResponse{
 					WorkRequest: networkloadbalancer.WorkRequest{
 						Status: networkloadbalancer.OperationStatusSucceeded,
