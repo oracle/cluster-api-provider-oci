@@ -3,7 +3,7 @@ package scope
 import infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 
 func desiredAPIServerBackendSets(lb infrastructurev1beta2.LoadBalancer) []infrastructurev1beta2.NLBBackendSet {
-	canonicalBackendSets := lb.NLBSpec.CanonicalBackendSets()
+	canonicalBackendSets := lb.CanonicalAPIServerBackendSets()
 	if len(canonicalBackendSets) > 0 {
 		return canonicalBackendSets
 	}

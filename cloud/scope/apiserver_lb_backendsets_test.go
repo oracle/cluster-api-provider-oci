@@ -96,7 +96,7 @@ func TestLBSpecPreservesBackendSets(t *testing.T) {
 		},
 	}
 
-	got := scope.LBSpec()
+	got := scope.DesiredAPIServerLoadBalancer()
 	if len(got.NLBSpec.BackendSets) != 2 {
 		t.Fatalf("expected backend sets to be preserved, got %#v", got.NLBSpec.BackendSets)
 	}

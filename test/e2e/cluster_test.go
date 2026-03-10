@@ -938,7 +938,7 @@ func verifyAdditionalAPIServerBackendSetResources(ctx context.Context, specName,
 			return fmt.Errorf("api server load balancer ID not yet assigned")
 		}
 
-		expectedBackendSets := ociCluster.Spec.NetworkSpec.APIServerLB.NLBSpec.CanonicalBackendSets()
+		expectedBackendSets := ociCluster.Spec.NetworkSpec.APIServerLB.CanonicalAPIServerBackendSets()
 		if len(expectedBackendSets) < 2 {
 			return fmt.Errorf("expected multiple API server backend sets, got %d", len(expectedBackendSets))
 		}

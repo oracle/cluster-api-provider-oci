@@ -31,7 +31,7 @@ import (
 
 // ReconcileApiServerNLB tries to move the Network Load Balancer to the desired OCICluster Spec
 func (s *ClusterScope) ReconcileApiServerNLB(ctx context.Context) error {
-	desiredApiServerNLB := s.NLBSpec()
+	desiredApiServerNLB := s.DesiredAPIServerNetworkLoadBalancer()
 
 	nlb, err := s.GetNetworkLoadBalancers(ctx)
 	if err != nil {
@@ -97,13 +97,12 @@ func (s *ClusterScope) DeleteApiServerNLB(ctx context.Context) error {
 	return nil
 }
 
-// NLBSpec builds the Network LoadBalancer from the ClusterScope and returns it
-func (s *ClusterScope) NLBSpec() infrastructurev1beta2.LoadBalancer {
-	nlbSpec := infrastructurev1beta2.LoadBalancer{
-		Name:    s.GetControlPlaneLoadBalancerName(),
-		NLBSpec: s.OCIClusterAccessor.GetNetworkSpec().APIServerLB.NLBSpec,
-	}
-	return nlbSpec
+// DesiredAPIServerNetworkLoadBalancer builds the desired network load balancer from the ClusterScope.
+func (s *ClusterScope) DesiredAPIServerNetworkLoadBalancer() infrastructurev1beta2.LoadBalancer {
+	return infrastructurev1beta2.NewAPIServerLoadBalancer(
+		s.GetControlPlaneLoadBalancerName(),
+		*s.OCIClusterAccessor.GetNetworkSpec().APIServerLB.APIServerLoadBalancerSpec(),
+	)
 }
 
 // GetControlPlaneLoadBalancerName returns the user defined APIServerLB name from the spec or
@@ -319,9 +318,9 @@ func (s *ClusterScope) CreateNLB(ctx context.Context, lb infrastructurev1beta2.L
 		}
 	}
 	var reservedIps []networkloadbalancer.ReservedIp
-	if len(lb.NLBSpec.ReservedIpIds) > 0 {
+	if len(lb.APIServerLoadBalancerSpec().ReservedIpIds) > 0 {
 		// since max is one we only take the first ip id supplied
-		reservedIps = append(reservedIps, networkloadbalancer.ReservedIp{Id: common.String(lb.NLBSpec.ReservedIpIds[0])})
+		reservedIps = append(reservedIps, networkloadbalancer.ReservedIp{Id: common.String(lb.APIServerLoadBalancerSpec().ReservedIpIds[0])})
 	}
 
 	if len(controlPlaneEndpointSubnets) < 1 {

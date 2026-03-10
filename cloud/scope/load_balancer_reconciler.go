@@ -31,7 +31,7 @@ import (
 
 // ReconcileApiServerLB tries to move the Load Balancer to the desired OCICluster Spec
 func (s *ClusterScope) ReconcileApiServerLB(ctx context.Context) error {
-	desiredApiServerLb := s.LBSpec()
+	desiredApiServerLb := s.DesiredAPIServerLoadBalancer()
 
 	lb, err := s.GetLoadBalancers(ctx)
 	if err != nil {
@@ -100,14 +100,12 @@ func (s *ClusterScope) DeleteApiServerLB(ctx context.Context) error {
 	return nil
 }
 
-// LBSpec builds the LoadBalancer from the ClusterScope and returns it.
-// Note: `NLBSpec` is the shared API server LB configuration for both OCI NLB and LBaaS paths.
-func (s *ClusterScope) LBSpec() infrastructurev1beta2.LoadBalancer {
-	lbSpec := infrastructurev1beta2.LoadBalancer{
-		Name:    s.GetControlPlaneLoadBalancerName(),
-		NLBSpec: s.OCIClusterAccessor.GetNetworkSpec().APIServerLB.NLBSpec,
-	}
-	return lbSpec
+// DesiredAPIServerLoadBalancer builds the desired LBaaS load balancer from the ClusterScope.
+func (s *ClusterScope) DesiredAPIServerLoadBalancer() infrastructurev1beta2.LoadBalancer {
+	return infrastructurev1beta2.NewAPIServerLoadBalancer(
+		s.GetControlPlaneLoadBalancerName(),
+		*s.OCIClusterAccessor.GetNetworkSpec().APIServerLB.APIServerLoadBalancerSpec(),
+	)
 }
 
 // GetControlPlaneLoadBalancerName returns the user defined APIServerLB name from the spec or

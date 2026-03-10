@@ -988,7 +988,27 @@ type LoadBalancer struct {
 	NLBSpec NLBSpec `json:"nlbSpec,omitempty"`
 }
 
-// NLBSpec specifies the NLB spec.
+// NewAPIServerLoadBalancer returns a LoadBalancer configured with the shared API server settings.
+// The underlying `nlbSpec` field name is historical and retained for API compatibility.
+func NewAPIServerLoadBalancer(name string, spec NLBSpec) LoadBalancer {
+	return LoadBalancer{
+		Name:    name,
+		NLBSpec: spec,
+	}
+}
+
+// APIServerLoadBalancerSpec returns the shared API server load balancer settings.
+func (in *LoadBalancer) APIServerLoadBalancerSpec() *NLBSpec {
+	return &in.NLBSpec
+}
+
+// CanonicalAPIServerBackendSets returns the canonical API server backend set list for this load balancer.
+func (in *LoadBalancer) CanonicalAPIServerBackendSets() []NLBBackendSet {
+	return in.APIServerLoadBalancerSpec().CanonicalBackendSets()
+}
+
+// NLBSpec specifies the shared API server load balancer settings.
+// The type name is historical and applies to both `loadBalancerType: nlb` and `loadBalancerType: lb`.
 type NLBSpec struct {
 	// BackendSets specifies the canonical list of API server backend sets.
 	// When set, this field takes precedence over the legacy `backendSetDetails` field.
@@ -1009,7 +1029,8 @@ type NLBSpec struct {
 	ReservedIpIds []string `json:"reservedIpIds,omitempty"`
 }
 
-// NLBBackendSet specifies the configuration for a named network load balancer backend set.
+// NLBBackendSet specifies the configuration for a named API server backend set.
+// The type name is historical and applies to both load balancer implementations.
 type NLBBackendSet struct {
 	// Name is the API server backend set identifier.
 	Name string `json:"name"`
@@ -1025,7 +1046,8 @@ type NLBBackendSet struct {
 	BackendSetDetails BackendSetDetails `json:"backendSetDetails,omitempty"`
 }
 
-// BackendSetDetails specifies the configuration of a network load balancer backend set.
+// BackendSetDetails specifies the configuration of an API server backend set.
+// The fields cover shared behavior used by both load balancer implementations.
 type BackendSetDetails struct {
 	// If this parameter is enabled, then the network load balancer preserves the source IP of the packet when it is forwarded to backends.
 	// Backends see the original source IP. If the isPreserveSourceDestination parameter is enabled for the network load balancer resource, then this parameter cannot be disabled.

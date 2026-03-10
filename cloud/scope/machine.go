@@ -854,7 +854,7 @@ func (m *MachineScope) ReconcileDeleteInstanceOnLB(ctx context.Context) error {
 }
 
 func (m *MachineScope) desiredAPIServerBackendSetNames() []string {
-	backendSets := m.OCIClusterAccessor.GetNetworkSpec().APIServerLB.NLBSpec.CanonicalBackendSets()
+	backendSets := m.OCIClusterAccessor.GetNetworkSpec().APIServerLB.CanonicalAPIServerBackendSets()
 	names := make([]string, 0, len(backendSets))
 	for _, backendSet := range backendSets {
 		names = append(names, backendSet.Name)
