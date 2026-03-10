@@ -1095,3 +1095,96 @@ func TestReconcileLBResources_CreatesBackendSetsBeforeListeners(t *testing.T) {
 
 	g.Expect(cs.reconcileLBResources(context.Background(), desiredLB)).To(Succeed())
 }
+
+func TestReconcileLBResources_IgnoresAlreadyExistsOnCreate(t *testing.T) {
+	g := NewWithT(t)
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	lbClient := mock_lb.NewMockLoadBalancerClient(mockCtrl)
+	client := fake.NewClientBuilder().Build()
+	ociCluster := &infrastructurev1beta2.OCICluster{
+		ObjectMeta: metav1.ObjectMeta{
+			UID:  "a",
+			Name: "cluster",
+		},
+		Spec: infrastructurev1beta2.OCIClusterSpec{},
+	}
+	ociCluster.Spec.ControlPlaneEndpoint.Port = 6443
+	ociCluster.Spec.NetworkSpec.APIServerLB.LoadBalancerId = common.String("lb-id")
+
+	cs, err := NewClusterScope(ClusterScopeParams{
+		LoadBalancerClient: lbClient,
+		Cluster:            &clusterv1.Cluster{},
+		OCIClusterAccessor: OCISelfManagedCluster{OCICluster: ociCluster},
+		Client:             client,
+	})
+	g.Expect(err).To(BeNil())
+
+	secondaryPort := int32(9345)
+	desiredLB := infrastructurev1beta2.LoadBalancer{
+		NLBSpec: infrastructurev1beta2.NLBSpec{
+			BackendSets: []infrastructurev1beta2.NLBBackendSet{
+				{Name: APIServerLBBackendSetName},
+				{Name: "apiserver-lb-backendset-2", ListenerPort: &secondaryPort},
+			},
+		},
+	}
+	secondaryListenerName := desiredAPIServerListenerName(1, 2, "apiserver-lb-backendset-2")
+
+	lbClient.EXPECT().GetLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.GetLoadBalancerRequest{
+		LoadBalancerId: common.String("lb-id"),
+	})).Return(loadbalancer.GetLoadBalancerResponse{
+		LoadBalancer: loadbalancer.LoadBalancer{
+			Listeners: map[string]loadbalancer.Listener{
+				APIServerLBListener: {
+					Name:                  common.String(APIServerLBListener),
+					Protocol:              common.String("TCP"),
+					Port:                  common.Int(6443),
+					DefaultBackendSetName: common.String(APIServerLBBackendSetName),
+				},
+			},
+			BackendSets: map[string]loadbalancer.BackendSet{
+				APIServerLBBackendSetName: {
+					Name:   common.String(APIServerLBBackendSetName),
+					Policy: common.String("ROUND_ROBIN"),
+					HealthChecker: &loadbalancer.HealthChecker{
+						Port:     common.Int(6443),
+						Protocol: common.String("TCP"),
+					},
+				},
+			},
+		},
+	}, nil)
+
+	lbClient.EXPECT().CreateBackendSet(gomock.Any(), gomock.Eq(loadbalancer.CreateBackendSetRequest{
+		LoadBalancerId: common.String("lb-id"),
+		CreateBackendSetDetails: loadbalancer.CreateBackendSetDetails{
+			Name:   common.String("apiserver-lb-backendset-2"),
+			Policy: common.String("ROUND_ROBIN"),
+			HealthChecker: &loadbalancer.HealthCheckerDetails{
+				Port:     common.Int(6443),
+				Protocol: common.String("TCP"),
+			},
+		},
+	})).Return(loadbalancer.CreateBackendSetResponse{}, mockServiceError{
+		status:  409,
+		code:    "Conflict",
+		message: "backend set already exists",
+	})
+	lbClient.EXPECT().CreateListener(gomock.Any(), gomock.Eq(loadbalancer.CreateListenerRequest{
+		LoadBalancerId: common.String("lb-id"),
+		CreateListenerDetails: loadbalancer.CreateListenerDetails{
+			Name:                  common.String(secondaryListenerName),
+			DefaultBackendSetName: common.String("apiserver-lb-backendset-2"),
+			Port:                  common.Int(9345),
+			Protocol:              common.String("TCP"),
+		},
+	})).Return(loadbalancer.CreateListenerResponse{}, mockServiceError{
+		status:  409,
+		code:    "Conflict",
+		message: "listener already exists",
+	})
+
+	g.Expect(cs.reconcileLBResources(context.Background(), desiredLB)).To(Succeed())
+}

@@ -168,6 +168,10 @@ func (s *ClusterScope) reconcileLBResources(ctx context.Context, lb infrastructu
 				},
 			})
 			if err != nil {
+				if isAlreadyExistsOCIError(err) {
+					s.Logger.Info("LB backend set already exists during reconcile; continuing", "backendSet", name)
+					continue
+				}
 				return errors.Wrapf(err, "failed to create lb backend set %q", name)
 			}
 			if _, err := ociutil.AwaitLBWorkRequest(ctx, s.LoadBalancerClient, resp.OpcWorkRequestId); err != nil {
@@ -210,6 +214,10 @@ func (s *ClusterScope) reconcileLBResources(ctx context.Context, lb infrastructu
 				},
 			})
 			if err != nil {
+				if isAlreadyExistsOCIError(err) {
+					s.Logger.Info("LB listener already exists during reconcile; continuing", "listener", name)
+					continue
+				}
 				return errors.Wrapf(err, "failed to create lb listener %q", name)
 			}
 			if _, err := ociutil.AwaitLBWorkRequest(ctx, s.LoadBalancerClient, resp.OpcWorkRequestId); err != nil {

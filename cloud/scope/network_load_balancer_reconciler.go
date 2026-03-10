@@ -178,6 +178,10 @@ func (s *ClusterScope) reconcileNLBResources(ctx context.Context, nlb infrastruc
 				},
 			})
 			if err != nil {
+				if isAlreadyExistsOCIError(err) {
+					s.Logger.Info("NLB listener already exists during reconcile; continuing", "listener", name)
+					continue
+				}
 				return errors.Wrapf(err, "failed to create nlb listener %q", name)
 			}
 			if _, err := ociutil.AwaitNLBWorkRequest(ctx, s.NetworkLoadBalancerClient, resp.OpcWorkRequestId); err != nil {
@@ -236,6 +240,10 @@ func (s *ClusterScope) reconcileNLBResources(ctx context.Context, nlb infrastruc
 				},
 			})
 			if err != nil {
+				if isAlreadyExistsOCIError(err) {
+					s.Logger.Info("NLB backend set already exists during reconcile; continuing", "backendSet", name)
+					continue
+				}
 				return errors.Wrapf(err, "failed to create nlb backend set %q", name)
 			}
 			if _, err := ociutil.AwaitNLBWorkRequest(ctx, s.NetworkLoadBalancerClient, resp.OpcWorkRequestId); err != nil {
