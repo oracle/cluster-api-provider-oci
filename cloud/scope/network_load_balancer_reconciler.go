@@ -227,11 +227,11 @@ func (s *ClusterScope) reconcileNLBResources(ctx context.Context, nlb infrastruc
 			resp, err := extendedClient.CreateBackendSet(ctx, networkloadbalancer.CreateBackendSetRequest{
 				NetworkLoadBalancerId: nlbID,
 				CreateBackendSetDetails: networkloadbalancer.CreateBackendSetDetails{
-					Name:                    common.String(name),
-					Policy:                  desired.Policy,
-					HealthChecker:           nlbHealthCheckerToDetails(desired.HealthChecker),
-					IsPreserveSource:        desired.IsPreserveSource,
-					IsFailOpen:              desired.IsFailOpen,
+					Name:                     common.String(name),
+					Policy:                   desired.Policy,
+					HealthChecker:            nlbHealthCheckerToDetails(desired.HealthChecker),
+					IsPreserveSource:         desired.IsPreserveSource,
+					IsFailOpen:               desired.IsFailOpen,
 					IsInstantFailoverEnabled: desired.IsInstantFailoverEnabled,
 				},
 			})
@@ -457,16 +457,16 @@ func nlbHealthCheckerToDetails(in *networkloadbalancer.HealthChecker) *networklo
 		return nil
 	}
 	return &networkloadbalancer.HealthCheckerDetails{
-		Protocol:         in.Protocol,
-		Port:             in.Port,
-		Retries:          in.Retries,
-		TimeoutInMillis:  in.TimeoutInMillis,
-		IntervalInMillis: in.IntervalInMillis,
-		UrlPath:          in.UrlPath,
+		Protocol:          in.Protocol,
+		Port:              in.Port,
+		Retries:           in.Retries,
+		TimeoutInMillis:   in.TimeoutInMillis,
+		IntervalInMillis:  in.IntervalInMillis,
+		UrlPath:           in.UrlPath,
 		ResponseBodyRegex: in.ResponseBodyRegex,
-		ReturnCode:       in.ReturnCode,
-		RequestData:      in.RequestData,
-		ResponseData:     in.ResponseData,
+		ReturnCode:        in.ReturnCode,
+		RequestData:       in.RequestData,
+		ResponseData:      in.ResponseData,
 	}
 }
 

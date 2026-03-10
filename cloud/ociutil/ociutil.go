@@ -36,13 +36,14 @@ import (
 )
 
 const (
-	WorkRequestPollInterval   = 5 * time.Second
-	WorkRequestTimeout        = 2 * time.Minute
-	MaxOPCRetryTokenBytes     = 64
-	CreatedBy                 = "CreatedBy"
-	OCIClusterAPIProvider     = "OCIClusterAPIProvider"
-	ClusterResourceIdentifier = "ClusterResourceIdentifier"
-	OutOfHostCapacityErr      = "Out of host capacity"
+	DefaultAPIServerPort      int32 = 6443
+	WorkRequestPollInterval         = 5 * time.Second
+	WorkRequestTimeout              = 2 * time.Minute
+	MaxOPCRetryTokenBytes           = 64
+	CreatedBy                       = "CreatedBy"
+	OCIClusterAPIProvider           = "OCIClusterAPIProvider"
+	ClusterResourceIdentifier       = "ClusterResourceIdentifier"
+	OutOfHostCapacityErr            = "Out of host capacity"
 )
 
 // ErrNotFound is for simulation during testing, OCI SDK does not have a way

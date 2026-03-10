@@ -111,7 +111,7 @@ func ValidRegion(stringRegion string) bool {
 }
 
 // ValidateNetworkSpec validates the NetworkSpec
-func ValidateNetworkSpec(validRoles []Role, networkSpec NetworkSpec, old NetworkSpec, fldPath *field.Path) field.ErrorList {
+func ValidateNetworkSpec(validRoles []Role, networkSpec NetworkSpec, old NetworkSpec, apiServerPort *int32, fldPath *field.Path) field.ErrorList {
 	var allErrs field.ErrorList
 
 	if len(networkSpec.Vcn.CIDR) > 0 {
@@ -128,7 +128,7 @@ func ValidateNetworkSpec(validRoles []Role, networkSpec NetworkSpec, old Network
 		nsgErrors := validateNSGs(validRoles, networkSpec.Vcn.NetworkSecurityGroup.List, fldPath.Child("networkSecurityGroups"))
 		allErrs = append(allErrs, nsgErrors...)
 	}
-	allErrs = append(allErrs, validateAPIServerLBBackendSets(networkSpec.APIServerLB.NLBSpec, fldPath.Child("apiServerLoadBalancer").Child("nlbSpec"))...)
+	allErrs = append(allErrs, validateAPIServerLBBackendSets(networkSpec.APIServerLB.NLBSpec, apiServerPort, fldPath.Child("apiServerLoadBalancer").Child("nlbSpec"))...)
 
 	if len(allErrs) == 0 {
 		return nil
@@ -136,7 +136,7 @@ func ValidateNetworkSpec(validRoles []Role, networkSpec NetworkSpec, old Network
 	return allErrs
 }
 
-func validateAPIServerLBBackendSets(spec NLBSpec, fldPath *field.Path) field.ErrorList {
+func validateAPIServerLBBackendSets(spec NLBSpec, apiServerPort *int32, fldPath *field.Path) field.ErrorList {
 	var allErrs field.ErrorList
 
 	legacyConfigured := spec.BackendSetDetails != (BackendSetDetails{})
@@ -175,21 +175,36 @@ func validateAPIServerLBBackendSets(spec NLBSpec, fldPath *field.Path) field.Err
 	}
 
 	usedPorts := map[int32]int{}
+	omittedListenerPortIndex := -1
 	for i, backendSet := range spec.BackendSets {
 		portPath := fldPath.Child("backendSets").Index(i).Child("listenerPort")
-		if backendSet.ListenerPort == nil {
+		if backendSet.ListenerPort != nil {
+			port := *backendSet.ListenerPort
+			if port < 1 || port > 65535 {
+				allErrs = append(allErrs, field.Invalid(portPath, port, "must be between 1 and 65535"))
+				continue
+			}
+		}
+
+		port, known := effectiveAPIServerListenerPort(backendSet.ListenerPort, apiServerPort)
+		if !known {
+			if omittedListenerPortIndex >= 0 {
+				allErrs = append(allErrs, field.Invalid(
+					portPath,
+					backendSet.ListenerPort,
+					fmt.Sprintf("multiple backend sets omit listenerPort, already omitted at backendSets[%d].listenerPort", omittedListenerPortIndex),
+				))
+				continue
+			}
+			omittedListenerPortIndex = i
 			continue
 		}
-		port := *backendSet.ListenerPort
-		if port < 1 || port > 65535 {
-			allErrs = append(allErrs, field.Invalid(portPath, port, "must be between 1 and 65535"))
-			continue
-		}
+
 		if firstIdx, ok := usedPorts[port]; ok {
 			allErrs = append(allErrs, field.Invalid(
 				portPath,
-				port,
-				fmt.Sprintf("duplicate listenerPort, already used at backendSets[%d].listenerPort", firstIdx),
+				backendSet.ListenerPort,
+				fmt.Sprintf("duplicate effective listenerPort %d, already used at backendSets[%d].listenerPort", port, firstIdx),
 			))
 			continue
 		}
@@ -197,6 +212,17 @@ func validateAPIServerLBBackendSets(spec NLBSpec, fldPath *field.Path) field.Err
 	}
 
 	return allErrs
+}
+
+func effectiveAPIServerListenerPort(listenerPort *int32, apiServerPort *int32) (int32, bool) {
+	if listenerPort != nil {
+		return *listenerPort, true
+	}
+	if apiServerPort == nil {
+		return 0, false
+	}
+
+	return *apiServerPort, true
 }
 
 // validateVCNCIDR validates the CIDR of a VNC.

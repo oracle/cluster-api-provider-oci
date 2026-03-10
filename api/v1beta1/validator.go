@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"net"
 	"regexp"
+	"strings"
 
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -32,6 +33,8 @@ const (
 	// can't use: \/"'[]:|<>+=;,.?*@&, Can't start with underscore. Can't end with period or hyphen.
 	// not using . in the name to avoid issues when the name is part of DNS name.
 	clusterNameRegex = `^[a-z0-9][a-z0-9-]{0,42}[a-z0-9]$`
+
+	apiServerBackendSetNameRegex = `^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$`
 )
 
 // invalidNameRegex is a broad regex used to validate allows names in OCI
@@ -69,7 +72,7 @@ func ValidRegion(stringRegion string) bool {
 }
 
 // ValidateNetworkSpec validates the NetworkSpec
-func ValidateNetworkSpec(validRoles []Role, networkSpec NetworkSpec, old NetworkSpec, fldPath *field.Path) field.ErrorList {
+func ValidateNetworkSpec(validRoles []Role, networkSpec NetworkSpec, old NetworkSpec, apiServerPort *int32, fldPath *field.Path) field.ErrorList {
 	var allErrs field.ErrorList
 
 	if len(networkSpec.Vcn.CIDR) > 0 {
@@ -84,10 +87,101 @@ func ValidateNetworkSpec(validRoles []Role, networkSpec NetworkSpec, old Network
 		allErrs = append(allErrs, validateNSGs(validRoles, networkSpec.Vcn.NetworkSecurityGroups, fldPath.Child("networkSecurityGroups"))...)
 	}
 
+	allErrs = append(allErrs, validateAPIServerLBBackendSets(networkSpec.APIServerLB.NLBSpec, apiServerPort, fldPath.Child("apiServerLoadBalancer").Child("nlbSpec"))...)
+
 	if len(allErrs) == 0 {
 		return nil
 	}
 	return allErrs
+}
+
+func validateAPIServerLBBackendSets(spec NLBSpec, apiServerPort *int32, fldPath *field.Path) field.ErrorList {
+	var allErrs field.ErrorList
+
+	legacyConfigured := spec.BackendSetDetails != (BackendSetDetails{})
+	if len(spec.BackendSets) > 0 && legacyConfigured {
+		allErrs = append(allErrs, field.Forbidden(
+			fldPath.Child("backendSetDetails"),
+			"cannot be set when backendSets is configured; move legacy backendSetDetails into backendSets",
+		))
+	}
+
+	nameRegex := regexp.MustCompile(apiServerBackendSetNameRegex)
+	seen := map[string]int{}
+	for i, backendSet := range spec.BackendSets {
+		namePath := fldPath.Child("backendSets").Index(i).Child("name")
+		name := strings.TrimSpace(backendSet.Name)
+		if name == "" {
+			allErrs = append(allErrs, field.Required(namePath, "must not be empty"))
+			continue
+		}
+		if !nameRegex.MatchString(name) {
+			allErrs = append(allErrs, field.Invalid(
+				namePath,
+				backendSet.Name,
+				"must match ^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$ (1-32 chars; alphanumeric, '-', '_')",
+			))
+		}
+		if firstIdx, ok := seen[name]; ok {
+			allErrs = append(allErrs, field.Invalid(
+				namePath,
+				backendSet.Name,
+				fmt.Sprintf("duplicate backend set name, already used at backendSets[%d].name", firstIdx),
+			))
+			continue
+		}
+		seen[name] = i
+	}
+
+	usedPorts := map[int32]int{}
+	omittedListenerPortIndex := -1
+	for i, backendSet := range spec.BackendSets {
+		portPath := fldPath.Child("backendSets").Index(i).Child("listenerPort")
+		if backendSet.ListenerPort != nil {
+			port := *backendSet.ListenerPort
+			if port < 1 || port > 65535 {
+				allErrs = append(allErrs, field.Invalid(portPath, port, "must be between 1 and 65535"))
+				continue
+			}
+		}
+
+		port, known := effectiveAPIServerListenerPort(backendSet.ListenerPort, apiServerPort)
+		if !known {
+			if omittedListenerPortIndex >= 0 {
+				allErrs = append(allErrs, field.Invalid(
+					portPath,
+					backendSet.ListenerPort,
+					fmt.Sprintf("multiple backend sets omit listenerPort, already omitted at backendSets[%d].listenerPort", omittedListenerPortIndex),
+				))
+				continue
+			}
+			omittedListenerPortIndex = i
+			continue
+		}
+
+		if firstIdx, ok := usedPorts[port]; ok {
+			allErrs = append(allErrs, field.Invalid(
+				portPath,
+				backendSet.ListenerPort,
+				fmt.Sprintf("duplicate effective listenerPort %d, already used at backendSets[%d].listenerPort", port, firstIdx),
+			))
+			continue
+		}
+		usedPorts[port] = i
+	}
+
+	return allErrs
+}
+
+func effectiveAPIServerListenerPort(listenerPort *int32, apiServerPort *int32) (int32, bool) {
+	if listenerPort != nil {
+		return *listenerPort, true
+	}
+	if apiServerPort == nil {
+		return 0, false
+	}
+
+	return *apiServerPort, true
 }
 
 // validateVCNCIDR validates the CIDR of a VNC.

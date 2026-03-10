@@ -27,13 +27,17 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 var managedclusterlogger = ctrl.Log.WithName("ocimanagedcluster-resource")
 
-type OCIManagedClusterWebhook struct{}
+// +kubebuilder:object:generate=false
+type OCIManagedClusterWebhook struct {
+	Client client.Client
+}
 
 var (
 	_ webhook.CustomDefaulter = &OCIManagedClusterWebhook{}
@@ -119,7 +123,7 @@ func (*OCIManagedClusterWebhook) Default(_ context.Context, obj runtime.Object) 
 }
 
 func (c *OCIManagedCluster) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	w := new(OCIManagedClusterWebhook)
+	w := &OCIManagedClusterWebhook{Client: mgr.GetClient()}
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(c).
 		WithDefaulter(w).
@@ -128,16 +132,21 @@ func (c *OCIManagedCluster) SetupWebhookWithManager(mgr ctrl.Manager) error {
 }
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
-func (*OCIManagedClusterWebhook) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (w *OCIManagedClusterWebhook) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	c, ok := obj.(*OCIManagedCluster)
 	if !ok {
 		return nil, fmt.Errorf("expected an OCIManagedCluster object but got %T", c)
 	}
 	managedclusterlogger.Info("validate create cluster", "name", c.Name)
 
+	apiServerPort, err := lookupClusterAPIServerPort(ctx, w.Client, c.ObjectMeta)
+	if err != nil {
+		return nil, err
+	}
+
 	var allErrs field.ErrorList
 
-	allErrs = append(allErrs, c.validate(nil)...)
+	allErrs = append(allErrs, c.validate(nil, apiServerPort)...)
 
 	if len(allErrs) == 0 {
 		return nil, nil
@@ -159,7 +168,7 @@ func (*OCIManagedClusterWebhook) ValidateDelete(_ context.Context, obj runtime.O
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (*OCIManagedClusterWebhook) ValidateUpdate(_ context.Context, oldRaw, newObj runtime.Object) (admission.Warnings, error) {
+func (w *OCIManagedClusterWebhook) ValidateUpdate(ctx context.Context, oldRaw, newObj runtime.Object) (admission.Warnings, error) {
 	c, ok := newObj.(*OCIManagedCluster)
 	if !ok {
 		return nil, fmt.Errorf("expected an OCIManagedCluster object but got %T", c)
@@ -186,7 +195,12 @@ func (*OCIManagedClusterWebhook) ValidateUpdate(_ context.Context, oldRaw, newOb
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "compartmentId"), c.Spec.CompartmentId, "field is immutable"))
 	}
 
-	allErrs = append(allErrs, c.validate(oldCluster)...)
+	apiServerPort, err := lookupClusterAPIServerPort(ctx, w.Client, c.ObjectMeta)
+	if err != nil {
+		return nil, err
+	}
+
+	allErrs = append(allErrs, c.validate(oldCluster, apiServerPort)...)
 
 	if len(allErrs) == 0 {
 		return nil, nil
@@ -195,7 +209,7 @@ func (*OCIManagedClusterWebhook) ValidateUpdate(_ context.Context, oldRaw, newOb
 	return nil, apierrors.NewInvalid(c.GroupVersionKind().GroupKind(), c.Name, allErrs)
 }
 
-func (c *OCIManagedCluster) validate(old *OCIManagedCluster) field.ErrorList {
+func (c *OCIManagedCluster) validate(old *OCIManagedCluster, apiServerPort *int32) field.ErrorList {
 	var allErrs field.ErrorList
 
 	var oldNetworkSpec NetworkSpec
@@ -203,7 +217,7 @@ func (c *OCIManagedCluster) validate(old *OCIManagedCluster) field.ErrorList {
 		oldNetworkSpec = old.Spec.NetworkSpec
 	}
 
-	allErrs = append(allErrs, ValidateNetworkSpec(OCIManagedClusterSubnetRoles, c.Spec.NetworkSpec, oldNetworkSpec, field.NewPath("spec").Child("networkSpec"))...)
+	allErrs = append(allErrs, ValidateNetworkSpec(OCIManagedClusterSubnetRoles, c.Spec.NetworkSpec, oldNetworkSpec, apiServerPort, field.NewPath("spec").Child("networkSpec"))...)
 	allErrs = append(allErrs, ValidateClusterName(c.Name)...)
 
 	if len(c.Spec.CompartmentId) <= 0 {
