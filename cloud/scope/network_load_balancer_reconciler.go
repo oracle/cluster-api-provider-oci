@@ -491,11 +491,50 @@ func (s *ClusterScope) getNetworkLoadbalancerIp(nlb networkloadbalancer.NetworkL
 }
 
 // IsNLBEqual determines if the actual networkloadbalancer.NetworkLoadBalancer is equal to the desired.
-// Equality is determined by DisplayName
+// Equality is determined by the NLB identity plus desired listener/backend-set resources matching.
 func (s *ClusterScope) IsNLBEqual(actual *networkloadbalancer.NetworkLoadBalancer, desired infrastructurev1beta2.LoadBalancer) bool {
 	if desired.Name != *actual.DisplayName {
 		return false
 	}
+
+	desiredListeners, desiredBackendSets := s.buildDesiredNLBListenersAndBackendSets(desired)
+	if len(actual.Listeners) != len(desiredListeners) {
+		return false
+	}
+	for name, desiredListener := range desiredListeners {
+		actualListener, exists := actual.Listeners[name]
+		if !exists {
+			return false
+		}
+		if !intPtrEqual(actualListener.Port, desiredListener.Port) ||
+			!ptr.StringEquals(actualListener.DefaultBackendSetName, ptr.ToString(desiredListener.DefaultBackendSetName)) ||
+			actualListener.Protocol != desiredListener.Protocol {
+			return false
+		}
+	}
+
+	if len(actual.BackendSets) != len(desiredBackendSets) {
+		return false
+	}
+	for name, desiredBackendSet := range desiredBackendSets {
+		actualBackendSet, exists := actual.BackendSets[name]
+		if !exists {
+			return false
+		}
+		if actualBackendSet.HealthChecker == nil || desiredBackendSet.HealthChecker == nil {
+			return false
+		}
+		if actualBackendSet.Policy != desiredBackendSet.Policy ||
+			!boolPtrEqual(actualBackendSet.IsPreserveSource, desiredBackendSet.IsPreserveSource) ||
+			!boolPtrEqual(actualBackendSet.IsFailOpen, desiredBackendSet.IsFailOpen) ||
+			!boolPtrEqual(actualBackendSet.IsInstantFailoverEnabled, desiredBackendSet.IsInstantFailoverEnabled) ||
+			!intPtrEqual(actualBackendSet.HealthChecker.Port, desiredBackendSet.HealthChecker.Port) ||
+			actualBackendSet.HealthChecker.Protocol != desiredBackendSet.HealthChecker.Protocol ||
+			!ptr.StringEquals(actualBackendSet.HealthChecker.UrlPath, ptr.ToString(desiredBackendSet.HealthChecker.UrlPath)) {
+			return false
+		}
+	}
+
 	return true
 }
 

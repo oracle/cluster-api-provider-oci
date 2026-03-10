@@ -5,6 +5,7 @@ import (
 
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/oci-go-sdk/v65/common"
+	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 )
 
@@ -101,5 +102,68 @@ func TestLBSpecPreservesBackendSets(t *testing.T) {
 	}
 	if got.NLBSpec.BackendSets[1].Name != "apiserver-lb-backendset-2" {
 		t.Fatalf("expected secondary backend set to be preserved, got %#v", got.NLBSpec.BackendSets)
+	}
+}
+
+func TestIsNLBEqual_DetectsSpecOnlyResourceChanges(t *testing.T) {
+	secondaryPort := int32(9345)
+	scope := &ClusterScope{Cluster: &clusterv1.Cluster{}}
+	desired := infrastructurev1beta2.LoadBalancer{
+		Name: "cluster-apiserver",
+		NLBSpec: infrastructurev1beta2.NLBSpec{
+			BackendSets: []infrastructurev1beta2.NLBBackendSet{
+				{Name: APIServerLBBackendSetName},
+				{Name: "rollout-set", ListenerPort: &secondaryPort},
+			},
+		},
+	}
+
+	actual := &networkloadbalancer.NetworkLoadBalancer{
+		DisplayName: common.String("cluster-apiserver"),
+		Listeners: map[string]networkloadbalancer.Listener{
+			APIServerLBListener: {
+				Name:                  common.String(APIServerLBListener),
+				DefaultBackendSetName: common.String(APIServerLBBackendSetName),
+				Port:                  common.Int(6443),
+				Protocol:              networkloadbalancer.ListenerProtocolsTcp,
+			},
+			desiredAPIServerListenerName(1, 2, "rollout-set"): {
+				Name:                  common.String(desiredAPIServerListenerName(1, 2, "rollout-set")),
+				DefaultBackendSetName: common.String("rollout-set"),
+				Port:                  common.Int(9345),
+				Protocol:              networkloadbalancer.ListenerProtocolsTcp,
+			},
+		},
+		BackendSets: map[string]networkloadbalancer.BackendSet{
+			APIServerLBBackendSetName: {
+				Name:             common.String(APIServerLBBackendSetName),
+				Policy:           LoadBalancerPolicy,
+				IsPreserveSource: common.Bool(false),
+				HealthChecker: &networkloadbalancer.HealthChecker{
+					Port:     common.Int(6443),
+					Protocol: networkloadbalancer.HealthCheckProtocolsHttps,
+					UrlPath:  common.String("/healthz"),
+				},
+			},
+			"rollout-set": {
+				Name:             common.String("rollout-set"),
+				Policy:           LoadBalancerPolicy,
+				IsPreserveSource: common.Bool(false),
+				HealthChecker: &networkloadbalancer.HealthChecker{
+					Port:     common.Int(6443),
+					Protocol: networkloadbalancer.HealthCheckProtocolsHttps,
+					UrlPath:  common.String("/healthz"),
+				},
+			},
+		},
+	}
+	if !scope.IsNLBEqual(actual, desired) {
+		t.Fatalf("expected matching NLB resources to be equal")
+	}
+
+	delete(actual.Listeners, desiredAPIServerListenerName(1, 2, "rollout-set"))
+	delete(actual.BackendSets, "rollout-set")
+	if scope.IsNLBEqual(actual, desired) {
+		t.Fatalf("expected spec-only listener/backend-set changes to make NLB unequal")
 	}
 }
