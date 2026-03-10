@@ -288,6 +288,9 @@ spec:
               echo "Argo CAPOCI E2E only supports instance principal auth for OCIR login and suite execution." >&2
               exit 1
             fi
+            export AUTH_CONFIG_DIR=/workspace/auth-config
+            mkdir -p "${AUTH_CONFIG_DIR}"
+            printf '%s' true > "${AUTH_CONFIG_DIR}/useInstancePrincipal"
             export USE_INSTANCE_PRINCIPAL_B64="$(printf '%s' "${USE_INSTANCE_PRINCIPAL}" | base64 | tr -d '\n')"
 
             # Setup OCIR token and login

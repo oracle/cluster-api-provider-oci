@@ -120,6 +120,58 @@ check_base64_env() {
     fi
 }
 
+check_dir_file() {
+    local dir="$1"
+    local name="$2"
+    if [ -f "${dir}/${name}" ]; then
+        note_ok "auth config file ${dir}/${name} is present"
+    else
+        note_fail "auth config file ${dir}/${name} is missing"
+    fi
+}
+
+check_auth_config_dir() {
+    local dir="$1"
+    local use_instance_principal=""
+    local use_session_token=""
+
+    if [ ! -d "${dir}" ]; then
+        note_fail "AUTH_CONFIG_DIR ${dir} does not exist"
+        return
+    fi
+
+    check_dir_file "${dir}" "useInstancePrincipal"
+    if [ ! -f "${dir}/useInstancePrincipal" ]; then
+        return
+    fi
+
+    use_instance_principal="$(tr -d '[:space:]' < "${dir}/useInstancePrincipal")"
+    if [ "${use_instance_principal}" = "true" ]; then
+        note_ok "AUTH_CONFIG_DIR selects instance principal"
+        return
+    fi
+
+    check_dir_file "${dir}" "useSessionToken"
+    if [ -f "${dir}/useSessionToken" ]; then
+        use_session_token="$(tr -d '[:space:]' < "${dir}/useSessionToken")"
+    fi
+
+    check_dir_file "${dir}" "region"
+    check_dir_file "${dir}" "tenancy"
+    check_dir_file "${dir}" "fingerprint"
+    if [ "${use_session_token}" = "true" ]; then
+        note_ok "AUTH_CONFIG_DIR selects session token auth"
+        check_dir_file "${dir}" "sessionToken"
+        check_dir_file "${dir}" "sessionPrivateKey"
+        return
+    fi
+
+    note_ok "AUTH_CONFIG_DIR selects user principal auth"
+    check_dir_file "${dir}" "user"
+    check_dir_file "${dir}" "key"
+    check_dir_file "${dir}" "passphrase"
+}
+
 uses_instance_principal_local() {
     local decoded=""
     if [ -n "${USE_INSTANCE_PRINCIPAL_B64:-}" ] && decoded=$(decode_base64 "${USE_INSTANCE_PRINCIPAL_B64}"); then
@@ -160,7 +212,9 @@ check_focus_specific_envs() {
 
 check_local_auth() {
     if [ -n "${AUTH_CONFIG_DIR:-}" ]; then
-        echo "WARN: AUTH_CONFIG_DIR is set, but the CAPOCI E2E suite does not read AUTH_CONFIG_DIR today." >&2
+        note_ok "AUTH_CONFIG_DIR is set"
+        check_auth_config_dir "${AUTH_CONFIG_DIR}"
+        return
     fi
 
     if uses_instance_principal_local; then

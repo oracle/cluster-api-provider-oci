@@ -193,48 +193,8 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	e2eConfig = loadE2EConfig(configPath)
 	bootstrapClusterProxy = NewOCIClusterProxy("bootstrap", kubeconfigPath, initScheme())
 
-	s, useInstancePrincipalFlagSet := os.LookupEnv("USE_INSTANCE_PRINCIPAL_B64")
-	useInstanePrincipal := false
-	if useInstancePrincipalFlagSet {
-		useInstanePrincipalStr, err := base64.StdEncoding.DecodeString(s)
-		Expect(err).NotTo(HaveOccurred())
-		useInstanePrincipal, err = strconv.ParseBool(string(useInstanePrincipalStr))
-		Expect(err).NotTo(HaveOccurred())
-	}
-	var ociAuthConfigProvider common.ConfigurationProvider
-	var err error
-	if useInstanePrincipal {
-		ociAuthConfigProvider, err = oci_config.NewConfigurationProvider(&oci_config.AuthConfig{
-			UseInstancePrincipals: true,
-		})
-		Expect(err).NotTo(HaveOccurred())
-		By("Using instance principal as auth provider")
-	} else {
-		tenancyId, err := base64.StdEncoding.DecodeString(os.Getenv("OCI_TENANCY_ID_B64"))
-		Expect(err).NotTo(HaveOccurred())
-		userId, err := base64.StdEncoding.DecodeString(os.Getenv("OCI_USER_ID_B64"))
-		Expect(err).NotTo(HaveOccurred())
-		passphrase, err := base64.StdEncoding.DecodeString(os.Getenv("OCI_CREDENTIALS_PASSPHRASE_B64"))
-		Expect(err).NotTo(HaveOccurred())
-		key, err := base64.StdEncoding.DecodeString(os.Getenv("OCI_CREDENTIALS_KEY_B64"))
-		Expect(err).NotTo(HaveOccurred())
-		fingerprint, err := base64.StdEncoding.DecodeString(os.Getenv("OCI_CREDENTIALS_FINGERPRINT_B64"))
-		Expect(err).NotTo(HaveOccurred())
-		region, err := base64.StdEncoding.DecodeString(os.Getenv("OCI_REGION_B64"))
-		Expect(err).NotTo(HaveOccurred())
-
-		ociAuthConfigProvider, err = oci_config.NewConfigurationProvider(&oci_config.AuthConfig{
-			Region:                string(region),
-			TenancyID:             string(tenancyId),
-			UserID:                string(userId),
-			PrivateKey:            string(key),
-			Fingerprint:           string(fingerprint),
-			Passphrase:            string(passphrase),
-			UseInstancePrincipals: false,
-		})
-		Expect(err).NotTo(HaveOccurred())
-		By("Using user principal as auth provider")
-	}
+	ociAuthConfigProvider, err := newE2EAuthConfigProvider()
+	Expect(err).NotTo(HaveOccurred())
 
 	clientProvider, err := scope.NewClientProvider(scope.ClientProviderParams{OciAuthConfigProvider: ociAuthConfigProvider})
 	Expect(err).NotTo(HaveOccurred())
@@ -258,6 +218,129 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	resp, err := identityClient.ListAvailabilityDomains(context.Background(), req)
 	adCount = len(resp.Items)
 })
+
+func newE2EAuthConfigProvider() (common.ConfigurationProvider, error) {
+	if authConfigDir := os.Getenv("AUTH_CONFIG_DIR"); authConfigDir != "" {
+		authConfig, err := oci_config.FromDir(authConfigDir)
+		if err != nil {
+			return nil, err
+		}
+		provider, err := oci_config.NewConfigurationProvider(authConfig)
+		if err != nil {
+			return nil, err
+		}
+		switch {
+		case authConfig.UseInstancePrincipals:
+			By(fmt.Sprintf("Using auth provider from AUTH_CONFIG_DIR %q with instance principal", authConfigDir))
+		case authConfig.UseSessionToken:
+			By(fmt.Sprintf("Using auth provider from AUTH_CONFIG_DIR %q with session token", authConfigDir))
+		default:
+			By(fmt.Sprintf("Using auth provider from AUTH_CONFIG_DIR %q with user principal", authConfigDir))
+		}
+		return provider, nil
+	}
+
+	useInstancePrincipal, err := useInstancePrincipalFromEnv()
+	if err != nil {
+		return nil, err
+	}
+	if useInstancePrincipal {
+		provider, err := oci_config.NewConfigurationProvider(&oci_config.AuthConfig{
+			UseInstancePrincipals: true,
+		})
+		if err != nil {
+			return nil, err
+		}
+		By("Using instance principal as auth provider from legacy env vars")
+		return provider, nil
+	}
+
+	authConfig, err := legacyBase64AuthConfigFromEnv()
+	if err != nil {
+		return nil, err
+	}
+	provider, err := oci_config.NewConfigurationProvider(authConfig)
+	if err != nil {
+		return nil, err
+	}
+	By("Using user principal as auth provider from legacy env vars")
+	return provider, nil
+}
+
+func useInstancePrincipalFromEnv() (bool, error) {
+	if rawValue, ok := os.LookupEnv("USE_INSTANCE_PRINCIPAL"); ok && rawValue != "" {
+		return strconv.ParseBool(rawValue)
+	}
+	if encodedValue, ok := os.LookupEnv("USE_INSTANCE_PRINCIPAL_B64"); ok && encodedValue != "" {
+		decodedValue, err := base64.StdEncoding.DecodeString(encodedValue)
+		if err != nil {
+			return false, err
+		}
+		return strconv.ParseBool(string(decodedValue))
+	}
+	return false, nil
+}
+
+func legacyBase64AuthConfigFromEnv() (*oci_config.AuthConfig, error) {
+	tenancyID, err := decodeRequiredBase64Env("OCI_TENANCY_ID_B64")
+	if err != nil {
+		return nil, err
+	}
+	userID, err := decodeRequiredBase64Env("OCI_USER_ID_B64")
+	if err != nil {
+		return nil, err
+	}
+	privateKey, err := decodeRequiredBase64Env("OCI_CREDENTIALS_KEY_B64")
+	if err != nil {
+		return nil, err
+	}
+	fingerprint, err := decodeRequiredBase64Env("OCI_CREDENTIALS_FINGERPRINT_B64")
+	if err != nil {
+		return nil, err
+	}
+	region, err := decodeRequiredBase64Env("OCI_REGION_B64")
+	if err != nil {
+		return nil, err
+	}
+	passphrase, err := decodeOptionalBase64Env("OCI_CREDENTIALS_PASSPHRASE_B64")
+	if err != nil {
+		return nil, err
+	}
+
+	return &oci_config.AuthConfig{
+		Region:                region,
+		TenancyID:             tenancyID,
+		UserID:                userID,
+		PrivateKey:            privateKey,
+		Fingerprint:           fingerprint,
+		Passphrase:            passphrase,
+		UseInstancePrincipals: false,
+	}, nil
+}
+
+func decodeRequiredBase64Env(name string) (string, error) {
+	value := os.Getenv(name)
+	if value == "" {
+		return "", fmt.Errorf("%s is not set", name)
+	}
+	decoded, err := base64.StdEncoding.DecodeString(value)
+	if err != nil {
+		return "", err
+	}
+	return string(decoded), nil
+}
+
+func decodeOptionalBase64Env(name string) (string, error) {
+	value := os.Getenv(name)
+	if value == "" {
+		return "", nil
+	}
+	decoded, err := base64.StdEncoding.DecodeString(value)
+	if err != nil {
+		return "", err
+	}
+	return string(decoded), nil
+}
 
 // Using a SynchronizedAfterSuite for controlling how to delete resources shared across ParallelNodes (~ginkgo threads).
 // The bootstrap cluster is shared across all the tests, so it should be deleted only after all ParallelNodes completes.
