@@ -31,9 +31,11 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
+	"github.com/oracle/oci-go-sdk/v65/loadbalancer"
 	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -176,6 +178,7 @@ var _ = Describe("Workload cluster creation", func() {
 			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),
 			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
 		}, result)
+		verifyAdditionalAPIServerBackendSetResources(ctx, specName, namespace.Name, clusterName)
 	})
 
 	It("Multiple API server backend sets on LB [PRBlocking]", func() {
@@ -198,6 +201,7 @@ var _ = Describe("Workload cluster creation", func() {
 			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),
 			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
 		}, result)
+		verifyAdditionalAPIServerBackendSetResources(ctx, specName, namespace.Name, clusterName)
 	})
 
 	It("Antrea as CNI - With 1 control-plane nodes and 1 worker nodes [DailyTests]", func() {
@@ -918,8 +922,128 @@ func validateVnicNSG(ctx context.Context, clusterName string, nameSpace string, 
 				Expect(vnic.NsgIds[0]).To(Equal(*nsgId))
 			}
 		}
-		Expect(exists).To(Equal(true))
 	}
+	Expect(exists).To(Equal(true))
+}
+
+func verifyAdditionalAPIServerBackendSetResources(ctx context.Context, specName, namespaceName, clusterName string) {
+	Eventually(func() error {
+		k8sClient := bootstrapClusterProxy.GetClient()
+		ociCluster := &infrastructurev1beta2.OCICluster{}
+		if err := k8sClient.Get(ctx, client.ObjectKey{Namespace: namespaceName, Name: clusterName}, ociCluster); err != nil {
+			return err
+		}
+		lbID := ociCluster.Spec.NetworkSpec.APIServerLB.LoadBalancerId
+		if lbID == nil || *lbID == "" {
+			return fmt.Errorf("api server load balancer ID not yet assigned")
+		}
+
+		expectedBackendSets := ociCluster.Spec.NetworkSpec.APIServerLB.NLBSpec.CanonicalBackendSets()
+		if len(expectedBackendSets) < 2 {
+			return fmt.Errorf("expected multiple API server backend sets, got %d", len(expectedBackendSets))
+		}
+
+		defaultPort := ociCluster.Spec.ControlPlaneEndpoint.Port
+		if defaultPort == 0 {
+			defaultPort = 6443
+		}
+
+		switch ociCluster.Spec.NetworkSpec.APIServerLB.LoadBalancerType {
+		case infrastructurev1beta2.LoadBalancerTypeLB:
+			return verifyAPIServerLBBackendSets(ctx, *lbID, defaultPort, expectedBackendSets)
+		case "", infrastructurev1beta2.LoadBalancerTypeNLB:
+			return verifyAPIServerNLBBackendSets(ctx, *lbID, defaultPort, expectedBackendSets)
+		default:
+			return fmt.Errorf("unsupported api server load balancer type %q", ociCluster.Spec.NetworkSpec.APIServerLB.LoadBalancerType)
+		}
+	}, e2eConfig.GetIntervals(specName, "wait-control-plane")...).Should(Succeed())
+}
+
+func verifyAPIServerNLBBackendSets(ctx context.Context, lbID string, defaultPort int32, expectedBackendSets []infrastructurev1beta2.NLBBackendSet) error {
+	resp, err := lbClient.GetNetworkLoadBalancer(ctx, networkloadbalancer.GetNetworkLoadBalancerRequest{
+		NetworkLoadBalancerId: common.String(lbID),
+	})
+	if err != nil {
+		return err
+	}
+
+	if len(resp.NetworkLoadBalancer.BackendSets) != len(expectedBackendSets) {
+		return fmt.Errorf("expected %d nlb backend sets, got %d", len(expectedBackendSets), len(resp.NetworkLoadBalancer.BackendSets))
+	}
+	if len(resp.NetworkLoadBalancer.Listeners) != len(expectedBackendSets) {
+		return fmt.Errorf("expected %d nlb listeners, got %d", len(expectedBackendSets), len(resp.NetworkLoadBalancer.Listeners))
+	}
+
+	for _, backendSet := range expectedBackendSets {
+		if _, ok := resp.NetworkLoadBalancer.BackendSets[backendSet.Name]; !ok {
+			return fmt.Errorf("nlb backend set %q not found", backendSet.Name)
+		}
+		if !hasExpectedNLBListener(resp.NetworkLoadBalancer.Listeners, backendSet.Name, expectedAPIServerListenerPort(defaultPort, backendSet)) {
+			return fmt.Errorf("nlb listener for backend set %q on port %d not found", backendSet.Name, expectedAPIServerListenerPort(defaultPort, backendSet))
+		}
+	}
+
+	return nil
+}
+
+func verifyAPIServerLBBackendSets(ctx context.Context, lbID string, defaultPort int32, expectedBackendSets []infrastructurev1beta2.NLBBackendSet) error {
+	resp, err := lbaasClient.GetLoadBalancer(ctx, loadbalancer.GetLoadBalancerRequest{
+		LoadBalancerId: common.String(lbID),
+	})
+	if err != nil {
+		return err
+	}
+
+	if len(resp.LoadBalancer.BackendSets) != len(expectedBackendSets) {
+		return fmt.Errorf("expected %d lb backend sets, got %d", len(expectedBackendSets), len(resp.LoadBalancer.BackendSets))
+	}
+	if len(resp.LoadBalancer.Listeners) != len(expectedBackendSets) {
+		return fmt.Errorf("expected %d lb listeners, got %d", len(expectedBackendSets), len(resp.LoadBalancer.Listeners))
+	}
+
+	for _, backendSet := range expectedBackendSets {
+		if _, ok := resp.LoadBalancer.BackendSets[backendSet.Name]; !ok {
+			return fmt.Errorf("lb backend set %q not found", backendSet.Name)
+		}
+		if !hasExpectedLBListener(resp.LoadBalancer.Listeners, backendSet.Name, expectedAPIServerListenerPort(defaultPort, backendSet)) {
+			return fmt.Errorf("lb listener for backend set %q on port %d not found", backendSet.Name, expectedAPIServerListenerPort(defaultPort, backendSet))
+		}
+	}
+
+	return nil
+}
+
+func hasExpectedNLBListener(listeners map[string]networkloadbalancer.Listener, backendSetName string, port int32) bool {
+	for _, listener := range listeners {
+		if listener.DefaultBackendSetName == nil || *listener.DefaultBackendSetName != backendSetName {
+			continue
+		}
+		if listener.Port == nil || int32(*listener.Port) != port {
+			continue
+		}
+		return true
+	}
+	return false
+}
+
+func hasExpectedLBListener(listeners map[string]loadbalancer.Listener, backendSetName string, port int32) bool {
+	for _, listener := range listeners {
+		if listener.DefaultBackendSetName == nil || *listener.DefaultBackendSetName != backendSetName {
+			continue
+		}
+		if listener.Port == nil || int32(*listener.Port) != port {
+			continue
+		}
+		return true
+	}
+	return false
+}
+
+func expectedAPIServerListenerPort(defaultPort int32, backendSet infrastructurev1beta2.NLBBackendSet) int32 {
+	if backendSet.ListenerPort != nil {
+		return *backendSet.ListenerPort
+	}
+	return defaultPort
 }
 
 func validateCustomNetworkingSeclist(ctx context.Context, ociCluster infrastructurev1beta1.OCICluster, clusterName string) error {
