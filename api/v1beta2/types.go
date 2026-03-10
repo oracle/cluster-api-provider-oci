@@ -1071,15 +1071,7 @@ type HealthChecker struct {
 // 1. If `backendSets` is configured, it is used as-is.
 // 2. Otherwise, a single backend set named APIServerLBBackendSetName is synthesized from the legacy `backendSetDetails`.
 func (in *NLBSpec) CanonicalBackendSets() []NLBBackendSet {
-	if len(in.BackendSets) > 0 {
-		return append([]NLBBackendSet(nil), in.BackendSets...)
-	}
-	return []NLBBackendSet{
-		{
-			Name:              APIServerLBBackendSetName,
-			BackendSetDetails: in.BackendSetDetails,
-		},
-	}
+	return canonicalAPIServerBackendSets(in.BackendSets, in.BackendSetDetails)
 }
 
 // NetworkSpec specifies what the OCI networking resources should look like.

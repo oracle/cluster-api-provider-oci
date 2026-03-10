@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"net"
 	"regexp"
-	"strings"
 
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -97,134 +96,7 @@ func ValidateNetworkSpec(validRoles []Role, networkSpec NetworkSpec, old Network
 }
 
 func validateAPIServerLBBackendSets(spec NLBSpec, apiServerPort *int32, fldPath *field.Path) field.ErrorList {
-	var allErrs field.ErrorList
-
-	legacyConfigured := spec.BackendSetDetails != (BackendSetDetails{})
-	if len(spec.BackendSets) > 0 && legacyConfigured {
-		allErrs = append(allErrs, field.Forbidden(
-			fldPath.Child("backendSetDetails"),
-			"cannot be set when backendSets is configured; move legacy backendSetDetails into backendSets",
-		))
-	}
-
-	nameRegex := regexp.MustCompile(apiServerBackendSetNameRegex)
-	seen := map[string]int{}
-	for i, backendSet := range spec.BackendSets {
-		namePath := fldPath.Child("backendSets").Index(i).Child("name")
-		name := strings.TrimSpace(backendSet.Name)
-		if name == "" {
-			allErrs = append(allErrs, field.Required(namePath, "must not be empty"))
-			continue
-		}
-		if !nameRegex.MatchString(name) {
-			allErrs = append(allErrs, field.Invalid(
-				namePath,
-				backendSet.Name,
-				"must match ^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$ (1-32 chars; alphanumeric, '-', '_')",
-			))
-		}
-		if firstIdx, ok := seen[name]; ok {
-			allErrs = append(allErrs, field.Invalid(
-				namePath,
-				backendSet.Name,
-				fmt.Sprintf("duplicate backend set name, already used at backendSets[%d].name", firstIdx),
-			))
-			continue
-		}
-		seen[name] = i
-	}
-
-	usedPorts := map[int32]int{}
-	omittedListenerPortIndex := -1
-	for i, backendSet := range spec.BackendSets {
-		portPath := fldPath.Child("backendSets").Index(i).Child("listenerPort")
-		if backendSet.ListenerPort != nil {
-			port := *backendSet.ListenerPort
-			if port < 1 || port > 65535 {
-				allErrs = append(allErrs, field.Invalid(portPath, port, "must be between 1 and 65535"))
-				continue
-			}
-			if !isSupportedAPIServerListenerPort(port, apiServerPort) {
-				allErrs = append(allErrs, field.Invalid(
-					portPath,
-					port,
-					fmt.Sprintf("must be one of %s to avoid exposing arbitrary control-plane ports", supportedAPIServerListenerPortsString(apiServerPort)),
-				))
-				continue
-			}
-		}
-
-		port, known := effectiveAPIServerListenerPort(backendSet.ListenerPort, apiServerPort)
-		if !known {
-			if omittedListenerPortIndex >= 0 {
-				allErrs = append(allErrs, field.Invalid(
-					portPath,
-					backendSet.ListenerPort,
-					fmt.Sprintf("multiple backend sets omit listenerPort, already omitted at backendSets[%d].listenerPort", omittedListenerPortIndex),
-				))
-				continue
-			}
-			omittedListenerPortIndex = i
-			continue
-		}
-
-		if firstIdx, ok := usedPorts[port]; ok {
-			allErrs = append(allErrs, field.Invalid(
-				portPath,
-				backendSet.ListenerPort,
-				fmt.Sprintf("duplicate effective listenerPort %d, already used at backendSets[%d].listenerPort", port, firstIdx),
-			))
-			continue
-		}
-		usedPorts[port] = i
-	}
-
-	return allErrs
-}
-
-func effectiveAPIServerListenerPort(listenerPort *int32, apiServerPort *int32) (int32, bool) {
-	if listenerPort != nil {
-		return *listenerPort, true
-	}
-	if apiServerPort == nil {
-		return 0, false
-	}
-
-	return *apiServerPort, true
-}
-
-func isSupportedAPIServerListenerPort(port int32, apiServerPort *int32) bool {
-	for _, allowedPort := range supportedAPIServerListenerPorts(apiServerPort) {
-		if port == allowedPort {
-			return true
-		}
-	}
-	return false
-}
-
-func supportedAPIServerListenerPorts(apiServerPort *int32) []int32 {
-	ports := []int32{ociutil.DefaultAPIServerPort}
-	if apiServerPort != nil && *apiServerPort != ociutil.DefaultAPIServerPort {
-		ports = append(ports, *apiServerPort)
-	}
-	if supportedSecondaryListenerPort != ociutil.DefaultAPIServerPort {
-		ports = append(ports, supportedSecondaryListenerPort)
-	}
-	return ports
-}
-
-func supportedAPIServerListenerPortsString(apiServerPort *int32) string {
-	values := supportedAPIServerListenerPorts(apiServerPort)
-	parts := make([]string, 0, len(values))
-	seen := map[int32]struct{}{}
-	for _, value := range values {
-		if _, ok := seen[value]; ok {
-			continue
-		}
-		seen[value] = struct{}{}
-		parts = append(parts, fmt.Sprintf("%d", value))
-	}
-	return strings.Join(parts, ", ")
+	return validateSharedAPIServerLBBackendSets(spec, apiServerPort, fldPath)
 }
 
 // validateVCNCIDR validates the CIDR of a VNC.
