@@ -181,7 +181,7 @@ var _ = Describe("Workload cluster creation", func() {
 		verifyAdditionalAPIServerBackendSetResources(ctx, specName, namespace.Name, clusterName)
 	})
 
-	It("Multiple API server backend sets on LB [PRBlocking]", func() {
+	It("Multiple API server backend sets on LB [DailyTests]", func() {
 		clusterName = getClusterName(clusterNamePrefix, "multiple-backends-lb")
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
