@@ -1188,3 +1188,107 @@ func TestReconcileLBResources_IgnoresAlreadyExistsOnCreate(t *testing.T) {
 
 	g.Expect(cs.reconcileLBResources(context.Background(), desiredLB)).To(Succeed())
 }
+
+func TestReconcileLBResources_RefreshesBeforeDeletingStaleBackendSets(t *testing.T) {
+	g := NewWithT(t)
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	lbClient := mock_lb.NewMockLoadBalancerClient(mockCtrl)
+	client := fake.NewClientBuilder().Build()
+	ociCluster := &infrastructurev1beta2.OCICluster{
+		ObjectMeta: metav1.ObjectMeta{
+			UID:  "a",
+			Name: "cluster",
+		},
+		Spec: infrastructurev1beta2.OCIClusterSpec{},
+	}
+	ociCluster.Spec.ControlPlaneEndpoint.Port = 6443
+	ociCluster.Spec.NetworkSpec.APIServerLB.LoadBalancerId = common.String("lb-id")
+
+	cs, err := NewClusterScope(ClusterScopeParams{
+		LoadBalancerClient: lbClient,
+		Cluster:            &clusterv1.Cluster{},
+		OCIClusterAccessor: OCISelfManagedCluster{OCICluster: ociCluster},
+		Client:             client,
+	})
+	g.Expect(err).To(BeNil())
+
+	desiredLB := infrastructurev1beta2.LoadBalancer{
+		NLBSpec: infrastructurev1beta2.NLBSpec{
+			BackendSets: []infrastructurev1beta2.NLBBackendSet{
+				{Name: APIServerLBBackendSetName},
+			},
+		},
+	}
+
+	gomock.InOrder(
+		lbClient.EXPECT().GetLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.GetLoadBalancerRequest{
+			LoadBalancerId: common.String("lb-id"),
+		})).Return(loadbalancer.GetLoadBalancerResponse{
+			LoadBalancer: loadbalancer.LoadBalancer{
+				Listeners: map[string]loadbalancer.Listener{
+					APIServerLBListener: {
+						Name:                  common.String(APIServerLBListener),
+						Protocol:              common.String("TCP"),
+						Port:                  common.Int(6443),
+						DefaultBackendSetName: common.String(APIServerLBBackendSetName),
+					},
+					"stale-listener": {Name: common.String("stale-listener")},
+				},
+				BackendSets: map[string]loadbalancer.BackendSet{
+					APIServerLBBackendSetName: {
+						Name:   common.String(APIServerLBBackendSetName),
+						Policy: common.String("ROUND_ROBIN"),
+						HealthChecker: &loadbalancer.HealthChecker{
+							Port:     common.Int(6443),
+							Protocol: common.String("TCP"),
+						},
+					},
+					"stale-set": {Name: common.String("stale-set"), Backends: []loadbalancer.Backend{}},
+				},
+			},
+		}, nil),
+		lbClient.EXPECT().DeleteListener(gomock.Any(), gomock.Eq(loadbalancer.DeleteListenerRequest{
+			LoadBalancerId: common.String("lb-id"),
+			ListenerName:   common.String("stale-listener"),
+		})).Return(loadbalancer.DeleteListenerResponse{OpcWorkRequestId: common.String("wr-delete-listener")}, nil),
+		lbClient.EXPECT().GetWorkRequest(gomock.Any(), gomock.Eq(loadbalancer.GetWorkRequestRequest{
+			WorkRequestId: common.String("wr-delete-listener"),
+		})).Return(loadbalancer.GetWorkRequestResponse{
+			WorkRequest: loadbalancer.WorkRequest{LifecycleState: loadbalancer.WorkRequestLifecycleStateSucceeded},
+		}, nil),
+		lbClient.EXPECT().GetLoadBalancer(gomock.Any(), gomock.Eq(loadbalancer.GetLoadBalancerRequest{
+			LoadBalancerId: common.String("lb-id"),
+		})).Return(loadbalancer.GetLoadBalancerResponse{
+			LoadBalancer: loadbalancer.LoadBalancer{
+				Listeners: map[string]loadbalancer.Listener{
+					APIServerLBListener: {
+						Name:                  common.String(APIServerLBListener),
+						Protocol:              common.String("TCP"),
+						Port:                  common.Int(6443),
+						DefaultBackendSetName: common.String(APIServerLBBackendSetName),
+					},
+				},
+				BackendSets: map[string]loadbalancer.BackendSet{
+					APIServerLBBackendSetName: {
+						Name:   common.String(APIServerLBBackendSetName),
+						Policy: common.String("ROUND_ROBIN"),
+						HealthChecker: &loadbalancer.HealthChecker{
+							Port:     common.Int(6443),
+							Protocol: common.String("TCP"),
+						},
+					},
+					"stale-set": {
+						Name: common.String("stale-set"),
+						Backends: []loadbalancer.Backend{
+							{Name: common.String("10.0.0.4:6443")},
+						},
+					},
+				},
+			},
+		}, nil),
+	)
+
+	g.Expect(cs.reconcileLBResources(context.Background(), desiredLB)).To(Succeed())
+}

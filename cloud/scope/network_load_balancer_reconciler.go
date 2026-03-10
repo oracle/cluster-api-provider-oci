@@ -209,6 +209,7 @@ func (s *ClusterScope) reconcileNLBResources(ctx context.Context, nlb infrastruc
 			}
 		}
 	}
+	staleListenerDeleted := false
 	for name := range actualResp.NetworkLoadBalancer.Listeners {
 		if _, keep := desiredListeners[name]; keep {
 			continue
@@ -222,6 +223,15 @@ func (s *ClusterScope) reconcileNLBResources(ctx context.Context, nlb infrastruc
 		}
 		if _, err := ociutil.AwaitNLBWorkRequest(ctx, s.NetworkLoadBalancerClient, resp.OpcWorkRequestId); err != nil {
 			return errors.Wrapf(err, "failed awaiting delete listener %q", name)
+		}
+		staleListenerDeleted = true
+	}
+	if staleListenerDeleted {
+		actualResp, err = s.NetworkLoadBalancerClient.GetNetworkLoadBalancer(ctx, networkloadbalancer.GetNetworkLoadBalancerRequest{
+			NetworkLoadBalancerId: nlbID,
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to refresh nlb after stale listener reconciliation")
 		}
 	}
 

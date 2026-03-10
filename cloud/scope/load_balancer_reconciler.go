@@ -245,6 +245,7 @@ func (s *ClusterScope) reconcileLBResources(ctx context.Context, lb infrastructu
 			}
 		}
 	}
+	staleListenerDeleted := false
 	for name := range actualResp.LoadBalancer.Listeners {
 		if _, keep := desiredListeners[name]; keep {
 			continue
@@ -258,6 +259,15 @@ func (s *ClusterScope) reconcileLBResources(ctx context.Context, lb infrastructu
 		}
 		if _, err := ociutil.AwaitLBWorkRequest(ctx, s.LoadBalancerClient, resp.OpcWorkRequestId); err != nil {
 			return errors.Wrapf(err, "failed awaiting delete listener %q", name)
+		}
+		staleListenerDeleted = true
+	}
+	if staleListenerDeleted {
+		actualResp, err = s.LoadBalancerClient.GetLoadBalancer(ctx, loadbalancer.GetLoadBalancerRequest{
+			LoadBalancerId: lbID,
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to refresh lb after stale listener reconciliation")
 		}
 	}
 	for name, actual := range actualResp.LoadBalancer.BackendSets {
