@@ -313,6 +313,10 @@ test-e2e-run: generate-e2e-templates $(GINKGO) $(ENVSUBST) ## Run e2e tests
     	-e2e.config="$(E2E_CONF_FILE_ENVSUBST)" \
     	-e2e.skip-resource-cleanup=$(SKIP_CLEANUP) -e2e.use-existing-cluster=$(SKIP_CREATE_MGMT_CLUSTER) $(E2E_ARGS)
 
+.PHONY: test-e2e-preflight
+test-e2e-preflight: ## Validate CAPOCI e2e prerequisites before a full run
+	./scripts/ci-e2e-preflight.sh $(E2E_PREFLIGHT_ARGS)
+
 .PHONY: test-e2e
 test-e2e: ## Run e2e tests
 	PULL_POLICY=IfNotPresent MANAGER_IMAGE=$(CONTROLLER_IMG)-$(ARCH):$(TAG) \
