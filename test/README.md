@@ -6,9 +6,10 @@ This is the source-of-truth runbook for CAPOCI E2E execution in this repo.
 
 The E2E suite currently reads auth from `test/e2e/e2e_suite_test.go`.
 
-- Preferred local and Argo auth uses `AUTH_CONFIG_DIR` and `cloud/config.FromDir`.
-- Legacy local base64 auth envs still work as a compatibility fallback when `AUTH_CONFIG_DIR` is unset.
+- Local instance principal uses `USE_INSTANCE_PRINCIPAL_B64`.
+- Local user principal uses base64-encoded env vars such as `OCI_TENANCY_ID_B64`.
 - Argo currently supports only instance principal for both suite execution and OCIR login.
+- `AUTH_CONFIG_DIR` is not read by the E2E suite today.
 
 ## Default suite behavior
 
@@ -82,62 +83,60 @@ The local preflight checks:
 - required tools: `go`, `docker`, `kind`, `kubectl`, `kustomize`, `envsubst`, `jq`
 - required OCI image inputs
 - scenario-specific env vars inferred from `GINKGO_FOCUS`
-- whether `AUTH_CONFIG_DIR` or the legacy fallback envs are configured for the current suite
+- whether auth is configured for the current suite
 
 ### 2. Configure auth
-
-Preferred local auth is `AUTH_CONFIG_DIR`.
 
 For local instance principal:
 
 ```bash
-mkdir -p /tmp/capoci-auth
-printf '%s' true > /tmp/capoci-auth/useInstancePrincipal
-export AUTH_CONFIG_DIR=/tmp/capoci-auth
+export USE_INSTANCE_PRINCIPAL_B64="$(printf '%s' "true" | base64 | tr -d '\n')"
 ```
 
 For local user principal:
 
 ```bash
-mkdir -p /tmp/capoci-auth
-printf '%s' false > /tmp/capoci-auth/useInstancePrincipal
-printf '%s' false > /tmp/capoci-auth/useSessionToken
-printf '%s' <region> > /tmp/capoci-auth/region
-printf '%s' <tenancy-ocid> > /tmp/capoci-auth/tenancy
-printf '%s' <user-ocid> > /tmp/capoci-auth/user
-printf '%s' <fingerprint> > /tmp/capoci-auth/fingerprint
-cp /path/to/api-private-key.pem /tmp/capoci-auth/key
-printf '%s' <passphrase> > /tmp/capoci-auth/passphrase
-export AUTH_CONFIG_DIR=/tmp/capoci-auth
+export OCI_TENANCY_ID=<tenancy-ocid>
+export OCI_USER_ID=<user-ocid>
+export OCI_CREDENTIALS_FINGERPRINT=<fingerprint>
+export OCI_REGION=<region>
+export OCI_TENANCY_ID_B64="$(printf '%s' "$OCI_TENANCY_ID" | base64 | tr -d '\n')"
+export OCI_USER_ID_B64="$(printf '%s' "$OCI_USER_ID" | base64 | tr -d '\n')"
+export OCI_CREDENTIALS_FINGERPRINT_B64="$(printf '%s' "$OCI_CREDENTIALS_FINGERPRINT" | base64 | tr -d '\n')"
+export OCI_REGION_B64="$(printf '%s' "$OCI_REGION" | base64 | tr -d '\n')"
+export OCI_CREDENTIALS_KEY_B64="$(base64 < /path/to/api-private-key.pem | tr -d '\n')"
+export OCI_CREDENTIALS_PASSPHRASE_B64="$(printf '%s' "$OCI_CREDENTIALS_PASSPHRASE" | base64 | tr -d '\n')"
 ```
 
 Notes:
 
-- Legacy base64 envs still work if `AUTH_CONFIG_DIR` is unset.
-- Session-token auth also works through `AUTH_CONFIG_DIR` if the directory contains `useSessionToken`, `sessionToken`, and `sessionPrivateKey`.
+- Session-token envs are not consumed by `test/e2e/e2e_suite_test.go`.
+- `AUTH_CONFIG_DIR` does not configure the E2E suite today.
 
 ### 3. Run the suite
-
-Preferred local runner:
-
-```bash
-scripts/run-e2e.sh --auth-config-dir "${AUTH_CONFIG_DIR}" --focus "PRBlocking"
-```
 
 Full local flow, including image build and push:
 
 ```bash
+make test-e2e-preflight
 REGISTRY=<registry-prefix> scripts/ci-e2e.sh
+```
+
+Focused run that reuses the already-built manager image flow:
+
+```bash
+make test-e2e-preflight
+make test-e2e-run GINKGO_FOCUS="PRBlocking" GINKGO_SKIP="Bare Metal|Multi-Region|VCNPeering"
 ```
 
 Examples:
 
 ```bash
-scripts/run-e2e.sh --auth-config-dir "${AUTH_CONFIG_DIR}" --focus "VCNPeering" --skip ""
+make test-e2e-run GINKGO_SKIP="" GINKGO_FOCUS="VCNPeering"
 ```
 
 ```bash
-scripts/run-e2e.sh --auth-config-dir "${AUTH_CONFIG_DIR}" --existing-cluster --artifacts-dir "$(pwd)/_artifacts-existing"
+make test-e2e-run GINKGO_FOCUS="Conformance" E2E_ARGS='-kubetest.config-file=$(pwd)/test/e2e/data/kubetest/conformance.yaml'
 ```
 
 Artifacts:
@@ -192,8 +191,6 @@ argo submit argo/capoci-e2e-workflow.yaml \
   -p oci_managed_node_image_id="${OCI_MANAGED_NODE_IMAGE_ID}" \
   -p use_instance_principal=true
 ```
-
-The workflow writes a temporary `AUTH_CONFIG_DIR` inside the job before running `scripts/ci-e2e.sh`.
 
 You can also install and submit from the workflow template:
 

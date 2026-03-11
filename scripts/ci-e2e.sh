@@ -62,4 +62,4 @@ if [ -z "${OCI_SSH_KEY}" ]; then
     export OCI_SSH_KEY
 fi
 
-scripts/run-e2e.sh --build-images
+make test-e2e
