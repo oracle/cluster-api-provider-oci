@@ -277,10 +277,10 @@ func TestNLBCreateMembership_DefaultAndSecondaryBackendSetNaming(t *testing.T) {
 		BackendSetName:        common.String("apiserver-lb-backendset-2"),
 		CreateBackendDetails: networkloadbalancer.CreateBackendDetails{
 			IpAddress: common.String("1.1.1.1"),
-			Port:      common.Int(6443),
+			Port:      common.Int(9345),
 			Name:      common.String(fmt.Sprintf("test-%s", stableShortHash("apiserver-lb-backendset-2"))),
 		},
-		OpcRetryToken: ociutil.GetOPCRetryToken("%s-%s-%s", "create-backend", "uid", stableShortHash("apiserver-lb-backendset-2:6443")),
+		OpcRetryToken: ociutil.GetOPCRetryToken("%s-%s-%s", "create-backend", "uid", stableShortHash("apiserver-lb-backendset-2:9345")),
 	})).Return(networkloadbalancer.CreateBackendResponse{OpcWorkRequestId: common.String("wrid-secondary")}, nil)
 	nlbClient.EXPECT().GetWorkRequest(gomock.Any(), gomock.Eq(networkloadbalancer.GetWorkRequestRequest{
 		WorkRequestId: common.String("wrid-secondary"),

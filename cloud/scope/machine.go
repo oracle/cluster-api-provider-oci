@@ -863,7 +863,14 @@ func (m *MachineScope) desiredAPIServerBackendSetNames() []string {
 }
 
 func (m *MachineScope) desiredAPIServerBackendPort(backendSetName string) int32 {
-	return m.OCIClusterAccessor.GetControlPlaneEndpoint().Port
+	defaultPort := m.OCIClusterAccessor.GetControlPlaneEndpoint().Port
+	for _, backendSet := range m.OCIClusterAccessor.GetNetworkSpec().APIServerLB.CanonicalAPIServerBackendSets() {
+		if backendSet.Name != backendSetName {
+			continue
+		}
+		return desiredAPIServerListenerPort(defaultPort, backendSet)
+	}
+	return defaultPort
 }
 
 func (m *MachineScope) createBackendRetryToken(backendSetName string, backendPort int32) *string {
