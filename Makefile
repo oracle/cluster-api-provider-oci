@@ -380,10 +380,10 @@ kubectl: $(KUBECTL) ## Build a local copy of kubectl.
 kustomize: $(KUSTOMIZE) ## Build a local copy of kustomize.
 
 $(CONTROLLER_GEN): ## Download controller-gen locally if necessary.
-	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) sigs.k8s.io/controller-tools/cmd/controller-gen $(CONTROLLER_GEN_BIN) v0.16.1
+	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) sigs.k8s.io/controller-tools/cmd/controller-gen $(CONTROLLER_GEN_BIN) v0.19.0
 
 $(CONVERSION_GEN): ## Download controller-gen locally if necessary.
-	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) k8s.io/code-generator/cmd/conversion-gen $(CONVERSION_GEN_BIN) v0.33.0
+	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) k8s.io/code-generator/cmd/conversion-gen $(CONVERSION_GEN_BIN) v0.34.3
 
 $(KUSTOMIZE): ## Download kustomize locally if necessary.
 	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) sigs.k8s.io/kustomize/kustomize/v4 $(KUSTOMIZE_BIN) $(KUSTOMIZE_VER)

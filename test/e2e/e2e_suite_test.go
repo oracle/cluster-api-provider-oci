@@ -314,11 +314,18 @@ func setupBootstrapCluster(config *clusterctl.E2EConfig, scheme *runtime.Scheme,
 	var clusterProvider bootstrap.ClusterProvider
 	kubeconfigPath := ""
 	if !useExistingCluster {
-		clusterProvider = bootstrap.CreateKindBootstrapClusterAndLoadImages(context.TODO(), bootstrap.CreateKindBootstrapClusterAndLoadImagesInput{
+		input := bootstrap.CreateKindBootstrapClusterAndLoadImagesInput{
 			Name:               config.ManagementClusterName,
 			RequiresDockerSock: config.HasDockerProvider(),
 			Images:             config.Images,
-		})
+		}
+		// Allow callers (CI/workflow) to pin the bootstrap kind image explicitly.
+		if customNodeImage := strings.TrimSpace(os.Getenv("KIND_NODE_IMAGE")); customNodeImage != "" {
+			input.CustomNodeImage = customNodeImage
+		} else if kubernetesVersion, ok := config.Variables["KUBERNETES_VERSION"]; ok && strings.TrimSpace(kubernetesVersion) != "" {
+			input.KubernetesVersion = kubernetesVersion
+		}
+		clusterProvider = bootstrap.CreateKindBootstrapClusterAndLoadImages(context.TODO(), input)
 		Expect(clusterProvider).ToNot(BeNil(), "Failed to create a bootstrap cluster")
 
 		kubeconfigPath = clusterProvider.GetKubeconfigPath()

@@ -259,6 +259,7 @@ func Test_getConfigFromDir(t *testing.T) {
 			args: args{path: func() string {
 				dir := t.TempDir()
 				os.WriteFile(filepath.Join(dir, UseInstancePrincipal), []byte("false"), 0644)
+				os.WriteFile(filepath.Join(dir, UseSessionToken), []byte("false"), 0644)
 				os.WriteFile(filepath.Join(dir, Region), []byte("us-phoenix-1"), 0644)
 				os.WriteFile(filepath.Join(dir, Tenancy), []byte("ocid1.tenancy.oc1..aaaaaaa"), 0644)
 				os.WriteFile(filepath.Join(dir, User), []byte("ocid1.user.oc1..bbbbbbb"), 0644)
@@ -278,6 +279,30 @@ func Test_getConfigFromDir(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "useSessionToken true",
+			args: args{path: func() string {
+				dir := t.TempDir()
+				os.WriteFile(filepath.Join(dir, UseInstancePrincipal), []byte("false"), 0644)
+				os.WriteFile(filepath.Join(dir, UseSessionToken), []byte("true"), 0644)
+				os.WriteFile(filepath.Join(dir, Region), []byte("us-phoenix-1"), 0644)
+				os.WriteFile(filepath.Join(dir, Tenancy), []byte("ocid1.tenancy.oc1..aaaaaaa"), 0644)
+				os.WriteFile(filepath.Join(dir, Fingerprint), []byte("11:22:33:44"), 0644)
+				os.WriteFile(filepath.Join(dir, SessionToken), []byte("security-token"), 0644)
+				os.WriteFile(filepath.Join(dir, SessionPrivateKey), []byte("private-key"), 0644)
+				return dir
+			}()},
+			want: &AuthConfig{
+				Region:                "us-phoenix-1",
+				TenancyID:             "ocid1.tenancy.oc1..aaaaaaa",
+				Fingerprint:           "11:22:33:44",
+				SessionTokenFilePath:  "",
+				SessionPrivateKeyPath: "",
+				UseInstancePrincipals: false,
+				UseSessionToken:       true,
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -285,6 +310,10 @@ func Test_getConfigFromDir(t *testing.T) {
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getConfigFromDir() error = %v, wantErr %v", err, tt.wantErr)
 				return
+			}
+			if tt.name == "useSessionToken true" && got != nil {
+				tt.want.SessionTokenFilePath = filepath.Join(tt.args.path, SessionToken)
+				tt.want.SessionPrivateKeyPath = filepath.Join(tt.args.path, SessionPrivateKey)
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getConfigFromDir() = %v, want %v", got, tt.want)
@@ -324,6 +353,47 @@ func TestNewConfigurationProvider(t *testing.T) {
 				instancePrincipalProviderFunc = auth.InstancePrincipalConfigurationProvider
 			},
 		},
+		{
+			name: "use session token",
+			args: args{cfg: &AuthConfig{
+				UseSessionToken:       true,
+				Region:                "us-phoenix-1",
+				TenancyID:             "ocid1.tenancy.oc1..aaaaaaa",
+				Fingerprint:           "11:22:33:44",
+				SessionTokenFilePath:  "/tmp/token",
+				SessionPrivateKeyPath: "/tmp/private-key",
+			}},
+			wantErr: false,
+			setup: func() {
+				sessionTokenProviderFunc = func(configFilePath, privateKeyPassword string) (common.ConfigurationProvider, error) {
+					return &mockInstancePrincipalConfigurationProvider{}, nil
+				}
+			},
+			cleanup: func() {
+				sessionTokenProviderFunc = common.ConfigurationProviderForSessionToken
+			},
+		},
+		{
+			name: "instance principal precedence over session token",
+			args: args{cfg: &AuthConfig{
+				UseInstancePrincipals: true,
+				UseSessionToken:       true,
+			}},
+			wantErr: false,
+			setup: func() {
+				instancePrincipalProviderFunc = func() (common.ConfigurationProvider, error) {
+					return &mockInstancePrincipalConfigurationProvider{}, nil
+				}
+				sessionTokenProviderFunc = func(configFilePath, privateKeyPassword string) (common.ConfigurationProvider, error) {
+					t.Fatalf("session token provider should not be called when instance principals are enabled")
+					return nil, nil
+				}
+			},
+			cleanup: func() {
+				instancePrincipalProviderFunc = auth.InstancePrincipalConfigurationProvider
+				sessionTokenProviderFunc = common.ConfigurationProviderForSessionToken
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -340,6 +410,72 @@ func TestNewConfigurationProvider(t *testing.T) {
 			}
 			if !tt.wantErr && got == nil {
 				t.Errorf("NewConfigurationProvider() returned nil, want non-nil")
+			}
+		})
+	}
+}
+
+func TestNewConfigurationProviderWithSessionToken(t *testing.T) {
+	type args struct {
+		cfg *AuthConfig
+	}
+	tests := []struct {
+		name       string
+		args       args
+		wantErr    bool
+		providerFn func(configFilePath, privateKeyPassword string) (common.ConfigurationProvider, error)
+	}{
+		{
+			name:    "nil config",
+			args:    args{cfg: nil},
+			wantErr: true,
+		},
+		{
+			name: "missing required fields",
+			args: args{cfg: &AuthConfig{
+				UseSessionToken: true,
+			}},
+			wantErr: true,
+		},
+		{
+			name: "valid session token config",
+			args: args{cfg: &AuthConfig{
+				UseSessionToken:       true,
+				Region:                "us-phoenix-1",
+				TenancyID:             "ocid1.tenancy.oc1..aaaaaaa",
+				Fingerprint:           "11:22:33:44",
+				Passphrase:            "secret-pass",
+				SessionTokenFilePath:  "/tmp/token",
+				SessionPrivateKeyPath: "/tmp/private-key",
+			}},
+			wantErr: false,
+			providerFn: func(configFilePath, privateKeyPassword string) (common.ConfigurationProvider, error) {
+				if configFilePath == "" {
+					t.Errorf("expected configFilePath to be set")
+				}
+				if privateKeyPassword != "secret-pass" {
+					t.Errorf("privateKeyPassword = %q, want secret-pass", privateKeyPassword)
+				}
+				return &mockInstancePrincipalConfigurationProvider{}, nil
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.providerFn != nil {
+				sessionTokenProviderFunc = tt.providerFn
+			}
+			defer func() {
+				sessionTokenProviderFunc = common.ConfigurationProviderForSessionToken
+			}()
+			got, err := NewConfigurationProviderWithSessionToken(tt.args.cfg)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("NewConfigurationProviderWithSessionToken() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr && got == nil {
+				t.Errorf("NewConfigurationProviderWithSessionToken() returned nil, want non-nil")
 			}
 		})
 	}

@@ -22,6 +22,7 @@ import (
 	"github.com/onsi/gomega"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/oci-go-sdk/v65/common"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
 func Test_GetNsgNamesFromId(t *testing.T) {
@@ -193,4 +194,44 @@ func Test_GetSubnetNamesFromId(t *testing.T) {
 			g.Expect(actual).To(gomega.Equal(test.expected))
 		})
 	}
+}
+
+func TestConvertMachineExtendedMetadata(t *testing.T) {
+	t.Run("converts nested json values", func(t *testing.T) {
+		g := gomega.NewWithT(t)
+		input := map[string]apiextensionsv1.JSON{
+			"cilium-primary-vnic": {
+				Raw: []byte(`{"ip-count":32,"cidr-blocks":["10.0.0.0/24"]}`),
+			},
+		}
+
+		actual, err := ConvertMachineExtendedMetadata(input)
+		g.Expect(err).ToNot(gomega.HaveOccurred())
+		g.Expect(actual).To(gomega.Equal(map[string]interface{}{
+			"cilium-primary-vnic": map[string]interface{}{
+				"ip-count":    float64(32),
+				"cidr-blocks": []interface{}{"10.0.0.0/24"},
+			},
+		}))
+	})
+
+	t.Run("returns nil for empty input", func(t *testing.T) {
+		g := gomega.NewWithT(t)
+		actual, err := ConvertMachineExtendedMetadata(nil)
+		g.Expect(err).ToNot(gomega.HaveOccurred())
+		g.Expect(actual).To(gomega.BeNil())
+	})
+
+	t.Run("returns error for invalid json", func(t *testing.T) {
+		g := gomega.NewWithT(t)
+		input := map[string]apiextensionsv1.JSON{
+			"invalid": {
+				Raw: []byte(`{"broken":`),
+			},
+		}
+
+		actual, err := ConvertMachineExtendedMetadata(input)
+		g.Expect(err).To(gomega.HaveOccurred())
+		g.Expect(actual).To(gomega.BeNil())
+	})
 }
