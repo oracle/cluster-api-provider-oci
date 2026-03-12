@@ -258,6 +258,7 @@ func TestInstanceConfigCreate(t *testing.T) {
 						DefinedTags:            definedTagsInterface,
 						FreeformTags:           tags,
 						NsgIds:                 []string{"nsg-id"},
+						AssignIpv6Ip:           common.Bool(false),
 						AssignPublicIp:         common.Bool(true),
 						SkipSourceDestCheck:    common.Bool(true),
 						SubnetId:               common.String("subnet-id"),
@@ -374,6 +375,7 @@ func TestInstanceConfigCreate(t *testing.T) {
 						DefinedTags:            definedTagsInterface,
 						FreeformTags:           tags,
 						NsgIds:                 []string{"nsg-id"},
+						AssignIpv6Ip:           common.Bool(false),
 						AssignPublicIp:         common.Bool(true),
 						SkipSourceDestCheck:    common.Bool(true),
 						SubnetId:               common.String("subnet-id"),
@@ -523,6 +525,105 @@ func TestInstanceConfigCreate(t *testing.T) {
 			},
 		},
 		{
+			name:          "instance config unchanged when actual includes flex shape defaults",
+			errorExpected: false,
+			testSpecificSetup: func(ms *MachinePoolScope, g *WithT) {
+				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+					Shape:                   common.String("VM.Standard.E4.Flex"),
+					InstanceConfigurationId: common.String("test"),
+					ShapeConfig: &infrav2exp.ShapeConfig{
+						Ocpus: common.String("1"),
+					},
+				}
+				computeManagementClient.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Eq(core.GetInstanceConfigurationRequest{
+					InstanceConfigurationId: common.String("test"),
+				})).
+					Return(core.GetInstanceConfigurationResponse{
+						InstanceConfiguration: core.InstanceConfiguration{
+							Id: common.String("test"),
+							InstanceDetails: core.ComputeInstanceDetails{
+								LaunchDetails: &core.InstanceConfigurationLaunchInstanceDetails{
+									DefinedTags:   definedTagsInterface,
+									FreeformTags:  tags,
+									CompartmentId: common.String("test-compartment"),
+									Shape:         common.String("VM.Standard.E4.Flex"),
+									CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+										FreeformTags: tags,
+										NsgIds:       []string{"nsg-id"},
+										SubnetId:     common.String("subnet-id"),
+									},
+									ShapeConfig: &core.InstanceConfigurationLaunchInstanceShapeConfigDetails{
+										Ocpus:       common.Float32(1),
+										MemoryInGBs: common.Float32(16),
+									},
+									SourceDetails: core.InstanceConfigurationInstanceSourceViaImageDetails{},
+									Metadata:      map[string]string{"user_data": "dGVzdA=="},
+								},
+							},
+						},
+					}, nil)
+				computeManagementClient.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).Times(0)
+			},
+		},
+		{
+			name:          "instance config unchanged when plugin config order differs",
+			errorExpected: false,
+			testSpecificSetup: func(ms *MachinePoolScope, g *WithT) {
+				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+					Shape:                   common.String("test-shape"),
+					InstanceConfigurationId: common.String("test"),
+					AgentConfig: &infrastructurev1beta2.LaunchInstanceAgentConfig{
+						PluginsConfig: []infrastructurev1beta2.InstanceAgentPluginConfig{
+							{
+								Name:         common.String("plugin-b"),
+								DesiredState: infrastructurev1beta2.InstanceAgentPluginConfigDetailsDesiredStateDisabled,
+							},
+							{
+								Name:         common.String("plugin-a"),
+								DesiredState: infrastructurev1beta2.InstanceAgentPluginConfigDetailsDesiredStateEnabled,
+							},
+						},
+					},
+				}
+				computeManagementClient.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Eq(core.GetInstanceConfigurationRequest{
+					InstanceConfigurationId: common.String("test"),
+				})).
+					Return(core.GetInstanceConfigurationResponse{
+						InstanceConfiguration: core.InstanceConfiguration{
+							Id: common.String("test"),
+							InstanceDetails: core.ComputeInstanceDetails{
+								LaunchDetails: &core.InstanceConfigurationLaunchInstanceDetails{
+									DefinedTags:   definedTagsInterface,
+									FreeformTags:  tags,
+									CompartmentId: common.String("test-compartment"),
+									Shape:         common.String("test-shape"),
+									CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+										FreeformTags: tags,
+										NsgIds:       []string{"nsg-id"},
+										SubnetId:     common.String("subnet-id"),
+									},
+									AgentConfig: &core.InstanceConfigurationLaunchInstanceAgentConfigDetails{
+										PluginsConfig: []core.InstanceAgentPluginConfigDetails{
+											{
+												Name:         common.String("plugin-a"),
+												DesiredState: core.InstanceAgentPluginConfigDetailsDesiredStateEnabled,
+											},
+											{
+												Name:         common.String("plugin-b"),
+												DesiredState: core.InstanceAgentPluginConfigDetailsDesiredStateDisabled,
+											},
+										},
+									},
+									SourceDetails: core.InstanceConfigurationInstanceSourceViaImageDetails{},
+									Metadata:      map[string]string{"user_data": "dGVzdA=="},
+								},
+							},
+						},
+					}, nil)
+				computeManagementClient.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).Times(0)
+			},
+		},
+		{
 			name:          "instance config update when shape changes",
 			errorExpected: false,
 			testSpecificSetup: func(ms *MachinePoolScope, g *WithT) {
@@ -601,6 +702,7 @@ func TestInstanceConfigCreate(t *testing.T) {
 						DefinedTags:            definedTagsInterface,
 						FreeformTags:           tags,
 						NsgIds:                 []string{"nsg-id"},
+						AssignIpv6Ip:           common.Bool(false),
 						AssignPublicIp:         common.Bool(true),
 						SkipSourceDestCheck:    common.Bool(true),
 						SubnetId:               common.String("subnet-id"),
@@ -683,6 +785,118 @@ func TestInstanceConfigCreate(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetLaunchInstanceDetailsCopiesMetadataAndPropagatesSupportedFields(t *testing.T) {
+	g := NewWithT(t)
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "bootstrap",
+			Namespace: "default",
+		},
+		Data: map[string][]byte{
+			"value": []byte("test"),
+		},
+	}
+	ociCluster := &infrastructurev1beta2.OCICluster{
+		Spec: infrastructurev1beta2.OCIClusterSpec{
+			CompartmentId: "test-compartment",
+			NetworkSpec: infrastructurev1beta2.NetworkSpec{
+				Vcn: infrastructurev1beta2.VCN{
+					Subnets: []*infrastructurev1beta2.Subnet{
+						{
+							Role: infrastructurev1beta2.WorkerRole,
+							ID:   common.String("worker-subnet-id"),
+							Name: "worker-subnet",
+						},
+					},
+					NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
+						List: []*infrastructurev1beta2.NSG{
+							{
+								Role: infrastructurev1beta2.WorkerRole,
+								ID:   common.String("worker-nsg-id"),
+								Name: "worker-nsg",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	machinePool := &infrav2exp.OCIMachinePool{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test",
+		},
+	}
+	client := fake.NewClientBuilder().WithStatusSubresource(machinePool).WithObjects(secret, machinePool).Build()
+	ms, err := NewMachinePoolScope(MachinePoolScopeParams{
+		ComputeManagementClient: mock_computemanagement.NewMockClient(mockCtrl),
+		OCIMachinePool:          machinePool,
+		OCIClusterAccessor: OCISelfManagedCluster{
+			OCICluster: ociCluster,
+		},
+		Cluster: &clusterv1.Cluster{},
+		MachinePool: &clusterv1.MachinePool{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "default",
+			},
+			Spec: clusterv1.MachinePoolSpec{
+				Template: clusterv1.MachineTemplateSpec{
+					Spec: clusterv1.MachineSpec{
+						Bootstrap: clusterv1.Bootstrap{
+							DataSecretName: common.String("bootstrap"),
+						},
+					},
+				},
+			},
+		},
+		Client: client,
+	})
+	g.Expect(err).To(BeNil())
+
+	metadata := map[string]string{"ssh_authorized_keys": "ssh-rsa test"}
+	spec := infrav2exp.InstanceConfiguration{
+		Shape:                          common.String("test-shape"),
+		Metadata:                       metadata,
+		IsPvEncryptionInTransitEnabled: common.Bool(true),
+		InstanceSourceViaImageDetails: &infrav2exp.InstanceSourceViaImageConfig{
+			ImageId:             common.String("image-id"),
+			KmsKeyId:            common.String("kms-id"),
+			BootVolumeSizeInGBs: common.Int64(100),
+			BootVolumeVpusPerGB: common.Int64(20),
+		},
+		AvailabilityConfig: &infrastructurev1beta2.LaunchInstanceAvailabilityConfig{
+			IsLiveMigrationPreferred: common.Bool(true),
+			RecoveryAction:           infrastructurev1beta2.LaunchInstanceAvailabilityConfigDetailsRecoveryActionRestoreInstance,
+		},
+		InstanceVnicConfiguration: &infrastructurev1beta2.NetworkDetails{
+			SubnetId:     common.String("explicit-subnet-id"),
+			NSGIds:       []string{"explicit-nsg-id"},
+			AssignIpv6Ip: true,
+		},
+	}
+	ms.OCIMachinePool.Spec.InstanceConfiguration = spec
+
+	launchDetails, err := ms.getLaunchInstanceDetails(spec, map[string]string{"freeform": "tag"}, nil)
+	g.Expect(err).To(BeNil())
+	g.Expect(metadata).To(Equal(map[string]string{"ssh_authorized_keys": "ssh-rsa test"}))
+	g.Expect(launchDetails.Metadata).To(HaveKey("user_data"))
+	g.Expect(launchDetails.Metadata["ssh_authorized_keys"]).To(Equal("ssh-rsa test"))
+	g.Expect(*launchDetails.IsPvEncryptionInTransitEnabled).To(BeTrue())
+	g.Expect(*launchDetails.CreateVnicDetails.SubnetId).To(Equal("explicit-subnet-id"))
+	g.Expect(launchDetails.CreateVnicDetails.NsgIds).To(Equal([]string{"explicit-nsg-id"}))
+	g.Expect(*launchDetails.CreateVnicDetails.AssignIpv6Ip).To(BeTrue())
+	g.Expect(*launchDetails.CreateVnicDetails.AssignPublicIp).To(BeFalse())
+
+	sourceDetails, ok := launchDetails.SourceDetails.(core.InstanceConfigurationInstanceSourceViaImageDetails)
+	g.Expect(ok).To(BeTrue())
+	g.Expect(*sourceDetails.KmsKeyId).To(Equal("kms-id"))
+	g.Expect(*sourceDetails.BootVolumeSizeInGBs).To(Equal(int64(100)))
+	g.Expect(*sourceDetails.BootVolumeVpusPerGB).To(Equal(int64(20)))
+	g.Expect(*launchDetails.AvailabilityConfig.IsLiveMigrationPreferred).To(BeTrue())
 }
 
 func TestInstancePoolCreate(t *testing.T) {
