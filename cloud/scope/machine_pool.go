@@ -425,7 +425,7 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context) e
 		return nil
 	}
 	actualLaunch := computeDetails.LaunchDetails
-	actualHash, err := hash.ComputeHash(actualLaunch)
+	actualHash, err := hash.ComputeComparableHash(actualLaunch, desiredLaunch)
 	if err != nil {
 		return errors.Wrap(err, "compute actual instance config hash")
 	}
@@ -532,10 +532,7 @@ func (m *MachinePoolScope) createInstanceConfiguration(
 }
 
 func (m *MachinePoolScope) getLaunchInstanceDetails(instanceConfigurationSpec infrav2exp.InstanceConfiguration, freeFormTags map[string]string, definedTags map[string]map[string]interface{}) (*core.InstanceConfigurationLaunchInstanceDetails, error) {
-	metadata := instanceConfigurationSpec.Metadata
-	if metadata == nil {
-		metadata = make(map[string]string)
-	}
+	metadata := copyStringMap(instanceConfigurationSpec.Metadata)
 	cloudInitData, err := m.GetBootstrapData()
 	if err != nil {
 		return nil, err
@@ -554,6 +551,9 @@ func (m *MachinePoolScope) getLaunchInstanceDetails(instanceConfigurationSpec in
 
 	if instanceConfigurationSpec.CapacityReservationId != nil {
 		launchDetails.CapacityReservationId = instanceConfigurationSpec.CapacityReservationId
+	}
+	if instanceConfigurationSpec.IsPvEncryptionInTransitEnabled != nil {
+		launchDetails.IsPvEncryptionInTransitEnabled = instanceConfigurationSpec.IsPvEncryptionInTransitEnabled
 	}
 	launchDetails.CreateVnicDetails = m.getVnicDetails(instanceConfigurationSpec, freeFormTags, definedTags)
 	launchDetails.SourceDetails = m.getInstanceConfigurationInstanceSourceViaImageDetail()
@@ -818,6 +818,7 @@ func (m *MachinePoolScope) getInstanceConfigurationInstanceSourceViaImageDetail(
 	if sourceConfig != nil {
 		return core.InstanceConfigurationInstanceSourceViaImageDetails{
 			ImageId:             sourceConfig.ImageId,
+			KmsKeyId:            sourceConfig.KmsKeyId,
 			BootVolumeVpusPerGB: sourceConfig.BootVolumeVpusPerGB,
 			BootVolumeSizeInGBs: sourceConfig.BootVolumeSizeInGBs,
 		}
@@ -830,7 +831,8 @@ func (m *MachinePoolScope) getAvailabilityConfig() *core.InstanceConfigurationAv
 	if avalabilityConfigSpec != nil {
 		recoveryAction, _ := core.GetMappingInstanceConfigurationAvailabilityConfigRecoveryActionEnum(string(avalabilityConfigSpec.RecoveryAction))
 		return &core.InstanceConfigurationAvailabilityConfig{
-			RecoveryAction: recoveryAction,
+			IsLiveMigrationPreferred: avalabilityConfigSpec.IsLiveMigrationPreferred,
+			RecoveryAction:           recoveryAction,
 		}
 	}
 	return nil
@@ -1058,18 +1060,39 @@ func (m *MachinePoolScope) getInstanceConfigurationsFromDisplayNameSortedTimeCre
 
 func (m *MachinePoolScope) getVnicDetails(instanceConfigurationSpec infrav2exp.InstanceConfiguration, freeFormTags map[string]string, definedTags map[string]map[string]interface{}) *core.InstanceConfigurationCreateVnicDetails {
 	subnetId := m.GetWorkerMachineSubnet()
+	nsgIDs := m.getWorkerMachineNSGs()
 	createVnicDetails := core.InstanceConfigurationCreateVnicDetails{
 		SubnetId:     subnetId,
 		FreeformTags: freeFormTags,
 		DefinedTags:  definedTags,
-		NsgIds:       m.getWorkerMachineNSGs(),
+		NsgIds:       nsgIDs,
 	}
 	if instanceConfigurationSpec.InstanceVnicConfiguration != nil {
-		createVnicDetails.AssignPublicIp = &instanceConfigurationSpec.InstanceVnicConfiguration.AssignPublicIp
+		createVnicDetails.AssignIpv6Ip = common.Bool(instanceConfigurationSpec.InstanceVnicConfiguration.AssignIpv6Ip)
+		createVnicDetails.AssignPublicIp = common.Bool(instanceConfigurationSpec.InstanceVnicConfiguration.AssignPublicIp)
+		if instanceConfigurationSpec.InstanceVnicConfiguration.SubnetId != nil {
+			createVnicDetails.SubnetId = instanceConfigurationSpec.InstanceVnicConfiguration.SubnetId
+		}
+		if len(instanceConfigurationSpec.InstanceVnicConfiguration.NSGIds) > 0 {
+			createVnicDetails.NsgIds = append([]string(nil), instanceConfigurationSpec.InstanceVnicConfiguration.NSGIds...)
+		} else if instanceConfigurationSpec.InstanceVnicConfiguration.NSGId != nil {
+			createVnicDetails.NsgIds = []string{*instanceConfigurationSpec.InstanceVnicConfiguration.NSGId}
+		}
 		createVnicDetails.HostnameLabel = instanceConfigurationSpec.InstanceVnicConfiguration.HostnameLabel
 		createVnicDetails.SkipSourceDestCheck = instanceConfigurationSpec.InstanceVnicConfiguration.SkipSourceDestCheck
 		createVnicDetails.AssignPrivateDnsRecord = instanceConfigurationSpec.InstanceVnicConfiguration.AssignPrivateDnsRecord
 		createVnicDetails.DisplayName = instanceConfigurationSpec.InstanceVnicConfiguration.DisplayName
 	}
 	return &createVnicDetails
+}
+
+func copyStringMap(in map[string]string) map[string]string {
+	if in == nil {
+		return make(map[string]string)
+	}
+	out := make(map[string]string, len(in)+1)
+	for k, v := range in {
+		out[k] = v
+	}
+	return out
 }

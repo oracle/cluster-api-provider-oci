@@ -32,6 +32,7 @@ import (
 	. "github.com/onsi/gomega"
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
+	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
@@ -605,7 +606,7 @@ var _ = Describe("Workload cluster creation", func() {
 		}, result)
 	})
 
-	It("Machine Pool - Simple", func() {
+	It("Machine Pool - Simple [PRBlocking]", func() {
 		clusterName = getClusterName(clusterNamePrefix, "machine-pool")
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
@@ -647,6 +648,33 @@ var _ = Describe("Workload cluster creation", func() {
 		})
 	})
 
+	It("Machine Pool - Instance Configuration Stability [PRBlocking]", func() {
+		clusterName = getClusterName(clusterNamePrefix, "machine-pool-instance-config")
+		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
+			ClusterProxy: bootstrapClusterProxy,
+			ConfigCluster: clusterctl.ConfigClusterInput{
+				LogFolder:                filepath.Join(artifactFolder, "clusters", bootstrapClusterProxy.GetName()),
+				ClusterctlConfigPath:     clusterctlConfigPath,
+				KubeconfigPath:           bootstrapClusterProxy.GetKubeconfigPath(),
+				InfrastructureProvider:   clusterctl.DefaultInfrastructureProvider,
+				Flavor:                   "machine-pool",
+				Namespace:                namespace.Name,
+				ClusterName:              clusterName,
+				KubernetesVersion:        e2eConfig.MustGetVariable(capi_e2e.KubernetesVersion),
+				ControlPlaneMachineCount: pointer.Int64(1),
+				WorkerMachineCount:       pointer.Int64(1),
+			},
+			CNIManifestPath:              e2eConfig.MustGetVariable(capi_e2e.CNIPath),
+			WaitForClusterIntervals:      e2eConfig.GetIntervals(specName, "wait-cluster"),
+			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),
+			WaitForMachinePools:          e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes"),
+			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
+		}, result)
+
+		By("Verifying the machine pool instance configuration remains stable after initial reconciliation")
+		assertMachinePoolInstanceConfigurationStable(ctx, bootstrapClusterProxy, result.Cluster, result.MachinePools[0], specName, "45s", "5s")
+	})
+
 	It("Cluster Identity - with 1 control-plane nodes and 1 worker nodes", func() {
 		clusterName = getClusterName(clusterNamePrefix, "cluster-identity")
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
@@ -670,6 +698,45 @@ var _ = Describe("Workload cluster creation", func() {
 		}, result)
 	})
 })
+
+func assertMachinePoolInstanceConfigurationStable(ctx context.Context, clusterProxy framework.ClusterProxy, cluster *clusterv1.Cluster, machinePool *clusterv1.MachinePool, specName string, duration string, interval string) {
+	Expect(ctx).NotTo(BeNil(), "ctx is required for machine pool stability check")
+	Expect(clusterProxy).ToNot(BeNil(), "clusterProxy is required for machine pool stability check")
+	Expect(cluster).ToNot(BeNil(), "cluster is required for machine pool stability check")
+	Expect(machinePool).ToNot(BeNil(), "machinePool is required for machine pool stability check")
+
+	lister := clusterProxy.GetClient()
+	Expect(lister).ToNot(BeNil(), "clusterProxy client is required for machine pool stability check")
+
+	var initialGeneration int64
+	var initialInstanceConfigurationID string
+	var initialHash string
+
+	Eventually(func(g Gomega) {
+		ociMachinePool := &infrav2exp.OCIMachinePool{}
+		err := lister.Get(ctx, client.ObjectKey{Name: machinePool.Name, Namespace: cluster.Namespace}, ociMachinePool)
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(ociMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(BeNil())
+		g.Expect(*ociMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(BeEmpty())
+		g.Expect(ociMachinePool.Annotations).To(HaveKey(scope.InstanceConfigurationHashAnnotation))
+		g.Expect(ociMachinePool.Annotations[scope.InstanceConfigurationHashAnnotation]).ToNot(BeEmpty())
+
+		initialGeneration = ociMachinePool.Generation
+		initialInstanceConfigurationID = *ociMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId
+		initialHash = ociMachinePool.Annotations[scope.InstanceConfigurationHashAnnotation]
+	}, e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes")...).Should(Succeed(), "Timed out waiting for the machine pool instance configuration to become ready")
+
+	Consistently(func(g Gomega) {
+		ociMachinePool := &infrav2exp.OCIMachinePool{}
+		err := lister.Get(ctx, client.ObjectKey{Name: machinePool.Name, Namespace: cluster.Namespace}, ociMachinePool)
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(ociMachinePool.Generation).To(Equal(initialGeneration))
+		g.Expect(ociMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(BeNil())
+		g.Expect(*ociMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId).To(Equal(initialInstanceConfigurationID))
+		g.Expect(ociMachinePool.Annotations).To(HaveKey(scope.InstanceConfigurationHashAnnotation))
+		g.Expect(ociMachinePool.Annotations[scope.InstanceConfigurationHashAnnotation]).To(Equal(initialHash))
+	}, duration, interval).Should(Succeed(), "Machine pool instance configuration drifted during stability window")
+}
 
 func verifyMultipleNsgSubnet(ctx context.Context, namespace string, clusterName string, mcDeployments []*clusterv1.MachineDeployment) {
 	ociCluster := &infrastructurev1beta1.OCICluster{}
