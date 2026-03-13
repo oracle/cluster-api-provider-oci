@@ -8,8 +8,8 @@ providers:
   - name: cluster-api
     type: CoreProvider
     versions:
-      - name: v1.11.0
-        value: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.11.0/core-components.yaml
+      - name: v1.12.3
+        value: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.12.3/core-components.yaml
         type: url
         files:
           - sourcePath: "../data/shared/v1beta2/metadata.yaml"
@@ -21,8 +21,8 @@ providers:
   - name: kubeadm
     type: BootstrapProvider
     versions:
-      - name: v1.11.0
-        value: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.11.0/bootstrap-components.yaml
+      - name: v1.12.3
+        value: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.12.3/bootstrap-components.yaml
         type: url
         files:
           - sourcePath: "../data/shared/v1beta2/metadata.yaml"
@@ -34,8 +34,8 @@ providers:
   - name: kubeadm
     type: ControlPlaneProvider
     versions:
-      - name: v1.11.0
-        value: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.11.0/control-plane-components.yaml
+      - name: v1.12.3
+        value: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.12.3/control-plane-components.yaml
         type: url
         files:
           - sourcePath: "../data/shared/v1beta2/metadata.yaml"
@@ -124,7 +124,11 @@ intervals:
   default/wait-worker-nodes-bare-metal: [ "60m", "10s" ]
   default/wait-delete-cluster: ["30m", "10s"]
   default/wait-machine-upgrade: ["30m", "10s"]
+  default/wait-control-plane-upgrade: ["30m", "10s"]
+  default/wait-machine-deployment-upgrade: ["30m", "10s"]
   default/wait-machine-remediation: ["30m", "10s"]
+  default/wait-resource-versions-become-stable: ["2m", "15s"]
+  default/wait-resource-versions-remain-stable: ["2m", "5s"]
   default/wait-deployment: ["15m", "10s"]
   default/wait-deployment-available: ["15m", "10s"]
   default/wait-job: ["5m", "10s"]
