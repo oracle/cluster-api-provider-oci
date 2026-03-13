@@ -87,21 +87,9 @@ func TestNormalizeLaunchDetails_StripsIgnoredFields(t *testing.T) {
 
 	normalized := normalizeLaunchDetails(original)
 
-	// Fields that should be stripped
-	g.Expect(normalized.DisplayName).To(BeNil())
-	g.Expect(normalized.FreeformTags).To(BeNil())
-	g.Expect(normalized.DefinedTags).To(BeNil())
-	g.Expect(normalized.SecurityAttributes).To(BeNil())
-
-	// Fields that should be preserved
+	// Only supported comparison fields should remain.
 	g.Expect(*normalized.Shape).To(Equal("VM.Standard2.1"))
-
-	// VNIC details should be stripped of ignored fields but NSGs preserved and sorted
-	g.Expect(normalized.CreateVnicDetails.DisplayName).To(BeNil())
-	g.Expect(normalized.CreateVnicDetails.FreeformTags).To(BeNil())
-	g.Expect(normalized.CreateVnicDetails.DefinedTags).To(BeNil())
-	g.Expect(normalized.CreateVnicDetails.SecurityAttributes).To(BeNil())
-	g.Expect(normalized.CreateVnicDetails.NsgIds).To(Equal([]string{"nsg1", "nsg2"}))
+	g.Expect(normalized.CreateVnicDetails.NSGIDs).To(Equal([]string{"nsg1", "nsg2"}))
 }
 
 func TestNormalizeLaunchDetails_SortsNSGIds(t *testing.T) {
@@ -115,7 +103,7 @@ func TestNormalizeLaunchDetails_SortsNSGIds(t *testing.T) {
 	normalized := normalizeLaunchDetails(original)
 
 	expected := []string{"nsg1", "nsg2", "nsg3"}
-	g.Expect(normalized.CreateVnicDetails.NsgIds).To(Equal(expected))
+	g.Expect(normalized.CreateVnicDetails.NSGIDs).To(Equal(expected))
 }
 
 func TestNormalizeLaunchDetails_EmptyNSGIds(t *testing.T) {
@@ -128,7 +116,7 @@ func TestNormalizeLaunchDetails_EmptyNSGIds(t *testing.T) {
 
 	normalized := normalizeLaunchDetails(original)
 
-	g.Expect(normalized.CreateVnicDetails.NsgIds).To(BeNil())
+	g.Expect(normalized.CreateVnicDetails).To(BeNil())
 }
 
 func TestNormalizeLaunchDetails_EmptyShapeConfig(t *testing.T) {
@@ -140,6 +128,36 @@ func TestNormalizeLaunchDetails_EmptyShapeConfig(t *testing.T) {
 	normalized := normalizeLaunchDetails(original)
 
 	g.Expect(normalized.ShapeConfig).To(BeNil())
+}
+
+func TestNormalizeLaunchDetails_SortsAgentPlugins(t *testing.T) {
+	g := NewWithT(t)
+	original := &core.InstanceConfigurationLaunchInstanceDetails{
+		AgentConfig: &core.InstanceConfigurationLaunchInstanceAgentConfigDetails{
+			PluginsConfig: []core.InstanceAgentPluginConfigDetails{
+				{
+					Name:         common.String("plugin-c"),
+					DesiredState: core.InstanceAgentPluginConfigDetailsDesiredStateDisabled,
+				},
+				{
+					Name:         common.String("plugin-a"),
+					DesiredState: core.InstanceAgentPluginConfigDetailsDesiredStateEnabled,
+				},
+				{
+					Name:         common.String("plugin-b"),
+					DesiredState: core.InstanceAgentPluginConfigDetailsDesiredStateEnabled,
+				},
+			},
+		},
+	}
+
+	normalized := normalizeLaunchDetails(original)
+
+	g.Expect(normalized.AgentConfig).ToNot(BeNil())
+	g.Expect(normalized.AgentConfig.PluginsConfig).To(HaveLen(3))
+	g.Expect(*normalized.AgentConfig.PluginsConfig[0].Name).To(Equal("plugin-a"))
+	g.Expect(*normalized.AgentConfig.PluginsConfig[1].Name).To(Equal("plugin-b"))
+	g.Expect(*normalized.AgentConfig.PluginsConfig[2].Name).To(Equal("plugin-c"))
 }
 
 func TestNormalizeLaunchDetails_NonEmptyShapeConfig(t *testing.T) {
@@ -154,18 +172,7 @@ func TestNormalizeLaunchDetails_NonEmptyShapeConfig(t *testing.T) {
 	normalized := normalizeLaunchDetails(original)
 
 	g.Expect(normalized.ShapeConfig).ToNot(BeNil())
-	g.Expect(*normalized.ShapeConfig.Ocpus).To(Equal(ocpus))
-}
-
-func TestNormalizeLaunchDetails_EmptyExtendedMetadata(t *testing.T) {
-	g := NewWithT(t)
-	original := &core.InstanceConfigurationLaunchInstanceDetails{
-		ExtendedMetadata: map[string]interface{}{},
-	}
-
-	normalized := normalizeLaunchDetails(original)
-
-	g.Expect(normalized.ExtendedMetadata).To(BeNil())
+	g.Expect(*normalized.ShapeConfig.OCPUs).To(Equal(ocpus))
 }
 
 func TestNormalizeMetadata_NilInput(t *testing.T) {
@@ -375,6 +382,122 @@ func TestComputeHash_SortsNSGIds(t *testing.T) {
 	g.Expect(hash1).To(Equal(hash2))
 }
 
+func TestComputeHash_SortsAgentPlugins(t *testing.T) {
+	g := NewWithT(t)
+	ld1 := &core.InstanceConfigurationLaunchInstanceDetails{
+		AgentConfig: &core.InstanceConfigurationLaunchInstanceAgentConfigDetails{
+			PluginsConfig: []core.InstanceAgentPluginConfigDetails{
+				{
+					Name:         common.String("plugin-b"),
+					DesiredState: core.InstanceAgentPluginConfigDetailsDesiredStateDisabled,
+				},
+				{
+					Name:         common.String("plugin-a"),
+					DesiredState: core.InstanceAgentPluginConfigDetailsDesiredStateEnabled,
+				},
+			},
+		},
+	}
+	ld2 := &core.InstanceConfigurationLaunchInstanceDetails{
+		AgentConfig: &core.InstanceConfigurationLaunchInstanceAgentConfigDetails{
+			PluginsConfig: []core.InstanceAgentPluginConfigDetails{
+				{
+					Name:         common.String("plugin-a"),
+					DesiredState: core.InstanceAgentPluginConfigDetailsDesiredStateEnabled,
+				},
+				{
+					Name:         common.String("plugin-b"),
+					DesiredState: core.InstanceAgentPluginConfigDetailsDesiredStateDisabled,
+				},
+			},
+		},
+	}
+
+	hash1, err := ComputeHash(ld1)
+	g.Expect(err).To(BeNil())
+
+	hash2, err := ComputeHash(ld2)
+	g.Expect(err).To(BeNil())
+
+	g.Expect(hash1).To(Equal(hash2))
+}
+
+func TestComputeComparableHash_IgnoresShapeDefaultsNotPresentInDesired(t *testing.T) {
+	g := NewWithT(t)
+	desired := &core.InstanceConfigurationLaunchInstanceDetails{
+		ShapeConfig: &core.InstanceConfigurationLaunchInstanceShapeConfigDetails{
+			Ocpus: common.Float32(1),
+		},
+	}
+	actual := &core.InstanceConfigurationLaunchInstanceDetails{
+		ShapeConfig: &core.InstanceConfigurationLaunchInstanceShapeConfigDetails{
+			Ocpus:       common.Float32(1),
+			MemoryInGBs: common.Float32(16),
+		},
+	}
+
+	desiredHash, err := ComputeHash(desired)
+	g.Expect(err).To(BeNil())
+
+	actualHash, err := ComputeComparableHash(actual, desired)
+	g.Expect(err).To(BeNil())
+
+	g.Expect(actualHash).To(Equal(desiredHash))
+}
+
+func TestComputeComparableHash_IgnoresFalseDefaultsForSupportedFields(t *testing.T) {
+	g := NewWithT(t)
+	desired := &core.InstanceConfigurationLaunchInstanceDetails{
+		AgentConfig: &core.InstanceConfigurationLaunchInstanceAgentConfigDetails{
+			IsMonitoringDisabled: common.Bool(false),
+		},
+		LaunchOptions: &core.InstanceConfigurationLaunchOptions{
+			IsConsistentVolumeNamingEnabled: common.Bool(false),
+		},
+		InstanceOptions: &core.InstanceConfigurationInstanceOptions{
+			AreLegacyImdsEndpointsDisabled: common.Bool(false),
+		},
+		IsPvEncryptionInTransitEnabled: common.Bool(false),
+	}
+	actual := &core.InstanceConfigurationLaunchInstanceDetails{
+		AgentConfig:     &core.InstanceConfigurationLaunchInstanceAgentConfigDetails{},
+		LaunchOptions:   &core.InstanceConfigurationLaunchOptions{},
+		InstanceOptions: &core.InstanceConfigurationInstanceOptions{},
+	}
+
+	desiredHash, err := ComputeHash(desired)
+	g.Expect(err).To(BeNil())
+
+	actualHash, err := ComputeComparableHash(actual, desired)
+	g.Expect(err).To(BeNil())
+
+	g.Expect(actualHash).To(Equal(desiredHash))
+}
+
+func TestComputeComparableHash_DetectsTrueToFalseVNICUpdates(t *testing.T) {
+	g := NewWithT(t)
+	desired := &core.InstanceConfigurationLaunchInstanceDetails{
+		CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+			AssignPublicIp: common.Bool(false),
+			AssignIpv6Ip:   common.Bool(false),
+		},
+	}
+	actual := &core.InstanceConfigurationLaunchInstanceDetails{
+		CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+			AssignPublicIp: common.Bool(true),
+			AssignIpv6Ip:   common.Bool(true),
+		},
+	}
+
+	desiredHash, err := ComputeHash(desired)
+	g.Expect(err).To(BeNil())
+
+	actualHash, err := ComputeComparableHash(actual, desired)
+	g.Expect(err).To(BeNil())
+
+	g.Expect(actualHash).ToNot(Equal(desiredHash))
+}
+
 func TestComputeHash_ComprehensiveTest(t *testing.T) {
 	g := NewWithT(t)
 
@@ -477,13 +600,6 @@ func TestComputeHash_ComprehensiveTest(t *testing.T) {
 			BootVolumeVpusPerGB: common.Int64(120),
 			BootVolumeSizeInGBs: common.Int64(50),
 		},
-
-		// Extended metadata - should be included (non-empty)
-		ExtendedMetadata: map[string]interface{}{
-			"custom_metadata": map[string]interface{}{
-				"nested": "value",
-			},
-		},
 	}
 
 	// Compute hash
@@ -492,19 +608,12 @@ func TestComputeHash_ComprehensiveTest(t *testing.T) {
 	g.Expect(hash).ToNot(BeEmpty())
 	g.Expect(hash).To(HaveLen(64))
 
-	// Verify the normalized result contains only the expected fields
+	// Verify the normalized result contains the canonical comparison projection
 	normalized := normalizeLaunchDetails(ld)
 
-	// Fields that should be nil
-	g.Expect(normalized.DisplayName).To(BeNil())
-	g.Expect(normalized.FreeformTags).To(BeNil())
-	g.Expect(normalized.DefinedTags).To(BeNil())
-	g.Expect(normalized.SecurityAttributes).To(BeNil())
-
-	// Fields that should be preserved
 	g.Expect(*normalized.Shape).To(Equal("VM.Standard.E4.Flex"))
-	g.Expect(*normalized.CompartmentId).To(Equal("ocid1.compartment.oc1..test"))
-	g.Expect(*normalized.DedicatedVmHostId).To(Equal("ocid1.dedicatedvmhost.oc1..test"))
+	g.Expect(*normalized.CompartmentID).To(Equal("ocid1.compartment.oc1..test"))
+	g.Expect(*normalized.DedicatedVMHostID).To(Equal("ocid1.dedicatedvmhost.oc1..test"))
 
 	// Metadata should exclude user_data but keep other keys
 	expectedMetadata := map[string]string{
@@ -513,34 +622,26 @@ func TestComputeHash_ComprehensiveTest(t *testing.T) {
 	}
 	g.Expect(normalized.Metadata).To(Equal(expectedMetadata))
 
-	// Shape config should be preserved
 	g.Expect(normalized.ShapeConfig).ToNot(BeNil())
-	g.Expect(*normalized.ShapeConfig.Ocpus).To(Equal(ocpus))
+	g.Expect(*normalized.ShapeConfig.OCPUs).To(Equal(ocpus))
 	g.Expect(*normalized.ShapeConfig.MemoryInGBs).To(Equal(memory))
-	g.Expect(*normalized.ShapeConfig.Vcpus).To(Equal(vcpus))
-	g.Expect(*normalized.ShapeConfig.Nvmes).To(Equal(nvmes))
+	g.Expect(*normalized.ShapeConfig.VCPUs).To(Equal(vcpus))
+	g.Expect(*normalized.ShapeConfig.NVMEs).To(Equal(nvmes))
 
-	// VNIC details should have some excluded fields but NSGs sorted
 	g.Expect(normalized.CreateVnicDetails).ToNot(BeNil())
-	g.Expect(normalized.CreateVnicDetails.DisplayName).To(BeNil())
-	g.Expect(normalized.CreateVnicDetails.FreeformTags).To(BeNil())
-	g.Expect(normalized.CreateVnicDetails.DefinedTags).To(BeNil())
-	g.Expect(normalized.CreateVnicDetails.SecurityAttributes).To(BeNil())
-	g.Expect(*normalized.CreateVnicDetails.AssignPublicIp).To(BeFalse())
-	g.Expect(*normalized.CreateVnicDetails.SkipSourceDestCheck).To(BeFalse())
-	g.Expect(*normalized.CreateVnicDetails.AssignPrivateDnsRecord).To(BeTrue())
+	g.Expect(normalized.CreateVnicDetails.AssignPublicIP).To(BeNil())
+	g.Expect(normalized.CreateVnicDetails.SkipSourceDestCheck).To(BeNil())
+	g.Expect(*normalized.CreateVnicDetails.AssignPrivateDNSRecord).To(BeTrue())
 	g.Expect(*normalized.CreateVnicDetails.HostnameLabel).To(Equal("test-host"))
-	// NSGs should be sorted
 	expectedNSGs := []string{"ocid1.nsg.oc1..nsg1", "ocid1.nsg.oc1..nsg2", "ocid1.nsg.oc1..nsg3"}
-	g.Expect(normalized.CreateVnicDetails.NsgIds).To(Equal(expectedNSGs))
+	g.Expect(normalized.CreateVnicDetails.NSGIDs).To(Equal(expectedNSGs))
 
-	// Other configs should be preserved
 	g.Expect(normalized.PlatformConfig).ToNot(BeNil())
+	g.Expect(normalized.PlatformConfig.Type).To(Equal("AmdVmPlatformConfig"))
 	g.Expect(normalized.AgentConfig).ToNot(BeNil())
 	g.Expect(normalized.LaunchOptions).ToNot(BeNil())
 	g.Expect(normalized.InstanceOptions).ToNot(BeNil())
 	g.Expect(normalized.AvailabilityConfig).ToNot(BeNil())
-	g.Expect(normalized.PreemptibleInstanceConfig).ToNot(BeNil())
-	g.Expect(normalized.ExtendedMetadata).ToNot(BeNil())
+	g.Expect(normalized.PreemptibleInstanceConfig).To(BeNil())
 	g.Expect(normalized.SourceDetails).ToNot(BeNil())
 }
