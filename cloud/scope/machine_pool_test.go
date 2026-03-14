@@ -1161,7 +1161,7 @@ func TestBackfillAnnotations_Upgrade(t *testing.T) {
 	})
 
 	// -----------------------------------------------------------------
-	t.Run("bootstrap annotation missing — backfill does NOT spuriously detect bootstrap change", func(t *testing.T) {
+	t.Run("bootstrap annotation missing + OCI has stale bootstrap — backfill from actual, detect real change", func(t *testing.T) {
 		g := NewWithT(t)
 		ms, computeMgmt := buildScope(t)
 
@@ -1169,10 +1169,14 @@ func TestBackfillAnnotations_Upgrade(t *testing.T) {
 			Shape:                   common.String("test-shape"),
 			InstanceConfigurationId: common.String("test"),
 		}
-		// Simulate upgrade: only config hash exists, bootstrap annotation is
-		// missing.  The OCI IC has DIFFERENT user_data than the current
-		// bootstrap secret — but on upgrade we must NOT treat this as a
-		// change because the backfill path seeds from desired, not actual.
+		// Simulate upgrade: bootstrap annotation missing. OCI IC has OLD
+		// user_data ("b2xkLWRhdGE=") while the current bootstrap secret has
+		// new data ("test" → "dGVzdA=="). The backfill seeds from OCI's
+		// actual user_data. Then the change detection sees desired != stored
+		// (the bootstrap secret genuinely changed) and creates a new IC.
+		//
+		// This is correct: the running IC has stale bootstrap data, so new
+		// nodes would get the wrong join token. A new IC is needed.
 		ms.OCIMachinePool.Annotations = map[string]string{
 			InstanceConfigurationHashAnnotation: "will-be-overwritten",
 		}
@@ -1187,15 +1191,54 @@ func TestBackfillAnnotations_Upgrade(t *testing.T) {
 					InstanceDetails: core.ComputeInstanceDetails{LaunchDetails: actualWithOldBootstrap},
 				},
 			}, nil)
-		// Must NOT create a new IC — the backfill should prevent spurious detection.
+		// Bootstrap data genuinely differs from OCI — new IC should be created.
+		computeMgmt.EXPECT().ListInstanceConfigurations(gomock.Any(), gomock.Any()).
+			Return(core.ListInstanceConfigurationsResponse{}, nil)
+		computeMgmt.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).
+			Return(core.CreateInstanceConfigurationResponse{
+				InstanceConfiguration: core.InstanceConfiguration{Id: common.String("new-id")},
+			}, nil)
+
+		err := ms.ReconcileInstanceConfiguration(context.Background())
+		g.Expect(err).To(BeNil())
+
+		// Bootstrap annotation should reflect the NEW desired hash (after IC recreation).
+		desiredBootstrapHash := hash.ComputeUserDataHash(map[string]string{"user_data": "dGVzdA=="})
+		g.Expect(ms.OCIMachinePool.Annotations[BootstrapDataHashAnnotation]).To(Equal(desiredBootstrapHash))
+	})
+
+	// -----------------------------------------------------------------
+	t.Run("bootstrap annotation missing + OCI matches desired — backfill from actual, no recreate", func(t *testing.T) {
+		g := NewWithT(t)
+		ms, computeMgmt := buildScope(t)
+
+		ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+			Shape:                   common.String("test-shape"),
+			InstanceConfigurationId: common.String("test"),
+		}
+		// Simulate upgrade where bootstrap secret has NOT changed since
+		// the IC was created. OCI's user_data matches the current secret.
+		// Backfill from actual → stored == desired → no change.
+		ms.OCIMachinePool.Annotations = map[string]string{
+			InstanceConfigurationHashAnnotation: "will-be-overwritten",
+		}
+
+		computeMgmt.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Any()).
+			Return(core.GetInstanceConfigurationResponse{
+				InstanceConfiguration: core.InstanceConfiguration{
+					Id:              common.String("test"),
+					InstanceDetails: core.ComputeInstanceDetails{LaunchDetails: matchingActualLaunch()},
+				},
+			}, nil)
+		// OCI user_data matches current secret — no IC recreation.
 		computeMgmt.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).Times(0)
 
 		err := ms.ReconcileInstanceConfiguration(context.Background())
 		g.Expect(err).To(BeNil())
 
-		// Bootstrap annotation should be backfilled from desired (current secret).
-		desiredBootstrapHash := hash.ComputeUserDataHash(map[string]string{"user_data": "dGVzdA=="})
-		g.Expect(ms.OCIMachinePool.Annotations[BootstrapDataHashAnnotation]).To(Equal(desiredBootstrapHash))
+		// Bootstrap annotation backfilled from actual (which matches desired).
+		actualBootstrapHash := hash.ComputeUserDataHash(map[string]string{"user_data": "dGVzdA=="})
+		g.Expect(ms.OCIMachinePool.Annotations[BootstrapDataHashAnnotation]).To(Equal(actualBootstrapHash))
 	})
 }
 

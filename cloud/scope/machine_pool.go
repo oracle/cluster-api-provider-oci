@@ -458,69 +458,62 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context) e
 
 	m.Logger.V(1).Info("InstanceConfig actual config hash", "hash", actualConfigHash)
 
-	// --- Backfill annotations on first reconciliation ---
+	// --- Backfill config hash annotation on first reconciliation ---
 	storedConfigHash := m.getInstanceConfigurationHashAnnotation()
-	storedBootstrapHash := m.getBootstrapDataHashAnnotation()
-	needsPatch := false
-
 	if storedConfigHash == "" {
 		m.Info("No stored config hash annotation, backfilling", "actualConfigHash", actualConfigHash)
 		m.setInstanceConfigurationHashAnnotation(actualConfigHash)
 		storedConfigHash = actualConfigHash
-		needsPatch = true
-	}
-	if storedBootstrapHash == "" {
-		// On first reconciliation after upgrade, backfill from desired so we
-		// don't spuriously detect a change. The current IC already has the
-		// bootstrap data that was sent when it was created.
-		m.Info("No stored bootstrap hash annotation, backfilling", "bootstrapHash", desiredBootstrapHash)
-		m.setBootstrapDataHashAnnotation(desiredBootstrapHash)
-		storedBootstrapHash = desiredBootstrapHash
-		needsPatch = true
-	}
-	if needsPatch {
 		if err := m.PatchObject(ctx); err != nil {
 			return err
 		}
 	}
 
-	// --- Evaluate change signals independently ---
+	// --- Evaluate change signals ---
 	//
-	// The two comparisons are intentionally asymmetric:
+	// Both signals compare desired vs actual (fetched from OCI):
 	//
-	//   configChanged:    desired  vs  actual (fetched from OCI)
-	//   bootstrapChanged: desired  vs  stored (annotation on the CR)
+	//   configChanged:    desired config hash  vs  actual config hash (projected)
+	//   bootstrapChanged: desired user_data hash  vs  actual user_data hash
 	//
-	// Config uses desired-vs-actual because OCI may return fields the user
-	// never set (e.g. ShapeConfig.MemoryInGBs on flex shapes). The
-	// projection in ComputeComparableHash filters those out so only
-	// user-specified fields are compared. Comparing against OCI directly
-	// is the only way to know what is *actually running*.
+	// Config uses ComputeComparableHash which projects the actual OCI
+	// response onto only the fields present in the desired spec. This
+	// filters out OCI-returned defaults (e.g. ShapeConfig.MemoryInGBs on
+	// flex shapes) that would otherwise cause continuous recreates (#509).
 	//
-	// Bootstrap uses desired-vs-stored because user_data is excluded from
-	// the config hash (to avoid the projection problem above), so OCI's
-	// actual launch details cannot tell us whether bootstrap data changed.
-	// Instead we record the hash of the user_data we last sent and compare
-	// the current desired value against that. This is safe because we are
-	// the only writer of user_data — it never changes out-of-band in OCI.
+	// Bootstrap compares user_data in isolation rather than including it
+	// in the config hash. OCI stores user_data as a plain metadata string
+	// and returns it unchanged, so desired-vs-actual comparison works
+	// reliably without projection. Comparing against OCI directly (rather
+	// than a stored annotation) avoids feedback loops where CAPI
+	// regenerates the bootstrap secret (e.g. kubeadm token rotation)
+	// on every reconcile.
 	//
-	// Do NOT "fix" this to make both comparisons symmetric. Using
-	// desired-vs-actual for bootstrap would require including user_data in
-	// the config hash, which reintroduces issue #509 (continuous recreates
-	// from OCI-returned field noise). Using desired-vs-stored for config
-	// would miss out-of-band OCI changes and break the projection logic.
+	// The bootstrap hash annotation is stored for observability but is
+	// NOT used for change detection.
+	actualBootstrapHash := hash.ComputeUserDataHash(actualLaunch.Metadata)
 	configChanged := desiredConfigHash != actualConfigHash
-	bootstrapChanged := desiredBootstrapHash != storedBootstrapHash
+	bootstrapChanged := desiredBootstrapHash != actualBootstrapHash
+
+	m.Logger.V(1).Info("InstanceConfig bootstrap hashes",
+		"desired", desiredBootstrapHash,
+		"actual", actualBootstrapHash)
 
 	if !configChanged && !bootstrapChanged {
 		m.Info("Instance configuration is up-to-date, no recreate",
 			"configHash", desiredConfigHash,
 			"bootstrapHash", desiredBootstrapHash)
-		// Keep stored config hash consistent with actual
+		// Keep annotations consistent for observability
+		needsAnnotationUpdate := false
 		if storedConfigHash != desiredConfigHash {
-			m.Info("Updating stored config hash annotation to match",
-				"from", storedConfigHash, "to", desiredConfigHash)
 			m.setInstanceConfigurationHashAnnotation(desiredConfigHash)
+			needsAnnotationUpdate = true
+		}
+		if m.getBootstrapDataHashAnnotation() != desiredBootstrapHash {
+			m.setBootstrapDataHashAnnotation(desiredBootstrapHash)
+			needsAnnotationUpdate = true
+		}
+		if needsAnnotationUpdate {
 			return m.PatchObject(ctx)
 		}
 		return nil
@@ -530,8 +523,10 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context) e
 	m.Info("Instance configuration changed, creating new one",
 		"configChanged", configChanged,
 		"bootstrapChanged", bootstrapChanged,
-		"configHash", desiredConfigHash,
-		"bootstrapHash", desiredBootstrapHash)
+		"desiredConfigHash", desiredConfigHash,
+		"actualConfigHash", actualConfigHash,
+		"desiredBootstrapHash", desiredBootstrapHash,
+		"actualBootstrapHash", actualBootstrapHash)
 
 	if err := m.createInstanceConfiguration(ctx, desiredLaunch, freeFormTags, definedTags, desiredConfigHash); err != nil {
 		return err
