@@ -192,11 +192,21 @@ func normalizeMetadata(md map[string]string) map[string]string {
 	return output
 }
 
-// ComputeUserDataHash computes a SHA-256 hash of the user_data value from
-// instance metadata. For kubeadm bootstrap payloads, the hash ignores the
-// rotated discovery token value so MachinePool reconciles do not churn OCI
-// InstanceConfigurations every time CAPI refreshes the join token.
+// ComputeUserDataHash computes a SHA-256 hash of the raw user_data value from
+// instance metadata.
 func ComputeUserDataHash(metadata map[string]string) string {
+	ud, ok := metadata["user_data"]
+	if !ok {
+		return ""
+	}
+	sum := sha256.Sum256([]byte(ud))
+	return hex.EncodeToString(sum[:])
+}
+
+// ComputeUserDataHashIgnoringKubeadmToken computes a SHA-256 hash of user_data
+// with kubeadm discovery token lines normalized away. This lets callers detect
+// token-only rotation separately from substantive bootstrap changes.
+func ComputeUserDataHashIgnoringKubeadmToken(metadata map[string]string) string {
 	ud, ok := metadata["user_data"]
 	if !ok {
 		return ""

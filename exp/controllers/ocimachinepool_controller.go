@@ -318,16 +318,6 @@ func (r *OCIMachinePoolReconciler) reconcileNormal(ctx context.Context, logger l
 		return reconcile.Result{}, nil
 	}
 
-	// get or create the InstanceConfiguration
-	// https://docs.oracle.com/en-us/iaas/api/#/en/iaas/20160918/InstanceConfiguration/
-	if err := machinePoolScope.ReconcileInstanceConfiguration(ctx); err != nil {
-		r.Recorder.Eventf(machinePoolScope.OCIMachinePool, corev1.EventTypeWarning, "FailedLaunchTemplateReconcile", "Failed to reconcile launch template: %v", err)
-		return ctrl.Result{}, err
-	}
-
-	// set the LaunchTemplateReady condition
-	v1beta1conditions.MarkTrue(machinePoolScope.OCIMachinePool, infrav2exp.LaunchTemplateReadyCondition)
-
 	// Find existing Instance Pool
 	instancePool, err := machinePoolScope.FindInstancePool(ctx)
 	if err != nil {
@@ -335,6 +325,16 @@ func (r *OCIMachinePoolReconciler) reconcileNormal(ctx context.Context, logger l
 		v1beta1conditions.MarkUnknown(machinePoolScope.OCIMachinePool, infrav2exp.InstancePoolReadyCondition, infrav2exp.InstancePoolNotFoundReason, "")
 		return ctrl.Result{}, err
 	}
+
+	// get or create the InstanceConfiguration
+	// https://docs.oracle.com/en-us/iaas/api/#/en/iaas/20160918/InstanceConfiguration/
+	if err := machinePoolScope.ReconcileInstanceConfiguration(ctx, instancePool); err != nil {
+		r.Recorder.Eventf(machinePoolScope.OCIMachinePool, corev1.EventTypeWarning, "FailedLaunchTemplateReconcile", "Failed to reconcile launch template: %v", err)
+		return ctrl.Result{}, err
+	}
+
+	// set the LaunchTemplateReady condition
+	v1beta1conditions.MarkTrue(machinePoolScope.OCIMachinePool, infrav2exp.LaunchTemplateReadyCondition)
 
 	if instancePool == nil {
 		if _, err := machinePoolScope.CreateInstancePool(ctx); err != nil {

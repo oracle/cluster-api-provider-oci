@@ -270,7 +270,7 @@ func TestComputeUserDataHash_EmptyString(t *testing.T) {
 	g.Expect(h).ToNot(Equal(ComputeUserDataHash(map[string]string{"user_data": "non-empty"})))
 }
 
-func TestComputeUserDataHash_IgnoresKubeadmBootstrapTokenRotation(t *testing.T) {
+func TestComputeUserDataHash_DetectsKubeadmBootstrapTokenRotation(t *testing.T) {
 	g := NewWithT(t)
 	first := `#cloud-config
 write_files:
@@ -299,10 +299,42 @@ write_files:
 
 	h1 := ComputeUserDataHash(map[string]string{"user_data": encodeUserData(t, first)})
 	h2 := ComputeUserDataHash(map[string]string{"user_data": encodeUserData(t, second)})
+	g.Expect(h1).ToNot(Equal(h2))
+}
+
+func TestComputeUserDataHashIgnoringKubeadmToken_IgnoresKubeadmBootstrapTokenRotation(t *testing.T) {
+	g := NewWithT(t)
+	first := `#cloud-config
+write_files:
+- path: /run/kubeadm/kubeadm-join-config.yaml
+  content: |
+    ---
+    apiVersion: kubeadm.k8s.io/v1beta4
+    discovery:
+      bootstrapToken:
+        apiServerEndpoint: 10.0.0.1:6443
+        token: abcdef.0123456789abcdef
+    kind: JoinConfiguration
+`
+	second := `#cloud-config
+write_files:
+- path: /run/kubeadm/kubeadm-join-config.yaml
+  content: |
+    ---
+    apiVersion: kubeadm.k8s.io/v1beta4
+    discovery:
+      bootstrapToken:
+        apiServerEndpoint: 10.0.0.1:6443
+        token: zyxwvu.fedcba9876543210
+    kind: JoinConfiguration
+`
+
+	h1 := ComputeUserDataHashIgnoringKubeadmToken(map[string]string{"user_data": encodeUserData(t, first)})
+	h2 := ComputeUserDataHashIgnoringKubeadmToken(map[string]string{"user_data": encodeUserData(t, second)})
 	g.Expect(h1).To(Equal(h2))
 }
 
-func TestComputeUserDataHash_DetectsNonTokenKubeadmBootstrapChanges(t *testing.T) {
+func TestComputeUserDataHashIgnoringKubeadmToken_DetectsNonTokenKubeadmBootstrapChanges(t *testing.T) {
 	g := NewWithT(t)
 	first := `#cloud-config
 write_files:
@@ -329,8 +361,8 @@ write_files:
     kind: JoinConfiguration
 `
 
-	h1 := ComputeUserDataHash(map[string]string{"user_data": encodeUserData(t, first)})
-	h2 := ComputeUserDataHash(map[string]string{"user_data": encodeUserData(t, second)})
+	h1 := ComputeUserDataHashIgnoringKubeadmToken(map[string]string{"user_data": encodeUserData(t, first)})
+	h2 := ComputeUserDataHashIgnoringKubeadmToken(map[string]string{"user_data": encodeUserData(t, second)})
 	g.Expect(h1).ToNot(Equal(h2))
 }
 

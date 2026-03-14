@@ -163,14 +163,15 @@ func TestInstanceConfigCreate(t *testing.T) {
 	}
 
 	tests := []struct {
-		name                string
-		errorExpected       bool
-		objects             []client.Object
-		expectedEvent       string
-		eventNotExpected    string
-		matchError          error
-		errorSubStringMatch bool
-		testSpecificSetup   func(ms *MachinePoolScope, g *WithT)
+		name                 string
+		errorExpected        bool
+		objects              []client.Object
+		expectedEvent        string
+		eventNotExpected     string
+		matchError           error
+		errorSubStringMatch  bool
+		existingInstancePool *core.InstancePool
+		testSpecificSetup    func(ms *MachinePoolScope, g *WithT)
 	}{
 		{
 			name:          "instance config exists",
@@ -494,6 +495,11 @@ func TestInstanceConfigCreate(t *testing.T) {
 		{
 			name:          "instance config unchanged when kubeadm bootstrap token rotates",
 			errorExpected: false,
+			existingInstancePool: &core.InstancePool{
+				Id:                      common.String("pool-id"),
+				InstanceConfigurationId: common.String("test"),
+				Size:                    common.Int(3),
+			},
 			testSpecificSetup: func(ms *MachinePoolScope, g *WithT) {
 				currentBootstrapData := `#cloud-config
 write_files:
@@ -558,6 +564,87 @@ write_files:
 						},
 					}, nil)
 				computeManagementClient.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).Times(0)
+			},
+		},
+		{
+			name:          "instance config recreated when kubeadm bootstrap token rotates and pool scales up",
+			errorExpected: false,
+			existingInstancePool: &core.InstancePool{
+				Id:                      common.String("pool-id"),
+				InstanceConfigurationId: common.String("test"),
+				Size:                    common.Int(2),
+			},
+			testSpecificSetup: func(ms *MachinePoolScope, g *WithT) {
+				currentBootstrapData := `#cloud-config
+write_files:
+- path: /run/kubeadm/kubeadm-join-config.yaml
+  content: |
+    ---
+    apiVersion: kubeadm.k8s.io/v1beta4
+    discovery:
+      bootstrapToken:
+        apiServerEndpoint: 10.0.0.1:6443
+        token: abcdef.0123456789abcdef
+    kind: JoinConfiguration
+`
+				rotatedBootstrapData := `#cloud-config
+write_files:
+- path: /run/kubeadm/kubeadm-join-config.yaml
+  content: |
+    ---
+    apiVersion: kubeadm.k8s.io/v1beta4
+    discovery:
+      bootstrapToken:
+        apiServerEndpoint: 10.0.0.1:6443
+        token: zyxwvu.fedcba9876543210
+    kind: JoinConfiguration
+`
+
+				secret := &corev1.Secret{}
+				err := ms.Client.Get(context.Background(), types.NamespacedName{Namespace: "default", Name: "bootstrap"}, secret)
+				g.Expect(err).To(BeNil())
+				secret.Data["value"] = []byte(currentBootstrapData)
+				err = ms.Client.Update(context.Background(), secret)
+				g.Expect(err).To(BeNil())
+
+				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+					Shape:                   common.String("test-shape"),
+					InstanceConfigurationId: common.String("test"),
+				}
+
+				computeManagementClient.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Eq(core.GetInstanceConfigurationRequest{
+					InstanceConfigurationId: common.String("test"),
+				})).
+					Return(core.GetInstanceConfigurationResponse{
+						InstanceConfiguration: core.InstanceConfiguration{
+							Id: common.String("test"),
+							InstanceDetails: core.ComputeInstanceDetails{
+								LaunchDetails: &core.InstanceConfigurationLaunchInstanceDetails{
+									DefinedTags:   definedTagsInterface,
+									FreeformTags:  tags,
+									CompartmentId: common.String("test-compartment"),
+									Shape:         common.String("test-shape"),
+									CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+										FreeformTags: tags,
+										NsgIds:       []string{"nsg-id"},
+										SubnetId:     common.String("subnet-id"),
+									},
+									SourceDetails: core.InstanceConfigurationInstanceSourceViaImageDetails{},
+									Metadata: map[string]string{
+										"user_data": base64.StdEncoding.EncodeToString([]byte(rotatedBootstrapData)),
+									},
+								},
+							},
+						},
+					}, nil)
+				computeManagementClient.EXPECT().ListInstanceConfigurations(gomock.Any(), gomock.Any()).
+					Return(core.ListInstanceConfigurationsResponse{}, nil)
+				computeManagementClient.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).
+					Return(core.CreateInstanceConfigurationResponse{
+						InstanceConfiguration: core.InstanceConfiguration{
+							Id: common.String("id"),
+						},
+					}, nil)
 			},
 		},
 
@@ -961,7 +1048,7 @@ write_files:
 			defer teardown(t, g)
 			setup(t, g)
 			tc.testSpecificSetup(ms, g)
-			err := ms.ReconcileInstanceConfiguration(context.Background())
+			err := ms.ReconcileInstanceConfiguration(context.Background(), tc.existingInstancePool)
 			if tc.errorExpected {
 				g.Expect(err).To(Not(BeNil()))
 				if tc.errorSubStringMatch {
@@ -1119,7 +1206,7 @@ func TestBackfillAnnotations_Upgrade(t *testing.T) {
 		// CreateInstanceConfiguration must NOT be called.
 		computeMgmt.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).Times(0)
 
-		err := ms.ReconcileInstanceConfiguration(context.Background())
+		err := ms.ReconcileInstanceConfiguration(context.Background(), nil)
 		g.Expect(err).To(BeNil())
 
 		// Both annotations should now be populated.
@@ -1151,7 +1238,7 @@ func TestBackfillAnnotations_Upgrade(t *testing.T) {
 			}, nil)
 		computeMgmt.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).Times(0)
 
-		err := ms.ReconcileInstanceConfiguration(context.Background())
+		err := ms.ReconcileInstanceConfiguration(context.Background(), nil)
 		g.Expect(err).To(BeNil())
 
 		// Bootstrap annotation should now be backfilled.
@@ -1184,7 +1271,7 @@ func TestBackfillAnnotations_Upgrade(t *testing.T) {
 			}, nil)
 		computeMgmt.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).Times(0)
 
-		err := ms.ReconcileInstanceConfiguration(context.Background())
+		err := ms.ReconcileInstanceConfiguration(context.Background(), nil)
 		g.Expect(err).To(BeNil())
 
 		// Config annotation should now be backfilled.
@@ -1223,7 +1310,7 @@ func TestBackfillAnnotations_Upgrade(t *testing.T) {
 				InstanceConfiguration: core.InstanceConfiguration{Id: common.String("new-id")},
 			}, nil)
 
-		err := ms.ReconcileInstanceConfiguration(context.Background())
+		err := ms.ReconcileInstanceConfiguration(context.Background(), nil)
 		g.Expect(err).To(BeNil())
 
 		// Both annotations should be populated after reconciliation.
@@ -1270,7 +1357,7 @@ func TestBackfillAnnotations_Upgrade(t *testing.T) {
 				InstanceConfiguration: core.InstanceConfiguration{Id: common.String("new-id")},
 			}, nil)
 
-		err := ms.ReconcileInstanceConfiguration(context.Background())
+		err := ms.ReconcileInstanceConfiguration(context.Background(), nil)
 		g.Expect(err).To(BeNil())
 
 		// Bootstrap annotation should reflect the NEW desired hash (after IC recreation).
@@ -1304,7 +1391,7 @@ func TestBackfillAnnotations_Upgrade(t *testing.T) {
 		// OCI user_data matches current secret — no IC recreation.
 		computeMgmt.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).Times(0)
 
-		err := ms.ReconcileInstanceConfiguration(context.Background())
+		err := ms.ReconcileInstanceConfiguration(context.Background(), nil)
 		g.Expect(err).To(BeNil())
 
 		// Bootstrap annotation backfilled from actual (which matches desired).
