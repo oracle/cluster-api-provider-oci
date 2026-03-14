@@ -46,6 +46,7 @@ import (
 	"sigs.k8s.io/cluster-api/test/framework"
 	"sigs.k8s.io/cluster-api/test/framework/clusterctl"
 	"sigs.k8s.io/cluster-api/util"
+	v1beta1patch "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -673,6 +674,85 @@ var _ = Describe("Workload cluster creation", func() {
 
 		By("Verifying the machine pool instance configuration remains stable after initial reconciliation")
 		assertMachinePoolInstanceConfigurationStable(ctx, bootstrapClusterProxy, result.Cluster, result.MachinePools[0], specName, "45s", "5s")
+	})
+
+	It("Machine Pool - Upgrade [DailyTest]", func() {
+		Expect(e2eConfig.Variables).To(HaveKey(capi_e2e.KubernetesVersionUpgradeFrom))
+		Expect(e2eConfig.Variables).To(HaveKey(capi_e2e.KubernetesVersionUpgradeTo))
+
+		clusterName = getClusterName(clusterNamePrefix, "mp-upgrade")
+		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
+			ClusterProxy: bootstrapClusterProxy,
+			ConfigCluster: clusterctl.ConfigClusterInput{
+				LogFolder:                filepath.Join(artifactFolder, "clusters", bootstrapClusterProxy.GetName()),
+				ClusterctlConfigPath:     clusterctlConfigPath,
+				KubeconfigPath:           bootstrapClusterProxy.GetKubeconfigPath(),
+				InfrastructureProvider:   clusterctl.DefaultInfrastructureProvider,
+				Flavor:                   "machine-pool",
+				Namespace:                namespace.Name,
+				ClusterName:              clusterName,
+				KubernetesVersion:        e2eConfig.MustGetVariable(capi_e2e.KubernetesVersionUpgradeFrom),
+				ControlPlaneMachineCount: pointer.Int64(1),
+				WorkerMachineCount:       pointer.Int64(1),
+			},
+			CNIManifestPath:              e2eConfig.MustGetVariable(capi_e2e.CNIPath),
+			WaitForClusterIntervals:      e2eConfig.GetIntervals(specName, "wait-cluster"),
+			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),
+			WaitForMachinePools:          e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes"),
+			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
+		}, result)
+
+		upgradeVersion := e2eConfig.MustGetVariable(capi_e2e.KubernetesVersionUpgradeTo)
+
+		By("Recording the initial machine pool instance configuration ID")
+		mpKey := client.ObjectKey{Name: result.MachinePools[0].Name, Namespace: namespace.Name}
+		initialOMP := &infrav2exp.OCIMachinePool{}
+		Expect(bootstrapClusterProxy.GetClient().Get(ctx, mpKey, initialOMP)).To(Succeed())
+		Expect(initialOMP.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(BeNil())
+		initialICID := *initialOMP.Spec.InstanceConfiguration.InstanceConfigurationId
+
+		By("Upgrading the control plane")
+		newCPMachineTemplateName := fmt.Sprintf("%s-control-plane-upgraded", clusterName)
+		updatedControlPlaneTemplate := makeOCIMachineTemplate(namespace.Name, newCPMachineTemplateName)
+		Expect(bootstrapClusterProxy.GetClient().Create(ctx, updatedControlPlaneTemplate)).To(Succeed())
+
+		controlPlane := framework.GetKubeadmControlPlaneByCluster(ctx, framework.GetKubeadmControlPlaneByClusterInput{
+			Lister:      bootstrapClusterProxy.GetClient(),
+			Namespace:   namespace.Name,
+			ClusterName: clusterName,
+		})
+		patchHelper, err := v1beta1patch.NewHelper(controlPlane, bootstrapClusterProxy.GetClient())
+		Expect(err).ToNot(HaveOccurred())
+		controlPlane.Spec.MachineTemplate.Spec.InfrastructureRef.Name = newCPMachineTemplateName
+		controlPlane.Spec.Version = upgradeVersion
+		Expect(patchHelper.Patch(ctx, controlPlane)).To(Succeed())
+
+		Log("Waiting for control-plane machines to have the upgraded Kubernetes version")
+		framework.WaitForControlPlaneMachinesToBeUpgraded(ctx, framework.WaitForControlPlaneMachinesToBeUpgradedInput{
+			Lister:                   bootstrapClusterProxy.GetClient(),
+			Cluster:                  result.Cluster,
+			MachineCount:             1,
+			KubernetesUpgradeVersion: upgradeVersion,
+		}, e2eConfig.GetIntervals(specName, "wait-machine-upgrade")...)
+
+		By("Upgrading the machine pool")
+		framework.UpgradeMachinePoolAndWait(ctx, framework.UpgradeMachinePoolAndWaitInput{
+			ClusterProxy:                   bootstrapClusterProxy,
+			Cluster:                        result.Cluster,
+			UpgradeVersion:                 upgradeVersion,
+			MachinePools:                   result.MachinePools,
+			WaitForMachinePoolToBeUpgraded: e2eConfig.GetIntervals(specName, "wait-machine-upgrade"),
+		})
+
+		By("Verifying the machine pool instance configuration was recreated after upgrade")
+		upgradedOMP := &infrav2exp.OCIMachinePool{}
+		Expect(bootstrapClusterProxy.GetClient().Get(ctx, mpKey, upgradedOMP)).To(Succeed())
+		Expect(upgradedOMP.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(BeNil())
+		Expect(*upgradedOMP.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(Equal(initialICID),
+			"Instance configuration should change after Kubernetes version upgrade")
+		Expect(upgradedOMP.Annotations).To(HaveKey(scope.BootstrapDataHashAnnotation),
+			"Bootstrap data hash annotation should be present after upgrade")
+		Expect(upgradedOMP.Annotations[scope.BootstrapDataHashAnnotation]).ToNot(BeEmpty())
 	})
 
 	It("Cluster Identity - with 1 control-plane nodes and 1 worker nodes", func() {

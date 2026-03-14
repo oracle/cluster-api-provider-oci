@@ -139,10 +139,6 @@ func computeProjectedHash(projected *comparableLaunchDetails) (string, error) {
 	return hex.EncodeToString(sum[:]), nil
 }
 
-func normalizeLaunchDetails(in *core.InstanceConfigurationLaunchInstanceDetails) *comparableLaunchDetails {
-	return projectLaunchDetails(in, in)
-}
-
 func projectLaunchDetails(in, mask *core.InstanceConfigurationLaunchInstanceDetails) *comparableLaunchDetails {
 	if in == nil {
 		return nil
@@ -170,14 +166,16 @@ func projectLaunchDetails(in, mask *core.InstanceConfigurationLaunchInstanceDeta
 	}
 }
 
-// normalizeMetadata filters instance metadata to exclude fields like user_data
+// normalizeMetadata returns a copy of the metadata map with user_data excluded.
+// Bootstrap data (user_data) changes are tracked separately via the
+// BootstrapDataHashAnnotation to avoid conflating infrastructure config
+// changes with bootstrap secret changes.
 func normalizeMetadata(md map[string]string) map[string]string {
 	if md == nil {
 		return nil
 	}
 	output := make(map[string]string, len(md))
 	for k, v := range md {
-		// exclude user_data
 		if k == "user_data" {
 			continue
 		}
@@ -189,17 +187,20 @@ func normalizeMetadata(md map[string]string) map[string]string {
 	return output
 }
 
-// hashChanged returns true if the two hashes are different, indicating a configuration change
-func hashChanged(hash1, hash2 string) bool {
-	return hash1 != hash2
+// ComputeUserDataHash computes a SHA-256 hash of the user_data value from
+// instance metadata. This is tracked separately from the config hash so
+// bootstrap secret changes (e.g. kubeadm token rotation, Kubernetes version
+// upgrades) trigger a new Instance Configuration without being affected by
+// OCI-returned field defaults.
+func ComputeUserDataHash(metadata map[string]string) string {
+	ud, ok := metadata["user_data"]
+	if !ok {
+		return ""
+	}
+	sum := sha256.Sum256([]byte(ud))
+	return hex.EncodeToString(sum[:])
 }
 
-// launchDetailsEqual returns true if two launch details are equivalent after normalization
-func launchDetailsEqual(ld1, ld2 *core.InstanceConfigurationLaunchInstanceDetails) bool {
-	normalized1 := normalizeLaunchDetails(ld1)
-	normalized2 := normalizeLaunchDetails(ld2)
-	return reflect.DeepEqual(normalized1, normalized2)
-}
 
 func projectCreateVnicDetails(in, mask *core.InstanceConfigurationCreateVnicDetails) *comparableCreateVnicDetails {
 	if in == nil || mask == nil {

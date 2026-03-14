@@ -52,6 +52,7 @@ import (
 const (
 	OCIMachinePoolKind                  = "OCIMachinePool"
 	InstanceConfigurationHashAnnotation = "oci.oraclecloud.com/instance-configuration-hash"
+	BootstrapDataHashAnnotation         = "oci.oraclecloud.com/bootstrap-data-hash"
 )
 
 // MachinePoolScopeParams defines the params need to create a new MachineScope
@@ -116,11 +117,25 @@ func (m *MachinePoolScope) getInstanceConfigurationHashAnnotation() string {
 	return m.OCIMachinePool.Annotations[InstanceConfigurationHashAnnotation]
 }
 
-func (m *MachinePoolScope) setInstanceConfigurationHashAnnotation(hash string) {
+func (m *MachinePoolScope) setInstanceConfigurationHashAnnotation(h string) {
 	if m.OCIMachinePool.Annotations == nil {
 		m.OCIMachinePool.Annotations = map[string]string{}
 	}
-	m.OCIMachinePool.Annotations[InstanceConfigurationHashAnnotation] = hash
+	m.OCIMachinePool.Annotations[InstanceConfigurationHashAnnotation] = h
+}
+
+func (m *MachinePoolScope) getBootstrapDataHashAnnotation() string {
+	if m.OCIMachinePool.Annotations == nil {
+		return ""
+	}
+	return m.OCIMachinePool.Annotations[BootstrapDataHashAnnotation]
+}
+
+func (m *MachinePoolScope) setBootstrapDataHashAnnotation(h string) {
+	if m.OCIMachinePool.Annotations == nil {
+		m.OCIMachinePool.Annotations = map[string]string{}
+	}
+	m.OCIMachinePool.Annotations[BootstrapDataHashAnnotation] = h
 }
 
 // PatchObject persists the cluster configuration and status.
@@ -376,7 +391,12 @@ func (m *MachinePoolScope) GetFreeFormTags() map[string]string {
 	return tags
 }
 
-// ReconcileInstanceConfiguration reconciles the InstanceConfiguration resource using hash-based comparison.
+// ReconcileInstanceConfiguration reconciles the InstanceConfiguration resource.
+//
+// Infrastructure config (shape, image, networking, etc.) and bootstrap data
+// (user_data from the bootstrap secret) are tracked as separate change signals,
+// similar to how CAPA tracks launch template config and userdata independently.
+// This avoids conflating OCI-returned field defaults with real bootstrap changes.
 func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context) error {
 	// Fetch existing IC
 	instanceConfiguration, err := m.GetInstanceConfiguration(ctx)
@@ -384,7 +404,7 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context) e
 		return err
 	}
 
-	// Build desired launch details includes everything
+	// Build desired launch details (includes everything: config + user_data)
 	freeFormTags := m.GetFreeFormTags()
 	definedTags := m.getDefinedTags()
 
@@ -393,79 +413,135 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context) e
 	if err != nil {
 		return err
 	}
-	desiredHash, err := hash.ComputeHash(desiredLaunch)
+
+	// Compute config hash (excludes user_data — tracked separately)
+	desiredConfigHash, err := hash.ComputeHash(desiredLaunch)
 	if err != nil {
 		return errors.Wrap(err, "compute desired instance config hash")
 	}
 
-	// Debug logs
-	m.Logger.V(1).Info("InstanceConfig desired hash", "hash", desiredHash)
+	// Compute bootstrap data hash (user_data only)
+	desiredBootstrapHash := hash.ComputeUserDataHash(desiredLaunch.Metadata)
 
-	// If none exists, create new one
+	m.Logger.V(1).Info("InstanceConfig desired hashes",
+		"configHash", desiredConfigHash,
+		"bootstrapHash", desiredBootstrapHash)
+
+	// If no IC exists, create a new one
 	if instanceConfiguration == nil {
 		m.Info("No existing instance configuration, creating a new one")
-		if err := m.createInstanceConfiguration(ctx, desiredLaunch, freeFormTags, definedTags, desiredHash); err != nil {
+		if err := m.createInstanceConfiguration(ctx, desiredLaunch, freeFormTags, definedTags, desiredConfigHash); err != nil {
 			return err
 		}
-		m.setInstanceConfigurationHashAnnotation(desiredHash)
+		m.setInstanceConfigurationHashAnnotation(desiredConfigHash)
+		m.setBootstrapDataHashAnnotation(desiredBootstrapHash)
 		if err := m.PatchObject(ctx); err != nil {
 			return err
 		}
-		// cleanup - best effort, don't fail reconciliation if cleanup fails
 		if cleanupErr := m.CleanupInstanceConfiguration(ctx, nil); cleanupErr != nil {
 			m.Logger.Error(cleanupErr, "Cleanup InstanceConfiguration failed, instance config could be full.")
 		}
 		return nil
 	}
 
-	// Compute existing hash from OCI LaunchDetails
+	// --- Compute actual config hash from OCI ---
 	computeDetails, ok := instanceConfiguration.InstanceDetails.(core.ComputeInstanceDetails)
 	if !ok {
 		m.Info("InstanceDetails not ComputeInstanceDetails, skipping hash compare")
 		return nil
 	}
 	actualLaunch := computeDetails.LaunchDetails
-	actualHash, err := hash.ComputeComparableHash(actualLaunch, desiredLaunch)
+	actualConfigHash, err := hash.ComputeComparableHash(actualLaunch, desiredLaunch)
 	if err != nil {
 		return errors.Wrap(err, "compute actual instance config hash")
 	}
 
-	m.Logger.V(1).Info("InstanceConfig actual hash", "hash", actualHash)
+	m.Logger.V(1).Info("InstanceConfig actual config hash", "hash", actualConfigHash)
 
-	// If annotation missing, backfill it from actual hash
-	storedHash := m.getInstanceConfigurationHashAnnotation()
-	if storedHash == "" {
-		m.Info("No stored hash annotation, backfilling", "actualHash", actualHash)
-		m.setInstanceConfigurationHashAnnotation(actualHash)
+	// --- Backfill annotations on first reconciliation ---
+	storedConfigHash := m.getInstanceConfigurationHashAnnotation()
+	storedBootstrapHash := m.getBootstrapDataHashAnnotation()
+	needsPatch := false
+
+	if storedConfigHash == "" {
+		m.Info("No stored config hash annotation, backfilling", "actualConfigHash", actualConfigHash)
+		m.setInstanceConfigurationHashAnnotation(actualConfigHash)
+		storedConfigHash = actualConfigHash
+		needsPatch = true
+	}
+	if storedBootstrapHash == "" {
+		// On first reconciliation after upgrade, backfill from desired so we
+		// don't spuriously detect a change. The current IC already has the
+		// bootstrap data that was sent when it was created.
+		m.Info("No stored bootstrap hash annotation, backfilling", "bootstrapHash", desiredBootstrapHash)
+		m.setBootstrapDataHashAnnotation(desiredBootstrapHash)
+		storedBootstrapHash = desiredBootstrapHash
+		needsPatch = true
+	}
+	if needsPatch {
 		if err := m.PatchObject(ctx); err != nil {
 			return err
 		}
-		storedHash = actualHash
 	}
 
-	// Decide based on desiredHash vs actualHash - same
-	if desiredHash == actualHash {
-		m.Info("Instance configuration is up-to-date, no recreate", "hash", desiredHash)
-		// keep annotation consistent
-		if storedHash != desiredHash {
-			m.Info("Updating stored hash annotation to match", "from", storedHash, "to", desiredHash)
-			m.setInstanceConfigurationHashAnnotation(desiredHash)
+	// --- Evaluate change signals independently ---
+	//
+	// The two comparisons are intentionally asymmetric:
+	//
+	//   configChanged:    desired  vs  actual (fetched from OCI)
+	//   bootstrapChanged: desired  vs  stored (annotation on the CR)
+	//
+	// Config uses desired-vs-actual because OCI may return fields the user
+	// never set (e.g. ShapeConfig.MemoryInGBs on flex shapes). The
+	// projection in ComputeComparableHash filters those out so only
+	// user-specified fields are compared. Comparing against OCI directly
+	// is the only way to know what is *actually running*.
+	//
+	// Bootstrap uses desired-vs-stored because user_data is excluded from
+	// the config hash (to avoid the projection problem above), so OCI's
+	// actual launch details cannot tell us whether bootstrap data changed.
+	// Instead we record the hash of the user_data we last sent and compare
+	// the current desired value against that. This is safe because we are
+	// the only writer of user_data — it never changes out-of-band in OCI.
+	//
+	// Do NOT "fix" this to make both comparisons symmetric. Using
+	// desired-vs-actual for bootstrap would require including user_data in
+	// the config hash, which reintroduces issue #509 (continuous recreates
+	// from OCI-returned field noise). Using desired-vs-stored for config
+	// would miss out-of-band OCI changes and break the projection logic.
+	configChanged := desiredConfigHash != actualConfigHash
+	bootstrapChanged := desiredBootstrapHash != storedBootstrapHash
+
+	if !configChanged && !bootstrapChanged {
+		m.Info("Instance configuration is up-to-date, no recreate",
+			"configHash", desiredConfigHash,
+			"bootstrapHash", desiredBootstrapHash)
+		// Keep stored config hash consistent with actual
+		if storedConfigHash != desiredConfigHash {
+			m.Info("Updating stored config hash annotation to match",
+				"from", storedConfigHash, "to", desiredConfigHash)
+			m.setInstanceConfigurationHashAnnotation(desiredConfigHash)
 			return m.PatchObject(ctx)
 		}
 		return nil
 	}
 
-	// Decide based on desiredHash vs actualHash - different
-	m.Info("Instance configuration changed, creating new one", "from", actualHash, "to", desiredHash)
-	if err := m.createInstanceConfiguration(ctx, desiredLaunch, freeFormTags, definedTags, desiredHash); err != nil {
+	// --- At least one signal changed, create new IC ---
+	m.Info("Instance configuration changed, creating new one",
+		"configChanged", configChanged,
+		"bootstrapChanged", bootstrapChanged,
+		"configHash", desiredConfigHash,
+		"bootstrapHash", desiredBootstrapHash)
+
+	if err := m.createInstanceConfiguration(ctx, desiredLaunch, freeFormTags, definedTags, desiredConfigHash); err != nil {
 		return err
 	}
-	m.setInstanceConfigurationHashAnnotation(desiredHash)
+	m.setInstanceConfigurationHashAnnotation(desiredConfigHash)
+	m.setBootstrapDataHashAnnotation(desiredBootstrapHash)
 	if err := m.PatchObject(ctx); err != nil {
 		return err
 	}
 
-	// cleanup
 	if cleanupErr := m.CleanupInstanceConfiguration(ctx, nil); cleanupErr != nil {
 		m.Logger.Error(cleanupErr, "Cleanup InstanceConfiguration failed, instance config could be full.")
 	}
