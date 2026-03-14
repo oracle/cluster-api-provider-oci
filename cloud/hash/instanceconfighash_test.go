@@ -17,12 +17,18 @@
 package hash
 
 import (
+	"encoding/base64"
 	"testing"
 
 	. "github.com/onsi/gomega"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
 )
+
+func encodeUserData(t *testing.T, value string) string {
+	t.Helper()
+	return base64.StdEncoding.EncodeToString([]byte(value))
+}
 
 func TestComputeHash_NilInput(t *testing.T) {
 	g := NewWithT(t)
@@ -262,6 +268,70 @@ func TestComputeUserDataHash_EmptyString(t *testing.T) {
 	// (the SHA-256 of the empty string).
 	g.Expect(h).To(HaveLen(64))
 	g.Expect(h).ToNot(Equal(ComputeUserDataHash(map[string]string{"user_data": "non-empty"})))
+}
+
+func TestComputeUserDataHash_IgnoresKubeadmBootstrapTokenRotation(t *testing.T) {
+	g := NewWithT(t)
+	first := `#cloud-config
+write_files:
+- path: /run/kubeadm/kubeadm-join-config.yaml
+  content: |
+    ---
+    apiVersion: kubeadm.k8s.io/v1beta4
+    discovery:
+      bootstrapToken:
+        apiServerEndpoint: 10.0.0.1:6443
+        token: abcdef.0123456789abcdef
+    kind: JoinConfiguration
+`
+	second := `#cloud-config
+write_files:
+- path: /run/kubeadm/kubeadm-join-config.yaml
+  content: |
+    ---
+    apiVersion: kubeadm.k8s.io/v1beta4
+    discovery:
+      bootstrapToken:
+        apiServerEndpoint: 10.0.0.1:6443
+        token: zyxwvu.fedcba9876543210
+    kind: JoinConfiguration
+`
+
+	h1 := ComputeUserDataHash(map[string]string{"user_data": encodeUserData(t, first)})
+	h2 := ComputeUserDataHash(map[string]string{"user_data": encodeUserData(t, second)})
+	g.Expect(h1).To(Equal(h2))
+}
+
+func TestComputeUserDataHash_DetectsNonTokenKubeadmBootstrapChanges(t *testing.T) {
+	g := NewWithT(t)
+	first := `#cloud-config
+write_files:
+- path: /run/kubeadm/kubeadm-join-config.yaml
+  content: |
+    ---
+    apiVersion: kubeadm.k8s.io/v1beta4
+    discovery:
+      bootstrapToken:
+        apiServerEndpoint: 10.0.0.1:6443
+        token: abcdef.0123456789abcdef
+    kind: JoinConfiguration
+`
+	second := `#cloud-config
+write_files:
+- path: /run/kubeadm/kubeadm-join-config.yaml
+  content: |
+    ---
+    apiVersion: kubeadm.k8s.io/v1beta4
+    discovery:
+      bootstrapToken:
+        apiServerEndpoint: 10.0.0.2:6443
+        token: abcdef.0123456789abcdef
+    kind: JoinConfiguration
+`
+
+	h1 := ComputeUserDataHash(map[string]string{"user_data": encodeUserData(t, first)})
+	h2 := ComputeUserDataHash(map[string]string{"user_data": encodeUserData(t, second)})
+	g.Expect(h1).ToNot(Equal(h2))
 }
 
 func TestComputeHash_DifferentInputsProduceDifferentHashes(t *testing.T) {

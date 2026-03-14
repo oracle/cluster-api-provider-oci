@@ -18,15 +18,20 @@ package hash
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"regexp"
 	"sort"
+	"strings"
 
 	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/pkg/errors"
 )
+
+var kubeadmBootstrapTokenLine = regexp.MustCompile(`(?m)^(\s*token:\s+).*$`)
 
 type comparableLaunchDetails struct {
 	CapacityReservationID          *string                              `json:"capacityReservationId,omitempty"`
@@ -188,19 +193,30 @@ func normalizeMetadata(md map[string]string) map[string]string {
 }
 
 // ComputeUserDataHash computes a SHA-256 hash of the user_data value from
-// instance metadata. This is tracked separately from the config hash so
-// bootstrap secret changes (e.g. kubeadm token rotation, Kubernetes version
-// upgrades) trigger a new Instance Configuration without being affected by
-// OCI-returned field defaults.
+// instance metadata. For kubeadm bootstrap payloads, the hash ignores the
+// rotated discovery token value so MachinePool reconciles do not churn OCI
+// InstanceConfigurations every time CAPI refreshes the join token.
 func ComputeUserDataHash(metadata map[string]string) string {
 	ud, ok := metadata["user_data"]
 	if !ok {
 		return ""
 	}
-	sum := sha256.Sum256([]byte(ud))
+	sum := sha256.Sum256([]byte(normalizeUserDataForHash(ud)))
 	return hex.EncodeToString(sum[:])
 }
 
+func normalizeUserDataForHash(userData string) string {
+	decoded, err := base64.StdEncoding.DecodeString(userData)
+	if err != nil {
+		return userData
+	}
+
+	normalized := string(decoded)
+	if strings.Contains(normalized, "kind: JoinConfiguration") && strings.Contains(normalized, "bootstrapToken:") {
+		normalized = kubeadmBootstrapTokenLine.ReplaceAllString(normalized, `${1}<redacted>`)
+	}
+	return normalized
+}
 
 func projectCreateVnicDetails(in, mask *core.InstanceConfigurationCreateVnicDetails) *comparableCreateVnicDetails {
 	if in == nil || mask == nil {

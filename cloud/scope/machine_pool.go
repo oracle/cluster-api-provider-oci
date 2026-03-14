@@ -484,10 +484,10 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context) e
 	// Bootstrap compares user_data in isolation rather than including it
 	// in the config hash. OCI stores user_data as a plain metadata string
 	// and returns it unchanged, so desired-vs-actual comparison works
-	// reliably without projection. Comparing against OCI directly (rather
-	// than a stored annotation) avoids feedback loops where CAPI
-	// regenerates the bootstrap secret (e.g. kubeadm token rotation)
-	// on every reconcile.
+	// reliably without projection. The bootstrap hash normalizes kubeadm's
+	// rotated discovery token before hashing, so periodic token refreshes
+	// do not churn InstanceConfigurations while real bootstrap changes
+	// (version, endpoint, CA hash, cloud-init content, etc.) still do.
 	//
 	// The bootstrap hash annotation is stored for observability but is
 	// NOT used for change detection.

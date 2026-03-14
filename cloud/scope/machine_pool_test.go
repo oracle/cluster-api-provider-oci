@@ -18,6 +18,7 @@ package scope
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"testing"
 
@@ -32,6 +33,7 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/core"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -487,6 +489,75 @@ func TestInstanceConfigCreate(t *testing.T) {
 							Id: common.String("id"),
 						},
 					}, nil)
+			},
+		},
+		{
+			name:          "instance config unchanged when kubeadm bootstrap token rotates",
+			errorExpected: false,
+			testSpecificSetup: func(ms *MachinePoolScope, g *WithT) {
+				currentBootstrapData := `#cloud-config
+write_files:
+- path: /run/kubeadm/kubeadm-join-config.yaml
+  content: |
+    ---
+    apiVersion: kubeadm.k8s.io/v1beta4
+    discovery:
+      bootstrapToken:
+        apiServerEndpoint: 10.0.0.1:6443
+        token: abcdef.0123456789abcdef
+    kind: JoinConfiguration
+`
+				rotatedBootstrapData := `#cloud-config
+write_files:
+- path: /run/kubeadm/kubeadm-join-config.yaml
+  content: |
+    ---
+    apiVersion: kubeadm.k8s.io/v1beta4
+    discovery:
+      bootstrapToken:
+        apiServerEndpoint: 10.0.0.1:6443
+        token: zyxwvu.fedcba9876543210
+    kind: JoinConfiguration
+`
+
+				secret := &corev1.Secret{}
+				err := ms.Client.Get(context.Background(), types.NamespacedName{Namespace: "default", Name: "bootstrap"}, secret)
+				g.Expect(err).To(BeNil())
+				secret.Data["value"] = []byte(currentBootstrapData)
+				err = ms.Client.Update(context.Background(), secret)
+				g.Expect(err).To(BeNil())
+
+				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+					Shape:                   common.String("test-shape"),
+					InstanceConfigurationId: common.String("test"),
+				}
+
+				computeManagementClient.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Eq(core.GetInstanceConfigurationRequest{
+					InstanceConfigurationId: common.String("test"),
+				})).
+					Return(core.GetInstanceConfigurationResponse{
+						InstanceConfiguration: core.InstanceConfiguration{
+							Id: common.String("test"),
+							InstanceDetails: core.ComputeInstanceDetails{
+								LaunchDetails: &core.InstanceConfigurationLaunchInstanceDetails{
+									DefinedTags:   definedTagsInterface,
+									FreeformTags:  tags,
+									CompartmentId: common.String("test-compartment"),
+									Shape:         common.String("test-shape"),
+									CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+										FreeformTags: tags,
+										NsgIds:       []string{"nsg-id"},
+										SubnetId:     common.String("subnet-id"),
+									},
+									SourceDetails: core.InstanceConfigurationInstanceSourceViaImageDetails{},
+									Metadata: map[string]string{
+										"user_data": base64.StdEncoding.EncodeToString([]byte(rotatedBootstrapData)),
+									},
+								},
+							},
+						},
+					}, nil)
+				computeManagementClient.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).Times(0)
 			},
 		},
 
