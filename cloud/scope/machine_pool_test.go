@@ -493,7 +493,7 @@ func TestInstanceConfigCreate(t *testing.T) {
 			},
 		},
 		{
-			name:          "instance config unchanged when kubeadm bootstrap token rotates",
+			name:          "instance config recreated when kubeadm bootstrap token rotates",
 			errorExpected: false,
 			existingInstancePool: &core.InstancePool{
 				Id:                      common.String("pool-id"),
@@ -525,6 +525,13 @@ write_files:
         token: zyxwvu.fedcba9876543210
     kind: JoinConfiguration
 `
+				currentUserData := base64.StdEncoding.EncodeToString([]byte(currentBootstrapData))
+				rotatedUserData := base64.StdEncoding.EncodeToString([]byte(rotatedBootstrapData))
+				// Guard this fixture: only the kubeadm discovery token changes.
+				g.Expect(hash.ComputeUserDataHash(map[string]string{"user_data": currentUserData})).
+					ToNot(Equal(hash.ComputeUserDataHash(map[string]string{"user_data": rotatedUserData})))
+				g.Expect(hash.ComputeUserDataHashIgnoringKubeadmToken(map[string]string{"user_data": currentUserData})).
+					To(Equal(hash.ComputeUserDataHashIgnoringKubeadmToken(map[string]string{"user_data": rotatedUserData})))
 
 				secret := &corev1.Secret{}
 				err := ms.Client.Get(context.Background(), types.NamespacedName{Namespace: "default", Name: "bootstrap"}, secret)
@@ -563,7 +570,14 @@ write_files:
 							},
 						},
 					}, nil)
-				computeManagementClient.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).Times(0)
+				computeManagementClient.EXPECT().ListInstanceConfigurations(gomock.Any(), gomock.Any()).
+					Return(core.ListInstanceConfigurationsResponse{}, nil)
+				computeManagementClient.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).
+					Return(core.CreateInstanceConfigurationResponse{
+						InstanceConfiguration: core.InstanceConfiguration{
+							Id: common.String("id"),
+						},
+					}, nil)
 			},
 		},
 		{

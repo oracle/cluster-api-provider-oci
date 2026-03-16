@@ -366,6 +366,76 @@ write_files:
 	g.Expect(h1).ToNot(Equal(h2))
 }
 
+func TestComputeUserDataHashIgnoringKubeadmToken_DetectsEndpointChangeEvenWhenTokenAlsoChanges(t *testing.T) {
+	g := NewWithT(t)
+	first := `#cloud-config
+write_files:
+- path: /run/kubeadm/kubeadm-join-config.yaml
+  content: |
+    ---
+    apiVersion: kubeadm.k8s.io/v1beta4
+    discovery:
+      bootstrapToken:
+        apiServerEndpoint: 10.0.0.1:6443
+        token: abcdef.0123456789abcdef
+    kind: JoinConfiguration
+`
+	second := `#cloud-config
+write_files:
+- path: /run/kubeadm/kubeadm-join-config.yaml
+  content: |
+    ---
+    apiVersion: kubeadm.k8s.io/v1beta4
+    discovery:
+      bootstrapToken:
+        apiServerEndpoint: 10.0.0.2:6443
+        token: zyxwvu.fedcba9876543210
+    kind: JoinConfiguration
+`
+
+	h1 := ComputeUserDataHashIgnoringKubeadmToken(map[string]string{"user_data": encodeUserData(t, first)})
+	h2 := ComputeUserDataHashIgnoringKubeadmToken(map[string]string{"user_data": encodeUserData(t, second)})
+	g.Expect(h1).ToNot(Equal(h2))
+}
+
+func TestComputeUserDataHashIgnoringKubeadmToken_DetectsNonKubeadmTokenChanges(t *testing.T) {
+	g := NewWithT(t)
+	first := `#cloud-config
+write_files:
+- path: /run/kubeadm/kubeadm-join-config.yaml
+  content: |
+    ---
+    apiVersion: kubeadm.k8s.io/v1beta4
+    discovery:
+      bootstrapToken:
+        apiServerEndpoint: 10.0.0.1:6443
+        token: abcdef.0123456789abcdef
+    kind: JoinConfiguration
+- path: /etc/custom/service.yaml
+  content: |
+    token: service-token-a
+`
+	second := `#cloud-config
+write_files:
+- path: /run/kubeadm/kubeadm-join-config.yaml
+  content: |
+    ---
+    apiVersion: kubeadm.k8s.io/v1beta4
+    discovery:
+      bootstrapToken:
+        apiServerEndpoint: 10.0.0.1:6443
+        token: abcdef.0123456789abcdef
+    kind: JoinConfiguration
+- path: /etc/custom/service.yaml
+  content: |
+    token: service-token-b
+`
+
+	h1 := ComputeUserDataHashIgnoringKubeadmToken(map[string]string{"user_data": encodeUserData(t, first)})
+	h2 := ComputeUserDataHashIgnoringKubeadmToken(map[string]string{"user_data": encodeUserData(t, second)})
+	g.Expect(h1).ToNot(Equal(h2))
+}
+
 func TestComputeHash_DifferentInputsProduceDifferentHashes(t *testing.T) {
 	g := NewWithT(t)
 	ld1 := &core.InstanceConfigurationLaunchInstanceDetails{

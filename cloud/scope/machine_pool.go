@@ -394,10 +394,9 @@ func (m *MachinePoolScope) GetFreeFormTags() map[string]string {
 // ReconcileInstanceConfiguration reconciles the InstanceConfiguration resource.
 //
 // Infrastructure config (shape, image, networking, etc.) and bootstrap data
-// (user_data from the bootstrap secret) are tracked as separate change signals,
-// similar to how CAPA tracks launch template config and userdata independently.
+// (user_data from the bootstrap secret) are tracked as separate change signals.
 // This avoids conflating OCI-returned field defaults with real bootstrap changes.
-func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context, instancePool *core.InstancePool) error {
+func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context, _ *core.InstancePool) error {
 	// Fetch existing IC
 	instanceConfiguration, err := m.GetInstanceConfiguration(ctx)
 	if err != nil {
@@ -444,7 +443,7 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context, i
 		return nil
 	}
 
-	// --- Compute actual config hash from OCI ---
+	// Compute actual config hash from OCI
 	computeDetails, ok := instanceConfiguration.InstanceDetails.(core.ComputeInstanceDetails)
 	if !ok {
 		m.Info("InstanceDetails not ComputeInstanceDetails, skipping hash compare")
@@ -461,7 +460,7 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context, i
 	actualBootstrapHash := hash.ComputeUserDataHash(actualLaunch.Metadata)
 	storedBootstrapHash := m.getBootstrapDataHashAnnotation()
 
-	// --- Backfill annotations on first reconciliation ---
+	// Backfill annotations on first reconciliation
 	storedConfigHash := m.getInstanceConfigurationHashAnnotation()
 	needsAnnotationPatch := false
 	if storedConfigHash == "" {
@@ -482,23 +481,22 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context, i
 		}
 	}
 
-	// --- Evaluate change signals ---
+	// Evaluate change signals
 	//
 	// Both signals compare desired vs actual (fetched from OCI):
 	//
-	//   configChanged:    desired config hash  vs  actual config hash (projected)
+	//   configChanged:     desired config hash  vs  actual config hash (projected)
 	//   bootstrapChanged: desired user_data hash  vs  actual user_data hash
 	//
 	// Config uses ComputeComparableHash which projects the actual OCI
 	// response onto only the fields present in the desired spec. This
 	// filters out OCI-returned defaults (e.g. ShapeConfig.MemoryInGBs on
-	// flex shapes) that would otherwise cause continuous recreates (#509).
+	// flex shapes) that would otherwise cause continuous recreates (issue #509).
 	//
-	// Bootstrap compares OCI actual vs desired, but we classify kubeadm
-	// discovery-token-only drift separately. Token-only drift is deferred
-	// until the pool already needs an update (for example a scale-up),
-	// which matches CAPA's "detect drift now, publish new template when
-	// you can actually use it" behavior.
+	// Bootstrap compares OCI actual vs desired. We still classify kubeadm
+	// discovery-token-only drift separately for observability, but bootstrap
+	// drift always creates a new InstanceConfiguration so future replacements
+	// don't launch with stale join configuration.
 	//
 	// The bootstrap hash annotation tracks the currently active IC's raw
 	// user_data hash for observability and upgrade backfill.
@@ -534,22 +532,10 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context, i
 		return nil
 	}
 
-	if tokenOnlyBootstrapChanged && !configChanged && !shouldUpdateDeferredBootstrap(instancePool, m) {
-		m.Info("Bootstrap token rotation detected, deferring instance configuration recreate until pool update is needed",
-			"desiredBootstrapHash", desiredBootstrapHash,
-			"actualBootstrapHash", actualBootstrapHash)
-		if storedConfigHash != actualConfigHash || storedBootstrapHash != actualBootstrapHash {
-			m.setInstanceConfigurationHashAnnotation(actualConfigHash)
-			m.setBootstrapDataHashAnnotation(actualBootstrapHash)
-			return m.PatchObject(ctx)
-		}
-		return nil
-	}
-
-	// --- At least one signal changed, create new IC ---
-	m.Info("Instance configuration changed, creating new one",
-		"configChanged", configChanged,
-		"bootstrapChanged", bootstrapChanged,
+	// At least one signal changed, create new IC
+	m.Info("creating new version for instance configuration",
+		"needsUpdate", configChanged,
+		"userDataHashChanged", bootstrapChanged,
 		"tokenOnlyBootstrapChanged", tokenOnlyBootstrapChanged,
 		"desiredConfigHash", desiredConfigHash,
 		"actualConfigHash", actualConfigHash,
@@ -846,13 +832,6 @@ func instancePoolNeedsUpdates(machinePoolScope *MachinePoolScope, instancePool *
 		return true
 	}
 	return false
-}
-
-func shouldUpdateDeferredBootstrap(instancePool *core.InstancePool, machinePoolScope *MachinePoolScope) bool {
-	if instancePool == nil {
-		return true
-	}
-	return instancePoolNeedsUpdates(machinePoolScope, instancePool)
 }
 
 func (m *MachinePoolScope) getAgentConfig() *core.InstanceConfigurationLaunchInstanceAgentConfigDetails {

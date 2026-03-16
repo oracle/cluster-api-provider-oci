@@ -23,15 +23,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"regexp"
 	"sort"
 	"strings"
 
 	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/pkg/errors"
 )
-
-var kubeadmBootstrapTokenLine = regexp.MustCompile(`(?m)^(\s*token:\s+).*$`)
 
 type comparableLaunchDetails struct {
 	CapacityReservationID          *string                              `json:"capacityReservationId,omitempty"`
@@ -222,10 +219,55 @@ func normalizeUserDataForHash(userData string) string {
 	}
 
 	normalized := string(decoded)
-	if strings.Contains(normalized, "kind: JoinConfiguration") && strings.Contains(normalized, "bootstrapToken:") {
-		normalized = kubeadmBootstrapTokenLine.ReplaceAllString(normalized, `${1}<redacted>`)
+	if !strings.Contains(normalized, "kind: JoinConfiguration") || !strings.Contains(normalized, "bootstrapToken:") {
+		return normalized
 	}
-	return normalized
+	return normalizeKubeadmDiscoveryBootstrapToken(normalized)
+}
+
+// normalizeKubeadmDiscoveryBootstrapToken rewrites only
+// JoinConfiguration.discovery.bootstrapToken.token values to a fixed sentinel.
+// Why: CABPK rotates this token frequently; we want a token-insensitive hash for
+// classification/observability. Reconcile still uses the raw user_data hash for
+// drift decisions, so non-token bootstrap changes are not ignored.
+func normalizeKubeadmDiscoveryBootstrapToken(cloudInitData string) string {
+	lines := strings.Split(cloudInitData, "\n")
+	discoveryIndent := -1
+	bootstrapTokenIndent := -1
+
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+
+		indent := leadingIndentWidth(line)
+
+		if bootstrapTokenIndent >= 0 && indent <= bootstrapTokenIndent {
+			bootstrapTokenIndent = -1
+		}
+		if discoveryIndent >= 0 && indent <= discoveryIndent {
+			discoveryIndent = -1
+		}
+
+		if trimmed == "discovery:" {
+			discoveryIndent = indent
+			continue
+		}
+		if discoveryIndent >= 0 && indent > discoveryIndent && trimmed == "bootstrapToken:" {
+			bootstrapTokenIndent = indent
+			continue
+		}
+		if bootstrapTokenIndent >= 0 && indent > bootstrapTokenIndent && strings.HasPrefix(trimmed, "token:") {
+			lines[i] = line[:indent] + "token: <redacted>"
+		}
+	}
+
+	return strings.Join(lines, "\n")
+}
+
+func leadingIndentWidth(s string) int {
+	return len(s) - len(strings.TrimLeft(s, " \t"))
 }
 
 func projectCreateVnicDetails(in, mask *core.InstanceConfigurationCreateVnicDetails) *comparableCreateVnicDetails {
