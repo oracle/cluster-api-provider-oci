@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"math/big"
 	"net/url"
+	"reflect"
 	"strconv"
 	"time"
 
@@ -275,59 +276,63 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 	launchDetails.PreemptibleInstanceConfig = m.getPreemptibleInstanceConfig()
 	launchDetails.PlatformConfig = m.getPlatformConfig()
 
-	m.Logger.Info("Started reconcile block volume creation...")
-	err = m.ReconcileBlockVolume(ctx)
+	// If BlockVolumeSpec is specified, create the block volume separately and attach it to the instance
+	if !reflect.DeepEqual(m.OCIMachine.Spec.BlockVolumeSpec, infrastructurev1beta2.BlockVolumeSpec{}) {
 
-	// if err != nil {
-	// 	return nil, err
-	// }
+		m.Logger.Info("Started reconcile block volume creation...")
+		err = m.ReconcileBlockVolume(ctx)
 
-	var bvId string
-	bvId, err = m.GetBlockVolumeId(ctx)
-
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	if bvId != "" {
-
-		// Wait for volume to be available
-		m.Logger.Info("Waiting for volume to be available...")
-		getVolumeReq := core.GetVolumeRequest{
-			VolumeId: common.String(bvId),
+		if err != nil {
+			return nil, err
 		}
-		for {
-			getVolumeResp, err := m.BlockVolumeClient.GetVolume(ctx, getVolumeReq)
-			if err != nil {
-				return nil, err
+
+		var bvId string
+		bvId, err = m.GetBlockVolumeId(ctx)
+
+		if err != nil {
+			return nil, err
+		}
+
+		if bvId != "" {
+
+			// Wait for volume to be available
+			m.Logger.Info("Waiting for volume to be available...")
+			getVolumeReq := core.GetVolumeRequest{
+				VolumeId: common.String(bvId),
 			}
-			if getVolumeResp.Volume.LifecycleState == core.VolumeLifecycleStateAvailable {
-				m.Logger.Info("Volume is available")
-				break
+			for {
+				getVolumeResp, err := m.BlockVolumeClient.GetVolume(ctx, getVolumeReq)
+				if err != nil {
+					return nil, err
+				}
+				if getVolumeResp.Volume.LifecycleState == core.VolumeLifecycleStateAvailable {
+					m.Logger.Info("Volume is available")
+					break
+				}
+				m.Logger.Info("Volume state, waiting...", "state", getVolumeResp.Volume.LifecycleState)
+				time.Sleep(5 * time.Second)
 			}
-			m.Logger.Info("Volume state, waiting...", "state", getVolumeResp.Volume.LifecycleState)
-			time.Sleep(5 * time.Second)
+
+			m.Logger.Info("Specifying instance attachments...")
+
+			// Appending block volumes created with BlockVolumeSpec to instance attachments
+			if infrastructurev1beta2.VolumeType(m.OCIMachine.Spec.BlockVolumeSpec.VolumeType) == infrastructurev1beta2.IscsiType {
+				launchDetails.LaunchVolumeAttachments = append(launchDetails.LaunchVolumeAttachments, []core.LaunchAttachVolumeDetails{
+					core.LaunchAttachIScsiVolumeDetails{
+						VolumeId: common.String(bvId),
+					},
+				}...)
+			} else if infrastructurev1beta2.VolumeType(m.OCIMachine.Spec.BlockVolumeSpec.VolumeType) == infrastructurev1beta2.ParavirtualizedType {
+				launchDetails.LaunchVolumeAttachments = append(launchDetails.LaunchVolumeAttachments, []core.LaunchAttachVolumeDetails{
+					core.LaunchAttachParavirtualizedVolumeDetails{
+						VolumeId: common.String(bvId),
+					},
+				}...)
+			} else {
+				return nil, errors.New("Unknown attachment type in BlockVolumeSpec, not supported")
+			}
+
 		}
-
-		m.Logger.Info("Specifying instance attachments...")
-
-		// Appending block volumes created with BlockVolumeSpec to instance attachments
-		if infrastructurev1beta2.VolumeType(m.OCIMachine.Spec.BlockVolumeSpec.VolumeType) == infrastructurev1beta2.IscsiType {
-			launchDetails.LaunchVolumeAttachments = append(launchDetails.LaunchVolumeAttachments, []core.LaunchAttachVolumeDetails{
-				core.LaunchAttachIScsiVolumeDetails{
-					VolumeId: common.String(bvId),
-				},
-			}...)
-		} else if infrastructurev1beta2.VolumeType(m.OCIMachine.Spec.BlockVolumeSpec.VolumeType) == infrastructurev1beta2.ParavirtualizedType {
-			launchDetails.LaunchVolumeAttachments = append(launchDetails.LaunchVolumeAttachments, []core.LaunchAttachVolumeDetails{
-				core.LaunchAttachParavirtualizedVolumeDetails{
-					VolumeId: common.String(bvId),
-				},
-			}...)
-		} else {
-			return nil, errors.New("Unknown attachment type in BlockVolumeSpec, not supported")
-		}
-
 	}
 
 	// Appending block volumes created with launchVolumeAttachments to instance attachments
@@ -501,6 +506,7 @@ func (m *MachineScope) DeleteMachine(ctx context.Context, instance *core.Instanc
 				m.Logger.Info("Instance terminated successfully")
 				break
 			}
+			// Error checking instance state
 			m.Logger.Info("Error checking instance state", "error", err.Error())
 			break
 		}
@@ -513,8 +519,9 @@ func (m *MachineScope) DeleteMachine(ctx context.Context, instance *core.Instanc
 		m.Logger.Info("Instance state, waiting...", "state", getInstanceResp.Instance.LifecycleState)
 		time.Sleep(5 * time.Second)
 	}
-
-	err = m.DeleteBlockVolume(ctx)
+	if !reflect.DeepEqual(m.OCIMachine.Spec.BlockVolumeSpec, infrastructurev1beta2.BlockVolumeSpec{}) {
+		err = m.DeleteBlockVolume(ctx)
+	}
 	return err
 }
 

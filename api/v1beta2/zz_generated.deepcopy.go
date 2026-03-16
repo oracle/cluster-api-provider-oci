@@ -551,11 +551,6 @@ func (in *ClientOverrides) DeepCopyInto(out *ClientOverrides) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.VolumeClientUrl != nil {
-		in, out := &in.VolumeClientUrl, &out.VolumeClientUrl
-		*out = new(string)
-		**out = **in
-	}
 	if in.ComputeManagementClientUrl != nil {
 		in, out := &in.ComputeManagementClientUrl, &out.ComputeManagementClientUrl
 		*out = new(string)

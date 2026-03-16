@@ -71,8 +71,6 @@ const (
 	InstanceLBBackendAdditionFailedReason = "BackendAdditionFailed"
 	// InstanceVnicAttachmentFailedReason used when attaching vnics to machine
 	InstanceVnicAttachmentFailedReason = "VnicAttachmentFailed"
-	// BlockVolumeReconciliationFailedReason used when BlockVolume reconciliation is failed
-	BlockVolumeReconciliationFailedReason = "BlockVolumeReconciliationFailedReason"
 	// InstanceIPAddressNotFound used when IP address of the instance count not be found
 	InstanceIPAddressNotFound = "InstanceIPAddressNotFound"
 	// VcnEventReady used after reconciliation has completed successfully
@@ -97,8 +95,6 @@ const (
 	SubnetEventReady = "SubnetReady"
 	// InstanceVnicAttachmentReady used after reconciliation has been completed successfully
 	InstanceVnicAttachmentReady = "VnicAttachmentReady"
-	// BlockVolumeEventReady used after reconciliation has been completed successfully
-	BlockVolumeEventReady = "BlockVolumeEventReady"
 	// ApiServerLoadBalancerEventReady used after reconciliation has completed successfully
 	ApiServerLoadBalancerEventReady = "APIServerLoadBalancerReady"
 	// FailureDomainEventReady used after reconciliation has completed successfully

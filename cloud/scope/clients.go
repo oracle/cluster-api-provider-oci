@@ -279,9 +279,6 @@ func (c *ClientProvider) createBlockVolumeClient(region string, ociAuthConfigPro
 	dispatcher := blockVolumeClient.HTTPClient
 	blockVolumeClient.HTTPClient = metrics.NewHttpRequestDispatcherWrapper(dispatcher, region)
 
-	if c.ociClientOverrides != nil && c.ociClientOverrides.VolumeClientUrl != nil {
-		blockVolumeClient.Host = *c.ociClientOverrides.VolumeClientUrl
-	}
 	blockVolumeClient.Interceptor = setVersionHeader()
 
 	return &blockVolumeClient, nil

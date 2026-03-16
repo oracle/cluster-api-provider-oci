@@ -90,78 +90,6 @@ func TestBlockVolumeReconciliation(t *testing.T) {
 		testSpecificSetup   func(machineScope *MachineScope, blockVolumeClient *mock_volume.MockBlockVolumeClient)
 	}{
 		{
-			name:          "reconcile returns error when AvailabilityDomain is nil",
-			errorExpected: true,
-			matchError:    errors.New("BlockVolumeSpec availabilityDomain is not set, but required"),
-			testSpecificSetup: func(machineScope *MachineScope, blockVolumeClient *mock_volume.MockBlockVolumeClient) {
-				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{}
-			},
-		},
-		{
-			name:          "reconcile returns error when DisplayName is not set",
-			errorExpected: true,
-			matchError:    errors.New("BlockVolumeSpec displayName is not set, but required"),
-			testSpecificSetup: func(machineScope *MachineScope, blockVolumeClient *mock_volume.MockBlockVolumeClient) {
-				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
-					AvailabilityDomain: common.String("ad1"),
-				}
-			},
-		},
-		{
-			name:          "volume already exists, no creation needed",
-			errorExpected: false,
-			testSpecificSetup: func(machineScope *MachineScope, blockVolumeClient *mock_volume.MockBlockVolumeClient) {
-				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
-					AvailabilityDomain: common.String("ad1"),
-					DisplayName:        common.String("test-volume"),
-					SizeInGBs:          common.Int64(50),
-				}
-				blockVolumeClient.EXPECT().ListVolumes(gomock.Any(), gomock.Eq(core.ListVolumesRequest{
-					CompartmentId: common.String("test-compartment"),
-					DisplayName:   common.String("test-volume"),
-				})).Return(core.ListVolumesResponse{
-					Items: []core.Volume{
-						{
-							Id:          common.String("vol-id"),
-							DisplayName: common.String("test-volume"),
-							FreeformTags: map[string]string{
-								ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,
-								ociutil.ClusterResourceIdentifier: "resource_uid",
-							},
-						},
-					},
-				}, nil)
-			},
-		},
-		{
-			name:          "volume does not exist, created successfully",
-			errorExpected: false,
-			testSpecificSetup: func(machineScope *MachineScope, blockVolumeClient *mock_volume.MockBlockVolumeClient) {
-				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
-					AvailabilityDomain: common.String("ad1"),
-					DisplayName:        common.String("new-volume"),
-					SizeInGBs:          common.Int64(100),
-				}
-				blockVolumeClient.EXPECT().ListVolumes(gomock.Any(), gomock.Eq(core.ListVolumesRequest{
-					CompartmentId: common.String("test-compartment"),
-					DisplayName:   common.String("new-volume"),
-				})).Return(core.ListVolumesResponse{Items: []core.Volume{}}, nil)
-				blockVolumeClient.EXPECT().CreateVolume(gomock.Any(), gomock.Eq(core.CreateVolumeRequest{
-					CreateVolumeDetails: core.CreateVolumeDetails{
-						AvailabilityDomain: common.String("ad1"),
-						CompartmentId:      common.String("test-compartment"),
-						DisplayName:        common.String("new-volume"),
-						SizeInGBs:          common.Int64(100),
-						FreeformTags: map[string]string{
-							ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,
-							ociutil.ClusterResourceIdentifier: "resource_uid",
-						},
-					},
-					OpcRetryToken: ociutil.GetOPCRetryToken("%s-%s", "create-bv", "machine-uid"),
-				})).Return(core.CreateVolumeResponse{}, nil)
-			},
-		},
-		{
 			name:          "list volumes returns error",
 			errorExpected: true,
 			matchError:    errors.New("list volumes failed"),
@@ -592,18 +520,6 @@ func TestToOCIAutotunePolicy(t *testing.T) {
 			expectedPolicies: []core.AutotunePolicy{
 				core.PerformanceBasedAutotunePolicy{MaxVpusPerGB: common.Int64(20)},
 			},
-		},
-		{
-			name: "performance based policy with nil MaxVPUsPerGB is skipped",
-			testSpecificSetup: func(machineScope *MachineScope) {
-				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
-					AvailabilityDomain: common.String("ad1"),
-					AutotunePolicies: []infrastructurev1beta2.AutotunePolicy{
-						{AutotuneType: "PERFORMANCE_BASED", MaxVPUsPerGB: nil},
-					},
-				}
-			},
-			expectedLen: 0,
 		},
 		{
 			name: "unknown policy type is skipped",

@@ -31,17 +31,7 @@ import (
 // Cluster API ownership via tags.
 // nolint:nilnil
 func (m *MachineScope) GetBlockVolume(ctx context.Context) (*core.Volume, error) {
-	spec := m.OCIMachine.Spec.BlockVolumeSpec
-
-	if spec.AvailabilityDomain == nil {
-		return nil, errors.New("BlockVolumeSpec availabilityDomain is not set, but required")
-	}
-
-	// search by DisplayName.
 	name := m.GetBlockVolumeDesiredName()
-	if name == "" {
-		return nil, errors.New("BlockVolumeSpec displayName is not set, but required")
-	}
 
 	var page *string
 	for {
@@ -64,7 +54,7 @@ func (m *MachineScope) GetBlockVolume(ctx context.Context) (*core.Volume, error)
 		page = resp.OpcNextPage
 	}
 
-	m.Logger.Info("There is not any Block Volume available at the moment with specified DisplayName")
+	m.Logger.Info("There isn't any block volume created by Cluster API with specified DisplayName")
 	return nil, nil
 }
 
@@ -100,16 +90,12 @@ func (m *MachineScope) ToOCIAutotunePolicy() []core.AutotunePolicy {
 			policies = append(policies, core.DetachedVolumeAutotunePolicy{})
 
 		case "PERFORMANCE_BASED":
-			if a.MaxVPUsPerGB == nil {
-				// skip invalid policy
-				continue
-			}
 			policies = append(policies, core.PerformanceBasedAutotunePolicy{
 				MaxVpusPerGB: a.MaxVPUsPerGB,
 			})
 
 		default:
-			// unknown policy type, skip
+			m.Logger.Info("Unknown policy type, skip")
 			continue
 		}
 	}
@@ -123,15 +109,8 @@ func (m *MachineScope) ToOCIAutotunePolicy() []core.AutotunePolicy {
 
 func (m *MachineScope) CreateBlockVolume(ctx context.Context) error {
 	spec := m.OCIMachine.Spec.BlockVolumeSpec
-	if spec.AvailabilityDomain == nil {
-		return errors.New("BlockVolumeSpec availabilityDomain is not set, but required")
-	}
 
 	blockVolumeName := m.GetBlockVolumeDesiredName()
-	if blockVolumeName == "" {
-		return errors.New("BlockVolumeSpec displayName is not set, but required")
-	}
-
 	// If compartmentId not specified in BlockVolumeSpec, take compartmentId from default compartment
 	compartmentId := spec.CompartmentId
 	if compartmentId == nil {
@@ -188,12 +167,6 @@ func (m *MachineScope) ReconcileBlockVolume(ctx context.Context) error {
 func (m *MachineScope) DeleteBlockVolume(ctx context.Context) error {
 	if m.BlockVolumeClient == nil {
 		m.Logger.Info("BlockVolumeClient is not set, skipping deletion")
-		return nil
-	}
-
-	spec := m.OCIMachine.Spec.BlockVolumeSpec
-	if spec.AvailabilityDomain == nil {
-		m.Logger.Info("BlockVolumeSpec is not set, skipping deletion")
 		return nil
 	}
 

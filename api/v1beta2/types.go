@@ -1206,6 +1206,7 @@ type NetworkSecurityGroup struct {
 // BlockVolumeSpec is used to create block volumes with autotune enabled configuration that will used as attachments for cluster nodes
 type BlockVolumeSpec struct {
 	// The OCID of the compartment that contains the volume.
+	// +optional
 	CompartmentId *string `json:"compartmentId,omitempty"`
 
 	// The availability domain of the volume. Omissible for cloning a volume. The new volume will be created in the availability domain of the source volume.
@@ -1217,10 +1218,7 @@ type BlockVolumeSpec struct {
 	// +optional
 	BackupPolicyId *string `json:"backupPolicyId,omitempty"`
 
-	// A user-friendly name. Does not have to be unique, and it's changeable.
-	// Avoid entering confidential information.
-	// If not specified, a random string name will be assigned to the block volume
-	// +optional
+	// A user-friendly name. Does not have to be unique.
 	DisplayName *string `json:"displayName,omitempty"`
 
 	// The OCID of the Vault service key to assign as the master encryption key
