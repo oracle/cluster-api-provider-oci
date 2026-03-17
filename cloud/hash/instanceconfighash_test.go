@@ -17,12 +17,18 @@
 package hash
 
 import (
+	"encoding/base64"
 	"testing"
 
 	. "github.com/onsi/gomega"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
 )
+
+func encodeUserData(t *testing.T, value string) string {
+	t.Helper()
+	return base64.StdEncoding.EncodeToString([]byte(value))
+}
 
 func TestComputeHash_NilInput(t *testing.T) {
 	g := NewWithT(t)
@@ -64,7 +70,7 @@ func TestComputeHash_ConsistentResults(t *testing.T) {
 
 func TestNormalizeLaunchDetails_NilInput(t *testing.T) {
 	g := NewWithT(t)
-	result := normalizeLaunchDetails(nil)
+	result := projectLaunchDetails(nil, nil)
 	g.Expect(result).To(BeNil())
 }
 
@@ -85,7 +91,7 @@ func TestNormalizeLaunchDetails_StripsIgnoredFields(t *testing.T) {
 		},
 	}
 
-	normalized := normalizeLaunchDetails(original)
+	normalized := projectLaunchDetails(original, original)
 
 	// Only supported comparison fields should remain.
 	g.Expect(*normalized.Shape).To(Equal("VM.Standard2.1"))
@@ -100,7 +106,7 @@ func TestNormalizeLaunchDetails_SortsNSGIds(t *testing.T) {
 		},
 	}
 
-	normalized := normalizeLaunchDetails(original)
+	normalized := projectLaunchDetails(original, original)
 
 	expected := []string{"nsg1", "nsg2", "nsg3"}
 	g.Expect(normalized.CreateVnicDetails.NSGIDs).To(Equal(expected))
@@ -114,7 +120,7 @@ func TestNormalizeLaunchDetails_EmptyNSGIds(t *testing.T) {
 		},
 	}
 
-	normalized := normalizeLaunchDetails(original)
+	normalized := projectLaunchDetails(original, original)
 
 	g.Expect(normalized.CreateVnicDetails).To(BeNil())
 }
@@ -125,7 +131,7 @@ func TestNormalizeLaunchDetails_EmptyShapeConfig(t *testing.T) {
 		ShapeConfig: &core.InstanceConfigurationLaunchInstanceShapeConfigDetails{},
 	}
 
-	normalized := normalizeLaunchDetails(original)
+	normalized := projectLaunchDetails(original, original)
 
 	g.Expect(normalized.ShapeConfig).To(BeNil())
 }
@@ -151,7 +157,7 @@ func TestNormalizeLaunchDetails_SortsAgentPlugins(t *testing.T) {
 		},
 	}
 
-	normalized := normalizeLaunchDetails(original)
+	normalized := projectLaunchDetails(original, original)
 
 	g.Expect(normalized.AgentConfig).ToNot(BeNil())
 	g.Expect(normalized.AgentConfig.PluginsConfig).To(HaveLen(3))
@@ -169,7 +175,7 @@ func TestNormalizeLaunchDetails_NonEmptyShapeConfig(t *testing.T) {
 		},
 	}
 
-	normalized := normalizeLaunchDetails(original)
+	normalized := projectLaunchDetails(original, original)
 
 	g.Expect(normalized.ShapeConfig).ToNot(BeNil())
 	g.Expect(*normalized.ShapeConfig.OCPUs).To(Equal(ocpus))
@@ -221,60 +227,213 @@ func TestNormalizeMetadata_NoUserData(t *testing.T) {
 	g.Expect(normalized).To(Equal(original))
 }
 
-func TestHashChanged_SameHashes(t *testing.T) {
+func TestComputeUserDataHash_Present(t *testing.T) {
 	g := NewWithT(t)
-	g.Expect(hashChanged("hash123", "hash123")).To(BeFalse())
+	md := map[string]string{"user_data": "dGVzdA==", "other": "value"}
+	h := ComputeUserDataHash(md)
+	g.Expect(h).To(HaveLen(64))
 }
 
-func TestHashChanged_DifferentHashes(t *testing.T) {
+func TestComputeUserDataHash_Missing(t *testing.T) {
 	g := NewWithT(t)
-	g.Expect(hashChanged("hash123", "hash456")).To(BeTrue())
+	md := map[string]string{"other": "value"}
+	h := ComputeUserDataHash(md)
+	g.Expect(h).To(BeEmpty())
 }
 
-func TestLaunchDetailsEqual_NilInputs(t *testing.T) {
+func TestComputeUserDataHash_NilMetadata(t *testing.T) {
 	g := NewWithT(t)
-	g.Expect(launchDetailsEqual(nil, nil)).To(BeTrue())
+	h := ComputeUserDataHash(nil)
+	g.Expect(h).To(BeEmpty())
 }
 
-func TestLaunchDetailsEqual_OneNil(t *testing.T) {
+func TestComputeUserDataHash_DifferentData(t *testing.T) {
 	g := NewWithT(t)
-	ld := &core.InstanceConfigurationLaunchInstanceDetails{Shape: common.String("VM.Standard2.1")}
-	g.Expect(launchDetailsEqual(ld, nil)).To(BeFalse())
-	g.Expect(launchDetailsEqual(nil, ld)).To(BeFalse())
+	h1 := ComputeUserDataHash(map[string]string{"user_data": "data1"})
+	h2 := ComputeUserDataHash(map[string]string{"user_data": "data2"})
+	g.Expect(h1).ToNot(Equal(h2))
 }
 
-func TestLaunchDetailsEqual_EquivalentAfterNormalization(t *testing.T) {
+func TestComputeUserDataHash_SameData(t *testing.T) {
 	g := NewWithT(t)
-	ld1 := &core.InstanceConfigurationLaunchInstanceDetails{
-		Shape:        common.String("VM.Standard2.1"),
-		DisplayName:  common.String("instance1"),
-		FreeformTags: map[string]string{"tag": "value"},
-		Metadata:     map[string]string{"user_data": "data", "key": "value"},
-	}
-
-	ld2 := &core.InstanceConfigurationLaunchInstanceDetails{
-		Shape:        common.String("VM.Standard2.1"),
-		DisplayName:  common.String("instance2"),                                   // different but ignored
-		FreeformTags: map[string]string{"other": "tag"},                            // different but ignored
-		Metadata:     map[string]string{"user_data": "other-data", "key": "value"}, // user_data ignored
-	}
-
-	g.Expect(launchDetailsEqual(ld1, ld2)).To(BeTrue())
+	h1 := ComputeUserDataHash(map[string]string{"user_data": "data1"})
+	h2 := ComputeUserDataHash(map[string]string{"user_data": "data1"})
+	g.Expect(h1).To(Equal(h2))
 }
 
-func TestLaunchDetailsEqual_DifferentAfterNormalization(t *testing.T) {
+func TestComputeUserDataHash_EmptyString(t *testing.T) {
 	g := NewWithT(t)
-	ld1 := &core.InstanceConfigurationLaunchInstanceDetails{
-		Shape:    common.String("VM.Standard2.1"),
-		Metadata: map[string]string{"key": "value1"},
-	}
+	h := ComputeUserDataHash(map[string]string{"user_data": ""})
+	// An empty user_data key IS present, so a hash should be returned
+	// (the SHA-256 of the empty string).
+	g.Expect(h).To(HaveLen(64))
+	g.Expect(h).ToNot(Equal(ComputeUserDataHash(map[string]string{"user_data": "non-empty"})))
+}
 
-	ld2 := &core.InstanceConfigurationLaunchInstanceDetails{
-		Shape:    common.String("VM.Standard2.1"),
-		Metadata: map[string]string{"key": "value2"}, // different value
-	}
+func TestComputeUserDataHash_DetectsKubeadmBootstrapTokenRotation(t *testing.T) {
+	g := NewWithT(t)
+	first := `#cloud-config
+write_files:
+- path: /run/kubeadm/kubeadm-join-config.yaml
+  content: |
+    ---
+    apiVersion: kubeadm.k8s.io/v1beta4
+    discovery:
+      bootstrapToken:
+        apiServerEndpoint: 10.0.0.1:6443
+        token: abcdef.0123456789abcdef
+    kind: JoinConfiguration
+`
+	second := `#cloud-config
+write_files:
+- path: /run/kubeadm/kubeadm-join-config.yaml
+  content: |
+    ---
+    apiVersion: kubeadm.k8s.io/v1beta4
+    discovery:
+      bootstrapToken:
+        apiServerEndpoint: 10.0.0.1:6443
+        token: zyxwvu.fedcba9876543210
+    kind: JoinConfiguration
+`
 
-	g.Expect(launchDetailsEqual(ld1, ld2)).To(BeFalse())
+	h1 := ComputeUserDataHash(map[string]string{"user_data": encodeUserData(t, first)})
+	h2 := ComputeUserDataHash(map[string]string{"user_data": encodeUserData(t, second)})
+	g.Expect(h1).ToNot(Equal(h2))
+}
+
+func TestComputeUserDataHashIgnoringKubeadmToken_IgnoresKubeadmBootstrapTokenRotation(t *testing.T) {
+	g := NewWithT(t)
+	first := `#cloud-config
+write_files:
+- path: /run/kubeadm/kubeadm-join-config.yaml
+  content: |
+    ---
+    apiVersion: kubeadm.k8s.io/v1beta4
+    discovery:
+      bootstrapToken:
+        apiServerEndpoint: 10.0.0.1:6443
+        token: abcdef.0123456789abcdef
+    kind: JoinConfiguration
+`
+	second := `#cloud-config
+write_files:
+- path: /run/kubeadm/kubeadm-join-config.yaml
+  content: |
+    ---
+    apiVersion: kubeadm.k8s.io/v1beta4
+    discovery:
+      bootstrapToken:
+        apiServerEndpoint: 10.0.0.1:6443
+        token: zyxwvu.fedcba9876543210
+    kind: JoinConfiguration
+`
+
+	h1 := ComputeUserDataHashIgnoringKubeadmToken(map[string]string{"user_data": encodeUserData(t, first)})
+	h2 := ComputeUserDataHashIgnoringKubeadmToken(map[string]string{"user_data": encodeUserData(t, second)})
+	g.Expect(h1).To(Equal(h2))
+}
+
+func TestComputeUserDataHashIgnoringKubeadmToken_DetectsNonTokenKubeadmBootstrapChanges(t *testing.T) {
+	g := NewWithT(t)
+	first := `#cloud-config
+write_files:
+- path: /run/kubeadm/kubeadm-join-config.yaml
+  content: |
+    ---
+    apiVersion: kubeadm.k8s.io/v1beta4
+    discovery:
+      bootstrapToken:
+        apiServerEndpoint: 10.0.0.1:6443
+        token: abcdef.0123456789abcdef
+    kind: JoinConfiguration
+`
+	second := `#cloud-config
+write_files:
+- path: /run/kubeadm/kubeadm-join-config.yaml
+  content: |
+    ---
+    apiVersion: kubeadm.k8s.io/v1beta4
+    discovery:
+      bootstrapToken:
+        apiServerEndpoint: 10.0.0.2:6443
+        token: abcdef.0123456789abcdef
+    kind: JoinConfiguration
+`
+
+	h1 := ComputeUserDataHashIgnoringKubeadmToken(map[string]string{"user_data": encodeUserData(t, first)})
+	h2 := ComputeUserDataHashIgnoringKubeadmToken(map[string]string{"user_data": encodeUserData(t, second)})
+	g.Expect(h1).ToNot(Equal(h2))
+}
+
+func TestComputeUserDataHashIgnoringKubeadmToken_DetectsEndpointChangeEvenWhenTokenAlsoChanges(t *testing.T) {
+	g := NewWithT(t)
+	first := `#cloud-config
+write_files:
+- path: /run/kubeadm/kubeadm-join-config.yaml
+  content: |
+    ---
+    apiVersion: kubeadm.k8s.io/v1beta4
+    discovery:
+      bootstrapToken:
+        apiServerEndpoint: 10.0.0.1:6443
+        token: abcdef.0123456789abcdef
+    kind: JoinConfiguration
+`
+	second := `#cloud-config
+write_files:
+- path: /run/kubeadm/kubeadm-join-config.yaml
+  content: |
+    ---
+    apiVersion: kubeadm.k8s.io/v1beta4
+    discovery:
+      bootstrapToken:
+        apiServerEndpoint: 10.0.0.2:6443
+        token: zyxwvu.fedcba9876543210
+    kind: JoinConfiguration
+`
+
+	h1 := ComputeUserDataHashIgnoringKubeadmToken(map[string]string{"user_data": encodeUserData(t, first)})
+	h2 := ComputeUserDataHashIgnoringKubeadmToken(map[string]string{"user_data": encodeUserData(t, second)})
+	g.Expect(h1).ToNot(Equal(h2))
+}
+
+func TestComputeUserDataHashIgnoringKubeadmToken_DetectsNonKubeadmTokenChanges(t *testing.T) {
+	g := NewWithT(t)
+	first := `#cloud-config
+write_files:
+- path: /run/kubeadm/kubeadm-join-config.yaml
+  content: |
+    ---
+    apiVersion: kubeadm.k8s.io/v1beta4
+    discovery:
+      bootstrapToken:
+        apiServerEndpoint: 10.0.0.1:6443
+        token: abcdef.0123456789abcdef
+    kind: JoinConfiguration
+- path: /etc/custom/service.yaml
+  content: |
+    token: service-token-a
+`
+	second := `#cloud-config
+write_files:
+- path: /run/kubeadm/kubeadm-join-config.yaml
+  content: |
+    ---
+    apiVersion: kubeadm.k8s.io/v1beta4
+    discovery:
+      bootstrapToken:
+        apiServerEndpoint: 10.0.0.1:6443
+        token: abcdef.0123456789abcdef
+    kind: JoinConfiguration
+- path: /etc/custom/service.yaml
+  content: |
+    token: service-token-b
+`
+
+	h1 := ComputeUserDataHashIgnoringKubeadmToken(map[string]string{"user_data": encodeUserData(t, first)})
+	h2 := ComputeUserDataHashIgnoringKubeadmToken(map[string]string{"user_data": encodeUserData(t, second)})
+	g.Expect(h1).ToNot(Equal(h2))
 }
 
 func TestComputeHash_DifferentInputsProduceDifferentHashes(t *testing.T) {
@@ -356,6 +515,7 @@ func TestComputeHash_IgnoresUserData(t *testing.T) {
 	hash2, err := ComputeHash(&ld2)
 	g.Expect(err).To(BeNil())
 
+	// Config hash should be the same — user_data is tracked separately
 	g.Expect(hash1).To(Equal(hash2))
 }
 
@@ -609,13 +769,13 @@ func TestComputeHash_ComprehensiveTest(t *testing.T) {
 	g.Expect(hash).To(HaveLen(64))
 
 	// Verify the normalized result contains the canonical comparison projection
-	normalized := normalizeLaunchDetails(ld)
+	normalized := projectLaunchDetails(ld, ld)
 
 	g.Expect(*normalized.Shape).To(Equal("VM.Standard.E4.Flex"))
 	g.Expect(*normalized.CompartmentID).To(Equal("ocid1.compartment.oc1..test"))
 	g.Expect(*normalized.DedicatedVMHostID).To(Equal("ocid1.dedicatedvmhost.oc1..test"))
 
-	// Metadata should exclude user_data but keep other keys
+	// Metadata should exclude user_data (tracked separately) but keep other keys
 	expectedMetadata := map[string]string{
 		"ssh_authorized_keys": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ...",
 		"custom_key":          "custom_value",
