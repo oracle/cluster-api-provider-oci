@@ -3108,18 +3108,11 @@ func TestInstanceDeletion(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				ms.OCIMachine.Spec.InstanceId = common.String("test")
-				ms.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
-					DisplayName: common.String("test-volume"),
-				}
 				computeClient.EXPECT().TerminateInstance(gomock.Any(), gomock.Eq(core.TerminateInstanceRequest{
 					InstanceId:                         common.String("test"),
 					PreserveBootVolume:                 common.Bool(false),
 					PreserveDataVolumesCreatedAtLaunch: common.Bool(false),
 				})).Return(core.TerminateInstanceResponse{}, nil)
-				// Add this expectation to return 404 and skip polling
-				computeClient.EXPECT().GetInstance(gomock.Any(), gomock.Eq(core.GetInstanceRequest{
-					InstanceId: common.String("test"),
-				})).Return(core.GetInstanceResponse{}, ociutil.ErrNotFound)
 			},
 			instance: &core.Instance{
 				Id: common.String("test"),
