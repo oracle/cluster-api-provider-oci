@@ -26,7 +26,6 @@ import (
 
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/loadbalancer/mock_lb"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer/mock_nlb"
-	"github.com/oracle/cluster-api-provider-oci/cloud/services/volume/mock_volume"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/workrequests/mock_workrequests"
 	"github.com/oracle/oci-go-sdk/v65/loadbalancer"
 	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
@@ -50,11 +49,10 @@ import (
 
 func TestInstanceReconciliation(t *testing.T) {
 	var (
-		ms                *MachineScope
-		mockCtrl          *gomock.Controller
-		computeClient     *mock_compute.MockComputeClient
-		blockVolumeClient *mock_volume.MockBlockVolumeClient
-		ociCluster        infrastructurev1beta2.OCICluster
+		ms            *MachineScope
+		mockCtrl      *gomock.Controller
+		computeClient *mock_compute.MockComputeClient
+		ociCluster    infrastructurev1beta2.OCICluster
 	)
 
 	setup := func(t *testing.T, g *WithT) {
@@ -71,7 +69,6 @@ func TestInstanceReconciliation(t *testing.T) {
 
 		mockCtrl = gomock.NewController(t)
 		computeClient = mock_compute.NewMockComputeClient(mockCtrl)
-		blockVolumeClient = mock_volume.NewMockBlockVolumeClient(mockCtrl)
 		client := fake.NewClientBuilder().WithObjects(secret).Build()
 		ociCluster = infrastructurev1beta2.OCICluster{
 			ObjectMeta: metav1.ObjectMeta{
@@ -83,8 +80,7 @@ func TestInstanceReconciliation(t *testing.T) {
 		}
 		ociCluster.Spec.ControlPlaneEndpoint.Port = 6443
 		ms, err = NewMachineScope(MachineScopeParams{
-			ComputeClient:     computeClient,
-			BlockVolumeClient: blockVolumeClient,
+			ComputeClient: computeClient,
 			OCIMachine: &infrastructurev1beta2.OCIMachine{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
