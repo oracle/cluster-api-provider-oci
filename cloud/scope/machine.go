@@ -130,8 +130,11 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 	}
 	if instance != nil {
 		m.Logger.Info("Found an existing instance")
-		m.Logger.Info("Reconcile block volume")
-		m.ReconcileBlockVolume(ctx)
+		// Run this if BlockVolumeSpec is specified
+		if !reflect.DeepEqual(m.OCIMachine.Spec.BlockVolumeSpec, infrastructurev1beta2.BlockVolumeSpec{}) {
+			m.Logger.Info("Reconcile block volume")
+			m.ReconcileBlockVolume(ctx)
+		}
 		return instance, nil
 	}
 	m.Logger.Info("Creating machine with name", "machine-name", m.OCIMachine.GetName())
@@ -488,38 +491,38 @@ func (m *MachineScope) DeleteMachine(ctx context.Context, instance *core.Instanc
 		PreserveDataVolumesCreatedAtLaunch: common.Bool(m.OCIMachine.Spec.PreserveDataVolumesCreatedAtLaunch),
 	}
 	_, err := m.ComputeClient.TerminateInstance(ctx, req)
-	if err != nil {
-		return err
-	}
 
-	m.Logger.Info("Waiting for instance to be terminated...")
-
-	getInstanceReq := core.GetInstanceRequest{
-		InstanceId: instance.Id,
-	}
-
-	// Poll for termination
-	for {
-		getInstanceResp, err := m.ComputeClient.GetInstance(ctx, getInstanceReq)
+	// Run this if BlockVolumeSpec is specified
+	if !reflect.DeepEqual(m.OCIMachine.Spec.BlockVolumeSpec, infrastructurev1beta2.BlockVolumeSpec{}) {
 		if err != nil {
-			if ociutil.IsNotFound(err) {
-				m.Logger.Info("Instance terminated successfully")
+			return err
+		}
+		m.Logger.Info("Waiting for instance to be terminated...")
+
+		getInstanceReq := core.GetInstanceRequest{
+			InstanceId: instance.Id,
+		}
+		// Poll for termination
+		for {
+			getInstanceResp, err := m.ComputeClient.GetInstance(ctx, getInstanceReq)
+			if err != nil {
+				if ociutil.IsNotFound(err) {
+					m.Logger.Info("Instance terminated successfully")
+					break
+				}
+				// Error checking instance state
+				m.Logger.Info("Error checking instance state", "error", err.Error())
 				break
 			}
-			// Error checking instance state
-			m.Logger.Info("Error checking instance state", "error", err.Error())
-			break
-		}
 
-		if getInstanceResp.Instance.LifecycleState == core.InstanceLifecycleStateTerminated {
-			m.Logger.Info("Instance is terminated")
-			break
-		}
+			if getInstanceResp.Instance.LifecycleState == core.InstanceLifecycleStateTerminated {
+				m.Logger.Info("Instance is terminated")
+				break
+			}
 
-		m.Logger.Info("Instance state, waiting...", "state", getInstanceResp.Instance.LifecycleState)
-		time.Sleep(5 * time.Second)
-	}
-	if !reflect.DeepEqual(m.OCIMachine.Spec.BlockVolumeSpec, infrastructurev1beta2.BlockVolumeSpec{}) {
+			m.Logger.Info("Instance state, waiting...", "state", getInstanceResp.Instance.LifecycleState)
+			time.Sleep(5 * time.Second)
+		}
 		err = m.DeleteBlockVolume(ctx)
 	}
 	return err
