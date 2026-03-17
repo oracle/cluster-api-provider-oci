@@ -676,7 +676,7 @@ var _ = Describe("Workload cluster creation", func() {
 		assertMachinePoolInstanceConfigurationStable(ctx, bootstrapClusterProxy, result.Cluster, result.MachinePools[0], specName, "45s", "5s")
 	})
 
-	It("Machine Pool - Upgrade [DailyTest]", func() {
+	It("Machine Pool - Upgrade [DailyTests]", func() {
 		Expect(e2eConfig.Variables).To(HaveKey(capi_e2e.KubernetesVersionUpgradeFrom))
 		Expect(e2eConfig.Variables).To(HaveKey(capi_e2e.KubernetesVersionUpgradeTo))
 
@@ -711,6 +711,25 @@ var _ = Describe("Workload cluster creation", func() {
 		Expect(initialOMP.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(BeNil())
 		initialICID := *initialOMP.Spec.InstanceConfiguration.InstanceConfigurationId
 
+		By("Simulating a pre-upgrade machine pool object missing bootstrap hash annotation")
+		ompPatchHelper, err := v1beta1patch.NewHelper(initialOMP, bootstrapClusterProxy.GetClient())
+		Expect(err).ToNot(HaveOccurred())
+		if initialOMP.Annotations != nil {
+			delete(initialOMP.Annotations, scope.BootstrapDataHashAnnotation)
+		}
+		Expect(ompPatchHelper.Patch(ctx, initialOMP)).To(Succeed())
+
+		By("Verifying bootstrap hash annotation is backfilled without instance configuration recreation")
+		Eventually(func(g Gomega) {
+			backfilledOMP := &infrav2exp.OCIMachinePool{}
+			g.Expect(bootstrapClusterProxy.GetClient().Get(ctx, mpKey, backfilledOMP)).To(Succeed())
+			g.Expect(backfilledOMP.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(BeNil())
+			g.Expect(*backfilledOMP.Spec.InstanceConfiguration.InstanceConfigurationId).To(Equal(initialICID),
+				"Backfill should not recreate instance configuration")
+			g.Expect(backfilledOMP.Annotations).To(HaveKey(scope.BootstrapDataHashAnnotation))
+			g.Expect(backfilledOMP.Annotations[scope.BootstrapDataHashAnnotation]).ToNot(BeEmpty())
+		}, e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes")...).Should(Succeed())
+
 		By("Upgrading the control plane")
 		newCPMachineTemplateName := fmt.Sprintf("%s-control-plane-upgraded", clusterName)
 		updatedControlPlaneTemplate := makeOCIMachineTemplate(namespace.Name, newCPMachineTemplateName)
@@ -734,6 +753,45 @@ var _ = Describe("Workload cluster creation", func() {
 			MachineCount:             1,
 			KubernetesUpgradeVersion: upgradeVersion,
 		}, e2eConfig.GetIntervals(specName, "wait-machine-upgrade")...)
+
+		By("Updating machine pool instance image and waiting for a new instance configuration")
+		upgradeImageID := e2eConfig.MustGetVariable("KUBERNETES_UPGRADE_OCI_IMAGE_ID")
+		Expect(upgradeImageID).ToNot(BeEmpty())
+		ompForUpgrade := &infrav2exp.OCIMachinePool{}
+		Expect(bootstrapClusterProxy.GetClient().Get(ctx, mpKey, ompForUpgrade)).To(Succeed())
+		ompPatchHelper, err = v1beta1patch.NewHelper(ompForUpgrade, bootstrapClusterProxy.GetClient())
+		Expect(err).ToNot(HaveOccurred())
+		if ompForUpgrade.Spec.InstanceConfiguration.InstanceSourceViaImageDetails == nil {
+			ompForUpgrade.Spec.InstanceConfiguration.InstanceSourceViaImageDetails = &infrav2exp.InstanceSourceViaImageConfig{}
+		}
+		ompForUpgrade.Spec.InstanceConfiguration.InstanceSourceViaImageDetails.ImageId = common.String(upgradeImageID)
+		Expect(ompPatchHelper.Patch(ctx, ompForUpgrade)).To(Succeed())
+		Eventually(func(g Gomega) {
+			updatedOMP := &infrav2exp.OCIMachinePool{}
+			g.Expect(bootstrapClusterProxy.GetClient().Get(ctx, mpKey, updatedOMP)).To(Succeed())
+			g.Expect(updatedOMP.Spec.InstanceConfiguration.InstanceSourceViaImageDetails).ToNot(BeNil())
+			g.Expect(updatedOMP.Spec.InstanceConfiguration.InstanceSourceViaImageDetails.ImageId).ToNot(BeNil())
+			g.Expect(*updatedOMP.Spec.InstanceConfiguration.InstanceSourceViaImageDetails.ImageId).To(Equal(upgradeImageID))
+			g.Expect(updatedOMP.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(BeNil())
+			g.Expect(*updatedOMP.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(Equal(initialICID),
+				"Expected a new instance configuration after machine pool image update")
+		}, e2eConfig.GetIntervals(specName, "wait-machine-upgrade")...).Should(Succeed())
+
+		By("Recycling machine pool instances to apply the updated instance configuration")
+		framework.ScaleMachinePoolAndWait(ctx, framework.ScaleMachinePoolAndWaitInput{
+			ClusterProxy:              bootstrapClusterProxy,
+			Cluster:                   result.Cluster,
+			Replicas:                  0,
+			MachinePools:              result.MachinePools,
+			WaitForMachinePoolToScale: e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes"),
+		})
+		framework.ScaleMachinePoolAndWait(ctx, framework.ScaleMachinePoolAndWaitInput{
+			ClusterProxy:              bootstrapClusterProxy,
+			Cluster:                   result.Cluster,
+			Replicas:                  1,
+			MachinePools:              result.MachinePools,
+			WaitForMachinePoolToScale: e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes"),
+		})
 
 		By("Upgrading the machine pool")
 		framework.UpgradeMachinePoolAndWait(ctx, framework.UpgradeMachinePoolAndWaitInput{
