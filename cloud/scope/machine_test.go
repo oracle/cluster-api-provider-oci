@@ -3055,23 +3055,20 @@ func TestLBReconciliationDeletion(t *testing.T) {
 
 func TestInstanceDeletion(t *testing.T) {
 	var (
-		ms                *MachineScope
-		mockCtrl          *gomock.Controller
-		computeClient     *mock_compute.MockComputeClient
-		blockVolumeClient *mock_volume.MockBlockVolumeClient
-		ociCluster        infrastructurev1beta2.OCICluster
+		ms            *MachineScope
+		mockCtrl      *gomock.Controller
+		computeClient *mock_compute.MockComputeClient
+		ociCluster    infrastructurev1beta2.OCICluster
 	)
 
 	setup := func(t *testing.T, g *WithT) {
 		var err error
 		mockCtrl = gomock.NewController(t)
 		computeClient = mock_compute.NewMockComputeClient(mockCtrl)
-		blockVolumeClient = mock_volume.NewMockBlockVolumeClient(mockCtrl)
 		client := fake.NewClientBuilder().Build()
 		ociCluster = infrastructurev1beta2.OCICluster{}
 		ms, err = NewMachineScope(MachineScopeParams{
-			ComputeClient:     computeClient,
-			BlockVolumeClient: blockVolumeClient,
+			ComputeClient: computeClient,
 			OCIMachine: &infrastructurev1beta2.OCIMachine{
 				Spec: infrastructurev1beta2.OCIMachineSpec{
 					CompartmentId: "test",
