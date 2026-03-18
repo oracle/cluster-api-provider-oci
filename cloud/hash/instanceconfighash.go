@@ -18,11 +18,13 @@ package hash
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"reflect"
 	"sort"
+	"strings"
 
 	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/pkg/errors"
@@ -139,10 +141,6 @@ func computeProjectedHash(projected *comparableLaunchDetails) (string, error) {
 	return hex.EncodeToString(sum[:]), nil
 }
 
-func normalizeLaunchDetails(in *core.InstanceConfigurationLaunchInstanceDetails) *comparableLaunchDetails {
-	return projectLaunchDetails(in, in)
-}
-
 func projectLaunchDetails(in, mask *core.InstanceConfigurationLaunchInstanceDetails) *comparableLaunchDetails {
 	if in == nil {
 		return nil
@@ -170,14 +168,16 @@ func projectLaunchDetails(in, mask *core.InstanceConfigurationLaunchInstanceDeta
 	}
 }
 
-// normalizeMetadata filters instance metadata to exclude fields like user_data
+// normalizeMetadata returns a copy of the metadata map with user_data excluded.
+// Bootstrap data (user_data) changes are tracked separately via the
+// BootstrapDataHashAnnotation to avoid conflating infrastructure config
+// changes with bootstrap secret changes.
 func normalizeMetadata(md map[string]string) map[string]string {
 	if md == nil {
 		return nil
 	}
 	output := make(map[string]string, len(md))
 	for k, v := range md {
-		// exclude user_data
 		if k == "user_data" {
 			continue
 		}
@@ -189,16 +189,85 @@ func normalizeMetadata(md map[string]string) map[string]string {
 	return output
 }
 
-// hashChanged returns true if the two hashes are different, indicating a configuration change
-func hashChanged(hash1, hash2 string) bool {
-	return hash1 != hash2
+// ComputeUserDataHash computes a SHA-256 hash of the raw user_data value from
+// instance metadata.
+func ComputeUserDataHash(metadata map[string]string) string {
+	ud, ok := metadata["user_data"]
+	if !ok {
+		return ""
+	}
+	sum := sha256.Sum256([]byte(ud))
+	return hex.EncodeToString(sum[:])
 }
 
-// launchDetailsEqual returns true if two launch details are equivalent after normalization
-func launchDetailsEqual(ld1, ld2 *core.InstanceConfigurationLaunchInstanceDetails) bool {
-	normalized1 := normalizeLaunchDetails(ld1)
-	normalized2 := normalizeLaunchDetails(ld2)
-	return reflect.DeepEqual(normalized1, normalized2)
+// ComputeUserDataHashIgnoringKubeadmToken computes a SHA-256 hash of user_data
+// with kubeadm discovery token lines normalized away. This lets callers detect
+// token-only rotation separately from substantive bootstrap changes.
+func ComputeUserDataHashIgnoringKubeadmToken(metadata map[string]string) string {
+	ud, ok := metadata["user_data"]
+	if !ok {
+		return ""
+	}
+	sum := sha256.Sum256([]byte(normalizeUserDataForHash(ud)))
+	return hex.EncodeToString(sum[:])
+}
+
+func normalizeUserDataForHash(userData string) string {
+	decoded, err := base64.StdEncoding.DecodeString(userData)
+	if err != nil {
+		return userData
+	}
+
+	normalized := string(decoded)
+	if !strings.Contains(normalized, "kind: JoinConfiguration") || !strings.Contains(normalized, "bootstrapToken:") {
+		return normalized
+	}
+	return normalizeKubeadmDiscoveryBootstrapToken(normalized)
+}
+
+// normalizeKubeadmDiscoveryBootstrapToken rewrites only
+// JoinConfiguration.discovery.bootstrapToken.token values to a fixed sentinel.
+// Why: CABPK rotates this token frequently; we want a token-insensitive hash for
+// classification/observability. Reconcile still uses the raw user_data hash for
+// drift decisions, so non-token bootstrap changes are not ignored.
+func normalizeKubeadmDiscoveryBootstrapToken(cloudInitData string) string {
+	lines := strings.Split(cloudInitData, "\n")
+	discoveryIndent := -1
+	bootstrapTokenIndent := -1
+
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+
+		indent := leadingIndentWidth(line)
+
+		if bootstrapTokenIndent >= 0 && indent <= bootstrapTokenIndent {
+			bootstrapTokenIndent = -1
+		}
+		if discoveryIndent >= 0 && indent <= discoveryIndent {
+			discoveryIndent = -1
+		}
+
+		if trimmed == "discovery:" {
+			discoveryIndent = indent
+			continue
+		}
+		if discoveryIndent >= 0 && indent > discoveryIndent && trimmed == "bootstrapToken:" {
+			bootstrapTokenIndent = indent
+			continue
+		}
+		if bootstrapTokenIndent >= 0 && indent > bootstrapTokenIndent && strings.HasPrefix(trimmed, "token:") {
+			lines[i] = line[:indent] + "token: <redacted>"
+		}
+	}
+
+	return strings.Join(lines, "\n")
+}
+
+func leadingIndentWidth(s string) int {
+	return len(s) - len(strings.TrimLeft(s, " \t"))
 }
 
 func projectCreateVnicDetails(in, mask *core.InstanceConfigurationCreateVnicDetails) *comparableCreateVnicDetails {
