@@ -63,6 +63,8 @@ providers:
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-custom-networking-seclist.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-custom-networking-nsg.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-multiple-node-nsg.yaml"
+          - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-multiple-backends-nlb.yaml"
+          - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-multiple-backends-lb.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-cluster-class.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-cluster-class/clusterclass-test-cluster-class.yaml"

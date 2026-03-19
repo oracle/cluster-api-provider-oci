@@ -32,6 +32,9 @@ const (
 	// can't use: \/"'[]:|<>+=;,.?*@&, Can't start with underscore. Can't end with period or hyphen.
 	// not using . in the name to avoid issues when the name is part of DNS name.
 	clusterNameRegex = `^[a-z0-9][a-z0-9-]{0,42}[a-z0-9]$`
+
+	apiServerBackendSetNameRegex         = `^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$`
+	supportedSecondaryListenerPort int32 = 9345
 )
 
 // invalidNameRegex is a broad regex used to validate allows names in OCI
@@ -69,7 +72,7 @@ func ValidRegion(stringRegion string) bool {
 }
 
 // ValidateNetworkSpec validates the NetworkSpec
-func ValidateNetworkSpec(validRoles []Role, networkSpec NetworkSpec, old NetworkSpec, fldPath *field.Path) field.ErrorList {
+func ValidateNetworkSpec(validRoles []Role, networkSpec NetworkSpec, old NetworkSpec, apiServerPort *int32, fldPath *field.Path) field.ErrorList {
 	var allErrs field.ErrorList
 
 	if len(networkSpec.Vcn.CIDR) > 0 {
@@ -84,10 +87,16 @@ func ValidateNetworkSpec(validRoles []Role, networkSpec NetworkSpec, old Network
 		allErrs = append(allErrs, validateNSGs(validRoles, networkSpec.Vcn.NetworkSecurityGroups, fldPath.Child("networkSecurityGroups"))...)
 	}
 
+	allErrs = append(allErrs, validateAPIServerLBBackendSets(networkSpec.APIServerLB.NLBSpec, apiServerPort, fldPath.Child("apiServerLoadBalancer").Child("nlbSpec"))...)
+
 	if len(allErrs) == 0 {
 		return nil
 	}
 	return allErrs
+}
+
+func validateAPIServerLBBackendSets(spec NLBSpec, apiServerPort *int32, fldPath *field.Path) field.ErrorList {
+	return validateSharedAPIServerLBBackendSets(spec, apiServerPort, fldPath)
 }
 
 // validateVCNCIDR validates the CIDR of a VNC.

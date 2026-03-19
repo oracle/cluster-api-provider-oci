@@ -25,6 +25,83 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 )
 
+func TestOCICluster_BackendSetsRoundTrip(t *testing.T) {
+	t.Run("v1beta1 legacy -> v1beta2 -> v1beta1 keeps legacy shape", func(t *testing.T) {
+		src := &OCICluster{
+			Spec: OCIClusterSpec{
+				NetworkSpec: NetworkSpec{
+					APIServerLB: LoadBalancer{
+						NLBSpec: NLBSpec{
+							BackendSetDetails: BackendSetDetails{
+								IsFailOpen: boolPtr(true),
+							},
+						},
+					},
+				},
+			},
+		}
+
+		hub := &v1beta2.OCICluster{}
+		if err := src.ConvertTo(hub); err != nil {
+			t.Fatalf("convert to hub failed: %v", err)
+		}
+		if len(hub.Spec.NetworkSpec.APIServerLB.NLBSpec.BackendSets) != 0 {
+			t.Fatalf("expected no canonical backendSets to be synthesized during conversion, got %#v", hub.Spec.NetworkSpec.APIServerLB.NLBSpec.BackendSets)
+		}
+		if hub.Spec.NetworkSpec.APIServerLB.NLBSpec.BackendSetDetails.IsFailOpen == nil || !*hub.Spec.NetworkSpec.APIServerLB.NLBSpec.BackendSetDetails.IsFailOpen {
+			t.Fatalf("expected legacy backendSetDetails to be preserved on hub")
+		}
+
+		restored := &OCICluster{}
+		if err := restored.ConvertFrom(hub); err != nil {
+			t.Fatalf("convert from hub failed: %v", err)
+		}
+		if restored.Spec.NetworkSpec.APIServerLB.NLBSpec.BackendSetDetails.IsFailOpen == nil || !*restored.Spec.NetworkSpec.APIServerLB.NLBSpec.BackendSetDetails.IsFailOpen {
+			t.Fatalf("expected legacy backendSetDetails after roundtrip, got %#v", restored.Spec.NetworkSpec.APIServerLB.NLBSpec.BackendSetDetails)
+		}
+	})
+
+	t.Run("v1beta2 canonical -> v1beta1 -> v1beta2 keeps canonical shape", func(t *testing.T) {
+		srcHub := &v1beta2.OCICluster{
+			Spec: v1beta2.OCIClusterSpec{
+				NetworkSpec: v1beta2.NetworkSpec{
+					APIServerLB: v1beta2.LoadBalancer{
+						NLBSpec: v1beta2.NLBSpec{
+							BackendSets: []v1beta2.NLBBackendSet{
+								{
+									Name: "new-set",
+									BackendSetDetails: v1beta2.BackendSetDetails{
+										IsFailOpen: boolPtr(true),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		spoke := &OCICluster{}
+		if err := spoke.ConvertFrom(srcHub); err != nil {
+			t.Fatalf("convert from hub failed: %v", err)
+		}
+		if len(spoke.Spec.NetworkSpec.APIServerLB.NLBSpec.BackendSets) != 1 || spoke.Spec.NetworkSpec.APIServerLB.NLBSpec.BackendSets[0].Name != "new-set" {
+			t.Fatalf("expected canonical backendSets after down-conversion, got %#v", spoke.Spec.NetworkSpec.APIServerLB.NLBSpec.BackendSets)
+		}
+
+		restoredHub := &v1beta2.OCICluster{}
+		if err := spoke.ConvertTo(restoredHub); err != nil {
+			t.Fatalf("convert back to hub failed: %v", err)
+		}
+		if len(restoredHub.Spec.NetworkSpec.APIServerLB.NLBSpec.BackendSets) != 1 || restoredHub.Spec.NetworkSpec.APIServerLB.NLBSpec.BackendSets[0].Name != "new-set" {
+			t.Fatalf("expected canonical backendSets after hub roundtrip, got %#v", restoredHub.Spec.NetworkSpec.APIServerLB.NLBSpec.BackendSets)
+		}
+		if restoredHub.Spec.NetworkSpec.APIServerLB.NLBSpec.BackendSets[0].BackendSetDetails.IsFailOpen == nil || !*restoredHub.Spec.NetworkSpec.APIServerLB.NLBSpec.BackendSets[0].BackendSetDetails.IsFailOpen {
+			t.Fatalf("expected backendSetDetails to remain intact after roundtrip")
+		}
+	})
+}
+
 func TestOCICluster_ConvertTo(t *testing.T) {
 	type fields struct {
 		TypeMeta   metav1.TypeMeta

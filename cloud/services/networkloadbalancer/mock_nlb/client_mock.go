@@ -50,6 +50,21 @@ func (mr *MockNetworkLoadBalancerClientMockRecorder) CreateBackend(ctx, request 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateBackend", reflect.TypeOf((*MockNetworkLoadBalancerClient)(nil).CreateBackend), ctx, request)
 }
 
+// CreateBackendSet mocks base method.
+func (m *MockNetworkLoadBalancerClient) CreateBackendSet(ctx context.Context, request networkloadbalancer.CreateBackendSetRequest) (networkloadbalancer.CreateBackendSetResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateBackendSet", ctx, request)
+	ret0, _ := ret[0].(networkloadbalancer.CreateBackendSetResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateBackendSet indicates an expected call of CreateBackendSet.
+func (mr *MockNetworkLoadBalancerClientMockRecorder) CreateBackendSet(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateBackendSet", reflect.TypeOf((*MockNetworkLoadBalancerClient)(nil).CreateBackendSet), ctx, request)
+}
+
 // CreateNetworkLoadBalancer mocks base method.
 func (m *MockNetworkLoadBalancerClient) CreateNetworkLoadBalancer(ctx context.Context, request networkloadbalancer.CreateNetworkLoadBalancerRequest) (networkloadbalancer.CreateNetworkLoadBalancerResponse, error) {
 	m.ctrl.T.Helper()
@@ -65,6 +80,21 @@ func (mr *MockNetworkLoadBalancerClientMockRecorder) CreateNetworkLoadBalancer(c
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateNetworkLoadBalancer", reflect.TypeOf((*MockNetworkLoadBalancerClient)(nil).CreateNetworkLoadBalancer), ctx, request)
 }
 
+// CreateListener mocks base method.
+func (m *MockNetworkLoadBalancerClient) CreateListener(ctx context.Context, request networkloadbalancer.CreateListenerRequest) (networkloadbalancer.CreateListenerResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateListener", ctx, request)
+	ret0, _ := ret[0].(networkloadbalancer.CreateListenerResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateListener indicates an expected call of CreateListener.
+func (mr *MockNetworkLoadBalancerClientMockRecorder) CreateListener(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateListener", reflect.TypeOf((*MockNetworkLoadBalancerClient)(nil).CreateListener), ctx, request)
+}
+
 // DeleteBackend mocks base method.
 func (m *MockNetworkLoadBalancerClient) DeleteBackend(ctx context.Context, request networkloadbalancer.DeleteBackendRequest) (networkloadbalancer.DeleteBackendResponse, error) {
 	m.ctrl.T.Helper()
@@ -78,6 +108,36 @@ func (m *MockNetworkLoadBalancerClient) DeleteBackend(ctx context.Context, reque
 func (mr *MockNetworkLoadBalancerClientMockRecorder) DeleteBackend(ctx, request interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteBackend", reflect.TypeOf((*MockNetworkLoadBalancerClient)(nil).DeleteBackend), ctx, request)
+}
+
+// DeleteBackendSet mocks base method.
+func (m *MockNetworkLoadBalancerClient) DeleteBackendSet(ctx context.Context, request networkloadbalancer.DeleteBackendSetRequest) (networkloadbalancer.DeleteBackendSetResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteBackendSet", ctx, request)
+	ret0, _ := ret[0].(networkloadbalancer.DeleteBackendSetResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteBackendSet indicates an expected call of DeleteBackendSet.
+func (mr *MockNetworkLoadBalancerClientMockRecorder) DeleteBackendSet(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteBackendSet", reflect.TypeOf((*MockNetworkLoadBalancerClient)(nil).DeleteBackendSet), ctx, request)
+}
+
+// DeleteListener mocks base method.
+func (m *MockNetworkLoadBalancerClient) DeleteListener(ctx context.Context, request networkloadbalancer.DeleteListenerRequest) (networkloadbalancer.DeleteListenerResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteListener", ctx, request)
+	ret0, _ := ret[0].(networkloadbalancer.DeleteListenerResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteListener indicates an expected call of DeleteListener.
+func (mr *MockNetworkLoadBalancerClientMockRecorder) DeleteListener(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteListener", reflect.TypeOf((*MockNetworkLoadBalancerClient)(nil).DeleteListener), ctx, request)
 }
 
 // DeleteNetworkLoadBalancer mocks base method.
@@ -168,4 +228,34 @@ func (m *MockNetworkLoadBalancerClient) UpdateNetworkLoadBalancer(ctx context.Co
 func (mr *MockNetworkLoadBalancerClientMockRecorder) UpdateNetworkLoadBalancer(ctx, request interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateNetworkLoadBalancer", reflect.TypeOf((*MockNetworkLoadBalancerClient)(nil).UpdateNetworkLoadBalancer), ctx, request)
+}
+
+// UpdateBackendSet mocks base method.
+func (m *MockNetworkLoadBalancerClient) UpdateBackendSet(ctx context.Context, request networkloadbalancer.UpdateBackendSetRequest) (networkloadbalancer.UpdateBackendSetResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateBackendSet", ctx, request)
+	ret0, _ := ret[0].(networkloadbalancer.UpdateBackendSetResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateBackendSet indicates an expected call of UpdateBackendSet.
+func (mr *MockNetworkLoadBalancerClientMockRecorder) UpdateBackendSet(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateBackendSet", reflect.TypeOf((*MockNetworkLoadBalancerClient)(nil).UpdateBackendSet), ctx, request)
+}
+
+// UpdateListener mocks base method.
+func (m *MockNetworkLoadBalancerClient) UpdateListener(ctx context.Context, request networkloadbalancer.UpdateListenerRequest) (networkloadbalancer.UpdateListenerResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateListener", ctx, request)
+	ret0, _ := ret[0].(networkloadbalancer.UpdateListenerResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateListener indicates an expected call of UpdateListener.
+func (mr *MockNetworkLoadBalancerClientMockRecorder) UpdateListener(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateListener", reflect.TypeOf((*MockNetworkLoadBalancerClient)(nil).UpdateListener), ctx, request)
 }
