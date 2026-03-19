@@ -73,6 +73,9 @@ func (m *MachineScope) GetBlockVolumeId(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	if volume == nil {
+		return "", errors.New("Volume not found")
+	}
 	return ptr.ToString(volume.Id), nil
 }
 
