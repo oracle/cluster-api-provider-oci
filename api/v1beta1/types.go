@@ -1138,18 +1138,8 @@ type BlockVolumeSpec struct {
 	// Example: `Uocm:PHX-AD-1`
 	AvailabilityDomain *string `json:"availabilityDomain,omitempty"`
 
-	// If provided, specifies the ID of the volume backup policy to assign to the newly
-	// created volume. If omitted, no policy will be assigned.
-	// +optional
-	BackupPolicyId *string `json:"backupPolicyId,omitempty"`
-
 	// A user-friendly name. Does not have to be unique.
 	DisplayName *string `json:"displayName,omitempty"`
-
-	// The OCID of the Vault service key to assign as the master encryption key
-	// for the volume.
-	// +optional
-	KmsKeyId *string `json:"kmsKeyId,omitempty"`
 
 	// The number of volume performance units (VPUs) that will be applied to this volume per GB,
 	// representing the Block Volume service's elastic performance options.
@@ -1169,20 +1159,8 @@ type BlockVolumeSpec struct {
 	// +optional
 	SizeInGBs *int64 `json:"sizeInGBs,omitempty"`
 
-	// VolumeSourceDetails Specifies the volume source details for a new Block volume. The volume source is either another Block volume in the same Availability Domain or a Block volume backup.
-	// This is an optional field. If not specified or set to null, the new Block volume will be empty.
-	// When specified, the new Block volume will contain data from the source volume or backup
-	// +optional
-	SourceDetails string `json:"sourceDetails,omitempty"`
-
 	// The list of autotune policies to be enabled for this volume.
-	// +optional
 	AutotunePolicies []AutotunePolicy `json:"autotunePolicies,omitempty"`
-
-	// When set to true, enables SCSI Persistent Reservation (SCSI PR) for the volume. For more information, see
-	// Persistent Reservations (https://docs.oracle.com/iaas/Content/Block/Concepts/persistent-reservations.htm).
-	// +optional
-	IsReservationsEnabled *bool `json:"isReservationsEnabled,omitempty"`
 
 	// The type of volume attachment used to attach this block volume to the instance
 	// If not specified the block volume will be created, but not attached to any instance

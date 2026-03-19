@@ -1220,14 +1220,10 @@ func Convert_v1beta2_BackendSetDetails_To_v1beta1_BackendSetDetails(in *v1beta2.
 func autoConvert_v1beta1_BlockVolumeSpec_To_v1beta2_BlockVolumeSpec(in *BlockVolumeSpec, out *v1beta2.BlockVolumeSpec, s conversion.Scope) error {
 	out.CompartmentId = (*string)(unsafe.Pointer(in.CompartmentId))
 	out.AvailabilityDomain = (*string)(unsafe.Pointer(in.AvailabilityDomain))
-	out.BackupPolicyId = (*string)(unsafe.Pointer(in.BackupPolicyId))
 	out.DisplayName = (*string)(unsafe.Pointer(in.DisplayName))
-	out.KmsKeyId = (*string)(unsafe.Pointer(in.KmsKeyId))
 	out.VpusPerGB = (*int64)(unsafe.Pointer(in.VpusPerGB))
 	out.SizeInGBs = (*int64)(unsafe.Pointer(in.SizeInGBs))
-	out.SourceDetails = in.SourceDetails
 	out.AutotunePolicies = *(*[]v1beta2.AutotunePolicy)(unsafe.Pointer(&in.AutotunePolicies))
-	out.IsReservationsEnabled = (*bool)(unsafe.Pointer(in.IsReservationsEnabled))
 	out.VolumeType = in.VolumeType
 	return nil
 }
@@ -1240,14 +1236,10 @@ func Convert_v1beta1_BlockVolumeSpec_To_v1beta2_BlockVolumeSpec(in *BlockVolumeS
 func autoConvert_v1beta2_BlockVolumeSpec_To_v1beta1_BlockVolumeSpec(in *v1beta2.BlockVolumeSpec, out *BlockVolumeSpec, s conversion.Scope) error {
 	out.CompartmentId = (*string)(unsafe.Pointer(in.CompartmentId))
 	out.AvailabilityDomain = (*string)(unsafe.Pointer(in.AvailabilityDomain))
-	out.BackupPolicyId = (*string)(unsafe.Pointer(in.BackupPolicyId))
 	out.DisplayName = (*string)(unsafe.Pointer(in.DisplayName))
-	out.KmsKeyId = (*string)(unsafe.Pointer(in.KmsKeyId))
 	out.VpusPerGB = (*int64)(unsafe.Pointer(in.VpusPerGB))
 	out.SizeInGBs = (*int64)(unsafe.Pointer(in.SizeInGBs))
-	out.SourceDetails = in.SourceDetails
 	out.AutotunePolicies = *(*[]AutotunePolicy)(unsafe.Pointer(&in.AutotunePolicies))
-	out.IsReservationsEnabled = (*bool)(unsafe.Pointer(in.IsReservationsEnabled))
 	out.VolumeType = in.VolumeType
 	return nil
 }

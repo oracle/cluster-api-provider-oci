@@ -33,10 +33,17 @@ import (
 func (m *MachineScope) GetBlockVolume(ctx context.Context) (*core.Volume, error) {
 	name := m.GetBlockVolumeDesiredName()
 
+	var blockVolumecompartmentId string
+	if m.OCIMachine.Spec.BlockVolumeSpec.CompartmentId == nil {
+		blockVolumecompartmentId = m.getCompartmentId()
+	} else {
+		blockVolumecompartmentId = *m.OCIMachine.Spec.BlockVolumeSpec.CompartmentId
+	}
+
 	var page *string
 	for {
 		resp, err := m.BlockVolumeClient.ListVolumes(ctx, core.ListVolumesRequest{
-			CompartmentId: common.String(m.getCompartmentId()),
+			CompartmentId: common.String(blockVolumecompartmentId),
 			DisplayName:   common.String(name),
 			Page:          page,
 		})
@@ -78,30 +85,18 @@ func (m *MachineScope) GetBlockVolumeDesiredName() string {
 // ToOCIAutotunePolicy converts your AutotunePolicy to the OCI SDK AutotunePolicy interface
 func (m *MachineScope) ToOCIAutotunePolicy() []core.AutotunePolicy {
 	spec := m.OCIMachine.Spec.BlockVolumeSpec
-	if spec.AvailabilityDomain == nil || len(spec.AutotunePolicies) == 0 {
-		return nil
-	}
 
 	policies := make([]core.AutotunePolicy, 0, len(spec.AutotunePolicies))
 
 	for _, a := range spec.AutotunePolicies {
-		switch a.AutotuneType {
-		case "DETACHED_VOLUME":
+		if a.AutotuneType == "DETACHED_VOLUME" {
 			policies = append(policies, core.DetachedVolumeAutotunePolicy{})
-
-		case "PERFORMANCE_BASED":
+		}
+		if a.AutotuneType == "PERFORMANCE_BASED" {
 			policies = append(policies, core.PerformanceBasedAutotunePolicy{
 				MaxVpusPerGB: a.MaxVPUsPerGB,
 			})
-
-		default:
-			m.Logger.Info("Unknown policy type, skip")
-			continue
 		}
-	}
-
-	if len(policies) == 0 {
-		return nil
 	}
 
 	return policies

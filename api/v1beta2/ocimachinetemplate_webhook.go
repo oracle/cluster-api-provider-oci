@@ -63,7 +63,7 @@ func (*OCIMachineTemplateWebhook) ValidateCreate(_ context.Context, raw runtime.
 			return nil, errors.New("AvailabilityDomain for BlockVolumeSpec not specified")
 		}
 
-		if !reflect.DeepEqual(m.Spec.Template.Spec.BlockVolumeSpec.AutotunePolicies, AutotunePolicy{}) {
+		if len(m.Spec.Template.Spec.BlockVolumeSpec.AutotunePolicies) > 0 && m.Spec.Template.Spec.BlockVolumeSpec.AutotunePolicies != nil {
 			for _, autotunePolicy := range m.Spec.Template.Spec.BlockVolumeSpec.AutotunePolicies {
 				if autotunePolicy.AutotuneType == "PERFORMANCE_BASED" && autotunePolicy.MaxVPUsPerGB == nil {
 					return nil, errors.New("MaxVPUsPerGB should be specified for AutotuneType of type PERFORMANCE_BASED")
@@ -75,8 +75,13 @@ func (*OCIMachineTemplateWebhook) ValidateCreate(_ context.Context, raw runtime.
 					return nil, errors.New("AutotuneType of type unknown. Available types are PERFORMANCE_BASED or DETACHED_VOLUME")
 				}
 			}
+		} else {
+			return nil, errors.New("AutotunePolicies field in BlockVolumeSpec should be specified and have at least one autotunePolicy in it")
 		}
 
+		if m.Spec.Template.Spec.BlockVolumeSpec.VolumeType != "paravirtualized" && m.Spec.Template.Spec.BlockVolumeSpec.VolumeType != "iscsi" {
+			return nil, errors.New("VolumeType field of BlockVolumeSpec should be of type paravirtualized or iscsi")
+		}
 	}
 
 	clusterlogger.Info("validate create machinetemplate", "name", m.Name)

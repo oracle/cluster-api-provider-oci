@@ -44,6 +44,7 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2/klogr"
 	"k8s.io/utils/pointer"
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
@@ -133,7 +134,10 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 		// Run this if BlockVolumeSpec is specified
 		if !reflect.DeepEqual(m.OCIMachine.Spec.BlockVolumeSpec, infrastructurev1beta2.BlockVolumeSpec{}) {
 			m.Logger.Info("Reconcile block volume")
-			m.ReconcileBlockVolume(ctx)
+			err = m.ReconcileBlockVolume(ctx)
+			if err != nil {
+				return nil, err
+			}
 		}
 		return instance, nil
 	}
@@ -298,22 +302,31 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 
 		if bvId != "" {
 
-			// Wait for volume to be available
 			m.Logger.Info("Waiting for volume to be available...")
 			getVolumeReq := core.GetVolumeRequest{
 				VolumeId: common.String(bvId),
 			}
-			for {
-				getVolumeResp, err := m.BlockVolumeClient.GetVolume(ctx, getVolumeReq)
-				if err != nil {
-					return nil, err
+
+			// Poll until volume is available, timeout after 2 minutes
+			err = wait.PollUntilContextTimeout(ctx, 5*time.Second, 2*time.Minute, true, func(ctx context.Context) (bool, error) {
+				getVolumeResp, errInPoll := m.BlockVolumeClient.GetVolume(ctx, getVolumeReq)
+				if errInPoll != nil {
+					return false, errInPoll
 				}
+
 				if getVolumeResp.Volume.LifecycleState == core.VolumeLifecycleStateAvailable {
-					m.Logger.Info("Volume is available")
-					break
+					m.Logger.Info("Volume is available", "volumeId", bvId)
+					return true, nil
 				}
-				m.Logger.Info("Volume state, waiting...", "state", getVolumeResp.Volume.LifecycleState)
-				time.Sleep(5 * time.Second)
+
+				m.Logger.Info("Volume not yet available, waiting...",
+					"state", getVolumeResp.Volume.LifecycleState,
+					"volumeId", bvId)
+				return false, nil
+			})
+
+			if err != nil {
+				return nil, fmt.Errorf("timeout waiting for volume to become available: %w", err)
 			}
 
 			m.Logger.Info("Specifying instance attachments...")
@@ -502,26 +515,31 @@ func (m *MachineScope) DeleteMachine(ctx context.Context, instance *core.Instanc
 		getInstanceReq := core.GetInstanceRequest{
 			InstanceId: instance.Id,
 		}
-		// Poll for termination
-		for {
-			getInstanceResp, err := m.ComputeClient.GetInstance(ctx, getInstanceReq)
-			if err != nil {
-				if ociutil.IsNotFound(err) {
-					m.Logger.Info("Instance terminated successfully")
-					break
+
+		// Poll until instance is terminated
+		err = wait.PollUntilContextTimeout(ctx, 5*time.Second, 10*time.Minute, true, func(ctx context.Context) (bool, error) {
+			getInstanceResp, errInPoll := m.ComputeClient.GetInstance(ctx, getInstanceReq)
+			if errInPoll != nil {
+				if ociutil.IsNotFound(errInPoll) {
+					m.Logger.Info("Instance terminated successfully (not found)")
+					return true, nil
 				}
-				// Error checking instance state
-				m.Logger.Info("Error checking instance state", "error", err.Error())
-				break
+				// On other errors, log and return error
+				m.Logger.Info("Error checking instance state", "error", errInPoll.Error())
+				return false, errInPoll
 			}
 
 			if getInstanceResp.Instance.LifecycleState == core.InstanceLifecycleStateTerminated {
 				m.Logger.Info("Instance is terminated")
-				break
+				return true, nil
 			}
 
 			m.Logger.Info("Instance state, waiting...", "state", getInstanceResp.Instance.LifecycleState)
-			time.Sleep(5 * time.Second)
+			return false, nil
+		})
+
+		if err != nil {
+			return fmt.Errorf("timeout waiting for instance to terminate: %w", err)
 		}
 		err = m.DeleteBlockVolume(ctx)
 	}

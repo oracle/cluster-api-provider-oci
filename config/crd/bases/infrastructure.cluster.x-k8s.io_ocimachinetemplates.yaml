@@ -285,20 +285,10 @@ spec:
                             description: The availability domain of the volume. Omissible for cloning 
                               a volume. The new volume will be created in the availability domain of the source volume.
                             type: string
-                          backupPolicyId:
-                            description: |-
-                              If provided, specifies the ID of the volume backup policy to assign to the newly
-                              created volume. If omitted, no policy will be assigned.
-                            type: string
                           displayName:
                             description: |-
                               A user-friendly name. Does not have to be unique, and it's changeable.
                               Avoid entering confidential information.
-                            type: string
-                          kmsKeyId:
-                            description: |-
-                              The OCID of the Vault service key to assign as the master encryption key
-                              for the volume.
                             type: string
                           vpusPerGB:
                             description: |-
@@ -315,13 +305,6 @@ spec:
                           sizeInGBs:
                             description: The size of the volume in GBs.
                             type: integer
-                          sourceDetails:
-                            description: |-
-                              VolumeSourceDetails Specifies the volume source details for a new Block volume.
-                              The volume source is either another Block volume in the same Availability Domain or a Block volume backup.
-                              This is an optional field. If not specified or set to null, the new Block volume will be empty.
-                              When specified, the new Block volume will contain data from the source volume or backup.
-                            type: string
                           autotunePolicies:
                             description: The list of autotune policies to be enabled for this volume.
                             type: array
@@ -336,11 +319,6 @@ spec:
                                 maxVpusPerGB:
                                   description: This field is needed for PERFORMANCE_BASED
                                   type: integer
-                          isReservationsEnabled:
-                            description: |-
-                              When set to true, enables SCSI Persistent Reservation (SCSI PR) for the volume. For more information, see
-                              Persistent Reservations (https://docs.oracle.com/iaas/Content/Block/Concepts/persistent-reservations.htm).
-                            type: boolean
                           volumeType:
                             description: The type of volume attachment used to attach this block volume to the instance
                             type: string
@@ -1278,20 +1256,10 @@ spec:
                             description: The availability domain of the volume. Omissible for cloning 
                               a volume. The new volume will be created in the availability domain of the source volume.
                             type: string
-                          backupPolicyId:
-                            description: |-
-                              If provided, specifies the ID of the volume backup policy to assign to the newly
-                              created volume. If omitted, no policy will be assigned.
-                            type: string
                           displayName:
                             description: |-
                               A user-friendly name. Does not have to be unique, and it's changeable.
                               Avoid entering confidential information.
-                            type: string
-                          kmsKeyId:
-                            description: |-
-                              The OCID of the Vault service key to assign as the master encryption key
-                              for the volume.
                             type: string
                           vpusPerGB:
                             description: |-
@@ -1308,13 +1276,6 @@ spec:
                           sizeInGBs:
                             description: The size of the volume in GBs.
                             type: integer
-                          sourceDetails:
-                            description: |-
-                              VolumeSourceDetails Specifies the volume source details for a new Block volume.
-                              The volume source is either another Block volume in the same Availability Domain or a Block volume backup.
-                              This is an optional field. If not specified or set to null, the new Block volume will be empty.
-                              When specified, the new Block volume will contain data from the source volume or backup.
-                            type: string
                           autotunePolicies:
                             description: The list of autotune policies to be enabled for this volume.
                             type: array
@@ -1329,11 +1290,6 @@ spec:
                                 maxVpusPerGB:
                                   description: This field is needed for PERFORMANCE_BASED
                                   type: integer
-                          isReservationsEnabled:
-                            description: |-
-                              When set to true, enables SCSI Persistent Reservation (SCSI PR) for the volume. For more information, see
-                              Persistent Reservations (https://docs.oracle.com/iaas/Content/Block/Concepts/persistent-reservations.htm).
-                            type: boolean
                           volumeType:
                             description: The type of volume attachment used to attach this block volume to the instance
                             type: string

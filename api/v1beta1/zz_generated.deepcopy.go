@@ -372,18 +372,8 @@ func (in *BlockVolumeSpec) DeepCopyInto(out *BlockVolumeSpec) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.BackupPolicyId != nil {
-		in, out := &in.BackupPolicyId, &out.BackupPolicyId
-		*out = new(string)
-		**out = **in
-	}
 	if in.DisplayName != nil {
 		in, out := &in.DisplayName, &out.DisplayName
-		*out = new(string)
-		**out = **in
-	}
-	if in.KmsKeyId != nil {
-		in, out := &in.KmsKeyId, &out.KmsKeyId
 		*out = new(string)
 		**out = **in
 	}
@@ -403,11 +393,6 @@ func (in *BlockVolumeSpec) DeepCopyInto(out *BlockVolumeSpec) {
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
-	}
-	if in.IsReservationsEnabled != nil {
-		in, out := &in.IsReservationsEnabled, &out.IsReservationsEnabled
-		*out = new(bool)
-		**out = **in
 	}
 }
 

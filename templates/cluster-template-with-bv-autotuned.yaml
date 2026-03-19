@@ -88,11 +88,10 @@ spec:
         ssh_authorized_keys: "${OCI_SSH_KEY}"
       isPvEncryptionInTransitEnabled: ${OCI_CONTROL_PLANE_PV_TRANSIT_ENCRYPTION=true}
       blockvolumeSpec:
-        isAutoTuneEnabled: true
         autotunePolicies:
           - autotuneType: "PERFORMANCE_BASED"
             maxVpusPerGB: 120
-        availabilityDomain: "<ADD_YOUR_AVAILABILITY_DOMAIN_NAME_HERE>"
+        availabilityDomain: "RiYU:EU-FRANKFURT-1-AD-1"
         compartmentId: "${OCI_COMPARTMENT_ID}"
         displayName: "autotuned-bv-controlplane"
         vpusPerGB: 100
@@ -115,11 +114,10 @@ spec:
         ssh_authorized_keys: "${OCI_SSH_KEY}"
       isPvEncryptionInTransitEnabled: ${OCI_NODE_PV_TRANSIT_ENCRYPTION=true}
       blockvolumeSpec:
-        isAutoTuneEnabled: true
         autotunePolicies:
           - autotuneType: "PERFORMANCE_BASED"
             maxVpusPerGB: 120
-        availabilityDomain: "<ADD_YOUR_AVAILABILITY_DOMAIN_NAME_HERE>"
+        availabilityDomain: "RiYU:EU-FRANKFURT-1-AD-1"
         compartmentId: "${OCI_COMPARTMENT_ID}"
         displayName: "autotuned-bv-md"
         vpusPerGB: 100
