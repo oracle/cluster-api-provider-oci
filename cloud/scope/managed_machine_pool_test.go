@@ -442,6 +442,150 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 			},
 		},
 		{
+			name:          "nodepool lookup image with nil NodeSourceViaImage",
+			errorExpected: false,
+			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
+				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
+				ms.OCIManagedMachinePool.Spec = infrav2exp.OCIManagedMachinePoolSpec{
+					Version:      common.String("v1.24.5"),
+					NodeMetadata: map[string]string{"key1": "value1"},
+					InitialNodeLabels: []infrav2exp.KeyValue{{
+						Key:   common.String("key"),
+						Value: common.String("value"),
+					}},
+					NodeShape: "test-shape",
+					NodeShapeConfig: &infrav2exp.NodeShapeConfig{
+						Ocpus:       common.String("2"),
+						MemoryInGBs: common.String("16"),
+					},
+					// NodeSourceViaImage is intentionally nil to verify fix for nil dereference
+					SshPublicKey: "test-ssh-public-key",
+					NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
+						PlacementConfigs: []infrav2exp.PlacementConfig{
+							{
+								AvailabilityDomain:    common.String("test-ad"),
+								SubnetName:            common.String("worker-subnet"),
+								CapacityReservationId: common.String("cap-id"),
+								FaultDomains:          []string{"fd-1", "fd-2"},
+							},
+						},
+						NsgNames:                       []string{"worker-nsg"},
+						KmsKeyId:                       common.String("kms-key-id"),
+						IsPvEncryptionInTransitEnabled: common.Bool(true),
+						NodePoolPodNetworkOptionDetails: &infrav2exp.NodePoolPodNetworkOptionDetails{
+							CniType: infrastructurev1beta2.VCNNativeCNI,
+							VcnIpNativePodNetworkOptions: infrav2exp.VcnIpNativePodNetworkOptions{
+								SubnetNames:    []string{"pod-subnet"},
+								MaxPodsPerNode: common.Int(25),
+								NSGNames:       []string{"pod-nsg"},
+							},
+						},
+					},
+					NodeEvictionNodePoolSettings: &infrav2exp.NodeEvictionNodePoolSettings{
+						EvictionGraceDuration:           common.String("PT30M"),
+						IsForceDeleteAfterGraceDuration: common.Bool(true),
+					},
+				}
+				okeClient.EXPECT().GetNodePoolOptions(gomock.Any(), gomock.Eq(oke.GetNodePoolOptionsRequest{
+					CompartmentId:    common.String("test-compartment"),
+					NodePoolOptionId: common.String("all"),
+				})).
+					Return(oke.GetNodePoolOptionsResponse{
+						NodePoolOptions: oke.NodePoolOptions{
+							Sources: []oke.NodeSourceOption{
+								oke.NodeSourceViaImageOption{
+									SourceName: common.String("Oracle-Linux-8.6-aarch64-2022.12.15-0-OKE-1.24.5-543"),
+									ImageId:    common.String("image-id-1"),
+								},
+								oke.NodeSourceViaImageOption{
+									SourceName: common.String("Oracle-Linux-8.6-Gen2-GPU-2022.12.16-0-OKE-1.24.5-543"),
+									ImageId:    common.String("image-id-2"),
+								},
+								oke.NodeSourceViaImageOption{
+									SourceName: common.String("Oracle-Linux-8.6-2022.12.15-0-OKE-1.24.5-543"),
+									ImageId:    common.String("image-id-3"),
+								},
+							},
+						},
+					}, nil)
+				okeClient.EXPECT().CreateNodePool(gomock.Any(), gomock.Eq(oke.CreateNodePoolRequest{
+					CreateNodePoolDetails: oke.CreateNodePoolDetails{
+						ClusterId:         common.String("cluster-id"),
+						Name:              common.String("test"),
+						CompartmentId:     common.String("test-compartment"),
+						KubernetesVersion: common.String("v1.24.5"),
+						NodeMetadata:      map[string]string{"key1": "value1"},
+						InitialNodeLabels: []oke.KeyValue{{
+							Key:   common.String("key"),
+							Value: common.String("value"),
+						}},
+						NodeShape: common.String("test-shape"),
+						NodeShapeConfig: &oke.CreateNodeShapeConfigDetails{
+							Ocpus:       common.Float32(2),
+							MemoryInGBs: common.Float32(16),
+						},
+						NodeSourceDetails: &oke.NodeSourceViaImageDetails{
+							ImageId: common.String("image-id-3"),
+						},
+						FreeformTags: tags,
+						DefinedTags:  definedTagsInterface,
+						SshPublicKey: common.String("test-ssh-public-key"),
+						NodeConfigDetails: &oke.CreateNodePoolNodeConfigDetails{
+							Size: common.Int(3),
+							PlacementConfigs: []oke.NodePoolPlacementConfigDetails{
+								{
+									AvailabilityDomain:    common.String("test-ad"),
+									SubnetId:              common.String("subnet-id"),
+									CapacityReservationId: common.String("cap-id"),
+									FaultDomains:          []string{"fd-1", "fd-2"},
+								},
+							},
+							NsgIds:                         []string{"nsg-id"},
+							KmsKeyId:                       common.String("kms-key-id"),
+							IsPvEncryptionInTransitEnabled: common.Bool(true),
+							FreeformTags:                   tags,
+							DefinedTags:                    definedTagsInterface,
+							NodePoolPodNetworkOptionDetails: oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
+								PodSubnetIds:   []string{"pod-subnet-id"},
+								MaxPodsPerNode: common.Int(25),
+								PodNsgIds:      []string{"pod-nsg-id"},
+							},
+						},
+						NodeEvictionNodePoolSettings: &oke.NodeEvictionNodePoolSettings{
+							EvictionGraceDuration:           common.String("PT30M"),
+							IsForceDeleteAfterGraceDuration: common.Bool(true),
+						},
+					},
+				})).
+					Return(oke.CreateNodePoolResponse{
+						OpcWorkRequestId: common.String("opc-work-request-id"),
+					}, nil)
+
+				okeClient.EXPECT().GetWorkRequest(gomock.Any(), gomock.Eq(oke.GetWorkRequestRequest{
+					WorkRequestId: common.String("opc-work-request-id"),
+				})).
+					Return(oke.GetWorkRequestResponse{
+						WorkRequest: oke.WorkRequest{
+							Resources: []oke.WorkRequestResource{
+								{
+									Identifier: common.String("oke-np-id"),
+									EntityType: common.String("nodepool"),
+								},
+							},
+						},
+					}, nil)
+				okeClient.EXPECT().GetNodePool(gomock.Any(), gomock.Eq(oke.GetNodePoolRequest{
+					NodePoolId: common.String("oke-np-id"),
+				})).
+					Return(oke.GetNodePoolResponse{
+						NodePool: oke.NodePool{
+							Id:           common.String("oke-np-id"),
+							FreeformTags: tags,
+						},
+					}, nil)
+			},
+		},
+		{
 			name:          "nodepool lookup image arm",
 			errorExpected: false,
 			testSpecificSetup: func(cs *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
