@@ -285,8 +285,6 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 
 	// If BlockVolumeSpec is specified, create the block volume separately and attach it to the instance
 	if !reflect.DeepEqual(m.OCIMachine.Spec.BlockVolumeSpec, infrastructurev1beta2.BlockVolumeSpec{}) {
-
-		m.Logger.Info("Started reconcile block volume creation...")
 		err = m.ReconcileBlockVolume(ctx)
 
 		if err != nil {
@@ -302,7 +300,6 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 
 		if bvId != "" {
 
-			m.Logger.Info("Waiting for volume to be available...")
 			getVolumeReq := core.GetVolumeRequest{
 				VolumeId: common.String(bvId),
 			}
@@ -322,8 +319,6 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 					Reason:       fmt.Sprintf("volume %s not available, state: %s", bvId, getVolumeResp.Volume.LifecycleState),
 				}
 			}
-
-			m.Logger.Info("Volume is available to be attached to instance", "volumeId", bvId)
 
 			// Appending block volumes created with BlockVolumeSpec to instance attachments
 			if infrastructurev1beta2.VolumeType(m.OCIMachine.Spec.BlockVolumeSpec.VolumeType) == infrastructurev1beta2.IscsiType {
