@@ -44,6 +44,7 @@ import (
 	"k8s.io/utils/pointer"
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+	"sigs.k8s.io/cluster-api/util/annotations"
 	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
 	v1beta1patch "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -180,6 +181,36 @@ func (m *MachinePoolScope) SetReady() {
 
 func (m *MachinePoolScope) SetReplicaCount(count int32) {
 	m.OCIMachinePool.Status.Replicas = count
+}
+
+// SyncReplicasFromInstancePool updates the owner MachinePool spec to match the
+// observed OCI instance pool size when replicas are externally managed.
+func (m *MachinePoolScope) SyncReplicasFromInstancePool(ctx context.Context, instancePool *core.InstancePool) error {
+	if !annotations.ReplicasManagedByExternalAutoscaler(m.MachinePool) {
+		return nil
+	}
+	if instancePool == nil || instancePool.Size == nil {
+		m.Info("Synced MachinePool instancePool or size is nil.")
+		return nil
+	}
+
+	observedReplicas := int32(*instancePool.Size)
+	if m.MachinePool.Spec.Replicas != nil && *m.MachinePool.Spec.Replicas == observedReplicas {
+		return nil
+	}
+
+	helper, err := v1beta1patch.NewHelper(m.MachinePool, m.Client)
+	if err != nil {
+		return errors.Wrap(err, "failed to init machinepool patch helper")
+	}
+
+	m.MachinePool.Spec.Replicas = pointer.Int32(observedReplicas)
+	if err := helper.Patch(ctx, m.MachinePool); err != nil {
+		return errors.Wrap(err, "failed to patch machinepool replicas from observed instance pool size")
+	}
+
+	m.Info("Synced MachinePool replicas from observed instance pool size", "replicas", observedReplicas)
+	return nil
 }
 
 // GetWorkerMachineSubnet returns the WorkerRole core.Subnet id for the cluster
@@ -826,7 +857,7 @@ func instancePoolNeedsUpdates(machinePoolScope *MachinePoolScope, instancePool *
 	if instancePool.Size != nil {
 		instanePoolSize = *instancePool.Size
 	}
-	if machinePoolReplicas != instanePoolSize {
+	if !annotations.ReplicasManagedByExternalAutoscaler(machinePoolScope.MachinePool) && machinePoolReplicas != instanePoolSize {
 		return true
 	} else if !(reflect.DeepEqual(machinePoolScope.OCIMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId, instancePool.InstanceConfigurationId)) {
 		return true
