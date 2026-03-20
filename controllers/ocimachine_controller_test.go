@@ -1160,7 +1160,7 @@ func TestMachineReconciliationDeletionNormal(t *testing.T) {
 			setup(t, g)
 			tc.testSpecificSetup(ms, computeClient, vcnClient, nlbClient)
 			ctx := context.Background()
-			_, err := r.reconcileDelete(ctx, ms)
+			_, err := r.reconcileDelete(ctx, log.FromContext(ctx), ms)
 			if len(tc.conditionAssertion) > 0 {
 				expectConditions(g, ociMachine, tc.conditionAssertion)
 			}

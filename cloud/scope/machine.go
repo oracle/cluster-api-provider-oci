@@ -44,7 +44,6 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2/klogr"
 	"k8s.io/utils/pointer"
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
@@ -86,6 +85,15 @@ type MachineScope struct {
 	NetworkLoadBalancerClient nlb.NetworkLoadBalancerClient
 	LoadBalancerClient        lb.LoadBalancerClient
 	WorkRequestsClient        wr.Client
+}
+
+type RequeueError struct {
+	RequeueAfter time.Duration
+	Reason       string
+}
+
+func (e *RequeueError) Error() string {
+	return e.Reason
 }
 
 // NewMachineScope creates a MachineScope given the MachineScopeParams
@@ -131,14 +139,6 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 	}
 	if instance != nil {
 		m.Logger.Info("Found an existing instance")
-		// Run this if BlockVolumeSpec is specified
-		if !reflect.DeepEqual(m.OCIMachine.Spec.BlockVolumeSpec, infrastructurev1beta2.BlockVolumeSpec{}) {
-			m.Logger.Info("Reconcile block volume")
-			err = m.ReconcileBlockVolume(ctx)
-			if err != nil {
-				return nil, err
-			}
-		}
 		return instance, nil
 	}
 	m.Logger.Info("Creating machine with name", "machine-name", m.OCIMachine.GetName())
@@ -307,29 +307,23 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 				VolumeId: common.String(bvId),
 			}
 
-			// Poll until volume is available, timeout after 2 minutes
-			err = wait.PollUntilContextTimeout(ctx, 5*time.Second, 2*time.Minute, true, func(ctx context.Context) (bool, error) {
-				getVolumeResp, errInPoll := m.BlockVolumeClient.GetVolume(ctx, getVolumeReq)
-				if errInPoll != nil {
-					return false, errInPoll
-				}
-
-				if getVolumeResp.Volume.LifecycleState == core.VolumeLifecycleStateAvailable {
-					m.Logger.Info("Volume is available", "volumeId", bvId)
-					return true, nil
-				}
-
-				m.Logger.Info("Volume not yet available, waiting...",
-					"state", getVolumeResp.Volume.LifecycleState,
-					"volumeId", bvId)
-				return false, nil
-			})
-
+			getVolumeResp, err := m.BlockVolumeClient.GetVolume(ctx, getVolumeReq)
 			if err != nil {
-				return nil, fmt.Errorf("timeout waiting for volume to become available: %w", err)
+				return nil, err
 			}
 
-			m.Logger.Info("Specifying instance attachments...")
+			// If volume is not yet available, return requeue error
+			if getVolumeResp.Volume.LifecycleState != core.VolumeLifecycleStateAvailable {
+				m.Logger.Info("Volume not yet available, will requeue...",
+					"state", getVolumeResp.Volume.LifecycleState,
+					"volumeId", bvId)
+				return nil, &RequeueError{
+					RequeueAfter: 5 * time.Second,
+					Reason:       fmt.Sprintf("volume %s not available, state: %s", bvId, getVolumeResp.Volume.LifecycleState),
+				}
+			}
+
+			m.Logger.Info("Volume is available to be attached to instance", "volumeId", bvId)
 
 			// Appending block volumes created with BlockVolumeSpec to instance attachments
 			if infrastructurev1beta2.VolumeType(m.OCIMachine.Spec.BlockVolumeSpec.VolumeType) == infrastructurev1beta2.IscsiType {
@@ -498,52 +492,66 @@ func (m *MachineScope) getFreeFormTags() map[string]string {
 
 // DeleteMachine terminates the instance using InstanceId from the OCIMachine spec and deletes the boot volume
 func (m *MachineScope) DeleteMachine(ctx context.Context, instance *core.Instance) error {
-	req := core.TerminateInstanceRequest{
-		InstanceId:                         instance.Id,
+	req := core.TerminateInstanceRequest{InstanceId: instance.Id,
 		PreserveBootVolume:                 common.Bool(m.OCIMachine.Spec.PreserveBootVolume),
 		PreserveDataVolumesCreatedAtLaunch: common.Bool(m.OCIMachine.Spec.PreserveDataVolumesCreatedAtLaunch),
 	}
-	_, err := m.ComputeClient.TerminateInstance(ctx, req)
 
-	// Run this if BlockVolumeSpec is specified
-	if !reflect.DeepEqual(m.OCIMachine.Spec.BlockVolumeSpec, infrastructurev1beta2.BlockVolumeSpec{}) {
-		if err != nil {
-			return err
-		}
-		m.Logger.Info("Waiting for instance to be terminated...")
+	hasBlockVolume := !reflect.DeepEqual(m.OCIMachine.Spec.BlockVolumeSpec, infrastructurev1beta2.BlockVolumeSpec{})
+
+	if hasBlockVolume {
 
 		getInstanceReq := core.GetInstanceRequest{
 			InstanceId: instance.Id,
 		}
 
-		// Poll until instance is terminated
-		err = wait.PollUntilContextTimeout(ctx, 5*time.Second, 10*time.Minute, true, func(ctx context.Context) (bool, error) {
-			getInstanceResp, errInPoll := m.ComputeClient.GetInstance(ctx, getInstanceReq)
-			if errInPoll != nil {
-				if ociutil.IsNotFound(errInPoll) {
-					m.Logger.Info("Instance terminated successfully (not found)")
-					return true, nil
-				}
-				// On other errors, log and return error
-				m.Logger.Info("Error checking instance state", "error", errInPoll.Error())
-				return false, errInPoll
-			}
-
-			if getInstanceResp.Instance.LifecycleState == core.InstanceLifecycleStateTerminated {
-				m.Logger.Info("Instance is terminated")
-				return true, nil
-			}
-
-			m.Logger.Info("Instance state, waiting...", "state", getInstanceResp.Instance.LifecycleState)
-			return false, nil
-		})
-
+		getInstanceResp, err := m.ComputeClient.GetInstance(ctx, getInstanceReq)
 		if err != nil {
-			return fmt.Errorf("timeout waiting for instance to terminate: %w", err)
+			if ociutil.IsNotFound(err) {
+				m.Logger.Info("Instance terminated successfully (not found), proceeding to delete block volume")
+				// Instance is gone, now delete the block volume
+				return m.DeleteBlockVolume(ctx)
+			}
+			// Other errors
+			return err
 		}
-		err = m.DeleteBlockVolume(ctx)
+
+		// Check instance lifecycle state
+		switch getInstanceResp.Instance.LifecycleState {
+		case core.InstanceLifecycleStateTerminating:
+			// Instance is already terminating, just wait
+			m.Logger.Info("Instance is terminating, waiting...",
+				"state", getInstanceResp.Instance.LifecycleState,
+				"instanceId", *instance.Id)
+
+			return &RequeueError{
+				RequeueAfter: 5 * time.Second,
+				Reason:       fmt.Sprintf("instance %s is terminating, state: %s", *instance.Id, getInstanceResp.Instance.LifecycleState),
+			}
+
+		default:
+			// Instance is in another state, initiate termination
+			m.Logger.Info("Terminating instance with block volume",
+				"state", getInstanceResp.Instance.LifecycleState,
+				"instanceId", *instance.Id)
+
+			_, err := m.ComputeClient.TerminateInstance(ctx, req)
+			if err != nil {
+				return err
+			}
+
+			// Requeue to wait for termination
+			return &RequeueError{
+				RequeueAfter: 5 * time.Second,
+				Reason:       fmt.Sprintf("instance %s termination initiated, waiting for completion", *instance.Id),
+			}
+		}
 	}
+
+	// No block volume, just terminate the instance normally
+	_, err := m.ComputeClient.TerminateInstance(ctx, req)
 	return err
+
 }
 
 // IsResourceCreatedByClusterAPI determines if the instance was created by the cluster using the
