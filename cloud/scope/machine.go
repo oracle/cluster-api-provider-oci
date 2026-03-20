@@ -25,7 +25,6 @@ import (
 	"net/url"
 	"reflect"
 	"strconv"
-	"time"
 
 	"github.com/go-logr/logr"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
@@ -85,15 +84,6 @@ type MachineScope struct {
 	NetworkLoadBalancerClient nlb.NetworkLoadBalancerClient
 	LoadBalancerClient        lb.LoadBalancerClient
 	WorkRequestsClient        wr.Client
-}
-
-type RequeueError struct {
-	RequeueAfter time.Duration
-	Reason       string
-}
-
-func (e *RequeueError) Error() string {
-	return e.Reason
 }
 
 // NewMachineScope creates a MachineScope given the MachineScopeParams
@@ -314,10 +304,7 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 				m.Logger.Info("Volume not yet available, will requeue...",
 					"state", getVolumeResp.Volume.LifecycleState,
 					"volumeId", bvId)
-				return nil, &RequeueError{
-					RequeueAfter: 5 * time.Second,
-					Reason:       fmt.Sprintf("volume %s not available, state: %s", bvId, getVolumeResp.Volume.LifecycleState),
-				}
+				return nil, errors.New(fmt.Sprintf("volume not available, state: %s for %s", getVolumeResp.Volume.LifecycleState, bvId))
 			}
 
 			// Appending block volumes created with BlockVolumeSpec to instance attachments
@@ -519,10 +506,7 @@ func (m *MachineScope) DeleteMachine(ctx context.Context, instance *core.Instanc
 				"state", getInstanceResp.Instance.LifecycleState,
 				"instanceId", *instance.Id)
 
-			return &RequeueError{
-				RequeueAfter: 5 * time.Second,
-				Reason:       fmt.Sprintf("instance %s is terminating, state: %s", *instance.Id, getInstanceResp.Instance.LifecycleState),
-			}
+			return errors.New(fmt.Sprintf("instance is terminating, state: %s for  %s ", getInstanceResp.Instance.LifecycleState, *instance.Id))
 
 		default:
 			// Instance is in another state, initiate termination
@@ -536,10 +520,7 @@ func (m *MachineScope) DeleteMachine(ctx context.Context, instance *core.Instanc
 			}
 
 			// Requeue to wait for termination
-			return &RequeueError{
-				RequeueAfter: 5 * time.Second,
-				Reason:       fmt.Sprintf("instance %s termination initiated, waiting for completion", *instance.Id),
-			}
+			return errors.New(fmt.Sprintf("instance termination initiated, waiting for completion for %s", *instance.Id))
 		}
 	}
 

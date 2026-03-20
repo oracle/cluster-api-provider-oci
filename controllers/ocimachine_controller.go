@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -355,9 +356,9 @@ func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.
 	instance, err := r.getOrCreate(ctx, machineScope)
 	if err != nil {
 		if hasBlockVolume {
-			if requeueErr, ok := err.(*scope.RequeueError); ok {
-				logger.Info("Requeueing reconciliation", "reason", requeueErr.Reason, "after", requeueErr.RequeueAfter)
-				return ctrl.Result{RequeueAfter: requeueErr.RequeueAfter}, nil
+			if strings.Contains(err.Error(), "volume not available") {
+				logger.Info("Requeueing reconciliation", "reason:", err.Error(), "after:", 5*time.Second)
+				return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 			}
 		}
 		r.Recorder.Event(machine, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "Failed to reconcile OCIMachine").Error())
@@ -509,9 +510,9 @@ func (r *OCIMachineReconciler) reconcileDelete(ctx context.Context, logger logr.
 		}
 		if err := machineScope.DeleteMachine(ctx, instance); err != nil {
 			if hasBlockVolume {
-				if requeueErr, ok := err.(*scope.RequeueError); ok {
-					logger.Info("Requeueing deletion", "reason", requeueErr.Reason, "after", requeueErr.RequeueAfter)
-					return ctrl.Result{RequeueAfter: requeueErr.RequeueAfter}, nil
+				if strings.Contains(err.Error(), "instance is terminating") || strings.Contains(err.Error(), "instance termination initiated") {
+					logger.Info("Requeueing reconciliation", "reason:", err.Error(), "after:", 5*time.Second)
+					return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 				}
 			}
 			machineScope.Error(err, "Error deleting Instance")
