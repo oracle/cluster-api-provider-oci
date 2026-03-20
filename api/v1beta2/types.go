@@ -1203,6 +1203,55 @@ type NetworkSecurityGroup struct {
 	List []*NSG `json:"list,omitempty"`
 }
 
+// BlockVolumeSpec is used to create block volumes with autotune enabled configuration that will used as attachments for cluster nodes
+type BlockVolumeSpec struct {
+	// The OCID of the compartment that contains the volume.
+	// +optional
+	CompartmentId *string `json:"compartmentId,omitempty"`
+
+	// The availability domain of the volume. Omissible for cloning a volume. The new volume will be created in the availability domain of the source volume.
+	// Example: `Uocm:PHX-AD-1`
+	AvailabilityDomain *string `json:"availabilityDomain,omitempty"`
+
+	// A user-friendly name. Does not have to be unique.
+	DisplayName *string `json:"displayName,omitempty"`
+
+	// The number of volume performance units (VPUs) that will be applied to this volume per GB,
+	// representing the Block Volume service's elastic performance options.
+	// See Block Volume Performance Levels (https://docs.oracle.com/iaas/Content/Block/Concepts/blockvolumeperformance.htm#perf_levels) for more information.
+	// Allowed values:
+	//   * `0`: Represents Lower Cost option.
+	//   * `10`: Represents Balanced option.
+	//   * `20`: Represents Higher Performance option.
+	//   * `30`-`120`: Represents the Ultra High Performance option.
+	// For performance autotune enabled volumes, it would be the Default(Minimum) VPUs/GB.
+	// If not specified the default value will be Balanced (VPU/GB:10)
+	// +optional
+	VpusPerGB *int64 `json:"vpusPerGB,omitempty"`
+
+	// The size of the volume in GBs.
+	// If not specified default is 50GB
+	// +optional
+	SizeInGBs *int64 `json:"sizeInGBs,omitempty"`
+
+	// The list of autotune policies to be enabled for this volume.
+	AutotunePolicies []AutotunePolicy `json:"autotunePolicies,omitempty"`
+
+	// The type of volume attachment used to attach this block volume to the instance
+	// If not specified the block volume will be created, but not attached to any instance
+	VolumeType string `json:"volumeType,omitempty"`
+}
+
+type AutotunePolicy struct {
+	// This field can be of type DETACHED_VOLUME or PERFORMANCE_BASED
+	AutotuneType string `json:"autotuneType,omitempty"`
+
+	// This field is required when AutotuneType is PERFORMANCE_BASED.
+	// This will be the maximum VPUs/GB performance level that the volume will be auto-tuned temporarily based on performance monitoring.
+	// + optional
+	MaxVPUsPerGB *int64 `json:"maxVpusPerGB,omitempty"`
+}
+
 type VolumeType string
 
 const (

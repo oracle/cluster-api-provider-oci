@@ -1,0 +1,81 @@
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Cluster
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: "${CLUSTER_NAME}"
+  name: "${CLUSTER_NAME}"
+  namespace: "${NAMESPACE}"
+spec:
+  infrastructureRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+    kind: OCIManagedCluster
+    name: "${CLUSTER_NAME}"
+    namespace: "${NAMESPACE}"
+  controlPlaneRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+    kind: OCIManagedControlPlane
+    name: "${CLUSTER_NAME}"
+    namespace: "${NAMESPACE}"
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: OCIManagedCluster
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: "${CLUSTER_NAME}"
+  name: "${CLUSTER_NAME}"
+spec:
+  compartmentId: "${OCI_COMPARTMENT_ID}"
+---
+kind: OCIManagedControlPlane
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+metadata:
+  name: "${CLUSTER_NAME}"
+  namespace: "${NAMESPACE}"
+spec:
+  version: "${KUBERNETES_VERSION}"
+  ### DE AICI IN JOS E OIDC
+  clusterType: "ENHANCED_CLUSTER"
+  clusterOptions:
+    openIdConnectDiscovery:
+      isOpenIdConnectDiscoveryEnabled: true
+    openIdConnectTokenAuthenticationConfig:
+      isOpenIdConnectAuthEnabled: true
+      clientId: "65ce6e286f7b7e4ee088f5759a62fb3eb6"
+      issuerUrl: "https://idcs-2b14051046724572b65240c1b2666907.identity.oraclecloud.com"
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachinePool
+metadata:
+  name: ${CLUSTER_NAME}-mp-0
+  namespace: default
+  annotations:
+    "cluster.x-k8s.io/replicas-managed-by": ""
+spec:
+  clusterName: ${CLUSTER_NAME}
+  replicas: ${NODE_MACHINE_COUNT}
+  template:
+    spec:
+      clusterName: ${CLUSTER_NAME}
+      bootstrap:
+        dataSecretName: ""
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        kind: OCIManagedMachinePool
+        name: ${CLUSTER_NAME}-mp-0
+      version: ${KUBERNETES_VERSION}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: OCIManagedMachinePool
+metadata:
+  name: ${CLUSTER_NAME}-mp-0
+  namespace: default
+spec:
+  version: "${KUBERNETES_VERSION}"
+  nodeShape: "${OCI_MANAGED_NODE_SHAPE=VM.Standard.E5.Flex}"
+  sshPublicKey: "${OCI_SSH_KEY}"
+  nodeSourceViaImage:
+    imageId: ${OCI_MANAGED_NODE_IMAGE_ID:=""}
+    bootVolumeSizeInGBs: ${OCI_MANAGED_NODE_BOOT_VOLUME_SIZE=50}
+  nodeShapeConfig:
+    ocpus: "${OCI_MANAGED_NODE_MACHINE_TYPE_OCPUS=1}"
+---

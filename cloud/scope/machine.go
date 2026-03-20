@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"math/big"
 	"net/url"
+	"reflect"
 	"strconv"
 
 	"github.com/go-logr/logr"
@@ -33,6 +34,7 @@ import (
 	lb "github.com/oracle/cluster-api-provider-oci/cloud/services/loadbalancer"
 	nlb "github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
+	"github.com/oracle/cluster-api-provider-oci/cloud/services/volume"
 	wr "github.com/oracle/cluster-api-provider-oci/cloud/services/workrequests"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
@@ -59,6 +61,7 @@ type MachineScopeParams struct {
 	Machine                   *clusterv1.Machine
 	Client                    client.Client
 	ComputeClient             compute.ComputeClient
+	BlockVolumeClient         volume.BlockVolumeClient
 	OCIClusterAccessor        OCIClusterAccessor
 	OCIMachine                *infrastructurev1beta2.OCIMachine
 	VCNClient                 vcn.Client
@@ -74,6 +77,7 @@ type MachineScope struct {
 	Cluster                   *clusterv1.Cluster
 	Machine                   *clusterv1.Machine
 	ComputeClient             compute.ComputeClient
+	BlockVolumeClient         volume.BlockVolumeClient
 	OCIClusterAccessor        OCIClusterAccessor
 	OCIMachine                *infrastructurev1beta2.OCIMachine
 	VCNClient                 vcn.Client
@@ -104,6 +108,7 @@ func NewMachineScope(params MachineScopeParams) (*MachineScope, error) {
 		Logger:                    params.Logger,
 		Client:                    params.Client,
 		ComputeClient:             params.ComputeClient,
+		BlockVolumeClient:         params.BlockVolumeClient,
 		Cluster:                   params.Cluster,
 		OCIClusterAccessor:        params.OCIClusterAccessor,
 		patchHelper:               helper,
@@ -267,7 +272,64 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 	launchDetails.AvailabilityConfig = m.getAvailabilityConfig()
 	launchDetails.PreemptibleInstanceConfig = m.getPreemptibleInstanceConfig()
 	launchDetails.PlatformConfig = m.getPlatformConfig()
-	launchDetails.LaunchVolumeAttachments = m.getLaunchVolumeAttachments()
+
+	// If BlockVolumeSpec is specified, create the block volume separately and attach it to the instance
+	if !reflect.DeepEqual(m.OCIMachine.Spec.BlockVolumeSpec, infrastructurev1beta2.BlockVolumeSpec{}) {
+		err = m.ReconcileBlockVolume(ctx)
+
+		if err != nil {
+			return nil, err
+		}
+
+		var bvId string
+		bvId, err = m.GetBlockVolumeId(ctx)
+
+		if err != nil {
+			return nil, err
+		}
+
+		if bvId != "" {
+
+			getVolumeReq := core.GetVolumeRequest{
+				VolumeId: common.String(bvId),
+			}
+
+			getVolumeResp, err := m.BlockVolumeClient.GetVolume(ctx, getVolumeReq)
+			if err != nil {
+				return nil, err
+			}
+
+			// If volume is not yet available, return requeue error
+			if getVolumeResp.Volume.LifecycleState != core.VolumeLifecycleStateAvailable {
+				m.Logger.Info("Volume not yet available, will requeue...",
+					"state", getVolumeResp.Volume.LifecycleState,
+					"volumeId", bvId)
+				return nil, errors.New(fmt.Sprintf("volume not available, state: %s for %s", getVolumeResp.Volume.LifecycleState, bvId))
+			}
+
+			// Appending block volumes created with BlockVolumeSpec to instance attachments
+			if infrastructurev1beta2.VolumeType(m.OCIMachine.Spec.BlockVolumeSpec.VolumeType) == infrastructurev1beta2.IscsiType {
+				launchDetails.LaunchVolumeAttachments = append(launchDetails.LaunchVolumeAttachments, []core.LaunchAttachVolumeDetails{
+					core.LaunchAttachIScsiVolumeDetails{
+						VolumeId: common.String(bvId),
+					},
+				}...)
+			} else if infrastructurev1beta2.VolumeType(m.OCIMachine.Spec.BlockVolumeSpec.VolumeType) == infrastructurev1beta2.ParavirtualizedType {
+				launchDetails.LaunchVolumeAttachments = append(launchDetails.LaunchVolumeAttachments, []core.LaunchAttachVolumeDetails{
+					core.LaunchAttachParavirtualizedVolumeDetails{
+						VolumeId: common.String(bvId),
+					},
+				}...)
+			} else {
+				return nil, errors.New("Unknown attachment type in BlockVolumeSpec, not supported")
+			}
+
+		}
+	}
+
+	// Appending block volumes created with launchVolumeAttachments to instance attachments
+	launchDetails.LaunchVolumeAttachments = append(launchDetails.LaunchVolumeAttachments, m.getLaunchVolumeAttachments()...)
+
 	// Build the list of fault domains to attempt launch in
 	faultDomains := m.buildFaultDomainRetryList(availabilityDomain, faultDomain, retry)
 	return m.launchInstanceWithFaultDomainRetry(ctx, launchDetails, faultDomains)
@@ -391,6 +453,7 @@ func (m *MachineScope) resolveAvailabilityAndFaultDomain() (string, string, bool
 	faultDomain := fdEntry.Attributes[FaultDomain]
 
 	return availabilityDomain, faultDomain, faultDomain != "", nil
+
 }
 
 func (m *MachineScope) getFreeFormTags() map[string]string {
@@ -415,8 +478,56 @@ func (m *MachineScope) DeleteMachine(ctx context.Context, instance *core.Instanc
 		PreserveBootVolume:                 common.Bool(m.OCIMachine.Spec.PreserveBootVolume),
 		PreserveDataVolumesCreatedAtLaunch: common.Bool(m.OCIMachine.Spec.PreserveDataVolumesCreatedAtLaunch),
 	}
+
+	hasBlockVolume := !reflect.DeepEqual(m.OCIMachine.Spec.BlockVolumeSpec, infrastructurev1beta2.BlockVolumeSpec{})
+
+	if hasBlockVolume {
+
+		getInstanceReq := core.GetInstanceRequest{
+			InstanceId: instance.Id,
+		}
+
+		getInstanceResp, err := m.ComputeClient.GetInstance(ctx, getInstanceReq)
+		if err != nil {
+			if ociutil.IsNotFound(err) {
+				m.Logger.Info("Instance terminated successfully (not found), proceeding to delete block volume")
+				// Instance is gone, now delete the block volume
+				return m.DeleteBlockVolume(ctx)
+			}
+			// Other errors
+			return err
+		}
+
+		// Check instance lifecycle state
+		switch getInstanceResp.Instance.LifecycleState {
+		case core.InstanceLifecycleStateTerminating:
+			// Instance is already terminating, just wait
+			m.Logger.Info("Instance is terminating, waiting...",
+				"state", getInstanceResp.Instance.LifecycleState,
+				"instanceId", *instance.Id)
+
+			return errors.New(fmt.Sprintf("instance is terminating, state: %s for  %s ", getInstanceResp.Instance.LifecycleState, *instance.Id))
+
+		default:
+			// Instance is in another state, initiate termination
+			m.Logger.Info("Terminating instance with block volume",
+				"state", getInstanceResp.Instance.LifecycleState,
+				"instanceId", *instance.Id)
+
+			_, err := m.ComputeClient.TerminateInstance(ctx, req)
+			if err != nil {
+				return err
+			}
+
+			// Requeue to wait for termination
+			return errors.New(fmt.Sprintf("instance termination initiated, waiting for completion for %s", *instance.Id))
+		}
+	}
+
+	// No block volume, just terminate the instance normally
 	_, err := m.ComputeClient.TerminateInstance(ctx, req)
 	return err
+
 }
 
 // IsResourceCreatedByClusterAPI determines if the instance was created by the cluster using the
@@ -1089,6 +1200,7 @@ func (m *MachineScope) getPlatformConfig() core.PlatformConfig {
 }
 
 func (m *MachineScope) getLaunchVolumeAttachments() []core.LaunchAttachVolumeDetails {
+
 	volumeAttachmentsInSpec := m.OCIMachine.Spec.LaunchVolumeAttachment
 	if len(volumeAttachmentsInSpec) < 0 {
 		return nil
@@ -1107,30 +1219,45 @@ func (m *MachineScope) getLaunchVolumeAttachments() []core.LaunchAttachVolumeDet
 	return volumes
 }
 
-func getIscsiVolumeAttachment(attachment infrastructurev1beta2.LaunchIscsiVolumeAttachment) core.LaunchAttachVolumeDetails {
-	volumeDetails := core.LaunchAttachIScsiVolumeDetails{
-		Device:                       attachment.Device,
-		DisplayName:                  attachment.DisplayName,
-		IsShareable:                  attachment.IsShareable,
-		IsReadOnly:                   attachment.IsReadOnly,
-		VolumeId:                     attachment.VolumeId,
-		UseChap:                      attachment.UseChap,
-		IsAgentAutoIscsiLoginEnabled: attachment.IsAgentAutoIscsiLoginEnabled,
-		EncryptionInTransitType:      getEncryptionType(attachment.EncryptionInTransitType),
-		LaunchCreateVolumeDetails:    getLaunchCreateVolumeDetails(attachment.LaunchCreateVolumeFromAttributes),
+func getIscsiVolumeAttachment(attachment infrastructurev1beta2.LaunchIscsiVolumeAttachment) core.LaunchAttachIScsiVolumeDetails {
+	var volumeDetails core.LaunchAttachIScsiVolumeDetails
+
+	if attachment.VolumeId != nil {
+		volumeDetails = core.LaunchAttachIScsiVolumeDetails{
+			VolumeId: attachment.VolumeId,
+		}
+	} else {
+		volumeDetails = core.LaunchAttachIScsiVolumeDetails{
+			Device:                       attachment.Device,
+			DisplayName:                  attachment.DisplayName,
+			IsShareable:                  attachment.IsShareable,
+			IsReadOnly:                   attachment.IsReadOnly,
+			VolumeId:                     attachment.VolumeId,
+			UseChap:                      attachment.UseChap,
+			IsAgentAutoIscsiLoginEnabled: attachment.IsAgentAutoIscsiLoginEnabled,
+			EncryptionInTransitType:      getEncryptionType(attachment.EncryptionInTransitType),
+			LaunchCreateVolumeDetails:    getLaunchCreateVolumeDetails(attachment.LaunchCreateVolumeFromAttributes),
+		}
 	}
 	return volumeDetails
 }
 
-func getParavirtualizedVolumeAttachment(attachment infrastructurev1beta2.LaunchParavirtualizedVolumeAttachment) core.LaunchAttachVolumeDetails {
-	volumeDetails := core.LaunchAttachParavirtualizedVolumeDetails{
-		Device:                         attachment.Device,
-		DisplayName:                    attachment.DisplayName,
-		IsShareable:                    attachment.IsShareable,
-		IsReadOnly:                     attachment.IsReadOnly,
-		VolumeId:                       attachment.VolumeId,
-		IsPvEncryptionInTransitEnabled: attachment.IsPvEncryptionInTransitEnabled,
-		LaunchCreateVolumeDetails:      getLaunchCreateVolumeDetails(attachment.LaunchCreateVolumeFromAttributes),
+func getParavirtualizedVolumeAttachment(attachment infrastructurev1beta2.LaunchParavirtualizedVolumeAttachment) core.LaunchAttachParavirtualizedVolumeDetails {
+	var volumeDetails core.LaunchAttachParavirtualizedVolumeDetails
+
+	if attachment.VolumeId != nil {
+		volumeDetails = core.LaunchAttachParavirtualizedVolumeDetails{
+			VolumeId: attachment.VolumeId,
+		}
+	} else {
+		volumeDetails = core.LaunchAttachParavirtualizedVolumeDetails{
+			Device:                         attachment.Device,
+			DisplayName:                    attachment.DisplayName,
+			IsShareable:                    attachment.IsShareable,
+			IsReadOnly:                     attachment.IsReadOnly,
+			IsPvEncryptionInTransitEnabled: attachment.IsPvEncryptionInTransitEnabled,
+			LaunchCreateVolumeDetails:      getLaunchCreateVolumeDetails(attachment.LaunchCreateVolumeFromAttributes),
+		}
 	}
 	return volumeDetails
 }
