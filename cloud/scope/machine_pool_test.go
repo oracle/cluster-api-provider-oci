@@ -33,6 +33,7 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/core"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -1876,6 +1877,22 @@ func TestInstancePoolUpdate(t *testing.T) {
 					}, nil)
 			},
 		},
+		{
+			name:          "no update due to change in replica size as annotation is set",
+			errorExpected: false,
+			instancepool: &core.InstancePool{
+				Size:                    common.Int(3),
+				InstanceConfigurationId: common.String("config_id"),
+			},
+			testSpecificSetup: func(ms *MachinePoolScope) {
+				ms.MachinePool.Annotations = map[string]string{
+					clusterv1.ReplicasManagedByAnnotation: "", // empty value counts as true (= externally managed)
+				}
+				newReplicas := int32(4)
+				ms.MachinePool.Spec.Replicas = &newReplicas
+				ms.OCIMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId = common.String("config_id")
+			},
+		},
 	}
 
 	for _, tc := range tests {
@@ -1890,6 +1907,123 @@ func TestInstancePoolUpdate(t *testing.T) {
 			} else {
 				g.Expect(err).To(BeNil())
 			}
+		})
+	}
+}
+
+func TestSyncReplicasFromInstancePool(t *testing.T) {
+	var (
+		ms       *MachinePoolScope
+		mockCtrl *gomock.Controller
+	)
+
+	setup := func(t *testing.T, g *WithT) {
+		var err error
+		mockCtrl = gomock.NewController(t)
+		secret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "bootstrap",
+				Namespace: "default",
+			},
+			Data: map[string][]byte{
+				"value": []byte("test"),
+			},
+		}
+		ociCluster := &infrastructurev1beta2.OCICluster{
+			ObjectMeta: metav1.ObjectMeta{
+				UID: "cluster_uid",
+			},
+			Spec: infrastructurev1beta2.OCIClusterSpec{
+				CompartmentId:         "test-compartment",
+				OCIResourceIdentifier: "resource_uid",
+			},
+		}
+		replicas := int32(3)
+		infraMachinePool := &infrav2exp.OCIMachinePool{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test",
+				Namespace: "default",
+			},
+		}
+		machinePool := &clusterv1.MachinePool{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test",
+				Namespace: "default",
+			},
+			Spec: clusterv1.MachinePoolSpec{
+				Replicas: &replicas,
+				Template: clusterv1.MachineTemplateSpec{
+					Spec: clusterv1.MachineSpec{
+						Bootstrap: clusterv1.Bootstrap{
+							DataSecretName: common.String("bootstrap"),
+						},
+					},
+				},
+			},
+		}
+		scheme := runtime.NewScheme()
+		g.Expect(corev1.AddToScheme(scheme)).To(Succeed())
+		g.Expect(clusterv1.AddToScheme(scheme)).To(Succeed())
+		g.Expect(infrav2exp.AddToScheme(scheme)).To(Succeed())
+
+		client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(secret, infraMachinePool, machinePool).Build()
+		ms, err = NewMachinePoolScope(MachinePoolScopeParams{
+			ComputeManagementClient: mock_computemanagement.NewMockClient(mockCtrl),
+			OCIMachinePool:          infraMachinePool,
+			OCIClusterAccessor: OCISelfManagedCluster{
+				OCICluster: ociCluster,
+			},
+			Cluster:     &clusterv1.Cluster{},
+			MachinePool: machinePool,
+			Client:      client,
+		})
+		g.Expect(err).To(BeNil())
+	}
+	teardown := func(t *testing.T, g *WithT) {
+		mockCtrl.Finish()
+	}
+
+	tests := []struct {
+		name             string
+		setup            func(ms *MachinePoolScope)
+		instancePool     *core.InstancePool
+		expectedReplicas int32
+	}{
+		{
+			name: "does not patch replicas when annotation is not set",
+			setup: func(ms *MachinePoolScope) {
+				ms.MachinePool.Annotations = nil
+			},
+			instancePool:     &core.InstancePool{Size: common.Int(4)},
+			expectedReplicas: 3,
+		},
+		{
+			name: "patches replicas from observed size when annotation is set",
+			setup: func(ms *MachinePoolScope) {
+				ms.MachinePool.Annotations = map[string]string{
+					clusterv1.ReplicasManagedByAnnotation: "", // empty value counts as true (= externally managed)
+				}
+			},
+			instancePool:     &core.InstancePool{Size: common.Int(4)},
+			expectedReplicas: 4,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+			defer teardown(t, g)
+			setup(t, g)
+			tc.setup(ms)
+
+			err := ms.SyncReplicasFromInstancePool(context.Background(), tc.instancePool)
+			g.Expect(err).To(BeNil())
+
+			updatedMachinePool := &clusterv1.MachinePool{}
+			err = ms.Client.Get(context.Background(), client.ObjectKey{Name: ms.MachinePool.Name, Namespace: ms.MachinePool.Namespace}, updatedMachinePool)
+			g.Expect(err).To(BeNil())
+			g.Expect(updatedMachinePool.Spec.Replicas).ToNot(BeNil())
+			g.Expect(*updatedMachinePool.Spec.Replicas).To(Equal(tc.expectedReplicas))
 		})
 	}
 }

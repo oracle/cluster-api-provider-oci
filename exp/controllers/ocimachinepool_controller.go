@@ -387,6 +387,10 @@ func (r *OCIMachinePoolReconciler) reconcileNormal(ctx context.Context, logger l
 			return reconcile.Result{}, err
 		}
 
+		if err := machinePoolScope.SyncReplicasFromInstancePool(ctx, instancePool); err != nil {
+			return reconcile.Result{}, err
+		}
+
 		instancePool, err = machinePoolScope.UpdatePool(ctx, instancePool)
 		if err != nil {
 			r.Recorder.Eventf(machinePoolScope.OCIMachinePool, corev1.EventTypeWarning, "FailedUpdate", "Failed to update instance pool: %v", err)
