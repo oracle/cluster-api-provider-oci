@@ -155,6 +155,53 @@ spec:
                                           backend as soon as current backend becomes
                                           unhealthy.
                                         properties:
+                                          intervalInMillis:
+                                            description: |-
+                                              The interval between health checks, in milliseconds. The default value is 10000 (10 seconds).
+                                              Example: `10000`
+                                            type: integer
+                                          port:
+                                            description: |-
+                                              The backend server port against which to run the health check. If the port is not specified,
+                                              then the network load balancer uses the port information from the Backend object.
+                                              Example: `8080`
+                                            type: integer
+                                          protocol:
+                                            description: |-
+                                              The protocol the health check must use; either HTTP, HTTPS, UDP, or TCP. Defaults to HTTPS.
+                                              Example: `HTTP`
+                                            type: string
+                                          requestData:
+                                            description: Base64 encoded payload to
+                                              send as the UDP or TCP health check
+                                              probe.
+                                            type: string
+                                          responseBodyRegex:
+                                            description: |-
+                                              A regular expression for parsing the response body from the backend server when using HTTP/HTTPS.
+                                              Example: `^((?!false).|\s)*$`
+                                            type: string
+                                          responseData:
+                                            description: Base64 encoded payload expected
+                                              in the UDP or TCP health check probe
+                                              response.
+                                            type: string
+                                          retries:
+                                            description: |-
+                                              The number of retries to attempt before a backend server is considered unhealthy.
+                                              Example: `3`
+                                            type: integer
+                                          returnCode:
+                                            description: |-
+                                              The status code a healthy backend server should return when using the HTTP/HTTPS protocol.
+                                              Example: `200`
+                                            type: integer
+                                          timeoutInMillis:
+                                            description: |-
+                                              The maximum time, in milliseconds, to wait for a reply to a health check.
+                                              The default value is 3000 (3 seconds).
+                                              Example: `3000`
+                                            type: integer
                                           urlPath:
                                             description: |-
                                               The path against which to run the health check.
@@ -1261,6 +1308,53 @@ spec:
                                           backend as soon as current backend becomes
                                           unhealthy.
                                         properties:
+                                          intervalInMillis:
+                                            description: |-
+                                              The interval between health checks, in milliseconds. The default value is 10000 (10 seconds).
+                                              Example: `10000`
+                                            type: integer
+                                          port:
+                                            description: |-
+                                              The backend server port against which to run the health check. If the port is not specified,
+                                              then the network load balancer uses the port information from the Backend object.
+                                              Example: `8080`
+                                            type: integer
+                                          protocol:
+                                            description: |-
+                                              The protocol the health check must use; either HTTP, HTTPS, UDP, or TCP. Defaults to HTTPS.
+                                              Example: `HTTP`
+                                            type: string
+                                          requestData:
+                                            description: Base64 encoded payload to
+                                              send as the UDP or TCP health check
+                                              probe.
+                                            type: string
+                                          responseBodyRegex:
+                                            description: |-
+                                              A regular expression for parsing the response body from the backend server when using HTTP/HTTPS.
+                                              Example: `^((?!false).|\s)*$`
+                                            type: string
+                                          responseData:
+                                            description: Base64 encoded payload expected
+                                              in the UDP or TCP health check probe
+                                              response.
+                                            type: string
+                                          retries:
+                                            description: |-
+                                              The number of retries to attempt before a backend server is considered unhealthy.
+                                              Example: `3`
+                                            type: integer
+                                          returnCode:
+                                            description: |-
+                                              The status code a healthy backend server should return when using the HTTP/HTTPS protocol.
+                                              Example: `200`
+                                            type: integer
+                                          timeoutInMillis:
+                                            description: |-
+                                              The maximum time, in milliseconds, to wait for a reply to a health check.
+                                              The default value is 3000 (3 seconds).
+                                              Example: `3000`
+                                            type: integer
                                           urlPath:
                                             description: |-
                                               The path against which to run the health check.

@@ -35,18 +35,6 @@ spec:
   compartmentId: "${OCI_COMPARTMENT_ID}"
   networkSpec:
     apiServerLoadBalancer:
-    # Optional: Customize API server NLB health checks using environment variables:
-      # - HEALTH_CHECKER_PROTOCOL: HTTP, HTTPS, TCP, or UDP (default: HTTPS)
-      # - HEALTH_CHECKER_PORT: Health check port (default: 6443)
-      # - HEALTH_CHECKER_INTERVAL_IN_MILLIS: Check interval in ms (default: 10000)
-      # - HEALTH_CHECKER_TIMEOUT_IN_MILLIS: Check timeout in ms (default: 3000)
-      # - HEALTH_CHECKER_RETRIES: Number of retries (default: 3)
-      # For HTTP/HTTPS protocols:
-      # - HEALTH_CHECKER_URL_PATH: URL path to check (default: /healthz)
-      # - HEALTH_CHECKER_RETURN_CODE: Expected HTTP status code (default: 200)
-      # For TCP/UDP protocols:
-      # - HEALTH_CHECKER_REQUEST_DATA_BASE64: Base64-encoded request payload
-      # - HEALTH_CHECKER_RESPONSE_DATA_BASE64: Base64-encoded expected response
       loadBalancerType: "NLB"
       nlbSpec:
         backendSetDetails:
@@ -58,7 +46,7 @@ spec:
             retries: ${HEALTH_CHECKER_RETRIES:=3}
             urlPath: "${HEALTH_CHECKER_URL_PATH:=/healthz}"
             returnCode: ${HEALTH_CHECKER_RETURN_CODE:=200}
-            responseBodyRegex: ${HEALTH_CHECKER_RESPONSE_REGEX:=""}
+            #responseBodyRegex: ${HEALTH_CHECKER_RESPONSE_REGEX:=""}
             # requestData: <base64 payload>   # Enable for TCP/UDP probes (set via HEALTH_CHECKER_REQUEST_DATA_BASE64)
             # responseData: <base64 payload>  # Requires protocol TCP or UDP and matching base64 payload
 ---
@@ -131,7 +119,7 @@ spec:
     spec:
       imageId: "${OCI_IMAGE_ID}"
       compartmentId: "${OCI_COMPARTMENT_ID}"
-      shape: "${OCI_NODE_MACHINE_TYPE=VM.Standard.E5.Flex}"
+      shape: "${OCI_NODE_MACHINE_TYPE=VM.Standard.E4.Flex}"
       shapeConfig:
         ocpus: "${OCI_NODE_MACHINE_TYPE_OCPUS=1}"
       metadata:
@@ -179,3 +167,45 @@ spec:
         apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
         kind: OCIMachineTemplate
 ---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineHealthCheck
+metadata:
+  name: "${CLUSTER_NAME}-control-plane-unhealthy-5m"
+spec:
+  clusterName: "${CLUSTER_NAME}"
+  maxUnhealthy: 100%
+  nodeStartupTimeout: 25m
+  selector:
+    matchLabels:
+      controlplane.remediation: ""
+  unhealthyConditions:
+    - type: Ready
+      status: Unknown
+      timeout: 900s
+    - type: Ready
+      status: "False"
+      timeout: 900s
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineHealthCheck
+metadata:
+  name: "${CLUSTER_NAME}-md-unhealthy-5m"
+spec:
+  clusterName: "${CLUSTER_NAME}"
+  maxUnhealthy: 100%
+  nodeStartupTimeout: 25m
+  selector:
+    matchLabels:
+      machine.remediation: ""
+  unhealthyConditions:
+    - type: Ready
+      status: Unknown
+      timeout: 900s
+    - type: Ready
+      status: "False"
+      timeout: 900s
+
+
+            # returnCode: ${HEALTH_CHECKER_RETURN_CODE:=200}
+            #requestData: "${HEALTH_CHECKER_REQUEST_DATA_BASE64:=}"
+            #responseData: "${HEALTH_CHECKER_RESPONSE_DATA_BASE64:=}"

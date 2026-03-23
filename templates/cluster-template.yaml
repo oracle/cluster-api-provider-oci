@@ -33,6 +33,19 @@ metadata:
   name: "${CLUSTER_NAME}"
 spec:
   compartmentId: "${OCI_COMPARTMENT_ID}"
+  networkSpec:
+    apiServerLoadBalancer:
+      # Optional: customize API server health checks with HEALTH_CHECKER_PROTOCOL,
+      # HEALTH_CHECKER_PORT, HEALTH_CHECKER_INTERVAL_IN_MILLIS, HEALTH_CHECKER_TIMEOUT_IN_MILLIS,
+      # and HEALTH_CHECKER_RETRIES environment variables when generating the cluster manifest.
+      nlbSpec:
+        backendSetDetails:
+          healthChecker:
+            protocol: "${HEALTH_CHECKER_PROTOCOL:=HTTPS}"
+            port: ${HEALTH_CHECKER_PORT:=6443}
+            intervalInMillis: ${HEALTH_CHECKER_INTERVAL_IN_MILLIS:=30000}
+            timeoutInMillis: ${HEALTH_CHECKER_TIMEOUT_IN_MILLIS:=10000}
+            retries: ${HEALTH_CHECKER_RETRIES:=3}
 ---
 kind: KubeadmControlPlane
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1

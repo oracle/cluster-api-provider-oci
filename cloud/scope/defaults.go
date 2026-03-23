@@ -37,6 +37,12 @@ const (
 	ControlPlaneDefaultName               = "control-plane"
 	WorkerDefaultName                     = "worker"
 	ServiceLBDefaultName                  = "service-lb"
+	HealthCheckerDefaultProtocol          = "HTTPS"
+	HealthCheckerDefaultURLPath           = "/healthz"
+	HealthCheckerDefaultReturnCode        = 200
+	HealthCheckerDefaultIntervalInMillis  = 30000
+	HealthCheckerDefaultTimeoutInMillis   = 10000
+	HealthCheckerDefaultRetries           = 3
 )
 
 var (
