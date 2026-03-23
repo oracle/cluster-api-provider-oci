@@ -33,7 +33,6 @@ export LOCAL_ONLY=${LOCAL_ONLY:-"true"}
 
 defaultTag=$(date -u '+%Y%m%d%H%M%S')
 export TAG="${defaultTag:-dev}"
-export GINKGO_NODES=3
 
 export OCI_SSH_KEY="${OCI_SSH_KEY:-""}"
 export OCI_CONTROL_PLANE_MACHINE_TYPE="${OCI_CONTROL_PLANE_MACHINE_TYPE:-"VM.Standard.E3.Flex"}"
@@ -42,6 +41,7 @@ export OCI_NODE_MACHINE_TYPE="${OCI_NODE_MACHINE_TYPE:-"VM.Standard.E3.Flex"}"
 export OCI_NODE_MACHINE_TYPE_OCPUS="${OCI_NODE_MACHINE_TYPE_OCPUS:-"1"}"
 export OCI_MANAGED_NODE_SHAPE="${OCI_NODE_MACHINE_TYPE:-"VM.Standard.E4.Flex"}"
 export OCI_ALTERNATIVE_REGION="${OCI_ALTERNATIVE_REGION:-"us-sanjose-1"}"
+export GINKGO_NODES=${GINKGO_NODES:-3}
 
 # Generate SSH key.
 if [ -z "${OCI_SSH_KEY}" ]; then
