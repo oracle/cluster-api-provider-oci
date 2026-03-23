@@ -26,6 +26,15 @@ import (
 	"github.com/pkg/errors"
 )
 
+func (m *MachineScope) GetBlockVolumeCompartmentId() string {
+
+	blockVolumecompartmentId := ptr.ToString(m.OCIMachine.Spec.BlockVolumeSpec.CompartmentId)
+	if blockVolumecompartmentId == "" {
+		return m.getCompartmentId()
+	}
+	return blockVolumecompartmentId
+}
+
 // GetBlockVolume retrieves a core.Volume using either the VolumeId recorded in the
 // spec or by listing volumes by DisplayName within the compartment and ensuring
 // Cluster API ownership via tags.
@@ -33,18 +42,13 @@ import (
 func (m *MachineScope) GetBlockVolume(ctx context.Context) (*core.Volume, error) {
 	name := m.GetBlockVolumeDesiredName()
 
-	var blockVolumecompartmentId string
-	if m.OCIMachine.Spec.BlockVolumeSpec.CompartmentId == nil {
-		blockVolumecompartmentId = m.getCompartmentId()
-	} else {
-		blockVolumecompartmentId = *m.OCIMachine.Spec.BlockVolumeSpec.CompartmentId
-	}
+	bvCompId := m.GetBlockVolumeCompartmentId()
 
 	var page *string
 	for {
 		resp, err := m.BlockVolumeClient.ListVolumes(ctx, core.ListVolumesRequest{
-			CompartmentId: common.String(blockVolumecompartmentId),
-			DisplayName:   common.String(name),
+			CompartmentId: common.String(bvCompId),
+			DisplayName:   common.String(m.OCIMachine.Name + "-" + name),
 			Page:          page,
 		})
 		if err != nil {
@@ -105,15 +109,12 @@ func (m *MachineScope) ToOCIAutotunePolicy() []core.AutotunePolicy {
 	return policies
 }
 
-func (m *MachineScope) CreateBlockVolume(ctx context.Context) error {
+func (m *MachineScope) CreateBlockVolume(ctx context.Context, instanceAD string) error {
 	spec := m.OCIMachine.Spec.BlockVolumeSpec
 
 	blockVolumeName := m.GetBlockVolumeDesiredName()
 	// If compartmentId not specified in BlockVolumeSpec, take compartmentId from default compartment
-	compartmentId := spec.CompartmentId
-	if compartmentId == nil {
-		compartmentId = common.String(m.getCompartmentId())
-	}
+	bvCompId := m.GetBlockVolumeCompartmentId()
 
 	if m.BlockVolumeClient == nil {
 		return errors.New("BlockVolumeClient is nil - was not initialized properly")
@@ -121,9 +122,9 @@ func (m *MachineScope) CreateBlockVolume(ctx context.Context) error {
 
 	// Build CreateVolumeDetails from spec
 	createVolumeDetails := core.CreateVolumeDetails{
-		AvailabilityDomain: spec.AvailabilityDomain,
-		CompartmentId:      compartmentId,
-		DisplayName:        common.String(blockVolumeName),
+		AvailabilityDomain: common.String(instanceAD),
+		CompartmentId:      common.String(bvCompId),
+		DisplayName:        common.String(m.OCIMachine.Name + "-" + blockVolumeName),
 		VpusPerGB:          spec.VpusPerGB,
 		SizeInGBs:          spec.SizeInGBs,
 		FreeformTags:       m.getFreeFormTags(),
@@ -145,7 +146,7 @@ func (m *MachineScope) CreateBlockVolume(ctx context.Context) error {
 // ReconcileBlockVolume ensures a block volume exists as described by the
 // cluster's BlockVolumeSpec. If the volume already exists, it records the OCID on
 // the spec and returns without changes.
-func (m *MachineScope) ReconcileBlockVolume(ctx context.Context) error {
+func (m *MachineScope) ReconcileBlockVolume(ctx context.Context, instanceAD string) error {
 	vol, err := m.GetBlockVolume(ctx)
 
 	if err != nil {
@@ -155,7 +156,7 @@ func (m *MachineScope) ReconcileBlockVolume(ctx context.Context) error {
 	// If there was not found any BlockVolume already created with BlockVolumeSpec configuration, it will create it
 	if vol == nil {
 		m.Logger.Info("Creating Block Volume")
-		err = m.CreateBlockVolume(ctx)
+		err = m.CreateBlockVolume(ctx, instanceAD)
 	}
 
 	return err
@@ -171,9 +172,11 @@ func (m *MachineScope) DeleteBlockVolume(ctx context.Context) error {
 	vol, err := m.GetBlockVolume(ctx)
 	if vol == nil {
 		m.Logger.Info("Block Volume already deleted or not found")
+		if err != nil {
+			return err
+		}
 		return nil
 	}
-
 	_, err = m.BlockVolumeClient.DeleteVolume(ctx, core.DeleteVolumeRequest{VolumeId: vol.Id})
 	if err != nil {
 		return err

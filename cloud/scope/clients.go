@@ -272,7 +272,7 @@ func (c *ClientProvider) createIdentityClient(region string, ociAuthConfigProvid
 func (c *ClientProvider) createBlockVolumeClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (volume.BlockVolumeClient, error) {
 	blockVolumeClient, err := core.NewBlockstorageClientWithConfigurationProvider(ociAuthConfigProvider)
 	if err != nil {
-		logger.Error(err, "unable to create OCI Compute Client")
+		logger.Error(err, "unable to create OCI BlockVolume Client")
 		return nil, err
 	}
 	blockVolumeClient.SetRegion(region)

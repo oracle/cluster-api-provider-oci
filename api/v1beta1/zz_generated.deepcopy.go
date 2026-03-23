@@ -367,11 +367,6 @@ func (in *BlockVolumeSpec) DeepCopyInto(out *BlockVolumeSpec) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.AvailabilityDomain != nil {
-		in, out := &in.AvailabilityDomain, &out.AvailabilityDomain
-		*out = new(string)
-		**out = **in
-	}
 	if in.DisplayName != nil {
 		in, out := &in.DisplayName, &out.DisplayName
 		*out = new(string)

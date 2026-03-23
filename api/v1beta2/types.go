@@ -1209,11 +1209,7 @@ type BlockVolumeSpec struct {
 	// +optional
 	CompartmentId *string `json:"compartmentId,omitempty"`
 
-	// The availability domain of the volume. Omissible for cloning a volume. The new volume will be created in the availability domain of the source volume.
-	// Example: `Uocm:PHX-AD-1`
-	AvailabilityDomain *string `json:"availabilityDomain,omitempty"`
-
-	// A user-friendly name. Does not have to be unique.
+	// A user-friendly name. This will be used as sufix for the actual name for BlockVolume when created, the prefix will be the instance name for which will be attached
 	DisplayName *string `json:"displayName,omitempty"`
 
 	// The number of volume performance units (VPUs) that will be applied to this volume per GB,

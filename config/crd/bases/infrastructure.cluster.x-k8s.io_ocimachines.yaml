@@ -271,10 +271,6 @@ spec:
                   compartmentId:
                     description: The OCID of the compartment that contains the volume.
                     type: string  
-                  availabilityDomain:
-                    description: The availability domain of the volume. Omissible for cloning 
-                      a volume. The new volume will be created in the availability domain of the source volume.
-                    type: string
                   displayName:
                     description: |-
                       A user-friendly name. Does not have to be unique, and it's changeable.
@@ -1308,10 +1304,6 @@ spec:
                   compartmentId:
                     description: The OCID of the compartment that contains the volume.
                     type: string  
-                  availabilityDomain:
-                    description: The availability domain of the volume. Omissible for cloning 
-                      a volume. The new volume will be created in the availability domain of the source volume.
-                    type: string
                   displayName:
                     description: |-
                       A user-friendly name. Does not have to be unique, and it's changeable.

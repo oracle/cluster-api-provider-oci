@@ -91,9 +91,8 @@ spec:
         autotunePolicies:
           - autotuneType: "PERFORMANCE_BASED"
             maxVpusPerGB: 120
-        availabilityDomain: "RiYU:EU-FRANKFURT-1-AD-1"
         compartmentId: "${OCI_COMPARTMENT_ID}"
-        displayName: "autotuned-bv-controlplane"
+        displayName: "autotuned-bv"
         vpusPerGB: 100
         sizeInGBs: 200
         volumeType: "paravirtualized"
@@ -117,9 +116,8 @@ spec:
         autotunePolicies:
           - autotuneType: "PERFORMANCE_BASED"
             maxVpusPerGB: 120
-        availabilityDomain: "RiYU:EU-FRANKFURT-1-AD-1"
         compartmentId: "${OCI_COMPARTMENT_ID}"
-        displayName: "autotuned-bv-md"
+        displayName: "autotuned-bv"
         vpusPerGB: 100
         sizeInGBs: 150
         volumeType: "paravirtualized"

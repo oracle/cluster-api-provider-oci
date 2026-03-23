@@ -95,9 +95,8 @@ func TestBlockVolumeReconciliation(t *testing.T) {
 			matchError:    errors.New("list volumes failed"),
 			testSpecificSetup: func(machineScope *MachineScope, blockVolumeClient *mock_volume.MockBlockVolumeClient) {
 				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
-					AvailabilityDomain: common.String("ad1"),
-					DisplayName:        common.String("test-volume"),
-					SizeInGBs:          common.Int64(50),
+					DisplayName: common.String("test-volume"),
+					SizeInGBs:   common.Int64(50),
 					AutotunePolicies: []infrastructurev1beta2.AutotunePolicy{
 						{AutotuneType: "PERFORMANCE_BASED", MaxVPUsPerGB: common.Int64(20)},
 					},
@@ -113,9 +112,8 @@ func TestBlockVolumeReconciliation(t *testing.T) {
 			matchError:    errors.New("create volume failed"),
 			testSpecificSetup: func(machineScope *MachineScope, blockVolumeClient *mock_volume.MockBlockVolumeClient) {
 				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
-					AvailabilityDomain: common.String("ad1"),
-					DisplayName:        common.String("new-volume"),
-					SizeInGBs:          common.Int64(100),
+					DisplayName: common.String("new-volume"),
+					SizeInGBs:   common.Int64(100),
 					AutotunePolicies: []infrastructurev1beta2.AutotunePolicy{
 						{AutotuneType: "PERFORMANCE_BASED", MaxVPUsPerGB: common.Int64(20)},
 					},
@@ -132,9 +130,8 @@ func TestBlockVolumeReconciliation(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, blockVolumeClient *mock_volume.MockBlockVolumeClient) {
 				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
-					AvailabilityDomain: common.String("ad1"),
-					DisplayName:        common.String("autotune-volume"),
-					SizeInGBs:          common.Int64(50),
+					DisplayName: common.String("autotune-volume"),
+					SizeInGBs:   common.Int64(50),
 					AutotunePolicies: []infrastructurev1beta2.AutotunePolicy{
 						{AutotuneType: "DETACHED_VOLUME"},
 						{AutotuneType: "PERFORMANCE_BASED", MaxVPUsPerGB: common.Int64(20)},
@@ -147,7 +144,7 @@ func TestBlockVolumeReconciliation(t *testing.T) {
 					CreateVolumeDetails: core.CreateVolumeDetails{
 						AvailabilityDomain: common.String("ad1"),
 						CompartmentId:      common.String("test-compartment"),
-						DisplayName:        common.String("autotune-volume"),
+						DisplayName:        common.String("test-machine-autotune-volume"),
 						SizeInGBs:          common.Int64(50),
 						AutotunePolicies: []core.AutotunePolicy{
 							core.DetachedVolumeAutotunePolicy{},
@@ -167,10 +164,9 @@ func TestBlockVolumeReconciliation(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, blockVolumeClient *mock_volume.MockBlockVolumeClient) {
 				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
-					AvailabilityDomain: common.String("ad1"),
-					DisplayName:        common.String("custom-compartment-volume"),
-					SizeInGBs:          common.Int64(50),
-					CompartmentId:      common.String("custom-compartment"),
+					DisplayName:   common.String("custom-compartment-volume"),
+					SizeInGBs:     common.Int64(50),
+					CompartmentId: common.String("custom-compartment"),
 					AutotunePolicies: []infrastructurev1beta2.AutotunePolicy{
 						{AutotuneType: "PERFORMANCE_BASED", MaxVPUsPerGB: common.Int64(20)},
 					},
@@ -178,13 +174,13 @@ func TestBlockVolumeReconciliation(t *testing.T) {
 				}
 				blockVolumeClient.EXPECT().ListVolumes(gomock.Any(), gomock.Eq(core.ListVolumesRequest{
 					CompartmentId: common.String("custom-compartment"),
-					DisplayName:   common.String("custom-compartment-volume"),
+					DisplayName:   common.String("test-machine-custom-compartment-volume"),
 				})).Return(core.ListVolumesResponse{Items: []core.Volume{}}, nil)
 				blockVolumeClient.EXPECT().CreateVolume(gomock.Any(), gomock.Eq(core.CreateVolumeRequest{
 					CreateVolumeDetails: core.CreateVolumeDetails{
 						AvailabilityDomain: common.String("ad1"),
 						CompartmentId:      common.String("custom-compartment"),
-						DisplayName:        common.String("custom-compartment-volume"),
+						DisplayName:        common.String("test-machine-custom-compartment-volume"),
 						SizeInGBs:          common.Int64(50),
 						AutotunePolicies: []core.AutotunePolicy{
 							core.PerformanceBasedAutotunePolicy{MaxVpusPerGB: common.Int64(20)},
@@ -206,7 +202,7 @@ func TestBlockVolumeReconciliation(t *testing.T) {
 			defer teardown(t, g)
 			setup(t, g)
 			tc.testSpecificSetup(ms, blockVolumeClient)
-			err := ms.ReconcileBlockVolume(context.Background())
+			err := ms.ReconcileBlockVolume(context.Background(), "ad1")
 			if tc.errorExpected {
 				g.Expect(err).To(Not(BeNil()))
 				if tc.errorSubStringMatch {
@@ -281,8 +277,7 @@ func TestDeleteBlockVolume(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, blockVolumeClient *mock_volume.MockBlockVolumeClient) {
 				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
-					AvailabilityDomain: common.String("ad1"),
-					DisplayName:        common.String("test-volume"),
+					DisplayName: common.String("test-volume"),
 					AutotunePolicies: []infrastructurev1beta2.AutotunePolicy{
 						{AutotuneType: "PERFORMANCE_BASED", MaxVPUsPerGB: common.Int64(20)},
 					},
@@ -290,7 +285,7 @@ func TestDeleteBlockVolume(t *testing.T) {
 				}
 				blockVolumeClient.EXPECT().ListVolumes(gomock.Any(), gomock.Eq(core.ListVolumesRequest{
 					CompartmentId: common.String("test-compartment"),
-					DisplayName:   common.String("test-volume"),
+					DisplayName:   common.String("test-machine-test-volume"),
 				})).Return(core.ListVolumesResponse{
 					Items: []core.Volume{
 						{
@@ -314,8 +309,7 @@ func TestDeleteBlockVolume(t *testing.T) {
 			matchError:    errors.New("delete volume failed"),
 			testSpecificSetup: func(machineScope *MachineScope, blockVolumeClient *mock_volume.MockBlockVolumeClient) {
 				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
-					AvailabilityDomain: common.String("ad1"),
-					DisplayName:        common.String("test-volume"),
+					DisplayName: common.String("test-volume"),
 					AutotunePolicies: []infrastructurev1beta2.AutotunePolicy{
 						{AutotuneType: "PERFORMANCE_BASED", MaxVPUsPerGB: common.Int64(20)},
 					},
@@ -411,20 +405,6 @@ func TestGetBlockVolumeDesiredName(t *testing.T) {
 			expectedName: "my-volume",
 			testSpecificSetup: func(machineScope *MachineScope) {
 				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
-					AvailabilityDomain: common.String("ad1"),
-					DisplayName:        common.String("my-volume"),
-					AutotunePolicies: []infrastructurev1beta2.AutotunePolicy{
-						{AutotuneType: "PERFORMANCE_BASED", MaxVPUsPerGB: common.Int64(20)},
-					},
-					VolumeType: "PARAVIRTUALIZED",
-				}
-			},
-		},
-		{
-			name:         "returns DisplayName even when AvailabilityDomain is nil",
-			expectedName: "my-volume",
-			testSpecificSetup: func(machineScope *MachineScope) {
-				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
 					DisplayName: common.String("my-volume"),
 					AutotunePolicies: []infrastructurev1beta2.AutotunePolicy{
 						{AutotuneType: "PERFORMANCE_BASED", MaxVPUsPerGB: common.Int64(20)},
@@ -438,8 +418,7 @@ func TestGetBlockVolumeDesiredName(t *testing.T) {
 			expectedName: "",
 			testSpecificSetup: func(machineScope *MachineScope) {
 				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
-					AvailabilityDomain: common.String("ad1"),
-					DisplayName:        common.String(""),
+					DisplayName: common.String(""),
 					AutotunePolicies: []infrastructurev1beta2.AutotunePolicy{
 						{AutotuneType: "PERFORMANCE_BASED", MaxVPUsPerGB: common.Int64(20)},
 					},
@@ -452,8 +431,7 @@ func TestGetBlockVolumeDesiredName(t *testing.T) {
 			expectedName: "",
 			testSpecificSetup: func(machineScope *MachineScope) {
 				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
-					AvailabilityDomain: common.String("ad1"),
-					DisplayName:        nil,
+					DisplayName: nil,
 					AutotunePolicies: []infrastructurev1beta2.AutotunePolicy{
 						{AutotuneType: "PERFORMANCE_BASED", MaxVPUsPerGB: common.Int64(20)},
 					},
@@ -518,7 +496,6 @@ func TestToOCIAutotunePolicy(t *testing.T) {
 			name: "detached volume policy",
 			testSpecificSetup: func(machineScope *MachineScope) {
 				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
-					AvailabilityDomain: common.String("ad1"),
 					AutotunePolicies: []infrastructurev1beta2.AutotunePolicy{
 						{AutotuneType: "DETACHED_VOLUME"},
 					},
@@ -533,7 +510,6 @@ func TestToOCIAutotunePolicy(t *testing.T) {
 			name: "performance based policy",
 			testSpecificSetup: func(machineScope *MachineScope) {
 				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
-					AvailabilityDomain: common.String("ad1"),
 					AutotunePolicies: []infrastructurev1beta2.AutotunePolicy{
 						{AutotuneType: "PERFORMANCE_BASED", MaxVPUsPerGB: common.Int64(20)},
 					},
@@ -548,7 +524,6 @@ func TestToOCIAutotunePolicy(t *testing.T) {
 			name: "multiple policies combined",
 			testSpecificSetup: func(machineScope *MachineScope) {
 				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
-					AvailabilityDomain: common.String("ad1"),
 					AutotunePolicies: []infrastructurev1beta2.AutotunePolicy{
 						{AutotuneType: "DETACHED_VOLUME"},
 						{AutotuneType: "PERFORMANCE_BASED", MaxVPUsPerGB: common.Int64(30)},

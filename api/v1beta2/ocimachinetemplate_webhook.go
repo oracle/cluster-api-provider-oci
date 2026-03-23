@@ -52,6 +52,7 @@ func (*OCIMachineTemplateWebhook) ValidateCreate(_ context.Context, raw runtime.
 	if !ok {
 		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected a OCIMachineTemplate but got a %T", raw))
 	}
+	clusterlogger.Info("validate create machinetemplate", "name", m.Name)
 
 	// if BlockVolumeSpec is specified, verify the mandatory fields are specified
 	if !reflect.DeepEqual(m.Spec.Template.Spec.BlockVolumeSpec, BlockVolumeSpec{}) {
@@ -59,11 +60,7 @@ func (*OCIMachineTemplateWebhook) ValidateCreate(_ context.Context, raw runtime.
 			return nil, errors.New("DisplayName for BlockVolumeSpec not specified")
 		}
 
-		if m.Spec.Template.Spec.BlockVolumeSpec.AvailabilityDomain == nil {
-			return nil, errors.New("AvailabilityDomain for BlockVolumeSpec not specified")
-		}
-
-		if len(m.Spec.Template.Spec.BlockVolumeSpec.AutotunePolicies) > 0 && m.Spec.Template.Spec.BlockVolumeSpec.AutotunePolicies != nil {
+		if len(m.Spec.Template.Spec.BlockVolumeSpec.AutotunePolicies) > 0 {
 			for _, autotunePolicy := range m.Spec.Template.Spec.BlockVolumeSpec.AutotunePolicies {
 				if autotunePolicy.AutotuneType == "PERFORMANCE_BASED" && autotunePolicy.MaxVPUsPerGB == nil {
 					return nil, errors.New("MaxVPUsPerGB should be specified for AutotuneType of type PERFORMANCE_BASED")
@@ -79,12 +76,11 @@ func (*OCIMachineTemplateWebhook) ValidateCreate(_ context.Context, raw runtime.
 			return nil, errors.New("AutotunePolicies field in BlockVolumeSpec should be specified and have at least one autotunePolicy in it")
 		}
 
-		if m.Spec.Template.Spec.BlockVolumeSpec.VolumeType != "paravirtualized" && m.Spec.Template.Spec.BlockVolumeSpec.VolumeType != "iscsi" {
+		volumeType := m.Spec.Template.Spec.BlockVolumeSpec.VolumeType
+		if volumeType != string(ParavirtualizedType) && volumeType != string(IscsiType) {
 			return nil, errors.New("VolumeType field of BlockVolumeSpec should be of type paravirtualized or iscsi")
 		}
 	}
-
-	clusterlogger.Info("validate create machinetemplate", "name", m.Name)
 
 	var allErrs field.ErrorList
 
@@ -115,6 +111,34 @@ func (*OCIMachineTemplateWebhook) ValidateUpdate(ctx context.Context, oldRaw run
 		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected a OCIMachineTemplate but got a %T", newRaw))
 	}
 	clusterlogger.Info("validate update machinetemplate", "name", m.Name)
+
+	// if BlockVolumeSpec is specified, verify the mandatory fields are specified
+	if !reflect.DeepEqual(m.Spec.Template.Spec.BlockVolumeSpec, BlockVolumeSpec{}) {
+		if m.Spec.Template.Spec.BlockVolumeSpec.DisplayName == nil {
+			return nil, errors.New("DisplayName for BlockVolumeSpec not specified")
+		}
+
+		if len(m.Spec.Template.Spec.BlockVolumeSpec.AutotunePolicies) > 0 {
+			for _, autotunePolicy := range m.Spec.Template.Spec.BlockVolumeSpec.AutotunePolicies {
+				if autotunePolicy.AutotuneType == "PERFORMANCE_BASED" && autotunePolicy.MaxVPUsPerGB == nil {
+					return nil, errors.New("MaxVPUsPerGB should be specified for AutotuneType of type PERFORMANCE_BASED")
+				}
+				if autotunePolicy.AutotuneType == "DETACHED_VOLUME" && autotunePolicy.MaxVPUsPerGB != nil {
+					return nil, errors.New("MaxVPUsPerGB should not be specified for AutotuneType of type DETACHED_VOLUME")
+				}
+				if autotunePolicy.AutotuneType != "DETACHED_VOLUME" && autotunePolicy.AutotuneType != "PERFORMANCE_BASED" {
+					return nil, errors.New("AutotuneType of type unknown. Available types are PERFORMANCE_BASED or DETACHED_VOLUME")
+				}
+			}
+		} else {
+			return nil, errors.New("AutotunePolicies field in BlockVolumeSpec should be specified and have at least one autotunePolicy in it")
+		}
+
+		volumeType := m.Spec.Template.Spec.BlockVolumeSpec.VolumeType
+		if volumeType != string(ParavirtualizedType) && volumeType != string(IscsiType) {
+			return nil, errors.New("VolumeType field of BlockVolumeSpec should be of type paravirtualized or iscsi")
+		}
+	}
 
 	var allErrs field.ErrorList
 

@@ -121,6 +121,10 @@ func NewMachineScope(params MachineScopeParams) (*MachineScope, error) {
 	}, nil
 }
 
+func (m *MachineScope) BlockVolumeSpecNotEmpty(ctx context.Context) bool {
+	return !reflect.DeepEqual(m.OCIMachine.Spec.BlockVolumeSpec, infrastructurev1beta2.BlockVolumeSpec{})
+}
+
 // GetOrCreateMachine will get machine instance or create if the instances doesn't exist
 func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, error) {
 	instance, err := m.GetMachine(ctx)
@@ -274,8 +278,8 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 	launchDetails.PlatformConfig = m.getPlatformConfig()
 
 	// If BlockVolumeSpec is specified, create the block volume separately and attach it to the instance
-	if !reflect.DeepEqual(m.OCIMachine.Spec.BlockVolumeSpec, infrastructurev1beta2.BlockVolumeSpec{}) {
-		err = m.ReconcileBlockVolume(ctx)
+	if m.BlockVolumeSpecNotEmpty(ctx) {
+		err = m.ReconcileBlockVolume(ctx, availabilityDomain)
 
 		if err != nil {
 			return nil, err
@@ -479,7 +483,7 @@ func (m *MachineScope) DeleteMachine(ctx context.Context, instance *core.Instanc
 		PreserveDataVolumesCreatedAtLaunch: common.Bool(m.OCIMachine.Spec.PreserveDataVolumesCreatedAtLaunch),
 	}
 
-	hasBlockVolume := !reflect.DeepEqual(m.OCIMachine.Spec.BlockVolumeSpec, infrastructurev1beta2.BlockVolumeSpec{})
+	hasBlockVolume := m.BlockVolumeSpecNotEmpty(ctx)
 
 	if hasBlockVolume {
 
