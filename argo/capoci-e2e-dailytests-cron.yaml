@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: CronWorkflow
+metadata:
+  name: capoci-e2e-dailytests
+  namespace: argo
+spec:
+  schedule: "0 7 * * *"
+  timezone: "America/New_York"
+  concurrencyPolicy: "Forbid"
+  startingDeadlineSeconds: 1800
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 5
+
+  workflowSpec:
+    workflowTemplateRef:
+      name: capoci-e2e
+    arguments:
+      parameters:
+        - name: ginkgo_nodes
+          value: "1"
+        - name: ginkgo_focus
+          value: "\\[DailyTests\\]"
+        - name: ginkgo_skip
+          value: "Bare Metal|VCNPeering"
+        - name: kind_node_image
+          value: "kindest/node:v1.33.0"
+        - name: node_machine_count
+          value: "1"
+        - name: use_instance_principal
+          value: "true"
+        - name: use_instance_principal_b64
+          value: "dHJ1ZQ=="
+        - name: git_ref
+          value: "main"
+        - name: git_repo
+          value: "https://github.com/oracle/cluster-api-provider-oci.git"
