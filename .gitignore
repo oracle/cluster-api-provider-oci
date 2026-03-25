@@ -46,3 +46,5 @@ tilt-settings.json
 worktrees/
 
 infrastructure-oci/v0.22.0
+infrastructure-oci/v0.22.0/infrastructure-components.yaml
+infrastructure-oci/v0.22.0/metadata.yaml

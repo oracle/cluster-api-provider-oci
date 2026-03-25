@@ -35,20 +35,26 @@ spec:
   compartmentId: "${OCI_COMPARTMENT_ID}"
   networkSpec:
     apiServerLoadBalancer:
+      # Customize NLB health checks via environment variables.
+      # The five fields below apply to ALL protocols (HTTP, HTTPS, TCP, UDP).
+      # Uncomment the protocol-specific section that matches your chosen protocol.
       loadBalancerType: "NLB"
       nlbSpec:
         backendSetDetails:
           healthChecker:
+            # --- Universal fields (all protocols) ---
             protocol: "${HEALTH_CHECKER_PROTOCOL:=HTTPS}"
             port: ${HEALTH_CHECKER_PORT:=6443}
-            intervalInMillis: ${HEALTH_CHECKER_INTERVAL_IN_MILLIS:=10000}
-            timeoutInMillis: ${HEALTH_CHECKER_TIMEOUT_IN_MILLIS:=3000}
+            intervalInMillis: ${HEALTH_CHECKER_INTERVAL_IN_MILLIS:=30000}
+            timeoutInMillis: ${HEALTH_CHECKER_TIMEOUT_IN_MILLIS:=10000}
             retries: ${HEALTH_CHECKER_RETRIES:=3}
-            urlPath: "${HEALTH_CHECKER_URL_PATH:=/healthz}"
-            returnCode: ${HEALTH_CHECKER_RETURN_CODE:=200}
-            #responseBodyRegex: ${HEALTH_CHECKER_RESPONSE_REGEX:=""}
-            # requestData: <base64 payload>   # Enable for TCP/UDP probes (set via HEALTH_CHECKER_REQUEST_DATA_BASE64)
-            # responseData: <base64 payload>  # Requires protocol TCP or UDP and matching base64 payload
+            # --- HTTP/HTTPS only — uncomment to override CAPOCI defaults (/healthz, 200) ---
+            # urlPath: "${HEALTH_CHECKER_URL_PATH:=/healthz}"
+            # returnCode: ${HEALTH_CHECKER_RETURN_CODE:=200}
+            # responseBodyRegex: "${HEALTH_CHECKER_RESPONSE_REGEX}"
+            # --- TCP/UDP only — uncomment if your probe requires a payload ---
+            # requestData: "${HEALTH_CHECKER_REQUEST_DATA_BASE64}"
+            # responseData: "${HEALTH_CHECKER_RESPONSE_DATA_BASE64}"
 ---
 kind: KubeadmControlPlane
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1
@@ -59,9 +65,6 @@ spec:
   version: "${KUBERNETES_VERSION}"
   replicas: ${CONTROL_PLANE_MACHINE_COUNT}
   machineTemplate:
-    metadata:
-      labels:
-        controlplane.remediation: ""
     infrastructureRef:
       kind: OCIMachineTemplate
       apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
@@ -94,14 +97,12 @@ kind: OCIMachineTemplate
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 metadata:
   name: "${CLUSTER_NAME}-control-plane"
-#  labels:
-#    controlplane.remediation: ""
 spec:
   template:
     spec:
       imageId: "${OCI_IMAGE_ID}"
       compartmentId: "${OCI_COMPARTMENT_ID}"
-      shape: "${OCI_CONTROL_PLANE_MACHINE_TYPE=VM.Standard.E4.Flex}"
+      shape: "${OCI_CONTROL_PLANE_MACHINE_TYPE=VM.Standard.E5.Flex}"
       shapeConfig:
         ocpus: "${OCI_CONTROL_PLANE_MACHINE_TYPE_OCPUS=1}"
       metadata:
@@ -112,14 +113,12 @@ apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCIMachineTemplate
 metadata:
   name: "${CLUSTER_NAME}-md-0"
-#  labels:
-#    machine.remediation: ""
 spec:
   template:
     spec:
       imageId: "${OCI_IMAGE_ID}"
       compartmentId: "${OCI_COMPARTMENT_ID}"
-      shape: "${OCI_NODE_MACHINE_TYPE=VM.Standard.E4.Flex}"
+      shape: "${OCI_NODE_MACHINE_TYPE=VM.Standard.E5.Flex}"
       shapeConfig:
         ocpus: "${OCI_NODE_MACHINE_TYPE_OCPUS=1}"
       metadata:
@@ -143,17 +142,16 @@ apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineDeployment
 metadata:
   name: "${CLUSTER_NAME}-md-0"
-#  labels:
-#    machine.remediation: ""
 spec:
   clusterName: "${CLUSTER_NAME}"
   replicas: ${NODE_MACHINE_COUNT}
   selector:
     matchLabels:
+      cluster.x-k8s.io/cluster-name: "${CLUSTER_NAME}"
   template:
     metadata:
       labels:
-        machine.remediation: ""
+        cluster.x-k8s.io/cluster-name: "${CLUSTER_NAME}"
     spec:
       clusterName: "${CLUSTER_NAME}"
       version: "${KUBERNETES_VERSION}"
@@ -166,46 +164,7 @@ spec:
         name: "${CLUSTER_NAME}-md-0"
         apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
         kind: OCIMachineTemplate
----
-apiVersion: cluster.x-k8s.io/v1beta1
-kind: MachineHealthCheck
-metadata:
-  name: "${CLUSTER_NAME}-control-plane-unhealthy-5m"
-spec:
-  clusterName: "${CLUSTER_NAME}"
-  maxUnhealthy: 100%
-  nodeStartupTimeout: 25m
-  selector:
-    matchLabels:
-      controlplane.remediation: ""
-  unhealthyConditions:
-    - type: Ready
-      status: Unknown
-      timeout: 900s
-    - type: Ready
-      status: "False"
-      timeout: 900s
----
-apiVersion: cluster.x-k8s.io/v1beta1
-kind: MachineHealthCheck
-metadata:
-  name: "${CLUSTER_NAME}-md-unhealthy-5m"
-spec:
-  clusterName: "${CLUSTER_NAME}"
-  maxUnhealthy: 100%
-  nodeStartupTimeout: 25m
-  selector:
-    matchLabels:
-      machine.remediation: ""
-  unhealthyConditions:
-    - type: Ready
-      status: Unknown
-      timeout: 900s
-    - type: Ready
-      status: "False"
-      timeout: 900s
 
 
-            # returnCode: ${HEALTH_CHECKER_RETURN_CODE:=200}
-            #requestData: "${HEALTH_CHECKER_REQUEST_DATA_BASE64:=}"
-            #responseData: "${HEALTH_CHECKER_RESPONSE_DATA_BASE64:=}"
+#Health check configuration for NLB is included in the OCICluster resource above. 
+#Adjust the environment variables at the top of that resource to customize the health checks as needed.

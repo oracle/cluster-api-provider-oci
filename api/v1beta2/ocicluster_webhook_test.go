@@ -839,7 +839,7 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 					Name: goodClusterName,
 				},
 				Spec: OCIClusterSpec{
-					Region:                "us-seattle-1",
+					Region:                "us-dallas-1",
 					CompartmentId:         "ocid1.compartment.oc1..cccc",
 					OCIResourceIdentifier: "uuid",
 					NetworkSpec: NetworkSpec{
@@ -869,6 +869,36 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 				"retries must be greater than 0",
 			},
 			expectErr: true,
+		},
+		{
+			name: "should reject health checker port outside valid range",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
+				Spec: OCIClusterSpec{
+					Region:                "us-ashburn-1",
+					CompartmentId:         "ocid1.compartment.oc1..dddd",
+					OCIResourceIdentifier: "uuid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							CIDR:    "10.0.0.0/16",
+							Subnets: goodSubnets,
+						},
+						APIServerLB: LoadBalancer{
+							NLBSpec: NLBSpec{
+								BackendSetDetails: BackendSetDetails{
+									HealthChecker: HealthChecker{
+										Port: common.Int(70000),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "port must be between 1 and 65535",
+			expectErr:             true,
 		},
 		{
 			name: "should succeed",

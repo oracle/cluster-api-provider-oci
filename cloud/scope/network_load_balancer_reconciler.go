@@ -28,7 +28,7 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
 	"github.com/pkg/errors"
-	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 )
 
 // ReconcileApiServerNLB tries to move the Network Load Balancer to the desired OCICluster Spec
@@ -49,7 +49,7 @@ func (s *ClusterScope) ReconcileApiServerNLB(ctx context.Context) error {
 		}
 		networkSpec := s.OCIClusterAccessor.GetNetworkSpec()
 		networkSpec.APIServerLB.LoadBalancerId = nlb.Id
-		s.OCIClusterAccessor.SetControlPlaneEndpoint(clusterv1.APIEndpoint{
+		s.OCIClusterAccessor.SetControlPlaneEndpoint(clusterv1beta1.APIEndpoint{
 			Host: *lbIP,
 			Port: s.APIServerPort(),
 		})
@@ -66,7 +66,7 @@ func (s *ClusterScope) ReconcileApiServerNLB(ctx context.Context) error {
 	}
 	networkSpec := s.OCIClusterAccessor.GetNetworkSpec()
 	networkSpec.APIServerLB.LoadBalancerId = nlbID
-	s.OCIClusterAccessor.SetControlPlaneEndpoint(clusterv1.APIEndpoint{
+	s.OCIClusterAccessor.SetControlPlaneEndpoint(clusterv1beta1.APIEndpoint{
 		Host: *nlbIP,
 		Port: s.APIServerPort(),
 	})
@@ -172,7 +172,6 @@ func (s *ClusterScope) CreateNLB(ctx context.Context, lb infrastructurev1beta2.L
 		HealthChecker:            healthChecker,
 		Backends:                 []networkloadbalancer.Backend{},
 	}
-	//s.Logger.Info(healchecker, "healthchecker struct")
 	var controlPlaneEndpointSubnets []string
 	for _, subnet := range ptr.ToSubnetSlice(s.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets) {
 		if subnet.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
@@ -334,6 +333,10 @@ func (s *ClusterScope) buildNLBHealthChecker(spec infrastructurev1beta2.HealthCh
 	port := int(s.APIServerPort())
 	if spec.Port != nil {
 		port = *spec.Port
+	}
+
+	if port < 1 || port > 65535 {
+		return nil, errors.Errorf("health checker port %d is out of range 1-65535", port)
 	}
 
 	interval := HealthCheckerDefaultIntervalInMillis

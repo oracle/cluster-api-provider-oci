@@ -1032,38 +1032,47 @@ type HealthChecker struct {
 	// The backend server port against which to run the health check. If the port is not specified,
 	// then the network load balancer uses the port information from the Backend object.
 	// Example: `8080`
+	// +optional
 	Port *int `json:"port,omitempty"`
 
 	// The interval between health checks, in milliseconds. The default value is 10000 (10 seconds).
 	// Example: `10000`
+	// +optional
 	IntervalInMillis *int `json:"intervalInMillis,omitempty"`
 
 	// The maximum time, in milliseconds, to wait for a reply to a health check.
 	// The default value is 3000 (3 seconds).
 	// Example: `3000`
+	// +optional
 	TimeoutInMillis *int `json:"timeoutInMillis,omitempty"`
 
 	// The number of retries to attempt before a backend server is considered unhealthy.
 	// Example: `3`
+	// +optional
 	Retries *int `json:"retries,omitempty"`
 
 	// The path against which to run the health check.
 	// Example: `/healthcheck`
 	// Default value is `/healthz`
+	// +optional
 	UrlPath *string `json:"urlPath,omitempty"`
 
 	// The status code a healthy backend server should return when using the HTTP/HTTPS protocol.
 	// Example: `200`
+	// +optional
 	ReturnCode *int `json:"returnCode,omitempty"`
 
 	// A regular expression for parsing the response body from the backend server when using HTTP/HTTPS.
 	// Example: `^((?!false).|\s)*$`
+	// +optional
 	ResponseBodyRegex *string `json:"responseBodyRegex,omitempty"`
 
 	// Base64 encoded payload to send as the UDP or TCP health check probe.
+	// +optional
 	RequestData *string `json:"requestData,omitempty"`
 
 	// Base64 encoded payload expected in the UDP or TCP health check probe response.
+	// +optional
 	ResponseData *string `json:"responseData,omitempty"`
 }
 
