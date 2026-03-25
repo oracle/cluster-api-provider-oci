@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -350,16 +349,8 @@ func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.
 		return ctrl.Result{}, nil
 	}
 
-	hasBlockVolume := machineScope.BlockVolumeSpecNotEmpty(ctx)
-
 	instance, err := r.getOrCreate(ctx, machineScope)
 	if err != nil {
-		if hasBlockVolume {
-			if strings.Contains(err.Error(), "volume not available") {
-				logger.Info("Requeueing reconciliation", "reason:", err.Error(), "after:", 5*time.Second)
-				return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
-			}
-		}
 		r.Recorder.Event(machine, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "Failed to reconcile OCIMachine").Error())
 		v1beta1conditions.MarkFalse(machine, infrastructurev1beta2.InstanceReadyCondition, infrastructurev1beta2.InstanceProvisionFailedReason, clusterv1beta1.ConditionSeverityError, "")
 		return ctrl.Result{}, errors.Wrapf(err, "failed to reconcile OCI Machine %s/%s", machineScope.OCIMachine.Namespace, machineScope.OCIMachine.Name)
@@ -472,10 +463,9 @@ func (r *OCIMachineReconciler) reconcileDelete(ctx context.Context, logger logr.
 			machineScope.Info("Instance is not found, may have been deleted")
 			if hasBlockVolume {
 				if err = machineScope.DeleteBlockVolume(ctx); err != nil {
-					if strings.Contains(err.Error(), "instance is terminating") || strings.Contains(err.Error(), "instance termination initiated") {
-						logger.Info("Requeueing reconciliation", "reason:", err.Error(), "after:", 5*time.Second)
-						return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
-					}
+					logger.Info("Requeueing reconciliation", "reason:", err.Error(), "after:", 5*time.Second)
+					return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+
 				}
 			}
 			controllerutil.RemoveFinalizer(machineScope.OCIMachine, infrastructurev1beta2.MachineFinalizer)
@@ -500,10 +490,9 @@ func (r *OCIMachineReconciler) reconcileDelete(ctx context.Context, logger logr.
 		v1beta1conditions.MarkFalse(machineScope.OCIMachine, infrastructurev1beta2.InstanceReadyCondition, infrastructurev1beta2.InstanceTerminatedReason, clusterv1beta1.ConditionSeverityInfo, "")
 		if hasBlockVolume {
 			if err = machineScope.DeleteBlockVolume(ctx); err != nil {
-				if strings.Contains(err.Error(), "instance is terminating") || strings.Contains(err.Error(), "instance termination initiated") {
-					logger.Info("Requeueing reconciliation", "reason:", err.Error(), "after:", 5*time.Second)
-					return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
-				}
+				logger.Info("Requeueing reconciliation", "reason:", err.Error(), "after:", 5*time.Second)
+				return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+
 			}
 		}
 		controllerutil.RemoveFinalizer(machineScope.OCIMachine, infrastructurev1beta2.MachineFinalizer)
@@ -520,12 +509,6 @@ func (r *OCIMachineReconciler) reconcileDelete(ctx context.Context, logger logr.
 			return reconcile.Result{}, err
 		}
 		if err := machineScope.DeleteMachine(ctx, instance); err != nil {
-			if hasBlockVolume {
-				if strings.Contains(err.Error(), "instance is terminating") || strings.Contains(err.Error(), "instance termination initiated") {
-					logger.Info("Requeueing reconciliation", "reason:", err.Error(), "after:", 5*time.Second)
-					return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
-				}
-			}
 			machineScope.Error(err, "Error deleting Instance")
 			return ctrl.Result{}, errors.Wrapf(err, "error deleting instance %s", machineScope.Name())
 		}

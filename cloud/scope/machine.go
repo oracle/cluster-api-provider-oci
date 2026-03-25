@@ -125,6 +125,121 @@ func (m *MachineScope) BlockVolumeSpecNotEmpty(ctx context.Context) bool {
 	return !reflect.DeepEqual(m.OCIMachine.Spec.BlockVolumeSpec, infrastructurev1beta2.BlockVolumeSpec{})
 }
 
+func (m *MachineScope) listBlockVolumeAttachmentResponse(ctx context.Context, instanceId *string, page *string) (core.ListVolumeAttachmentsResponse, error) {
+	listReq := core.ListVolumeAttachmentsRequest{
+		InstanceId:    instanceId,
+		CompartmentId: common.String(m.getCompartmentId()),
+		Page:          page,
+	}
+
+	return m.ComputeClient.ListVolumeAttachments(ctx, listReq)
+}
+
+// HasSpecificBlockVolumeAttached checks if a specific block volume is attached to the instance
+func (m *MachineScope) hasSpecificBlockVolumeAttached(ctx context.Context, instanceId *string, volumeId *string) (bool, error) {
+
+	var page *string
+	for {
+		resp, err := m.listBlockVolumeAttachmentResponse(ctx, instanceId, page)
+		if err != nil {
+			return false, errors.Wrapf(err, "failed to list volume attachments for instance %s", *instanceId)
+		}
+
+		// Check if the specific volume is attached or attaching
+		for _, attachment := range resp.Items {
+			if (attachment.GetLifecycleState() == core.VolumeAttachmentLifecycleStateAttached || attachment.GetLifecycleState() == core.VolumeAttachmentLifecycleStateAttaching) && ptr.ToString(attachment.GetVolumeId()) == ptr.ToString(volumeId) {
+				return true, nil
+			}
+		}
+
+		if resp.OpcNextPage == nil {
+			break
+		}
+		page = resp.OpcNextPage
+	}
+
+	return false, nil
+}
+
+// attachBlockVolumeToInstance attaches the block volume to the given instance
+func (m *MachineScope) attachBlockVolumeToInstance(ctx context.Context, instance *core.Instance) error {
+	bvId, err := m.GetBlockVolumeId(ctx)
+	if err != nil {
+		return err
+	}
+
+	if bvId == "" {
+		return nil
+	}
+
+	getVolumeReq := core.GetVolumeRequest{
+		VolumeId: common.String(bvId),
+	}
+
+	getVolumeResp, err := m.BlockVolumeClient.GetVolume(ctx, getVolumeReq)
+	if err != nil {
+		return err
+	}
+
+	// If volume is not yet available, return error
+	if getVolumeResp.Volume.LifecycleState != core.VolumeLifecycleStateAvailable {
+		return errors.New(fmt.Sprintf("volume not available, state: %s for %s", getVolumeResp.Volume.LifecycleState, bvId))
+	}
+
+	// Attach the block volume to the instance
+	var attachDetails core.AttachVolumeDetails
+	if infrastructurev1beta2.VolumeType(m.OCIMachine.Spec.BlockVolumeSpec.VolumeType) == infrastructurev1beta2.IscsiType {
+		attachDetails = core.AttachIScsiVolumeDetails{
+			VolumeId:   common.String(bvId),
+			InstanceId: instance.Id,
+		}
+	} else if infrastructurev1beta2.VolumeType(m.OCIMachine.Spec.BlockVolumeSpec.VolumeType) == infrastructurev1beta2.ParavirtualizedType {
+		attachDetails = core.AttachParavirtualizedVolumeDetails{
+			VolumeId:   common.String(bvId),
+			InstanceId: instance.Id,
+		}
+	} else {
+		return errors.New("Unknown attachment type in BlockVolumeSpec, not supported")
+	}
+
+	attachReq := core.AttachVolumeRequest{
+		AttachVolumeDetails: attachDetails,
+	}
+
+	_, err = m.ComputeClient.AttachVolume(ctx, attachReq)
+	if err != nil {
+		return errors.Wrap(err, "failed to attach block volume to instance")
+	}
+
+	m.Logger.Info("Block volume attached to instance",
+		"volumeId", bvId,
+		"instanceId", *instance.Id)
+
+	return nil
+}
+
+// ensureBlockVolumeAttached ensures the block volume is attached to the instance
+func (m *MachineScope) ensureBlockVolumeAttached(ctx context.Context, instance *core.Instance) error {
+	bvId, err := m.GetBlockVolumeId(ctx)
+	if err != nil {
+		return err
+	}
+
+	bvIsAttached, err := m.hasSpecificBlockVolumeAttached(ctx, instance.Id, common.String(bvId))
+	if err != nil {
+		return err
+	}
+
+	if !bvIsAttached {
+		err = m.attachBlockVolumeToInstance(ctx, instance)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // GetOrCreateMachine will get machine instance or create if the instances doesn't exist
 func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, error) {
 	instance, err := m.GetMachine(ctx)
@@ -133,6 +248,17 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 	}
 	if instance != nil {
 		m.Logger.Info("Found an existing instance")
+		if m.BlockVolumeSpecNotEmpty(ctx) {
+			err = m.ReconcileBlockVolume(ctx, *instance.AvailabilityDomain)
+			if err != nil {
+				return nil, err
+			}
+
+			err = m.ensureBlockVolumeAttached(ctx, instance)
+			if err != nil {
+				return nil, err
+			}
+		}
 		return instance, nil
 	}
 	m.Logger.Info("Creating machine with name", "machine-name", m.OCIMachine.GetName())
@@ -277,66 +403,31 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 	launchDetails.PreemptibleInstanceConfig = m.getPreemptibleInstanceConfig()
 	launchDetails.PlatformConfig = m.getPlatformConfig()
 
-	// If BlockVolumeSpec is specified, create the block volume separately and attach it to the instance
-	if m.BlockVolumeSpecNotEmpty(ctx) {
-		err = m.ReconcileBlockVolume(ctx, availabilityDomain)
-
-		if err != nil {
-			return nil, err
-		}
-
-		var bvId string
-		bvId, err = m.GetBlockVolumeId(ctx)
-
-		if err != nil {
-			return nil, err
-		}
-
-		if bvId != "" {
-
-			getVolumeReq := core.GetVolumeRequest{
-				VolumeId: common.String(bvId),
-			}
-
-			getVolumeResp, err := m.BlockVolumeClient.GetVolume(ctx, getVolumeReq)
-			if err != nil {
-				return nil, err
-			}
-
-			// If volume is not yet available, return requeue error
-			if getVolumeResp.Volume.LifecycleState != core.VolumeLifecycleStateAvailable {
-				m.Logger.Info("Volume not yet available, will requeue...",
-					"state", getVolumeResp.Volume.LifecycleState,
-					"volumeId", bvId)
-				return nil, errors.New(fmt.Sprintf("volume not available, state: %s for %s", getVolumeResp.Volume.LifecycleState, bvId))
-			}
-
-			// Appending block volumes created with BlockVolumeSpec to instance attachments
-			if infrastructurev1beta2.VolumeType(m.OCIMachine.Spec.BlockVolumeSpec.VolumeType) == infrastructurev1beta2.IscsiType {
-				launchDetails.LaunchVolumeAttachments = append(launchDetails.LaunchVolumeAttachments, []core.LaunchAttachVolumeDetails{
-					core.LaunchAttachIScsiVolumeDetails{
-						VolumeId: common.String(bvId),
-					},
-				}...)
-			} else if infrastructurev1beta2.VolumeType(m.OCIMachine.Spec.BlockVolumeSpec.VolumeType) == infrastructurev1beta2.ParavirtualizedType {
-				launchDetails.LaunchVolumeAttachments = append(launchDetails.LaunchVolumeAttachments, []core.LaunchAttachVolumeDetails{
-					core.LaunchAttachParavirtualizedVolumeDetails{
-						VolumeId: common.String(bvId),
-					},
-				}...)
-			} else {
-				return nil, errors.New("Unknown attachment type in BlockVolumeSpec, not supported")
-			}
-
-		}
-	}
-
 	// Appending block volumes created with launchVolumeAttachments to instance attachments
 	launchDetails.LaunchVolumeAttachments = append(launchDetails.LaunchVolumeAttachments, m.getLaunchVolumeAttachments()...)
 
 	// Build the list of fault domains to attempt launch in
 	faultDomains := m.buildFaultDomainRetryList(availabilityDomain, faultDomain, retry)
-	return m.launchInstanceWithFaultDomainRetry(ctx, launchDetails, faultDomains)
+	instance, err = m.launchInstanceWithFaultDomainRetry(ctx, launchDetails, faultDomains)
+	if err != nil {
+		return nil, err
+	}
+
+	// If BlockVolumeSpec is specified, create the block volume separately and attach it to the instance
+	// This happens AFTER instance creation to ensure we don't orphan volumes
+	if m.BlockVolumeSpecNotEmpty(ctx) {
+		err = m.ReconcileBlockVolume(ctx, availabilityDomain)
+		if err != nil {
+			return instance, err
+		}
+
+		err = m.ensureBlockVolumeAttached(ctx, instance)
+		if err != nil {
+			return instance, err
+		}
+	}
+
+	return instance, nil
 }
 
 // launchInstanceWithFaultDomainRetry iterates through the provided fault domains and
@@ -478,54 +569,46 @@ func (m *MachineScope) getFreeFormTags() map[string]string {
 
 // DeleteMachine terminates the instance using InstanceId from the OCIMachine spec and deletes the boot volume
 func (m *MachineScope) DeleteMachine(ctx context.Context, instance *core.Instance) error {
+
+	hasBlockVolume := m.BlockVolumeSpecNotEmpty(ctx)
+	// Detach autotune block volume from instance before terminating the instance,
+	// because they were attached with AttachVolume and need manual DetachVolume calls,
+	// instead of being attached at launch and automatically detached by Compute when instance is terminated.
+	// Only do this if BlockVolumeSpec is specified, otherwise we can skip straight to terminating the instance without worrying about block volumes.
+	if hasBlockVolume {
+		var page *string
+		for {
+			resp, err := m.listBlockVolumeAttachmentResponse(ctx, instance.Id, page)
+			if err != nil {
+				return errors.Wrapf(err, "failed to list volume attachments for instance %s", *instance.Id)
+			}
+
+			for _, attachment := range resp.Items {
+				attachedAutotuneBlockVolumeId, err := m.GetBlockVolumeId(ctx)
+				if err != nil {
+					return err
+				}
+				if ptr.ToString(attachment.GetVolumeId()) == attachedAutotuneBlockVolumeId && attachment.GetLifecycleState() == core.VolumeAttachmentLifecycleStateAttached {
+					detachBlockVolumeReq := core.DetachVolumeRequest{
+						VolumeAttachmentId: attachment.GetId(),
+					}
+					_, err := m.ComputeClient.DetachVolume(ctx, detachBlockVolumeReq)
+					if err != nil {
+						return err
+					}
+				}
+
+			}
+			if resp.OpcNextPage == nil {
+				break
+			}
+			page = resp.OpcNextPage
+		}
+	}
+
 	req := core.TerminateInstanceRequest{InstanceId: instance.Id,
 		PreserveBootVolume:                 common.Bool(m.OCIMachine.Spec.PreserveBootVolume),
 		PreserveDataVolumesCreatedAtLaunch: common.Bool(m.OCIMachine.Spec.PreserveDataVolumesCreatedAtLaunch),
-	}
-
-	hasBlockVolume := m.BlockVolumeSpecNotEmpty(ctx)
-
-	if hasBlockVolume {
-
-		getInstanceReq := core.GetInstanceRequest{
-			InstanceId: instance.Id,
-		}
-
-		getInstanceResp, err := m.ComputeClient.GetInstance(ctx, getInstanceReq)
-		if err != nil {
-			if ociutil.IsNotFound(err) {
-				m.Logger.Info("Instance terminated successfully (not found), proceeding to delete block volume")
-				// Instance is gone, now delete the block volume
-				return m.DeleteBlockVolume(ctx)
-			}
-			// Other errors
-			return err
-		}
-
-		// Check instance lifecycle state
-		switch getInstanceResp.Instance.LifecycleState {
-		case core.InstanceLifecycleStateTerminating:
-			// Instance is already terminating, just wait
-			m.Logger.Info("Instance is terminating, waiting...",
-				"state", getInstanceResp.Instance.LifecycleState,
-				"instanceId", *instance.Id)
-
-			return errors.New(fmt.Sprintf("instance is terminating, state: %s for  %s ", getInstanceResp.Instance.LifecycleState, *instance.Id))
-
-		default:
-			// Instance is in another state, initiate termination
-			m.Logger.Info("Terminating instance with block volume",
-				"state", getInstanceResp.Instance.LifecycleState,
-				"instanceId", *instance.Id)
-
-			_, err := m.ComputeClient.TerminateInstance(ctx, req)
-			if err != nil {
-				return err
-			}
-
-			// Requeue to wait for termination
-			return errors.New(fmt.Sprintf("instance termination initiated, waiting for completion for %s", *instance.Id))
-		}
 	}
 
 	// No block volume, just terminate the instance normally
@@ -1228,7 +1311,14 @@ func getIscsiVolumeAttachment(attachment infrastructurev1beta2.LaunchIscsiVolume
 
 	if attachment.VolumeId != nil {
 		volumeDetails = core.LaunchAttachIScsiVolumeDetails{
-			VolumeId: attachment.VolumeId,
+			VolumeId:                     attachment.VolumeId,
+			Device:                       attachment.Device,
+			DisplayName:                  attachment.DisplayName,
+			IsShareable:                  attachment.IsShareable,
+			IsReadOnly:                   attachment.IsReadOnly,
+			UseChap:                      attachment.UseChap,
+			IsAgentAutoIscsiLoginEnabled: attachment.IsAgentAutoIscsiLoginEnabled,
+			EncryptionInTransitType:      getEncryptionType(attachment.EncryptionInTransitType),
 		}
 	} else {
 		volumeDetails = core.LaunchAttachIScsiVolumeDetails{
@@ -1236,7 +1326,6 @@ func getIscsiVolumeAttachment(attachment infrastructurev1beta2.LaunchIscsiVolume
 			DisplayName:                  attachment.DisplayName,
 			IsShareable:                  attachment.IsShareable,
 			IsReadOnly:                   attachment.IsReadOnly,
-			VolumeId:                     attachment.VolumeId,
 			UseChap:                      attachment.UseChap,
 			IsAgentAutoIscsiLoginEnabled: attachment.IsAgentAutoIscsiLoginEnabled,
 			EncryptionInTransitType:      getEncryptionType(attachment.EncryptionInTransitType),
@@ -1251,7 +1340,12 @@ func getParavirtualizedVolumeAttachment(attachment infrastructurev1beta2.LaunchP
 
 	if attachment.VolumeId != nil {
 		volumeDetails = core.LaunchAttachParavirtualizedVolumeDetails{
-			VolumeId: attachment.VolumeId,
+			VolumeId:                       attachment.VolumeId,
+			Device:                         attachment.Device,
+			DisplayName:                    attachment.DisplayName,
+			IsShareable:                    attachment.IsShareable,
+			IsReadOnly:                     attachment.IsReadOnly,
+			IsPvEncryptionInTransitEnabled: attachment.IsPvEncryptionInTransitEnabled,
 		}
 	} else {
 		volumeDetails = core.LaunchAttachParavirtualizedVolumeDetails{
