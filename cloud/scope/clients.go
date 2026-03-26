@@ -280,7 +280,7 @@ func (c *ClientProvider) createComputeClient(region string, ociAuthConfigProvide
 	return &computeClient, nil
 }
 
-func (c *ClientProvider) createComputeManagementClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (*core.ComputeManagementClient, error) {
+func (c *ClientProvider) createComputeManagementClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (computemanagement.Client, error) {
 	computeManagementClient, err := core.NewComputeManagementClientWithConfigurationProvider(ociAuthConfigProvider)
 	if err != nil {
 		logger.Error(err, "unable to create OCI Compute Management Client")
@@ -295,7 +295,7 @@ func (c *ClientProvider) createComputeManagementClient(region string, ociAuthCon
 	}
 	computeManagementClient.Interceptor = setVersionHeader()
 
-	return &computeManagementClient, nil
+	return computemanagement.NewClient(&computeManagementClient), nil
 }
 
 func (c *ClientProvider) createContainerEngineClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (*containerengine.ContainerEngineClient, error) {

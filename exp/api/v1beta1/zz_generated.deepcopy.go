@@ -22,6 +22,7 @@ package v1beta1
 
 import (
 	apiv1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	corev1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	"sigs.k8s.io/cluster-api/errors"
@@ -105,6 +106,13 @@ func (in *InstanceConfiguration) DeepCopyInto(out *InstanceConfiguration) {
 		*out = make(map[string]string, len(*in))
 		for key, val := range *in {
 			(*out)[key] = val
+		}
+	}
+	if in.ExtendedMetadata != nil {
+		in, out := &in.ExtendedMetadata, &out.ExtendedMetadata
+		*out = make(map[string]v1.JSON, len(*in))
+		for key, val := range *in {
+			(*out)[key] = *val.DeepCopy()
 		}
 	}
 }

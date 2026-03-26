@@ -30,6 +30,15 @@ spec:
   instanceConfiguration:
     metadata:
       ssh_authorized_keys: "${OCI_SSH_KEY}"
+    extendedMetadata:
+      workload:
+        profile: "standard"
+        features:
+          hpc: true
+      network:
+        cni:
+          type: "cilium"
+        retries: 3
     instanceSourceViaImageConfig:
       imageId: "${OCI_IMAGE_ID}"
     shape: "${OCI_NODE_MACHINE_TYPE=VM.Standard.E4.Flex}"

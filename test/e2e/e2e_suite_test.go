@@ -40,6 +40,7 @@ import (
 	oci_config "github.com/oracle/cluster-api-provider-oci/cloud/config"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/compute"
+	"github.com/oracle/cluster-api-provider-oci/cloud/services/computemanagement"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/containerengine"
 	nlb "github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
@@ -104,6 +105,8 @@ var (
 	usePRArtifacts bool
 
 	computeClient compute.ComputeClient
+
+	computeManagementClient computemanagement.Client
 
 	vcnClient vcn.Client
 
@@ -243,12 +246,14 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	Expect(err).NotTo(HaveOccurred())
 
 	computeClient = ociClients.ComputeClient
+	computeManagementClient = ociClients.ComputeManagementClient
 	identityClient := ociClients.IdentityClient
 	vcnClient = ociClients.VCNClient
 	lbClient = ociClients.NetworkLoadBalancerClient
 	okeClient = ociClients.ContainerEngineClient
 	Expect(identityClient).NotTo(BeNil())
 	Expect(lbClient).NotTo(BeNil())
+	Expect(computeManagementClient).NotTo(BeNil())
 
 	req := identity.ListAvailabilityDomainsRequest{CompartmentId: common.String(os.Getenv("OCI_COMPARTMENT_ID"))}
 	resp, err := identityClient.ListAvailabilityDomains(context.Background(), req)

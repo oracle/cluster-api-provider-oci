@@ -17,6 +17,7 @@ limitations under the License.
 package scope
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/onsi/gomega"
@@ -231,6 +232,39 @@ func TestConvertMachineExtendedMetadata(t *testing.T) {
 		}
 
 		actual, err := ConvertMachineExtendedMetadata(input)
+		g.Expect(err).To(gomega.HaveOccurred())
+		g.Expect(actual).To(gomega.BeNil())
+	})
+}
+
+func TestConvertMachineExtendedMetadataPreservingNumbers(t *testing.T) {
+	t.Run("preserves large integer literals", func(t *testing.T) {
+		g := gomega.NewWithT(t)
+		input := map[string]apiextensionsv1.JSON{
+			"workload": {
+				Raw: []byte(`{"nanoseconds":9223372036854775807,"small":32}`),
+			},
+		}
+
+		actual, err := convertMachineExtendedMetadataPreservingNumbers(input)
+		g.Expect(err).ToNot(gomega.HaveOccurred())
+		g.Expect(actual).To(gomega.Equal(map[string]interface{}{
+			"workload": map[string]interface{}{
+				"nanoseconds": json.Number("9223372036854775807"),
+				"small":       json.Number("32"),
+			},
+		}))
+	})
+
+	t.Run("returns error for invalid json", func(t *testing.T) {
+		g := gomega.NewWithT(t)
+		input := map[string]apiextensionsv1.JSON{
+			"invalid": {
+				Raw: []byte(`{"broken":`),
+			},
+		}
+
+		actual, err := convertMachineExtendedMetadataPreservingNumbers(input)
 		g.Expect(err).To(gomega.HaveOccurred())
 		g.Expect(actual).To(gomega.BeNil())
 	})

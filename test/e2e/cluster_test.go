@@ -21,6 +21,7 @@ package e2e
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -630,6 +631,9 @@ var _ = Describe("Workload cluster creation", func() {
 			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
 		}, result)
 
+		By("Verifying the OCI instance configuration contains the expected extended metadata")
+		assertMachinePoolInstanceConfigurationExtendedMetadata(ctx, bootstrapClusterProxy, result.Cluster, result.MachinePools[0], specName)
+
 		By("Scaling the machine pool up")
 		framework.ScaleMachinePoolAndWait(ctx, framework.ScaleMachinePoolAndWaitInput{
 			ClusterProxy:              bootstrapClusterProxy,
@@ -874,6 +878,50 @@ func assertMachinePoolInstanceConfigurationStable(ctx context.Context, clusterPr
 		g.Expect(ociMachinePool.Annotations).To(HaveKey(scope.InstanceConfigurationHashAnnotation))
 		g.Expect(ociMachinePool.Annotations[scope.InstanceConfigurationHashAnnotation]).To(Equal(initialHash))
 	}, duration, interval).Should(Succeed(), "Machine pool instance configuration drifted during stability window")
+}
+
+func assertMachinePoolInstanceConfigurationExtendedMetadata(ctx context.Context, clusterProxy framework.ClusterProxy, cluster *clusterv1.Cluster, machinePool *clusterv1.MachinePool, specName string) {
+	Expect(ctx).NotTo(BeNil(), "ctx is required for machine pool extended metadata check")
+	Expect(clusterProxy).ToNot(BeNil(), "clusterProxy is required for machine pool extended metadata check")
+	Expect(cluster).ToNot(BeNil(), "cluster is required for machine pool extended metadata check")
+	Expect(machinePool).ToNot(BeNil(), "machinePool is required for machine pool extended metadata check")
+	Expect(computeManagementClient).ToNot(BeNil(), "computeManagementClient is required for machine pool extended metadata check")
+
+	lister := clusterProxy.GetClient()
+	Expect(lister).ToNot(BeNil(), "clusterProxy client is required for machine pool extended metadata check")
+
+	expected := map[string]interface{}{
+		"workload": map[string]interface{}{
+			"profile": "standard",
+			"features": map[string]interface{}{
+				"hpc": true,
+			},
+		},
+		"network": map[string]interface{}{
+			"cni": map[string]interface{}{
+				"type": "cilium",
+			},
+			"retries": json.Number("3"),
+		},
+	}
+
+	Eventually(func(g Gomega) {
+		ociMachinePool := &infrav2exp.OCIMachinePool{}
+		err := lister.Get(ctx, client.ObjectKey{Name: machinePool.Name, Namespace: cluster.Namespace}, ociMachinePool)
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(ociMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(BeNil())
+		g.Expect(*ociMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(BeEmpty())
+
+		resp, err := computeManagementClient.GetInstanceConfiguration(ctx, core.GetInstanceConfigurationRequest{
+			InstanceConfigurationId: ociMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId,
+		})
+		g.Expect(err).NotTo(HaveOccurred())
+
+		instanceDetails, ok := resp.InstanceConfiguration.InstanceDetails.(core.ComputeInstanceDetails)
+		g.Expect(ok).To(BeTrue(), "expected compute instance details on the machine pool instance configuration")
+		g.Expect(instanceDetails.LaunchDetails).ToNot(BeNil())
+		g.Expect(instanceDetails.LaunchDetails.ExtendedMetadata).To(Equal(expected))
+	}, e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes")...).Should(Succeed(), "Timed out waiting for the machine pool OCI instance configuration to report the expected extended metadata")
 }
 
 func verifyMultipleNsgSubnet(ctx context.Context, namespace string, clusterName string, mcDeployments []*clusterv1.MachineDeployment) {

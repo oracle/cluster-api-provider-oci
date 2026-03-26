@@ -654,12 +654,17 @@ func (m *MachinePoolScope) getLaunchInstanceDetails(instanceConfigurationSpec in
 		return nil, err
 	}
 	metadata["user_data"] = base64.StdEncoding.EncodeToString([]byte(cloudInitData))
+	extendedMetadata, err := convertMachineExtendedMetadataPreservingNumbers(instanceConfigurationSpec.ExtendedMetadata)
+	if err != nil {
+		return nil, err
+	}
 
 	launchDetails := &core.InstanceConfigurationLaunchInstanceDetails{
 		CompartmentId:     common.String(m.OCIClusterAccesor.GetCompartmentId()),
 		DisplayName:       common.String(m.OCIMachinePool.GetName()),
 		Shape:             common.String(*m.OCIMachinePool.Spec.InstanceConfiguration.Shape),
 		Metadata:          metadata,
+		ExtendedMetadata:  extendedMetadata,
 		DedicatedVmHostId: instanceConfigurationSpec.DedicatedVmHostId,
 		FreeformTags:      freeFormTags,
 		DefinedTags:       definedTags,

@@ -138,6 +138,14 @@ spec:
                     description: DedicatedVmHostId defines the OCID of the dedicated
                       VM host.
                     type: string
+                  extendedMetadata:
+                    additionalProperties:
+                      x-kubernetes-preserve-unknown-fields: true
+                    description: |-
+                      Additional metadata key/value pairs that provide non-string values.
+                      Values support nested JSON objects and arrays and map to OCI LaunchInstanceDetails.extendedMetadata.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
                   instanceConfigurationId:
                     type: string
                   instanceOptions:
@@ -871,6 +879,14 @@ spec:
                     description: DedicatedVmHostId defines the OCID of the dedicated
                       VM host.
                     type: string
+                  extendedMetadata:
+                    additionalProperties:
+                      x-kubernetes-preserve-unknown-fields: true
+                    description: |-
+                      Additional metadata key/value pairs that provide non-string values.
+                      Values support nested JSON objects and arrays and map to OCI LaunchInstanceDetails.extendedMetadata.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
                   instanceConfigurationId:
                     type: string
                   instanceOptions:
