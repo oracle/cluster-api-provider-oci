@@ -1027,7 +1027,6 @@ type HealthChecker struct {
 
 	// The protocol the health check must use; either HTTP, HTTPS, UDP, or TCP. Defaults to HTTPS.
 	// Example: `HTTP`
-	// +optional
 	Protocol *string `json:"protocol,omitempty"`
 
 	// The backend server port against which to run the health check. If the port is not specified,
