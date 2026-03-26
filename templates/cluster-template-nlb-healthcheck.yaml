@@ -51,10 +51,10 @@ spec:
             # --- HTTP/HTTPS only — uncomment to override CAPOCI defaults (/healthz, 200) ---
             # urlPath: "${HEALTH_CHECKER_URL_PATH:=/healthz}"
             # returnCode: ${HEALTH_CHECKER_RETURN_CODE:=200}
-            # responseBodyRegex: "${HEALTH_CHECKER_RESPONSE_REGEX}"
+            # responseBodyRegex: "$#{HEALTH_CHECKER_RESPONSE_REGEX}"
             # --- TCP/UDP only — uncomment if your probe requires a payload ---
-            # requestData: "${HEALTH_CHECKER_REQUEST_DATA_BASE64}"
-            # responseData: "${HEALTH_CHECKER_RESPONSE_DATA_BASE64}"
+            # requestData: "$#{HEALTH_CHECKER_REQUEST_DATA_BASE64}"
+            # responseData: "$#{HEALTH_CHECKER_RESPONSE_DATA_BASE64}"
 ---
 kind: KubeadmControlPlane
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1
