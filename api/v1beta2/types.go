@@ -1234,7 +1234,6 @@ type BlockVolumeSpec struct {
 	AutotunePolicies []AutotunePolicy `json:"autotunePolicies,omitempty"`
 
 	// The type of volume attachment used to attach this block volume to the instance
-	// If not specified the block volume will be created, but not attached to any instance
 	VolumeType string `json:"volumeType,omitempty"`
 }
 
