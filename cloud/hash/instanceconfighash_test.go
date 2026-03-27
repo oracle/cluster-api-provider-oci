@@ -805,3 +805,81 @@ func TestComputeHash_ComprehensiveTest(t *testing.T) {
 	g.Expect(normalized.PreemptibleInstanceConfig).To(BeNil())
 	g.Expect(normalized.SourceDetails).ToNot(BeNil())
 }
+
+func TestComputeHash_ExtendedMetadataChangeProducesDifferentHash(t *testing.T) {
+	g := NewWithT(t)
+
+	base := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape: common.String("VM.Standard2.1"),
+	}
+
+	withExtMeta := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape: common.String("VM.Standard2.1"),
+		ExtendedMetadata: map[string]interface{}{
+			"cilium-primary-vnic": map[string]interface{}{
+				"ip-count": float64(32),
+			},
+		},
+	}
+
+	hashBase, err := ComputeHash(base)
+	g.Expect(err).To(BeNil())
+
+	hashWithMeta, err := ComputeHash(withExtMeta)
+	g.Expect(err).To(BeNil())
+
+	g.Expect(hashBase).ToNot(Equal(hashWithMeta))
+}
+
+func TestComputeComparableHash_ExtendedMetadataProjection(t *testing.T) {
+	g := NewWithT(t)
+
+	actual := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape: common.String("VM.Standard2.1"),
+		ExtendedMetadata: map[string]interface{}{
+			"cilium-primary-vnic": map[string]interface{}{
+				"ip-count": float64(32),
+			},
+			"oci-added-key": "some-default",
+		},
+	}
+
+	desired := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape: common.String("VM.Standard2.1"),
+		ExtendedMetadata: map[string]interface{}{
+			"cilium-primary-vnic": map[string]interface{}{
+				"ip-count": float64(32),
+			},
+		},
+	}
+
+	hashActual, err := ComputeComparableHash(actual, desired)
+	g.Expect(err).To(BeNil())
+
+	hashDesired, err := ComputeHash(desired)
+	g.Expect(err).To(BeNil())
+
+	// The projected hash should match because oci-added-key is not in the desired mask
+	g.Expect(hashActual).To(Equal(hashDesired))
+}
+
+func TestComputeHash_NilExtendedMetadataDoesNotAffectHash(t *testing.T) {
+	g := NewWithT(t)
+
+	withNil := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape: common.String("VM.Standard2.1"),
+	}
+
+	withEmpty := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape:            common.String("VM.Standard2.1"),
+		ExtendedMetadata: map[string]interface{}{},
+	}
+
+	hashNil, err := ComputeHash(withNil)
+	g.Expect(err).To(BeNil())
+
+	hashEmpty, err := ComputeHash(withEmpty)
+	g.Expect(err).To(BeNil())
+
+	g.Expect(hashNil).To(Equal(hashEmpty))
+}

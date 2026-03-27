@@ -35,6 +35,7 @@ type comparableLaunchDetails struct {
 	CompartmentID                  *string                              `json:"compartmentId,omitempty"`
 	CreateVnicDetails              *comparableCreateVnicDetails         `json:"createVnicDetails,omitempty"`
 	Metadata                       map[string]string                    `json:"metadata,omitempty"`
+	ExtendedMetadata               map[string]interface{}               `json:"extendedMetadata,omitempty"`
 	Shape                          *string                              `json:"shape,omitempty"`
 	ShapeConfig                    *comparableShapeConfig               `json:"shapeConfig,omitempty"`
 	PlatformConfig                 *comparablePlatformConfig            `json:"platformConfig,omitempty"`
@@ -154,6 +155,7 @@ func projectLaunchDetails(in, mask *core.InstanceConfigurationLaunchInstanceDeta
 		CompartmentID:                  pickString(in.CompartmentId, mask.CompartmentId),
 		CreateVnicDetails:              projectCreateVnicDetails(in.CreateVnicDetails, mask.CreateVnicDetails),
 		Metadata:                       normalizeMetadata(pickMetadata(in.Metadata, mask.Metadata)),
+		ExtendedMetadata:               pickExtendedMetadata(in.ExtendedMetadata, mask.ExtendedMetadata),
 		Shape:                          pickString(in.Shape, mask.Shape),
 		ShapeConfig:                    projectShapeConfig(in.ShapeConfig, mask.ShapeConfig),
 		PlatformConfig:                 projectPlatformConfig(in.PlatformConfig, mask.PlatformConfig),
@@ -564,6 +566,25 @@ func pickMetadata(actual, mask map[string]string) map[string]string {
 		return nil
 	}
 	result := make(map[string]string, len(mask))
+	for key := range mask {
+		if value, ok := actual[key]; ok {
+			result[key] = value
+		}
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}
+
+func pickExtendedMetadata(actual, mask map[string]interface{}) map[string]interface{} {
+	if len(mask) == 0 {
+		return nil
+	}
+	if len(actual) == 0 {
+		return nil
+	}
+	result := make(map[string]interface{}, len(mask))
 	for key := range mask {
 		if value, ok := actual[key]; ok {
 			result[key] = value

@@ -31,6 +31,7 @@ import (
 func fuzzFuncs(_ runtimeserializer.CodecFactory) []interface{} {
 	return []interface{}{
 		OCIMachinePoolFuzzer,
+		OCIMachinePoolHubFuzzer,
 	}
 }
 
@@ -41,6 +42,12 @@ func OCIMachinePoolFuzzer(obj *OCIMachinePool, c randfill.Continue) {
 		obj.Spec.InstanceConfiguration.InstanceVnicConfiguration.NSGId = nil
 		obj.Spec.InstanceConfiguration.InstanceVnicConfiguration.SubnetId = nil
 	}
+	obj.Spec.InstanceConfiguration.ExtendedMetadata = nil
+}
+
+func OCIMachinePoolHubFuzzer(obj *v1beta2.OCIMachinePool, c randfill.Continue) {
+	c.FillNoCustom(obj)
+	obj.Spec.InstanceConfiguration.ExtendedMetadata = nil
 }
 
 func TestFuzzyConversion(t *testing.T) {

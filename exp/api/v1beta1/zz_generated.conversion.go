@@ -27,6 +27,7 @@ import (
 	apiv1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
 	apiv1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	v1beta2 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
+	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	corev1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
@@ -452,6 +453,7 @@ func autoConvert_v1beta1_InstanceConfiguration_To_v1beta2_InstanceConfiguration(
 	out.InstanceSourceViaImageDetails = (*v1beta2.InstanceSourceViaImageConfig)(unsafe.Pointer(in.InstanceSourceViaImageDetails))
 	out.CapacityReservationId = (*string)(unsafe.Pointer(in.CapacityReservationId))
 	out.Metadata = *(*map[string]string)(unsafe.Pointer(&in.Metadata))
+	out.ExtendedMetadata = *(*map[string]v1.JSON)(unsafe.Pointer(&in.ExtendedMetadata))
 	return nil
 }
 
@@ -484,6 +486,7 @@ func autoConvert_v1beta2_InstanceConfiguration_To_v1beta1_InstanceConfiguration(
 	out.InstanceSourceViaImageDetails = (*InstanceSourceViaImageConfig)(unsafe.Pointer(in.InstanceSourceViaImageDetails))
 	out.CapacityReservationId = (*string)(unsafe.Pointer(in.CapacityReservationId))
 	out.Metadata = *(*map[string]string)(unsafe.Pointer(&in.Metadata))
+	out.ExtendedMetadata = *(*map[string]v1.JSON)(unsafe.Pointer(&in.ExtendedMetadata))
 	return nil
 }
 
