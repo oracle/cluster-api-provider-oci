@@ -50,6 +50,51 @@ func (mr *MockComputeClientMockRecorder) AttachVnic(ctx, request interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AttachVnic", reflect.TypeOf((*MockComputeClient)(nil).AttachVnic), ctx, request)
 }
 
+// Attacholume mocks base method.
+func (m *MockComputeClient) AttachVolume(ctx context.Context, request core.AttachVolumeRequest) (core.AttachVolumeResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AttachVolume", ctx, request)
+	ret0, _ := ret[0].(core.AttachVolumeResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AttachVolume indicates an expected call of AttachVolume.
+func (mr *MockComputeClientMockRecorder) AttachVolume(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AttachVolume", reflect.TypeOf((*MockComputeClient)(nil).AttachVolume), ctx, request)
+}
+
+// DetachVolume mocks base method.
+func (m *MockComputeClient) DetachVolume(ctx context.Context, request core.DetachVolumeRequest) (core.DetachVolumeResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DetachVolume", ctx, request)
+	ret0, _ := ret[0].(core.DetachVolumeResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DetachVolume indicates an expected call of DetachVolume.
+func (mr *MockComputeClientMockRecorder) DetachVolume(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DetachVolume", reflect.TypeOf((*MockComputeClient)(nil).DetachVolume), ctx, request)
+}
+
+// ListVolumeAttachments mocks base method.
+func (m *MockComputeClient) ListVolumeAttachments(ctx context.Context, request core.ListVolumeAttachmentsRequest) (core.ListVolumeAttachmentsResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListVolumeAttachments", ctx, request)
+	ret0, _ := ret[0].(core.ListVolumeAttachmentsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListVolumeAttachments indicates an expected call of ListVolumeAttachments.
+func (mr *MockComputeClientMockRecorder) ListVolumeAttachments(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListVolumeAttachments", reflect.TypeOf((*MockComputeClient)(nil).ListVolumeAttachments), ctx, request)
+}
+
 // GetInstance mocks base method.
 func (m *MockComputeClient) GetInstance(ctx context.Context, request core.GetInstanceRequest) (core.GetInstanceResponse, error) {
 	m.ctrl.T.Helper()
