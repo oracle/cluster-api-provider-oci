@@ -49,12 +49,12 @@ spec:
             timeoutInMillis: ${HEALTH_CHECKER_TIMEOUT_IN_MILLIS:=3000}
             retries: ${HEALTH_CHECKER_RETRIES:=3}
             # --- HTTP/HTTPS only — uncomment to override CAPOCI defaults (/healthz, 200) ---
-            # urlPath: "$#{HEALTH_CHECKER_URL_PATH:=/healthz}"
-            # returnCode: $#{HEALTH_CHECKER_RETURN_CODE:=200}
-            # responseBodyRegex: "$#HEALTH_CHECKER_RESPONSE_REGEX}"
+            # urlPath: ${HEALTH_CHECKER_URL_PATH:=/healthz}
+            # returnCode: ${HEALTH_CHECKER_RETURN_CODE:=200}
+            # responseBodyRegex: "${HEALTH_CHECKER_RESPONSE_REGEX}"
             # --- TCP/UDP only — uncomment if your probe requires a payload ---
-            # requestData: "$#{##HEALTH_CHECKER_REQUEST_DATA_BASE64}"
-            # responseData: "#$#{HEALTH_CHECKER_RESPONSE_DATA_BASE64}"
+            # requestData: "${HEALTH_CHECKER_REQUEST_DATA_BASE64}"
+            # responseData: "${HEALTH_CHECKER_RESPONSE_DATA_BASE64}"
 ---
 kind: KubeadmControlPlane
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1
@@ -160,7 +160,3 @@ spec:
         name: "${CLUSTER_NAME}-md-0"
         apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
         kind: OCIMachineTemplate
-
-
-#Health check configuration for NLB is included in the OCICluster resource above. 
-#Adjust the environment variables at the top of that resource to customize the health checks as needed.

@@ -178,7 +178,8 @@ func validateHealthChecker(healthChecker HealthChecker, fldPath *field.Path) fie
 			))
 		}
 
-		// UDP requires both requestData and responseData.
+		// UDP requires both requestData and responseData per the OCI NLB HealthCheckerDetails API.
+		// See: https://docs.oracle.com/en-us/iaas/api/#/en/networkloadbalancer/20200501/datatypes/HealthCheckerDetails
 		// TCP treats each field as independently optional.
 		if protocol == networkloadbalancer.HealthCheckProtocolsUdp {
 			if healthChecker.RequestData == nil {

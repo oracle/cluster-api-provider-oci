@@ -193,7 +193,7 @@ func (s *ClusterScope) CreateNLB(ctx context.Context, lb infrastructurev1beta2.L
 
 	healthChecker, err := s.buildNLBHealthChecker(lb.NLBSpec.BackendSetDetails.HealthChecker)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Wrap(err, "failed to build health checker for nlb creation")
 	}
 	backendSetDetails[APIServerLBBackendSetName] = networkloadbalancer.BackendSetDetails{
 		Policy:                   LoadBalancerPolicy,
@@ -305,11 +305,13 @@ func (s *ClusterScope) IsNLBEqual(actual *networkloadbalancer.NetworkLoadBalance
 
 	desiredHC, err := s.buildNLBHealthChecker(desired.NLBSpec.BackendSetDetails.HealthChecker)
 	if err != nil {
-		return false
+		s.Logger.Error(err, "IsNLBEqual: failed to build desired health checker, assuming equal to avoid update loop")
+		return true
 	}
 
 	actualBackendSet, ok := actual.BackendSets[APIServerLBBackendSetName]
 	if !ok {
+		s.Logger.Info("IsNLBEqual: backend set not found in actual NLB", "backendSetName", APIServerLBBackendSetName)
 		return false
 	}
 
@@ -324,25 +326,25 @@ func isHealthCheckerEqual(actual, desired *networkloadbalancer.HealthChecker) bo
 	if actual.Protocol != desired.Protocol {
 		return false
 	}
-	if !ptrIntEqual(actual.Port, desired.Port) {
+	if !ptr.PtrIntEqual(actual.Port, desired.Port) {
 		return false
 	}
-	if !ptrIntEqual(actual.IntervalInMillis, desired.IntervalInMillis) {
+	if !ptr.PtrIntEqual(actual.IntervalInMillis, desired.IntervalInMillis) {
 		return false
 	}
-	if !ptrIntEqual(actual.TimeoutInMillis, desired.TimeoutInMillis) {
+	if !ptr.PtrIntEqual(actual.TimeoutInMillis, desired.TimeoutInMillis) {
 		return false
 	}
-	if !ptrIntEqual(actual.Retries, desired.Retries) {
+	if !ptr.PtrIntEqual(actual.Retries, desired.Retries) {
 		return false
 	}
-	if !ptrStringEqual(actual.UrlPath, desired.UrlPath) {
+	if !ptr.PtrStringEqual(actual.UrlPath, desired.UrlPath) {
 		return false
 	}
-	if !ptrIntEqual(actual.ReturnCode, desired.ReturnCode) {
+	if !ptr.PtrIntEqual(actual.ReturnCode, desired.ReturnCode) {
 		return false
 	}
-	if !ptrStringEqual(actual.ResponseBodyRegex, desired.ResponseBodyRegex) {
+	if !ptr.PtrStringEqual(actual.ResponseBodyRegex, desired.ResponseBodyRegex) {
 		return false
 	}
 	if !bytes.Equal(actual.RequestData, desired.RequestData) {
@@ -354,25 +356,6 @@ func isHealthCheckerEqual(actual, desired *networkloadbalancer.HealthChecker) bo
 	return true
 }
 
-func ptrIntEqual(a, b *int) bool {
-	if a == nil && b == nil {
-		return true
-	}
-	if a == nil || b == nil {
-		return false
-	}
-	return *a == *b
-}
-
-func ptrStringEqual(a, b *string) bool {
-	if a == nil && b == nil {
-		return true
-	}
-	if a == nil || b == nil {
-		return false
-	}
-	return *a == *b
-}
 
 // GetNetworkLoadBalancers retrieves the Cluster's networkloadbalancer.NetworkLoadBalancer using the one of the following methods
 //
