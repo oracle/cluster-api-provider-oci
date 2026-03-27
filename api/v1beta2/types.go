@@ -1026,7 +1026,7 @@ type BackendSetDetails struct {
 	// +optional
 	IsInstantFailoverEnabled *bool `json:"isInstantFailoverEnabled,omitempty"`
 
-	// If enabled existing connections will be forwarded to an alternative healthy backend as soon as current backend becomes unhealthy.
+	// The health check policy configuration for the NLB backend set.
 	// +optional
 	HealthChecker HealthChecker `json:"healthChecker,omitempty"`
 }
@@ -1078,7 +1078,7 @@ type HealthChecker struct {
 	// +optional
 	ResponseBodyRegex *string `json:"responseBodyRegex,omitempty"`
 
-	// Base64 encoded payload to send as the UDP or TCP health check probe.\
+	// Base64 encoded payload to send as the UDP or TCP health check probe.
 	// +optional
 	RequestData *string `json:"requestData,omitempty"`
 

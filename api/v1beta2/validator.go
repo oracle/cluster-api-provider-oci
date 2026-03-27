@@ -178,45 +178,59 @@ func validateHealthChecker(healthChecker HealthChecker, fldPath *field.Path) fie
 			))
 		}
 
-		requestDataProvided := healthChecker.RequestData != nil
-		responseDataProvided := healthChecker.ResponseData != nil
-
-		if requestDataProvided != responseDataProvided {
-			if !requestDataProvided {
+		// UDP requires both requestData and responseData.
+		// TCP treats each field as independently optional.
+		if protocol == networkloadbalancer.HealthCheckProtocolsUdp {
+			if healthChecker.RequestData == nil {
 				allErrs = append(allErrs, field.Invalid(
 					fldPath.Child("requestData"),
-					ociutil.DerefString(healthChecker.RequestData),
-					"requestData must be provided when responseData is set",
+					"",
+					"requestData is required for UDP health checks",
 				))
 			}
-			if !responseDataProvided {
+			if healthChecker.ResponseData == nil {
 				allErrs = append(allErrs, field.Invalid(
 					fldPath.Child("responseData"),
-					ociutil.DerefString(healthChecker.ResponseData),
-					"responseData must be provided when requestData is set",
+					"",
+					"responseData is required for UDP health checks",
 				))
 			}
 		}
 
-		if requestDataProvided && responseDataProvided {
-			if _, err := base64.StdEncoding.DecodeString(strings.TrimSpace(*healthChecker.RequestData)); err != nil {
+		// Validate base64 encoding and payload size for each field independently.
+		if healthChecker.RequestData != nil {
+			if decoded, err := base64.StdEncoding.DecodeString(strings.TrimSpace(*healthChecker.RequestData)); err != nil {
 				allErrs = append(allErrs, field.Invalid(
 					fldPath.Child("requestData"),
 					*healthChecker.RequestData,
 					fmt.Sprintf("requestData must be base64 encoded: %v", err),
 				))
+			} else if len(decoded) > 1024 {
+				allErrs = append(allErrs, field.Invalid(
+					fldPath.Child("requestData"),
+					*healthChecker.RequestData,
+					"requestData payload must not exceed 1024 bytes before base64 encoding",
+				))
 			}
+		}
 
-			if _, err := base64.StdEncoding.DecodeString(strings.TrimSpace(*healthChecker.ResponseData)); err != nil {
+		if healthChecker.ResponseData != nil {
+			if decoded, err := base64.StdEncoding.DecodeString(strings.TrimSpace(*healthChecker.ResponseData)); err != nil {
 				allErrs = append(allErrs, field.Invalid(
 					fldPath.Child("responseData"),
 					*healthChecker.ResponseData,
 					fmt.Sprintf("responseData must be base64 encoded: %v", err),
 				))
+			} else if len(decoded) > 1024 {
+				allErrs = append(allErrs, field.Invalid(
+					fldPath.Child("responseData"),
+					*healthChecker.ResponseData,
+					"responseData payload must not exceed 1024 bytes before base64 encoding",
+				))
 			}
 		}
 	default:
-		// No additional validation for DNS health checks or unknown values (handled above)
+		// Unrecognized protocols are already rejected above; nothing more to validate here.
 	}
 
 	return allErrs

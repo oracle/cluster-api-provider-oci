@@ -31,5 +31,6 @@ type NetworkLoadBalancerClient interface {
 	GetWorkRequest(ctx context.Context, request networkloadbalancer.GetWorkRequestRequest) (response networkloadbalancer.GetWorkRequestResponse, err error)
 	ListWorkRequestErrors(ctx context.Context, request networkloadbalancer.ListWorkRequestErrorsRequest) (response networkloadbalancer.ListWorkRequestErrorsResponse, err error)
 	UpdateNetworkLoadBalancer(ctx context.Context, request networkloadbalancer.UpdateNetworkLoadBalancerRequest) (response networkloadbalancer.UpdateNetworkLoadBalancerResponse, err error)
+	UpdateHealthChecker(ctx context.Context, request networkloadbalancer.UpdateHealthCheckerRequest) (response networkloadbalancer.UpdateHealthCheckerResponse, err error)
 	DeleteNetworkLoadBalancer(ctx context.Context, request networkloadbalancer.DeleteNetworkLoadBalancerRequest) (response networkloadbalancer.DeleteNetworkLoadBalancerResponse, err error)
 }

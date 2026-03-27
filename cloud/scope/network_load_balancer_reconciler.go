@@ -17,6 +17,7 @@
 package scope
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"fmt"
@@ -117,7 +118,7 @@ func (s *ClusterScope) GetControlPlaneLoadBalancerName() string {
 	return fmt.Sprintf("%s-%s", s.OCIClusterAccessor.GetName(), "apiserver")
 }
 
-// UpdateLB updates existing Load Balancer's DisplayName, FreeformTags and DefinedTags
+// UpdateNLB updates an existing Network Load Balancer's DisplayName and health checker configuration.
 func (s *ClusterScope) UpdateNLB(ctx context.Context, nlb infrastructurev1beta2.LoadBalancer) error {
 	nlbId := s.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerId
 	updateLBDetails := networkloadbalancer.UpdateNetworkLoadBalancerDetails{
@@ -135,6 +136,36 @@ func (s *ClusterScope) UpdateNLB(ctx context.Context, nlb infrastructurev1beta2.
 	if err != nil {
 		s.Logger.Error(err, "failed to reconcile the apiserver NLB, failed to update nlb")
 		return errors.Wrap(err, "failed to reconcile the apiserver NLB, failed to update nlb")
+	}
+
+	healthChecker, err := s.buildNLBHealthChecker(nlb.NLBSpec.BackendSetDetails.HealthChecker)
+	if err != nil {
+		return errors.Wrap(err, "failed to build health checker for nlb update")
+	}
+	hcResponse, err := s.NetworkLoadBalancerClient.UpdateHealthChecker(ctx, networkloadbalancer.UpdateHealthCheckerRequest{
+		NetworkLoadBalancerId: nlbId,
+		BackendSetName:        common.String(APIServerLBBackendSetName),
+		UpdateHealthCheckerDetails: networkloadbalancer.UpdateHealthCheckerDetails{
+			Protocol:          healthChecker.Protocol,
+			Port:              healthChecker.Port,
+			IntervalInMillis:  healthChecker.IntervalInMillis,
+			TimeoutInMillis:   healthChecker.TimeoutInMillis,
+			Retries:           healthChecker.Retries,
+			UrlPath:           healthChecker.UrlPath,
+			ReturnCode:        healthChecker.ReturnCode,
+			ResponseBodyRegex: healthChecker.ResponseBodyRegex,
+			RequestData:       healthChecker.RequestData,
+			ResponseData:      healthChecker.ResponseData,
+		},
+	})
+	if err != nil {
+		s.Logger.Error(err, "failed to reconcile the apiserver NLB, failed to generate update health checker workrequest")
+		return errors.Wrap(err, "failed to reconcile the apiserver NLB, failed to generate update health checker workrequest")
+	}
+	_, err = ociutil.AwaitNLBWorkRequest(ctx, s.NetworkLoadBalancerClient, hcResponse.OpcWorkRequestId)
+	if err != nil {
+		s.Logger.Error(err, "failed to reconcile the apiserver NLB, failed to update health checker")
+		return errors.Wrap(err, "failed to reconcile the apiserver NLB, failed to update health checker")
 	}
 	return nil
 }
@@ -266,12 +297,81 @@ func (s *ClusterScope) getNetworkLoadbalancerIp(nlb networkloadbalancer.NetworkL
 }
 
 // IsNLBEqual determines if the actual networkloadbalancer.NetworkLoadBalancer is equal to the desired.
-// Equality is determined by DisplayName
+// Equality is determined by DisplayName and the health checker configuration on the backend set.
 func (s *ClusterScope) IsNLBEqual(actual *networkloadbalancer.NetworkLoadBalancer, desired infrastructurev1beta2.LoadBalancer) bool {
 	if desired.Name != *actual.DisplayName {
 		return false
 	}
+
+	desiredHC, err := s.buildNLBHealthChecker(desired.NLBSpec.BackendSetDetails.HealthChecker)
+	if err != nil {
+		return false
+	}
+
+	actualBackendSet, ok := actual.BackendSets[APIServerLBBackendSetName]
+	if !ok {
+		return false
+	}
+
+	return isHealthCheckerEqual(actualBackendSet.HealthChecker, desiredHC)
+}
+
+// isHealthCheckerEqual compares two OCI SDK HealthChecker objects field by field.
+func isHealthCheckerEqual(actual, desired *networkloadbalancer.HealthChecker) bool {
+	if actual == nil || desired == nil {
+		return actual == desired
+	}
+	if actual.Protocol != desired.Protocol {
+		return false
+	}
+	if !ptrIntEqual(actual.Port, desired.Port) {
+		return false
+	}
+	if !ptrIntEqual(actual.IntervalInMillis, desired.IntervalInMillis) {
+		return false
+	}
+	if !ptrIntEqual(actual.TimeoutInMillis, desired.TimeoutInMillis) {
+		return false
+	}
+	if !ptrIntEqual(actual.Retries, desired.Retries) {
+		return false
+	}
+	if !ptrStringEqual(actual.UrlPath, desired.UrlPath) {
+		return false
+	}
+	if !ptrIntEqual(actual.ReturnCode, desired.ReturnCode) {
+		return false
+	}
+	if !ptrStringEqual(actual.ResponseBodyRegex, desired.ResponseBodyRegex) {
+		return false
+	}
+	if !bytes.Equal(actual.RequestData, desired.RequestData) {
+		return false
+	}
+	if !bytes.Equal(actual.ResponseData, desired.ResponseData) {
+		return false
+	}
 	return true
+}
+
+func ptrIntEqual(a, b *int) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return *a == *b
+}
+
+func ptrStringEqual(a, b *string) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return *a == *b
 }
 
 // GetNetworkLoadBalancers retrieves the Cluster's networkloadbalancer.NetworkLoadBalancer using the one of the following methods
@@ -339,17 +439,17 @@ func (s *ClusterScope) buildNLBHealthChecker(spec infrastructurev1beta2.HealthCh
 		return nil, errors.Errorf("health checker port %d is out of range 1-65535", port)
 	}
 
-	interval := HealthCheckerDefaultIntervalInMillis
+	interval := 10000
 	if spec.IntervalInMillis != nil {
 		interval = *spec.IntervalInMillis
 	}
 
-	timeout := HealthCheckerDefaultTimeoutInMillis
+	timeout := 3000
 	if spec.TimeoutInMillis != nil {
 		timeout = *spec.TimeoutInMillis
 	}
 
-	retries := HealthCheckerDefaultRetries
+	retries := 3
 	if spec.Retries != nil {
 		retries = *spec.Retries
 	}

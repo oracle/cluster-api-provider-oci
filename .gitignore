@@ -41,10 +41,3 @@ test/e2e/data/infrastructure-oci/v1beta*/cluster-template*.yaml
 # tilt
 tilt-settings.json
 
-
-# git worktrees
-worktrees/
-
-infrastructure-oci/v0.22.0
-infrastructure-oci/v0.22.0/infrastructure-components.yaml
-infrastructure-oci/v0.22.0/metadata.yaml

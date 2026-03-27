@@ -45,8 +45,8 @@ spec:
             # --- Universal fields (all protocols) ---
             protocol: "${HEALTH_CHECKER_PROTOCOL:=HTTPS}"
             port: ${HEALTH_CHECKER_PORT:=6443}
-            intervalInMillis: ${HEALTH_CHECKER_INTERVAL_IN_MILLIS:=30000}
-            timeoutInMillis: ${HEALTH_CHECKER_TIMEOUT_IN_MILLIS:=10000}
+            intervalInMillis: ${HEALTH_CHECKER_INTERVAL_IN_MILLIS:=10000}
+            timeoutInMillis: ${HEALTH_CHECKER_TIMEOUT_IN_MILLIS:=3000}
             retries: ${HEALTH_CHECKER_RETRIES:=3}
             # --- HTTP/HTTPS only — uncomment to override CAPOCI defaults (/healthz, 200) ---
             # urlPath: "$#{HEALTH_CHECKER_URL_PATH:=/healthz}"
