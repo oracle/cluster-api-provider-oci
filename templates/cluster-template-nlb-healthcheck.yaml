@@ -54,7 +54,7 @@ spec:
             # responseBodyRegex: "$#HEALTH_CHECKER_RESPONSE_REGEX}"
             # --- TCP/UDP only — uncomment if your probe requires a payload ---
             # requestData: "$#{##HEALTH_CHECKER_REQUEST_DATA_BASE64}"
-            # responseData: "#${HEALTH_CHECKER_RESPONSE_DATA_BASE64}"
+            # responseData: "#$#{HEALTH_CHECKER_RESPONSE_DATA_BASE64}"
 ---
 kind: KubeadmControlPlane
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1
@@ -147,11 +147,7 @@ spec:
   replicas: ${NODE_MACHINE_COUNT}
   selector:
     matchLabels:
-      cluster.x-k8s.io/cluster-name: "${CLUSTER_NAME}"
   template:
-    metadata:
-      labels:
-        cluster.x-k8s.io/cluster-name: "${CLUSTER_NAME}"
     spec:
       clusterName: "${CLUSTER_NAME}"
       version: "${KUBERNETES_VERSION}"
