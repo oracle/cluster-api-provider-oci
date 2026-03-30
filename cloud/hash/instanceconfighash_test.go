@@ -831,7 +831,41 @@ func TestComputeHash_ExtendedMetadataChangeProducesDifferentHash(t *testing.T) {
 	g.Expect(hashBase).ToNot(Equal(hashWithMeta))
 }
 
-func TestComputeComparableHash_ExtendedMetadataProjection(t *testing.T) {
+func TestComputeComparableHash_ExtendedMetadataKeyRemovalDetected(t *testing.T) {
+	g := NewWithT(t)
+
+	// Actual instance config still has keys {a, b}
+	actual := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape: common.String("VM.Standard2.1"),
+		ExtendedMetadata: map[string]interface{}{
+			"cilium-primary-vnic": map[string]interface{}{
+				"ip-count": float64(32),
+			},
+			"removed-key": "old-value",
+		},
+	}
+
+	// Desired spec now only has {a} — user removed "removed-key"
+	desired := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape: common.String("VM.Standard2.1"),
+		ExtendedMetadata: map[string]interface{}{
+			"cilium-primary-vnic": map[string]interface{}{
+				"ip-count": float64(32),
+			},
+		},
+	}
+
+	hashActual, err := ComputeComparableHash(actual, desired)
+	g.Expect(err).To(BeNil())
+
+	hashDesired, err := ComputeHash(desired)
+	g.Expect(err).To(BeNil())
+
+	// Hashes must differ so the key removal triggers an instance config update
+	g.Expect(hashActual).ToNot(Equal(hashDesired))
+}
+
+func TestComputeComparableHash_ExtendedMetadataSameKeysMatch(t *testing.T) {
 	g := NewWithT(t)
 
 	actual := &core.InstanceConfigurationLaunchInstanceDetails{
@@ -840,7 +874,6 @@ func TestComputeComparableHash_ExtendedMetadataProjection(t *testing.T) {
 			"cilium-primary-vnic": map[string]interface{}{
 				"ip-count": float64(32),
 			},
-			"oci-added-key": "some-default",
 		},
 	}
 
@@ -859,7 +892,6 @@ func TestComputeComparableHash_ExtendedMetadataProjection(t *testing.T) {
 	hashDesired, err := ComputeHash(desired)
 	g.Expect(err).To(BeNil())
 
-	// The projected hash should match because oci-added-key is not in the desired mask
 	g.Expect(hashActual).To(Equal(hashDesired))
 }
 
