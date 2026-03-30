@@ -302,6 +302,7 @@ generate-e2e-templates: $(KUSTOMIZE)
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-machine-with-ipv6 --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-machine-with-ipv6.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-with-paravirt-bv --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-with-paravirt-bv.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-self-manage-nsg --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-self-manage-nsg.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-vnic-hostname-dns --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-vnic-hostname-dns.yaml
 
 .PHONY: test-e2e-run
 test-e2e-run: generate-e2e-templates $(GINKGO) $(ENVSUBST) ## Run e2e tests

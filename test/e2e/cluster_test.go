@@ -441,6 +441,30 @@ var _ = Describe("Workload cluster creation", func() {
 		verifyMultipleNsgSubnet(ctx, namespace.Name, clusterName, result.MachineDeployments)
 	})
 
+	It("VNIC secondary attachment with HostnameLabel and AssignPrivateDnsRecord [DailyTests]", func() {
+		clusterName = getClusterName(clusterNamePrefix, "vnic-hostname-dns")
+		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
+			ClusterProxy: bootstrapClusterProxy,
+			ConfigCluster: clusterctl.ConfigClusterInput{
+				LogFolder:                filepath.Join(artifactFolder, "clusters", bootstrapClusterProxy.GetName()),
+				ClusterctlConfigPath:     clusterctlConfigPath,
+				KubeconfigPath:           bootstrapClusterProxy.GetKubeconfigPath(),
+				InfrastructureProvider:   clusterctl.DefaultInfrastructureProvider,
+				Flavor:                   "vnic-hostname-dns",
+				Namespace:                namespace.Name,
+				ClusterName:              clusterName,
+				KubernetesVersion:        e2eConfig.MustGetVariable(capi_e2e.KubernetesVersion),
+				ControlPlaneMachineCount: pointer.Int64(1),
+				WorkerMachineCount:       pointer.Int64(1),
+			},
+			WaitForClusterIntervals:      e2eConfig.GetIntervals(specName, "wait-cluster"),
+			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),
+			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
+		}, result)
+
+		verifyVnicHostnameDns(ctx, namespace.Name, clusterName, result.MachineDeployments)
+	})
+
 	When("Bare Metal workload cluster creation", func() {
 
 		It("Bare Metal - With 1 control-plane nodes and 1 worker nodes", func() {
@@ -1241,4 +1265,51 @@ func getProtocolOptions(icmp *infrastructurev1beta1.IcmpOptions, tcp *infrastruc
 		}
 	}
 	return icmpOptions, tcpOptions, udpOptions
+}
+
+func verifyVnicHostnameDns(ctx context.Context, namespace string, clusterName string, mcDeployments []*clusterv1.MachineDeployment) {
+	lister := bootstrapClusterProxy.GetClient()
+	inClustersNamespaceListOption := client.InNamespace(namespace)
+	matchClusterListOption := client.MatchingLabels{
+		clusterv1.ClusterNameLabel: clusterName,
+	}
+
+	for _, mcDeployment := range mcDeployments {
+		matchClusterListOption[clusterv1.MachineDeploymentNameLabel] = mcDeployment.Name
+		machineList := &clusterv1.MachineList{}
+		Expect(lister.List(context.Background(), machineList, inClustersNamespaceListOption, matchClusterListOption)).
+			To(Succeed(), "Couldn't list machines for the cluster %q", clusterName)
+
+		for _, machine := range machineList.Items {
+			instanceOcid := strings.Split(machine.Spec.ProviderID, "//")[1]
+			Log(fmt.Sprintf("Instance OCID is %s", instanceOcid))
+
+			resp, err := computeClient.ListVnicAttachments(ctx, core.ListVnicAttachmentsRequest{
+				InstanceId:    common.String(instanceOcid),
+				CompartmentId: common.String(os.Getenv("OCI_COMPARTMENT_ID")),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			found := false
+			for _, attachment := range resp.Items {
+				if attachment.LifecycleState != core.VnicAttachmentLifecycleStateAttached {
+					continue
+				}
+				if attachment.VnicId == nil {
+					continue
+				}
+				vnic, err := vcnClient.GetVnic(ctx, core.GetVnicRequest{
+					VnicId: attachment.VnicId,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				if vnic.IsPrimary != nil && !*vnic.IsPrimary {
+					found = true
+					Expect(vnic.HostnameLabel).NotTo(BeNil())
+					Expect(*vnic.HostnameLabel).To(Equal("secondary-vnic"))
+				}
+			}
+			Expect(found).To(Equal(true), "secondary VNIC not found on instance %s", instanceOcid)
+		}
+	}
 }

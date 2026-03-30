@@ -203,6 +203,136 @@ func TestReconcileVnicAttachment(t *testing.T) {
 			},
 		},
 		{
+			name:          "Create vnic attachment with hostname label and private dns record",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				ms.OCIMachine.Spec.InstanceId = common.String("test")
+				ms.OCIMachine.Spec.VnicAttachments[0].HostnameLabel = common.String("worker-1")
+				ms.OCIMachine.Spec.VnicAttachments[0].AssignPrivateDnsRecord = common.Bool(true)
+
+				computeClient.EXPECT().ListVnicAttachments(gomock.Any(), gomock.Eq(core.ListVnicAttachmentsRequest{
+					InstanceId:    common.String("test"),
+					CompartmentId: common.String("testCompartment"),
+				})).
+					Return(core.ListVnicAttachmentsResponse{
+						Items: []core.VnicAttachment{
+							{
+								InstanceId:  common.String("test"),
+								DisplayName: common.String("vnicDisplayName"),
+							},
+						},
+					}, nil)
+
+				computeClient.EXPECT().AttachVnic(gomock.Any(), gomock.Eq(core.AttachVnicRequest{
+					AttachVnicDetails: core.AttachVnicDetails{
+						DisplayName: common.String("VnicTest"),
+						NicIndex:    common.Int(0),
+						InstanceId:  common.String("test"),
+						CreateVnicDetails: &core.CreateVnicDetails{
+							DisplayName:            common.String("VnicTest"),
+							AssignPublicIp:         common.Bool(false),
+							DefinedTags:            map[string]map[string]interface{}{},
+							FreeformTags:           map[string]string{
+								ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,
+								ociutil.ClusterResourceIdentifier: "resource_uid",
+							},
+							NsgIds:                 make([]string, 0),
+							HostnameLabel:          common.String("worker-1"),
+							AssignPrivateDnsRecord: common.Bool(true),
+						},
+					}})).
+					Return(core.AttachVnicResponse{
+						VnicAttachment: core.VnicAttachment{Id: common.String("vnic.id")},
+					}, nil)
+			},
+		},
+		{
+			name:          "Create vnic attachment with hostname label only",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				ms.OCIMachine.Spec.InstanceId = common.String("test")
+				ms.OCIMachine.Spec.VnicAttachments[0].HostnameLabel = common.String("worker-1")
+
+				computeClient.EXPECT().ListVnicAttachments(gomock.Any(), gomock.Eq(core.ListVnicAttachmentsRequest{
+					InstanceId:    common.String("test"),
+					CompartmentId: common.String("testCompartment"),
+				})).
+					Return(core.ListVnicAttachmentsResponse{
+						Items: []core.VnicAttachment{
+							{
+								InstanceId:  common.String("test"),
+								DisplayName: common.String("vnicDisplayName"),
+							},
+						},
+					}, nil)
+
+				computeClient.EXPECT().AttachVnic(gomock.Any(), gomock.Eq(core.AttachVnicRequest{
+					AttachVnicDetails: core.AttachVnicDetails{
+						DisplayName: common.String("VnicTest"),
+						NicIndex:    common.Int(0),
+						InstanceId:  common.String("test"),
+						CreateVnicDetails: &core.CreateVnicDetails{
+							DisplayName:            common.String("VnicTest"),
+							AssignPublicIp:         common.Bool(false),
+							DefinedTags:            map[string]map[string]interface{}{},
+							FreeformTags: map[string]string{
+								ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,
+								ociutil.ClusterResourceIdentifier: "resource_uid",
+							},
+							NsgIds:                 make([]string, 0),
+							HostnameLabel:          common.String("worker-1"),
+							AssignPrivateDnsRecord: nil,
+						},
+					}})).
+					Return(core.AttachVnicResponse{
+						VnicAttachment: core.VnicAttachment{Id: common.String("vnic.id")},
+					}, nil)
+			},
+		},
+		{
+			name:          "Create vnic attachment with assign private dns record false",
+			errorExpected: false,
+			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
+				ms.OCIMachine.Spec.InstanceId = common.String("test")
+				ms.OCIMachine.Spec.VnicAttachments[0].AssignPrivateDnsRecord = common.Bool(false)
+
+				computeClient.EXPECT().ListVnicAttachments(gomock.Any(), gomock.Eq(core.ListVnicAttachmentsRequest{
+					InstanceId:    common.String("test"),
+					CompartmentId: common.String("testCompartment"),
+				})).
+					Return(core.ListVnicAttachmentsResponse{
+						Items: []core.VnicAttachment{
+							{
+								InstanceId:  common.String("test"),
+								DisplayName: common.String("vnicDisplayName"),
+							},
+						},
+					}, nil)
+
+				computeClient.EXPECT().AttachVnic(gomock.Any(), gomock.Eq(core.AttachVnicRequest{
+					AttachVnicDetails: core.AttachVnicDetails{
+						DisplayName: common.String("VnicTest"),
+						NicIndex:    common.Int(0),
+						InstanceId:  common.String("test"),
+						CreateVnicDetails: &core.CreateVnicDetails{
+							DisplayName:            common.String("VnicTest"),
+							AssignPublicIp:         common.Bool(false),
+							DefinedTags:            map[string]map[string]interface{}{},
+							FreeformTags: map[string]string{
+								ociutil.CreatedBy:                 ociutil.OCIClusterAPIProvider,
+								ociutil.ClusterResourceIdentifier: "resource_uid",
+							},
+							NsgIds:                 make([]string, 0),
+							HostnameLabel:          nil,
+							AssignPrivateDnsRecord: common.Bool(false),
+						},
+					}})).
+					Return(core.AttachVnicResponse{
+						VnicAttachment: core.VnicAttachment{Id: common.String("vnic.id")},
+					}, nil)
+			},
+		},
+		{
 			name:          "Crete vnic attachment error",
 			errorExpected: true,
 			matchError:    fmt.Errorf("could not attach to nic 10"),

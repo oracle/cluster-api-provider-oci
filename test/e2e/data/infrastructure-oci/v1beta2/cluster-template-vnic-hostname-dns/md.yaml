@@ -1,0 +1,12 @@
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: OCIMachineTemplate
+metadata:
+  name: "${CLUSTER_NAME}-md-0"
+spec:
+  template:
+    spec:
+      vnicAttachments:
+        - displayName: "secondary-vnic"
+          hostnameLabel: "secondary-vnic"
+          assignPrivateDnsRecord: true
