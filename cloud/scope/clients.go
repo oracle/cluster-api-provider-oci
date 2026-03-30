@@ -295,7 +295,7 @@ func (c *ClientProvider) createComputeManagementClient(region string, ociAuthCon
 	}
 	computeManagementClient.Interceptor = setVersionHeader()
 
-	return computemanagement.NewClient(&computeManagementClient), nil
+	return &computeManagementClient, nil
 }
 
 func (c *ClientProvider) createContainerEngineClient(region string, ociAuthConfigProvider common.ConfigurationProvider, logger *logr.Logger) (*containerengine.ContainerEngineClient, error) {

@@ -18,7 +18,6 @@ package hash
 
 import (
 	"encoding/base64"
-	"encoding/json"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -561,6 +560,26 @@ func TestComputeHash_DetectsExtendedMetadataChanges(t *testing.T) {
 	g.Expect(hash1).ToNot(Equal(hash2))
 }
 
+func TestComputeHash_NilExtendedMetadataDoesNotAffectHash(t *testing.T) {
+	g := NewWithT(t)
+
+	withNil := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape: common.String("VM.Standard2.1"),
+	}
+
+	withEmpty := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape:            common.String("VM.Standard2.1"),
+		ExtendedMetadata: map[string]interface{}{},
+	}
+
+	hashNil, err := ComputeHash(withNil)
+	g.Expect(err).To(BeNil())
+	hashEmpty, err := ComputeHash(withEmpty)
+	g.Expect(err).To(BeNil())
+
+	g.Expect(hashNil).To(Equal(hashEmpty))
+}
+
 func TestComputeHash_SortsNSGIds(t *testing.T) {
 	g := NewWithT(t)
 	ld1 := &core.InstanceConfigurationLaunchInstanceDetails{
@@ -700,7 +719,7 @@ func TestComputeComparableHash_DetectsTrueToFalseVNICUpdates(t *testing.T) {
 	g.Expect(actualHash).ToNot(Equal(desiredHash))
 }
 
-func TestComputeComparableHash_ExtendedMetadataEquivalentNoDrift(t *testing.T) {
+func TestComputeComparableHash_ExtendedMetadataExactMatchNoDrift(t *testing.T) {
 	g := NewWithT(t)
 	desired := &core.InstanceConfigurationLaunchInstanceDetails{
 		ExtendedMetadata: map[string]interface{}{
@@ -716,37 +735,9 @@ func TestComputeComparableHash_ExtendedMetadataEquivalentNoDrift(t *testing.T) {
 		ExtendedMetadata: map[string]interface{}{
 			"workload": map[string]interface{}{
 				"features": map[string]interface{}{
-					"hpc":   true,
-					"debug": true,
+					"hpc": true,
 				},
 				"profile": "standard",
-				"orphan":  "ignored-by-mask",
-			},
-			"extra": "ignored-by-mask",
-		},
-	}
-
-	desiredHash, err := ComputeHash(desired)
-	g.Expect(err).To(BeNil())
-	actualHash, err := ComputeComparableHash(actual, desired)
-	g.Expect(err).To(BeNil())
-
-	g.Expect(actualHash).To(Equal(desiredHash))
-}
-
-func TestComputeComparableHash_MatchesSafeIntegerNumberLiteral(t *testing.T) {
-	g := NewWithT(t)
-	desired := &core.InstanceConfigurationLaunchInstanceDetails{
-		ExtendedMetadata: map[string]interface{}{
-			"workload": map[string]interface{}{
-				"retries": json.Number("3"),
-			},
-		},
-	}
-	actual := &core.InstanceConfigurationLaunchInstanceDetails{
-		ExtendedMetadata: map[string]interface{}{
-			"workload": map[string]interface{}{
-				"retries": float64(3),
 			},
 		},
 	}
@@ -759,95 +750,21 @@ func TestComputeComparableHash_MatchesSafeIntegerNumberLiteral(t *testing.T) {
 	g.Expect(actualHash).To(Equal(desiredHash))
 }
 
-func TestComputeComparableHash_MatchesLargeIntegerNumberLiteral(t *testing.T) {
+func TestComputeComparableHash_DetectsExtendedMetadataTopLevelKeyRemoval(t *testing.T) {
 	g := NewWithT(t)
 	desired := &core.InstanceConfigurationLaunchInstanceDetails{
 		ExtendedMetadata: map[string]interface{}{
 			"workload": map[string]interface{}{
-				"timestampNs": json.Number("9223372036854775807"),
+				"profile": "standard",
 			},
 		},
 	}
 	actual := &core.InstanceConfigurationLaunchInstanceDetails{
 		ExtendedMetadata: map[string]interface{}{
 			"workload": map[string]interface{}{
-				"timestampNs": json.Number("9223372036854775807"),
+				"profile": "standard",
 			},
-		},
-	}
-
-	desiredHash, err := ComputeHash(desired)
-	g.Expect(err).To(BeNil())
-	actualHash, err := ComputeComparableHash(actual, desired)
-	g.Expect(err).To(BeNil())
-
-	g.Expect(actualHash).To(Equal(desiredHash))
-}
-
-func TestComputeComparableHash_MatchesEquivalentScientificNotation(t *testing.T) {
-	g := NewWithT(t)
-	desired := &core.InstanceConfigurationLaunchInstanceDetails{
-		ExtendedMetadata: map[string]interface{}{
-			"workload": map[string]interface{}{
-				"cpuLimit": json.Number("1e3"),
-			},
-		},
-	}
-	actual := &core.InstanceConfigurationLaunchInstanceDetails{
-		ExtendedMetadata: map[string]interface{}{
-			"workload": map[string]interface{}{
-				"cpuLimit": json.Number("1000"),
-			},
-		},
-	}
-
-	desiredHash, err := ComputeHash(desired)
-	g.Expect(err).To(BeNil())
-	actualHash, err := ComputeComparableHash(actual, desired)
-	g.Expect(err).To(BeNil())
-
-	g.Expect(actualHash).To(Equal(desiredHash))
-}
-
-func TestComputeComparableHash_MatchesEquivalentDecimalNotation(t *testing.T) {
-	g := NewWithT(t)
-	desired := &core.InstanceConfigurationLaunchInstanceDetails{
-		ExtendedMetadata: map[string]interface{}{
-			"workload": map[string]interface{}{
-				"weight": json.Number("1.0"),
-			},
-		},
-	}
-	actual := &core.InstanceConfigurationLaunchInstanceDetails{
-		ExtendedMetadata: map[string]interface{}{
-			"workload": map[string]interface{}{
-				"weight": json.Number("1"),
-			},
-		},
-	}
-
-	desiredHash, err := ComputeHash(desired)
-	g.Expect(err).To(BeNil())
-	actualHash, err := ComputeComparableHash(actual, desired)
-	g.Expect(err).To(BeNil())
-
-	g.Expect(actualHash).To(Equal(desiredHash))
-}
-
-func TestComputeComparableHash_DetectsLargeIntegerDriftFromRoundedActual(t *testing.T) {
-	g := NewWithT(t)
-	desired := &core.InstanceConfigurationLaunchInstanceDetails{
-		ExtendedMetadata: map[string]interface{}{
-			"workload": map[string]interface{}{
-				"timestampNs": json.Number("9223372036854775807"),
-			},
-		},
-	}
-	actual := &core.InstanceConfigurationLaunchInstanceDetails{
-		ExtendedMetadata: map[string]interface{}{
-			"workload": map[string]interface{}{
-				"timestampNs": float64(9223372036854775806),
-			},
+			"legacy": "remove-me",
 		},
 	}
 

@@ -19,7 +19,6 @@ package scope
 import (
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -1017,7 +1016,7 @@ write_files:
 			},
 		},
 		{
-			name:          "instance config not recreated when extended metadata matches desired shape",
+			name:          "instance config not recreated when extended metadata matches desired payload",
 			errorExpected: false,
 			testSpecificSetup: func(ms *MachinePoolScope, g *WithT) {
 				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
@@ -1059,7 +1058,6 @@ write_files:
 											},
 											"profile": "standard",
 										},
-										"leftover-key": "ignored-by-mask",
 									},
 								},
 							},
@@ -1067,6 +1065,67 @@ write_files:
 					}, nil)
 
 				computeManagementClient.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).Times(0)
+			},
+		},
+		{
+			name:          "instance config recreated when desired removes top-level extended metadata key",
+			errorExpected: false,
+			testSpecificSetup: func(ms *MachinePoolScope, g *WithT) {
+				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+					Shape:                   common.String("test-shape"),
+					InstanceConfigurationId: common.String("test"),
+					ExtendedMetadata: map[string]apiextensionsv1.JSON{
+						"workload": {Raw: []byte(`{"profile":"standard","features":{"hpc":true}}`)},
+					},
+				}
+				currentBootstrapHash := hash.ComputeUserDataHash(map[string]string{"user_data": "dGVzdA=="})
+				ms.OCIMachinePool.Annotations = map[string]string{
+					InstanceConfigurationHashAnnotation: "previous-config-hash",
+					BootstrapDataHashAnnotation:         currentBootstrapHash,
+				}
+
+				computeManagementClient.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Eq(core.GetInstanceConfigurationRequest{
+					InstanceConfigurationId: common.String("test"),
+				})).
+					Return(core.GetInstanceConfigurationResponse{
+						InstanceConfiguration: core.InstanceConfiguration{
+							Id: common.String("test"),
+							InstanceDetails: core.ComputeInstanceDetails{
+								LaunchDetails: &core.InstanceConfigurationLaunchInstanceDetails{
+									DefinedTags:   definedTagsInterface,
+									FreeformTags:  tags,
+									CompartmentId: common.String("test-compartment"),
+									Shape:         common.String("test-shape"),
+									CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+										FreeformTags: tags,
+										NsgIds:       []string{"nsg-id"},
+										SubnetId:     common.String("subnet-id"),
+									},
+									SourceDetails: core.InstanceConfigurationInstanceSourceViaImageDetails{},
+									Metadata:      map[string]string{"user_data": "dGVzdA=="},
+									ExtendedMetadata: map[string]interface{}{
+										"workload": map[string]interface{}{
+											"features": map[string]interface{}{
+												"hpc": true,
+											},
+											"profile": "standard",
+										},
+										"legacy": "remove-me",
+									},
+								},
+							},
+						},
+					}, nil)
+
+				computeManagementClient.EXPECT().ListInstanceConfigurations(gomock.Any(), gomock.Any()).
+					Return(core.ListInstanceConfigurationsResponse{}, nil)
+
+				computeManagementClient.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).
+					Return(core.CreateInstanceConfigurationResponse{
+						InstanceConfiguration: core.InstanceConfiguration{
+							Id: common.String("id"),
+						},
+					}, nil)
 			},
 		},
 		{
@@ -1604,7 +1663,7 @@ func TestGetLaunchInstanceDetailsCopiesMetadataAndPropagatesSupportedFields(t *t
 	spec := infrav2exp.InstanceConfiguration{
 		Shape:                          common.String("test-shape"),
 		Metadata:                       metadata,
-		ExtendedMetadata:               map[string]apiextensionsv1.JSON{"network": {Raw: []byte(`{"cni":{"type":"cilium","enabled":true},"zones":["ad-1","ad-2"],"timestampNs":9223372036854775807}`)}},
+		ExtendedMetadata:               map[string]apiextensionsv1.JSON{"network": {Raw: []byte(`{"cni":{"type":"cilium","enabled":true},"zones":["ad-1","ad-2"],"retries":3}`)}},
 		IsPvEncryptionInTransitEnabled: common.Bool(true),
 		InstanceSourceViaImageDetails: &infrav2exp.InstanceSourceViaImageConfig{
 			ImageId:             common.String("image-id"),
@@ -1635,8 +1694,8 @@ func TestGetLaunchInstanceDetailsCopiesMetadataAndPropagatesSupportedFields(t *t
 				"type":    "cilium",
 				"enabled": true,
 			},
-			"zones":       []interface{}{"ad-1", "ad-2"},
-			"timestampNs": json.Number("9223372036854775807"),
+			"zones":   []interface{}{"ad-1", "ad-2"},
+			"retries": float64(3),
 		},
 	}))
 	g.Expect(*launchDetails.IsPvEncryptionInTransitEnabled).To(BeTrue())

@@ -17,7 +17,6 @@ limitations under the License.
 package scope
 
 import (
-	"bytes"
 	"encoding/json"
 
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
@@ -87,14 +86,6 @@ func ConvertMachineDefinedTags(machineDefinedTags map[string]map[string]string) 
 
 // ConvertMachineExtendedMetadata converts API extended metadata values into OCI SDK values.
 func ConvertMachineExtendedMetadata(machineExtendedMetadata map[string]apiextensionsv1.JSON) (map[string]interface{}, error) {
-	return convertMachineExtendedMetadata(machineExtendedMetadata, false)
-}
-
-func convertMachineExtendedMetadataPreservingNumbers(machineExtendedMetadata map[string]apiextensionsv1.JSON) (map[string]interface{}, error) {
-	return convertMachineExtendedMetadata(machineExtendedMetadata, true)
-}
-
-func convertMachineExtendedMetadata(machineExtendedMetadata map[string]apiextensionsv1.JSON, preserveNumbers bool) (map[string]interface{}, error) {
 	if len(machineExtendedMetadata) == 0 {
 		return nil, nil
 	}
@@ -107,13 +98,7 @@ func convertMachineExtendedMetadata(machineExtendedMetadata map[string]apiextens
 		}
 
 		var converted interface{}
-		if preserveNumbers {
-			decoder := json.NewDecoder(bytes.NewReader(v.Raw))
-			decoder.UseNumber()
-			if err := decoder.Decode(&converted); err != nil {
-				return nil, err
-			}
-		} else if err := json.Unmarshal(v.Raw, &converted); err != nil {
+		if err := json.Unmarshal(v.Raw, &converted); err != nil {
 			return nil, err
 		}
 		extendedMetadata[k] = converted

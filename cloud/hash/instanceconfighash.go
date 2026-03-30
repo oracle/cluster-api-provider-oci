@@ -22,10 +22,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"math/big"
 	"reflect"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/oracle/oci-go-sdk/v65/core"
@@ -157,7 +155,7 @@ func projectLaunchDetails(in, mask *core.InstanceConfigurationLaunchInstanceDeta
 		CompartmentID:                  pickString(in.CompartmentId, mask.CompartmentId),
 		CreateVnicDetails:              projectCreateVnicDetails(in.CreateVnicDetails, mask.CreateVnicDetails),
 		Metadata:                       normalizeMetadata(pickMetadata(in.Metadata, mask.Metadata)),
-		ExtendedMetadata:               projectExtendedMetadata(in.ExtendedMetadata, mask.ExtendedMetadata),
+		ExtendedMetadata:               pickExtendedMetadata(in.ExtendedMetadata, mask.ExtendedMetadata),
 		Shape:                          pickString(in.Shape, mask.Shape),
 		ShapeConfig:                    projectShapeConfig(in.ShapeConfig, mask.ShapeConfig),
 		PlatformConfig:                 projectPlatformConfig(in.PlatformConfig, mask.PlatformConfig),
@@ -224,119 +222,8 @@ func normalizeExtendedMetadataValue(value interface{}) interface{} {
 	}
 }
 
-func projectExtendedMetadata(actual, mask map[string]interface{}) map[string]interface{} {
-	if len(mask) == 0 {
-		return nil
-	}
-
-	output := make(map[string]interface{}, len(mask))
-	for key, desiredValue := range mask {
-		actualValue, ok := actual[key]
-		if !ok {
-			continue
-		}
-		output[key] = projectExtendedMetadataValue(actualValue, desiredValue)
-	}
-	return normalizeExtendedMetadata(output)
-}
-
-func projectExtendedMetadataValue(actual, desired interface{}) interface{} {
-	switch desiredTyped := desired.(type) {
-	case map[string]interface{}:
-		actualTyped, ok := actual.(map[string]interface{})
-		if !ok {
-			return actual
-		}
-		output := make(map[string]interface{}, len(desiredTyped))
-		for key, desiredValue := range desiredTyped {
-			actualValue, ok := actualTyped[key]
-			if !ok {
-				continue
-			}
-			output[key] = projectExtendedMetadataValue(actualValue, desiredValue)
-		}
-		return output
-	case []interface{}:
-		actualTyped, ok := actual.([]interface{})
-		if !ok {
-			return actual
-		}
-		output := make([]interface{}, 0, len(desiredTyped))
-		for i, desiredValue := range desiredTyped {
-			if i >= len(actualTyped) {
-				continue
-			}
-			output = append(output, projectExtendedMetadataValue(actualTyped[i], desiredValue))
-		}
-		return output
-	case json.Number:
-		if extendedMetadataNumbersEqual(actual, desiredTyped) {
-			return desiredTyped
-		}
-	}
-
-	return actual
-}
-
-func extendedMetadataNumbersEqual(actual interface{}, desired json.Number) bool {
-	switch actualTyped := actual.(type) {
-	case json.Number:
-		return jsonNumbersEqual(actualTyped, desired)
-	case float64:
-		return jsonNumberMatchesFloat64(desired, actualTyped)
-	default:
-		return false
-	}
-}
-
-func jsonNumbersEqual(actual, desired json.Number) bool {
-	if actual == desired {
-		return true
-	}
-
-	actualValue, ok := parseJSONNumber(actual)
-	if !ok {
-		return false
-	}
-	desiredValue, ok := parseJSONNumber(desired)
-	if !ok {
-		return false
-	}
-
-	return actualValue.Cmp(desiredValue) == 0
-}
-
-func parseJSONNumber(number json.Number) (*big.Rat, bool) {
-	return new(big.Rat).SetString(number.String())
-}
-
-func jsonNumberMatchesFloat64(number json.Number, actual float64) bool {
-	if !isSafeJSONNumberForFloat64(number) {
-		return false
-	}
-
-	expected, err := number.Float64()
-	if err != nil {
-		return false
-	}
-
-	return actual == expected
-}
-
-// isSafeJSONNumberForFloat64 reports whether number->float comparison can be
-// trusted to preserve integer identity. Integer literals beyond 2^53-1 are not
-// compared via float64 because they can alias after IEEE-754 rounding.
-func isSafeJSONNumberForFloat64(number json.Number) bool {
-	s := number.String()
-	if strings.ContainsAny(s, ".eE") {
-		return true
-	}
-	const maxSafeInteger = int64(9007199254740991) // 2^53 - 1
-	i, err := strconv.ParseInt(s, 10, 64)
-	if err != nil {
-		return false
-	}
-	return i <= maxSafeInteger && i >= -maxSafeInteger
+func pickExtendedMetadata(actual, _ map[string]interface{}) map[string]interface{} {
+	return normalizeExtendedMetadata(actual)
 }
 
 // ComputeUserDataHash computes a SHA-256 hash of the raw user_data value from

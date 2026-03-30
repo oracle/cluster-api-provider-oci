@@ -519,10 +519,14 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context, _
 	//   configChanged:     desired config hash  vs  actual config hash (projected)
 	//   bootstrapChanged: desired user_data hash  vs  actual user_data hash
 	//
-	// Config uses ComputeComparableHash which projects the actual OCI
-	// response onto only the fields present in the desired spec. This
+	// Config uses ComputeComparableHash which projects most OCI response
+	// fields onto only the fields present in the desired spec. This
 	// filters out OCI-returned defaults (e.g. ShapeConfig.MemoryInGBs on
 	// flex shapes) that would otherwise cause continuous recreates (issue #509).
+	//
+	// extendedMetadata is treated as opaque user JSON. Any difference in
+	// the current OCI payload versus the desired payload triggers a new
+	// InstanceConfiguration.
 	//
 	// Bootstrap compares OCI actual vs desired. We still classify kubeadm
 	// discovery-token-only drift separately for observability, but bootstrap
@@ -654,7 +658,7 @@ func (m *MachinePoolScope) getLaunchInstanceDetails(instanceConfigurationSpec in
 		return nil, err
 	}
 	metadata["user_data"] = base64.StdEncoding.EncodeToString([]byte(cloudInitData))
-	extendedMetadata, err := convertMachineExtendedMetadataPreservingNumbers(instanceConfigurationSpec.ExtendedMetadata)
+	extendedMetadata, err := ConvertMachineExtendedMetadata(instanceConfigurationSpec.ExtendedMetadata)
 	if err != nil {
 		return nil, err
 	}
