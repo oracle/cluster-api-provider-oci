@@ -21,6 +21,7 @@ import (
 
 	. "github.com/onsi/gomega"
 	"github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/apitesting/fuzzer"
 	"k8s.io/apimachinery/pkg/runtime"
 	runtimeserializer "k8s.io/apimachinery/pkg/runtime/serializer"
@@ -37,8 +38,7 @@ func fuzzFuncs(_ runtimeserializer.CodecFactory) []interface{} {
 
 func OCIMachinePoolFuzzer(obj *OCIMachinePool, c randfill.Continue) {
 	c.FillNoCustom(obj)
-	// nil fields which have been removed so that tests dont fail
-	obj.Spec.InstanceConfiguration.ExtendedMetadata = nil
+	obj.Spec.InstanceConfiguration.ExtendedMetadata = sampleExtendedMetadata()
 	if obj.Spec.InstanceConfiguration.InstanceVnicConfiguration != nil {
 		obj.Spec.InstanceConfiguration.InstanceVnicConfiguration.NSGId = nil
 		obj.Spec.InstanceConfiguration.InstanceVnicConfiguration.SubnetId = nil
@@ -47,7 +47,18 @@ func OCIMachinePoolFuzzer(obj *OCIMachinePool, c randfill.Continue) {
 
 func OCIMachinePoolHubFuzzer(obj *v1beta2.OCIMachinePool, c randfill.Continue) {
 	c.FillNoCustom(obj)
-	obj.Spec.InstanceConfiguration.ExtendedMetadata = nil
+	obj.Spec.InstanceConfiguration.ExtendedMetadata = sampleExtendedMetadata()
+}
+
+func sampleExtendedMetadata() map[string]apiextensionsv1.JSON {
+	return map[string]apiextensionsv1.JSON{
+		"workload": {
+			Raw: []byte(`{"profile":"standard","debug":false,"features":["hpc","gpu"]}`),
+		},
+		"replicasHint": {
+			Raw: []byte(`3`),
+		},
+	}
 }
 
 func TestFuzzyConversion(t *testing.T) {
