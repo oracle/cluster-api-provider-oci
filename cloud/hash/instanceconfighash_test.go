@@ -895,6 +895,48 @@ func TestComputeComparableHash_ExtendedMetadataSameKeysMatch(t *testing.T) {
 	g.Expect(hashActual).To(Equal(hashDesired))
 }
 
+func TestComputeComparableHash_ExtendedMetadataClearDetected(t *testing.T) {
+	tests := []struct {
+		name                string
+		desiredExtendedMeta map[string]interface{}
+	}{
+		{
+			name:                "nil desired extended metadata",
+			desiredExtendedMeta: nil,
+		},
+		{
+			name:                "empty desired extended metadata",
+			desiredExtendedMeta: map[string]interface{}{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			actual := &core.InstanceConfigurationLaunchInstanceDetails{
+				Shape: common.String("VM.Standard2.1"),
+				ExtendedMetadata: map[string]interface{}{
+					"stale-key": "old-value",
+				},
+			}
+
+			desired := &core.InstanceConfigurationLaunchInstanceDetails{
+				Shape:            common.String("VM.Standard2.1"),
+				ExtendedMetadata: tt.desiredExtendedMeta,
+			}
+
+			hashActual, err := ComputeComparableHash(actual, desired)
+			g.Expect(err).To(BeNil())
+
+			hashDesired, err := ComputeHash(desired)
+			g.Expect(err).To(BeNil())
+
+			g.Expect(hashActual).ToNot(Equal(hashDesired))
+		})
+	}
+}
+
 func TestComputeHash_NilExtendedMetadataDoesNotAffectHash(t *testing.T) {
 	g := NewWithT(t)
 

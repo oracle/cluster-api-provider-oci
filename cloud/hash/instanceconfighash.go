@@ -577,14 +577,12 @@ func pickMetadata(actual, mask map[string]string) map[string]string {
 	return result
 }
 
-// pickExtendedMetadata returns all actual keys when the desired mask is
-// non-empty. Unlike regular metadata, OCI does not inject default extended
-// metadata keys, so returning the full actual map is safe and ensures that
-// key removals from the desired spec are detected as hash differences.
+// pickExtendedMetadata returns all actual keys whenever any actual keys exist.
+// Unlike regular metadata, OCI does not inject default extended metadata keys,
+// so returning the full actual map is safe and ensures that key removals from
+// the desired spec, including clearing the entire field, are detected as hash
+// differences.
 func pickExtendedMetadata(actual, mask map[string]interface{}) map[string]interface{} {
-	if len(mask) == 0 {
-		return nil
-	}
 	if len(actual) == 0 {
 		return nil
 	}
