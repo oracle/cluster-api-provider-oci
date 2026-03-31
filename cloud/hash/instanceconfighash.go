@@ -35,6 +35,7 @@ type comparableLaunchDetails struct {
 	CompartmentID                  *string                              `json:"compartmentId,omitempty"`
 	CreateVnicDetails              *comparableCreateVnicDetails         `json:"createVnicDetails,omitempty"`
 	Metadata                       map[string]string                    `json:"metadata,omitempty"`
+	ExtendedMetadata               map[string]interface{}               `json:"extendedMetadata,omitempty"`
 	Shape                          *string                              `json:"shape,omitempty"`
 	ShapeConfig                    *comparableShapeConfig               `json:"shapeConfig,omitempty"`
 	PlatformConfig                 *comparablePlatformConfig            `json:"platformConfig,omitempty"`
@@ -154,6 +155,7 @@ func projectLaunchDetails(in, mask *core.InstanceConfigurationLaunchInstanceDeta
 		CompartmentID:                  pickString(in.CompartmentId, mask.CompartmentId),
 		CreateVnicDetails:              projectCreateVnicDetails(in.CreateVnicDetails, mask.CreateVnicDetails),
 		Metadata:                       normalizeMetadata(pickMetadata(in.Metadata, mask.Metadata)),
+		ExtendedMetadata:               pickExtendedMetadata(in.ExtendedMetadata, mask.ExtendedMetadata),
 		Shape:                          pickString(in.Shape, mask.Shape),
 		ShapeConfig:                    projectShapeConfig(in.ShapeConfig, mask.ShapeConfig),
 		PlatformConfig:                 projectPlatformConfig(in.PlatformConfig, mask.PlatformConfig),
@@ -571,6 +573,22 @@ func pickMetadata(actual, mask map[string]string) map[string]string {
 	}
 	if len(result) == 0 {
 		return nil
+	}
+	return result
+}
+
+// pickExtendedMetadata returns all actual keys whenever any actual keys exist.
+// Unlike regular metadata, OCI does not inject default extended metadata keys,
+// so returning the full actual map is safe and ensures that key removals from
+// the desired spec, including clearing the entire field, are detected as hash
+// differences.
+func pickExtendedMetadata(actual, mask map[string]interface{}) map[string]interface{} {
+	if len(actual) == 0 {
+		return nil
+	}
+	result := make(map[string]interface{}, len(actual))
+	for k, v := range actual {
+		result[k] = v
 	}
 	return result
 }
