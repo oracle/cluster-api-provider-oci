@@ -865,6 +865,50 @@ func TestComputeComparableHash_ExtendedMetadataKeyRemovalDetected(t *testing.T) 
 	g.Expect(hashActual).ToNot(Equal(hashDesired))
 }
 
+func TestComputeComparableHash_ExtendedMetadataTopLevelWorkloadKeyRemovalDetected(t *testing.T) {
+	g := NewWithT(t)
+
+	actual := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape: common.String("VM.Standard2.1"),
+		ExtendedMetadata: map[string]interface{}{
+			"workload": map[string]interface{}{
+				"profile": "standard",
+				"features": map[string]interface{}{
+					"hpc": true,
+					"gpu": true,
+				},
+			},
+			"network": map[string]interface{}{
+				"cni": map[string]interface{}{
+					"type": "cilium",
+					"mode": "overlay",
+				},
+			},
+		},
+	}
+
+	// Desired spec keeps network metadata but removes the top-level workload key.
+	desired := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape: common.String("VM.Standard2.1"),
+		ExtendedMetadata: map[string]interface{}{
+			"network": map[string]interface{}{
+				"cni": map[string]interface{}{
+					"type": "cilium",
+					"mode": "overlay",
+				},
+			},
+		},
+	}
+
+	hashActual, err := ComputeComparableHash(actual, desired)
+	g.Expect(err).To(BeNil())
+
+	hashDesired, err := ComputeHash(desired)
+	g.Expect(err).To(BeNil())
+
+	g.Expect(hashActual).ToNot(Equal(hashDesired))
+}
+
 func TestComputeComparableHash_ExtendedMetadataSameKeysMatch(t *testing.T) {
 	g := NewWithT(t)
 
@@ -893,6 +937,30 @@ func TestComputeComparableHash_ExtendedMetadataSameKeysMatch(t *testing.T) {
 	g.Expect(err).To(BeNil())
 
 	g.Expect(hashActual).To(Equal(hashDesired))
+}
+
+func TestComputeComparableHash_ExtendedMetadataNilDesiredDetected(t *testing.T) {
+	g := NewWithT(t)
+
+	actual := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape: common.String("VM.Standard2.1"),
+		ExtendedMetadata: map[string]interface{}{
+			"stale-key": "old-value",
+		},
+	}
+
+	desired := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape:            common.String("VM.Standard2.1"),
+		ExtendedMetadata: nil,
+	}
+
+	hashActual, err := ComputeComparableHash(actual, desired)
+	g.Expect(err).To(BeNil())
+
+	hashDesired, err := ComputeHash(desired)
+	g.Expect(err).To(BeNil())
+
+	g.Expect(hashActual).ToNot(Equal(hashDesired))
 }
 
 func TestComputeComparableHash_ExtendedMetadataClearDetected(t *testing.T) {
