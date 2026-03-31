@@ -32,6 +32,7 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -1525,6 +1526,134 @@ func TestGetLaunchInstanceDetailsCopiesMetadataAndPropagatesSupportedFields(t *t
 	g.Expect(*sourceDetails.BootVolumeSizeInGBs).To(Equal(int64(100)))
 	g.Expect(*sourceDetails.BootVolumeVpusPerGB).To(Equal(int64(20)))
 	g.Expect(*launchDetails.AvailabilityConfig.IsLiveMigrationPreferred).To(BeTrue())
+}
+
+func TestGetLaunchInstanceDetailsExtendedMetadata(t *testing.T) {
+	g := NewWithT(t)
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "bootstrap",
+			Namespace: "default",
+		},
+		Data: map[string][]byte{
+			"value": []byte("test"),
+		},
+	}
+	machinePool := &infrav2exp.OCIMachinePool{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test",
+		},
+	}
+	client := fake.NewClientBuilder().WithStatusSubresource(machinePool).WithObjects(secret, machinePool).Build()
+	ms, err := NewMachinePoolScope(MachinePoolScopeParams{
+		ComputeManagementClient: mock_computemanagement.NewMockClient(mockCtrl),
+		OCIMachinePool:          machinePool,
+		OCIClusterAccessor: OCISelfManagedCluster{
+			OCICluster: &infrastructurev1beta2.OCICluster{
+				Spec: infrastructurev1beta2.OCIClusterSpec{
+					CompartmentId: "test-compartment",
+				},
+			},
+		},
+		Cluster: &clusterv1.Cluster{},
+		MachinePool: &clusterv1.MachinePool{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "default",
+			},
+			Spec: clusterv1.MachinePoolSpec{
+				Template: clusterv1.MachineTemplateSpec{
+					Spec: clusterv1.MachineSpec{
+						Bootstrap: clusterv1.Bootstrap{
+							DataSecretName: common.String("bootstrap"),
+						},
+					},
+				},
+			},
+		},
+		Client: client,
+	})
+	g.Expect(err).To(BeNil())
+
+	spec := infrav2exp.InstanceConfiguration{
+		Shape: common.String("test-shape"),
+		ExtendedMetadata: map[string]apiextensionsv1.JSON{
+			"cilium-primary-vnic": {
+				Raw: []byte(`{"ip-count":32,"cidr-blocks":["10.0.0.0/24"]}`),
+			},
+		},
+	}
+	ms.OCIMachinePool.Spec.InstanceConfiguration = spec
+
+	launchDetails, err := ms.getLaunchInstanceDetails(spec, map[string]string{"freeform": "tag"}, nil)
+	g.Expect(err).To(BeNil())
+	g.Expect(launchDetails.ExtendedMetadata).ToNot(BeNil())
+	g.Expect(launchDetails.ExtendedMetadata).To(HaveKey("cilium-primary-vnic"))
+	ciliumConfig, ok := launchDetails.ExtendedMetadata["cilium-primary-vnic"].(map[string]interface{})
+	g.Expect(ok).To(BeTrue())
+	g.Expect(ciliumConfig["ip-count"]).To(Equal(float64(32)))
+	g.Expect(ciliumConfig["cidr-blocks"]).To(Equal([]interface{}{"10.0.0.0/24"}))
+}
+
+func TestGetLaunchInstanceDetailsNilExtendedMetadata(t *testing.T) {
+	g := NewWithT(t)
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "bootstrap",
+			Namespace: "default",
+		},
+		Data: map[string][]byte{
+			"value": []byte("test"),
+		},
+	}
+	machinePool := &infrav2exp.OCIMachinePool{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test",
+		},
+	}
+	client := fake.NewClientBuilder().WithStatusSubresource(machinePool).WithObjects(secret, machinePool).Build()
+	ms, err := NewMachinePoolScope(MachinePoolScopeParams{
+		ComputeManagementClient: mock_computemanagement.NewMockClient(mockCtrl),
+		OCIMachinePool:          machinePool,
+		OCIClusterAccessor: OCISelfManagedCluster{
+			OCICluster: &infrastructurev1beta2.OCICluster{
+				Spec: infrastructurev1beta2.OCIClusterSpec{
+					CompartmentId: "test-compartment",
+				},
+			},
+		},
+		Cluster: &clusterv1.Cluster{},
+		MachinePool: &clusterv1.MachinePool{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "default",
+			},
+			Spec: clusterv1.MachinePoolSpec{
+				Template: clusterv1.MachineTemplateSpec{
+					Spec: clusterv1.MachineSpec{
+						Bootstrap: clusterv1.Bootstrap{
+							DataSecretName: common.String("bootstrap"),
+						},
+					},
+				},
+			},
+		},
+		Client: client,
+	})
+	g.Expect(err).To(BeNil())
+
+	spec := infrav2exp.InstanceConfiguration{
+		Shape: common.String("test-shape"),
+	}
+	ms.OCIMachinePool.Spec.InstanceConfiguration = spec
+
+	launchDetails, err := ms.getLaunchInstanceDetails(spec, map[string]string{"freeform": "tag"}, nil)
+	g.Expect(err).To(BeNil())
+	g.Expect(launchDetails.ExtendedMetadata).To(BeNil())
 }
 
 func TestInstancePoolCreate(t *testing.T) {

@@ -21,6 +21,7 @@ import (
 
 	. "github.com/onsi/gomega"
 	"github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/apitesting/fuzzer"
 	"k8s.io/apimachinery/pkg/runtime"
 	runtimeserializer "k8s.io/apimachinery/pkg/runtime/serializer"
@@ -31,6 +32,14 @@ import (
 func fuzzFuncs(_ runtimeserializer.CodecFactory) []interface{} {
 	return []interface{}{
 		OCIMachinePoolFuzzer,
+		OCIMachinePoolHubFuzzer,
+	}
+}
+
+func sampleExtendedMetadata() map[string]apiextensionsv1.JSON {
+	return map[string]apiextensionsv1.JSON{
+		"cilium-primary-vnic": {Raw: []byte(`{"ip-count":32,"cidr-blocks":["10.0.0.0/24"]}`)},
+		"simple-key":          {Raw: []byte(`"string-value"`)},
 	}
 }
 
@@ -41,6 +50,14 @@ func OCIMachinePoolFuzzer(obj *OCIMachinePool, c randfill.Continue) {
 		obj.Spec.InstanceConfiguration.InstanceVnicConfiguration.NSGId = nil
 		obj.Spec.InstanceConfiguration.InstanceVnicConfiguration.SubnetId = nil
 	}
+	// Replace fuzzed bytes with valid JSON so the roundtrip works
+	obj.Spec.InstanceConfiguration.ExtendedMetadata = sampleExtendedMetadata()
+}
+
+func OCIMachinePoolHubFuzzer(obj *v1beta2.OCIMachinePool, c randfill.Continue) {
+	c.FillNoCustom(obj)
+	// Replace fuzzed bytes with valid JSON so the roundtrip works
+	obj.Spec.InstanceConfiguration.ExtendedMetadata = sampleExtendedMetadata()
 }
 
 func TestFuzzyConversion(t *testing.T) {

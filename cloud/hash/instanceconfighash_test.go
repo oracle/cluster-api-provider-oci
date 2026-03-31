@@ -805,3 +805,223 @@ func TestComputeHash_ComprehensiveTest(t *testing.T) {
 	g.Expect(normalized.PreemptibleInstanceConfig).To(BeNil())
 	g.Expect(normalized.SourceDetails).ToNot(BeNil())
 }
+
+func TestComputeHash_ExtendedMetadataChangeProducesDifferentHash(t *testing.T) {
+	g := NewWithT(t)
+
+	base := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape: common.String("VM.Standard2.1"),
+	}
+
+	withExtMeta := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape: common.String("VM.Standard2.1"),
+		ExtendedMetadata: map[string]interface{}{
+			"cilium-primary-vnic": map[string]interface{}{
+				"ip-count": float64(32),
+			},
+		},
+	}
+
+	hashBase, err := ComputeHash(base)
+	g.Expect(err).To(BeNil())
+
+	hashWithMeta, err := ComputeHash(withExtMeta)
+	g.Expect(err).To(BeNil())
+
+	g.Expect(hashBase).ToNot(Equal(hashWithMeta))
+}
+
+func TestComputeComparableHash_ExtendedMetadataKeyRemovalDetected(t *testing.T) {
+	g := NewWithT(t)
+
+	// Actual instance config still has keys {a, b}
+	actual := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape: common.String("VM.Standard2.1"),
+		ExtendedMetadata: map[string]interface{}{
+			"cilium-primary-vnic": map[string]interface{}{
+				"ip-count": float64(32),
+			},
+			"removed-key": "old-value",
+		},
+	}
+
+	// Desired spec now only has {a} — user removed "removed-key"
+	desired := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape: common.String("VM.Standard2.1"),
+		ExtendedMetadata: map[string]interface{}{
+			"cilium-primary-vnic": map[string]interface{}{
+				"ip-count": float64(32),
+			},
+		},
+	}
+
+	hashActual, err := ComputeComparableHash(actual, desired)
+	g.Expect(err).To(BeNil())
+
+	hashDesired, err := ComputeHash(desired)
+	g.Expect(err).To(BeNil())
+
+	// Hashes must differ so the key removal triggers an instance config update
+	g.Expect(hashActual).ToNot(Equal(hashDesired))
+}
+
+func TestComputeComparableHash_ExtendedMetadataTopLevelWorkloadKeyRemovalDetected(t *testing.T) {
+	g := NewWithT(t)
+
+	actual := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape: common.String("VM.Standard2.1"),
+		ExtendedMetadata: map[string]interface{}{
+			"workload": map[string]interface{}{
+				"profile": "standard",
+				"features": map[string]interface{}{
+					"hpc": true,
+					"gpu": true,
+				},
+			},
+			"network": map[string]interface{}{
+				"cni": map[string]interface{}{
+					"type": "cilium",
+					"mode": "overlay",
+				},
+			},
+		},
+	}
+
+	// Desired spec keeps network metadata but removes the top-level workload key.
+	desired := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape: common.String("VM.Standard2.1"),
+		ExtendedMetadata: map[string]interface{}{
+			"network": map[string]interface{}{
+				"cni": map[string]interface{}{
+					"type": "cilium",
+					"mode": "overlay",
+				},
+			},
+		},
+	}
+
+	hashActual, err := ComputeComparableHash(actual, desired)
+	g.Expect(err).To(BeNil())
+
+	hashDesired, err := ComputeHash(desired)
+	g.Expect(err).To(BeNil())
+
+	g.Expect(hashActual).ToNot(Equal(hashDesired))
+}
+
+func TestComputeComparableHash_ExtendedMetadataSameKeysMatch(t *testing.T) {
+	g := NewWithT(t)
+
+	actual := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape: common.String("VM.Standard2.1"),
+		ExtendedMetadata: map[string]interface{}{
+			"cilium-primary-vnic": map[string]interface{}{
+				"ip-count": float64(32),
+			},
+		},
+	}
+
+	desired := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape: common.String("VM.Standard2.1"),
+		ExtendedMetadata: map[string]interface{}{
+			"cilium-primary-vnic": map[string]interface{}{
+				"ip-count": float64(32),
+			},
+		},
+	}
+
+	hashActual, err := ComputeComparableHash(actual, desired)
+	g.Expect(err).To(BeNil())
+
+	hashDesired, err := ComputeHash(desired)
+	g.Expect(err).To(BeNil())
+
+	g.Expect(hashActual).To(Equal(hashDesired))
+}
+
+func TestComputeComparableHash_ExtendedMetadataNilDesiredDetected(t *testing.T) {
+	g := NewWithT(t)
+
+	actual := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape: common.String("VM.Standard2.1"),
+		ExtendedMetadata: map[string]interface{}{
+			"stale-key": "old-value",
+		},
+	}
+
+	desired := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape:            common.String("VM.Standard2.1"),
+		ExtendedMetadata: nil,
+	}
+
+	hashActual, err := ComputeComparableHash(actual, desired)
+	g.Expect(err).To(BeNil())
+
+	hashDesired, err := ComputeHash(desired)
+	g.Expect(err).To(BeNil())
+
+	g.Expect(hashActual).ToNot(Equal(hashDesired))
+}
+
+func TestComputeComparableHash_ExtendedMetadataClearDetected(t *testing.T) {
+	tests := []struct {
+		name                string
+		desiredExtendedMeta map[string]interface{}
+	}{
+		{
+			name:                "nil desired extended metadata",
+			desiredExtendedMeta: nil,
+		},
+		{
+			name:                "empty desired extended metadata",
+			desiredExtendedMeta: map[string]interface{}{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			actual := &core.InstanceConfigurationLaunchInstanceDetails{
+				Shape: common.String("VM.Standard2.1"),
+				ExtendedMetadata: map[string]interface{}{
+					"stale-key": "old-value",
+				},
+			}
+
+			desired := &core.InstanceConfigurationLaunchInstanceDetails{
+				Shape:            common.String("VM.Standard2.1"),
+				ExtendedMetadata: tt.desiredExtendedMeta,
+			}
+
+			hashActual, err := ComputeComparableHash(actual, desired)
+			g.Expect(err).To(BeNil())
+
+			hashDesired, err := ComputeHash(desired)
+			g.Expect(err).To(BeNil())
+
+			g.Expect(hashActual).ToNot(Equal(hashDesired))
+		})
+	}
+}
+
+func TestComputeHash_NilExtendedMetadataDoesNotAffectHash(t *testing.T) {
+	g := NewWithT(t)
+
+	withNil := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape: common.String("VM.Standard2.1"),
+	}
+
+	withEmpty := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape:            common.String("VM.Standard2.1"),
+		ExtendedMetadata: map[string]interface{}{},
+	}
+
+	hashNil, err := ComputeHash(withNil)
+	g.Expect(err).To(BeNil())
+
+	hashEmpty, err := ComputeHash(withEmpty)
+	g.Expect(err).To(BeNil())
+
+	g.Expect(hashNil).To(Equal(hashEmpty))
+}
