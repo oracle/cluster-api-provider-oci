@@ -22,8 +22,8 @@ func StringEquals(p *string, value string) bool {
 	return *p == value
 }
 
-// PtrStringEqual compares two string pointers for equality, treating two nil pointers as equal.
-func PtrStringEqual(a, b *string) bool {
+// StringEqual compares two string pointers for equality, treating two nil pointers as equal.
+func StringEqual(a, b *string) bool {
 	if a == nil && b == nil {
 		return true
 	}
@@ -33,8 +33,8 @@ func PtrStringEqual(a, b *string) bool {
 	return *a == *b
 }
 
-// PtrIntEqual compares two int pointers for equality, treating two nil pointers as equal.
-func PtrIntEqual(a, b *int) bool {
+// IntEqual compares two int pointers for equality, treating two nil pointers as equal.
+func IntEqual(a, b *int) bool {
 	if a == nil && b == nil {
 		return true
 	}

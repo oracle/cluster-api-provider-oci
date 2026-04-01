@@ -137,9 +137,8 @@ spec:
                               of a network load balancer backend set.
                             properties:
                               healthChecker:
-                                description: If enabled existing connections will
-                                  be forwarded to an alternative healthy backend as
-                                  soon as current backend becomes unhealthy.
+                                description: The health check policy configuration
+                                  for the NLB backend set.
                                 properties:
                                   intervalInMillis:
                                     description: |-
@@ -158,17 +157,22 @@ spec:
                                       Example: `HTTP`
                                     type: string
                                   requestData:
-                                    description: Base64 encoded payload to send as
-                                      the UDP or TCP health check probe.
+                                    description: |-
+                                      Base64 encoded payload to send as the TCP or UDP health check probe.
+                                      Only supported for TCP and UDP protocols. Not allowed for HTTP or HTTPS.
+                                      For UDP, both requestData and responseData are required.
                                     type: string
                                   responseBodyRegex:
                                     description: |-
-                                      A regular expression for parsing the response body from the backend server when using HTTP/HTTPS.
+                                      A regular expression for parsing the response body from the backend server.
+                                      Only supported for HTTP and HTTPS protocols. Not allowed for TCP or UDP.
                                       Example: `^((?!false).|\s)*$`
                                     type: string
                                   responseData:
-                                    description: Base64 encoded payload expected in
-                                      the UDP or TCP health check probe response.
+                                    description: |-
+                                      Base64 encoded payload expected in the TCP or UDP health check probe response.
+                                      Only supported for TCP and UDP protocols. Not allowed for HTTP or HTTPS.
+                                      For UDP, both requestData and responseData are required.
                                     type: string
                                   retries:
                                     description: |-
@@ -178,6 +182,7 @@ spec:
                                   returnCode:
                                     description: |-
                                       The status code a healthy backend server should return when using the HTTP/HTTPS protocol.
+                                      Only supported for HTTP and HTTPS protocols. Not allowed for TCP or UDP.
                                       Example: `200`
                                     type: integer
                                   timeoutInMillis:
@@ -189,6 +194,7 @@ spec:
                                   urlPath:
                                     description: |-
                                       The path against which to run the health check.
+                                      Only supported for HTTP and HTTPS protocols. Not allowed for TCP or UDP.
                                       Example: `/healthcheck`
                                       Default value is `/healthz`
                                     type: string
@@ -1343,9 +1349,8 @@ spec:
                               of a network load balancer backend set.
                             properties:
                               healthChecker:
-                                description: If enabled existing connections will
-                                  be forwarded to an alternative healthy backend as
-                                  soon as current backend becomes unhealthy.
+                                description: The health check policy configuration
+                                  for the NLB backend set.
                                 properties:
                                   intervalInMillis:
                                     description: |-
@@ -1364,17 +1369,22 @@ spec:
                                       Example: `HTTP`
                                     type: string
                                   requestData:
-                                    description: Base64 encoded payload to send as
-                                      the UDP or TCP health check probe.
+                                    description: |-
+                                      Base64 encoded payload to send as the TCP or UDP health check probe.
+                                      Only supported for TCP and UDP protocols. Not allowed for HTTP or HTTPS.
+                                      For UDP, both requestData and responseData are required.
                                     type: string
                                   responseBodyRegex:
                                     description: |-
-                                      A regular expression for parsing the response body from the backend server when using HTTP/HTTPS.
+                                      A regular expression for parsing the response body from the backend server.
+                                      Only supported for HTTP and HTTPS protocols. Not allowed for TCP or UDP.
                                       Example: `^((?!false).|\s)*$`
                                     type: string
                                   responseData:
-                                    description: Base64 encoded payload expected in
-                                      the UDP or TCP health check probe response.
+                                    description: |-
+                                      Base64 encoded payload expected in the TCP or UDP health check probe response.
+                                      Only supported for TCP and UDP protocols. Not allowed for HTTP or HTTPS.
+                                      For UDP, both requestData and responseData are required.
                                     type: string
                                   retries:
                                     description: |-
@@ -1384,6 +1394,7 @@ spec:
                                   returnCode:
                                     description: |-
                                       The status code a healthy backend server should return when using the HTTP/HTTPS protocol.
+                                      Only supported for HTTP and HTTPS protocols. Not allowed for TCP or UDP.
                                       Example: `200`
                                     type: integer
                                   timeoutInMillis:
@@ -1395,6 +1406,7 @@ spec:
                                   urlPath:
                                     description: |-
                                       The path against which to run the health check.
+                                      Only supported for HTTP and HTTPS protocols. Not allowed for TCP or UDP.
                                       Example: `/healthcheck`
                                       Default value is `/healthz`
                                     type: string

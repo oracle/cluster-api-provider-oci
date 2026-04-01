@@ -1016,7 +1016,7 @@ type BackendSetDetails struct {
 	// If enabled existing connections will be forwarded to an alternative healthy backend as soon as current backend becomes unhealthy.
 	// +optional
 	IsInstantFailoverEnabled *bool `json:"isInstantFailoverEnabled,omitempty"`
-	// If enabled existing connections will be forwarded to an alternative healthy backend as soon as current backend becomes unhealthy.
+	// The health check policy configuration for the NLB backend set.
 	// +optional
 	HealthChecker HealthChecker `json:"healthChecker,omitempty"`
 }
@@ -1053,26 +1053,33 @@ type HealthChecker struct {
 	Retries *int `json:"retries,omitempty"`
 
 	// The path against which to run the health check.
+	// Only supported for HTTP and HTTPS protocols. Not allowed for TCP or UDP.
 	// Example: `/healthcheck`
 	// Default value is `/healthz`
 	// +optional
 	UrlPath *string `json:"urlPath,omitempty"`
 
 	// The status code a healthy backend server should return when using the HTTP/HTTPS protocol.
+	// Only supported for HTTP and HTTPS protocols. Not allowed for TCP or UDP.
 	// Example: `200`
 	// +optional
 	ReturnCode *int `json:"returnCode,omitempty"`
 
-	// A regular expression for parsing the response body from the backend server when using HTTP/HTTPS.
+	// A regular expression for parsing the response body from the backend server.
+	// Only supported for HTTP and HTTPS protocols. Not allowed for TCP or UDP.
 	// Example: `^((?!false).|\s)*$`
 	// +optional
 	ResponseBodyRegex *string `json:"responseBodyRegex,omitempty"`
 
-	// Base64 encoded payload to send as the UDP or TCP health check probe.
+	// Base64 encoded payload to send as the TCP or UDP health check probe.
+	// Only supported for TCP and UDP protocols. Not allowed for HTTP or HTTPS.
+	// For UDP, both requestData and responseData are required.
 	// +optional
 	RequestData *string `json:"requestData,omitempty"`
 
-	// Base64 encoded payload expected in the UDP or TCP health check probe response.
+	// Base64 encoded payload expected in the TCP or UDP health check probe response.
+	// Only supported for TCP and UDP protocols. Not allowed for HTTP or HTTPS.
+	// For UDP, both requestData and responseData are required.
 	// +optional
 	ResponseData *string `json:"responseData,omitempty"`
 }

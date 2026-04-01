@@ -326,25 +326,25 @@ func isHealthCheckerEqual(actual, desired *networkloadbalancer.HealthChecker) bo
 	if actual.Protocol != desired.Protocol {
 		return false
 	}
-	if !ptr.PtrIntEqual(actual.Port, desired.Port) {
+	if !ptr.IntEqual(actual.Port, desired.Port) {
 		return false
 	}
-	if !ptr.PtrIntEqual(actual.IntervalInMillis, desired.IntervalInMillis) {
+	if !ptr.IntEqual(actual.IntervalInMillis, desired.IntervalInMillis) {
 		return false
 	}
-	if !ptr.PtrIntEqual(actual.TimeoutInMillis, desired.TimeoutInMillis) {
+	if !ptr.IntEqual(actual.TimeoutInMillis, desired.TimeoutInMillis) {
 		return false
 	}
-	if !ptr.PtrIntEqual(actual.Retries, desired.Retries) {
+	if !ptr.IntEqual(actual.Retries, desired.Retries) {
 		return false
 	}
-	if !ptr.PtrStringEqual(actual.UrlPath, desired.UrlPath) {
+	if !ptr.StringEqual(actual.UrlPath, desired.UrlPath) {
 		return false
 	}
-	if !ptr.PtrIntEqual(actual.ReturnCode, desired.ReturnCode) {
+	if !ptr.IntEqual(actual.ReturnCode, desired.ReturnCode) {
 		return false
 	}
-	if !ptr.PtrStringEqual(actual.ResponseBodyRegex, desired.ResponseBodyRegex) {
+	if !ptr.StringEqual(actual.ResponseBodyRegex, desired.ResponseBodyRegex) {
 		return false
 	}
 	if !bytes.Equal(actual.RequestData, desired.RequestData) {
@@ -451,7 +451,7 @@ func (s *ClusterScope) buildNLBHealthChecker(spec infrastructurev1beta2.HealthCh
 			return nil, errors.New("requestData and responseData are not supported for HTTP/HTTPS health checks")
 		}
 
-		url := "/healthz"
+		url := HealthCheckerDefaultURLPath
 		if spec.UrlPath != nil && strings.TrimSpace(*spec.UrlPath) != "" {
 			url = strings.TrimSpace(*spec.UrlPath)
 		}
@@ -467,7 +467,7 @@ func (s *ClusterScope) buildNLBHealthChecker(spec infrastructurev1beta2.HealthCh
 			regex := strings.TrimSpace(*spec.ResponseBodyRegex)
 			healthChecker.ResponseBodyRegex = common.String(regex)
 		}
-	default:
+	case networkloadbalancer.HealthCheckProtocolsTcp, networkloadbalancer.HealthCheckProtocolsUdp:
 		if spec.UrlPath != nil || spec.ReturnCode != nil || spec.ResponseBodyRegex != nil {
 			return nil, errors.New("urlPath, returnCode, and responseBodyRegex are only supported for HTTP/HTTPS health checks")
 		}
@@ -482,6 +482,8 @@ func (s *ClusterScope) buildNLBHealthChecker(spec infrastructurev1beta2.HealthCh
 		} else if decoded != nil {
 			healthChecker.ResponseData = decoded
 		}
+	default:
+		// Unrecognized protocols are already rejected by the webhook validator.
 	}
 
 	return healthChecker, nil
