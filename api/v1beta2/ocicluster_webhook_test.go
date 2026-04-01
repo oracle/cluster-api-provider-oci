@@ -1598,6 +1598,316 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 			errorMgsShouldContain: "returnCode must be between 100 and 599",
 			expectErr:             true,
 		},
+		{
+			name: "should reject request data on http health checker",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
+				Spec: OCIClusterSpec{
+					Region:                "us-ashburn-1",
+					CompartmentId:         "ocid",
+					OCIResourceIdentifier: "uuid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							CIDR:    "10.0.0.0/16",
+							Subnets: goodSubnets,
+						},
+						APIServerLB: LoadBalancer{
+							NLBSpec: NLBSpec{
+								BackendSetDetails: BackendSetDetails{
+									HealthChecker: HealthChecker{
+										Protocol:    common.String("HTTP"),
+										RequestData: common.String("Zm9v"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "requestData is only supported for TCP/UDP health checks",
+			expectErr:             true,
+		},
+		{
+			name: "should reject response data on http health checker",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
+				Spec: OCIClusterSpec{
+					Region:                "us-ashburn-1",
+					CompartmentId:         "ocid",
+					OCIResourceIdentifier: "uuid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							CIDR:    "10.0.0.0/16",
+							Subnets: goodSubnets,
+						},
+						APIServerLB: LoadBalancer{
+							NLBSpec: NLBSpec{
+								BackendSetDetails: BackendSetDetails{
+									HealthChecker: HealthChecker{
+										Protocol:     common.String("HTTP"),
+										ResponseData: common.String("YmFy"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "responseData is only supported for TCP/UDP health checks",
+			expectErr:             true,
+		},
+		{
+			name: "should reject urlPath on tcp health checker",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
+				Spec: OCIClusterSpec{
+					Region:                "us-ashburn-1",
+					CompartmentId:         "ocid",
+					OCIResourceIdentifier: "uuid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							CIDR:    "10.0.0.0/16",
+							Subnets: goodSubnets,
+						},
+						APIServerLB: LoadBalancer{
+							NLBSpec: NLBSpec{
+								BackendSetDetails: BackendSetDetails{
+									HealthChecker: HealthChecker{
+										Protocol: common.String("TCP"),
+										UrlPath:  common.String("/healthz"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "urlPath is only supported for HTTP and HTTPS health checks",
+			expectErr:             true,
+		},
+		{
+			name: "should reject responseBodyRegex on tcp health checker",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
+				Spec: OCIClusterSpec{
+					Region:                "us-ashburn-1",
+					CompartmentId:         "ocid",
+					OCIResourceIdentifier: "uuid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							CIDR:    "10.0.0.0/16",
+							Subnets: goodSubnets,
+						},
+						APIServerLB: LoadBalancer{
+							NLBSpec: NLBSpec{
+								BackendSetDetails: BackendSetDetails{
+									HealthChecker: HealthChecker{
+										Protocol:          common.String("TCP"),
+										ResponseBodyRegex: common.String("healthy"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "responseBodyRegex is only supported for HTTP and HTTPS health checks",
+			expectErr:             true,
+		},
+		{
+			name: "should reject returnCode on udp health checker",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
+				Spec: OCIClusterSpec{
+					Region:                "us-ashburn-1",
+					CompartmentId:         "ocid",
+					OCIResourceIdentifier: "uuid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							CIDR:    "10.0.0.0/16",
+							Subnets: goodSubnets,
+						},
+						APIServerLB: LoadBalancer{
+							NLBSpec: NLBSpec{
+								BackendSetDetails: BackendSetDetails{
+									HealthChecker: HealthChecker{
+										Protocol:   common.String("UDP"),
+										ReturnCode: common.Int(200),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "returnCode is only supported for HTTP and HTTPS health checks",
+			expectErr:             true,
+		},
+		{
+			name: "should reject invalid base64 requestData on udp health checker",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
+				Spec: OCIClusterSpec{
+					Region:                "us-ashburn-1",
+					CompartmentId:         "ocid",
+					OCIResourceIdentifier: "uuid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							CIDR:    "10.0.0.0/16",
+							Subnets: goodSubnets,
+						},
+						APIServerLB: LoadBalancer{
+							NLBSpec: NLBSpec{
+								BackendSetDetails: BackendSetDetails{
+									HealthChecker: HealthChecker{
+										Protocol:     common.String("UDP"),
+										RequestData:  common.String("not-valid-base64!!!"),
+										ResponseData: common.String("YmFy"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "requestData must be base64 encoded",
+			expectErr:             true,
+		},
+		{
+			name: "should reject invalid base64 responseData on udp health checker",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
+				Spec: OCIClusterSpec{
+					Region:                "us-ashburn-1",
+					CompartmentId:         "ocid",
+					OCIResourceIdentifier: "uuid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							CIDR:    "10.0.0.0/16",
+							Subnets: goodSubnets,
+						},
+						APIServerLB: LoadBalancer{
+							NLBSpec: NLBSpec{
+								BackendSetDetails: BackendSetDetails{
+									HealthChecker: HealthChecker{
+										Protocol:     common.String("UDP"),
+										RequestData:  common.String("Zm9v"),
+										ResponseData: common.String("not-valid-base64!!!"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "responseData must be base64 encoded",
+			expectErr:             true,
+		},
+		{
+			name: "should reject responseData payload exceeding 1024 bytes",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
+				Spec: OCIClusterSpec{
+					Region:                "us-ashburn-1",
+					CompartmentId:         "ocid",
+					OCIResourceIdentifier: "uuid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							CIDR:    "10.0.0.0/16",
+							Subnets: goodSubnets,
+						},
+						APIServerLB: LoadBalancer{
+							NLBSpec: NLBSpec{
+								BackendSetDetails: BackendSetDetails{
+									HealthChecker: HealthChecker{
+										Protocol:     common.String("TCP"),
+										ResponseData: common.String("QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE="),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "responseData payload must not exceed 1024 bytes before base64 encoding",
+			expectErr:             true,
+		},
+		{
+			name: "should allow http health checker",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
+				Spec: OCIClusterSpec{
+					Region:                "us-ashburn-1",
+					CompartmentId:         "ocid",
+					OCIResourceIdentifier: "uuid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							CIDR:    "10.0.0.0/16",
+							Subnets: goodSubnets,
+						},
+						APIServerLB: LoadBalancer{
+							NLBSpec: NLBSpec{
+								BackendSetDetails: BackendSetDetails{
+									HealthChecker: HealthChecker{
+										Protocol: common.String("HTTP"),
+										UrlPath:  common.String("/healthz"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectErr: false,
+		},
+		{
+			name: "should allow tcp health checker with no payload",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
+				Spec: OCIClusterSpec{
+					Region:                "us-ashburn-1",
+					CompartmentId:         "ocid",
+					OCIResourceIdentifier: "uuid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							CIDR:    "10.0.0.0/16",
+							Subnets: goodSubnets,
+						},
+						APIServerLB: LoadBalancer{
+							NLBSpec: NLBSpec{
+								BackendSetDetails: BackendSetDetails{
+									HealthChecker: HealthChecker{
+										Protocol: common.String("TCP"),
+										Port:     common.Int(50000),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectErr: false,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

@@ -37,9 +37,9 @@ test/e2e/config/e2e_conf-envsubst.yaml
 test/e2e/data/infrastructure-oci/v1beta*/cluster-template*.yaml
 
 
-
 # tilt
 tilt-settings.json
+
 
 # git worktrees
 worktrees/
