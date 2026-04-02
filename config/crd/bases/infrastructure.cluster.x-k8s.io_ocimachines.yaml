@@ -913,6 +913,11 @@ spec:
                   The network bandwidth and number of VNICs scale proportionately with the number of OCPUs.
                 items:
                   properties:
+                    assignPrivateDnsRecord:
+                      description: |-
+                        AssignPrivateDnsRecord controls whether OCI registers a DNS record
+                        for this VNIC's private IP.
+                      type: boolean
                     assignPublicIp:
                       description: AssignPublicIp defines whether the vnic should
                         have a public IP address
@@ -921,6 +926,11 @@ spec:
                       description: |-
                         DisplayName defines a user-friendly name. Does not have to be unique.
                         Avoid entering confidential information.
+                      type: string
+                    hostnameLabel:
+                      description: |-
+                        HostnameLabel defines the hostname for the VNIC's primary private IP.
+                        Forms part of the FQDN: <hostnameLabel>.<subnetDNSLabel>.<vcnDNSLabel>.oraclevcn.com
                       type: string
                     nicIndex:
                       description: |-
@@ -1942,6 +1952,11 @@ spec:
                   The network bandwidth and number of VNICs scale proportionately with the number of OCPUs.
                 items:
                   properties:
+                    assignPrivateDnsRecord:
+                      description: |-
+                        AssignPrivateDnsRecord controls whether OCI registers a DNS record
+                        for this VNIC's private IP.
+                      type: boolean
                     assignPublicIp:
                       description: AssignPublicIp defines whether the vnic should
                         have a public IP address
@@ -1950,6 +1965,11 @@ spec:
                       description: |-
                         DisplayName defines a user-friendly name. Does not have to be unique.
                         Avoid entering confidential information.
+                      type: string
+                    hostnameLabel:
+                      description: |-
+                        HostnameLabel defines the hostname for the VNIC's primary private IP.
+                        Forms part of the FQDN: <hostnameLabel>.<subnetDNSLabel>.<vcnDNSLabel>.oraclevcn.com
                       type: string
                     nicIndex:
                       description: |-

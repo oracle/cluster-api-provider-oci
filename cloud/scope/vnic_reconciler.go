@@ -83,10 +83,10 @@ func (m *MachineScope) createVnicAttachment(ctx context.Context, spec infrastruc
 			AssignPublicIp:         common.Bool(spec.AssignPublicIp),
 			FreeformTags:           tags,
 			DefinedTags:            definedTags,
-			HostnameLabel:          m.OCIMachine.Spec.NetworkDetails.HostnameLabel,
+			HostnameLabel:          spec.HostnameLabel,
 			NsgIds:                 m.getWorkerMachineNSGs(),
 			SkipSourceDestCheck:    m.OCIMachine.Spec.NetworkDetails.SkipSourceDestCheck,
-			AssignPrivateDnsRecord: m.OCIMachine.Spec.NetworkDetails.AssignPrivateDnsRecord,
+			AssignPrivateDnsRecord: spec.AssignPrivateDnsRecord,
 			DisplayName:            vnicName,
 		},
 	}
