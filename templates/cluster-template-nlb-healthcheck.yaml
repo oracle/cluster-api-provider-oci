@@ -48,13 +48,13 @@ spec:
             intervalInMillis: ${HEALTH_CHECKER_INTERVAL_IN_MILLIS:=10000}
             timeoutInMillis: ${HEALTH_CHECKER_TIMEOUT_IN_MILLIS:=3000}
             retries: ${HEALTH_CHECKER_RETRIES:=3}
-            # --- HTTP/HTTPS only — uncomment to override CAPOCI defaults (/healthz, 200) ---
-            # urlPath: ${HEALTH_CHECKER_URL_PATH:=/healthz}
-            # returnCode: ${HEALTH_CHECKER_RETURN_CODE:=200}
-            # responseBodyRegex: "${HEALTH_CHECKER_RESPONSE_REGEX}"
-            # --- TCP/UDP only — uncomment if your probe requires a payload ---
-            # requestData: "${HEALTH_CHECKER_REQUEST_DATA_BASE64}"
-            # responseData: "${HEALTH_CHECKER_RESPONSE_DATA_BASE64}"
+            # --- HTTP/HTTPS only — uncomment and replace value to override CAPOCI defaults ---
+            # urlPath: "/healthz"
+            # returnCode: 200
+            # responseBodyRegex: ".*"
+            # --- TCP/UDP only — uncomment and replace with your base64-encoded payload ---
+            # requestData: "<base64-encoded-payload>"
+            # responseData: "<base64-encoded-payload>"
 ---
 kind: KubeadmControlPlane
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1
