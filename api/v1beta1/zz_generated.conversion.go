@@ -1387,7 +1387,16 @@ func Convert_v1beta2_EndpointConfig_To_v1beta1_EndpointConfig(in *v1beta2.Endpoi
 }
 
 func autoConvert_v1beta1_HealthChecker_To_v1beta2_HealthChecker(in *HealthChecker, out *v1beta2.HealthChecker, s conversion.Scope) error {
+	out.Protocol = (*string)(unsafe.Pointer(in.Protocol))
+	out.Port = (*int)(unsafe.Pointer(in.Port))
+	out.IntervalInMillis = (*int)(unsafe.Pointer(in.IntervalInMillis))
+	out.TimeoutInMillis = (*int)(unsafe.Pointer(in.TimeoutInMillis))
+	out.Retries = (*int)(unsafe.Pointer(in.Retries))
 	out.UrlPath = (*string)(unsafe.Pointer(in.UrlPath))
+	out.ReturnCode = (*int)(unsafe.Pointer(in.ReturnCode))
+	out.ResponseBodyRegex = (*string)(unsafe.Pointer(in.ResponseBodyRegex))
+	out.RequestData = (*string)(unsafe.Pointer(in.RequestData))
+	out.ResponseData = (*string)(unsafe.Pointer(in.ResponseData))
 	return nil
 }
 
@@ -1397,7 +1406,16 @@ func Convert_v1beta1_HealthChecker_To_v1beta2_HealthChecker(in *HealthChecker, o
 }
 
 func autoConvert_v1beta2_HealthChecker_To_v1beta1_HealthChecker(in *v1beta2.HealthChecker, out *HealthChecker, s conversion.Scope) error {
+	out.Protocol = (*string)(unsafe.Pointer(in.Protocol))
+	out.Port = (*int)(unsafe.Pointer(in.Port))
+	out.IntervalInMillis = (*int)(unsafe.Pointer(in.IntervalInMillis))
+	out.TimeoutInMillis = (*int)(unsafe.Pointer(in.TimeoutInMillis))
+	out.Retries = (*int)(unsafe.Pointer(in.Retries))
 	out.UrlPath = (*string)(unsafe.Pointer(in.UrlPath))
+	out.ReturnCode = (*int)(unsafe.Pointer(in.ReturnCode))
+	out.ResponseBodyRegex = (*string)(unsafe.Pointer(in.ResponseBodyRegex))
+	out.RequestData = (*string)(unsafe.Pointer(in.RequestData))
+	out.ResponseData = (*string)(unsafe.Pointer(in.ResponseData))
 	return nil
 }
 

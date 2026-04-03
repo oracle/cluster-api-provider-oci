@@ -35,6 +35,235 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
+func newTestClusterScope(t *testing.T) *ClusterScope {
+	t.Helper()
+
+	client := fake.NewClientBuilder().Build()
+	ociClusterAccessor := OCISelfManagedCluster{
+		&infrastructurev1beta2.OCICluster{
+			ObjectMeta: metav1.ObjectMeta{
+				UID:  "test-uid",
+				Name: "cluster",
+			},
+			Spec: infrastructurev1beta2.OCIClusterSpec{
+				CompartmentId:         "compartment-id",
+				OCIResourceIdentifier: "resource_uid",
+			},
+		},
+	}
+	ociClusterAccessor.OCICluster.Spec.ControlPlaneEndpoint.Port = 6443
+
+	scope, err := NewClusterScope(ClusterScopeParams{
+		Cluster:            &clusterv1.Cluster{},
+		Client:             client,
+		OCIClusterAccessor: ociClusterAccessor,
+	})
+	if err != nil {
+		t.Fatalf("failed to create test cluster scope: %v", err)
+	}
+	return scope
+}
+
+func TestBuildNLBHealthChecker(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		spec        infrastructurev1beta2.HealthChecker
+		expected    *networkloadbalancer.HealthChecker
+		errContains string
+	}{
+		{
+			name: "default https health checker uses defaults",
+			spec: infrastructurev1beta2.HealthChecker{},
+			expected: &networkloadbalancer.HealthChecker{
+				Protocol:         networkloadbalancer.HealthCheckProtocolsHttps,
+				Port:             common.Int(ApiServerPort),
+				IntervalInMillis: common.Int(10000),
+				TimeoutInMillis:  common.Int(3000),
+				Retries:          common.Int(3),
+				UrlPath:          common.String(HealthCheckerDefaultURLPath),
+				ReturnCode:       common.Int(200),
+			},
+		},
+		{
+			name: "http health checker success",
+			spec: infrastructurev1beta2.HealthChecker{
+				Protocol:          common.String("http"),
+				Port:              common.Int(8080),
+				IntervalInMillis:  common.Int(15000),
+				TimeoutInMillis:   common.Int(5000),
+				Retries:           common.Int(4),
+				UrlPath:           common.String(" /livez "),
+				ReturnCode:        common.Int(202),
+				ResponseBodyRegex: common.String(" ready "),
+			},
+			expected: &networkloadbalancer.HealthChecker{
+				Protocol:          networkloadbalancer.HealthCheckProtocolsHttp,
+				Port:              common.Int(8080),
+				IntervalInMillis:  common.Int(15000),
+				TimeoutInMillis:   common.Int(5000),
+				Retries:           common.Int(4),
+				UrlPath:           common.String("/livez"),
+				ReturnCode:        common.Int(202),
+				ResponseBodyRegex: common.String("ready"),
+			},
+		},
+		{
+			name: "udp response payload decode failure",
+			spec: infrastructurev1beta2.HealthChecker{
+				Protocol:     common.String("udp"),
+				RequestData:  common.String("Zm9v"),
+				ResponseData: common.String("%%%"),
+			},
+			errContains: "failed to decode health checker responseData",
+		},
+		{
+			name: "tcp request payload decode failure",
+			spec: infrastructurev1beta2.HealthChecker{
+				Protocol:    common.String("tcp"),
+				RequestData: common.String("%%%"),
+			},
+			errContains: "failed to decode health checker requestData",
+		},
+		{
+			name: "unsupported protocol returns error",
+			spec: infrastructurev1beta2.HealthChecker{
+				Protocol: common.String("GRPC"),
+			},
+			errContains: "unsupported health checker protocol",
+		},
+		{
+			name: "port zero returns out-of-range error",
+			spec: infrastructurev1beta2.HealthChecker{
+				Port: common.Int(0),
+			},
+			errContains: "health checker port 0 is out of range 1-65535",
+		},
+		{
+			name: "port 65536 returns out-of-range error",
+			spec: infrastructurev1beta2.HealthChecker{
+				Port: common.Int(65536),
+			},
+			errContains: "health checker port 65536 is out of range 1-65535",
+		},
+		{
+			name: "https with requestData returns error",
+			spec: infrastructurev1beta2.HealthChecker{
+				Protocol:    common.String("HTTPS"),
+				RequestData: common.String("Zm9v"),
+			},
+			errContains: "requestData and responseData are not supported for HTTP/HTTPS health checks",
+		},
+		{
+			name: "tcp with urlPath returns error",
+			spec: infrastructurev1beta2.HealthChecker{
+				Protocol: common.String("TCP"),
+				UrlPath:  common.String("/healthz"),
+			},
+			errContains: "urlPath, returnCode, and responseBodyRegex are only supported for HTTP/HTTPS health checks",
+		},
+		{
+			name: "https with explicit port and returnCode",
+			spec: infrastructurev1beta2.HealthChecker{
+				Protocol:   common.String("HTTPS"),
+				Port:       common.Int(8443),
+				ReturnCode: common.Int(204),
+			},
+			expected: &networkloadbalancer.HealthChecker{
+				Protocol:         networkloadbalancer.HealthCheckProtocolsHttps,
+				Port:             common.Int(8443),
+				IntervalInMillis: common.Int(10000),
+				TimeoutInMillis:  common.Int(3000),
+				Retries:          common.Int(3),
+				UrlPath:          common.String("/healthz"),
+				ReturnCode:       common.Int(204),
+			},
+		},
+		{
+			name: "tcp with requestData only",
+			spec: infrastructurev1beta2.HealthChecker{
+				Protocol:    common.String("TCP"),
+				RequestData: common.String("Zm9v"), // "foo"
+			},
+			expected: &networkloadbalancer.HealthChecker{
+				Protocol:         networkloadbalancer.HealthCheckProtocolsTcp,
+				Port:             common.Int(ApiServerPort),
+				IntervalInMillis: common.Int(10000),
+				TimeoutInMillis:  common.Int(3000),
+				Retries:          common.Int(3),
+				RequestData:      []byte("foo"),
+			},
+		},
+		{
+			name: "tcp with responseData only",
+			spec: infrastructurev1beta2.HealthChecker{
+				Protocol:     common.String("TCP"),
+				ResponseData: common.String("YmFy"), // "bar"
+			},
+			expected: &networkloadbalancer.HealthChecker{
+				Protocol:         networkloadbalancer.HealthCheckProtocolsTcp,
+				Port:             common.Int(ApiServerPort),
+				IntervalInMillis: common.Int(10000),
+				TimeoutInMillis:  common.Int(3000),
+				Retries:          common.Int(3),
+				ResponseData:     []byte("bar"),
+			},
+		},
+		{
+			name: "tcp with both requestData and responseData",
+			spec: infrastructurev1beta2.HealthChecker{
+				Protocol:     common.String("TCP"),
+				RequestData:  common.String("Zm9v"), // "foo"
+				ResponseData: common.String("YmFy"), // "bar"
+			},
+			expected: &networkloadbalancer.HealthChecker{
+				Protocol:         networkloadbalancer.HealthCheckProtocolsTcp,
+				Port:             common.Int(ApiServerPort),
+				IntervalInMillis: common.Int(10000),
+				TimeoutInMillis:  common.Int(3000),
+				Retries:          common.Int(3),
+				RequestData:      []byte("foo"),
+				ResponseData:     []byte("bar"),
+			},
+		},
+		{
+			name: "udp with both requestData and responseData",
+			spec: infrastructurev1beta2.HealthChecker{
+				Protocol:     common.String("UDP"),
+				RequestData:  common.String("Zm9v"), // "foo"
+				ResponseData: common.String("YmFy"), // "bar"
+			},
+			expected: &networkloadbalancer.HealthChecker{
+				Protocol:         networkloadbalancer.HealthCheckProtocolsUdp,
+				Port:             common.Int(ApiServerPort),
+				IntervalInMillis: common.Int(10000),
+				TimeoutInMillis:  common.Int(3000),
+				Retries:          common.Int(3),
+				RequestData:      []byte("foo"),
+				ResponseData:     []byte("bar"),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			scope := newTestClusterScope(t)
+
+			actual, err := scope.buildNLBHealthChecker(tt.spec)
+			if tt.errContains != "" {
+				g.Expect(err).To(HaveOccurred())
+				g.Expect(err.Error()).To(ContainSubstring(tt.errContains))
+				return
+			}
+
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(actual).To(Equal(tt.expected))
+		})
+	}
+}
+
 func TestNLBReconciliation(t *testing.T) {
 	var (
 		cs                 *ClusterScope
@@ -107,6 +336,19 @@ func TestNLBReconciliation(t *testing.T) {
 								{
 									IpAddress: common.String("2.2.2.2"),
 									IsPublic:  common.Bool(true),
+								},
+							},
+							BackendSets: map[string]networkloadbalancer.BackendSet{
+								APIServerLBBackendSetName: {
+									HealthChecker: &networkloadbalancer.HealthChecker{
+										Protocol:         networkloadbalancer.HealthCheckProtocolsHttps,
+										Port:             common.Int(6443),
+										IntervalInMillis: common.Int(10000),
+										TimeoutInMillis:  common.Int(3000),
+										Retries:          common.Int(3),
+										UrlPath:          common.String(HealthCheckerDefaultURLPath),
+										ReturnCode:       common.Int(200),
+									},
 								},
 							},
 						},
@@ -294,10 +536,13 @@ func TestNLBReconciliation(t *testing.T) {
 								Policy:           LoadBalancerPolicy,
 								IsPreserveSource: common.Bool(false),
 								HealthChecker: &networkloadbalancer.HealthChecker{
-									Port:       common.Int(6443),
-									Protocol:   networkloadbalancer.HealthCheckProtocolsHttps,
-									UrlPath:    common.String("/healthz"),
-									ReturnCode: common.Int(200),
+									Port:             common.Int(6443),
+									Protocol:         networkloadbalancer.HealthCheckProtocolsHttps,
+									UrlPath:          common.String(HealthCheckerDefaultURLPath),
+									IntervalInMillis: common.Int(10000),
+									TimeoutInMillis:  common.Int(3000),
+									Retries:          common.Int(3),
+									ReturnCode:       common.Int(200),
 								},
 								Backends: []networkloadbalancer.Backend{},
 							},
@@ -370,7 +615,10 @@ func TestNLBReconciliation(t *testing.T) {
 							IsFailOpen:               common.Bool(false),
 							IsPreserveSource:         common.Bool(false),
 							HealthChecker: infrastructurev1beta2.HealthChecker{
-								UrlPath: common.String("readyz"),
+								UrlPath:          common.String("readyz"),
+								IntervalInMillis: common.Int(15000),
+								TimeoutInMillis:  common.Int(5000),
+								Retries:          common.Int(5),
 							},
 						},
 					},
@@ -404,10 +652,13 @@ func TestNLBReconciliation(t *testing.T) {
 								IsFailOpen:               common.Bool(false),
 								IsPreserveSource:         common.Bool(false),
 								HealthChecker: &networkloadbalancer.HealthChecker{
-									Port:       common.Int(6443),
-									Protocol:   networkloadbalancer.HealthCheckProtocolsHttps,
-									UrlPath:    common.String("readyz"),
-									ReturnCode: common.Int(200),
+									Port:             common.Int(6443),
+									Protocol:         networkloadbalancer.HealthCheckProtocolsHttps,
+									UrlPath:          common.String("readyz"),
+									IntervalInMillis: common.Int(15000),
+									TimeoutInMillis:  common.Int(5000),
+									Retries:          common.Int(5),
+									ReturnCode:       common.Int(200),
 								},
 								Backends: []networkloadbalancer.Backend{},
 							},
@@ -516,10 +767,13 @@ func TestNLBReconciliation(t *testing.T) {
 								IsFailOpen:               common.Bool(false),
 								IsPreserveSource:         common.Bool(false),
 								HealthChecker: &networkloadbalancer.HealthChecker{
-									Port:       common.Int(6443),
-									Protocol:   networkloadbalancer.HealthCheckProtocolsHttps,
-									UrlPath:    common.String("readyz"),
-									ReturnCode: common.Int(200),
+									Port:             common.Int(6443),
+									Protocol:         networkloadbalancer.HealthCheckProtocolsHttps,
+									UrlPath:          common.String("readyz"),
+									IntervalInMillis: common.Int(10000),
+									TimeoutInMillis:  common.Int(3000),
+									Retries:          common.Int(3),
+									ReturnCode:       common.Int(200),
 								},
 								Backends: []networkloadbalancer.Backend{},
 							},
@@ -600,10 +854,13 @@ func TestNLBReconciliation(t *testing.T) {
 								Policy:           LoadBalancerPolicy,
 								IsPreserveSource: common.Bool(false),
 								HealthChecker: &networkloadbalancer.HealthChecker{
-									Port:       common.Int(6443),
-									Protocol:   networkloadbalancer.HealthCheckProtocolsHttps,
-									UrlPath:    common.String("/healthz"),
-									ReturnCode: common.Int(200),
+									Port:             common.Int(6443),
+									Protocol:         networkloadbalancer.HealthCheckProtocolsHttps,
+									UrlPath:          common.String(HealthCheckerDefaultURLPath),
+									IntervalInMillis: common.Int(10000),
+									TimeoutInMillis:  common.Int(3000),
+									Retries:          common.Int(3),
+									ReturnCode:       common.Int(200),
 								},
 								Backends: []networkloadbalancer.Backend{},
 							},
@@ -653,10 +910,13 @@ func TestNLBReconciliation(t *testing.T) {
 								Policy:           LoadBalancerPolicy,
 								IsPreserveSource: common.Bool(false),
 								HealthChecker: &networkloadbalancer.HealthChecker{
-									Port:       common.Int(6443),
-									Protocol:   networkloadbalancer.HealthCheckProtocolsHttps,
-									UrlPath:    common.String("/healthz"),
-									ReturnCode: common.Int(200),
+									Port:             common.Int(6443),
+									Protocol:         networkloadbalancer.HealthCheckProtocolsHttps,
+									UrlPath:          common.String(HealthCheckerDefaultURLPath),
+									IntervalInMillis: common.Int(10000),
+									TimeoutInMillis:  common.Int(3000),
+									Retries:          common.Int(3),
+									ReturnCode:       common.Int(200),
 								},
 								Backends: []networkloadbalancer.Backend{},
 							},

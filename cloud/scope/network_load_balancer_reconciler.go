@@ -17,8 +17,11 @@
 package scope
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"fmt"
+	"strings"
 
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
@@ -115,7 +118,7 @@ func (s *ClusterScope) GetControlPlaneLoadBalancerName() string {
 	return fmt.Sprintf("%s-%s", s.OCIClusterAccessor.GetName(), "apiserver")
 }
 
-// UpdateLB updates existing Load Balancer's DisplayName, FreeformTags and DefinedTags
+// UpdateNLB updates an existing Network Load Balancer's DisplayName and health checker configuration.
 func (s *ClusterScope) UpdateNLB(ctx context.Context, nlb infrastructurev1beta2.LoadBalancer) error {
 	nlbId := s.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerId
 	updateLBDetails := networkloadbalancer.UpdateNetworkLoadBalancerDetails{
@@ -133,6 +136,36 @@ func (s *ClusterScope) UpdateNLB(ctx context.Context, nlb infrastructurev1beta2.
 	if err != nil {
 		s.Logger.Error(err, "failed to reconcile the apiserver NLB, failed to update nlb")
 		return errors.Wrap(err, "failed to reconcile the apiserver NLB, failed to update nlb")
+	}
+
+	healthChecker, err := s.buildNLBHealthChecker(nlb.NLBSpec.BackendSetDetails.HealthChecker)
+	if err != nil {
+		return errors.Wrap(err, "failed to build health checker for nlb update")
+	}
+	hcResponse, err := s.NetworkLoadBalancerClient.UpdateHealthChecker(ctx, networkloadbalancer.UpdateHealthCheckerRequest{
+		NetworkLoadBalancerId: nlbId,
+		BackendSetName:        common.String(APIServerLBBackendSetName),
+		UpdateHealthCheckerDetails: networkloadbalancer.UpdateHealthCheckerDetails{
+			Protocol:          healthChecker.Protocol,
+			Port:              healthChecker.Port,
+			IntervalInMillis:  healthChecker.IntervalInMillis,
+			TimeoutInMillis:   healthChecker.TimeoutInMillis,
+			Retries:           healthChecker.Retries,
+			UrlPath:           healthChecker.UrlPath,
+			ReturnCode:        healthChecker.ReturnCode,
+			ResponseBodyRegex: healthChecker.ResponseBodyRegex,
+			RequestData:       healthChecker.RequestData,
+			ResponseData:      healthChecker.ResponseData,
+		},
+	})
+	if err != nil {
+		s.Logger.Error(err, "failed to reconcile the apiserver NLB, failed to generate update health checker workrequest")
+		return errors.Wrap(err, "failed to reconcile the apiserver NLB, failed to generate update health checker workrequest")
+	}
+	_, err = ociutil.AwaitNLBWorkRequest(ctx, s.NetworkLoadBalancerClient, hcResponse.OpcWorkRequestId)
+	if err != nil {
+		s.Logger.Error(err, "failed to reconcile the apiserver NLB, failed to update health checker")
+		return errors.Wrap(err, "failed to reconcile the apiserver NLB, failed to update health checker")
 	}
 	return nil
 }
@@ -157,24 +190,19 @@ func (s *ClusterScope) CreateNLB(ctx context.Context, lb infrastructurev1beta2.L
 	}
 
 	backendSetDetails := make(map[string]networkloadbalancer.BackendSetDetails)
-	healthCheckUrl := lb.NLBSpec.BackendSetDetails.HealthChecker.UrlPath
-	if healthCheckUrl == nil {
-		healthCheckUrl = common.String("/healthz")
+
+	healthChecker, err := s.buildNLBHealthChecker(lb.NLBSpec.BackendSetDetails.HealthChecker)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to build health checker for nlb creation")
 	}
 	backendSetDetails[APIServerLBBackendSetName] = networkloadbalancer.BackendSetDetails{
 		Policy:                   LoadBalancerPolicy,
 		IsPreserveSource:         isPreserverSourceIp,
 		IsFailOpen:               lb.NLBSpec.BackendSetDetails.IsFailOpen,
 		IsInstantFailoverEnabled: lb.NLBSpec.BackendSetDetails.IsInstantFailoverEnabled,
-		HealthChecker: &networkloadbalancer.HealthChecker{
-			Port:       common.Int(int(s.APIServerPort())),
-			Protocol:   networkloadbalancer.HealthCheckProtocolsHttps,
-			UrlPath:    healthCheckUrl,
-			ReturnCode: common.Int(200),
-		},
-		Backends: []networkloadbalancer.Backend{},
+		HealthChecker:            healthChecker,
+		Backends:                 []networkloadbalancer.Backend{},
 	}
-
 	var controlPlaneEndpointSubnets []string
 	for _, subnet := range ptr.ToSubnetSlice(s.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets) {
 		if subnet.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
@@ -269,13 +297,65 @@ func (s *ClusterScope) getNetworkLoadbalancerIp(nlb networkloadbalancer.NetworkL
 }
 
 // IsNLBEqual determines if the actual networkloadbalancer.NetworkLoadBalancer is equal to the desired.
-// Equality is determined by DisplayName
+// Equality is determined by DisplayName and the health checker configuration on the backend set.
 func (s *ClusterScope) IsNLBEqual(actual *networkloadbalancer.NetworkLoadBalancer, desired infrastructurev1beta2.LoadBalancer) bool {
 	if desired.Name != *actual.DisplayName {
 		return false
 	}
+
+	desiredHC, err := s.buildNLBHealthChecker(desired.NLBSpec.BackendSetDetails.HealthChecker)
+	if err != nil {
+		s.Logger.Error(err, "IsNLBEqual: failed to build desired health checker, assuming equal to avoid update loop")
+		return true
+	}
+
+	actualBackendSet, ok := actual.BackendSets[APIServerLBBackendSetName]
+	if !ok {
+		s.Logger.Info("IsNLBEqual: backend set not found in actual NLB", "backendSetName", APIServerLBBackendSetName)
+		return false
+	}
+
+	return isHealthCheckerEqual(actualBackendSet.HealthChecker, desiredHC)
+}
+
+// isHealthCheckerEqual compares two OCI SDK HealthChecker objects field by field.
+func isHealthCheckerEqual(actual, desired *networkloadbalancer.HealthChecker) bool {
+	if actual == nil || desired == nil {
+		return actual == desired
+	}
+	if actual.Protocol != desired.Protocol {
+		return false
+	}
+	if !ptr.IntEqual(actual.Port, desired.Port) {
+		return false
+	}
+	if !ptr.IntEqual(actual.IntervalInMillis, desired.IntervalInMillis) {
+		return false
+	}
+	if !ptr.IntEqual(actual.TimeoutInMillis, desired.TimeoutInMillis) {
+		return false
+	}
+	if !ptr.IntEqual(actual.Retries, desired.Retries) {
+		return false
+	}
+	if !ptr.StringEqual(actual.UrlPath, desired.UrlPath) {
+		return false
+	}
+	if !ptr.IntEqual(actual.ReturnCode, desired.ReturnCode) {
+		return false
+	}
+	if !ptr.StringEqual(actual.ResponseBodyRegex, desired.ResponseBodyRegex) {
+		return false
+	}
+	if !bytes.Equal(actual.RequestData, desired.RequestData) {
+		return false
+	}
+	if !bytes.Equal(actual.ResponseData, desired.ResponseData) {
+		return false
+	}
 	return true
 }
+
 
 // GetNetworkLoadBalancers retrieves the Cluster's networkloadbalancer.NetworkLoadBalancer using the one of the following methods
 //
@@ -320,4 +400,104 @@ func (s *ClusterScope) GetNetworkLoadBalancers(ctx context.Context) (*networkloa
 		}
 	}
 	return nil, nil
+}
+
+func (s *ClusterScope) buildNLBHealthChecker(spec infrastructurev1beta2.HealthChecker) (*networkloadbalancer.HealthChecker, error) {
+	protocol := networkloadbalancer.HealthCheckProtocolsHttps
+	if spec.Protocol != nil && strings.TrimSpace(*spec.Protocol) != "" {
+		value := strings.ToUpper(strings.TrimSpace(*spec.Protocol))
+		if enum, ok := networkloadbalancer.GetMappingHealthCheckProtocolsEnum(value); ok {
+			protocol = enum
+		} else {
+			return nil, errors.Errorf("unsupported health checker protocol %q", value)
+		}
+	}
+
+	port := int(s.APIServerPort())
+	if spec.Port != nil {
+		port = *spec.Port
+	}
+
+	if port < 1 || port > 65535 {
+		return nil, errors.Errorf("health checker port %d is out of range 1-65535", port)
+	}
+
+	interval := 10000
+	if spec.IntervalInMillis != nil {
+		interval = *spec.IntervalInMillis
+	}
+
+	timeout := 3000
+	if spec.TimeoutInMillis != nil {
+		timeout = *spec.TimeoutInMillis
+	}
+
+	retries := 3
+	if spec.Retries != nil {
+		retries = *spec.Retries
+	}
+
+	healthChecker := &networkloadbalancer.HealthChecker{
+		Protocol:         protocol,
+		Port:             common.Int(port),
+		IntervalInMillis: common.Int(interval),
+		TimeoutInMillis:  common.Int(timeout),
+		Retries:          common.Int(retries),
+	}
+
+	switch protocol {
+	case networkloadbalancer.HealthCheckProtocolsHttp, networkloadbalancer.HealthCheckProtocolsHttps:
+		if spec.RequestData != nil || spec.ResponseData != nil {
+			return nil, errors.New("requestData and responseData are not supported for HTTP/HTTPS health checks")
+		}
+
+		url := HealthCheckerDefaultURLPath
+		if spec.UrlPath != nil && strings.TrimSpace(*spec.UrlPath) != "" {
+			url = strings.TrimSpace(*spec.UrlPath)
+		}
+		healthChecker.UrlPath = common.String(url)
+
+		returnCode := 200
+		if spec.ReturnCode != nil {
+			returnCode = *spec.ReturnCode
+		}
+		healthChecker.ReturnCode = common.Int(returnCode)
+
+		if spec.ResponseBodyRegex != nil && strings.TrimSpace(*spec.ResponseBodyRegex) != "" {
+			regex := strings.TrimSpace(*spec.ResponseBodyRegex)
+			healthChecker.ResponseBodyRegex = common.String(regex)
+		}
+	case networkloadbalancer.HealthCheckProtocolsTcp, networkloadbalancer.HealthCheckProtocolsUdp:
+		if spec.UrlPath != nil || spec.ReturnCode != nil || spec.ResponseBodyRegex != nil {
+			return nil, errors.New("urlPath, returnCode, and responseBodyRegex are only supported for HTTP/HTTPS health checks")
+		}
+
+		if decoded, err := decodeHealthCheckerPayload("requestData", spec.RequestData); err != nil {
+			return nil, err
+		} else if decoded != nil {
+			healthChecker.RequestData = decoded
+		}
+		if decoded, err := decodeHealthCheckerPayload("responseData", spec.ResponseData); err != nil {
+			return nil, err
+		} else if decoded != nil {
+			healthChecker.ResponseData = decoded
+		}
+	default:
+		// Unrecognized protocols are already rejected by the webhook validator.
+	}
+
+	return healthChecker, nil
+}
+
+func decodeHealthCheckerPayload(fieldName string, value *string) ([]byte, error) {
+	if value == nil {
+		return nil, nil
+	}
+
+	trimmed := strings.TrimSpace(*value)
+	data, err := base64.StdEncoding.DecodeString(trimmed)
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("failed to decode health checker %s", fieldName))
+	}
+	return data, nil
 }

@@ -20,12 +20,15 @@
 package v1beta2
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net"
 	"reflect"
 	"regexp"
+	"strings"
 
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
+	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
@@ -56,6 +59,184 @@ const (
 
 // invalidNameRegex is a broad regex used to validate allows names in OCI
 var invalidNameRegex = regexp.MustCompile("\\s")
+
+func validateHealthChecker(healthChecker HealthChecker, fldPath *field.Path) field.ErrorList {
+	var allErrs field.ErrorList
+
+	protocol := networkloadbalancer.HealthCheckProtocolsHttps
+	if healthChecker.Protocol != nil && strings.TrimSpace(*healthChecker.Protocol) != "" {
+		value := strings.ToUpper(strings.TrimSpace(*healthChecker.Protocol))
+		if enum, ok := networkloadbalancer.GetMappingHealthCheckProtocolsEnum(value); ok {
+			protocol = enum
+		} else {
+			allErrs = append(allErrs, field.Invalid(
+				fldPath.Child("protocol"),
+				*healthChecker.Protocol,
+				"protocol must be one of HTTP, HTTPS, TCP, or UDP",
+			))
+		}
+	}
+
+	if healthChecker.Port != nil && (*healthChecker.Port < 1 || *healthChecker.Port > 65535) {
+		allErrs = append(allErrs, field.Invalid(
+			fldPath.Child("port"),
+			*healthChecker.Port,
+			"port must be between 1 and 65535",
+		))
+	}
+
+	if healthChecker.IntervalInMillis != nil && *healthChecker.IntervalInMillis <= 0 {
+		allErrs = append(allErrs, field.Invalid(
+			fldPath.Child("intervalInMillis"),
+			*healthChecker.IntervalInMillis,
+			"intervalInMillis must be greater than 0",
+		))
+	}
+
+	if healthChecker.TimeoutInMillis != nil && *healthChecker.TimeoutInMillis <= 0 {
+		allErrs = append(allErrs, field.Invalid(
+			fldPath.Child("timeoutInMillis"),
+			*healthChecker.TimeoutInMillis,
+			"timeoutInMillis must be greater than 0",
+		))
+	}
+
+	if healthChecker.Retries != nil && *healthChecker.Retries <= 0 {
+		allErrs = append(allErrs, field.Invalid(
+			fldPath.Child("retries"),
+			*healthChecker.Retries,
+			"retries must be greater than 0",
+		))
+	}
+
+	if healthChecker.UrlPath != nil && !strings.HasPrefix(*healthChecker.UrlPath, "/") {
+		allErrs = append(allErrs, field.Invalid(
+			fldPath.Child("urlPath"),
+			*healthChecker.UrlPath,
+			"urlPath must start with '/'",
+		))
+	}
+
+	if healthChecker.ReturnCode != nil {
+		if *healthChecker.ReturnCode < 100 || *healthChecker.ReturnCode > 599 {
+			allErrs = append(allErrs, field.Invalid(
+				fldPath.Child("returnCode"),
+				*healthChecker.ReturnCode,
+				"returnCode must be between 100 and 599",
+			))
+		}
+	}
+
+	switch protocol {
+	case networkloadbalancer.HealthCheckProtocolsHttp, networkloadbalancer.HealthCheckProtocolsHttps:
+		if healthChecker.ResponseBodyRegex != nil {
+			if _, err := regexp.Compile(*healthChecker.ResponseBodyRegex); err != nil {
+				allErrs = append(allErrs, field.Invalid(
+					fldPath.Child("responseBodyRegex"),
+					*healthChecker.ResponseBodyRegex,
+					fmt.Sprintf("invalid responseBodyRegex: %v", err),
+				))
+			}
+		}
+
+		if healthChecker.RequestData != nil {
+			allErrs = append(allErrs, field.Invalid(
+				fldPath.Child("requestData"),
+				ociutil.DerefString(healthChecker.RequestData),
+				"requestData is only supported for TCP/UDP health checks",
+			))
+		}
+
+		if healthChecker.ResponseData != nil {
+			allErrs = append(allErrs, field.Invalid(
+				fldPath.Child("responseData"),
+				ociutil.DerefString(healthChecker.ResponseData),
+				"responseData is only supported for TCP/UDP health checks",
+			))
+		}
+	case networkloadbalancer.HealthCheckProtocolsTcp, networkloadbalancer.HealthCheckProtocolsUdp:
+		if healthChecker.UrlPath != nil {
+			allErrs = append(allErrs, field.Invalid(
+				fldPath.Child("urlPath"),
+				ociutil.DerefString(healthChecker.UrlPath),
+				"urlPath is only supported for HTTP and HTTPS health checks",
+			))
+		}
+
+		if healthChecker.ReturnCode != nil {
+			allErrs = append(allErrs, field.Invalid(
+				fldPath.Child("returnCode"),
+				healthChecker.ReturnCode,
+				"returnCode is only supported for HTTP and HTTPS health checks",
+			))
+		}
+
+		if healthChecker.ResponseBodyRegex != nil {
+			allErrs = append(allErrs, field.Invalid(
+				fldPath.Child("responseBodyRegex"),
+				ociutil.DerefString(healthChecker.ResponseBodyRegex),
+				"responseBodyRegex is only supported for HTTP and HTTPS health checks",
+			))
+		}
+
+		// UDP requires both requestData and responseData per the OCI NLB HealthCheckerDetails API.
+		// See: https://docs.oracle.com/en-us/iaas/api/#/en/networkloadbalancer/20200501/datatypes/HealthCheckerDetails
+		// TCP treats each field as independently optional.
+		if protocol == networkloadbalancer.HealthCheckProtocolsUdp {
+			if healthChecker.RequestData == nil {
+				allErrs = append(allErrs, field.Invalid(
+					fldPath.Child("requestData"),
+					"",
+					"requestData is required for UDP health checks",
+				))
+			}
+			if healthChecker.ResponseData == nil {
+				allErrs = append(allErrs, field.Invalid(
+					fldPath.Child("responseData"),
+					"",
+					"responseData is required for UDP health checks",
+				))
+			}
+		}
+
+		// Validate base64 encoding and payload size for each field independently.
+		if healthChecker.RequestData != nil {
+			if decoded, err := base64.StdEncoding.DecodeString(strings.TrimSpace(*healthChecker.RequestData)); err != nil {
+				allErrs = append(allErrs, field.Invalid(
+					fldPath.Child("requestData"),
+					*healthChecker.RequestData,
+					fmt.Sprintf("requestData must be base64 encoded: %v", err),
+				))
+			} else if len(decoded) > 1024 {
+				allErrs = append(allErrs, field.Invalid(
+					fldPath.Child("requestData"),
+					*healthChecker.RequestData,
+					"requestData payload must not exceed 1024 bytes before base64 encoding",
+				))
+			}
+		}
+
+		if healthChecker.ResponseData != nil {
+			if decoded, err := base64.StdEncoding.DecodeString(strings.TrimSpace(*healthChecker.ResponseData)); err != nil {
+				allErrs = append(allErrs, field.Invalid(
+					fldPath.Child("responseData"),
+					*healthChecker.ResponseData,
+					fmt.Sprintf("responseData must be base64 encoded: %v", err),
+				))
+			} else if len(decoded) > 1024 {
+				allErrs = append(allErrs, field.Invalid(
+					fldPath.Child("responseData"),
+					*healthChecker.ResponseData,
+					"responseData payload must not exceed 1024 bytes before base64 encoding",
+				))
+			}
+		}
+	default:
+		// Unrecognized protocols are already rejected above; nothing more to validate here.
+	}
+
+	return allErrs
+}
 
 // validatePortRange validates that both Min and Max are set for a port range
 func validatePortRange(portRange *PortRange, fldPath *field.Path, maxMsg, minMsg string) field.ErrorList {
@@ -127,6 +308,9 @@ func ValidateNetworkSpec(validRoles []Role, networkSpec NetworkSpec, old Network
 		nsgErrors := validateNSGs(validRoles, networkSpec.Vcn.NetworkSecurityGroup.List, fldPath.Child("networkSecurityGroups"))
 		allErrs = append(allErrs, nsgErrors...)
 	}
+
+	healthCheckerPath := fldPath.Child("apiServerLoadBalancer").Child("nlbSpec").Child("backendSetDetails").Child("healthChecker")
+	allErrs = append(allErrs, validateHealthChecker(networkSpec.APIServerLB.NLBSpec.BackendSetDetails.HealthChecker, healthCheckerPath)...)
 
 	if len(allErrs) == 0 {
 		return nil

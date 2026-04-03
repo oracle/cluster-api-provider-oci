@@ -169,3 +169,17 @@ func (mr *MockNetworkLoadBalancerClientMockRecorder) UpdateNetworkLoadBalancer(c
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateNetworkLoadBalancer", reflect.TypeOf((*MockNetworkLoadBalancerClient)(nil).UpdateNetworkLoadBalancer), ctx, request)
 }
+
+func (m *MockNetworkLoadBalancerClient) UpdateHealthChecker(ctx context.Context, request networkloadbalancer.UpdateHealthCheckerRequest) (networkloadbalancer.UpdateHealthCheckerResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateHealthChecker", ctx, request)
+	ret0, _ := ret[0].(networkloadbalancer.UpdateHealthCheckerResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateHealthChecker indicates an expected call of UpdateHealthChecker.
+func (mr *MockNetworkLoadBalancerClientMockRecorder) UpdateHealthChecker(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateHealthChecker", reflect.TypeOf((*MockNetworkLoadBalancerClient)(nil).UpdateHealthChecker), ctx, request)
+}
