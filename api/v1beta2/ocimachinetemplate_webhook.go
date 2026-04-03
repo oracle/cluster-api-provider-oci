@@ -50,7 +50,6 @@ func (*OCIMachineTemplateWebhook) ValidateCreate(_ context.Context, raw runtime.
 	if !ok {
 		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected a OCIMachineTemplate but got a %T", raw))
 	}
-
 	clusterlogger.Info("validate create machinetemplate", "name", m.Name)
 
 	var allErrs field.ErrorList
@@ -128,6 +127,9 @@ func (m *OCIMachineTemplate) validate() field.ErrorList {
 		)
 	}
 
+	if err := ValidateBlockVolumeSpec(m.Spec.Template.Spec.BlockVolumeSpec, field.NewPath("spec").Child("blockvolumeSpec")); err != nil {
+		allErrs = append(allErrs, err...)
+	}
 	if len(allErrs) == 0 {
 		return nil
 	}

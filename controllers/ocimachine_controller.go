@@ -154,6 +154,7 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	machineScope, err := scope.NewMachineScope(scope.MachineScopeParams{
 		Client:                    r.Client,
 		ComputeClient:             clients.ComputeClient,
+		BlockVolumeClient:         clients.BlockVolumeClient,
 		Logger:                    &logger,
 		Cluster:                   cluster,
 		OCIClusterAccessor:        clusterAccessor,
@@ -176,7 +177,7 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	// Handle deleted machines
 	if !ociMachine.DeletionTimestamp.IsZero() {
-		return r.reconcileDelete(ctx, machineScope)
+		return r.reconcileDelete(ctx, logger, machineScope)
 	}
 
 	// Handle non-deleted machines
@@ -442,11 +443,14 @@ func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.
 
 func (r *OCIMachineReconciler) getOrCreate(ctx context.Context, scope *scope.MachineScope) (*core.Instance, error) {
 	instance, err := scope.GetOrCreateMachine(ctx)
+
 	return instance, err
 }
 
-func (r *OCIMachineReconciler) reconcileDelete(ctx context.Context, machineScope *scope.MachineScope) (_ ctrl.Result, reterr error) {
+func (r *OCIMachineReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) (_ ctrl.Result, reterr error) {
 	machineScope.Info("Handling deleted OCIMachine")
+
+	hasBlockVolume := machineScope.BlockVolumeSpecNotEmpty(ctx)
 
 	instance, err := machineScope.GetMachine(ctx)
 	if err != nil {
@@ -457,6 +461,13 @@ func (r *OCIMachineReconciler) reconcileDelete(ctx context.Context, machineScope
 			}
 			v1beta1conditions.MarkFalse(machineScope.OCIMachine, infrastructurev1beta2.InstanceReadyCondition, infrastructurev1beta2.InstanceNotFoundReason, clusterv1beta1.ConditionSeverityInfo, "")
 			machineScope.Info("Instance is not found, may have been deleted")
+			if hasBlockVolume {
+				if err = machineScope.DeleteBlockVolume(ctx); err != nil {
+					logger.Info("Requeueing reconciliation", "reason:", err.Error(), "after:", 5*time.Second)
+					return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+
+				}
+			}
 			controllerutil.RemoveFinalizer(machineScope.OCIMachine, infrastructurev1beta2.MachineFinalizer)
 			return reconcile.Result{}, nil
 		} else {
@@ -477,6 +488,13 @@ func (r *OCIMachineReconciler) reconcileDelete(ctx context.Context, machineScope
 		return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 	case core.InstanceLifecycleStateTerminated:
 		v1beta1conditions.MarkFalse(machineScope.OCIMachine, infrastructurev1beta2.InstanceReadyCondition, infrastructurev1beta2.InstanceTerminatedReason, clusterv1beta1.ConditionSeverityInfo, "")
+		if hasBlockVolume {
+			if err = machineScope.DeleteBlockVolume(ctx); err != nil {
+				logger.Info("Requeueing reconciliation", "reason:", err.Error(), "after:", 5*time.Second)
+				return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+
+			}
+		}
 		controllerutil.RemoveFinalizer(machineScope.OCIMachine, infrastructurev1beta2.MachineFinalizer)
 		machineScope.Info("Instance is deleted")
 		r.Recorder.Eventf(machineScope.OCIMachine, corev1.EventTypeNormal,

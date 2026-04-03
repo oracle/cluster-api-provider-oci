@@ -23,6 +23,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net"
+	"reflect"
 	"regexp"
 	"strings"
 
@@ -626,4 +627,38 @@ func validateRole(validRoles []Role, subnetRole Role, fldPath *field.Path, error
 		}
 	}
 	return field.Invalid(fldPath, subnetRole, errorMsg)
+}
+
+func ValidateBlockVolumeSpec(blockVolumeSpec BlockVolumeSpec, fldPath *field.Path) field.ErrorList {
+	var allErrs field.ErrorList
+
+	// if BlockVolumeSpec is specified, verify the mandatory fields are specified
+	if !reflect.DeepEqual(blockVolumeSpec, BlockVolumeSpec{}) {
+		if blockVolumeSpec.DisplayName == nil {
+			allErrs = append(allErrs, field.Invalid(fldPath, blockVolumeSpec.DisplayName, "DisplayName for BlockVolumeSpec not specified"))
+		}
+
+		if len(blockVolumeSpec.AutotunePolicies) > 0 {
+			for _, autotunePolicy := range blockVolumeSpec.AutotunePolicies {
+				if autotunePolicy.AutotuneType == "PERFORMANCE_BASED" && autotunePolicy.MaxVPUsPerGB == nil {
+					allErrs = append(allErrs, field.Invalid(fldPath, blockVolumeSpec.AutotunePolicies, "MaxVPUsPerGB should be specified for AutotuneType of type PERFORMANCE_BASED"))
+				}
+				if autotunePolicy.AutotuneType == "DETACHED_VOLUME" && autotunePolicy.MaxVPUsPerGB != nil {
+					allErrs = append(allErrs, field.Invalid(fldPath, blockVolumeSpec.AutotunePolicies, "MaxVPUsPerGB should not be specified for AutotuneType of type DETACHED_VOLUME"))
+				}
+				if autotunePolicy.AutotuneType != "DETACHED_VOLUME" && autotunePolicy.AutotuneType != "PERFORMANCE_BASED" {
+					allErrs = append(allErrs, field.Invalid(fldPath, blockVolumeSpec.AutotunePolicies, "AutotuneType of type unknown. Available types are PERFORMANCE_BASED or DETACHED_VOLUME"))
+				}
+			}
+		} else {
+			allErrs = append(allErrs, field.Invalid(fldPath, blockVolumeSpec.AutotunePolicies, "AutotunePolicies field in BlockVolumeSpec should be specified and have at least one autotunePolicy in it"))
+		}
+
+		volumeType := blockVolumeSpec.VolumeType
+		if volumeType != string(ParavirtualizedType) && volumeType != string(IscsiType) {
+			allErrs = append(allErrs, field.Invalid(fldPath, blockVolumeSpec.VolumeType, "VolumeType field of BlockVolumeSpec should be of type paravirtualized or iscsi"))
+		}
+	}
+
+	return allErrs
 }

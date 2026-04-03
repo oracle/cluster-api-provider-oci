@@ -6,7 +6,7 @@ set -o nounset
 set -o pipefail
 
 GOPATH_BIN="$(go env GOPATH)/bin/"
-MINIMUM_KIND_VERSION=v0.25.0
+MINIMUM_KIND_VERSION=v0.31.0
 
 # Ensure the kind tool exists and is a viable version, or installs it
 verify_kind_version() {

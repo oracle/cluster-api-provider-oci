@@ -110,9 +110,6 @@ spec:
                               is serving.
                             format: int32
                             type: integer
-                        required:
-                        - host
-                        - port
                         type: object
                       id:
                         description: ID of the OKEcluster.
@@ -381,9 +378,6 @@ spec:
                               is serving.
                             format: int32
                             type: integer
-                        required:
-                        - host
-                        - port
                         type: object
                       id:
                         description: ID of the OKEcluster.

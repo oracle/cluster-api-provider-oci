@@ -20,7 +20,7 @@ settings = {
     "deploy_cert_manager": True,
     "preload_images_for_kind": True,
     "kind_cluster_name": "capoci",
-    "capi_version": "v1.11.0",
+    "capi_version": "v1.12.3",
     "cert_manager_version": "v1.16.2",
     "kubernetes_version": "v1.30.0",
 }
@@ -177,7 +177,14 @@ def include_user_tilt_files():
 def deploy_capi():
     version = settings.get("capi_version")
     capi_uri = "https://github.com/kubernetes-sigs/cluster-api/releases/download/{}/cluster-api-components.yaml".format(version)
-    cmd = "curl -sSL {} | {} | {} apply -f -".format(capi_uri, envsubst_cmd, kubectl_cmd)
+    context = str(local("{} config current-context".format(kubectl_cmd), quiet = True)).strip()
+    if not context:
+        fail("kubectl has no current context configured. Set KUBECONFIG/current-context before running Tilt.")
+    reachable = str(local("if {} --request-timeout=5s cluster-info >/dev/null 2>&1; then echo ok; else echo fail; fi".format(kubectl_cmd), quiet = True)).strip()
+    if reachable != "ok":
+        fail("kubectl cannot reach the API server for context '{}'. Start your management cluster and ensure your kube context points to it (allowed_contexts: {}).".format(context, settings.get("allowed_contexts")))
+    # Use server-side apply for CAPI CRDs to avoid oversized client-side last-applied annotations.
+    cmd = "curl -fsSL {} | {} | {} apply --server-side -f -".format(capi_uri, envsubst_cmd, kubectl_cmd)
     local(cmd, quiet = False)
     if settings.get("extra_args"):
         extra_args = settings.get("extra_args")
