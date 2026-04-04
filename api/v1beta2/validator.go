@@ -39,19 +39,21 @@ const (
 	ingressRulesType = "ingressRules"
 
 	// Error message formats for NSG security rule validation
-	udpDestinationPortRangeMaxRequiredFormat = "invalid %s: UdpOptions DestinationPortRange Max may not be empty"
-	udpDestinationPortRangeMinRequiredFormat = "invalid %s: UdpOptions DestinationPortRange Min may not be empty"
-	udpSourcePortRangeMaxRequiredFormat      = "invalid %s: UdpOptions SourcePortRange Max may not be empty"
-	udpSourcePortRangeMinRequiredFormat      = "invalid %s: UdpOptions SourcePortRange Min may not be empty"
-	tcpDestinationPortRangeMaxRequiredFormat = "invalid %s: TcpOptions DestinationPortRange Max may not be empty"
-	tcpDestinationPortRangeMinRequiredFormat = "invalid %s: TcpOptions DestinationPortRange Min may not be empty"
-	tcpSourcePortRangeMaxRequiredFormat      = "invalid %s: TcpOptions SourcePortRange Max may not be empty"
-	tcpSourcePortRangeMinRequiredFormat      = "invalid %s: TcpOptions SourcePortRange Min may not be empty"
-	icmpTypeRequiredFormat                   = "invalid %s: IcmpOptions Type may not be empty"
-	destinationRequiredFormat                = "invalid %s: Destination may not be empty"
-	sourceRequiredFormat                     = "invalid %s: Source may not be empty"
-	protocolRequiredFormat                   = "invalid %s: Protocol may not be empty"
-	invalidCIDRFormatFormat                  = "invalid %s: CIDR format"
+	udpDestinationPortRangeMaxRequiredFormat       = "invalid %s: UdpOptions DestinationPortRange Max may not be empty"
+	udpDestinationPortRangeMinRequiredFormat       = "invalid %s: UdpOptions DestinationPortRange Min may not be empty"
+	udpSourcePortRangeMaxRequiredFormat            = "invalid %s: UdpOptions SourcePortRange Max may not be empty"
+	udpSourcePortRangeMinRequiredFormat            = "invalid %s: UdpOptions SourcePortRange Min may not be empty"
+	tcpDestinationPortRangeMaxRequiredFormat       = "invalid %s: TcpOptions DestinationPortRange Max may not be empty"
+	tcpDestinationPortRangeMinRequiredFormat       = "invalid %s: TcpOptions DestinationPortRange Min may not be empty"
+	tcpSourcePortRangeMaxRequiredFormat            = "invalid %s: TcpOptions SourcePortRange Max may not be empty"
+	tcpSourcePortRangeMinRequiredFormat            = "invalid %s: TcpOptions SourcePortRange Min may not be empty"
+	icmpTypeRequiredFormat                         = "invalid %s: IcmpOptions Type may not be empty"
+	destinationRequiredFormat                      = "invalid %s: Destination may not be empty"
+	sourceRequiredFormat                           = "invalid %s: Source may not be empty"
+	protocolRequiredFormat                         = "invalid %s: Protocol may not be empty"
+	invalidCIDRFormatFormat                        = "invalid %s: CIDR format"
+	apiServerBackendSetNameRegex                   = `^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$`
+	supportedSecondaryListenerPort           int32 = 9345
 )
 
 // invalidNameRegex is a broad regex used to validate allows names in OCI
@@ -110,7 +112,7 @@ func ValidRegion(stringRegion string) bool {
 }
 
 // ValidateNetworkSpec validates the NetworkSpec
-func ValidateNetworkSpec(validRoles []Role, networkSpec NetworkSpec, old NetworkSpec, fldPath *field.Path) field.ErrorList {
+func ValidateNetworkSpec(validRoles []Role, networkSpec NetworkSpec, old NetworkSpec, apiServerPort *int32, fldPath *field.Path) field.ErrorList {
 	var allErrs field.ErrorList
 
 	if len(networkSpec.Vcn.CIDR) > 0 {
@@ -127,11 +129,16 @@ func ValidateNetworkSpec(validRoles []Role, networkSpec NetworkSpec, old Network
 		nsgErrors := validateNSGs(validRoles, networkSpec.Vcn.NetworkSecurityGroup.List, fldPath.Child("networkSecurityGroups"))
 		allErrs = append(allErrs, nsgErrors...)
 	}
+	allErrs = append(allErrs, validateAPIServerLBBackendSets(networkSpec.APIServerLB.NLBSpec, apiServerPort, fldPath.Child("apiServerLoadBalancer").Child("nlbSpec"))...)
 
 	if len(allErrs) == 0 {
 		return nil
 	}
 	return allErrs
+}
+
+func validateAPIServerLBBackendSets(spec NLBSpec, apiServerPort *int32, fldPath *field.Path) field.ErrorList {
+	return validateSharedAPIServerLBBackendSets(spec, apiServerPort, fldPath)
 }
 
 // validateVCNCIDR validates the CIDR of a VNC.

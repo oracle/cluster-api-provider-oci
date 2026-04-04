@@ -50,6 +50,21 @@ func (mr *MockLoadBalancerClientMockRecorder) CreateBackend(arg0, arg1 interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateBackend", reflect.TypeOf((*MockLoadBalancerClient)(nil).CreateBackend), arg0, arg1)
 }
 
+// CreateBackendSet mocks base method.
+func (m *MockLoadBalancerClient) CreateBackendSet(arg0 context.Context, arg1 loadbalancer.CreateBackendSetRequest) (loadbalancer.CreateBackendSetResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateBackendSet", arg0, arg1)
+	ret0, _ := ret[0].(loadbalancer.CreateBackendSetResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateBackendSet indicates an expected call of CreateBackendSet.
+func (mr *MockLoadBalancerClientMockRecorder) CreateBackendSet(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateBackendSet", reflect.TypeOf((*MockLoadBalancerClient)(nil).CreateBackendSet), arg0, arg1)
+}
+
 // CreateLoadBalancer mocks base method.
 func (m *MockLoadBalancerClient) CreateLoadBalancer(arg0 context.Context, arg1 loadbalancer.CreateLoadBalancerRequest) (loadbalancer.CreateLoadBalancerResponse, error) {
 	m.ctrl.T.Helper()
@@ -65,6 +80,21 @@ func (mr *MockLoadBalancerClientMockRecorder) CreateLoadBalancer(arg0, arg1 inte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateLoadBalancer", reflect.TypeOf((*MockLoadBalancerClient)(nil).CreateLoadBalancer), arg0, arg1)
 }
 
+// CreateListener mocks base method.
+func (m *MockLoadBalancerClient) CreateListener(arg0 context.Context, arg1 loadbalancer.CreateListenerRequest) (loadbalancer.CreateListenerResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateListener", arg0, arg1)
+	ret0, _ := ret[0].(loadbalancer.CreateListenerResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateListener indicates an expected call of CreateListener.
+func (mr *MockLoadBalancerClientMockRecorder) CreateListener(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateListener", reflect.TypeOf((*MockLoadBalancerClient)(nil).CreateListener), arg0, arg1)
+}
+
 // DeleteBackend mocks base method.
 func (m *MockLoadBalancerClient) DeleteBackend(arg0 context.Context, arg1 loadbalancer.DeleteBackendRequest) (loadbalancer.DeleteBackendResponse, error) {
 	m.ctrl.T.Helper()
@@ -78,6 +108,36 @@ func (m *MockLoadBalancerClient) DeleteBackend(arg0 context.Context, arg1 loadba
 func (mr *MockLoadBalancerClientMockRecorder) DeleteBackend(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteBackend", reflect.TypeOf((*MockLoadBalancerClient)(nil).DeleteBackend), arg0, arg1)
+}
+
+// DeleteBackendSet mocks base method.
+func (m *MockLoadBalancerClient) DeleteBackendSet(arg0 context.Context, arg1 loadbalancer.DeleteBackendSetRequest) (loadbalancer.DeleteBackendSetResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteBackendSet", arg0, arg1)
+	ret0, _ := ret[0].(loadbalancer.DeleteBackendSetResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteBackendSet indicates an expected call of DeleteBackendSet.
+func (mr *MockLoadBalancerClientMockRecorder) DeleteBackendSet(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteBackendSet", reflect.TypeOf((*MockLoadBalancerClient)(nil).DeleteBackendSet), arg0, arg1)
+}
+
+// DeleteListener mocks base method.
+func (m *MockLoadBalancerClient) DeleteListener(arg0 context.Context, arg1 loadbalancer.DeleteListenerRequest) (loadbalancer.DeleteListenerResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteListener", arg0, arg1)
+	ret0, _ := ret[0].(loadbalancer.DeleteListenerResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteListener indicates an expected call of DeleteListener.
+func (mr *MockLoadBalancerClientMockRecorder) DeleteListener(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteListener", reflect.TypeOf((*MockLoadBalancerClient)(nil).DeleteListener), arg0, arg1)
 }
 
 // DeleteLoadBalancer mocks base method.
@@ -153,4 +213,34 @@ func (m *MockLoadBalancerClient) UpdateLoadBalancer(arg0 context.Context, arg1 l
 func (mr *MockLoadBalancerClientMockRecorder) UpdateLoadBalancer(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateLoadBalancer", reflect.TypeOf((*MockLoadBalancerClient)(nil).UpdateLoadBalancer), arg0, arg1)
+}
+
+// UpdateBackendSet mocks base method.
+func (m *MockLoadBalancerClient) UpdateBackendSet(arg0 context.Context, arg1 loadbalancer.UpdateBackendSetRequest) (loadbalancer.UpdateBackendSetResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateBackendSet", arg0, arg1)
+	ret0, _ := ret[0].(loadbalancer.UpdateBackendSetResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateBackendSet indicates an expected call of UpdateBackendSet.
+func (mr *MockLoadBalancerClientMockRecorder) UpdateBackendSet(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateBackendSet", reflect.TypeOf((*MockLoadBalancerClient)(nil).UpdateBackendSet), arg0, arg1)
+}
+
+// UpdateListener mocks base method.
+func (m *MockLoadBalancerClient) UpdateListener(arg0 context.Context, arg1 loadbalancer.UpdateListenerRequest) (loadbalancer.UpdateListenerResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateListener", arg0, arg1)
+	ret0, _ := ret[0].(loadbalancer.UpdateListenerResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateListener indicates an expected call of UpdateListener.
+func (mr *MockLoadBalancerClientMockRecorder) UpdateListener(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateListener", reflect.TypeOf((*MockLoadBalancerClient)(nil).UpdateListener), arg0, arg1)
 }

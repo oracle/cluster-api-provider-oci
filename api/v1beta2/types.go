@@ -991,14 +991,43 @@ type LoadBalancer struct {
 	// +optional
 	LoadBalancerType LoadBalancerType `json:"loadBalancerType,omitempty"`
 
-	// The NLB Spec
+	// Shared API server load balancer settings used for both `loadBalancerType: nlb` and `loadBalancerType: lb`.
+	// The field name is historical; it is not limited to the NLB implementation.
 	// +optional
 	NLBSpec NLBSpec `json:"nlbSpec,omitempty"`
 }
 
-// NLBSpec specifies the NLB spec.
+// NewAPIServerLoadBalancer returns a LoadBalancer configured with the shared API server settings.
+// The underlying `nlbSpec` field name is historical and retained for API compatibility.
+func NewAPIServerLoadBalancer(name string, spec NLBSpec) LoadBalancer {
+	return LoadBalancer{
+		Name:    name,
+		NLBSpec: spec,
+	}
+}
+
+// APIServerLoadBalancerSpec returns the shared API server load balancer settings.
+func (in *LoadBalancer) APIServerLoadBalancerSpec() *NLBSpec {
+	return &in.NLBSpec
+}
+
+// CanonicalAPIServerBackendSets returns the canonical API server backend set list for this load balancer.
+func (in *LoadBalancer) CanonicalAPIServerBackendSets() []NLBBackendSet {
+	return in.APIServerLoadBalancerSpec().CanonicalBackendSets()
+}
+
+// NLBSpec specifies the shared API server load balancer settings.
+// The type name is historical and applies to both `loadBalancerType: nlb` and `loadBalancerType: lb`.
 type NLBSpec struct {
+	// BackendSets specifies the canonical list of API server backend sets.
+	// When set, this field takes precedence over the legacy `backendSetDetails` field.
+	// +optional
+	// +listType=map
+	// +listMapKey=name
+	BackendSets []NLBBackendSet `json:"backendSets,omitempty"`
+
 	// BackendSetDetails specifies the configuration of a network load balancer backend set.
+	// Deprecated: use `backendSets` instead.
 	// +optional
 	BackendSetDetails BackendSetDetails `json:"backendSetDetails,omitempty"`
 
@@ -1009,7 +1038,25 @@ type NLBSpec struct {
 	ReservedIpIds []string `json:"reservedIpIds,omitempty"`
 }
 
-// BackendSetDetails specifies the configuration of a network load balancer backend set.
+// NLBBackendSet specifies the configuration for a named API server backend set.
+// The type name is historical and applies to both load balancer implementations.
+type NLBBackendSet struct {
+	// Name is the API server backend set identifier.
+	Name string `json:"name"`
+
+	// ListenerPort is the load balancer listener port routed to this backend set.
+	// When omitted, the cluster API server port is used. Explicit values are restricted
+	// to the supported API server listener ports.
+	// +optional
+	ListenerPort *int32 `json:"listenerPort,omitempty"`
+
+	// BackendSetDetails specifies the backend set behavior.
+	// +optional
+	BackendSetDetails BackendSetDetails `json:"backendSetDetails,omitempty"`
+}
+
+// BackendSetDetails specifies the configuration of an API server backend set.
+// The fields cover shared behavior used by both load balancer implementations.
 type BackendSetDetails struct {
 	// If this parameter is enabled, then the network load balancer preserves the source IP of the packet when it is forwarded to backends.
 	// Backends see the original source IP. If the isPreserveSourceDestination parameter is enabled for the network load balancer resource, then this parameter cannot be disabled.
@@ -1039,6 +1086,14 @@ type HealthChecker struct {
 	// Example: `/healthcheck`
 	// Default value is `/healthz`
 	UrlPath *string `json:"urlPath,omitempty"`
+}
+
+// CanonicalBackendSets returns the canonical API server backend set list.
+// Precedence:
+// 1. If `backendSets` is configured, it is used as-is.
+// 2. Otherwise, a single backend set named APIServerLBBackendSetName is synthesized from the legacy `backendSetDetails`.
+func (in *NLBSpec) CanonicalBackendSets() []NLBBackendSet {
+	return canonicalAPIServerBackendSets(in.BackendSets, in.BackendSetDetails)
 }
 
 // NetworkSpec specifies what the OCI networking resources should look like.

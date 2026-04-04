@@ -16,7 +16,10 @@
 
 package scope
 
-import "github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
+import (
+	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
+	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
+)
 
 const (
 	VcnDefaultCidr                        = "10.0.0.0/16"
@@ -24,7 +27,7 @@ const (
 	ControlPlaneMachineSubnetDefaultCIDR  = "10.0.0.0/29"
 	WorkerSubnetDefaultCIDR               = "10.0.64.0/20"
 	ServiceLoadBalancerDefaultCIDR        = "10.0.0.32/27"
-	ApiServerPort                         = 6443
+	ApiServerPort                         = ociutil.DefaultAPIServerPort
 	APIServerLBBackendSetName             = "apiserver-lb-backendset"
 	APIServerLBListener                   = "apiserver-lb-listener"
 	SGWServiceSuffix                      = "-services-in-oracle-services-network"

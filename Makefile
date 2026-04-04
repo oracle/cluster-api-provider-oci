@@ -287,6 +287,8 @@ generate-e2e-templates: $(KUSTOMIZE)
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-custom-networking-seclist --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-custom-networking-seclist.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-custom-networking-nsg --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-custom-networking-nsg.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-multiple-node-nsg --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-multiple-node-nsg.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-multiple-backends-nlb --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-multiple-backends-nlb.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-multiple-backends-lb --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-multiple-backends-lb.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-cluster-class --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-cluster-class.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-local-vcn-peering --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-local-vcn-peering.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-remote-vcn-peering --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-remote-vcn-peering.yaml
