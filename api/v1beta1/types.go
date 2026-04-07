@@ -1016,7 +1016,7 @@ type BackendSetDetails struct {
 	// If enabled existing connections will be forwarded to an alternative healthy backend as soon as current backend becomes unhealthy.
 	// +optional
 	IsInstantFailoverEnabled *bool `json:"isInstantFailoverEnabled,omitempty"`
-	// If enabled existing connections will be forwarded to an alternative healthy backend as soon as current backend becomes unhealthy.
+	// The health check policy configuration for the NLB backend set.
 	// +optional
 	HealthChecker HealthChecker `json:"healthChecker,omitempty"`
 }
@@ -1025,10 +1025,63 @@ type BackendSetDetails struct {
 // For more information, see Editing Health Check Policies (https://docs.cloud.oracle.com/Content/NetworkLoadBalancer/HealthCheckPolicies/health-check-policy-management.htm).
 type HealthChecker struct {
 
+	// The protocol the health check must use; either HTTP, HTTPS, UDP, or TCP. Defaults to HTTPS.
+	// Example: `HTTP`
+	// +optional
+	Protocol *string `json:"protocol,omitempty"`
+
+	// The backend server port against which to run the health check. If the port is not specified,
+	// then the network load balancer uses the port information from the Backend object.
+	// Example: `8080`
+	// +optional
+	Port *int `json:"port,omitempty"`
+
+	// The interval between health checks, in milliseconds. The default value is 10000 (10 seconds).
+	// Example: `10000`
+	// +optional
+	IntervalInMillis *int `json:"intervalInMillis,omitempty"`
+
+	// The maximum time, in milliseconds, to wait for a reply to a health check.
+	// The default value is 3000 (3 seconds).
+	// Example: `3000`
+	// +optional
+	TimeoutInMillis *int `json:"timeoutInMillis,omitempty"`
+
+	// The number of retries to attempt before a backend server is considered unhealthy.
+	// Example: `3`
+	// +optional
+	Retries *int `json:"retries,omitempty"`
+
 	// The path against which to run the health check.
+	// Only supported for HTTP and HTTPS protocols. Not allowed for TCP or UDP.
 	// Example: `/healthcheck`
 	// Default value is `/healthz`
+	// +optional
 	UrlPath *string `json:"urlPath,omitempty"`
+
+	// The status code a healthy backend server should return when using the HTTP/HTTPS protocol.
+	// Only supported for HTTP and HTTPS protocols. Not allowed for TCP or UDP.
+	// Example: `200`
+	// +optional
+	ReturnCode *int `json:"returnCode,omitempty"`
+
+	// A regular expression for parsing the response body from the backend server.
+	// Only supported for HTTP and HTTPS protocols. Not allowed for TCP or UDP.
+	// Example: `^((?!false).|\s)*$`
+	// +optional
+	ResponseBodyRegex *string `json:"responseBodyRegex,omitempty"`
+
+	// Base64 encoded payload to send as the TCP or UDP health check probe.
+	// Only supported for TCP and UDP protocols. Not allowed for HTTP or HTTPS.
+	// For UDP, both requestData and responseData are required.
+	// +optional
+	RequestData *string `json:"requestData,omitempty"`
+
+	// Base64 encoded payload expected in the TCP or UDP health check probe response.
+	// Only supported for TCP and UDP protocols. Not allowed for HTTP or HTTPS.
+	// For UDP, both requestData and responseData are required.
+	// +optional
+	ResponseData *string `json:"responseData,omitempty"`
 }
 
 // NetworkSpec specifies what the OCI networking resources should look like.

@@ -37,6 +37,8 @@ const (
 	ControlPlaneDefaultName               = "control-plane"
 	WorkerDefaultName                     = "worker"
 	ServiceLBDefaultName                  = "service-lb"
+	HealthCheckerDefaultProtocol          = "HTTPS"
+	HealthCheckerDefaultURLPath           = "/healthz"
 )
 
 var (
