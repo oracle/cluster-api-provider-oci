@@ -232,3 +232,53 @@ func TestToSubnetSlice(t *testing.T) {
 		})
 	}
 }
+
+func TestStringEqual(t *testing.T) {
+	s1 := "hello"
+	s2 := "hello"
+	s3 := "world"
+	tests := []struct {
+		name string
+		a    *string
+		b    *string
+		want bool
+	}{
+		{name: "both nil", a: nil, b: nil, want: true},
+		{name: "a nil b non-nil", a: nil, b: &s1, want: false},
+		{name: "a non-nil b nil", a: &s1, b: nil, want: false},
+		{name: "both equal", a: &s1, b: &s2, want: true},
+		{name: "both different", a: &s1, b: &s3, want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := StringEqual(tt.a, tt.b); got != tt.want {
+				t.Errorf("StringEqual() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIntEqual(t *testing.T) {
+	i1 := 42
+	i2 := 42
+	i3 := 99
+	tests := []struct {
+		name string
+		a    *int
+		b    *int
+		want bool
+	}{
+		{name: "both nil", a: nil, b: nil, want: true},
+		{name: "a nil b non-nil", a: nil, b: &i1, want: false},
+		{name: "a non-nil b nil", a: &i1, b: nil, want: false},
+		{name: "both equal", a: &i1, b: &i2, want: true},
+		{name: "both different", a: &i1, b: &i3, want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IntEqual(tt.a, tt.b); got != tt.want {
+				t.Errorf("IntEqual() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
