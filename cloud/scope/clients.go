@@ -19,6 +19,7 @@ package scope
 import (
 	"crypto/x509"
 	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/go-logr/logr"
@@ -45,6 +46,8 @@ import (
 	"github.com/pkg/errors"
 	"k8s.io/klog/v2/klogr"
 )
+
+const capociUserAgentToken = "Oracle-ClusterAPI"
 
 // OCIClients is the struct of all the needed OCI clients
 type OCIClients struct {
@@ -210,7 +213,7 @@ func (c *ClientProvider) createVcnClient(region string, ociAuthConfigProvider co
 	if c.ociClientOverrides != nil && c.ociClientOverrides.VCNClientUrl != nil {
 		vcnClient.Host = *c.ociClientOverrides.VCNClientUrl
 	}
-	vcnClient.Interceptor = setVersionHeader()
+	vcnClient.Interceptor = setCAPOCIRequestHeaders()
 
 	return &vcnClient, nil
 }
@@ -228,7 +231,7 @@ func (c *ClientProvider) createNLbClient(region string, ociAuthConfigProvider co
 	if c.ociClientOverrides != nil && c.ociClientOverrides.NetworkLoadBalancerClientUrl != nil {
 		nlbClient.Host = *c.ociClientOverrides.NetworkLoadBalancerClientUrl
 	}
-	nlbClient.Interceptor = setVersionHeader()
+	nlbClient.Interceptor = setCAPOCIRequestHeaders()
 
 	return &nlbClient, nil
 }
@@ -246,7 +249,7 @@ func (c *ClientProvider) createLBClient(region string, ociAuthConfigProvider com
 	if c.ociClientOverrides != nil && c.ociClientOverrides.LoadBalancerClientUrl != nil {
 		lbClient.Host = *c.ociClientOverrides.LoadBalancerClientUrl
 	}
-	lbClient.Interceptor = setVersionHeader()
+	lbClient.Interceptor = setCAPOCIRequestHeaders()
 
 	return &lbClient, nil
 }
@@ -264,7 +267,7 @@ func (c *ClientProvider) createIdentityClient(region string, ociAuthConfigProvid
 	if c.ociClientOverrides != nil && c.ociClientOverrides.IdentityClientUrl != nil {
 		identityClt.Host = *c.ociClientOverrides.IdentityClientUrl
 	}
-	identityClt.Interceptor = setVersionHeader()
+	identityClt.Interceptor = setCAPOCIRequestHeaders()
 
 	return &identityClt, nil
 }
@@ -279,7 +282,7 @@ func (c *ClientProvider) createBlockVolumeClient(region string, ociAuthConfigPro
 	dispatcher := blockVolumeClient.HTTPClient
 	blockVolumeClient.HTTPClient = metrics.NewHttpRequestDispatcherWrapper(dispatcher, region)
 
-	blockVolumeClient.Interceptor = setVersionHeader()
+	blockVolumeClient.Interceptor = setCAPOCIRequestHeaders()
 
 	return &blockVolumeClient, nil
 }
@@ -297,7 +300,7 @@ func (c *ClientProvider) createComputeClient(region string, ociAuthConfigProvide
 	if c.ociClientOverrides != nil && c.ociClientOverrides.ComputeClientUrl != nil {
 		computeClient.Host = *c.ociClientOverrides.ComputeClientUrl
 	}
-	computeClient.Interceptor = setVersionHeader()
+	computeClient.Interceptor = setCAPOCIRequestHeaders()
 
 	return &computeClient, nil
 }
@@ -315,7 +318,7 @@ func (c *ClientProvider) createComputeManagementClient(region string, ociAuthCon
 	if c.ociClientOverrides != nil && c.ociClientOverrides.ComputeManagementClientUrl != nil {
 		computeManagementClient.Host = *c.ociClientOverrides.ComputeManagementClientUrl
 	}
-	computeManagementClient.Interceptor = setVersionHeader()
+	computeManagementClient.Interceptor = setCAPOCIRequestHeaders()
 
 	return &computeManagementClient, nil
 }
@@ -333,7 +336,7 @@ func (c *ClientProvider) createContainerEngineClient(region string, ociAuthConfi
 	if c.ociClientOverrides != nil && c.ociClientOverrides.ContainerEngineClientUrl != nil {
 		containerEngineClt.Host = *c.ociClientOverrides.ContainerEngineClientUrl
 	}
-	containerEngineClt.Interceptor = setVersionHeader()
+	containerEngineClt.Interceptor = setCAPOCIRequestHeaders()
 
 	return &containerEngineClt, nil
 }
@@ -351,7 +354,7 @@ func (c *ClientProvider) createWorkrequestsClient(region string, ociAuthConfigPr
 	if c.ociClientOverrides != nil && c.ociClientOverrides.WorkrequestClientUrl != nil {
 		workrequestsClt.Host = *c.ociClientOverrides.WorkrequestClientUrl
 	}
-	workrequestsClt.Interceptor = setVersionHeader()
+	workrequestsClt.Interceptor = setCAPOCIRequestHeaders()
 
 	return &workrequestsClt, nil
 }
@@ -365,9 +368,24 @@ func (c *ClientProvider) createBaseClient(region string, ociAuthConfigProvider c
 	return baseClient, nil
 }
 
-func setVersionHeader() func(request *http.Request) error {
+func setCAPOCIRequestHeaders() func(request *http.Request) error {
 	return func(request *http.Request) error {
+		request.Header.Set("User-Agent", appendUserAgentToken(request.Header.Get("User-Agent"), capociUserAgentToken))
 		request.Header.Set("X-CAPOCI-VERSION", version.GitVersion)
 		return nil
 	}
+}
+
+func appendUserAgentToken(existing, token string) string {
+	for _, currentToken := range strings.Fields(existing) {
+		if currentToken == token {
+			return strings.TrimSpace(existing)
+		}
+	}
+
+	if existing == "" {
+		return token
+	}
+
+	return strings.TrimSpace(existing) + " " + token
 }
