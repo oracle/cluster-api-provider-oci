@@ -17,13 +17,16 @@ limitations under the License.
 package scope
 
 import (
+	"net/http"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/config"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn/mock_vcn"
+	"github.com/oracle/cluster-api-provider-oci/version"
 	"github.com/oracle/oci-go-sdk/v65/common"
 )
 
@@ -219,5 +222,34 @@ func TestClients_GetAuthProvider(t *testing.T) {
 
 	if clientProvider.GetAuthProvider() != ociAuthConfigProvider {
 		t.Errorf("returned authprovider %v doesn't equal: %v", clientProvider.GetAuthProvider(), ociAuthConfigProvider)
+	}
+}
+
+func TestSetCAPOCIRequestHeaders(t *testing.T) {
+	request, err := http.NewRequest(http.MethodGet, "https://example.com", nil)
+	if err != nil {
+		t.Fatalf("failed to build request: %v", err)
+	}
+
+	originalUserAgent := "Oracle-GoSDK/65.102.0 (go1.22.0; amd64)"
+	request.Header.Set("User-Agent", originalUserAgent)
+
+	interceptor := setCAPOCIRequestHeaders()
+	if err := interceptor(request); err != nil {
+		t.Fatalf("unexpected interceptor error on first call: %v", err)
+	}
+	if err := interceptor(request); err != nil {
+		t.Fatalf("unexpected interceptor error on second call: %v", err)
+	}
+
+	userAgent := request.Header.Get("User-Agent")
+	if !strings.Contains(userAgent, originalUserAgent) {
+		t.Fatalf("expected user-agent %q to preserve original content %q", userAgent, originalUserAgent)
+	}
+	if strings.Count(userAgent, capociUserAgentToken) != 1 {
+		t.Fatalf("expected user-agent %q to contain %q exactly once", userAgent, capociUserAgentToken)
+	}
+	if request.Header.Get("X-CAPOCI-VERSION") != version.GitVersion {
+		t.Fatalf("expected X-CAPOCI-VERSION %q, got %q", version.GitVersion, request.Header.Get("X-CAPOCI-VERSION"))
 	}
 }
