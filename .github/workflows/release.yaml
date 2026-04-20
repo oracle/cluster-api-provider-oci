@@ -7,7 +7,9 @@ on:
       - "v*.*.*"
 
 permissions:
+  attestations: write
   contents: read
+  id-token: write
   packages: write
 
 jobs:
@@ -33,6 +35,11 @@ jobs:
         run: |
           echo "Release Tag: ${{ github.ref_name }}" 
           curl -sSL https://doc.crds.dev/github.com/oracle/cluster-api-provider-oci@${{ github.ref_name }}
+
+      - name: Attest release artifacts
+        uses: actions/attest-build-provenance@43d14bc2b83dec42d39ecae14e916627a18bb661 # v3
+        with:
+          subject-path: out/*
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
