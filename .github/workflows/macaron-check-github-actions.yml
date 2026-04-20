@@ -34,4 +34,4 @@ jobs:
         with:
           repo_path: https://github.com/${{ github.repository }}
           policy_file: check-github-actions
-          policy_purl: pkg:github/${{ github.repository }}@${{ github.sha }}
+          policy_purl: pkg:github.com/${{ github.repository }}@${{ github.sha }}
