@@ -34,4 +34,4 @@ jobs:
         with:
           repo_path: ./
           policy_file: check-github-actions
-          policy_purl: pkg:github.com/${{ github.event.pull_request.head.repo.full_name || github.repository }}@${{ github.event.pull_request.head.sha || github.sha }}
+          policy_purl: pkg:github.com/oracle/cluster-api-provider-oci@.*
