@@ -9,6 +9,8 @@ spec:
       compartmentId: "${OCI_COMPARTMENT_ID}"
       shape: "${OCI_NODE_MACHINE_TYPE}"
       isPvEncryptionInTransitEnabled: true
+      instanceOptions:
+        areLegacyImdsEndpointsDisabled: true
       shapeConfig:
         ocpus: "1"
       metadata:
