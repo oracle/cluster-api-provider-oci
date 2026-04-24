@@ -402,6 +402,8 @@ spec:
       metadata:
         ssh_authorized_keys: "${OCI_SSH_KEY}"
       isPvEncryptionInTransitEnabled: ${OCI_PV_TRANSIT_ENCRYPTION=true}
+      instanceOptions:
+        areLegacyImdsEndpointsDisabled: true
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCIMachineTemplate
@@ -419,6 +421,8 @@ spec:
       metadata:
         ssh_authorized_keys: "${OCI_SSH_KEY}"
       isPvEncryptionInTransitEnabled: ${OCI_PV_TRANSIT_ENCRYPTION=true}
+      instanceOptions:
+        areLegacyImdsEndpointsDisabled: true
 ---
 apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
 kind: KubeadmConfigTemplate

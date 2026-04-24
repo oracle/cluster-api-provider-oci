@@ -86,6 +86,8 @@ spec:
       metadata:
         ssh_authorized_keys: "${OCI_SSH_KEY}"
       isPvEncryptionInTransitEnabled: ${OCI_CONTROL_PLANE_PV_TRANSIT_ENCRYPTION=true}
+      instanceOptions:
+        areLegacyImdsEndpointsDisabled: true
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachinePool
@@ -116,6 +118,8 @@ metadata:
   namespace: default
 spec:
   instanceConfiguration:
+    instanceOptions:
+      areLegacyImdsEndpointsDisabled: true
     instanceSourceViaImageConfig:
       imageId: "${OCI_IMAGE_ID}"
     shape: "${OCI_NODE_MACHINE_TYPE=VM.Standard.E4.Flex}"
