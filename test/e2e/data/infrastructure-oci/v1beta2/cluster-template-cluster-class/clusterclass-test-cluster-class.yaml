@@ -202,6 +202,8 @@ spec:
     spec:
       # will be replaced by shape variable defined above
       shape: VM.Standard.E5.Flex
+      instanceOptions:
+        areLegacyImdsEndpointsDisabled: true
       metadata: {}
       shapeConfig: {}
 ---
@@ -214,6 +216,8 @@ spec:
     spec:
       # will be replaced by shape variable defined above
       shape: VM.Standard.E5.Flex
+      instanceOptions:
+        areLegacyImdsEndpointsDisabled: true
       metadata: {}
       shapeConfig: {}
 ---

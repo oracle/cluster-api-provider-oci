@@ -107,6 +107,8 @@ spec:
       metadata:
         ssh_authorized_keys: "${OCI_SSH_KEY}"
       isPvEncryptionInTransitEnabled: ${OCI_CONTROL_PLANE_PV_TRANSIT_ENCRYPTION=true}
+      instanceOptions:
+        areLegacyImdsEndpointsDisabled: true
       networkDetails:
         assignIpv6Ip: true
 ---
@@ -125,6 +127,8 @@ spec:
       metadata:
         ssh_authorized_keys: "${OCI_SSH_KEY}"
       isPvEncryptionInTransitEnabled: ${OCI_NODE_PV_TRANSIT_ENCRYPTION=true}
+      instanceOptions:
+        areLegacyImdsEndpointsDisabled: true
       networkDetails:
         assignIpv6Ip: true
 ---
