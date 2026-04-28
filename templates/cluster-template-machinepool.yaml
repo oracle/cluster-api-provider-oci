@@ -115,12 +115,15 @@ metadata:
   name: ${CLUSTER_NAME}-mp-0
   namespace: default
 spec:
+  instanceDisplayNameFormatter: "${CLUSTER_NAME}-mp-$${launchCount}"
+  instanceHostnameFormatter: "${CLUSTER_NAME}-mp-$${launchCount}"
   instanceConfiguration:
     instanceSourceViaImageConfig:
       imageId: "${OCI_IMAGE_ID}"
     shape: "${OCI_NODE_MACHINE_TYPE=VM.Standard.E4.Flex}"
     shapeConfig:
       ocpus: "${OCI_NODE_MACHINE_TYPE_OCPUS=1}"
+    preferredMaintenanceAction: LIVE_MIGRATE
     metadata:
       ssh_authorized_keys: "${OCI_SSH_KEY}"
 

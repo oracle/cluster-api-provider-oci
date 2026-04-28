@@ -74,6 +74,8 @@ metadata:
   name: "${CLUSTER_NAME}-mp-0"
   namespace: default
 spec:
+  instanceDisplayNameFormatter: "${CLUSTER_NAME}-mp-$${launchCount}"
+  instanceHostnameFormatter: "${CLUSTER_NAME}-mp-$${launchCount}"
   instanceConfiguration:
     metadata:
       ssh_authorized_keys: "${OCI_SSH_KEY}"
@@ -82,8 +84,12 @@ spec:
     shape: "${OCI_NODE_MACHINE_TYPE=VM.Standard.E4.Flex}"
     shapeConfig:
       ocpus: "1"
+    preferredMaintenanceAction: LIVE_MIGRATE
 ```
 
+The formatter examples use OCI's `${launchCount}` token. In clusterctl-style
+templates it is escaped as `$${launchCount}` so the rendered `OCIMachinePool`
+passes `${launchCount}` through to OCI.
 
 
 
