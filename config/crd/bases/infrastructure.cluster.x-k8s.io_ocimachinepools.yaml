@@ -134,6 +134,10 @@ spec:
                       You can opt out of all default reservations by specifying an empty string as input for this field.
                       For more information, see Capacity Reservations (https://docs.cloud.oracle.com/iaas/Content/Compute/Tasks/reserve-capacity.htm#default).
                     type: string
+                  clusterPlacementGroupId:
+                    description: ClusterPlacementGroupId defines the OCID of the cluster
+                      placement group of the instance.
+                    type: string
                   dedicatedVmHostId:
                     description: DedicatedVmHostId defines the OCID of the dedicated
                       VM host.
@@ -190,11 +194,12 @@ spec:
                         type: string
                     type: object
                   instanceVnicConfiguration:
-                    description: NetworkDetails defines the configuration options
-                      for the network
+                    description: MachinePoolNetworkDetails defines the configuration
+                      options for the MachinePool primary VNIC.
                     properties:
                       assignIpv6Ip:
-                        description: IPv6 defines if the instance should have an IPv6
+                        description: AssignIPv6 determines whether to assign an IPv6
+                          address to the instance.
                         type: boolean
                       assignPrivateDnsRecord:
                         description: AssignPrivateDnsRecord defines whether the VNIC
@@ -202,7 +207,7 @@ spec:
                         type: boolean
                       assignPublicIp:
                         description: AssignPublicIp defines whether the instance should
-                          have a public IP address
+                          have a public IP address.
                         type: boolean
                       displayName:
                         description: |-
@@ -213,10 +218,28 @@ spec:
                         description: HostnameLabel defines the hostname for the VNIC's
                           primary private IP. Used for DNS.
                         type: string
+                      ipv6AddressIpv6SubnetCidrPairDetails:
+                        description: Ipv6AddressIpv6SubnetCidrPairDetails defines
+                          IPv6 CIDR pair details for the primary VNIC.
+                        items:
+                          description: InstanceConfigurationIpv6AddressIpv6SubnetCidrPairDetails
+                            defines an IPv6 address and subnet CIDR pair.
+                          properties:
+                            ipv6Address:
+                              description: Ipv6Address is an available IPv6 address
+                                of the subnet from a valid IPv6 prefix.
+                              type: string
+                            ipv6SubnetCidr:
+                              description: Ipv6SubnetCidr is used to disambiguate
+                                which subnet prefix should be used to create an IPv6
+                                allocation.
+                              type: string
+                          type: object
+                        type: array
                       nsgId:
                         description: |-
                           NSGId defines the ID of the NSG to use. This parameter takes priority over NsgNames.
-                          Deprecated, please use NetworkDetails.NSGIds
+                          Deprecated, please use MachinePoolNetworkDetails.NSGIds.
                         type: string
                       nsgIds:
                         description: NSGIds defines the list of NSG IDs to use. This
@@ -230,6 +253,15 @@ spec:
                         items:
                           type: string
                         type: array
+                      securityAttributes:
+                        additionalProperties:
+                          additionalProperties:
+                            x-kubernetes-preserve-unknown-fields: true
+                          type: object
+                        description: SecurityAttributes are OCI security attributes
+                          for the primary VNIC.
+                        type: object
+                        x-kubernetes-preserve-unknown-fields: true
                       skipSourceDestCheck:
                         description: SkipSourceDestCheck defines whether the source/destination
                           check is disabled on the VNIC.
@@ -240,13 +272,21 @@ spec:
                         type: string
                       subnetName:
                         description: SubnetName defines the subnet name to use for
-                          the VNIC
+                          the VNIC.
                         type: string
                     type: object
+                  ipxeScript:
+                    description: IpxeScript is the custom iPXE script that will run
+                      when the instance boots.
+                    type: string
                   isPvEncryptionInTransitEnabled:
                     default: true
                     description: Is in transit encryption of volumes required.
                     type: boolean
+                  launchMode:
+                    description: LaunchMode specifies the configuration mode for launching
+                      virtual machine instances.
+                    type: string
                   launchOptions:
                     description: LaunchOptions defines the options for tuning the
                       compatibility and performance of VM shapes
@@ -295,6 +335,17 @@ spec:
                           storage volumes on platform images.
                         type: string
                     type: object
+                  licensingConfigs:
+                    description: LicensingConfigs defines licensing configurations
+                      associated with target launch values.
+                    items:
+                      properties:
+                        licenseType:
+                          type: string
+                        type:
+                          type: string
+                      type: object
+                    type: array
                   metadata:
                     additionalProperties:
                       type: string
@@ -306,306 +357,159 @@ spec:
                     description: PlatformConfig defines the platform config parameters
                     properties:
                       amdMilanBmPlatformConfig:
-                        description: AmdMilanBmPlatformConfig describe AMD Milan BM
-                          platform configuration
                         properties:
                           areVirtualInstructionsEnabled:
-                            description: |-
-                              Whether virtualization instructions are available. For example, Secure Virtual Machine for AMD shapes
-                              or VT-x for Intel shapes.
                             type: boolean
+                          configMap:
+                            additionalProperties:
+                              type: string
+                            type: object
                           isAccessControlServiceEnabled:
-                            description: |-
-                              Whether the Access Control Service is enabled on the instance. When enabled,
-                              the platform can enforce PCIe device isolation, required for VFIO device pass-through.
                             type: boolean
                           isInputOutputMemoryManagementUnitEnabled:
-                            description: Whether the input-output memory management
-                              unit is enabled.
                             type: boolean
                           isMeasuredBootEnabled:
-                            description: Whether the Measured Boot feature is enabled
-                              on the instance.
                             type: boolean
                           isMemoryEncryptionEnabled:
-                            description: Whether the instance is a confidential instance.
-                              If this value is `true`, the instance is a confidential
-                              instance. The default value is `false`.
                             type: boolean
                           isSecureBootEnabled:
-                            description: Whether Secure Boot is enabled on the instance.
                             type: boolean
                           isSymmetricMultiThreadingEnabled:
-                            description: |-
-                              Whether symmetric multithreading is enabled on the instance. Symmetric multithreading is also
-                              called simultaneous multithreading (SMT) or Intel Hyper-Threading.
-                              Intel and AMD processors have two hardware execution threads per core (OCPU). SMT permits multiple
-                              independent threads of execution, to better use the resources and increase the efficiency
-                              of the CPU. When multithreading is disabled, only one thread is permitted to run on each core, which
-                              can provide higher or more predictable performance for some workloads.
                             type: boolean
                           isTrustedPlatformModuleEnabled:
-                            description: Whether the Trusted Platform Module (TPM)
-                              is enabled on the instance.
                             type: boolean
                           numaNodesPerSocket:
-                            description: |-
-                              The number of NUMA nodes per socket (NPS).
-                              The following values are supported:
-                              * `NPS0`
-                              * `NPS1`
-                              * `NPS2`
-                              * `NPS4`
                             type: string
                           percentageOfCoresEnabled:
-                            description: |-
-                              The percentage of cores enabled. Value must be a multiple of 25%. If the requested percentage
-                              results in a fractional number of cores, the system rounds up the number of cores across processors
-                              and provisions an instance with a whole number of cores.
-                              If the applications that you run on the instance use a core-based licensing model and need fewer cores
-                              than the full size of the shape, you can disable cores to reduce your licensing costs. The instance
-                              itself is billed for the full shape, regardless of whether all cores are enabled.
                             type: integer
                         type: object
                       amdRomeBmGpuPlatformConfig:
-                        description: AmdMilanBmPlatformConfig describe AMD Rome BM
-                          platform configuration
                         properties:
                           areVirtualInstructionsEnabled:
-                            description: |-
-                              Whether virtualization instructions are available. For example, Secure Virtual Machine for AMD shapes
-                              or VT-x for Intel shapes.
                             type: boolean
+                          configMap:
+                            additionalProperties:
+                              type: string
+                            type: object
                           isAccessControlServiceEnabled:
-                            description: |-
-                              Whether the Access Control Service is enabled on the instance. When enabled,
-                              the platform can enforce PCIe device isolation, required for VFIO device pass-through.
                             type: boolean
                           isInputOutputMemoryManagementUnitEnabled:
-                            description: Whether the input-output memory management
-                              unit is enabled.
                             type: boolean
                           isMeasuredBootEnabled:
-                            description: Whether the Measured Boot feature is enabled
-                              on the instance.
                             type: boolean
                           isMemoryEncryptionEnabled:
-                            description: Whether the instance is a confidential instance.
-                              If this value is `true`, the instance is a confidential
-                              instance. The default value is `false`.
                             type: boolean
                           isSecureBootEnabled:
-                            description: Whether Secure Boot is enabled on the instance.
                             type: boolean
                           isSymmetricMultiThreadingEnabled:
-                            description: |-
-                              Whether symmetric multithreading is enabled on the instance. Symmetric multithreading is also
-                              called simultaneous multithreading (SMT) or Intel Hyper-Threading.
-                              Intel and AMD processors have two hardware execution threads per core (OCPU). SMT permits multiple
-                              independent threads of execution, to better use the resources and increase the efficiency
-                              of the CPU. When multithreading is disabled, only one thread is permitted to run on each core, which
-                              can provide higher or more predictable performance for some workloads.
                             type: boolean
                           isTrustedPlatformModuleEnabled:
-                            description: Whether the Trusted Platform Module (TPM)
-                              is enabled on the instance.
                             type: boolean
                           numaNodesPerSocket:
-                            description: |-
-                              The number of NUMA nodes per socket (NPS).
-                              The following values are supported:
-                              * `NPS0`
-                              * `NPS1`
-                              * `NPS2`
-                              * `NPS4`
                             type: string
                         type: object
                       amdRomeBmPlatformConfig:
-                        description: AmdMilanBmPlatformConfig describe AMD Rome BM
-                          platform configuration
                         properties:
                           areVirtualInstructionsEnabled:
-                            description: |-
-                              Whether virtualization instructions are available. For example, Secure Virtual Machine for AMD shapes
-                              or VT-x for Intel shapes.
                             type: boolean
+                          configMap:
+                            additionalProperties:
+                              type: string
+                            type: object
                           isAccessControlServiceEnabled:
-                            description: |-
-                              Whether the Access Control Service is enabled on the instance. When enabled,
-                              the platform can enforce PCIe device isolation, required for VFIO device pass-through.
                             type: boolean
                           isInputOutputMemoryManagementUnitEnabled:
-                            description: Whether the input-output memory management
-                              unit is enabled.
                             type: boolean
                           isMeasuredBootEnabled:
-                            description: Whether the Measured Boot feature is enabled
-                              on the instance.
                             type: boolean
                           isMemoryEncryptionEnabled:
-                            description: Whether the instance is a confidential instance.
-                              If this value is `true`, the instance is a confidential
-                              instance. The default value is `false`.
                             type: boolean
                           isSecureBootEnabled:
-                            description: Whether Secure Boot is enabled on the instance.
                             type: boolean
                           isSymmetricMultiThreadingEnabled:
-                            description: |-
-                              Whether symmetric multithreading is enabled on the instance. Symmetric multithreading is also
-                              called simultaneous multithreading (SMT) or Intel Hyper-Threading.
-                              Intel and AMD processors have two hardware execution threads per core (OCPU). SMT permits multiple
-                              independent threads of execution, to better use the resources and increase the efficiency
-                              of the CPU. When multithreading is disabled, only one thread is permitted to run on each core, which
-                              can provide higher or more predictable performance for some workloads.
                             type: boolean
                           isTrustedPlatformModuleEnabled:
-                            description: Whether the Trusted Platform Module (TPM)
-                              is enabled on the instance.
                             type: boolean
                           numaNodesPerSocket:
-                            description: |-
-                              The number of NUMA nodes per socket (NPS).
-                              The following values are supported:
-                              * `NPS0`
-                              * `NPS1`
-                              * `NPS2`
-                              * `NPS4`
                             type: string
                           percentageOfCoresEnabled:
-                            description: |-
-                              The percentage of cores enabled. Value must be a multiple of 25%. If the requested percentage
-                              results in a fractional number of cores, the system rounds up the number of cores across processors
-                              and provisions an instance with a whole number of cores.
-                              If the applications that you run on the instance use a core-based licensing model and need fewer cores
-                              than the full size of the shape, you can disable cores to reduce your licensing costs. The instance
-                              itself is billed for the full shape, regardless of whether all cores are enabled.
                             type: integer
                         type: object
                       amdVmPlatformConfig:
-                        description: AmdMilanBmPlatformConfig describe AMD VM platform
-                          configuration
                         properties:
                           isMeasuredBootEnabled:
-                            description: Whether the Measured Boot feature is enabled
-                              on the instance.
                             type: boolean
                           isMemoryEncryptionEnabled:
-                            description: Whether the instance is a confidential instance.
-                              If this value is `true`, the instance is a confidential
-                              instance. The default value is `false`.
                             type: boolean
                           isSecureBootEnabled:
-                            description: Whether Secure Boot is enabled on the instance.
+                            type: boolean
+                          isSymmetricMultiThreadingEnabled:
                             type: boolean
                           isTrustedPlatformModuleEnabled:
-                            description: Whether the Trusted Platform Module (TPM)
-                              is enabled on the instance.
                             type: boolean
                         type: object
                       intelIcelakeBmPlatformConfig:
-                        description: AmdMilanBmPlatformConfig describe Intel Skylke
-                          BM platform configuration
                         properties:
+                          configMap:
+                            additionalProperties:
+                              type: string
+                            type: object
                           isInputOutputMemoryManagementUnitEnabled:
-                            description: Whether the input-output memory management
-                              unit is enabled.
                             type: boolean
                           isMeasuredBootEnabled:
-                            description: Whether the Measured Boot feature is enabled
-                              on the instance.
                             type: boolean
                           isMemoryEncryptionEnabled:
-                            description: Whether the instance is a confidential instance.
-                              If this value is `true`, the instance is a confidential
-                              instance. The default value is `false`.
                             type: boolean
                           isSecureBootEnabled:
-                            description: Whether Secure Boot is enabled on the instance.
                             type: boolean
                           isSymmetricMultiThreadingEnabled:
-                            description: |-
-                              Whether symmetric multithreading is enabled on the instance. Symmetric multithreading is also
-                              called simultaneous multithreading (SMT) or Intel Hyper-Threading.
-                              Intel and AMD processors have two hardware execution threads per core (OCPU). SMT permits multiple
-                              independent threads of execution, to better use the resources and increase the efficiency
-                              of the CPU. When multithreading is disabled, only one thread is permitted to run on each core, which
-                              can provide higher or more predictable performance for some workloads.
                             type: boolean
                           isTrustedPlatformModuleEnabled:
-                            description: Whether the Trusted Platform Module (TPM)
-                              is enabled on the instance.
                             type: boolean
                           numaNodesPerSocket:
-                            description: |-
-                              The number of NUMA nodes per socket (NPS).
-                              The following values are supported:
-                              * `NPS1`
-                              * `NPS2`
                             type: string
                           percentageOfCoresEnabled:
-                            description: |-
-                              The percentage of cores enabled. Value must be a multiple of 25%. If the requested percentage
-                              results in a fractional number of cores, the system rounds up the number of cores across processors
-                              and provisions an instance with a whole number of cores.
-                              If the applications that you run on the instance use a core-based licensing model and need fewer cores
-                              than the full size of the shape, you can disable cores to reduce your licensing costs. The instance
-                              itself is billed for the full shape, regardless of whether all cores are enabled.
                             type: integer
                         type: object
                       intelSkylakeBmPlatformConfig:
-                        description: AmdMilanBmPlatformConfig describe Intel Skylke
-                          BM platform configuration
                         properties:
+                          configMap:
+                            additionalProperties:
+                              type: string
+                            type: object
+                          isInputOutputMemoryManagementUnitEnabled:
+                            type: boolean
                           isMeasuredBootEnabled:
-                            description: Whether the Measured Boot feature is enabled
-                              on the instance.
                             type: boolean
                           isMemoryEncryptionEnabled:
-                            description: Whether the instance is a confidential instance.
-                              If this value is `true`, the instance is a confidential
-                              instance. The default value is `false`.
                             type: boolean
                           isSecureBootEnabled:
-                            description: Whether Secure Boot is enabled on the instance.
+                            type: boolean
+                          isSymmetricMultiThreadingEnabled:
                             type: boolean
                           isTrustedPlatformModuleEnabled:
-                            description: Whether the Trusted Platform Module (TPM)
-                              is enabled on the instance.
                             type: boolean
+                          numaNodesPerSocket:
+                            type: string
+                          percentageOfCoresEnabled:
+                            type: integer
                         type: object
                       intelVmPlatformConfig:
-                        description: AmdMilanBmPlatformConfig describe Intel VM platform
-                          configuration
                         properties:
                           isMeasuredBootEnabled:
-                            description: Whether the Measured Boot feature is enabled
-                              on the instance.
                             type: boolean
                           isMemoryEncryptionEnabled:
-                            description: Whether the instance is a confidential instance.
-                              If this value is `true`, the instance is a confidential
-                              instance. The default value is `false`.
                             type: boolean
                           isSecureBootEnabled:
-                            description: Whether Secure Boot is enabled on the instance.
+                            type: boolean
+                          isSymmetricMultiThreadingEnabled:
                             type: boolean
                           isTrustedPlatformModuleEnabled:
-                            description: Whether the Trusted Platform Module (TPM)
-                              is enabled on the instance.
                             type: boolean
                         type: object
                       platformConfigType:
-                        description: |-
-                          The type of platform configuration. Valid values are
-                          * `AMD_ROME_BM_GPU`
-                          * `AMD_ROME_BM`
-                          * `INTEL_ICELAKE_BM`
-                          * `AMD_VM`
-                          * `INTEL_VM`
-                          * `INTEL_SKYLAKE_BM`
-                          * `AMD_MILAN_BM`
-                          Based on the enum, exactly one of the specific configuration types must be set
+                        description: PlatformConfigTypeEnum defines the type of platform
+                          configuration.
                         type: string
                     type: object
                   preemptibleInstanceConfig:
@@ -624,6 +528,19 @@ spec:
                             type: boolean
                         type: object
                     type: object
+                  preferredMaintenanceAction:
+                    description: PreferredMaintenanceAction defines the preferred
+                      maintenance action for an instance.
+                    type: string
+                  securityAttributes:
+                    additionalProperties:
+                      additionalProperties:
+                        x-kubernetes-preserve-unknown-fields: true
+                      type: object
+                    description: SecurityAttributes are OCI security attributes for
+                      the launched instance.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
                   shape:
                     type: string
                   shapeConfig:
@@ -650,8 +567,19 @@ spec:
                       ocpus:
                         description: The total number of OCPUs available to the instance.
                         type: string
+                      vcpus:
+                        description: The total number of VCPUs available to the instance.
+                        type: integer
                     type: object
                 type: object
+              instanceDisplayNameFormatter:
+                description: InstanceDisplayNameFormatter defines a formatter for
+                  instance display names in the instance pool.
+                type: string
+              instanceHostnameFormatter:
+                description: InstanceHostnameFormatter defines a formatter for instance
+                  hostnames in the instance pool.
+                type: string
               ocid:
                 description: OCID is the OCID of the associated InstancePool
                 type: string
@@ -663,6 +591,34 @@ spec:
                     availabilityDomain:
                       description: The availability domain to place instances.
                       type: integer
+                    primaryVnicSubnets:
+                      description: PrimaryVnicSubnets defines primary VNIC subnet
+                        placement details.
+                      properties:
+                        ipv6AddressIpv6SubnetCidrPairDetails:
+                          description: Ipv6AddressIpv6SubnetCidrPairDetails defines
+                            IPv6 CIDR pair details for placement.
+                          items:
+                            description: InstancePoolPlacementIpv6AddressIpv6SubnetCidrDetails
+                              defines an IPv6 address and subnet CIDR pair for pool
+                              placement.
+                            properties:
+                              ipv6SubnetCidr:
+                                description: Ipv6SubnetCidr is used to disambiguate
+                                  which subnet prefix should be used to create an
+                                  IPv6 allocation.
+                                type: string
+                            type: object
+                          type: array
+                        isAssignIpv6Ip:
+                          description: IsAssignIpv6Ip determines whether to assign
+                            an IPv6 address at instance and VNIC creation.
+                          type: boolean
+                        subnetId:
+                          description: SubnetId defines the subnet OCID for the primary
+                            VNIC.
+                          type: string
+                      type: object
                   required:
                   - availabilityDomain
                   type: object
@@ -875,6 +831,10 @@ spec:
                       You can opt out of all default reservations by specifying an empty string as input for this field.
                       For more information, see Capacity Reservations (https://docs.cloud.oracle.com/iaas/Content/Compute/Tasks/reserve-capacity.htm#default).
                     type: string
+                  clusterPlacementGroupId:
+                    description: ClusterPlacementGroupId defines the OCID of the cluster
+                      placement group of the instance.
+                    type: string
                   dedicatedVmHostId:
                     description: DedicatedVmHostId defines the OCID of the dedicated
                       VM host.
@@ -931,11 +891,11 @@ spec:
                         type: string
                     type: object
                   instanceVnicConfiguration:
-                    description: NetworkDetails defines the configuration options
-                      for the network
+                    description: MachinePoolNetworkDetails defines the configuration
+                      options for the MachinePool primary VNIC.
                     properties:
                       assignIpv6Ip:
-                        description: AssignIPv6 determines whether to assign a IPv6
+                        description: AssignIPv6 determines whether to assign an IPv6
                           address to the instance.
                         type: boolean
                       assignPrivateDnsRecord:
@@ -944,7 +904,7 @@ spec:
                         type: boolean
                       assignPublicIp:
                         description: AssignPublicIp defines whether the instance should
-                          have a public IP address
+                          have a public IP address.
                         type: boolean
                       displayName:
                         description: |-
@@ -955,10 +915,28 @@ spec:
                         description: HostnameLabel defines the hostname for the VNIC's
                           primary private IP. Used for DNS.
                         type: string
+                      ipv6AddressIpv6SubnetCidrPairDetails:
+                        description: Ipv6AddressIpv6SubnetCidrPairDetails defines
+                          IPv6 CIDR pair details for the primary VNIC.
+                        items:
+                          description: InstanceConfigurationIpv6AddressIpv6SubnetCidrPairDetails
+                            defines an IPv6 address and subnet CIDR pair.
+                          properties:
+                            ipv6Address:
+                              description: Ipv6Address is an available IPv6 address
+                                of the subnet from a valid IPv6 prefix.
+                              type: string
+                            ipv6SubnetCidr:
+                              description: Ipv6SubnetCidr is used to disambiguate
+                                which subnet prefix should be used to create an IPv6
+                                allocation.
+                              type: string
+                          type: object
+                        type: array
                       nsgId:
                         description: |-
                           NSGId defines the ID of the NSG to use. This parameter takes priority over NsgNames.
-                          Deprecated, please use NetworkDetails.NSGIds
+                          Deprecated, please use MachinePoolNetworkDetails.NSGIds.
                         type: string
                       nsgIds:
                         description: NSGIds defines the list of NSG IDs to use. This
@@ -972,6 +950,15 @@ spec:
                         items:
                           type: string
                         type: array
+                      securityAttributes:
+                        additionalProperties:
+                          additionalProperties:
+                            x-kubernetes-preserve-unknown-fields: true
+                          type: object
+                        description: SecurityAttributes are OCI security attributes
+                          for the primary VNIC.
+                        type: object
+                        x-kubernetes-preserve-unknown-fields: true
                       skipSourceDestCheck:
                         description: SkipSourceDestCheck defines whether the source/destination
                           check is disabled on the VNIC.
@@ -982,12 +969,20 @@ spec:
                         type: string
                       subnetName:
                         description: SubnetName defines the subnet name to use for
-                          the VNIC
+                          the VNIC.
                         type: string
                     type: object
+                  ipxeScript:
+                    description: IpxeScript is the custom iPXE script that will run
+                      when the instance boots.
+                    type: string
                   isPvEncryptionInTransitEnabled:
                     description: Is in transit encryption of volumes required.
                     type: boolean
+                  launchMode:
+                    description: LaunchMode specifies the configuration mode for launching
+                      virtual machine instances.
+                    type: string
                   launchOptions:
                     description: LaunchOptions defines the options for tuning the
                       compatibility and performance of VM shapes
@@ -1036,6 +1031,21 @@ spec:
                           storage volumes on platform images.
                         type: string
                     type: object
+                  licensingConfigs:
+                    description: LicensingConfigs defines licensing configurations
+                      associated with target launch values.
+                    items:
+                      description: LaunchInstanceLicensingConfig defines a launch
+                        licensing configuration.
+                      properties:
+                        licenseType:
+                          description: LicenseType defines the OS license type.
+                          type: string
+                        type:
+                          description: Type identifies the licensing config type.
+                          type: string
+                      type: object
+                    type: array
                   metadata:
                     additionalProperties:
                       type: string
@@ -1047,306 +1057,183 @@ spec:
                     description: PlatformConfig defines the platform config parameters
                     properties:
                       amdMilanBmPlatformConfig:
-                        description: AmdMilanBmPlatformConfig describe AMD Milan BM
-                          platform configuration
+                        description: AmdMilanBmPlatformConfig describes AMD Milan
+                          BM platform configuration.
                         properties:
                           areVirtualInstructionsEnabled:
-                            description: |-
-                              Whether virtualization instructions are available. For example, Secure Virtual Machine for AMD shapes
-                              or VT-x for Intel shapes.
                             type: boolean
+                          configMap:
+                            additionalProperties:
+                              type: string
+                            type: object
                           isAccessControlServiceEnabled:
-                            description: |-
-                              Whether the Access Control Service is enabled on the instance. When enabled,
-                              the platform can enforce PCIe device isolation, required for VFIO device pass-through.
                             type: boolean
                           isInputOutputMemoryManagementUnitEnabled:
-                            description: Whether the input-output memory management
-                              unit is enabled.
                             type: boolean
                           isMeasuredBootEnabled:
-                            description: Whether the Measured Boot feature is enabled
-                              on the instance.
                             type: boolean
                           isMemoryEncryptionEnabled:
-                            description: Whether the instance is a confidential instance.
-                              If this value is `true`, the instance is a confidential
-                              instance. The default value is `false`.
                             type: boolean
                           isSecureBootEnabled:
-                            description: Whether Secure Boot is enabled on the instance.
                             type: boolean
                           isSymmetricMultiThreadingEnabled:
-                            description: |-
-                              Whether symmetric multithreading is enabled on the instance. Symmetric multithreading is also
-                              called simultaneous multithreading (SMT) or Intel Hyper-Threading.
-                              Intel and AMD processors have two hardware execution threads per core (OCPU). SMT permits multiple
-                              independent threads of execution, to better use the resources and increase the efficiency
-                              of the CPU. When multithreading is disabled, only one thread is permitted to run on each core, which
-                              can provide higher or more predictable performance for some workloads.
                             type: boolean
                           isTrustedPlatformModuleEnabled:
-                            description: Whether the Trusted Platform Module (TPM)
-                              is enabled on the instance.
                             type: boolean
                           numaNodesPerSocket:
-                            description: |-
-                              The number of NUMA nodes per socket (NPS).
-                              The following values are supported:
-                              * `NPS0`
-                              * `NPS1`
-                              * `NPS2`
-                              * `NPS4`
+                            description: AmdMilanBmPlatformConfigNumaNodesPerSocketEnum
+                              defines AMD Milan NUMA node options.
                             type: string
                           percentageOfCoresEnabled:
-                            description: |-
-                              The percentage of cores enabled. Value must be a multiple of 25%. If the requested percentage
-                              results in a fractional number of cores, the system rounds up the number of cores across processors
-                              and provisions an instance with a whole number of cores.
-                              If the applications that you run on the instance use a core-based licensing model and need fewer cores
-                              than the full size of the shape, you can disable cores to reduce your licensing costs. The instance
-                              itself is billed for the full shape, regardless of whether all cores are enabled.
                             type: integer
                         type: object
                       amdRomeBmGpuPlatformConfig:
-                        description: AmdMilanBmPlatformConfig describe AMD Rome BM
-                          platform configuration
+                        description: AmdRomeBmGpuPlatformConfig describes AMD Rome
+                          BM GPU platform configuration.
                         properties:
                           areVirtualInstructionsEnabled:
-                            description: |-
-                              Whether virtualization instructions are available. For example, Secure Virtual Machine for AMD shapes
-                              or VT-x for Intel shapes.
                             type: boolean
+                          configMap:
+                            additionalProperties:
+                              type: string
+                            type: object
                           isAccessControlServiceEnabled:
-                            description: |-
-                              Whether the Access Control Service is enabled on the instance. When enabled,
-                              the platform can enforce PCIe device isolation, required for VFIO device pass-through.
                             type: boolean
                           isInputOutputMemoryManagementUnitEnabled:
-                            description: Whether the input-output memory management
-                              unit is enabled.
                             type: boolean
                           isMeasuredBootEnabled:
-                            description: Whether the Measured Boot feature is enabled
-                              on the instance.
                             type: boolean
                           isMemoryEncryptionEnabled:
-                            description: Whether the instance is a confidential instance.
-                              If this value is `true`, the instance is a confidential
-                              instance. The default value is `false`.
                             type: boolean
                           isSecureBootEnabled:
-                            description: Whether Secure Boot is enabled on the instance.
                             type: boolean
                           isSymmetricMultiThreadingEnabled:
-                            description: |-
-                              Whether symmetric multithreading is enabled on the instance. Symmetric multithreading is also
-                              called simultaneous multithreading (SMT) or Intel Hyper-Threading.
-                              Intel and AMD processors have two hardware execution threads per core (OCPU). SMT permits multiple
-                              independent threads of execution, to better use the resources and increase the efficiency
-                              of the CPU. When multithreading is disabled, only one thread is permitted to run on each core, which
-                              can provide higher or more predictable performance for some workloads.
                             type: boolean
                           isTrustedPlatformModuleEnabled:
-                            description: Whether the Trusted Platform Module (TPM)
-                              is enabled on the instance.
                             type: boolean
                           numaNodesPerSocket:
-                            description: |-
-                              The number of NUMA nodes per socket (NPS).
-                              The following values are supported:
-                              * `NPS0`
-                              * `NPS1`
-                              * `NPS2`
-                              * `NPS4`
+                            description: AmdRomeBmGpuPlatformConfigNumaNodesPerSocketEnum
+                              defines AMD Rome GPU NUMA node options.
                             type: string
                         type: object
                       amdRomeBmPlatformConfig:
-                        description: AmdMilanBmPlatformConfig describe AMD Rome BM
-                          platform configuration
+                        description: AmdRomeBmPlatformConfig describes AMD Rome BM
+                          platform configuration.
                         properties:
                           areVirtualInstructionsEnabled:
-                            description: |-
-                              Whether virtualization instructions are available. For example, Secure Virtual Machine for AMD shapes
-                              or VT-x for Intel shapes.
                             type: boolean
+                          configMap:
+                            additionalProperties:
+                              type: string
+                            type: object
                           isAccessControlServiceEnabled:
-                            description: |-
-                              Whether the Access Control Service is enabled on the instance. When enabled,
-                              the platform can enforce PCIe device isolation, required for VFIO device pass-through.
                             type: boolean
                           isInputOutputMemoryManagementUnitEnabled:
-                            description: Whether the input-output memory management
-                              unit is enabled.
                             type: boolean
                           isMeasuredBootEnabled:
-                            description: Whether the Measured Boot feature is enabled
-                              on the instance.
                             type: boolean
                           isMemoryEncryptionEnabled:
-                            description: Whether the instance is a confidential instance.
-                              If this value is `true`, the instance is a confidential
-                              instance. The default value is `false`.
                             type: boolean
                           isSecureBootEnabled:
-                            description: Whether Secure Boot is enabled on the instance.
                             type: boolean
                           isSymmetricMultiThreadingEnabled:
-                            description: |-
-                              Whether symmetric multithreading is enabled on the instance. Symmetric multithreading is also
-                              called simultaneous multithreading (SMT) or Intel Hyper-Threading.
-                              Intel and AMD processors have two hardware execution threads per core (OCPU). SMT permits multiple
-                              independent threads of execution, to better use the resources and increase the efficiency
-                              of the CPU. When multithreading is disabled, only one thread is permitted to run on each core, which
-                              can provide higher or more predictable performance for some workloads.
                             type: boolean
                           isTrustedPlatformModuleEnabled:
-                            description: Whether the Trusted Platform Module (TPM)
-                              is enabled on the instance.
                             type: boolean
                           numaNodesPerSocket:
-                            description: |-
-                              The number of NUMA nodes per socket (NPS).
-                              The following values are supported:
-                              * `NPS0`
-                              * `NPS1`
-                              * `NPS2`
-                              * `NPS4`
+                            description: AmdRomeBmPlatformConfigNumaNodesPerSocketEnum
+                              defines AMD Rome NUMA node options.
                             type: string
                           percentageOfCoresEnabled:
-                            description: |-
-                              The percentage of cores enabled. Value must be a multiple of 25%. If the requested percentage
-                              results in a fractional number of cores, the system rounds up the number of cores across processors
-                              and provisions an instance with a whole number of cores.
-                              If the applications that you run on the instance use a core-based licensing model and need fewer cores
-                              than the full size of the shape, you can disable cores to reduce your licensing costs. The instance
-                              itself is billed for the full shape, regardless of whether all cores are enabled.
                             type: integer
                         type: object
                       amdVmPlatformConfig:
-                        description: AmdMilanBmPlatformConfig describe AMD VM platform
-                          configuration
+                        description: AmdVmPlatformConfig describes AMD VM platform
+                          configuration.
                         properties:
                           isMeasuredBootEnabled:
-                            description: Whether the Measured Boot feature is enabled
-                              on the instance.
                             type: boolean
                           isMemoryEncryptionEnabled:
-                            description: Whether the instance is a confidential instance.
-                              If this value is `true`, the instance is a confidential
-                              instance. The default value is `false`.
                             type: boolean
                           isSecureBootEnabled:
-                            description: Whether Secure Boot is enabled on the instance.
+                            type: boolean
+                          isSymmetricMultiThreadingEnabled:
                             type: boolean
                           isTrustedPlatformModuleEnabled:
-                            description: Whether the Trusted Platform Module (TPM)
-                              is enabled on the instance.
                             type: boolean
                         type: object
                       intelIcelakeBmPlatformConfig:
-                        description: AmdMilanBmPlatformConfig describe Intel Skylke
-                          BM platform configuration
+                        description: IntelIcelakeBmPlatformConfig describes Intel
+                          Icelake BM platform configuration.
                         properties:
+                          configMap:
+                            additionalProperties:
+                              type: string
+                            type: object
                           isInputOutputMemoryManagementUnitEnabled:
-                            description: Whether the input-output memory management
-                              unit is enabled.
                             type: boolean
                           isMeasuredBootEnabled:
-                            description: Whether the Measured Boot feature is enabled
-                              on the instance.
                             type: boolean
                           isMemoryEncryptionEnabled:
-                            description: Whether the instance is a confidential instance.
-                              If this value is `true`, the instance is a confidential
-                              instance. The default value is `false`.
                             type: boolean
                           isSecureBootEnabled:
-                            description: Whether Secure Boot is enabled on the instance.
                             type: boolean
                           isSymmetricMultiThreadingEnabled:
-                            description: |-
-                              Whether symmetric multithreading is enabled on the instance. Symmetric multithreading is also
-                              called simultaneous multithreading (SMT) or Intel Hyper-Threading.
-                              Intel and AMD processors have two hardware execution threads per core (OCPU). SMT permits multiple
-                              independent threads of execution, to better use the resources and increase the efficiency
-                              of the CPU. When multithreading is disabled, only one thread is permitted to run on each core, which
-                              can provide higher or more predictable performance for some workloads.
                             type: boolean
                           isTrustedPlatformModuleEnabled:
-                            description: Whether the Trusted Platform Module (TPM)
-                              is enabled on the instance.
                             type: boolean
                           numaNodesPerSocket:
-                            description: |-
-                              The number of NUMA nodes per socket (NPS).
-                              The following values are supported:
-                              * `NPS1`
-                              * `NPS2`
+                            description: IntelIcelakeBmPlatformConfigNumaNodesPerSocketEnum
+                              defines Intel Icelake NUMA node options.
                             type: string
                           percentageOfCoresEnabled:
-                            description: |-
-                              The percentage of cores enabled. Value must be a multiple of 25%. If the requested percentage
-                              results in a fractional number of cores, the system rounds up the number of cores across processors
-                              and provisions an instance with a whole number of cores.
-                              If the applications that you run on the instance use a core-based licensing model and need fewer cores
-                              than the full size of the shape, you can disable cores to reduce your licensing costs. The instance
-                              itself is billed for the full shape, regardless of whether all cores are enabled.
                             type: integer
                         type: object
                       intelSkylakeBmPlatformConfig:
-                        description: AmdMilanBmPlatformConfig describe Intel Skylke
-                          BM platform configuration
+                        description: IntelSkylakeBmPlatformConfig describes Intel
+                          Skylake BM platform configuration.
                         properties:
+                          configMap:
+                            additionalProperties:
+                              type: string
+                            type: object
+                          isInputOutputMemoryManagementUnitEnabled:
+                            type: boolean
                           isMeasuredBootEnabled:
-                            description: Whether the Measured Boot feature is enabled
-                              on the instance.
                             type: boolean
                           isMemoryEncryptionEnabled:
-                            description: Whether the instance is a confidential instance.
-                              If this value is `true`, the instance is a confidential
-                              instance. The default value is `false`.
                             type: boolean
                           isSecureBootEnabled:
-                            description: Whether Secure Boot is enabled on the instance.
+                            type: boolean
+                          isSymmetricMultiThreadingEnabled:
                             type: boolean
                           isTrustedPlatformModuleEnabled:
-                            description: Whether the Trusted Platform Module (TPM)
-                              is enabled on the instance.
                             type: boolean
+                          numaNodesPerSocket:
+                            description: IntelSkylakeBmPlatformConfigNumaNodesPerSocketEnum
+                              defines Intel Skylake NUMA node options.
+                            type: string
+                          percentageOfCoresEnabled:
+                            type: integer
                         type: object
                       intelVmPlatformConfig:
-                        description: AmdMilanBmPlatformConfig describe Intel VM platform
-                          configuration
+                        description: IntelVmPlatformConfig describes Intel VM platform
+                          configuration.
                         properties:
                           isMeasuredBootEnabled:
-                            description: Whether the Measured Boot feature is enabled
-                              on the instance.
                             type: boolean
                           isMemoryEncryptionEnabled:
-                            description: Whether the instance is a confidential instance.
-                              If this value is `true`, the instance is a confidential
-                              instance. The default value is `false`.
                             type: boolean
                           isSecureBootEnabled:
-                            description: Whether Secure Boot is enabled on the instance.
+                            type: boolean
+                          isSymmetricMultiThreadingEnabled:
                             type: boolean
                           isTrustedPlatformModuleEnabled:
-                            description: Whether the Trusted Platform Module (TPM)
-                              is enabled on the instance.
                             type: boolean
                         type: object
                       platformConfigType:
-                        description: |-
-                          The type of platform configuration. Valid values are
-                          * `AMD_ROME_BM_GPU`
-                          * `AMD_ROME_BM`
-                          * `INTEL_ICELAKE_BM`
-                          * `AMD_VM`
-                          * `INTEL_VM`
-                          * `INTEL_SKYLAKE_BM`
-                          * `AMD_MILAN_BM`
-                          Based on the enum, exactly one of the specific configuration types must be set
+                        description: PlatformConfigTypeEnum defines the type of platform
+                          configuration.
                         type: string
                     type: object
                   preemptibleInstanceConfig:
@@ -1365,6 +1252,19 @@ spec:
                             type: boolean
                         type: object
                     type: object
+                  preferredMaintenanceAction:
+                    description: PreferredMaintenanceAction defines the preferred
+                      maintenance action for an instance.
+                    type: string
+                  securityAttributes:
+                    additionalProperties:
+                      additionalProperties:
+                        x-kubernetes-preserve-unknown-fields: true
+                      type: object
+                    description: SecurityAttributes are OCI security attributes for
+                      the launched instance.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
                   shape:
                     type: string
                   shapeConfig:
@@ -1391,8 +1291,19 @@ spec:
                       ocpus:
                         description: The total number of OCPUs available to the instance.
                         type: string
+                      vcpus:
+                        description: The total number of VCPUs available to the instance.
+                        type: integer
                     type: object
                 type: object
+              instanceDisplayNameFormatter:
+                description: InstanceDisplayNameFormatter defines a formatter for
+                  instance display names in the instance pool.
+                type: string
+              instanceHostnameFormatter:
+                description: InstanceHostnameFormatter defines a formatter for instance
+                  hostnames in the instance pool.
+                type: string
               ocid:
                 description: OCID is the OCID of the associated InstancePool
                 type: string
@@ -1404,6 +1315,34 @@ spec:
                     availabilityDomain:
                       description: The availability domain to place instances.
                       type: integer
+                    primaryVnicSubnets:
+                      description: PrimaryVnicSubnets defines primary VNIC subnet
+                        placement details.
+                      properties:
+                        ipv6AddressIpv6SubnetCidrPairDetails:
+                          description: Ipv6AddressIpv6SubnetCidrPairDetails defines
+                            IPv6 CIDR pair details for placement.
+                          items:
+                            description: InstancePoolPlacementIpv6AddressIpv6SubnetCidrDetails
+                              defines an IPv6 address and subnet CIDR pair for pool
+                              placement.
+                            properties:
+                              ipv6SubnetCidr:
+                                description: Ipv6SubnetCidr is used to disambiguate
+                                  which subnet prefix should be used to create an
+                                  IPv6 allocation.
+                                type: string
+                            type: object
+                          type: array
+                        isAssignIpv6Ip:
+                          description: IsAssignIpv6Ip determines whether to assign
+                            an IPv6 address at instance and VNIC creation.
+                          type: boolean
+                        subnetId:
+                          description: SubnetId defines the subnet OCID for the primary
+                            VNIC.
+                          type: string
+                      type: object
                   required:
                   - availabilityDomain
                   type: object

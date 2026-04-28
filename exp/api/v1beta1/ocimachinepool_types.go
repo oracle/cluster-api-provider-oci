@@ -47,6 +47,14 @@ type OCIMachinePoolSpec struct {
 	// InstanceConfiguration defines the configuration of the instance pool instances.
 	InstanceConfiguration InstanceConfiguration `json:"instanceConfiguration,omitempty"`
 
+	// InstanceDisplayNameFormatter defines a formatter for instance display names in the instance pool.
+	// +optional
+	InstanceDisplayNameFormatter *string `json:"instanceDisplayNameFormatter,omitempty"`
+
+	// InstanceHostnameFormatter defines a formatter for instance hostnames in the instance pool.
+	// +optional
+	InstanceHostnameFormatter *string `json:"instanceHostnameFormatter,omitempty"`
+
 	// ProviderIDList are the identification IDs of machine instances provided by the provider.
 	// This field must match the provider IDs as seen on the node objects corresponding to a machine pool's machine instances.
 	// +optional
@@ -59,10 +67,10 @@ type InstanceConfiguration struct {
 	// The shape configuration of the instance, applicable for flex instances.
 	ShapeConfig *ShapeConfig `json:"shapeConfig,omitempty"`
 
-	InstanceVnicConfiguration *infrastructurev1beta1.NetworkDetails `json:"instanceVnicConfiguration,omitempty"`
+	InstanceVnicConfiguration *MachinePoolNetworkDetails `json:"instanceVnicConfiguration,omitempty"`
 
 	// PlatformConfig defines the platform config parameters
-	PlatformConfig *infrastructurev1beta1.PlatformConfig `json:"platformConfig,omitempty"`
+	PlatformConfig *PlatformConfig `json:"platformConfig,omitempty"`
 
 	// AgentConfig defines the options for the Oracle Cloud Agent software running on the instance.
 	AgentConfig *infrastructurev1beta1.LaunchInstanceAgentConfig `json:"agentConfig,omitempty"`
@@ -96,6 +104,31 @@ type InstanceConfiguration struct {
 	// For more information, see Capacity Reservations (https://docs.cloud.oracle.com/iaas/Content/Compute/Tasks/reserve-capacity.htm#default).
 	CapacityReservationId *string `json:"capacityReservationId,omitempty"`
 
+	// ClusterPlacementGroupId defines the OCID of the cluster placement group of the instance.
+	// +optional
+	ClusterPlacementGroupId *string `json:"clusterPlacementGroupId,omitempty"`
+
+	// IpxeScript is the custom iPXE script that will run when the instance boots.
+	// +optional
+	IpxeScript *string `json:"ipxeScript,omitempty"`
+
+	// LaunchMode specifies the configuration mode for launching virtual machine instances.
+	// +optional
+	LaunchMode LaunchModeEnum `json:"launchMode,omitempty"`
+
+	// LicensingConfigs defines licensing configurations associated with target launch values.
+	// +optional
+	LicensingConfigs []LaunchInstanceLicensingConfig `json:"licensingConfigs,omitempty"`
+
+	// PreferredMaintenanceAction defines the preferred maintenance action for an instance.
+	// +optional
+	PreferredMaintenanceAction PreferredMaintenanceActionEnum `json:"preferredMaintenanceAction,omitempty"`
+
+	// SecurityAttributes are OCI security attributes for the launched instance.
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +optional
+	SecurityAttributes map[string]map[string]apiextensionsv1.JSON `json:"securityAttributes,omitempty"`
+
 	// Custom metadata key/value pairs that you provide, such as the SSH public key
 	// required to connect to the instance.
 	Metadata map[string]string `json:"metadata,omitempty"`
@@ -109,6 +142,10 @@ type InstanceConfiguration struct {
 type PlacementDetails struct {
 	// The availability domain to place instances.
 	AvailabilityDomain int `mandatory:"true" json:"availabilityDomain"`
+
+	// PrimaryVnicSubnets defines primary VNIC subnet placement details.
+	// +optional
+	PrimaryVnicSubnets *InstancePoolPlacementPrimarySubnet `json:"primaryVnicSubnets,omitempty"`
 }
 
 // LaunchDetails Instance launch details for creating an instance from an instance configuration
@@ -127,6 +164,9 @@ type ShapeConfig struct {
 	// The total number of OCPUs available to the instance.
 	Ocpus *string `json:"ocpus,omitempty"`
 
+	// The total number of VCPUs available to the instance.
+	Vcpus *int `json:"vcpus,omitempty"`
+
 	// The total amount of memory available to the instance, in gigabytes.
 	MemoryInGBs *string `json:"memoryInGBs,omitempty"`
 
@@ -142,20 +182,34 @@ type ShapeConfig struct {
 	Nvmes *int `json:"nvmes,omitempty"`
 }
 
-// InstanceVnicConfiguration defines the configuration options for the network
-type InstanceVnicConfiguration struct {
+// MachinePoolNetworkDetails defines the configuration options for the MachinePool primary VNIC.
+type MachinePoolNetworkDetails struct {
+	// SubnetId defines the ID of the subnet to use. This parameter takes priority over SubnetName.
+	SubnetId *string `json:"subnetId,omitempty"`
 
-	// AssignPublicIp defines whether the instance should have a public IP address
+	// AssignIPv6 determines whether to assign an IPv6 address to the instance.
+	// +optional
+	AssignIpv6Ip bool `json:"assignIpv6Ip,omitempty"`
+
+	// Ipv6AddressIpv6SubnetCidrPairDetails defines IPv6 CIDR pair details for the primary VNIC.
+	// +optional
+	Ipv6AddressIpv6SubnetCidrPairDetails []InstanceConfigurationIpv6AddressIpv6SubnetCidrPairDetails `json:"ipv6AddressIpv6SubnetCidrPairDetails,omitempty"`
+
+	// AssignPublicIp defines whether the instance should have a public IP address.
 	AssignPublicIp bool `json:"assignPublicIp,omitempty"`
 
-	// SubnetName defines the subnet name to use for the VNIC
+	// SubnetName defines the subnet name to use for the VNIC.
 	SubnetName string `json:"subnetName,omitempty"`
-
-	// Deprecated, use 	NsgNames parameter to define the NSGs
-	NSGId *string `json:"nsgId,omitempty"`
 
 	// SkipSourceDestCheck defines whether the source/destination check is disabled on the VNIC.
 	SkipSourceDestCheck *bool `json:"skipSourceDestCheck,omitempty"`
+
+	// NSGId defines the ID of the NSG to use. This parameter takes priority over NsgNames.
+	// Deprecated, please use MachinePoolNetworkDetails.NSGIds.
+	NSGId *string `json:"nsgId,omitempty"`
+
+	// NSGIds defines the list of NSG IDs to use. This parameter takes priority over NsgNames.
+	NSGIds []string `json:"nsgIds,omitempty"`
 
 	// NsgNames defines a list of the nsg names of the network security groups (NSGs) to add the VNIC to.
 	NsgNames []string `json:"nsgNames,omitempty"`
@@ -169,7 +223,233 @@ type InstanceVnicConfiguration struct {
 
 	// AssignPrivateDnsRecord defines whether the VNIC should be assigned a DNS record.
 	AssignPrivateDnsRecord *bool `json:"assignPrivateDnsRecord,omitempty"`
+
+	// SecurityAttributes are OCI security attributes for the primary VNIC.
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +optional
+	SecurityAttributes map[string]map[string]apiextensionsv1.JSON `json:"securityAttributes,omitempty"`
 }
+
+// InstanceConfigurationIpv6AddressIpv6SubnetCidrPairDetails defines an IPv6 address and subnet CIDR pair.
+type InstanceConfigurationIpv6AddressIpv6SubnetCidrPairDetails struct {
+	// Ipv6SubnetCidr is used to disambiguate which subnet prefix should be used to create an IPv6 allocation.
+	// +optional
+	Ipv6SubnetCidr *string `json:"ipv6SubnetCidr,omitempty"`
+
+	// Ipv6Address is an available IPv6 address of the subnet from a valid IPv6 prefix.
+	// +optional
+	Ipv6Address *string `json:"ipv6Address,omitempty"`
+}
+
+// InstancePoolPlacementPrimarySubnet defines primary VNIC subnet placement details.
+type InstancePoolPlacementPrimarySubnet struct {
+	// SubnetId defines the subnet OCID for the primary VNIC.
+	// +optional
+	SubnetId *string `json:"subnetId,omitempty"`
+
+	// IsAssignIpv6Ip determines whether to assign an IPv6 address at instance and VNIC creation.
+	// +optional
+	IsAssignIpv6Ip *bool `json:"isAssignIpv6Ip,omitempty"`
+
+	// Ipv6AddressIpv6SubnetCidrPairDetails defines IPv6 CIDR pair details for placement.
+	// +optional
+	Ipv6AddressIpv6SubnetCidrPairDetails []InstancePoolPlacementIpv6AddressIpv6SubnetCidrDetails `json:"ipv6AddressIpv6SubnetCidrPairDetails,omitempty"`
+}
+
+// InstancePoolPlacementIpv6AddressIpv6SubnetCidrDetails defines an IPv6 address and subnet CIDR pair for pool placement.
+type InstancePoolPlacementIpv6AddressIpv6SubnetCidrDetails struct {
+	// Ipv6SubnetCidr is used to disambiguate which subnet prefix should be used to create an IPv6 allocation.
+	// +optional
+	Ipv6SubnetCidr *string `json:"ipv6SubnetCidr,omitempty"`
+}
+
+// PlatformConfigTypeEnum defines the type of platform configuration.
+type PlatformConfigTypeEnum string
+
+const (
+	PlatformConfigTypeAmdRomeBmGpu   PlatformConfigTypeEnum = "AMD_ROME_BM_GPU"
+	PlatformConfigTypeAmdRomeBm      PlatformConfigTypeEnum = "AMD_ROME_BM"
+	PlatformConfigTypeIntelIcelakeBm PlatformConfigTypeEnum = "INTEL_ICELAKE_BM"
+	PlatformConfigTypeAmdvm          PlatformConfigTypeEnum = "AMD_VM"
+	PlatformConfigTypeIntelVm        PlatformConfigTypeEnum = "INTEL_VM"
+	PlatformConfigTypeIntelSkylakeBm PlatformConfigTypeEnum = "INTEL_SKYLAKE_BM"
+	PlatformConfigTypeAmdMilanBm     PlatformConfigTypeEnum = "AMD_MILAN_BM"
+)
+
+// PlatformConfig defines the platform config parameters.
+type PlatformConfig struct {
+	PlatformConfigType PlatformConfigTypeEnum `json:"platformConfigType,omitempty"`
+
+	AmdMilanBmPlatformConfig AmdMilanBmPlatformConfig `json:"amdMilanBmPlatformConfig,omitempty"`
+
+	AmdRomeBmPlatformConfig AmdRomeBmPlatformConfig `json:"amdRomeBmPlatformConfig,omitempty"`
+
+	IntelSkylakeBmPlatformConfig IntelSkylakeBmPlatformConfig `json:"intelSkylakeBmPlatformConfig,omitempty"`
+
+	IntelIcelakeBmPlatformConfig IntelIcelakeBmPlatformConfig `json:"intelIcelakeBmPlatformConfig,omitempty"`
+
+	AmdRomeBmGpuPlatformConfig AmdRomeBmGpuPlatformConfig `json:"amdRomeBmGpuPlatformConfig,omitempty"`
+
+	IntelVmPlatformConfig IntelVmPlatformConfig `json:"intelVmPlatformConfig,omitempty"`
+
+	AmdVmPlatformConfig AmdVmPlatformConfig `json:"amdVmPlatformConfig,omitempty"`
+}
+
+type AmdMilanBmPlatformConfigNumaNodesPerSocketEnum string
+
+const (
+	AmdMilanBmPlatformConfigNumaNodesPerSocketNps0 AmdMilanBmPlatformConfigNumaNodesPerSocketEnum = "NPS0"
+	AmdMilanBmPlatformConfigNumaNodesPerSocketNps1 AmdMilanBmPlatformConfigNumaNodesPerSocketEnum = "NPS1"
+	AmdMilanBmPlatformConfigNumaNodesPerSocketNps2 AmdMilanBmPlatformConfigNumaNodesPerSocketEnum = "NPS2"
+	AmdMilanBmPlatformConfigNumaNodesPerSocketNps4 AmdMilanBmPlatformConfigNumaNodesPerSocketEnum = "NPS4"
+)
+
+type AmdMilanBmPlatformConfig struct {
+	IsSecureBootEnabled                      *bool                                          `json:"isSecureBootEnabled,omitempty"`
+	IsTrustedPlatformModuleEnabled           *bool                                          `json:"isTrustedPlatformModuleEnabled,omitempty"`
+	IsMeasuredBootEnabled                    *bool                                          `json:"isMeasuredBootEnabled,omitempty"`
+	IsMemoryEncryptionEnabled                *bool                                          `json:"isMemoryEncryptionEnabled,omitempty"`
+	IsSymmetricMultiThreadingEnabled         *bool                                          `json:"isSymmetricMultiThreadingEnabled,omitempty"`
+	IsAccessControlServiceEnabled            *bool                                          `json:"isAccessControlServiceEnabled,omitempty"`
+	AreVirtualInstructionsEnabled            *bool                                          `json:"areVirtualInstructionsEnabled,omitempty"`
+	IsInputOutputMemoryManagementUnitEnabled *bool                                          `json:"isInputOutputMemoryManagementUnitEnabled,omitempty"`
+	PercentageOfCoresEnabled                 *int                                           `json:"percentageOfCoresEnabled,omitempty"`
+	ConfigMap                                map[string]string                              `json:"configMap,omitempty"`
+	NumaNodesPerSocket                       AmdMilanBmPlatformConfigNumaNodesPerSocketEnum `json:"numaNodesPerSocket,omitempty"`
+}
+
+type AmdRomeBmPlatformConfigNumaNodesPerSocketEnum string
+
+const (
+	AmdRomeBmPlatformConfigNumaNodesPerSocketNps0 AmdRomeBmPlatformConfigNumaNodesPerSocketEnum = "NPS0"
+	AmdRomeBmPlatformConfigNumaNodesPerSocketNps1 AmdRomeBmPlatformConfigNumaNodesPerSocketEnum = "NPS1"
+	AmdRomeBmPlatformConfigNumaNodesPerSocketNps2 AmdRomeBmPlatformConfigNumaNodesPerSocketEnum = "NPS2"
+	AmdRomeBmPlatformConfigNumaNodesPerSocketNps4 AmdRomeBmPlatformConfigNumaNodesPerSocketEnum = "NPS4"
+)
+
+type AmdRomeBmPlatformConfig struct {
+	IsSecureBootEnabled                      *bool                                         `json:"isSecureBootEnabled,omitempty"`
+	IsTrustedPlatformModuleEnabled           *bool                                         `json:"isTrustedPlatformModuleEnabled,omitempty"`
+	IsMeasuredBootEnabled                    *bool                                         `json:"isMeasuredBootEnabled,omitempty"`
+	IsMemoryEncryptionEnabled                *bool                                         `json:"isMemoryEncryptionEnabled,omitempty"`
+	IsSymmetricMultiThreadingEnabled         *bool                                         `json:"isSymmetricMultiThreadingEnabled,omitempty"`
+	IsAccessControlServiceEnabled            *bool                                         `json:"isAccessControlServiceEnabled,omitempty"`
+	AreVirtualInstructionsEnabled            *bool                                         `json:"areVirtualInstructionsEnabled,omitempty"`
+	IsInputOutputMemoryManagementUnitEnabled *bool                                         `json:"isInputOutputMemoryManagementUnitEnabled,omitempty"`
+	PercentageOfCoresEnabled                 *int                                          `json:"percentageOfCoresEnabled,omitempty"`
+	ConfigMap                                map[string]string                             `json:"configMap,omitempty"`
+	NumaNodesPerSocket                       AmdRomeBmPlatformConfigNumaNodesPerSocketEnum `json:"numaNodesPerSocket,omitempty"`
+}
+
+type IntelSkylakeBmPlatformConfigNumaNodesPerSocketEnum string
+
+const (
+	IntelSkylakeBmPlatformConfigNumaNodesPerSocketNps1 IntelSkylakeBmPlatformConfigNumaNodesPerSocketEnum = "NPS1"
+	IntelSkylakeBmPlatformConfigNumaNodesPerSocketNps2 IntelSkylakeBmPlatformConfigNumaNodesPerSocketEnum = "NPS2"
+)
+
+type IntelSkylakeBmPlatformConfig struct {
+	IsSecureBootEnabled                      *bool                                              `json:"isSecureBootEnabled,omitempty"`
+	IsTrustedPlatformModuleEnabled           *bool                                              `json:"isTrustedPlatformModuleEnabled,omitempty"`
+	IsMeasuredBootEnabled                    *bool                                              `json:"isMeasuredBootEnabled,omitempty"`
+	IsMemoryEncryptionEnabled                *bool                                              `json:"isMemoryEncryptionEnabled,omitempty"`
+	IsSymmetricMultiThreadingEnabled         *bool                                              `json:"isSymmetricMultiThreadingEnabled,omitempty"`
+	IsInputOutputMemoryManagementUnitEnabled *bool                                              `json:"isInputOutputMemoryManagementUnitEnabled,omitempty"`
+	PercentageOfCoresEnabled                 *int                                               `json:"percentageOfCoresEnabled,omitempty"`
+	ConfigMap                                map[string]string                                  `json:"configMap,omitempty"`
+	NumaNodesPerSocket                       IntelSkylakeBmPlatformConfigNumaNodesPerSocketEnum `json:"numaNodesPerSocket,omitempty"`
+}
+
+type AmdRomeBmGpuPlatformConfigNumaNodesPerSocketEnum string
+
+const (
+	AmdRomeBmGpuPlatformConfigNumaNodesPerSocketNps0 AmdRomeBmGpuPlatformConfigNumaNodesPerSocketEnum = "NPS0"
+	AmdRomeBmGpuPlatformConfigNumaNodesPerSocketNps1 AmdRomeBmGpuPlatformConfigNumaNodesPerSocketEnum = "NPS1"
+	AmdRomeBmGpuPlatformConfigNumaNodesPerSocketNps2 AmdRomeBmGpuPlatformConfigNumaNodesPerSocketEnum = "NPS2"
+	AmdRomeBmGpuPlatformConfigNumaNodesPerSocketNps4 AmdRomeBmGpuPlatformConfigNumaNodesPerSocketEnum = "NPS4"
+)
+
+type AmdRomeBmGpuPlatformConfig struct {
+	IsSecureBootEnabled                      *bool                                            `json:"isSecureBootEnabled,omitempty"`
+	IsTrustedPlatformModuleEnabled           *bool                                            `json:"isTrustedPlatformModuleEnabled,omitempty"`
+	IsMeasuredBootEnabled                    *bool                                            `json:"isMeasuredBootEnabled,omitempty"`
+	IsMemoryEncryptionEnabled                *bool                                            `json:"isMemoryEncryptionEnabled,omitempty"`
+	IsSymmetricMultiThreadingEnabled         *bool                                            `json:"isSymmetricMultiThreadingEnabled,omitempty"`
+	IsAccessControlServiceEnabled            *bool                                            `json:"isAccessControlServiceEnabled,omitempty"`
+	AreVirtualInstructionsEnabled            *bool                                            `json:"areVirtualInstructionsEnabled,omitempty"`
+	IsInputOutputMemoryManagementUnitEnabled *bool                                            `json:"isInputOutputMemoryManagementUnitEnabled,omitempty"`
+	ConfigMap                                map[string]string                                `json:"configMap,omitempty"`
+	NumaNodesPerSocket                       AmdRomeBmGpuPlatformConfigNumaNodesPerSocketEnum `json:"numaNodesPerSocket,omitempty"`
+}
+
+type IntelIcelakeBmPlatformConfigNumaNodesPerSocketEnum string
+
+const (
+	IntelIcelakeBmPlatformConfigNumaNodesPerSocketNps1 IntelIcelakeBmPlatformConfigNumaNodesPerSocketEnum = "NPS1"
+	IntelIcelakeBmPlatformConfigNumaNodesPerSocketNps2 IntelIcelakeBmPlatformConfigNumaNodesPerSocketEnum = "NPS2"
+)
+
+type IntelIcelakeBmPlatformConfig struct {
+	IsSecureBootEnabled                      *bool                                              `json:"isSecureBootEnabled,omitempty"`
+	IsTrustedPlatformModuleEnabled           *bool                                              `json:"isTrustedPlatformModuleEnabled,omitempty"`
+	IsMeasuredBootEnabled                    *bool                                              `json:"isMeasuredBootEnabled,omitempty"`
+	IsMemoryEncryptionEnabled                *bool                                              `json:"isMemoryEncryptionEnabled,omitempty"`
+	IsSymmetricMultiThreadingEnabled         *bool                                              `json:"isSymmetricMultiThreadingEnabled,omitempty"`
+	IsInputOutputMemoryManagementUnitEnabled *bool                                              `json:"isInputOutputMemoryManagementUnitEnabled,omitempty"`
+	PercentageOfCoresEnabled                 *int                                               `json:"percentageOfCoresEnabled,omitempty"`
+	ConfigMap                                map[string]string                                  `json:"configMap,omitempty"`
+	NumaNodesPerSocket                       IntelIcelakeBmPlatformConfigNumaNodesPerSocketEnum `json:"numaNodesPerSocket,omitempty"`
+}
+
+type IntelVmPlatformConfig struct {
+	IsSecureBootEnabled              *bool `json:"isSecureBootEnabled,omitempty"`
+	IsTrustedPlatformModuleEnabled   *bool `json:"isTrustedPlatformModuleEnabled,omitempty"`
+	IsMeasuredBootEnabled            *bool `json:"isMeasuredBootEnabled,omitempty"`
+	IsMemoryEncryptionEnabled        *bool `json:"isMemoryEncryptionEnabled,omitempty"`
+	IsSymmetricMultiThreadingEnabled *bool `json:"isSymmetricMultiThreadingEnabled,omitempty"`
+}
+
+type AmdVmPlatformConfig struct {
+	IsSecureBootEnabled              *bool `json:"isSecureBootEnabled,omitempty"`
+	IsTrustedPlatformModuleEnabled   *bool `json:"isTrustedPlatformModuleEnabled,omitempty"`
+	IsMeasuredBootEnabled            *bool `json:"isMeasuredBootEnabled,omitempty"`
+	IsMemoryEncryptionEnabled        *bool `json:"isMemoryEncryptionEnabled,omitempty"`
+	IsSymmetricMultiThreadingEnabled *bool `json:"isSymmetricMultiThreadingEnabled,omitempty"`
+}
+
+type LaunchModeEnum string
+
+const (
+	LaunchModeNative          LaunchModeEnum = "NATIVE"
+	LaunchModeEmulated        LaunchModeEnum = "EMULATED"
+	LaunchModeParavirtualized LaunchModeEnum = "PARAVIRTUALIZED"
+	LaunchModeCustom          LaunchModeEnum = "CUSTOM"
+)
+
+type PreferredMaintenanceActionEnum string
+
+const (
+	PreferredMaintenanceActionLiveMigrate PreferredMaintenanceActionEnum = "LIVE_MIGRATE"
+	PreferredMaintenanceActionReboot      PreferredMaintenanceActionEnum = "REBOOT"
+)
+
+type LaunchInstanceLicensingConfig struct {
+	Type        LaunchInstanceLicensingConfigTypeEnum        `json:"type,omitempty"`
+	LicenseType LaunchInstanceLicensingConfigLicenseTypeEnum `json:"licenseType,omitempty"`
+}
+
+type LaunchInstanceLicensingConfigTypeEnum string
+
+const (
+	LaunchInstanceLicensingConfigTypeWindows LaunchInstanceLicensingConfigTypeEnum = "WINDOWS"
+)
+
+type LaunchInstanceLicensingConfigLicenseTypeEnum string
+
+const (
+	LaunchInstanceLicensingConfigLicenseTypeOCIProvided         LaunchInstanceLicensingConfigLicenseTypeEnum = "OCI_PROVIDED"
+	LaunchInstanceLicensingConfigLicenseTypeBringYourOwnLicense LaunchInstanceLicensingConfigLicenseTypeEnum = "BRING_YOUR_OWN_LICENSE"
+)
 
 // InstanceSourceViaImageConfig The configuration options for booting up instances via images
 type InstanceSourceViaImageConfig struct {

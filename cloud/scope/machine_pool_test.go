@@ -221,7 +221,7 @@ func TestInstanceConfigCreate(t *testing.T) {
 						BaselineOcpuUtilization: "BASELINE_1_1",
 						Nvmes:                   common.Int(5),
 					},
-					InstanceVnicConfiguration: &infrastructurev1beta2.NetworkDetails{
+					InstanceVnicConfiguration: &infrav2exp.MachinePoolNetworkDetails{
 						AssignPublicIp:         true,
 						SubnetName:             "worker-subnet",
 						SkipSourceDestCheck:    common.Bool(true),
@@ -230,9 +230,9 @@ func TestInstanceConfigCreate(t *testing.T) {
 						DisplayName:            common.String("test-display"),
 						AssignPrivateDnsRecord: common.Bool(true),
 					},
-					PlatformConfig: &infrastructurev1beta2.PlatformConfig{
-						PlatformConfigType: infrastructurev1beta2.PlatformConfigTypeAmdvm,
-						AmdVmPlatformConfig: infrastructurev1beta2.AmdVmPlatformConfig{
+					PlatformConfig: &infrav2exp.PlatformConfig{
+						PlatformConfigType: infrav2exp.PlatformConfigTypeAmdvm,
+						AmdVmPlatformConfig: infrav2exp.AmdVmPlatformConfig{
 							IsMeasuredBootEnabled:          common.Bool(false),
 							IsTrustedPlatformModuleEnabled: common.Bool(true),
 							IsSecureBootEnabled:            common.Bool(true),
@@ -252,7 +252,7 @@ func TestInstanceConfigCreate(t *testing.T) {
 					},
 				}
 				computeManagementClient.EXPECT().ListInstanceConfigurations(gomock.Any(), gomock.Any()).
-					Return(core.ListInstanceConfigurationsResponse{}, nil).Times(2)
+					Return(core.ListInstanceConfigurationsResponse{}, nil)
 
 				expectedLaunch := &core.InstanceConfigurationLaunchInstanceDetails{
 					DefinedTags:   definedTagsInterface,
@@ -338,7 +338,7 @@ func TestInstanceConfigCreate(t *testing.T) {
 						BaselineOcpuUtilization: "BASELINE_1_1",
 						Nvmes:                   common.Int(5),
 					},
-					InstanceVnicConfiguration: &infrastructurev1beta2.NetworkDetails{
+					InstanceVnicConfiguration: &infrav2exp.MachinePoolNetworkDetails{
 						AssignPublicIp:         true,
 						SubnetName:             "worker-subnet",
 						SkipSourceDestCheck:    common.Bool(true),
@@ -347,9 +347,9 @@ func TestInstanceConfigCreate(t *testing.T) {
 						DisplayName:            common.String("test-display"),
 						AssignPrivateDnsRecord: common.Bool(true),
 					},
-					PlatformConfig: &infrastructurev1beta2.PlatformConfig{
-						PlatformConfigType: infrastructurev1beta2.PlatformConfigTypeAmdvm,
-						AmdVmPlatformConfig: infrastructurev1beta2.AmdVmPlatformConfig{
+					PlatformConfig: &infrav2exp.PlatformConfig{
+						PlatformConfigType: infrav2exp.PlatformConfigTypeAmdvm,
+						AmdVmPlatformConfig: infrav2exp.AmdVmPlatformConfig{
 							IsMeasuredBootEnabled:          common.Bool(false),
 							IsTrustedPlatformModuleEnabled: common.Bool(true),
 							IsSecureBootEnabled:            common.Bool(true),
@@ -369,7 +369,7 @@ func TestInstanceConfigCreate(t *testing.T) {
 					},
 				}
 				computeManagementClient.EXPECT().ListInstanceConfigurations(gomock.Any(), gomock.Any()).
-					Return(core.ListInstanceConfigurationsResponse{}, nil).Times(2)
+					Return(core.ListInstanceConfigurationsResponse{}, nil)
 
 				expectedLaunch := &core.InstanceConfigurationLaunchInstanceDetails{
 					DefinedTags:   definedTagsInterface,
@@ -483,9 +483,6 @@ func TestInstanceConfigCreate(t *testing.T) {
 						},
 					}, nil)
 
-				computeManagementClient.EXPECT().ListInstanceConfigurations(gomock.Any(), gomock.Any()).
-					Return(core.ListInstanceConfigurationsResponse{}, nil)
-
 				computeManagementClient.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).
 					Return(core.CreateInstanceConfigurationResponse{
 						InstanceConfiguration: core.InstanceConfiguration{
@@ -572,8 +569,6 @@ write_files:
 							},
 						},
 					}, nil)
-				computeManagementClient.EXPECT().ListInstanceConfigurations(gomock.Any(), gomock.Any()).
-					Return(core.ListInstanceConfigurationsResponse{}, nil)
 				computeManagementClient.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).
 					Return(core.CreateInstanceConfigurationResponse{
 						InstanceConfiguration: core.InstanceConfiguration{
@@ -653,8 +648,6 @@ write_files:
 							},
 						},
 					}, nil)
-				computeManagementClient.EXPECT().ListInstanceConfigurations(gomock.Any(), gomock.Any()).
-					Return(core.ListInstanceConfigurationsResponse{}, nil)
 				computeManagementClient.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).
 					Return(core.CreateInstanceConfigurationResponse{
 						InstanceConfiguration: core.InstanceConfiguration{
@@ -684,7 +677,7 @@ write_files:
 				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
 					Shape:                   common.String("test-shape"),
 					InstanceConfigurationId: common.String("test"),
-					InstanceVnicConfiguration: &infrastructurev1beta2.NetworkDetails{
+					InstanceVnicConfiguration: &infrav2exp.MachinePoolNetworkDetails{
 						NsgNames: []string{"worker-nsg-2", "worker-nsg"},
 					},
 				}
@@ -827,7 +820,7 @@ write_files:
 						BaselineOcpuUtilization: "BASELINE_1_1",
 						Nvmes:                   common.Int(5),
 					},
-					InstanceVnicConfiguration: &infrastructurev1beta2.NetworkDetails{
+					InstanceVnicConfiguration: &infrav2exp.MachinePoolNetworkDetails{
 						AssignPublicIp:         true,
 						SubnetName:             "worker-subnet",
 						SkipSourceDestCheck:    common.Bool(true),
@@ -836,9 +829,9 @@ write_files:
 						DisplayName:            common.String("test-display"),
 						AssignPrivateDnsRecord: common.Bool(true),
 					},
-					PlatformConfig: &infrastructurev1beta2.PlatformConfig{
-						PlatformConfigType: infrastructurev1beta2.PlatformConfigTypeAmdvm,
-						AmdVmPlatformConfig: infrastructurev1beta2.AmdVmPlatformConfig{
+					PlatformConfig: &infrav2exp.PlatformConfig{
+						PlatformConfigType: infrav2exp.PlatformConfigTypeAmdvm,
+						AmdVmPlatformConfig: infrav2exp.AmdVmPlatformConfig{
 							IsMeasuredBootEnabled:          common.Bool(false),
 							IsTrustedPlatformModuleEnabled: common.Bool(true),
 							IsSecureBootEnabled:            common.Bool(true),
@@ -880,9 +873,6 @@ write_files:
 							},
 						},
 					}, nil)
-
-				computeManagementClient.EXPECT().ListInstanceConfigurations(gomock.Any(), gomock.Any()).
-					Return(core.ListInstanceConfigurationsResponse{}, nil)
 
 				expectedLaunch := &core.InstanceConfigurationLaunchInstanceDetails{
 					DefinedTags:   definedTagsInterface,
@@ -995,9 +985,6 @@ write_files:
 						},
 					}, nil)
 
-				computeManagementClient.EXPECT().ListInstanceConfigurations(gomock.Any(), gomock.Any()).
-					Return(core.ListInstanceConfigurationsResponse{}, nil)
-
 				computeManagementClient.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).
 					Return(core.CreateInstanceConfigurationResponse{
 						InstanceConfiguration: core.InstanceConfiguration{
@@ -1044,9 +1031,6 @@ write_files:
 							},
 						},
 					}, nil)
-
-				computeManagementClient.EXPECT().ListInstanceConfigurations(gomock.Any(), gomock.Any()).
-					Return(core.ListInstanceConfigurationsResponse{}, nil)
 
 				computeManagementClient.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).
 					Return(core.CreateInstanceConfigurationResponse{
@@ -1319,8 +1303,6 @@ func TestBackfillAnnotations_Upgrade(t *testing.T) {
 				},
 			}, nil)
 		// Config drift should trigger a new IC.
-		computeMgmt.EXPECT().ListInstanceConfigurations(gomock.Any(), gomock.Any()).
-			Return(core.ListInstanceConfigurationsResponse{}, nil)
 		computeMgmt.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).
 			Return(core.CreateInstanceConfigurationResponse{
 				InstanceConfiguration: core.InstanceConfiguration{Id: common.String("new-id")},
@@ -1366,8 +1348,6 @@ func TestBackfillAnnotations_Upgrade(t *testing.T) {
 				},
 			}, nil)
 		// Bootstrap data genuinely differs from OCI — new IC should be created.
-		computeMgmt.EXPECT().ListInstanceConfigurations(gomock.Any(), gomock.Any()).
-			Return(core.ListInstanceConfigurationsResponse{}, nil)
 		computeMgmt.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).
 			Return(core.CreateInstanceConfigurationResponse{
 				InstanceConfiguration: core.InstanceConfiguration{Id: common.String("new-id")},
@@ -1414,6 +1394,222 @@ func TestBackfillAnnotations_Upgrade(t *testing.T) {
 		actualBootstrapHash := hash.ComputeUserDataHash(map[string]string{"user_data": "dGVzdA=="})
 		g.Expect(ms.OCIMachinePool.Annotations[BootstrapDataHashAnnotation]).To(Equal(actualBootstrapHash))
 	})
+}
+
+func TestReconcileInstanceConfigurationDefersCleanupBeforePoolSwitch(t *testing.T) {
+	g := NewWithT(t)
+	ms, computeMgmt := newInstanceConfigurationOrderingScope(t, "test")
+
+	ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+		Shape:                   common.String("new-shape"),
+		InstanceConfigurationId: common.String("old-id"),
+	}
+	activePool := &core.InstancePool{
+		Id:                      common.String("pool-id"),
+		InstanceConfigurationId: common.String("old-id"),
+		Size:                    common.Int(3),
+	}
+
+	computeMgmt.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Eq(core.GetInstanceConfigurationRequest{
+		InstanceConfigurationId: common.String("old-id"),
+	})).
+		Return(core.GetInstanceConfigurationResponse{
+			InstanceConfiguration: core.InstanceConfiguration{
+				Id: common.String("old-id"),
+				InstanceDetails: core.ComputeInstanceDetails{
+					LaunchDetails: orderingLaunchDetails("old-shape", "test"),
+				},
+			},
+		}, nil)
+	computeMgmt.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).
+		Return(core.CreateInstanceConfigurationResponse{
+			InstanceConfiguration: core.InstanceConfiguration{Id: common.String("new-id")},
+		}, nil)
+	computeMgmt.EXPECT().DeleteInstanceConfiguration(gomock.Any(), gomock.Any()).Times(0)
+
+	err := ms.ReconcileInstanceConfiguration(context.Background(), activePool)
+	g.Expect(err).To(BeNil())
+	g.Expect(ms.GetInstanceConfigurationId()).To(Equal(common.String("new-id")))
+}
+
+func TestFailedInstancePoolUpdatePreservesActiveInstanceConfiguration(t *testing.T) {
+	g := NewWithT(t)
+	ms, computeMgmt := newInstanceConfigurationOrderingScope(t, "test")
+
+	ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+		Shape:                   common.String("new-shape"),
+		InstanceConfigurationId: common.String("old-id"),
+	}
+	activePool := &core.InstancePool{
+		Id:                      common.String("pool-id"),
+		InstanceConfigurationId: common.String("old-id"),
+		Size:                    common.Int(3),
+	}
+
+	computeMgmt.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Any()).
+		Return(core.GetInstanceConfigurationResponse{
+			InstanceConfiguration: core.InstanceConfiguration{
+				Id: common.String("old-id"),
+				InstanceDetails: core.ComputeInstanceDetails{
+					LaunchDetails: orderingLaunchDetails("old-shape", "test"),
+				},
+			},
+		}, nil)
+	computeMgmt.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).
+		Return(core.CreateInstanceConfigurationResponse{
+			InstanceConfiguration: core.InstanceConfiguration{Id: common.String("new-id")},
+		}, nil)
+	computeMgmt.EXPECT().UpdateInstancePool(gomock.Any(), gomock.Any()).
+		Return(core.UpdateInstancePoolResponse{}, fmt.Errorf("update failed"))
+	computeMgmt.EXPECT().DeleteInstanceConfiguration(gomock.Any(), gomock.Any()).Times(0)
+
+	err := ms.ReconcileInstanceConfiguration(context.Background(), activePool)
+	g.Expect(err).To(BeNil())
+	g.Expect(ms.GetInstanceConfigurationId()).To(Equal(common.String("new-id")))
+
+	_, err = ms.UpdatePool(context.Background(), activePool)
+	g.Expect(err).To(HaveOccurred())
+	g.Expect(ms.GetInstanceConfigurationId()).To(Equal(common.String("new-id")))
+}
+
+func TestCleanupInstanceConfigurationDefersWhenInstancePoolSwitchStalls(t *testing.T) {
+	g := NewWithT(t)
+	ms, computeMgmt := newInstanceConfigurationOrderingScope(t, "test")
+
+	ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+		InstanceConfigurationId: common.String("new-id"),
+	}
+	stalledPool := &core.InstancePool{
+		Id:                      common.String("pool-id"),
+		InstanceConfigurationId: common.String("old-id"),
+	}
+
+	computeMgmt.EXPECT().ListInstanceConfigurations(gomock.Any(), gomock.Any()).Times(0)
+	computeMgmt.EXPECT().DeleteInstanceConfiguration(gomock.Any(), gomock.Any()).Times(0)
+
+	err := ms.CleanupInstanceConfiguration(context.Background(), stalledPool)
+	g.Expect(err).To(BeNil())
+}
+
+func TestBootstrapTriggeredRotationDefersCleanupBeforePoolSwitch(t *testing.T) {
+	g := NewWithT(t)
+	ms, computeMgmt := newInstanceConfigurationOrderingScope(t, "new-bootstrap")
+
+	ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+		Shape:                   common.String("test-shape"),
+		InstanceConfigurationId: common.String("old-id"),
+	}
+	activePool := &core.InstancePool{
+		Id:                      common.String("pool-id"),
+		InstanceConfigurationId: common.String("old-id"),
+		Size:                    common.Int(3),
+	}
+
+	computeMgmt.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Any()).
+		Return(core.GetInstanceConfigurationResponse{
+			InstanceConfiguration: core.InstanceConfiguration{
+				Id: common.String("old-id"),
+				InstanceDetails: core.ComputeInstanceDetails{
+					LaunchDetails: orderingLaunchDetails("test-shape", "old-bootstrap"),
+				},
+			},
+		}, nil)
+	computeMgmt.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).
+		Return(core.CreateInstanceConfigurationResponse{
+			InstanceConfiguration: core.InstanceConfiguration{Id: common.String("new-id")},
+		}, nil)
+	computeMgmt.EXPECT().DeleteInstanceConfiguration(gomock.Any(), gomock.Any()).Times(0)
+
+	err := ms.ReconcileInstanceConfiguration(context.Background(), activePool)
+	g.Expect(err).To(BeNil())
+	g.Expect(ms.GetInstanceConfigurationId()).To(Equal(common.String("new-id")))
+}
+
+func newInstanceConfigurationOrderingScope(t *testing.T, bootstrapData string) (*MachinePoolScope, *mock_computemanagement.MockClient) {
+	t.Helper()
+
+	mockCtrl := gomock.NewController(t)
+	t.Cleanup(func() { mockCtrl.Finish() })
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "bootstrap",
+			Namespace: "default",
+		},
+		Data: map[string][]byte{
+			"value": []byte(bootstrapData),
+		},
+	}
+	computeMgmt := mock_computemanagement.NewMockClient(mockCtrl)
+	ociMachinePool := &infrav2exp.OCIMachinePool{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test",
+			Namespace: "default",
+		},
+	}
+	client := fake.NewClientBuilder().WithStatusSubresource(ociMachinePool).WithObjects(secret, ociMachinePool).Build()
+	replicas := int32(3)
+	ms, err := NewMachinePoolScope(MachinePoolScopeParams{
+		ComputeManagementClient: computeMgmt,
+		OCIMachinePool:          ociMachinePool,
+		OCIClusterAccessor: OCISelfManagedCluster{
+			OCICluster: &infrastructurev1beta2.OCICluster{
+				ObjectMeta: metav1.ObjectMeta{UID: "cluster_uid"},
+				Spec: infrastructurev1beta2.OCIClusterSpec{
+					CompartmentId:         "test-compartment",
+					OCIResourceIdentifier: "resource_uid",
+					NetworkSpec: infrastructurev1beta2.NetworkSpec{
+						Vcn: infrastructurev1beta2.VCN{
+							Subnets: []*infrastructurev1beta2.Subnet{
+								{
+									Role: infrastructurev1beta2.WorkerRole,
+									ID:   common.String("subnet-id"),
+									Type: infrastructurev1beta2.Private,
+									Name: "worker-subnet",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Cluster: &clusterv1.Cluster{},
+		MachinePool: &clusterv1.MachinePool{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test",
+				Namespace: "default",
+			},
+			Spec: clusterv1.MachinePoolSpec{
+				Replicas: &replicas,
+				Template: clusterv1.MachineTemplateSpec{
+					Spec: clusterv1.MachineSpec{
+						Bootstrap: clusterv1.Bootstrap{
+							DataSecretName: common.String("bootstrap"),
+						},
+					},
+				},
+			},
+		},
+		Client: client,
+	})
+	if err != nil {
+		t.Fatalf("NewMachinePoolScope: %v", err)
+	}
+	return ms, computeMgmt
+}
+
+func orderingLaunchDetails(shape, bootstrapData string) *core.InstanceConfigurationLaunchInstanceDetails {
+	return &core.InstanceConfigurationLaunchInstanceDetails{
+		CompartmentId: common.String("test-compartment"),
+		Shape:         common.String(shape),
+		CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+			SubnetId: common.String("subnet-id"),
+		},
+		SourceDetails: core.InstanceConfigurationInstanceSourceViaImageDetails{},
+		Metadata: map[string]string{
+			"user_data": base64.StdEncoding.EncodeToString([]byte(bootstrapData)),
+		},
+	}
 }
 
 func TestGetLaunchInstanceDetailsCopiesMetadataAndPropagatesSupportedFields(t *testing.T) {
@@ -1487,10 +1683,28 @@ func TestGetLaunchInstanceDetailsCopiesMetadataAndPropagatesSupportedFields(t *t
 	g.Expect(err).To(BeNil())
 
 	metadata := map[string]string{"ssh_authorized_keys": "ssh-rsa test"}
+	percentage := 50
+	vcpus := 4
 	spec := infrav2exp.InstanceConfiguration{
 		Shape:                          common.String("test-shape"),
 		Metadata:                       metadata,
 		IsPvEncryptionInTransitEnabled: common.Bool(true),
+		ClusterPlacementGroupId:        common.String("cluster-placement-group-id"),
+		IpxeScript:                     common.String("#!ipxe"),
+		LaunchMode:                     infrav2exp.LaunchModeEnum(core.InstanceConfigurationLaunchInstanceDetailsLaunchModeNative),
+		LicensingConfigs: []infrav2exp.LaunchInstanceLicensingConfig{{
+			Type:        infrav2exp.LaunchInstanceLicensingConfigTypeEnum(core.LaunchInstanceLicensingConfigTypeWindows),
+			LicenseType: infrav2exp.LaunchInstanceLicensingConfigLicenseTypeEnum(core.LaunchInstanceLicensingConfigLicenseTypeBringYourOwnLicense),
+		}},
+		PreferredMaintenanceAction: infrav2exp.PreferredMaintenanceActionEnum(core.InstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionReboot),
+		SecurityAttributes: map[string]map[string]apiextensionsv1.JSON{
+			"Oracle-DataSecurity-ZPR": {
+				"MaxEgressCount": {Raw: []byte(`{"value":"42","mode":"audit"}`)},
+			},
+		},
+		ShapeConfig: &infrav2exp.ShapeConfig{
+			Vcpus: &vcpus,
+		},
 		InstanceSourceViaImageDetails: &infrav2exp.InstanceSourceViaImageConfig{
 			ImageId:             common.String("image-id"),
 			KmsKeyId:            common.String("kms-id"),
@@ -1501,10 +1715,29 @@ func TestGetLaunchInstanceDetailsCopiesMetadataAndPropagatesSupportedFields(t *t
 			IsLiveMigrationPreferred: common.Bool(true),
 			RecoveryAction:           infrastructurev1beta2.LaunchInstanceAvailabilityConfigDetailsRecoveryActionRestoreInstance,
 		},
-		InstanceVnicConfiguration: &infrastructurev1beta2.NetworkDetails{
+		InstanceVnicConfiguration: &infrav2exp.MachinePoolNetworkDetails{
 			SubnetId:     common.String("explicit-subnet-id"),
 			NSGIds:       []string{"explicit-nsg-id"},
 			AssignIpv6Ip: true,
+			Ipv6AddressIpv6SubnetCidrPairDetails: []infrav2exp.InstanceConfigurationIpv6AddressIpv6SubnetCidrPairDetails{{
+				Ipv6SubnetCidr: common.String("2001:db8::/64"),
+				Ipv6Address:    common.String("2001:db8::10"),
+			}},
+			SecurityAttributes: map[string]map[string]apiextensionsv1.JSON{
+				"Oracle-DataSecurity-ZPR": {
+					"VnicEgress": {Raw: []byte(`"audit"`)},
+				},
+			},
+		},
+		PlatformConfig: &infrav2exp.PlatformConfig{
+			PlatformConfigType: infrav2exp.PlatformConfigTypeIntelSkylakeBm,
+			IntelSkylakeBmPlatformConfig: infrav2exp.IntelSkylakeBmPlatformConfig{
+				IsSymmetricMultiThreadingEnabled:         common.Bool(false),
+				IsInputOutputMemoryManagementUnitEnabled: common.Bool(true),
+				PercentageOfCoresEnabled:                 &percentage,
+				ConfigMap:                                map[string]string{"config": "enabled"},
+				NumaNodesPerSocket:                       infrav2exp.IntelSkylakeBmPlatformConfigNumaNodesPerSocketNps2,
+			},
 		},
 	}
 	ms.OCIMachinePool.Spec.InstanceConfiguration = spec
@@ -1519,6 +1752,27 @@ func TestGetLaunchInstanceDetailsCopiesMetadataAndPropagatesSupportedFields(t *t
 	g.Expect(launchDetails.CreateVnicDetails.NsgIds).To(Equal([]string{"explicit-nsg-id"}))
 	g.Expect(*launchDetails.CreateVnicDetails.AssignIpv6Ip).To(BeTrue())
 	g.Expect(*launchDetails.CreateVnicDetails.AssignPublicIp).To(BeFalse())
+	g.Expect(launchDetails.CreateVnicDetails.Ipv6AddressIpv6SubnetCidrPairDetails).To(Equal([]core.InstanceConfigurationIpv6AddressIpv6SubnetCidrPairDetails{{
+		Ipv6SubnetCidr: common.String("2001:db8::/64"),
+		Ipv6Address:    common.String("2001:db8::10"),
+	}}))
+	g.Expect(launchDetails.CreateVnicDetails.SecurityAttributes["Oracle-DataSecurity-ZPR"]["VnicEgress"]).To(Equal("audit"))
+	g.Expect(*launchDetails.ClusterPlacementGroupId).To(Equal("cluster-placement-group-id"))
+	g.Expect(*launchDetails.IpxeScript).To(Equal("#!ipxe"))
+	g.Expect(launchDetails.LaunchMode).To(Equal(core.InstanceConfigurationLaunchInstanceDetailsLaunchModeNative))
+	g.Expect(launchDetails.PreferredMaintenanceAction).To(Equal(core.InstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionReboot))
+	g.Expect(launchDetails.SecurityAttributes["Oracle-DataSecurity-ZPR"]["MaxEgressCount"]).To(Equal(map[string]interface{}{"value": "42", "mode": "audit"}))
+	g.Expect(launchDetails.LicensingConfigs).To(Equal([]core.LaunchInstanceLicensingConfig{core.LaunchInstanceWindowsLicensingConfig{
+		LicenseType: core.LaunchInstanceLicensingConfigLicenseTypeBringYourOwnLicense,
+	}}))
+	g.Expect(*launchDetails.ShapeConfig.Vcpus).To(Equal(4))
+	platformConfig, ok := launchDetails.PlatformConfig.(core.IntelSkylakeBmPlatformConfig)
+	g.Expect(ok).To(BeTrue())
+	g.Expect(*platformConfig.IsSymmetricMultiThreadingEnabled).To(BeFalse())
+	g.Expect(*platformConfig.IsInputOutputMemoryManagementUnitEnabled).To(BeTrue())
+	g.Expect(*platformConfig.PercentageOfCoresEnabled).To(Equal(50))
+	g.Expect(platformConfig.ConfigMap).To(Equal(map[string]string{"config": "enabled"}))
+	g.Expect(platformConfig.NumaNodesPerSocket).To(Equal(core.IntelSkylakeBmPlatformConfigNumaNodesPerSocketNps2))
 
 	sourceDetails, ok := launchDetails.SourceDetails.(core.InstanceConfigurationInstanceSourceViaImageDetails)
 	g.Expect(ok).To(BeTrue())
@@ -1526,6 +1780,142 @@ func TestGetLaunchInstanceDetailsCopiesMetadataAndPropagatesSupportedFields(t *t
 	g.Expect(*sourceDetails.BootVolumeSizeInGBs).To(Equal(int64(100)))
 	g.Expect(*sourceDetails.BootVolumeVpusPerGB).To(Equal(int64(20)))
 	g.Expect(*launchDetails.AvailabilityConfig.IsLiveMigrationPreferred).To(BeTrue())
+}
+
+func TestGetPlatformConfigPropagatesApprovedPlatformFields(t *testing.T) {
+	falseValue := false
+	trueValue := true
+	percentage := 50
+
+	tests := []struct {
+		name           string
+		platformConfig *infrav2exp.PlatformConfig
+		assert         func(g *WithT, platformConfig core.PlatformConfig)
+	}{
+		{
+			name: "AMD Milan BM config map",
+			platformConfig: &infrav2exp.PlatformConfig{
+				PlatformConfigType: infrav2exp.PlatformConfigTypeAmdMilanBm,
+				AmdMilanBmPlatformConfig: infrav2exp.AmdMilanBmPlatformConfig{
+					ConfigMap: map[string]string{"hpc": "enabled"},
+				},
+			},
+			assert: func(g *WithT, platformConfig core.PlatformConfig) {
+				actual, ok := platformConfig.(core.AmdMilanBmPlatformConfig)
+				g.Expect(ok).To(BeTrue())
+				g.Expect(actual.ConfigMap).To(Equal(map[string]string{"hpc": "enabled"}))
+			},
+		},
+		{
+			name: "AMD Rome BM GPU config map",
+			platformConfig: &infrav2exp.PlatformConfig{
+				PlatformConfigType: infrav2exp.PlatformConfigTypeAmdRomeBmGpu,
+				AmdRomeBmGpuPlatformConfig: infrav2exp.AmdRomeBmGpuPlatformConfig{
+					ConfigMap: map[string]string{"gpu": "enabled"},
+				},
+			},
+			assert: func(g *WithT, platformConfig core.PlatformConfig) {
+				actual, ok := platformConfig.(core.AmdRomeBmGpuPlatformConfig)
+				g.Expect(ok).To(BeTrue())
+				g.Expect(actual.ConfigMap).To(Equal(map[string]string{"gpu": "enabled"}))
+			},
+		},
+		{
+			name: "AMD Rome BM config map",
+			platformConfig: &infrav2exp.PlatformConfig{
+				PlatformConfigType: infrav2exp.PlatformConfigTypeAmdRomeBm,
+				AmdRomeBmPlatformConfig: infrav2exp.AmdRomeBmPlatformConfig{
+					ConfigMap: map[string]string{"numa": "compact"},
+				},
+			},
+			assert: func(g *WithT, platformConfig core.PlatformConfig) {
+				actual, ok := platformConfig.(core.AmdRomeBmPlatformConfig)
+				g.Expect(ok).To(BeTrue())
+				g.Expect(actual.ConfigMap).To(Equal(map[string]string{"numa": "compact"}))
+			},
+		},
+		{
+			name: "AMD VM SMT",
+			platformConfig: &infrav2exp.PlatformConfig{
+				PlatformConfigType: infrav2exp.PlatformConfigTypeAmdvm,
+				AmdVmPlatformConfig: infrav2exp.AmdVmPlatformConfig{
+					IsSymmetricMultiThreadingEnabled: &falseValue,
+				},
+			},
+			assert: func(g *WithT, platformConfig core.PlatformConfig) {
+				actual, ok := platformConfig.(core.AmdVmPlatformConfig)
+				g.Expect(ok).To(BeTrue())
+				g.Expect(actual.IsSymmetricMultiThreadingEnabled).To(Equal(&falseValue))
+			},
+		},
+		{
+			name: "Intel Icelake BM config map",
+			platformConfig: &infrav2exp.PlatformConfig{
+				PlatformConfigType: infrav2exp.PlatformConfigTypeIntelIcelakeBm,
+				IntelIcelakeBmPlatformConfig: infrav2exp.IntelIcelakeBmPlatformConfig{
+					ConfigMap: map[string]string{"ice": "lake"},
+				},
+			},
+			assert: func(g *WithT, platformConfig core.PlatformConfig) {
+				actual, ok := platformConfig.(core.IntelIcelakeBmPlatformConfig)
+				g.Expect(ok).To(BeTrue())
+				g.Expect(actual.ConfigMap).To(Equal(map[string]string{"ice": "lake"}))
+			},
+		},
+		{
+			name: "Intel Skylake BM approved knobs",
+			platformConfig: &infrav2exp.PlatformConfig{
+				PlatformConfigType: infrav2exp.PlatformConfigTypeIntelSkylakeBm,
+				IntelSkylakeBmPlatformConfig: infrav2exp.IntelSkylakeBmPlatformConfig{
+					IsSymmetricMultiThreadingEnabled:         &falseValue,
+					IsInputOutputMemoryManagementUnitEnabled: &trueValue,
+					PercentageOfCoresEnabled:                 &percentage,
+					ConfigMap:                                map[string]string{"sky": "lake"},
+					NumaNodesPerSocket:                       infrav2exp.IntelSkylakeBmPlatformConfigNumaNodesPerSocketNps2,
+				},
+			},
+			assert: func(g *WithT, platformConfig core.PlatformConfig) {
+				actual, ok := platformConfig.(core.IntelSkylakeBmPlatformConfig)
+				g.Expect(ok).To(BeTrue())
+				g.Expect(actual.IsSymmetricMultiThreadingEnabled).To(Equal(&falseValue))
+				g.Expect(actual.IsInputOutputMemoryManagementUnitEnabled).To(Equal(&trueValue))
+				g.Expect(actual.PercentageOfCoresEnabled).To(Equal(&percentage))
+				g.Expect(actual.ConfigMap).To(Equal(map[string]string{"sky": "lake"}))
+				g.Expect(actual.NumaNodesPerSocket).To(Equal(core.IntelSkylakeBmPlatformConfigNumaNodesPerSocketNps2))
+			},
+		},
+		{
+			name: "Intel VM SMT",
+			platformConfig: &infrav2exp.PlatformConfig{
+				PlatformConfigType: infrav2exp.PlatformConfigTypeIntelVm,
+				IntelVmPlatformConfig: infrav2exp.IntelVmPlatformConfig{
+					IsSymmetricMultiThreadingEnabled: &trueValue,
+				},
+			},
+			assert: func(g *WithT, platformConfig core.PlatformConfig) {
+				actual, ok := platformConfig.(core.IntelVmPlatformConfig)
+				g.Expect(ok).To(BeTrue())
+				g.Expect(actual.IsSymmetricMultiThreadingEnabled).To(Equal(&trueValue))
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			ms := &MachinePoolScope{
+				OCIMachinePool: &infrav2exp.OCIMachinePool{
+					Spec: infrav2exp.OCIMachinePoolSpec{
+						InstanceConfiguration: infrav2exp.InstanceConfiguration{
+							PlatformConfig: tt.platformConfig,
+						},
+					},
+				},
+			}
+
+			tt.assert(g, ms.getPlatformConfig())
+		})
+	}
 }
 
 func TestGetLaunchInstanceDetailsExtendedMetadata(t *testing.T) {
@@ -1799,6 +2189,18 @@ func TestInstancePoolCreate(t *testing.T) {
 			name:          "instance pool",
 			errorExpected: false,
 			testSpecificSetup: func(ms *MachinePoolScope) {
+				ms.OCIMachinePool.Spec.InstanceDisplayNameFormatter = common.String("worker-${launchCount}")
+				ms.OCIMachinePool.Spec.InstanceHostnameFormatter = common.String("worker-${launchCount}")
+				ms.OCIMachinePool.Spec.PlacementDetails = []infrav2exp.PlacementDetails{{
+					AvailabilityDomain: 1,
+					PrimaryVnicSubnets: &infrav2exp.InstancePoolPlacementPrimarySubnet{
+						SubnetId:       common.String("primary-subnet-id"),
+						IsAssignIpv6Ip: common.Bool(true),
+						Ipv6AddressIpv6SubnetCidrPairDetails: []infrav2exp.InstancePoolPlacementIpv6AddressIpv6SubnetCidrDetails{{
+							Ipv6SubnetCidr: common.String("2001:db8::/64"),
+						}},
+					},
+				}}
 				ms.OCIMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId = common.String("config_id")
 				computeManagementClient.EXPECT().CreateInstancePool(gomock.Any(), gomock.Eq(core.CreateInstancePoolRequest{
 					CreateInstancePoolDetails: core.CreateInstancePoolDetails{
@@ -1808,10 +2210,18 @@ func TestInstancePoolCreate(t *testing.T) {
 						DisplayName:             common.String("test"),
 						PlacementConfigurations: []core.CreateInstancePoolPlacementConfigurationDetails{{
 							AvailabilityDomain: common.String("ad-1"),
-							PrimarySubnetId:    common.String("subnet-id"),
 							FaultDomains:       []string{"fd-5", "fd-6"},
+							PrimaryVnicSubnets: &core.InstancePoolPlacementPrimarySubnet{
+								SubnetId:       common.String("primary-subnet-id"),
+								IsAssignIpv6Ip: common.Bool(true),
+								Ipv6AddressIpv6SubnetCidrPairDetails: []core.InstancePoolPlacementIpv6AddressIpv6SubnetCidrDetails{{
+									Ipv6SubnetCidr: common.String("2001:db8::/64"),
+								}},
+							},
 						}},
-						FreeformTags: tags,
+						FreeformTags:                 tags,
+						InstanceDisplayNameFormatter: common.String("worker-${launchCount}"),
+						InstanceHostnameFormatter:    common.String("worker-${launchCount}"),
 					},
 				})).
 					Return(core.CreateInstancePoolResponse{
@@ -1997,6 +2407,34 @@ func TestInstancePoolUpdate(t *testing.T) {
 					UpdateInstancePoolDetails: core.UpdateInstancePoolDetails{
 						Size:                    common.Int(3),
 						InstanceConfigurationId: common.String("config_id_new"),
+					},
+				})).
+					Return(core.UpdateInstancePoolResponse{
+						InstancePool: core.InstancePool{
+							Id: common.String("id"),
+						},
+					}, nil)
+			},
+		},
+		{
+			name:          "instance pool formatter update",
+			errorExpected: false,
+			instancepool: &core.InstancePool{
+				Size:                         common.Int(3),
+				InstanceConfigurationId:      common.String("config_id"),
+				InstanceDisplayNameFormatter: common.String("old-display-${launchCount}"),
+				InstanceHostnameFormatter:    common.String("old-host-${launchCount}"),
+			},
+			testSpecificSetup: func(ms *MachinePoolScope) {
+				ms.OCIMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId = common.String("config_id")
+				ms.OCIMachinePool.Spec.InstanceDisplayNameFormatter = common.String("new-display-${launchCount}")
+				ms.OCIMachinePool.Spec.InstanceHostnameFormatter = common.String("new-host-${launchCount}")
+				computeManagementClient.EXPECT().UpdateInstancePool(gomock.Any(), gomock.Eq(core.UpdateInstancePoolRequest{
+					UpdateInstancePoolDetails: core.UpdateInstancePoolDetails{
+						Size:                         common.Int(3),
+						InstanceConfigurationId:      common.String("config_id"),
+						InstanceDisplayNameFormatter: common.String("new-display-${launchCount}"),
+						InstanceHostnameFormatter:    common.String("new-host-${launchCount}"),
 					},
 				})).
 					Return(core.UpdateInstancePoolResponse{

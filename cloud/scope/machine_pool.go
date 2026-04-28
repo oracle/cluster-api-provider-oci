@@ -19,11 +19,13 @@ package scope
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
 
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 
@@ -341,6 +343,7 @@ func (m *MachinePoolScope) buildInstanceConfigurationShapeConfig() (core.Instanc
 			}
 			shapeConfig.MemoryInGBs = common.Float32(float32(memoryInGBs))
 		}
+		shapeConfig.Vcpus = shapeConfigSpec.Vcpus
 		baselineOcpuOptString := shapeConfigSpec.BaselineOcpuUtilization
 		if baselineOcpuOptString != "" {
 			value, err := ociutil.GetInstanceConfigBaseLineOcpuOptimizationEnum(baselineOcpuOptString)
@@ -377,6 +380,10 @@ func (s *MachinePoolScope) BuildInstancePoolPlacement() ([]core.CreateInstancePo
 					PrimarySubnetId:    s.GetWorkerMachineSubnet(),
 					FaultDomains:       ad.FaultDomains,
 				}
+				if specPlacment.PrimaryVnicSubnets != nil {
+					placement.PrimarySubnetId = nil
+					placement.PrimaryVnicSubnets = buildPrimaryVnicSubnets(specPlacment.PrimaryVnicSubnets, s.GetWorkerMachineSubnet())
+				}
 				s.Info("Adding machine placement for AD", "AD", ad.Name)
 				placements = append(placements, placement)
 			}
@@ -396,6 +403,34 @@ func (s *MachinePoolScope) BuildInstancePoolPlacement() ([]core.CreateInstancePo
 	}
 
 	return placements, nil
+}
+
+func buildPrimaryVnicSubnets(spec *infrav2exp.InstancePoolPlacementPrimarySubnet, defaultSubnetID *string) *core.InstancePoolPlacementPrimarySubnet {
+	if spec == nil {
+		return nil
+	}
+	subnetID := spec.SubnetId
+	if subnetID == nil {
+		subnetID = defaultSubnetID
+	}
+	return &core.InstancePoolPlacementPrimarySubnet{
+		SubnetId:                             subnetID,
+		IsAssignIpv6Ip:                       spec.IsAssignIpv6Ip,
+		Ipv6AddressIpv6SubnetCidrPairDetails: buildPlacementIpv6Pairs(spec.Ipv6AddressIpv6SubnetCidrPairDetails),
+	}
+}
+
+func buildPlacementIpv6Pairs(spec []infrav2exp.InstancePoolPlacementIpv6AddressIpv6SubnetCidrDetails) []core.InstancePoolPlacementIpv6AddressIpv6SubnetCidrDetails {
+	if len(spec) == 0 {
+		return nil
+	}
+	pairs := make([]core.InstancePoolPlacementIpv6AddressIpv6SubnetCidrDetails, 0, len(spec))
+	for _, pair := range spec {
+		pairs = append(pairs, core.InstancePoolPlacementIpv6AddressIpv6SubnetCidrDetails{
+			Ipv6SubnetCidr: pair.Ipv6SubnetCidr,
+		})
+	}
+	return pairs
 }
 
 // IsResourceCreatedByClusterAPI determines if the instance was created by the cluster using the
@@ -467,9 +502,6 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context, _
 		m.setBootstrapDataHashAnnotation(desiredBootstrapHash)
 		if err := m.PatchObject(ctx); err != nil {
 			return err
-		}
-		if cleanupErr := m.CleanupInstanceConfiguration(ctx, nil); cleanupErr != nil {
-			m.Logger.Error(cleanupErr, "Cleanup InstanceConfiguration failed, instance config could be full.")
 		}
 		return nil
 	}
@@ -582,9 +614,6 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context, _
 		return err
 	}
 
-	if cleanupErr := m.CleanupInstanceConfiguration(ctx, nil); cleanupErr != nil {
-		m.Logger.Error(cleanupErr, "Cleanup InstanceConfiguration failed, instance config could be full.")
-	}
 	return nil
 }
 
@@ -661,15 +690,24 @@ func (m *MachinePoolScope) getLaunchInstanceDetails(instanceConfigurationSpec in
 	}
 
 	launchDetails := &core.InstanceConfigurationLaunchInstanceDetails{
-		CompartmentId:     common.String(m.OCIClusterAccesor.GetCompartmentId()),
-		DisplayName:       common.String(m.OCIMachinePool.GetName()),
-		Shape:             common.String(*m.OCIMachinePool.Spec.InstanceConfiguration.Shape),
-		Metadata:          metadata,
-		ExtendedMetadata:  extendedMetadata,
-		DedicatedVmHostId: instanceConfigurationSpec.DedicatedVmHostId,
-		FreeformTags:      freeFormTags,
-		DefinedTags:       definedTags,
+		CompartmentId:           common.String(m.OCIClusterAccesor.GetCompartmentId()),
+		ClusterPlacementGroupId: instanceConfigurationSpec.ClusterPlacementGroupId,
+		DisplayName:             common.String(m.OCIMachinePool.GetName()),
+		Shape:                   common.String(*m.OCIMachinePool.Spec.InstanceConfiguration.Shape),
+		Metadata:                metadata,
+		ExtendedMetadata:        extendedMetadata,
+		DedicatedVmHostId:       instanceConfigurationSpec.DedicatedVmHostId,
+		FreeformTags:            freeFormTags,
+		DefinedTags:             definedTags,
+		IpxeScript:              instanceConfigurationSpec.IpxeScript,
+		LicensingConfigs:        buildLaunchInstanceLicensingConfigs(instanceConfigurationSpec.LicensingConfigs),
+		SecurityAttributes:      nil,
 	}
+	securityAttributes, err := convertSecurityAttributes(instanceConfigurationSpec.SecurityAttributes)
+	if err != nil {
+		return nil, err
+	}
+	launchDetails.SecurityAttributes = securityAttributes
 
 	if instanceConfigurationSpec.CapacityReservationId != nil {
 		launchDetails.CapacityReservationId = instanceConfigurationSpec.CapacityReservationId
@@ -677,7 +715,19 @@ func (m *MachinePoolScope) getLaunchInstanceDetails(instanceConfigurationSpec in
 	if instanceConfigurationSpec.IsPvEncryptionInTransitEnabled != nil {
 		launchDetails.IsPvEncryptionInTransitEnabled = instanceConfigurationSpec.IsPvEncryptionInTransitEnabled
 	}
-	launchDetails.CreateVnicDetails = m.getVnicDetails(instanceConfigurationSpec, freeFormTags, definedTags)
+	if instanceConfigurationSpec.LaunchMode != "" {
+		launchMode, _ := core.GetMappingInstanceConfigurationLaunchInstanceDetailsLaunchModeEnum(string(instanceConfigurationSpec.LaunchMode))
+		launchDetails.LaunchMode = launchMode
+	}
+	if instanceConfigurationSpec.PreferredMaintenanceAction != "" {
+		preferredMaintenanceAction, _ := core.GetMappingInstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionEnum(string(instanceConfigurationSpec.PreferredMaintenanceAction))
+		launchDetails.PreferredMaintenanceAction = preferredMaintenanceAction
+	}
+	createVnicDetails, err := m.getVnicDetails(instanceConfigurationSpec, freeFormTags, definedTags)
+	if err != nil {
+		return nil, err
+	}
+	launchDetails.CreateVnicDetails = createVnicDetails
 	launchDetails.SourceDetails = m.getInstanceConfigurationInstanceSourceViaImageDetail()
 	launchDetails.AgentConfig = m.getAgentConfig()
 	launchDetails.LaunchOptions = m.getLaunchOptions()
@@ -805,8 +855,10 @@ func (m *MachinePoolScope) CreateInstancePool(ctx context.Context) (*core.Instan
 			Size:                    common.Int(replicas),
 			DisplayName:             common.String(m.OCIMachinePool.GetName()),
 
-			PlacementConfigurations: placements,
-			FreeformTags:            tags,
+			PlacementConfigurations:      placements,
+			FreeformTags:                 tags,
+			InstanceDisplayNameFormatter: m.OCIMachinePool.Spec.InstanceDisplayNameFormatter,
+			InstanceHostnameFormatter:    m.OCIMachinePool.Spec.InstanceHostnameFormatter,
 		},
 	}
 	instancePool, err := m.ComputeManagementClient.CreateInstancePool(ctx, req)
@@ -828,8 +880,10 @@ func (m *MachinePoolScope) UpdatePool(ctx context.Context, instancePool *core.In
 		}
 		req := core.UpdateInstancePoolRequest{InstancePoolId: instancePool.Id,
 			UpdateInstancePoolDetails: core.UpdateInstancePoolDetails{
-				Size:                    common.Int(replicas),
-				InstanceConfigurationId: m.OCIMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId,
+				Size:                         common.Int(replicas),
+				InstanceConfigurationId:      m.OCIMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId,
+				InstanceDisplayNameFormatter: m.OCIMachinePool.Spec.InstanceDisplayNameFormatter,
+				InstanceHostnameFormatter:    m.OCIMachinePool.Spec.InstanceHostnameFormatter,
 			},
 		}
 		resp, err := m.ComputeManagementClient.UpdateInstancePool(ctx, req)
@@ -867,8 +921,24 @@ func instancePoolNeedsUpdates(machinePoolScope *MachinePoolScope, instancePool *
 		return true
 	} else if !(reflect.DeepEqual(machinePoolScope.OCIMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId, instancePool.InstanceConfigurationId)) {
 		return true
+	} else if !reflect.DeepEqual(machinePoolScope.OCIMachinePool.Spec.InstanceDisplayNameFormatter, instancePool.InstanceDisplayNameFormatter) {
+		return true
+	} else if !reflect.DeepEqual(machinePoolScope.OCIMachinePool.Spec.InstanceHostnameFormatter, instancePool.InstanceHostnameFormatter) {
+		return true
 	}
 	return false
+}
+
+// InstancePoolUsesDesiredInstanceConfiguration reports whether the actual
+// InstancePool has switched to the desired backing InstanceConfiguration.
+func (m *MachinePoolScope) InstancePoolUsesDesiredInstanceConfiguration(instancePool *core.InstancePool) bool {
+	if instancePool == nil {
+		return true
+	}
+	desiredID := m.GetInstanceConfigurationId()
+	return desiredID != nil &&
+		instancePool.InstanceConfigurationId != nil &&
+		ptr.ToString(instancePool.InstanceConfigurationId) == ptr.ToString(desiredID)
 }
 
 func (m *MachinePoolScope) getAgentConfig() *core.InstanceConfigurationLaunchInstanceAgentConfigDetails {
@@ -978,7 +1048,7 @@ func (m *MachinePoolScope) getPlatformConfig() core.PlatformConfig {
 	platformConfig := m.OCIMachinePool.Spec.InstanceConfiguration.PlatformConfig
 	if platformConfig != nil {
 		switch platformConfig.PlatformConfigType {
-		case infrastructurev1beta2.PlatformConfigTypeAmdRomeBmGpu:
+		case infrav2exp.PlatformConfigTypeAmdRomeBmGpu:
 			numaNodesPerSocket, _ := core.GetMappingAmdRomeBmGpuPlatformConfigNumaNodesPerSocketEnum(string(platformConfig.AmdRomeBmGpuPlatformConfig.NumaNodesPerSocket))
 			return core.AmdRomeBmGpuPlatformConfig{
 				IsSecureBootEnabled:                      platformConfig.AmdRomeBmGpuPlatformConfig.IsSecureBootEnabled,
@@ -989,9 +1059,10 @@ func (m *MachinePoolScope) getPlatformConfig() core.PlatformConfig {
 				IsAccessControlServiceEnabled:            platformConfig.AmdRomeBmGpuPlatformConfig.IsAccessControlServiceEnabled,
 				AreVirtualInstructionsEnabled:            platformConfig.AmdRomeBmGpuPlatformConfig.AreVirtualInstructionsEnabled,
 				IsInputOutputMemoryManagementUnitEnabled: platformConfig.AmdRomeBmGpuPlatformConfig.IsInputOutputMemoryManagementUnitEnabled,
+				ConfigMap:                                platformConfig.AmdRomeBmGpuPlatformConfig.ConfigMap,
 				NumaNodesPerSocket:                       numaNodesPerSocket,
 			}
-		case infrastructurev1beta2.PlatformConfigTypeAmdRomeBm:
+		case infrav2exp.PlatformConfigTypeAmdRomeBm:
 			numaNodesPerSocket, _ := core.GetMappingAmdRomeBmPlatformConfigNumaNodesPerSocketEnum(string(platformConfig.AmdRomeBmPlatformConfig.NumaNodesPerSocket))
 			return core.AmdRomeBmPlatformConfig{
 				IsSecureBootEnabled:                      platformConfig.AmdRomeBmPlatformConfig.IsSecureBootEnabled,
@@ -1003,9 +1074,10 @@ func (m *MachinePoolScope) getPlatformConfig() core.PlatformConfig {
 				AreVirtualInstructionsEnabled:            platformConfig.AmdRomeBmPlatformConfig.AreVirtualInstructionsEnabled,
 				IsInputOutputMemoryManagementUnitEnabled: platformConfig.AmdRomeBmPlatformConfig.IsInputOutputMemoryManagementUnitEnabled,
 				PercentageOfCoresEnabled:                 platformConfig.AmdRomeBmPlatformConfig.PercentageOfCoresEnabled,
+				ConfigMap:                                platformConfig.AmdRomeBmPlatformConfig.ConfigMap,
 				NumaNodesPerSocket:                       numaNodesPerSocket,
 			}
-		case infrastructurev1beta2.PlatformConfigTypeIntelIcelakeBm:
+		case infrav2exp.PlatformConfigTypeIntelIcelakeBm:
 			numaNodesPerSocket, _ := core.GetMappingIntelIcelakeBmPlatformConfigNumaNodesPerSocketEnum(string(platformConfig.IntelIcelakeBmPlatformConfig.NumaNodesPerSocket))
 			return core.IntelIcelakeBmPlatformConfig{
 				IsSecureBootEnabled:                      platformConfig.IntelIcelakeBmPlatformConfig.IsSecureBootEnabled,
@@ -1015,30 +1087,39 @@ func (m *MachinePoolScope) getPlatformConfig() core.PlatformConfig {
 				IsSymmetricMultiThreadingEnabled:         platformConfig.IntelIcelakeBmPlatformConfig.IsSymmetricMultiThreadingEnabled,
 				PercentageOfCoresEnabled:                 platformConfig.IntelIcelakeBmPlatformConfig.PercentageOfCoresEnabled,
 				IsInputOutputMemoryManagementUnitEnabled: platformConfig.IntelIcelakeBmPlatformConfig.IsInputOutputMemoryManagementUnitEnabled,
+				ConfigMap:                                platformConfig.IntelIcelakeBmPlatformConfig.ConfigMap,
 				NumaNodesPerSocket:                       numaNodesPerSocket,
 			}
-		case infrastructurev1beta2.PlatformConfigTypeAmdvm:
+		case infrav2exp.PlatformConfigTypeAmdvm:
 			return core.AmdVmPlatformConfig{
-				IsSecureBootEnabled:            platformConfig.AmdVmPlatformConfig.IsSecureBootEnabled,
-				IsTrustedPlatformModuleEnabled: platformConfig.AmdVmPlatformConfig.IsTrustedPlatformModuleEnabled,
-				IsMeasuredBootEnabled:          platformConfig.AmdVmPlatformConfig.IsMeasuredBootEnabled,
-				IsMemoryEncryptionEnabled:      platformConfig.AmdVmPlatformConfig.IsMemoryEncryptionEnabled,
+				IsSecureBootEnabled:              platformConfig.AmdVmPlatformConfig.IsSecureBootEnabled,
+				IsTrustedPlatformModuleEnabled:   platformConfig.AmdVmPlatformConfig.IsTrustedPlatformModuleEnabled,
+				IsMeasuredBootEnabled:            platformConfig.AmdVmPlatformConfig.IsMeasuredBootEnabled,
+				IsMemoryEncryptionEnabled:        platformConfig.AmdVmPlatformConfig.IsMemoryEncryptionEnabled,
+				IsSymmetricMultiThreadingEnabled: platformConfig.AmdVmPlatformConfig.IsSymmetricMultiThreadingEnabled,
 			}
-		case infrastructurev1beta2.PlatformConfigTypeIntelVm:
+		case infrav2exp.PlatformConfigTypeIntelVm:
 			return core.IntelVmPlatformConfig{
-				IsSecureBootEnabled:            platformConfig.IntelVmPlatformConfig.IsSecureBootEnabled,
-				IsTrustedPlatformModuleEnabled: platformConfig.IntelVmPlatformConfig.IsTrustedPlatformModuleEnabled,
-				IsMeasuredBootEnabled:          platformConfig.IntelVmPlatformConfig.IsMeasuredBootEnabled,
-				IsMemoryEncryptionEnabled:      platformConfig.IntelVmPlatformConfig.IsMemoryEncryptionEnabled,
+				IsSecureBootEnabled:              platformConfig.IntelVmPlatformConfig.IsSecureBootEnabled,
+				IsTrustedPlatformModuleEnabled:   platformConfig.IntelVmPlatformConfig.IsTrustedPlatformModuleEnabled,
+				IsMeasuredBootEnabled:            platformConfig.IntelVmPlatformConfig.IsMeasuredBootEnabled,
+				IsMemoryEncryptionEnabled:        platformConfig.IntelVmPlatformConfig.IsMemoryEncryptionEnabled,
+				IsSymmetricMultiThreadingEnabled: platformConfig.IntelVmPlatformConfig.IsSymmetricMultiThreadingEnabled,
 			}
-		case infrastructurev1beta2.PlatformConfigTypeIntelSkylakeBm:
+		case infrav2exp.PlatformConfigTypeIntelSkylakeBm:
+			numaNodesPerSocket, _ := core.GetMappingIntelSkylakeBmPlatformConfigNumaNodesPerSocketEnum(string(platformConfig.IntelSkylakeBmPlatformConfig.NumaNodesPerSocket))
 			return core.IntelSkylakeBmPlatformConfig{
-				IsSecureBootEnabled:            platformConfig.IntelSkylakeBmPlatformConfig.IsSecureBootEnabled,
-				IsTrustedPlatformModuleEnabled: platformConfig.IntelSkylakeBmPlatformConfig.IsTrustedPlatformModuleEnabled,
-				IsMeasuredBootEnabled:          platformConfig.IntelSkylakeBmPlatformConfig.IsMeasuredBootEnabled,
-				IsMemoryEncryptionEnabled:      platformConfig.IntelSkylakeBmPlatformConfig.IsMemoryEncryptionEnabled,
+				IsSecureBootEnabled:                      platformConfig.IntelSkylakeBmPlatformConfig.IsSecureBootEnabled,
+				IsTrustedPlatformModuleEnabled:           platformConfig.IntelSkylakeBmPlatformConfig.IsTrustedPlatformModuleEnabled,
+				IsMeasuredBootEnabled:                    platformConfig.IntelSkylakeBmPlatformConfig.IsMeasuredBootEnabled,
+				IsMemoryEncryptionEnabled:                platformConfig.IntelSkylakeBmPlatformConfig.IsMemoryEncryptionEnabled,
+				IsSymmetricMultiThreadingEnabled:         platformConfig.IntelSkylakeBmPlatformConfig.IsSymmetricMultiThreadingEnabled,
+				IsInputOutputMemoryManagementUnitEnabled: platformConfig.IntelSkylakeBmPlatformConfig.IsInputOutputMemoryManagementUnitEnabled,
+				PercentageOfCoresEnabled:                 platformConfig.IntelSkylakeBmPlatformConfig.PercentageOfCoresEnabled,
+				ConfigMap:                                platformConfig.IntelSkylakeBmPlatformConfig.ConfigMap,
+				NumaNodesPerSocket:                       numaNodesPerSocket,
 			}
-		case infrastructurev1beta2.PlatformConfigTypeAmdMilanBm:
+		case infrav2exp.PlatformConfigTypeAmdMilanBm:
 			numaNodesPerSocket, _ := core.GetMappingAmdMilanBmPlatformConfigNumaNodesPerSocketEnum(string(platformConfig.AmdMilanBmPlatformConfig.NumaNodesPerSocket))
 			return core.AmdMilanBmPlatformConfig{
 				IsSecureBootEnabled:                      platformConfig.AmdMilanBmPlatformConfig.IsSecureBootEnabled,
@@ -1050,6 +1131,7 @@ func (m *MachinePoolScope) getPlatformConfig() core.PlatformConfig {
 				AreVirtualInstructionsEnabled:            platformConfig.AmdMilanBmPlatformConfig.AreVirtualInstructionsEnabled,
 				IsInputOutputMemoryManagementUnitEnabled: platformConfig.AmdMilanBmPlatformConfig.IsInputOutputMemoryManagementUnitEnabled,
 				PercentageOfCoresEnabled:                 platformConfig.AmdMilanBmPlatformConfig.PercentageOfCoresEnabled,
+				ConfigMap:                                platformConfig.AmdMilanBmPlatformConfig.ConfigMap,
 				NumaNodesPerSocket:                       numaNodesPerSocket,
 			}
 		default:
@@ -1103,6 +1185,13 @@ func (m *MachinePoolScope) GetInstanceConfiguration(ctx context.Context) (*core.
 // by the current MachinePool, keeping only the currently active one.
 func (m *MachinePoolScope) CleanupInstanceConfiguration(ctx context.Context, instancePool *core.InstancePool) error {
 	m.Info("Cleaning up unused instance configurations")
+
+	if !m.InstancePoolUsesDesiredInstanceConfiguration(instancePool) {
+		m.Info("Deferring instance configuration cleanup until instance pool switch is observed",
+			"desiredInstanceConfigurationId", ptr.ToString(m.GetInstanceConfigurationId()),
+			"actualInstanceConfigurationId", ptr.ToString(instancePool.InstanceConfigurationId))
+		return nil
+	}
 
 	ids, err := m.getInstanceConfigurationsFromDisplayNameSortedTimeCreateDescending(ctx, m.OCIMachinePool.GetName())
 	if err != nil {
@@ -1180,7 +1269,7 @@ func (m *MachinePoolScope) getInstanceConfigurationsFromDisplayNameSortedTimeCre
 	return ids, nil
 }
 
-func (m *MachinePoolScope) getVnicDetails(instanceConfigurationSpec infrav2exp.InstanceConfiguration, freeFormTags map[string]string, definedTags map[string]map[string]interface{}) *core.InstanceConfigurationCreateVnicDetails {
+func (m *MachinePoolScope) getVnicDetails(instanceConfigurationSpec infrav2exp.InstanceConfiguration, freeFormTags map[string]string, definedTags map[string]map[string]interface{}) (*core.InstanceConfigurationCreateVnicDetails, error) {
 	subnetId := m.GetWorkerMachineSubnet()
 	nsgIDs := m.getWorkerMachineNSGs()
 	createVnicDetails := core.InstanceConfigurationCreateVnicDetails{
@@ -1204,8 +1293,71 @@ func (m *MachinePoolScope) getVnicDetails(instanceConfigurationSpec infrav2exp.I
 		createVnicDetails.SkipSourceDestCheck = instanceConfigurationSpec.InstanceVnicConfiguration.SkipSourceDestCheck
 		createVnicDetails.AssignPrivateDnsRecord = instanceConfigurationSpec.InstanceVnicConfiguration.AssignPrivateDnsRecord
 		createVnicDetails.DisplayName = instanceConfigurationSpec.InstanceVnicConfiguration.DisplayName
+		createVnicDetails.Ipv6AddressIpv6SubnetCidrPairDetails = buildInstanceConfigurationIpv6Pairs(instanceConfigurationSpec.InstanceVnicConfiguration.Ipv6AddressIpv6SubnetCidrPairDetails)
+		securityAttributes, err := convertSecurityAttributes(instanceConfigurationSpec.InstanceVnicConfiguration.SecurityAttributes)
+		if err != nil {
+			return nil, err
+		}
+		createVnicDetails.SecurityAttributes = securityAttributes
 	}
-	return &createVnicDetails
+	return &createVnicDetails, nil
+}
+
+func buildInstanceConfigurationIpv6Pairs(spec []infrav2exp.InstanceConfigurationIpv6AddressIpv6SubnetCidrPairDetails) []core.InstanceConfigurationIpv6AddressIpv6SubnetCidrPairDetails {
+	if len(spec) == 0 {
+		return nil
+	}
+	pairs := make([]core.InstanceConfigurationIpv6AddressIpv6SubnetCidrPairDetails, 0, len(spec))
+	for _, pair := range spec {
+		pairs = append(pairs, core.InstanceConfigurationIpv6AddressIpv6SubnetCidrPairDetails{
+			Ipv6SubnetCidr: pair.Ipv6SubnetCidr,
+			Ipv6Address:    pair.Ipv6Address,
+		})
+	}
+	return pairs
+}
+
+func buildLaunchInstanceLicensingConfigs(spec []infrav2exp.LaunchInstanceLicensingConfig) []core.LaunchInstanceLicensingConfig {
+	if len(spec) == 0 {
+		return nil
+	}
+	configs := make([]core.LaunchInstanceLicensingConfig, 0, len(spec))
+	for _, licensingConfig := range spec {
+		switch licensingConfig.Type {
+		case infrav2exp.LaunchInstanceLicensingConfigTypeEnum(core.LaunchInstanceLicensingConfigTypeWindows):
+			licenseType, _ := core.GetMappingLaunchInstanceLicensingConfigLicenseTypeEnum(string(licensingConfig.LicenseType))
+			configs = append(configs, core.LaunchInstanceWindowsLicensingConfig{
+				LicenseType: licenseType,
+			})
+		}
+	}
+	if len(configs) == 0 {
+		return nil
+	}
+	return configs
+}
+
+func convertSecurityAttributes(input map[string]map[string]apiextensionsv1.JSON) (map[string]map[string]interface{}, error) {
+	if len(input) == 0 {
+		return nil, nil
+	}
+	output := make(map[string]map[string]interface{}, len(input))
+	for namespace, attrs := range input {
+		convertedAttrs := make(map[string]interface{}, len(attrs))
+		for key, value := range attrs {
+			if len(value.Raw) == 0 {
+				convertedAttrs[key] = nil
+				continue
+			}
+			var converted interface{}
+			if err := json.Unmarshal(value.Raw, &converted); err != nil {
+				return nil, err
+			}
+			convertedAttrs[key] = converted
+		}
+		output[namespace] = convertedAttrs
+	}
+	return output, nil
 }
 
 func copyStringMap(in map[string]string) map[string]string {
