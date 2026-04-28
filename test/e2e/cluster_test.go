@@ -611,7 +611,7 @@ var _ = Describe("Workload cluster creation", func() {
 		}, result)
 	})
 
-	It("Machine Pool - Simple [PRBlocking] [DailyTests]", func() {
+	It("Machine Pool - Simple [PRBlocking]", func() {
 		clusterName = getClusterName(clusterNamePrefix, "machine-pool")
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
@@ -633,9 +633,6 @@ var _ = Describe("Workload cluster creation", func() {
 			WaitForMachinePools:          e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes"),
 			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
 		}, result)
-
-		By("Verifying the machine pool create path carries representative approved fields")
-		assertMachinePoolRepresentativeApprovedFields(ctx, bootstrapClusterProxy, result.Cluster, result.MachinePools[0], clusterName, specName)
 
 		By("Scaling the machine pool up")
 		framework.ScaleMachinePoolAndWait(ctx, framework.ScaleMachinePoolAndWaitInput{
@@ -705,6 +702,9 @@ var _ = Describe("Workload cluster creation", func() {
 			WaitForMachinePools:          e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes"),
 			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
 		}, result)
+
+		By("Verifying the machine pool create path carries representative approved fields")
+		assertMachinePoolRepresentativeApprovedFields(ctx, bootstrapClusterProxy, result.Cluster, result.MachinePools[0], clusterName, specName)
 
 		By("Patching an existing machine pool with newly approved update fields")
 		mpKey := client.ObjectKey{Name: result.MachinePools[0].Name, Namespace: namespace.Name}
