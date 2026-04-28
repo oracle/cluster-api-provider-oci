@@ -1491,6 +1491,99 @@ func TestCleanupInstanceConfigurationDefersWhenInstancePoolSwitchStalls(t *testi
 	g.Expect(err).To(BeNil())
 }
 
+func TestCleanupInstanceConfigurationDeletesOnlyAfterSuccessfulSwitch(t *testing.T) {
+	g := NewWithT(t)
+	ms, computeMgmt := newInstanceConfigurationOrderingScope(t, "test")
+
+	ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+		InstanceConfigurationId: common.String("new-id"),
+	}
+	switchedPool := &core.InstancePool{
+		Id:                      common.String("pool-id"),
+		InstanceConfigurationId: common.String("new-id"),
+	}
+
+	computeMgmt.EXPECT().ListInstanceConfigurations(gomock.Any(), gomock.Any()).
+		Return(core.ListInstanceConfigurationsResponse{
+			Items: []core.InstanceConfigurationSummary{
+				{
+					Id:           common.String("new-id"),
+					DisplayName:  common.String("test-new"),
+					FreeformTags: ms.GetFreeFormTags(),
+				},
+				{
+					Id:           common.String("old-id"),
+					DisplayName:  common.String("test-old"),
+					FreeformTags: ms.GetFreeFormTags(),
+				},
+			},
+		}, nil)
+	computeMgmt.EXPECT().DeleteInstanceConfiguration(gomock.Any(), gomock.Eq(core.DeleteInstanceConfigurationRequest{
+		InstanceConfigurationId: common.String("old-id"),
+	})).
+		Return(core.DeleteInstanceConfigurationResponse{}, nil)
+
+	err := ms.CleanupInstanceConfiguration(context.Background(), switchedPool)
+	g.Expect(err).To(BeNil())
+}
+
+func TestReconcileInstanceConfigurationCoalescesMultipleApprovedFieldChanges(t *testing.T) {
+	g := NewWithT(t)
+	ms, computeMgmt := newInstanceConfigurationOrderingScope(t, "test")
+
+	ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+		Shape:                      common.String("new-shape"),
+		InstanceConfigurationId:    common.String("old-id"),
+		LaunchMode:                 infrav2exp.LaunchModeEnum(core.InstanceConfigurationLaunchInstanceDetailsLaunchModeNative),
+		PreferredMaintenanceAction: infrav2exp.PreferredMaintenanceActionEnum(core.InstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionReboot),
+	}
+	stalledPool := &core.InstancePool{
+		Id:                      common.String("pool-id"),
+		InstanceConfigurationId: common.String("old-id"),
+		Size:                    common.Int(3),
+	}
+	desiredLaunch := orderingLaunchDetails("new-shape", "test")
+	desiredLaunch.LaunchMode = core.InstanceConfigurationLaunchInstanceDetailsLaunchModeNative
+	desiredLaunch.PreferredMaintenanceAction = core.InstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionReboot
+
+	computeMgmt.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Eq(core.GetInstanceConfigurationRequest{
+		InstanceConfigurationId: common.String("old-id"),
+	})).
+		Return(core.GetInstanceConfigurationResponse{
+			InstanceConfiguration: core.InstanceConfiguration{
+				Id: common.String("old-id"),
+				InstanceDetails: core.ComputeInstanceDetails{
+					LaunchDetails: orderingLaunchDetails("old-shape", "test"),
+				},
+			},
+		}, nil)
+	computeMgmt.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).
+		Return(core.CreateInstanceConfigurationResponse{
+			InstanceConfiguration: core.InstanceConfiguration{Id: common.String("new-id")},
+		}, nil)
+
+	err := ms.ReconcileInstanceConfiguration(context.Background(), stalledPool)
+	g.Expect(err).To(BeNil())
+	g.Expect(ms.GetInstanceConfigurationId()).To(Equal(common.String("new-id")))
+
+	computeMgmt.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Eq(core.GetInstanceConfigurationRequest{
+		InstanceConfigurationId: common.String("new-id"),
+	})).
+		Return(core.GetInstanceConfigurationResponse{
+			InstanceConfiguration: core.InstanceConfiguration{
+				Id: common.String("new-id"),
+				InstanceDetails: core.ComputeInstanceDetails{
+					LaunchDetails: desiredLaunch,
+				},
+			},
+		}, nil)
+	computeMgmt.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).Times(0)
+
+	err = ms.ReconcileInstanceConfiguration(context.Background(), stalledPool)
+	g.Expect(err).To(BeNil())
+	g.Expect(ms.GetInstanceConfigurationId()).To(Equal(common.String("new-id")))
+}
+
 func TestBootstrapTriggeredRotationDefersCleanupBeforePoolSwitch(t *testing.T) {
 	g := NewWithT(t)
 	ms, computeMgmt := newInstanceConfigurationOrderingScope(t, "new-bootstrap")
@@ -1523,6 +1616,92 @@ func TestBootstrapTriggeredRotationDefersCleanupBeforePoolSwitch(t *testing.T) {
 	err := ms.ReconcileInstanceConfiguration(context.Background(), activePool)
 	g.Expect(err).To(BeNil())
 	g.Expect(ms.GetInstanceConfigurationId()).To(Equal(common.String("new-id")))
+}
+
+func TestBootstrapTriggeredRotationUpdatesPoolBeforeCleanupEligibility(t *testing.T) {
+	g := NewWithT(t)
+	ms, computeMgmt := newInstanceConfigurationOrderingScope(t, "new-bootstrap")
+
+	ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+		Shape:                   common.String("test-shape"),
+		InstanceConfigurationId: common.String("old-id"),
+	}
+	activePool := &core.InstancePool{
+		Id:                      common.String("pool-id"),
+		InstanceConfigurationId: common.String("old-id"),
+		Size:                    common.Int(3),
+	}
+
+	computeMgmt.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Eq(core.GetInstanceConfigurationRequest{
+		InstanceConfigurationId: common.String("old-id"),
+	})).
+		Return(core.GetInstanceConfigurationResponse{
+			InstanceConfiguration: core.InstanceConfiguration{
+				Id: common.String("old-id"),
+				InstanceDetails: core.ComputeInstanceDetails{
+					LaunchDetails: orderingLaunchDetails("test-shape", "old-bootstrap"),
+				},
+			},
+		}, nil)
+	computeMgmt.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).
+		Return(core.CreateInstanceConfigurationResponse{
+			InstanceConfiguration: core.InstanceConfiguration{Id: common.String("new-id")},
+		}, nil)
+
+	err := ms.ReconcileInstanceConfiguration(context.Background(), activePool)
+	g.Expect(err).To(BeNil())
+	g.Expect(ms.GetInstanceConfigurationId()).To(Equal(common.String("new-id")))
+
+	computeMgmt.EXPECT().UpdateInstancePool(gomock.Any(), gomock.Eq(core.UpdateInstancePoolRequest{
+		InstancePoolId: common.String("pool-id"),
+		UpdateInstancePoolDetails: core.UpdateInstancePoolDetails{
+			Size:                    common.Int(3),
+			InstanceConfigurationId: common.String("new-id"),
+		},
+	})).
+		Return(core.UpdateInstancePoolResponse{
+			InstancePool: core.InstancePool{
+				Id:                      common.String("pool-id"),
+				InstanceConfigurationId: common.String("old-id"),
+				Size:                    common.Int(3),
+			},
+		}, nil)
+	computeMgmt.EXPECT().ListInstanceConfigurations(gomock.Any(), gomock.Any()).Times(0)
+	computeMgmt.EXPECT().DeleteInstanceConfiguration(gomock.Any(), gomock.Any()).Times(0)
+
+	updatedPool, err := ms.UpdatePool(context.Background(), activePool)
+	g.Expect(err).To(BeNil())
+	g.Expect(ms.InstancePoolUsesDesiredInstanceConfiguration(updatedPool)).To(BeFalse())
+	err = ms.CleanupInstanceConfiguration(context.Background(), updatedPool)
+	g.Expect(err).To(BeNil())
+
+	switchedPool := &core.InstancePool{
+		Id:                      common.String("pool-id"),
+		InstanceConfigurationId: common.String("new-id"),
+		Size:                    common.Int(3),
+	}
+	computeMgmt.EXPECT().ListInstanceConfigurations(gomock.Any(), gomock.Any()).
+		Return(core.ListInstanceConfigurationsResponse{
+			Items: []core.InstanceConfigurationSummary{
+				{
+					Id:           common.String("new-id"),
+					DisplayName:  common.String("test-new"),
+					FreeformTags: ms.GetFreeFormTags(),
+				},
+				{
+					Id:           common.String("old-id"),
+					DisplayName:  common.String("test-old"),
+					FreeformTags: ms.GetFreeFormTags(),
+				},
+			},
+		}, nil)
+	computeMgmt.EXPECT().DeleteInstanceConfiguration(gomock.Any(), gomock.Eq(core.DeleteInstanceConfigurationRequest{
+		InstanceConfigurationId: common.String("old-id"),
+	})).
+		Return(core.DeleteInstanceConfigurationResponse{}, nil)
+
+	err = ms.CleanupInstanceConfiguration(context.Background(), switchedPool)
+	g.Expect(err).To(BeNil())
 }
 
 func newInstanceConfigurationOrderingScope(t *testing.T, bootstrapData string) (*MachinePoolScope, *mock_computemanagement.MockClient) {
