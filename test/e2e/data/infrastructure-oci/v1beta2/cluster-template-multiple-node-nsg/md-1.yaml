@@ -12,6 +12,8 @@ spec:
       networkDetails:
         nsgNames:
           - "worker-nsg-2"
+      instanceOptions:
+        areLegacyImdsEndpointsDisabled: true
       shapeConfig:
         ocpus: "1"
       metadata:

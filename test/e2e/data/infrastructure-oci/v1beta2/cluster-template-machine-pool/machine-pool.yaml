@@ -28,6 +28,8 @@ metadata:
   namespace: default
 spec:
   instanceConfiguration:
+    instanceOptions:
+      areLegacyImdsEndpointsDisabled: true
     metadata:
       ssh_authorized_keys: "${OCI_SSH_KEY}"
     instanceSourceViaImageConfig:
