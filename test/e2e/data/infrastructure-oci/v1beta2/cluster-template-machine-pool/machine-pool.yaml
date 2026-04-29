@@ -28,7 +28,6 @@ metadata:
   namespace: default
 spec:
   instanceDisplayNameFormatter: "${CLUSTER_NAME}-mp-$${launchCount}"
-  instanceHostnameFormatter: "${CLUSTER_NAME}-mp-$${launchCount}"
   instanceConfiguration:
     metadata:
       ssh_authorized_keys: "${OCI_SSH_KEY}"

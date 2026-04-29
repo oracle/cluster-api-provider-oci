@@ -116,7 +116,6 @@ metadata:
   namespace: default
 spec:
   instanceDisplayNameFormatter: "${CLUSTER_NAME}-mp-$${launchCount}"
-  instanceHostnameFormatter: "${CLUSTER_NAME}-mp-$${launchCount}"
   instanceConfiguration:
     instanceSourceViaImageConfig:
       imageId: "${OCI_IMAGE_ID}"

@@ -716,7 +716,6 @@ var _ = Describe("Workload cluster creation", func() {
 		patchHelper, err := v1beta1patch.NewHelper(initialOMP, bootstrapClusterProxy.GetClient())
 		Expect(err).ToNot(HaveOccurred())
 		initialOMP.Spec.InstanceDisplayNameFormatter = common.String("updated-worker-${launchCount}")
-		initialOMP.Spec.InstanceHostnameFormatter = common.String("updated-worker-${launchCount}")
 		initialOMP.Spec.InstanceConfiguration.IpxeScript = common.String("#!ipxe")
 		initialOMP.Spec.InstanceConfiguration.PreferredMaintenanceAction = infrav2exp.PreferredMaintenanceActionReboot
 		Expect(patchHelper.Patch(ctx, initialOMP)).To(Succeed())
@@ -728,8 +727,6 @@ var _ = Describe("Workload cluster creation", func() {
 			g.Expect(bootstrapClusterProxy.GetClient().Get(ctx, mpKey, updatedOMP)).To(Succeed())
 			g.Expect(updatedOMP.Spec.InstanceDisplayNameFormatter).ToNot(BeNil())
 			g.Expect(*updatedOMP.Spec.InstanceDisplayNameFormatter).To(Equal("updated-worker-${launchCount}"))
-			g.Expect(updatedOMP.Spec.InstanceHostnameFormatter).ToNot(BeNil())
-			g.Expect(*updatedOMP.Spec.InstanceHostnameFormatter).To(Equal("updated-worker-${launchCount}"))
 			g.Expect(updatedOMP.Spec.InstanceConfiguration.IpxeScript).ToNot(BeNil())
 			g.Expect(*updatedOMP.Spec.InstanceConfiguration.IpxeScript).To(Equal("#!ipxe"))
 			g.Expect(updatedOMP.Spec.InstanceConfiguration.PreferredMaintenanceAction).To(Equal(infrav2exp.PreferredMaintenanceActionReboot))
@@ -923,8 +920,6 @@ func assertMachinePoolRepresentativeApprovedFields(ctx context.Context, clusterP
 		g.Expect(err).NotTo(HaveOccurred())
 		g.Expect(ociMachinePool.Spec.InstanceDisplayNameFormatter).ToNot(BeNil())
 		g.Expect(*ociMachinePool.Spec.InstanceDisplayNameFormatter).To(Equal(expectedFormatter))
-		g.Expect(ociMachinePool.Spec.InstanceHostnameFormatter).ToNot(BeNil())
-		g.Expect(*ociMachinePool.Spec.InstanceHostnameFormatter).To(Equal(expectedFormatter))
 		g.Expect(ociMachinePool.Spec.InstanceConfiguration.PreferredMaintenanceAction).To(Equal(expectedMaintenanceAction))
 		g.Expect(ociMachinePool.Spec.OCID).ToNot(BeNil())
 		g.Expect(*ociMachinePool.Spec.OCID).ToNot(BeEmpty())
@@ -942,8 +937,6 @@ func assertMachinePoolRepresentativeApprovedFields(ctx context.Context, clusterP
 		g.Expect(err).NotTo(HaveOccurred())
 		g.Expect(resp.InstancePool.InstanceDisplayNameFormatter).ToNot(BeNil())
 		g.Expect(*resp.InstancePool.InstanceDisplayNameFormatter).To(Equal(expectedFormatter))
-		g.Expect(resp.InstancePool.InstanceHostnameFormatter).ToNot(BeNil())
-		g.Expect(*resp.InstancePool.InstanceHostnameFormatter).To(Equal(expectedFormatter))
 	}, e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes")...).Should(Succeed(), "Timed out waiting for actual OCI InstancePool representative fields")
 
 	Eventually(func(g Gomega) {

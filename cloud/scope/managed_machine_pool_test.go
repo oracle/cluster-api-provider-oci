@@ -357,6 +357,10 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 									ImageId:    common.String("image-id-2"),
 								},
 								oke.NodeSourceViaImageOption{
+									SourceName: common.String("Oracle-Linux-8.10-2026.02.28-0-OKE-1.24.50-1392"),
+									ImageId:    common.String("wrong-prefix-match-image-id"),
+								},
+								oke.NodeSourceViaImageOption{
 									SourceName: common.String("Oracle-Linux-8.6-2022.12.15-0-OKE-1.24.5-543"),
 									ImageId:    common.String("image-id-3"),
 								},

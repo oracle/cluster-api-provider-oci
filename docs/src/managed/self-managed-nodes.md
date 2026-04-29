@@ -75,7 +75,6 @@ metadata:
   namespace: default
 spec:
   instanceDisplayNameFormatter: "${CLUSTER_NAME}-mp-$${launchCount}"
-  instanceHostnameFormatter: "${CLUSTER_NAME}-mp-$${launchCount}"
   instanceConfiguration:
     metadata:
       ssh_authorized_keys: "${OCI_SSH_KEY}"
@@ -90,6 +89,10 @@ spec:
 The formatter examples use OCI's `${launchCount}` token. In clusterctl-style
 templates it is escaped as `$${launchCount}` so the rendered `OCIMachinePool`
 passes `${launchCount}` through to OCI.
+
+`instanceHostnameFormatter` is also supported, but it requires the worker subnet
+to have a valid DNS resolver. Configure DNS labels on the VCN and worker subnet
+before setting a hostname formatter.
 
 
 
