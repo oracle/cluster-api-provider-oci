@@ -112,6 +112,7 @@ type InstanceConfiguration struct {
 	IpxeScript *string `json:"ipxeScript,omitempty"`
 
 	// LaunchMode specifies the configuration mode for launching virtual machine instances.
+	// Supported values are NATIVE, EMULATED, PARAVIRTUALIZED, CUSTOM, and ACCELERATEDPV.
 	// +optional
 	LaunchMode LaunchModeEnum `json:"launchMode,omitempty"`
 
@@ -436,6 +437,7 @@ const (
 	LaunchModeEmulated        LaunchModeEnum = "EMULATED"
 	LaunchModeParavirtualized LaunchModeEnum = "PARAVIRTUALIZED"
 	LaunchModeCustom          LaunchModeEnum = "CUSTOM"
+	LaunchModeAcceleratedPV   LaunchModeEnum = "ACCELERATEDPV"
 )
 
 // PreferredMaintenanceActionEnum defines the preferred maintenance action.

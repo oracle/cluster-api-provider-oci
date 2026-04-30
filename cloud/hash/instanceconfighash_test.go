@@ -912,9 +912,11 @@ func TestComputeComparableHash_IgnoresDefaultOnlyReadbackChurn(t *testing.T) {
 			AssignPublicIp: common.Bool(false),
 		},
 		AgentConfig: &core.InstanceConfigurationLaunchInstanceAgentConfigDetails{},
+		LaunchMode:  core.InstanceConfigurationLaunchInstanceDetailsLaunchModeNative,
 		Metadata: map[string]string{
 			"user_data": "different-bootstrap-is-tracked-separately",
 		},
+		PreferredMaintenanceAction: core.InstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionLiveMigrate,
 	}
 
 	desiredHash, err := ComputeHash(desired)
@@ -924,6 +926,136 @@ func TestComputeComparableHash_IgnoresDefaultOnlyReadbackChurn(t *testing.T) {
 	g.Expect(err).To(BeNil())
 
 	g.Expect(actualHash).To(Equal(desiredHash))
+}
+
+func TestComputeComparableHash_DetectsSetToUnsetOptionalLaunchFields(t *testing.T) {
+	tests := []struct {
+		name   string
+		actual *core.InstanceConfigurationLaunchInstanceDetails
+	}{
+		{
+			name: "ipxe script",
+			actual: &core.InstanceConfigurationLaunchInstanceDetails{
+				IpxeScript: common.String("#!ipxe"),
+			},
+		},
+		{
+			name: "launch mode",
+			actual: &core.InstanceConfigurationLaunchInstanceDetails{
+				LaunchMode: core.InstanceConfigurationLaunchInstanceDetailsLaunchModeCustom,
+			},
+		},
+		{
+			name: "licensing configs",
+			actual: &core.InstanceConfigurationLaunchInstanceDetails{
+				LicensingConfigs: []core.LaunchInstanceLicensingConfig{
+					core.LaunchInstanceWindowsLicensingConfig{
+						LicenseType: core.LaunchInstanceLicensingConfigLicenseTypeBringYourOwnLicense,
+					},
+				},
+			},
+		},
+		{
+			name: "preferred maintenance action",
+			actual: &core.InstanceConfigurationLaunchInstanceDetails{
+				PreferredMaintenanceAction: core.InstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionReboot,
+			},
+		},
+		{
+			name: "instance security attributes",
+			actual: &core.InstanceConfigurationLaunchInstanceDetails{
+				SecurityAttributes: map[string]map[string]interface{}{
+					"Oracle-DataSecurity-ZPR": {
+						"MaxEgressCount": map[string]interface{}{"value": "42", "mode": "audit"},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			actual := &core.InstanceConfigurationLaunchInstanceDetails{
+				Shape: common.String("VM.Standard2.1"),
+			}
+			*actual = *tt.actual
+			actual.Shape = common.String("VM.Standard2.1")
+
+			desired := &core.InstanceConfigurationLaunchInstanceDetails{
+				Shape: common.String("VM.Standard2.1"),
+			}
+
+			actualHash, err := ComputeComparableHash(actual, desired)
+			g.Expect(err).To(BeNil())
+
+			desiredHash, err := ComputeHash(desired)
+			g.Expect(err).To(BeNil())
+
+			g.Expect(actualHash).ToNot(Equal(desiredHash))
+		})
+	}
+}
+
+func TestComputeComparableHash_DetectsPartialInstanceSecurityAttributesRemoval(t *testing.T) {
+	tests := []struct {
+		name    string
+		actual  map[string]map[string]interface{}
+		desired map[string]map[string]interface{}
+	}{
+		{
+			name: "namespace removal",
+			actual: map[string]map[string]interface{}{
+				"Oracle-DataSecurity-ZPR": {
+					"MaxEgressCount": map[string]interface{}{"value": "42", "mode": "audit"},
+				},
+				"stale-namespace": {
+					"StaleAttribute": "old-value",
+				},
+			},
+			desired: map[string]map[string]interface{}{
+				"Oracle-DataSecurity-ZPR": {
+					"MaxEgressCount": map[string]interface{}{"value": "42", "mode": "audit"},
+				},
+			},
+		},
+		{
+			name: "key removal",
+			actual: map[string]map[string]interface{}{
+				"Oracle-DataSecurity-ZPR": {
+					"MaxEgressCount": map[string]interface{}{"value": "42", "mode": "audit"},
+					"StaleAttribute": "old-value",
+				},
+			},
+			desired: map[string]map[string]interface{}{
+				"Oracle-DataSecurity-ZPR": {
+					"MaxEgressCount": map[string]interface{}{"value": "42", "mode": "audit"},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			actual := &core.InstanceConfigurationLaunchInstanceDetails{
+				Shape:              common.String("VM.Standard2.1"),
+				SecurityAttributes: tt.actual,
+			}
+			desired := &core.InstanceConfigurationLaunchInstanceDetails{
+				Shape:              common.String("VM.Standard2.1"),
+				SecurityAttributes: tt.desired,
+			}
+
+			actualHash, err := ComputeComparableHash(actual, desired)
+			g.Expect(err).To(BeNil())
+
+			desiredHash, err := ComputeHash(desired)
+			g.Expect(err).To(BeNil())
+
+			g.Expect(actualHash).ToNot(Equal(desiredHash))
+		})
+	}
 }
 
 func TestComputeComparableHash_DetectsTrueToFalseVNICUpdates(t *testing.T) {

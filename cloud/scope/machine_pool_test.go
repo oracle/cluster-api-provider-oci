@@ -1961,6 +1961,34 @@ func TestGetLaunchInstanceDetailsCopiesMetadataAndPropagatesSupportedFields(t *t
 	g.Expect(*launchDetails.AvailabilityConfig.IsLiveMigrationPreferred).To(BeTrue())
 }
 
+func TestGetLaunchInstanceDetailsSupportsAcceleratedPVLaunchMode(t *testing.T) {
+	g := NewWithT(t)
+	ms, _ := newInstanceConfigurationOrderingScope(t, "test")
+	spec := infrav2exp.InstanceConfiguration{
+		Shape:      common.String("test-shape"),
+		LaunchMode: infrav2exp.LaunchModeAcceleratedPV,
+	}
+	ms.OCIMachinePool.Spec.InstanceConfiguration = spec
+
+	launchDetails, err := ms.getLaunchInstanceDetails(spec, nil, nil)
+	g.Expect(err).To(BeNil())
+	g.Expect(launchDetails.LaunchMode).To(Equal(core.InstanceConfigurationLaunchInstanceDetailsLaunchModeEnum("ACCELERATEDPV")))
+}
+
+func TestGetLaunchInstanceDetailsRejectsUnknownLaunchMode(t *testing.T) {
+	g := NewWithT(t)
+	ms, _ := newInstanceConfigurationOrderingScope(t, "test")
+	spec := infrav2exp.InstanceConfiguration{
+		Shape:      common.String("test-shape"),
+		LaunchMode: infrav2exp.LaunchModeEnum("UNKNOWN_MODE"),
+	}
+	ms.OCIMachinePool.Spec.InstanceConfiguration = spec
+
+	launchDetails, err := ms.getLaunchInstanceDetails(spec, nil, nil)
+	g.Expect(err).To(MatchError(`unsupported launch mode "UNKNOWN_MODE"`))
+	g.Expect(launchDetails).To(BeNil())
+}
+
 func TestGetPlatformConfigPropagatesApprovedPlatformFields(t *testing.T) {
 	falseValue := false
 	trueValue := true

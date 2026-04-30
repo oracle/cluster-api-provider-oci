@@ -284,8 +284,9 @@ spec:
                     description: Is in transit encryption of volumes required.
                     type: boolean
                   launchMode:
-                    description: LaunchMode specifies the configuration mode for launching
-                      virtual machine instances.
+                    description: |-
+                      LaunchMode specifies the configuration mode for launching virtual machine instances.
+                      Supported values are NATIVE, EMULATED, PARAVIRTUALIZED, CUSTOM, and ACCELERATEDPV.
                     type: string
                   launchOptions:
                     description: LaunchOptions defines the options for tuning the
@@ -980,8 +981,9 @@ spec:
                     description: Is in transit encryption of volumes required.
                     type: boolean
                   launchMode:
-                    description: LaunchMode specifies the configuration mode for launching
-                      virtual machine instances.
+                    description: |-
+                      LaunchMode specifies the configuration mode for launching virtual machine instances.
+                      Supported values are NATIVE, EMULATED, PARAVIRTUALIZED, CUSTOM, and ACCELERATEDPV.
                     type: string
                   launchOptions:
                     description: LaunchOptions defines the options for tuning the

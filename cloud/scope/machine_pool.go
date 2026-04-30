@@ -716,7 +716,10 @@ func (m *MachinePoolScope) getLaunchInstanceDetails(instanceConfigurationSpec in
 		launchDetails.IsPvEncryptionInTransitEnabled = instanceConfigurationSpec.IsPvEncryptionInTransitEnabled
 	}
 	if instanceConfigurationSpec.LaunchMode != "" {
-		launchMode, _ := core.GetMappingInstanceConfigurationLaunchInstanceDetailsLaunchModeEnum(string(instanceConfigurationSpec.LaunchMode))
+		launchMode, err := mapInstanceConfigurationLaunchMode(instanceConfigurationSpec.LaunchMode)
+		if err != nil {
+			return nil, err
+		}
 		launchDetails.LaunchMode = launchMode
 	}
 	if instanceConfigurationSpec.PreferredMaintenanceAction != "" {
@@ -746,6 +749,20 @@ func (m *MachinePoolScope) getLaunchInstanceDetails(instanceConfigurationSpec in
 		launchDetails.ShapeConfig = &shapeConfig
 	}
 	return launchDetails, nil
+}
+
+func mapInstanceConfigurationLaunchMode(mode infrav2exp.LaunchModeEnum) (core.InstanceConfigurationLaunchInstanceDetailsLaunchModeEnum, error) {
+	if mode == "" {
+		return "", nil
+	}
+	if mode == infrav2exp.LaunchModeAcceleratedPV {
+		return core.InstanceConfigurationLaunchInstanceDetailsLaunchModeEnum(infrav2exp.LaunchModeAcceleratedPV), nil
+	}
+	launchMode, ok := core.GetMappingInstanceConfigurationLaunchInstanceDetailsLaunchModeEnum(string(mode))
+	if !ok {
+		return "", errors.Errorf("unsupported launch mode %q", mode)
+	}
+	return launchMode, nil
 }
 
 // ListInstancePoolSummaries list the core.InstancePoolSummary for the given core.ListInstancePoolsRequest
