@@ -972,6 +972,21 @@ type VCN struct {
 	IsIpv6Enabled *bool `json:"isIpv6Enabled,omitempty"`
 }
 
+// LBNetworkVisibility defines the network visibility of the API server load balancer.
+// +kubebuilder:validation:Enum=Public;Private;Inherited
+type LBNetworkVisibility string
+
+const (
+	// LBNetworkVisibilityPublic creates a public load balancer with a public IP address.
+	LBNetworkVisibilityPublic LBNetworkVisibility = "Public"
+
+	// LBNetworkVisibilityPrivate creates a private load balancer accessible only within the VCN.
+	LBNetworkVisibilityPrivate LBNetworkVisibility = "Private"
+
+	// LBNetworkVisibilityInherited derives visibility from the control-plane-endpoint subnet type.
+	LBNetworkVisibilityInherited LBNetworkVisibility = "Inherited"
+)
+
 // LoadBalancer Configuration
 type LoadBalancer struct {
 	//LoadBalancer Name.
@@ -985,6 +1000,14 @@ type LoadBalancer struct {
 	// The NLB Spec
 	// +optional
 	NLBSpec NLBSpec `json:"nlbSpec,omitempty"`
+
+	// NetworkVisibility controls whether the API server LB is Public, Private, or Inherited
+	// from the control-plane-endpoint subnet type. Defaults to Inherited, which preserves
+	// backwards compatibility. Setting Public when the control-plane-endpoint subnet is
+	// Private is rejected by the webhook.
+	// +kubebuilder:default=Inherited
+	// +optional
+	NetworkVisibility LBNetworkVisibility `json:"networkVisibility,omitempty"`
 }
 
 // NLBSpec specifies the NLB spec.

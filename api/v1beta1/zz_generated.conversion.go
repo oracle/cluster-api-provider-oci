@@ -1932,6 +1932,7 @@ func autoConvert_v1beta1_LoadBalancer_To_v1beta2_LoadBalancer(in *LoadBalancer, 
 	if err := Convert_v1beta1_NLBSpec_To_v1beta2_NLBSpec(&in.NLBSpec, &out.NLBSpec, s); err != nil {
 		return err
 	}
+	out.NetworkVisibility = v1beta2.LBNetworkVisibility(in.NetworkVisibility)
 	return nil
 }
 
@@ -1947,6 +1948,7 @@ func autoConvert_v1beta2_LoadBalancer_To_v1beta1_LoadBalancer(in *v1beta2.LoadBa
 	if err := Convert_v1beta2_NLBSpec_To_v1beta1_NLBSpec(&in.NLBSpec, &out.NLBSpec, s); err != nil {
 		return err
 	}
+	out.NetworkVisibility = LBNetworkVisibility(in.NetworkVisibility)
 	return nil
 }
 
