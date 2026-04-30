@@ -177,7 +177,7 @@ func (s *ClusterScope) CreateLB(ctx context.Context, lb infrastructurev1beta2.Lo
 		ShapeDetails: &loadbalancer.ShapeDetails{MinimumBandwidthInMbps: common.Int(10),
 			MaximumBandwidthInMbps: common.Int(100)},
 		SubnetIds:    controlPlaneEndpointSubnets,
-		IsPrivate:    common.Bool(s.isControlPlaneEndpointSubnetPrivate()),
+		IsPrivate:    common.Bool(s.isAPIServerLBPrivate()),
 		Listeners:    listenerDetails,
 		BackendSets:  backendSetDetails,
 		FreeformTags: s.GetFreeFormTags(),

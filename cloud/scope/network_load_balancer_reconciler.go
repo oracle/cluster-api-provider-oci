@@ -228,7 +228,7 @@ func (s *ClusterScope) CreateNLB(ctx context.Context, lb infrastructurev1beta2.L
 		CompartmentId: common.String(s.GetCompartmentId()),
 		DisplayName:   common.String(lb.Name),
 		SubnetId:      common.String(controlPlaneEndpointSubnets[0]),
-		IsPrivate:     common.Bool(s.isControlPlaneEndpointSubnetPrivate()),
+		IsPrivate:     common.Bool(s.isAPIServerLBPrivate()),
 		Listeners:     listenerDetails,
 		BackendSets:   backendSetDetails,
 		FreeformTags:  s.GetFreeFormTags(),
@@ -355,7 +355,6 @@ func isHealthCheckerEqual(actual, desired *networkloadbalancer.HealthChecker) bo
 	}
 	return true
 }
-
 
 // GetNetworkLoadBalancers retrieves the Cluster's networkloadbalancer.NetworkLoadBalancer using the one of the following methods
 //
