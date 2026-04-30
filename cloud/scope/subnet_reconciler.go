@@ -327,6 +327,18 @@ func (s *ClusterScope) isControlPlaneEndpointSubnetPrivate() bool {
 	return false
 }
 
+func (s *ClusterScope) isAPIServerLBPrivate() bool {
+	visibility := s.OCIClusterAccessor.GetNetworkSpec().APIServerLB.NetworkVisibility
+	if visibility == infrastructurev1beta2.LBNetworkVisibilityPrivate {
+		return true
+	}
+	if visibility == infrastructurev1beta2.LBNetworkVisibilityPublic {
+		return false
+	}
+	// Empty string or Inherited → fall back to subnet derivation
+	return s.isControlPlaneEndpointSubnetPrivate()
+}
+
 func (s *ClusterScope) GetControlPlaneEndpointSubnetCidr() string {
 	subnetSlice := ptr.ToSubnetSlice(s.GetSubnetsSpec())
 	for i := range subnetSlice {
