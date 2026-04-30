@@ -43,3 +43,5 @@ tilt-settings.json
 
 # git worktrees
 worktrees/
+
+infrastructure-oci

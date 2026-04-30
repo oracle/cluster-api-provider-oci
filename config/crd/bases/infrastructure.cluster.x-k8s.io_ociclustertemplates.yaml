@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.16.1
+    controller-gen.kubebuilder.io/version: v0.19.0
   name: ociclustertemplates.infrastructure.cluster.x-k8s.io
 spec:
   group: infrastructure.cluster.x-k8s.io
@@ -138,6 +138,18 @@ spec:
                                 type: string
                               name:
                                 description: LoadBalancer Name.
+                                type: string
+                              networkVisibility:
+                                default: Inherited
+                                description: |-
+                                  NetworkVisibility controls whether the API server LB is Public, Private, or Inherited
+                                  from the control-plane-endpoint subnet type. Defaults to Inherited, which preserves
+                                  backwards compatibility. Setting Public when the control-plane-endpoint subnet is
+                                  Private is rejected by the webhook.
+                                enum:
+                                - Public
+                                - Private
+                                - Inherited
                                 type: string
                               nlbSpec:
                                 description: The NLB Spec
@@ -1162,11 +1174,6 @@ spec:
                               SDK client URL to be changed.
                             nullable: true
                             type: string
-                          volumeClientUrl:
-                            description: VolumeClientUrl allows the default volume SDK client
-                              URL to be changed.
-                            nullable: true
-                            type: string  
                           computeManagementClientUrl:
                             description: ComputeManagementClientUrl allows the default
                               compute management SDK client URL to be changed.
@@ -1296,6 +1303,18 @@ spec:
                                 type: string
                               name:
                                 description: LoadBalancer Name.
+                                type: string
+                              networkVisibility:
+                                default: Inherited
+                                description: |-
+                                  NetworkVisibility controls whether the API server LB is Public, Private, or Inherited
+                                  from the control-plane-endpoint subnet type. Defaults to Inherited, which preserves
+                                  backwards compatibility. Setting Public when the control-plane-endpoint subnet is
+                                  Private is rejected by the webhook.
+                                enum:
+                                - Public
+                                - Private
+                                - Inherited
                                 type: string
                               nlbSpec:
                                 description: The NLB Spec

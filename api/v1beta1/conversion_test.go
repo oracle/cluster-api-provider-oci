@@ -717,6 +717,51 @@ func TestConvert_v1beta2_LoadBalancer_To_v1beta1_LoadBalancer(t *testing.T) {
 	}
 }
 
+func TestNetworkVisibility_RoundTrip(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		visibility v1beta2.LBNetworkVisibility
+	}{
+		{
+			name:       "Public survives round trip",
+			visibility: v1beta2.LBNetworkVisibilityPublic,
+		},
+		{
+			name:       "Private survives round trip",
+			visibility: v1beta2.LBNetworkVisibilityPrivate,
+		},
+		{
+			name:       "Inherited survives round trip",
+			visibility: v1beta2.LBNetworkVisibilityInherited,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			source := &v1beta2.LoadBalancer{
+				NetworkVisibility: tt.visibility,
+			}
+			intermediate := &LoadBalancer{}
+			err := Convert_v1beta2_LoadBalancer_To_v1beta1_LoadBalancer(source, intermediate, nil)
+			if err != nil {
+				t.Fatalf("Convert_v1beta2_LoadBalancer_To_v1beta1_LoadBalancer() error = %v", err)
+			}
+
+			dest := &v1beta2.LoadBalancer{}
+			err = Convert_v1beta1_LoadBalancer_To_v1beta2_LoadBalancer(intermediate, dest, nil)
+			if err != nil {
+				t.Fatalf("Convert_v1beta1_LoadBalancer_To_v1beta2_LoadBalancer() error = %v", err)
+			}
+
+			if dest.NetworkVisibility != tt.visibility {
+				t.Fatalf("expected NetworkVisibility %q, got %q", tt.visibility, dest.NetworkVisibility)
+			}
+		})
+	}
+}
+
 func TestConvert_v1beta2_OCIManagedControlPlaneStatus_To_v1beta1_OCIManagedControlPlaneStatus(t *testing.T) {
 	type args struct {
 		in  *v1beta2.OCIManagedControlPlaneStatus

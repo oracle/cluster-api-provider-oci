@@ -1378,3 +1378,69 @@ func getDefinedTags() (map[string]map[string]string, map[string]map[string]inter
 	}
 	return definedTags, definedTagsInterface
 }
+
+func TestIsAPIServerLBPrivate(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name               string
+		networkVisibility  infrastructurev1beta2.LBNetworkVisibility
+		controlPlaneSubnet infrastructurev1beta2.SubnetType
+		expected           bool
+	}{
+		{
+			name:               "Private visibility returns true",
+			networkVisibility:  infrastructurev1beta2.LBNetworkVisibilityPrivate,
+			controlPlaneSubnet: infrastructurev1beta2.Public,
+			expected:           true,
+		},
+		{
+			name:               "Public visibility returns false",
+			networkVisibility:  infrastructurev1beta2.LBNetworkVisibilityPublic,
+			controlPlaneSubnet: infrastructurev1beta2.Private,
+			expected:           false,
+		},
+		{
+			name:               "Inherited with private subnet returns true",
+			networkVisibility:  infrastructurev1beta2.LBNetworkVisibilityInherited,
+			controlPlaneSubnet: infrastructurev1beta2.Private,
+			expected:           true,
+		},
+		{
+			name:               "Inherited with public subnet returns false",
+			networkVisibility:  infrastructurev1beta2.LBNetworkVisibilityInherited,
+			controlPlaneSubnet: infrastructurev1beta2.Public,
+			expected:           false,
+		},
+		{
+			name:               "Empty string with private subnet returns true",
+			networkVisibility:  "",
+			controlPlaneSubnet: infrastructurev1beta2.Private,
+			expected:           true,
+		},
+		{
+			name:               "Empty string with public subnet returns false",
+			networkVisibility:  "",
+			controlPlaneSubnet: infrastructurev1beta2.Public,
+			expected:           false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			scope := newTestClusterScope(t)
+			scope.OCIClusterAccessor.GetNetworkSpec().APIServerLB = infrastructurev1beta2.LoadBalancer{
+				NetworkVisibility: tt.networkVisibility,
+			}
+			scope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta2.Subnet{
+				{
+					Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+					Type: tt.controlPlaneSubnet,
+				},
+			}
+
+			g.Expect(scope.isAPIServerLBPrivate()).To(Equal(tt.expected))
+		})
+	}
+}

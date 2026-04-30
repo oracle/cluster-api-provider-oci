@@ -1908,6 +1908,112 @@ func TestOCICluster_ValidateCreate(t *testing.T) {
 			},
 			expectErr: false,
 		},
+		{
+			name: "should reject networkVisibility=Public when control-plane-endpoint subnet is private",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
+				Spec: OCIClusterSpec{
+					Region:                "us-ashburn-1",
+					CompartmentId:         "ocid",
+					OCIResourceIdentifier: "uuid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							CIDR: "10.0.0.0/16",
+							Subnets: []*Subnet{
+								{
+									Role: ControlPlaneRole,
+									Name: "cp-subnet",
+									CIDR: "10.0.0.0/24",
+								},
+								{
+									Role: ControlPlaneEndpointRole,
+									Name: "cp-endpoint-subnet",
+									CIDR: "10.0.1.0/24",
+									Type: Private,
+								},
+							},
+						},
+						APIServerLB: LoadBalancer{
+							NetworkVisibility: LBNetworkVisibilityPublic,
+						},
+					},
+				},
+			},
+			errorMgsShouldContain: "networkVisibility",
+			expectErr:             true,
+		},
+		{
+			name: "should allow networkVisibility=Private when control-plane-endpoint subnet is public",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
+				Spec: OCIClusterSpec{
+					Region:                "us-ashburn-1",
+					CompartmentId:         "ocid",
+					OCIResourceIdentifier: "uuid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							CIDR: "10.0.0.0/16",
+							Subnets: []*Subnet{
+								{
+									Role: ControlPlaneRole,
+									Name: "cp-subnet",
+									CIDR: "10.0.0.0/24",
+								},
+								{
+									Role: ControlPlaneEndpointRole,
+									Name: "cp-endpoint-subnet",
+									CIDR: "10.0.1.0/24",
+									Type: Public,
+								},
+							},
+						},
+						APIServerLB: LoadBalancer{
+							NetworkVisibility: LBNetworkVisibilityPrivate,
+						},
+					},
+				},
+			},
+			expectErr: false,
+		},
+		{
+			name: "should allow networkVisibility=Inherited",
+			c: &OCICluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: goodClusterName,
+				},
+				Spec: OCIClusterSpec{
+					Region:                "us-ashburn-1",
+					CompartmentId:         "ocid",
+					OCIResourceIdentifier: "uuid",
+					NetworkSpec: NetworkSpec{
+						Vcn: VCN{
+							CIDR: "10.0.0.0/16",
+							Subnets: []*Subnet{
+								{
+									Role: ControlPlaneRole,
+									Name: "cp-subnet",
+									CIDR: "10.0.0.0/24",
+								},
+								{
+									Role: ControlPlaneEndpointRole,
+									Name: "cp-endpoint-subnet",
+									CIDR: "10.0.1.0/24",
+									Type: Private,
+								},
+							},
+						},
+						APIServerLB: LoadBalancer{
+							NetworkVisibility: LBNetworkVisibilityInherited,
+						},
+					},
+				},
+			},
+			expectErr: false,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

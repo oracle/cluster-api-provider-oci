@@ -312,6 +312,19 @@ func ValidateNetworkSpec(validRoles []Role, networkSpec NetworkSpec, old Network
 	healthCheckerPath := fldPath.Child("apiServerLoadBalancer").Child("nlbSpec").Child("backendSetDetails").Child("healthChecker")
 	allErrs = append(allErrs, validateHealthChecker(networkSpec.APIServerLB.NLBSpec.BackendSetDetails.HealthChecker, healthCheckerPath)...)
 
+	if networkSpec.APIServerLB.NetworkVisibility == LBNetworkVisibilityPublic {
+		for _, subnet := range networkSpec.Vcn.Subnets {
+			if subnet != nil && subnet.Role == ControlPlaneEndpointRole && subnet.Type == Private {
+				allErrs = append(allErrs, field.Invalid(
+					fldPath.Child("apiServerLoadBalancer").Child("networkVisibility"),
+					networkSpec.APIServerLB.NetworkVisibility,
+					"cannot set networkVisibility to Public when the control-plane-endpoint subnet is Private; OCI does not allow a public load balancer on a private subnet",
+				))
+				break
+			}
+		}
+	}
+
 	if len(allErrs) == 0 {
 		return nil
 	}
