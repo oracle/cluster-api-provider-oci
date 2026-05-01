@@ -934,6 +934,12 @@ func TestComputeComparableHash_DetectsSetToUnsetOptionalLaunchFields(t *testing.
 		actual *core.InstanceConfigurationLaunchInstanceDetails
 	}{
 		{
+			name: "cluster placement group id",
+			actual: &core.InstanceConfigurationLaunchInstanceDetails{
+				ClusterPlacementGroupId: common.String("ocid1.clusterplacementgroup.oc1..test"),
+			},
+		},
+		{
 			name: "ipxe script",
 			actual: &core.InstanceConfigurationLaunchInstanceDetails{
 				IpxeScript: common.String("#!ipxe"),
@@ -959,6 +965,37 @@ func TestComputeComparableHash_DetectsSetToUnsetOptionalLaunchFields(t *testing.
 			name: "preferred maintenance action",
 			actual: &core.InstanceConfigurationLaunchInstanceDetails{
 				PreferredMaintenanceAction: core.InstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionReboot,
+			},
+		},
+		{
+			name: "shape vcpus",
+			actual: &core.InstanceConfigurationLaunchInstanceDetails{
+				ShapeConfig: &core.InstanceConfigurationLaunchInstanceShapeConfigDetails{
+					Vcpus: common.Int(4),
+				},
+			},
+		},
+		{
+			name: "primary VNIC IPv6 CIDR pairs",
+			actual: &core.InstanceConfigurationLaunchInstanceDetails{
+				CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+					Ipv6AddressIpv6SubnetCidrPairDetails: []core.InstanceConfigurationIpv6AddressIpv6SubnetCidrPairDetails{{
+						Ipv6SubnetCidr: common.String("2001:db8::/64"),
+						Ipv6Address:    common.String("2001:db8::10"),
+					}},
+				},
+			},
+		},
+		{
+			name: "primary VNIC security attributes",
+			actual: &core.InstanceConfigurationLaunchInstanceDetails{
+				CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+					SecurityAttributes: map[string]map[string]interface{}{
+						"Oracle-DataSecurity-ZPR": {
+							"VnicEgress": "audit",
+						},
+					},
+				},
 			},
 		},
 		{
@@ -1045,6 +1082,71 @@ func TestComputeComparableHash_DetectsPartialInstanceSecurityAttributesRemoval(t
 			desired := &core.InstanceConfigurationLaunchInstanceDetails{
 				Shape:              common.String("VM.Standard2.1"),
 				SecurityAttributes: tt.desired,
+			}
+
+			actualHash, err := ComputeComparableHash(actual, desired)
+			g.Expect(err).To(BeNil())
+
+			desiredHash, err := ComputeHash(desired)
+			g.Expect(err).To(BeNil())
+
+			g.Expect(actualHash).ToNot(Equal(desiredHash))
+		})
+	}
+}
+
+func TestComputeComparableHash_DetectsPartialVNICSecurityAttributesRemoval(t *testing.T) {
+	tests := []struct {
+		name    string
+		actual  map[string]map[string]interface{}
+		desired map[string]map[string]interface{}
+	}{
+		{
+			name: "namespace removal",
+			actual: map[string]map[string]interface{}{
+				"Oracle-DataSecurity-ZPR": {
+					"VnicEgress": "audit",
+				},
+				"stale-namespace": {
+					"StaleAttribute": "old-value",
+				},
+			},
+			desired: map[string]map[string]interface{}{
+				"Oracle-DataSecurity-ZPR": {
+					"VnicEgress": "audit",
+				},
+			},
+		},
+		{
+			name: "key removal",
+			actual: map[string]map[string]interface{}{
+				"Oracle-DataSecurity-ZPR": {
+					"VnicEgress":     "audit",
+					"StaleAttribute": "old-value",
+				},
+			},
+			desired: map[string]map[string]interface{}{
+				"Oracle-DataSecurity-ZPR": {
+					"VnicEgress": "audit",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			actual := &core.InstanceConfigurationLaunchInstanceDetails{
+				Shape: common.String("VM.Standard2.1"),
+				CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+					SecurityAttributes: tt.actual,
+				},
+			}
+			desired := &core.InstanceConfigurationLaunchInstanceDetails{
+				Shape: common.String("VM.Standard2.1"),
+				CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+					SecurityAttributes: tt.desired,
+				},
 			}
 
 			actualHash, err := ComputeComparableHash(actual, desired)

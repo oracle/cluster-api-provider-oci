@@ -1989,6 +1989,54 @@ func TestGetLaunchInstanceDetailsRejectsUnknownLaunchMode(t *testing.T) {
 	g.Expect(launchDetails).To(BeNil())
 }
 
+func TestGetLaunchInstanceDetailsRejectsUnknownPreferredMaintenanceAction(t *testing.T) {
+	g := NewWithT(t)
+	ms, _ := newInstanceConfigurationOrderingScope(t, "test")
+	spec := infrav2exp.InstanceConfiguration{
+		Shape:                      common.String("test-shape"),
+		PreferredMaintenanceAction: infrav2exp.PreferredMaintenanceActionEnum("POWER_CYCLE"),
+	}
+	ms.OCIMachinePool.Spec.InstanceConfiguration = spec
+
+	launchDetails, err := ms.getLaunchInstanceDetails(spec, nil, nil)
+	g.Expect(err).To(MatchError(`unsupported preferred maintenance action "POWER_CYCLE"`))
+	g.Expect(launchDetails).To(BeNil())
+}
+
+func TestGetLaunchInstanceDetailsRejectsUnknownLicensingConfigType(t *testing.T) {
+	g := NewWithT(t)
+	ms, _ := newInstanceConfigurationOrderingScope(t, "test")
+	spec := infrav2exp.InstanceConfiguration{
+		Shape: common.String("test-shape"),
+		LicensingConfigs: []infrav2exp.LaunchInstanceLicensingConfig{{
+			Type:        infrav2exp.LaunchInstanceLicensingConfigTypeEnum("LINUX"),
+			LicenseType: infrav2exp.LaunchInstanceLicensingConfigLicenseTypeBringYourOwnLicense,
+		}},
+	}
+	ms.OCIMachinePool.Spec.InstanceConfiguration = spec
+
+	launchDetails, err := ms.getLaunchInstanceDetails(spec, nil, nil)
+	g.Expect(err).To(MatchError(`unsupported licensing config type "LINUX"`))
+	g.Expect(launchDetails).To(BeNil())
+}
+
+func TestGetLaunchInstanceDetailsRejectsUnknownLicensingConfigLicenseType(t *testing.T) {
+	g := NewWithT(t)
+	ms, _ := newInstanceConfigurationOrderingScope(t, "test")
+	spec := infrav2exp.InstanceConfiguration{
+		Shape: common.String("test-shape"),
+		LicensingConfigs: []infrav2exp.LaunchInstanceLicensingConfig{{
+			Type:        infrav2exp.LaunchInstanceLicensingConfigTypeWindows,
+			LicenseType: infrav2exp.LaunchInstanceLicensingConfigLicenseTypeEnum("RENTED"),
+		}},
+	}
+	ms.OCIMachinePool.Spec.InstanceConfiguration = spec
+
+	launchDetails, err := ms.getLaunchInstanceDetails(spec, nil, nil)
+	g.Expect(err).To(MatchError(`unsupported licensing config license type "RENTED"`))
+	g.Expect(launchDetails).To(BeNil())
+}
+
 func TestGetPlatformConfigPropagatesApprovedPlatformFields(t *testing.T) {
 	falseValue := false
 	trueValue := true

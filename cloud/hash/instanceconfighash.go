@@ -171,7 +171,7 @@ func projectLaunchDetails(in, mask *core.InstanceConfigurationLaunchInstanceDeta
 
 	return &comparableLaunchDetails{
 		CapacityReservationID:          pickString(in.CapacityReservationId, mask.CapacityReservationId),
-		ClusterPlacementGroupID:        pickString(in.ClusterPlacementGroupId, mask.ClusterPlacementGroupId),
+		ClusterPlacementGroupID:        pickStringDetectRemoval(in.ClusterPlacementGroupId, mask.ClusterPlacementGroupId),
 		CompartmentID:                  pickString(in.CompartmentId, mask.CompartmentId),
 		CreateVnicDetails:              projectCreateVnicDetails(in.CreateVnicDetails, mask.CreateVnicDetails),
 		Metadata:                       normalizeMetadata(pickMetadata(in.Metadata, mask.Metadata)),
@@ -298,8 +298,11 @@ func leadingIndentWidth(s string) int {
 }
 
 func projectCreateVnicDetails(in, mask *core.InstanceConfigurationCreateVnicDetails) *comparableCreateVnicDetails {
-	if in == nil || mask == nil {
+	if in == nil {
 		return nil
+	}
+	if mask == nil {
+		mask = &core.InstanceConfigurationCreateVnicDetails{}
 	}
 
 	nsgIDs := pickStrings(in.NsgIds, mask.NsgIds)
@@ -315,7 +318,7 @@ func projectCreateVnicDetails(in, mask *core.InstanceConfigurationCreateVnicDeta
 		IPv6AddressCIDRPairs:   projectIPv6AddressCIDRPairs(in.Ipv6AddressIpv6SubnetCidrPairDetails, mask.Ipv6AddressIpv6SubnetCidrPairDetails),
 		NSGIDs:                 nsgIDs,
 		PrivateIP:              pickString(in.PrivateIp, mask.PrivateIp),
-		SecurityAttributes:     pickNestedInterfaceMap(in.SecurityAttributes, mask.SecurityAttributes),
+		SecurityAttributes:     pickNestedInterfaceMapDetectRemoval(in.SecurityAttributes, mask.SecurityAttributes),
 		SkipSourceDestCheck:    pickDefaultFalseBool(in.SkipSourceDestCheck, mask.SkipSourceDestCheck),
 		SubnetID:               pickString(in.SubnetId, mask.SubnetId),
 	}
@@ -326,17 +329,18 @@ func projectCreateVnicDetails(in, mask *core.InstanceConfigurationCreateVnicDeta
 }
 
 func projectIPv6AddressCIDRPairs(in, mask []core.InstanceConfigurationIpv6AddressIpv6SubnetCidrPairDetails) []comparableIPv6AddressCIDRPair {
-	if len(in) == 0 || len(mask) == 0 {
+	if len(in) == 0 {
 		return nil
 	}
 	pairs := make([]comparableIPv6AddressCIDRPair, 0, len(in))
 	for i, pair := range in {
-		if i >= len(mask) {
-			break
+		var desired core.InstanceConfigurationIpv6AddressIpv6SubnetCidrPairDetails
+		if i < len(mask) {
+			desired = mask[i]
 		}
 		pairs = append(pairs, comparableIPv6AddressCIDRPair{
-			IPv6SubnetCIDR: pickString(pair.Ipv6SubnetCidr, mask[i].Ipv6SubnetCidr),
-			IPv6Address:    pickString(pair.Ipv6Address, mask[i].Ipv6Address),
+			IPv6SubnetCIDR: pickStringDetectRemoval(pair.Ipv6SubnetCidr, desired.Ipv6SubnetCidr),
+			IPv6Address:    pickStringDetectRemoval(pair.Ipv6Address, desired.Ipv6Address),
 		})
 	}
 	return pairs
@@ -385,13 +389,16 @@ func licensingConfigValues(config core.LaunchInstanceLicensingConfig) (string, s
 }
 
 func projectShapeConfig(in, mask *core.InstanceConfigurationLaunchInstanceShapeConfigDetails) *comparableShapeConfig {
-	if in == nil || mask == nil {
+	if in == nil {
 		return nil
+	}
+	if mask == nil {
+		mask = &core.InstanceConfigurationLaunchInstanceShapeConfigDetails{}
 	}
 	result := &comparableShapeConfig{
 		OCPUs:                   pickFloat32(in.Ocpus, mask.Ocpus),
 		MemoryInGBs:             pickFloat32(in.MemoryInGBs, mask.MemoryInGBs),
-		VCPUs:                   pickInt(in.Vcpus, mask.Vcpus),
+		VCPUs:                   pickIntDetectRemoval(in.Vcpus, mask.Vcpus),
 		NVMEs:                   pickInt(in.Nvmes, mask.Nvmes),
 		BaselineOCPUUtilization: pickEnum(string(in.BaselineOcpuUtilization), string(mask.BaselineOcpuUtilization)),
 	}
@@ -804,6 +811,13 @@ func pickFloat32(actual, mask *float32) *float32 {
 
 func pickInt(actual, mask *int) *int {
 	if mask == nil {
+		return nil
+	}
+	return actual
+}
+
+func pickIntDetectRemoval(actual, mask *int) *int {
+	if mask == nil && actual == nil {
 		return nil
 	}
 	return actual

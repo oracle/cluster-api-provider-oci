@@ -700,9 +700,14 @@ func (m *MachinePoolScope) getLaunchInstanceDetails(instanceConfigurationSpec in
 		FreeformTags:            freeFormTags,
 		DefinedTags:             definedTags,
 		IpxeScript:              instanceConfigurationSpec.IpxeScript,
-		LicensingConfigs:        buildLaunchInstanceLicensingConfigs(instanceConfigurationSpec.LicensingConfigs),
 		SecurityAttributes:      nil,
 	}
+	licensingConfigs, err := buildLaunchInstanceLicensingConfigs(instanceConfigurationSpec.LicensingConfigs)
+	if err != nil {
+		return nil, err
+	}
+	launchDetails.LicensingConfigs = licensingConfigs
+
 	securityAttributes, err := convertSecurityAttributes(instanceConfigurationSpec.SecurityAttributes)
 	if err != nil {
 		return nil, err
@@ -723,7 +728,10 @@ func (m *MachinePoolScope) getLaunchInstanceDetails(instanceConfigurationSpec in
 		launchDetails.LaunchMode = launchMode
 	}
 	if instanceConfigurationSpec.PreferredMaintenanceAction != "" {
-		preferredMaintenanceAction, _ := core.GetMappingInstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionEnum(string(instanceConfigurationSpec.PreferredMaintenanceAction))
+		preferredMaintenanceAction, err := mapInstanceConfigurationPreferredMaintenanceAction(instanceConfigurationSpec.PreferredMaintenanceAction)
+		if err != nil {
+			return nil, err
+		}
 		launchDetails.PreferredMaintenanceAction = preferredMaintenanceAction
 	}
 	createVnicDetails, err := m.getVnicDetails(instanceConfigurationSpec, freeFormTags, definedTags)
@@ -763,6 +771,17 @@ func mapInstanceConfigurationLaunchMode(mode infrav2exp.LaunchModeEnum) (core.In
 		return "", errors.Errorf("unsupported launch mode %q", mode)
 	}
 	return launchMode, nil
+}
+
+func mapInstanceConfigurationPreferredMaintenanceAction(action infrav2exp.PreferredMaintenanceActionEnum) (core.InstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionEnum, error) {
+	if action == "" {
+		return "", nil
+	}
+	preferredMaintenanceAction, ok := core.GetMappingInstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionEnum(string(action))
+	if !ok {
+		return "", errors.Errorf("unsupported preferred maintenance action %q", action)
+	}
+	return preferredMaintenanceAction, nil
 }
 
 // ListInstancePoolSummaries list the core.InstancePoolSummary for the given core.ListInstancePoolsRequest
@@ -1334,24 +1353,26 @@ func buildInstanceConfigurationIpv6Pairs(spec []infrav2exp.InstanceConfiguration
 	return pairs
 }
 
-func buildLaunchInstanceLicensingConfigs(spec []infrav2exp.LaunchInstanceLicensingConfig) []core.LaunchInstanceLicensingConfig {
+func buildLaunchInstanceLicensingConfigs(spec []infrav2exp.LaunchInstanceLicensingConfig) ([]core.LaunchInstanceLicensingConfig, error) {
 	if len(spec) == 0 {
-		return nil
+		return nil, nil
 	}
 	configs := make([]core.LaunchInstanceLicensingConfig, 0, len(spec))
 	for _, licensingConfig := range spec {
 		switch licensingConfig.Type {
 		case infrav2exp.LaunchInstanceLicensingConfigTypeEnum(core.LaunchInstanceLicensingConfigTypeWindows):
-			licenseType, _ := core.GetMappingLaunchInstanceLicensingConfigLicenseTypeEnum(string(licensingConfig.LicenseType))
+			licenseType, ok := core.GetMappingLaunchInstanceLicensingConfigLicenseTypeEnum(string(licensingConfig.LicenseType))
+			if !ok {
+				return nil, errors.Errorf("unsupported licensing config license type %q", licensingConfig.LicenseType)
+			}
 			configs = append(configs, core.LaunchInstanceWindowsLicensingConfig{
 				LicenseType: licenseType,
 			})
+		default:
+			return nil, errors.Errorf("unsupported licensing config type %q", licensingConfig.Type)
 		}
 	}
-	if len(configs) == 0 {
-		return nil
-	}
-	return configs
+	return configs, nil
 }
 
 func convertSecurityAttributes(input map[string]map[string]apiextensionsv1.JSON) (map[string]map[string]interface{}, error) {
