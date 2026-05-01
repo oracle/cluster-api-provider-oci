@@ -397,6 +397,13 @@ func (r *OCIMachinePoolReconciler) reconcileNormal(ctx context.Context, logger l
 			machinePoolScope.Error(err, "error updating OCIMachinePool")
 			return ctrl.Result{}, err
 		}
+		if !machinePoolScope.InstancePoolUsesDesiredInstanceConfiguration(instancePool) {
+			machinePoolScope.Info("Instance pool has not switched to desired instance configuration",
+				"desiredInstanceConfigurationId", ptr.ToString(machinePoolScope.GetInstanceConfigurationId()),
+				"actualInstanceConfigurationId", ptr.ToString(instancePool.InstanceConfigurationId))
+			v1beta1conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav2exp.InstancePoolReadyCondition, infrav2exp.InstancePoolNotReadyReason, clusterv1beta1.ConditionSeverityInfo, "waiting for instance pool to switch to desired instance configuration")
+			return reconcile.Result{RequeueAfter: 10 * time.Second}, nil
+		}
 		err = machinePoolScope.CleanupInstanceConfiguration(ctx, instancePool)
 		if err != nil {
 			return ctrl.Result{}, err

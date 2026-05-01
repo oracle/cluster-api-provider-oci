@@ -68,6 +68,253 @@ func TestComputeHash_ConsistentResults(t *testing.T) {
 	g.Expect(hash1).To(Equal(hash2))
 }
 
+func TestComputeHash_ApprovedParityFieldsAffectDesiredHashAndProjection(t *testing.T) {
+	baseLaunchDetails := func() *core.InstanceConfigurationLaunchInstanceDetails {
+		return &core.InstanceConfigurationLaunchInstanceDetails{
+			Shape: common.String("VM.Standard.E4.Flex"),
+		}
+	}
+
+	tests := []struct {
+		name   string
+		mutate func(*core.InstanceConfigurationLaunchInstanceDetails)
+		assert func(g *WithT, projected *comparableLaunchDetails)
+	}{
+		{
+			name: "cluster placement group id",
+			mutate: func(ld *core.InstanceConfigurationLaunchInstanceDetails) {
+				ld.ClusterPlacementGroupId = common.String("ocid1.clusterplacementgroup.oc1..test")
+			},
+			assert: func(g *WithT, projected *comparableLaunchDetails) {
+				g.Expect(*projected.ClusterPlacementGroupID).To(Equal("ocid1.clusterplacementgroup.oc1..test"))
+			},
+		},
+		{
+			name: "ipxe script",
+			mutate: func(ld *core.InstanceConfigurationLaunchInstanceDetails) {
+				ld.IpxeScript = common.String("#!ipxe")
+			},
+			assert: func(g *WithT, projected *comparableLaunchDetails) {
+				g.Expect(*projected.IpxeScript).To(Equal("#!ipxe"))
+			},
+		},
+		{
+			name: "launch mode",
+			mutate: func(ld *core.InstanceConfigurationLaunchInstanceDetails) {
+				ld.LaunchMode = core.InstanceConfigurationLaunchInstanceDetailsLaunchModeNative
+			},
+			assert: func(g *WithT, projected *comparableLaunchDetails) {
+				g.Expect(projected.LaunchMode).To(Equal(string(core.InstanceConfigurationLaunchInstanceDetailsLaunchModeNative)))
+			},
+		},
+		{
+			name: "licensing configs",
+			mutate: func(ld *core.InstanceConfigurationLaunchInstanceDetails) {
+				ld.LicensingConfigs = []core.LaunchInstanceLicensingConfig{
+					core.LaunchInstanceWindowsLicensingConfig{
+						LicenseType: core.LaunchInstanceLicensingConfigLicenseTypeBringYourOwnLicense,
+					},
+				}
+			},
+			assert: func(g *WithT, projected *comparableLaunchDetails) {
+				g.Expect(projected.LicensingConfigs).To(Equal([]comparableLicensingConfig{{
+					Type:        string(core.LaunchInstanceLicensingConfigTypeWindows),
+					LicenseType: string(core.LaunchInstanceLicensingConfigLicenseTypeBringYourOwnLicense),
+				}}))
+			},
+		},
+		{
+			name: "preferred maintenance action",
+			mutate: func(ld *core.InstanceConfigurationLaunchInstanceDetails) {
+				ld.PreferredMaintenanceAction = core.InstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionReboot
+			},
+			assert: func(g *WithT, projected *comparableLaunchDetails) {
+				g.Expect(projected.PreferredMaintenanceAction).To(Equal(string(core.InstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionReboot)))
+			},
+		},
+		{
+			name: "launch security attributes",
+			mutate: func(ld *core.InstanceConfigurationLaunchInstanceDetails) {
+				ld.SecurityAttributes = map[string]map[string]interface{}{
+					"Oracle-DataSecurity-ZPR": {
+						"MaxEgressCount": map[string]interface{}{"value": "42", "mode": "audit"},
+					},
+				}
+			},
+			assert: func(g *WithT, projected *comparableLaunchDetails) {
+				g.Expect(projected.SecurityAttributes).To(Equal(map[string]map[string]interface{}{
+					"Oracle-DataSecurity-ZPR": {
+						"MaxEgressCount": map[string]interface{}{"value": "42", "mode": "audit"},
+					},
+				}))
+			},
+		},
+		{
+			name: "shape vcpus",
+			mutate: func(ld *core.InstanceConfigurationLaunchInstanceDetails) {
+				ld.ShapeConfig = &core.InstanceConfigurationLaunchInstanceShapeConfigDetails{
+					Vcpus: common.Int(4),
+				}
+			},
+			assert: func(g *WithT, projected *comparableLaunchDetails) {
+				g.Expect(*projected.ShapeConfig.VCPUs).To(Equal(4))
+			},
+		},
+		{
+			name: "primary VNIC IPv6 CIDR pairs",
+			mutate: func(ld *core.InstanceConfigurationLaunchInstanceDetails) {
+				ld.CreateVnicDetails = &core.InstanceConfigurationCreateVnicDetails{
+					Ipv6AddressIpv6SubnetCidrPairDetails: []core.InstanceConfigurationIpv6AddressIpv6SubnetCidrPairDetails{{
+						Ipv6SubnetCidr: common.String("2001:db8::/64"),
+						Ipv6Address:    common.String("2001:db8::10"),
+					}},
+				}
+			},
+			assert: func(g *WithT, projected *comparableLaunchDetails) {
+				g.Expect(projected.CreateVnicDetails.IPv6AddressCIDRPairs).To(Equal([]comparableIPv6AddressCIDRPair{{
+					IPv6SubnetCIDR: common.String("2001:db8::/64"),
+					IPv6Address:    common.String("2001:db8::10"),
+				}}))
+			},
+		},
+		{
+			name: "primary VNIC security attributes",
+			mutate: func(ld *core.InstanceConfigurationLaunchInstanceDetails) {
+				ld.CreateVnicDetails = &core.InstanceConfigurationCreateVnicDetails{
+					SecurityAttributes: map[string]map[string]interface{}{
+						"Oracle-DataSecurity-ZPR": {
+							"VnicEgress": "audit",
+						},
+					},
+				}
+			},
+			assert: func(g *WithT, projected *comparableLaunchDetails) {
+				g.Expect(projected.CreateVnicDetails.SecurityAttributes).To(Equal(map[string]map[string]interface{}{
+					"Oracle-DataSecurity-ZPR": {
+						"VnicEgress": "audit",
+					},
+				}))
+			},
+		},
+		{
+			name: "AMD Milan BM config map",
+			mutate: func(ld *core.InstanceConfigurationLaunchInstanceDetails) {
+				ld.PlatformConfig = core.AmdMilanBmPlatformConfig{
+					ConfigMap: map[string]string{"hpc": "enabled"},
+				}
+			},
+			assert: func(g *WithT, projected *comparableLaunchDetails) {
+				g.Expect(projected.PlatformConfig.Type).To(Equal("AmdMilanBmPlatformConfig"))
+				g.Expect(projected.PlatformConfig.ConfigMap).To(Equal(map[string]string{"hpc": "enabled"}))
+			},
+		},
+		{
+			name: "AMD Rome BM GPU config map",
+			mutate: func(ld *core.InstanceConfigurationLaunchInstanceDetails) {
+				ld.PlatformConfig = core.AmdRomeBmGpuPlatformConfig{
+					ConfigMap: map[string]string{"gpu": "enabled"},
+				}
+			},
+			assert: func(g *WithT, projected *comparableLaunchDetails) {
+				g.Expect(projected.PlatformConfig.Type).To(Equal("AmdRomeBmGpuPlatformConfig"))
+				g.Expect(projected.PlatformConfig.ConfigMap).To(Equal(map[string]string{"gpu": "enabled"}))
+			},
+		},
+		{
+			name: "AMD Rome BM config map",
+			mutate: func(ld *core.InstanceConfigurationLaunchInstanceDetails) {
+				ld.PlatformConfig = core.AmdRomeBmPlatformConfig{
+					ConfigMap: map[string]string{"numa": "compact"},
+				}
+			},
+			assert: func(g *WithT, projected *comparableLaunchDetails) {
+				g.Expect(projected.PlatformConfig.Type).To(Equal("AmdRomeBmPlatformConfig"))
+				g.Expect(projected.PlatformConfig.ConfigMap).To(Equal(map[string]string{"numa": "compact"}))
+			},
+		},
+		{
+			name: "AMD VM SMT",
+			mutate: func(ld *core.InstanceConfigurationLaunchInstanceDetails) {
+				ld.PlatformConfig = core.AmdVmPlatformConfig{
+					IsSymmetricMultiThreadingEnabled: common.Bool(true),
+				}
+			},
+			assert: func(g *WithT, projected *comparableLaunchDetails) {
+				g.Expect(projected.PlatformConfig.Type).To(Equal("AmdVmPlatformConfig"))
+				g.Expect(*projected.PlatformConfig.IsSymmetricMultiThreadingEnabled).To(BeTrue())
+			},
+		},
+		{
+			name: "Intel Icelake BM config map",
+			mutate: func(ld *core.InstanceConfigurationLaunchInstanceDetails) {
+				ld.PlatformConfig = core.IntelIcelakeBmPlatformConfig{
+					ConfigMap: map[string]string{"ice": "lake"},
+				}
+			},
+			assert: func(g *WithT, projected *comparableLaunchDetails) {
+				g.Expect(projected.PlatformConfig.Type).To(Equal("IntelIcelakeBmPlatformConfig"))
+				g.Expect(projected.PlatformConfig.ConfigMap).To(Equal(map[string]string{"ice": "lake"}))
+			},
+		},
+		{
+			name: "Intel Skylake BM approved knobs",
+			mutate: func(ld *core.InstanceConfigurationLaunchInstanceDetails) {
+				ld.PlatformConfig = core.IntelSkylakeBmPlatformConfig{
+					IsSymmetricMultiThreadingEnabled:         common.Bool(true),
+					IsInputOutputMemoryManagementUnitEnabled: common.Bool(true),
+					PercentageOfCoresEnabled:                 common.Int(50),
+					ConfigMap:                                map[string]string{"sky": "lake"},
+					NumaNodesPerSocket:                       core.IntelSkylakeBmPlatformConfigNumaNodesPerSocketNps2,
+				}
+			},
+			assert: func(g *WithT, projected *comparableLaunchDetails) {
+				g.Expect(projected.PlatformConfig.Type).To(Equal("IntelSkylakeBmPlatformConfig"))
+				g.Expect(*projected.PlatformConfig.IsSymmetricMultiThreadingEnabled).To(BeTrue())
+				g.Expect(*projected.PlatformConfig.IsInputOutputMemoryManagementUnitEnabled).To(BeTrue())
+				g.Expect(*projected.PlatformConfig.PercentageOfCoresEnabled).To(Equal(50))
+				g.Expect(projected.PlatformConfig.ConfigMap).To(Equal(map[string]string{"sky": "lake"}))
+				g.Expect(projected.PlatformConfig.NumaNodesPerSocket).To(Equal(string(core.IntelSkylakeBmPlatformConfigNumaNodesPerSocketNps2)))
+			},
+		},
+		{
+			name: "Intel VM SMT",
+			mutate: func(ld *core.InstanceConfigurationLaunchInstanceDetails) {
+				ld.PlatformConfig = core.IntelVmPlatformConfig{
+					IsSymmetricMultiThreadingEnabled: common.Bool(true),
+				}
+			},
+			assert: func(g *WithT, projected *comparableLaunchDetails) {
+				g.Expect(projected.PlatformConfig.Type).To(Equal("IntelVmPlatformConfig"))
+				g.Expect(*projected.PlatformConfig.IsSymmetricMultiThreadingEnabled).To(BeTrue())
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			base := baseLaunchDetails()
+			baseHash, err := ComputeHash(base)
+			g.Expect(err).To(BeNil())
+
+			desired := baseLaunchDetails()
+			tt.mutate(desired)
+
+			desiredHash, err := ComputeHash(desired)
+			g.Expect(err).To(BeNil())
+			g.Expect(desiredHash).ToNot(Equal(baseHash))
+
+			projected := projectLaunchDetails(desired, desired)
+			tt.assert(g, projected)
+
+			comparableHash, err := ComputeComparableHash(desired, desired)
+			g.Expect(err).To(BeNil())
+			g.Expect(comparableHash).To(Equal(desiredHash))
+		})
+	}
+}
+
 func TestNormalizeLaunchDetails_NilInput(t *testing.T) {
 	g := NewWithT(t)
 	result := projectLaunchDetails(nil, nil)
@@ -634,6 +881,285 @@ func TestComputeComparableHash_IgnoresFalseDefaultsForSupportedFields(t *testing
 	g.Expect(actualHash).To(Equal(desiredHash))
 }
 
+func TestComputeComparableHash_IgnoresDefaultOnlyReadbackChurn(t *testing.T) {
+	g := NewWithT(t)
+	desired := &core.InstanceConfigurationLaunchInstanceDetails{
+		CompartmentId: common.String("ocid1.compartment.oc1..test"),
+		Shape:         common.String("VM.Standard.E4.Flex"),
+		ShapeConfig: &core.InstanceConfigurationLaunchInstanceShapeConfigDetails{
+			Ocpus: common.Float32(1),
+		},
+		CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+			SubnetId: common.String("ocid1.subnet.oc1..test"),
+		},
+		Metadata: map[string]string{
+			"user_data": "desired-bootstrap",
+		},
+	}
+	actual := &core.InstanceConfigurationLaunchInstanceDetails{
+		CompartmentId: common.String("ocid1.compartment.oc1..test"),
+		DisplayName:   common.String("server-filled-name"),
+		FreeformTags:  map[string]string{"oci-default": "ignored"},
+		DefinedTags:   map[string]map[string]interface{}{"Oracle-Tags": {"CreatedBy": "oci"}},
+		Shape:         common.String("VM.Standard.E4.Flex"),
+		ShapeConfig: &core.InstanceConfigurationLaunchInstanceShapeConfigDetails{
+			Ocpus:       common.Float32(1),
+			MemoryInGBs: common.Float32(16),
+		},
+		CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+			SubnetId:       common.String("ocid1.subnet.oc1..test"),
+			DisplayName:    common.String("server-filled-vnic"),
+			AssignPublicIp: common.Bool(false),
+		},
+		AgentConfig: &core.InstanceConfigurationLaunchInstanceAgentConfigDetails{},
+		LaunchMode:  core.InstanceConfigurationLaunchInstanceDetailsLaunchModeNative,
+		Metadata: map[string]string{
+			"user_data": "different-bootstrap-is-tracked-separately",
+		},
+		PreferredMaintenanceAction: core.InstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionLiveMigrate,
+	}
+
+	desiredHash, err := ComputeHash(desired)
+	g.Expect(err).To(BeNil())
+
+	actualHash, err := ComputeComparableHash(actual, desired)
+	g.Expect(err).To(BeNil())
+
+	g.Expect(actualHash).To(Equal(desiredHash))
+}
+
+func TestComputeComparableHash_DetectsSetToUnsetOptionalLaunchFields(t *testing.T) {
+	tests := []struct {
+		name   string
+		actual *core.InstanceConfigurationLaunchInstanceDetails
+	}{
+		{
+			name: "cluster placement group id",
+			actual: &core.InstanceConfigurationLaunchInstanceDetails{
+				ClusterPlacementGroupId: common.String("ocid1.clusterplacementgroup.oc1..test"),
+			},
+		},
+		{
+			name: "ipxe script",
+			actual: &core.InstanceConfigurationLaunchInstanceDetails{
+				IpxeScript: common.String("#!ipxe"),
+			},
+		},
+		{
+			name: "launch mode",
+			actual: &core.InstanceConfigurationLaunchInstanceDetails{
+				LaunchMode: core.InstanceConfigurationLaunchInstanceDetailsLaunchModeCustom,
+			},
+		},
+		{
+			name: "licensing configs",
+			actual: &core.InstanceConfigurationLaunchInstanceDetails{
+				LicensingConfigs: []core.LaunchInstanceLicensingConfig{
+					core.LaunchInstanceWindowsLicensingConfig{
+						LicenseType: core.LaunchInstanceLicensingConfigLicenseTypeBringYourOwnLicense,
+					},
+				},
+			},
+		},
+		{
+			name: "preferred maintenance action",
+			actual: &core.InstanceConfigurationLaunchInstanceDetails{
+				PreferredMaintenanceAction: core.InstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionReboot,
+			},
+		},
+		{
+			name: "shape vcpus",
+			actual: &core.InstanceConfigurationLaunchInstanceDetails{
+				ShapeConfig: &core.InstanceConfigurationLaunchInstanceShapeConfigDetails{
+					Vcpus: common.Int(4),
+				},
+			},
+		},
+		{
+			name: "primary VNIC IPv6 CIDR pairs",
+			actual: &core.InstanceConfigurationLaunchInstanceDetails{
+				CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+					Ipv6AddressIpv6SubnetCidrPairDetails: []core.InstanceConfigurationIpv6AddressIpv6SubnetCidrPairDetails{{
+						Ipv6SubnetCidr: common.String("2001:db8::/64"),
+						Ipv6Address:    common.String("2001:db8::10"),
+					}},
+				},
+			},
+		},
+		{
+			name: "primary VNIC security attributes",
+			actual: &core.InstanceConfigurationLaunchInstanceDetails{
+				CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+					SecurityAttributes: map[string]map[string]interface{}{
+						"Oracle-DataSecurity-ZPR": {
+							"VnicEgress": "audit",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "instance security attributes",
+			actual: &core.InstanceConfigurationLaunchInstanceDetails{
+				SecurityAttributes: map[string]map[string]interface{}{
+					"Oracle-DataSecurity-ZPR": {
+						"MaxEgressCount": map[string]interface{}{"value": "42", "mode": "audit"},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			actual := &core.InstanceConfigurationLaunchInstanceDetails{
+				Shape: common.String("VM.Standard2.1"),
+			}
+			*actual = *tt.actual
+			actual.Shape = common.String("VM.Standard2.1")
+
+			desired := &core.InstanceConfigurationLaunchInstanceDetails{
+				Shape: common.String("VM.Standard2.1"),
+			}
+
+			actualHash, err := ComputeComparableHash(actual, desired)
+			g.Expect(err).To(BeNil())
+
+			desiredHash, err := ComputeHash(desired)
+			g.Expect(err).To(BeNil())
+
+			g.Expect(actualHash).ToNot(Equal(desiredHash))
+		})
+	}
+}
+
+func TestComputeComparableHash_DetectsPartialInstanceSecurityAttributesRemoval(t *testing.T) {
+	tests := []struct {
+		name    string
+		actual  map[string]map[string]interface{}
+		desired map[string]map[string]interface{}
+	}{
+		{
+			name: "namespace removal",
+			actual: map[string]map[string]interface{}{
+				"Oracle-DataSecurity-ZPR": {
+					"MaxEgressCount": map[string]interface{}{"value": "42", "mode": "audit"},
+				},
+				"stale-namespace": {
+					"StaleAttribute": "old-value",
+				},
+			},
+			desired: map[string]map[string]interface{}{
+				"Oracle-DataSecurity-ZPR": {
+					"MaxEgressCount": map[string]interface{}{"value": "42", "mode": "audit"},
+				},
+			},
+		},
+		{
+			name: "key removal",
+			actual: map[string]map[string]interface{}{
+				"Oracle-DataSecurity-ZPR": {
+					"MaxEgressCount": map[string]interface{}{"value": "42", "mode": "audit"},
+					"StaleAttribute": "old-value",
+				},
+			},
+			desired: map[string]map[string]interface{}{
+				"Oracle-DataSecurity-ZPR": {
+					"MaxEgressCount": map[string]interface{}{"value": "42", "mode": "audit"},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			actual := &core.InstanceConfigurationLaunchInstanceDetails{
+				Shape:              common.String("VM.Standard2.1"),
+				SecurityAttributes: tt.actual,
+			}
+			desired := &core.InstanceConfigurationLaunchInstanceDetails{
+				Shape:              common.String("VM.Standard2.1"),
+				SecurityAttributes: tt.desired,
+			}
+
+			actualHash, err := ComputeComparableHash(actual, desired)
+			g.Expect(err).To(BeNil())
+
+			desiredHash, err := ComputeHash(desired)
+			g.Expect(err).To(BeNil())
+
+			g.Expect(actualHash).ToNot(Equal(desiredHash))
+		})
+	}
+}
+
+func TestComputeComparableHash_DetectsPartialVNICSecurityAttributesRemoval(t *testing.T) {
+	tests := []struct {
+		name    string
+		actual  map[string]map[string]interface{}
+		desired map[string]map[string]interface{}
+	}{
+		{
+			name: "namespace removal",
+			actual: map[string]map[string]interface{}{
+				"Oracle-DataSecurity-ZPR": {
+					"VnicEgress": "audit",
+				},
+				"stale-namespace": {
+					"StaleAttribute": "old-value",
+				},
+			},
+			desired: map[string]map[string]interface{}{
+				"Oracle-DataSecurity-ZPR": {
+					"VnicEgress": "audit",
+				},
+			},
+		},
+		{
+			name: "key removal",
+			actual: map[string]map[string]interface{}{
+				"Oracle-DataSecurity-ZPR": {
+					"VnicEgress":     "audit",
+					"StaleAttribute": "old-value",
+				},
+			},
+			desired: map[string]map[string]interface{}{
+				"Oracle-DataSecurity-ZPR": {
+					"VnicEgress": "audit",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			actual := &core.InstanceConfigurationLaunchInstanceDetails{
+				Shape: common.String("VM.Standard2.1"),
+				CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+					SecurityAttributes: tt.actual,
+				},
+			}
+			desired := &core.InstanceConfigurationLaunchInstanceDetails{
+				Shape: common.String("VM.Standard2.1"),
+				CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+					SecurityAttributes: tt.desired,
+				},
+			}
+
+			actualHash, err := ComputeComparableHash(actual, desired)
+			g.Expect(err).To(BeNil())
+
+			desiredHash, err := ComputeHash(desired)
+			g.Expect(err).To(BeNil())
+
+			g.Expect(actualHash).ToNot(Equal(desiredHash))
+		})
+	}
+}
+
 func TestComputeComparableHash_DetectsTrueToFalseVNICUpdates(t *testing.T) {
 	g := NewWithT(t)
 	desired := &core.InstanceConfigurationLaunchInstanceDetails{
@@ -668,16 +1194,16 @@ func TestComputeHash_ComprehensiveTest(t *testing.T) {
 	var nvmes int = 1
 
 	ld := &core.InstanceConfigurationLaunchInstanceDetails{
-		// Fields that should be EXCLUDED
-		DisplayName:        common.String("test-instance"),
-		FreeformTags:       map[string]string{"env": "test", "team": "platform"},
-		DefinedTags:        map[string]map[string]interface{}{"oracle-tags": {"CreatedBy": "test"}},
-		SecurityAttributes: map[string]map[string]interface{}{"security": {"level": "high"}},
+		// Fields that should be excluded from the InstanceConfiguration identity.
+		DisplayName:  common.String("test-instance"),
+		FreeformTags: map[string]string{"env": "test", "team": "platform"},
+		DefinedTags:  map[string]map[string]interface{}{"oracle-tags": {"CreatedBy": "test"}},
 
 		// Fields that should be included
-		Shape:             common.String("VM.Standard.E4.Flex"),
-		CompartmentId:     common.String("ocid1.compartment.oc1..test"),
-		DedicatedVmHostId: common.String("ocid1.dedicatedvmhost.oc1..test"),
+		Shape:              common.String("VM.Standard.E4.Flex"),
+		CompartmentId:      common.String("ocid1.compartment.oc1..test"),
+		DedicatedVmHostId:  common.String("ocid1.dedicatedvmhost.oc1..test"),
+		SecurityAttributes: map[string]map[string]interface{}{"security": {"level": "high"}},
 
 		// Metadata - user_data should be excluded
 		Metadata: map[string]string{
@@ -694,7 +1220,7 @@ func TestComputeHash_ComprehensiveTest(t *testing.T) {
 			Nvmes:       &nvmes,
 		},
 
-		// VNIC details - display name/tags/security should be EXCLUDED, NSGs sorted
+		// VNIC details - display name/tags should be excluded, security attributes included, NSGs sorted
 		CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
 			DisplayName:            common.String("test-vnic"),
 			FreeformTags:           map[string]string{"vnic-tag": "value"},
@@ -774,6 +1300,7 @@ func TestComputeHash_ComprehensiveTest(t *testing.T) {
 	g.Expect(*normalized.Shape).To(Equal("VM.Standard.E4.Flex"))
 	g.Expect(*normalized.CompartmentID).To(Equal("ocid1.compartment.oc1..test"))
 	g.Expect(*normalized.DedicatedVMHostID).To(Equal("ocid1.dedicatedvmhost.oc1..test"))
+	g.Expect(normalized.SecurityAttributes).To(Equal(map[string]map[string]interface{}{"security": {"level": "high"}}))
 
 	// Metadata should exclude user_data (tracked separately) but keep other keys
 	expectedMetadata := map[string]string{
@@ -793,6 +1320,7 @@ func TestComputeHash_ComprehensiveTest(t *testing.T) {
 	g.Expect(normalized.CreateVnicDetails.SkipSourceDestCheck).To(BeNil())
 	g.Expect(*normalized.CreateVnicDetails.AssignPrivateDNSRecord).To(BeTrue())
 	g.Expect(*normalized.CreateVnicDetails.HostnameLabel).To(Equal("test-host"))
+	g.Expect(normalized.CreateVnicDetails.SecurityAttributes).To(Equal(map[string]map[string]interface{}{"vnic-sec": {"attr": "val"}}))
 	expectedNSGs := []string{"ocid1.nsg.oc1..nsg1", "ocid1.nsg.oc1..nsg2", "ocid1.nsg.oc1..nsg3"}
 	g.Expect(normalized.CreateVnicDetails.NSGIDs).To(Equal(expectedNSGs))
 

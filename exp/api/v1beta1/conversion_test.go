@@ -17,6 +17,9 @@
 package v1beta1
 
 import (
+	"os"
+	"reflect"
+	"strings"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -43,21 +46,90 @@ func sampleExtendedMetadata() map[string]apiextensionsv1.JSON {
 	}
 }
 
+func sampleSecurityAttributes() map[string]map[string]apiextensionsv1.JSON {
+	return map[string]map[string]apiextensionsv1.JSON{
+		"Oracle-DataSecurity-ZPR": {
+			"MaxEgressCount": {Raw: []byte(`{"value":"42","mode":"audit"}`)},
+		},
+	}
+}
+
 func OCIMachinePoolFuzzer(obj *OCIMachinePool, c randfill.Continue) {
 	c.FillNoCustom(obj)
 	// nil fields which have been removed so that tests dont fail
 	if obj.Spec.InstanceConfiguration.InstanceVnicConfiguration != nil {
 		obj.Spec.InstanceConfiguration.InstanceVnicConfiguration.NSGId = nil
 		obj.Spec.InstanceConfiguration.InstanceVnicConfiguration.SubnetId = nil
+		obj.Spec.InstanceConfiguration.InstanceVnicConfiguration.SecurityAttributes = sampleSecurityAttributes()
 	}
 	// Replace fuzzed bytes with valid JSON so the roundtrip works
 	obj.Spec.InstanceConfiguration.ExtendedMetadata = sampleExtendedMetadata()
+	obj.Spec.InstanceConfiguration.SecurityAttributes = sampleSecurityAttributes()
 }
 
 func OCIMachinePoolHubFuzzer(obj *v1beta2.OCIMachinePool, c randfill.Continue) {
 	c.FillNoCustom(obj)
 	// Replace fuzzed bytes with valid JSON so the roundtrip works
 	obj.Spec.InstanceConfiguration.ExtendedMetadata = sampleExtendedMetadata()
+	obj.Spec.InstanceConfiguration.SecurityAttributes = sampleSecurityAttributes()
+	if obj.Spec.InstanceConfiguration.InstanceVnicConfiguration != nil {
+		obj.Spec.InstanceConfiguration.InstanceVnicConfiguration.SecurityAttributes = sampleSecurityAttributes()
+	}
+}
+
+func TestOCIMachinePoolDeferredAndOutOfScopeFieldsRemainAbsent(t *testing.T) {
+	g := NewWithT(t)
+
+	assertNoJSONField := func(obj interface{}, field string) {
+		t.Helper()
+		typ := reflect.TypeOf(obj)
+		if typ.Kind() == reflect.Pointer {
+			typ = typ.Elem()
+		}
+		for i := 0; i < typ.NumField(); i++ {
+			jsonTag := typ.Field(i).Tag.Get("json")
+			if strings.Split(jsonTag, ",")[0] == field {
+				t.Fatalf("%s unexpectedly exposes json field %q", typ.Name(), field)
+			}
+		}
+	}
+
+	apiChecks := []struct {
+		obj    interface{}
+		fields []string
+	}{
+		{OCIMachinePoolSpec{}, []string{"definedTags", "displayName", "freeformTags", "loadBalancers", "placementConfigurations"}},
+		{InstanceConfiguration{}, []string{"availabilityDomain", "blockVolumes", "faultDomain", "instanceSourceImageFilterDetails", "secondaryVnics"}},
+		{MachinePoolNetworkDetails{}, []string{"privateIp"}},
+		{PlacementDetails{}, []string{"secondaryVnicSubnets"}},
+		{v1beta2.OCIMachinePoolSpec{}, []string{"definedTags", "displayName", "freeformTags", "loadBalancers", "placementConfigurations"}},
+		{v1beta2.InstanceConfiguration{}, []string{"availabilityDomain", "blockVolumes", "faultDomain", "instanceSourceImageFilterDetails", "secondaryVnics"}},
+		{v1beta2.MachinePoolNetworkDetails{}, []string{"privateIp"}},
+		{v1beta2.PlacementDetails{}, []string{"secondaryVnicSubnets"}},
+	}
+	for _, check := range apiChecks {
+		for _, field := range check.fields {
+			assertNoJSONField(check.obj, field)
+		}
+	}
+
+	crdBytes, err := os.ReadFile("../../../config/crd/bases/infrastructure.cluster.x-k8s.io_ocimachinepools.yaml")
+	g.Expect(err).To(BeNil())
+	crd := string(crdBytes)
+	for _, field := range []string{
+		"blockVolumes:",
+		"definedTags:",
+		"faultDomain:",
+		"freeformTags:",
+		"instanceSourceImageFilterDetails:",
+		"loadBalancers:",
+		"placementConfigurations:",
+		"privateIp:",
+		"secondaryVnicSubnets:",
+		"secondaryVnics:",
+	} {
+		g.Expect(crd).ToNot(ContainSubstring(field), "CRD unexpectedly exposes %s", field)
+	}
 }
 
 func TestFuzzyConversion(t *testing.T) {

@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
@@ -257,6 +258,7 @@ func TestReconciliationFunction(t *testing.T) {
 		expectedFailureMessages []string
 		createPoolMachines      []infrav2exp.OCIMachinePoolMachine
 		deletePoolMachines      []clusterv1.Machine
+		expectedRequeueAfter    time.Duration
 		validate                func(g *WithT, t *test)
 	}
 	tests := []test{
@@ -460,6 +462,93 @@ func TestReconciliationFunction(t *testing.T) {
 			},
 		},
 		{
+			name:                 "instance pool switch pending defers cleanup and requeues",
+			errorExpected:        false,
+			conditionAssertion:   []conditionAssertion{{infrav2exp.LaunchTemplateReadyCondition, corev1.ConditionTrue, "", ""}, {infrav2exp.InstancePoolReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityInfo, infrav2exp.InstancePoolNotReadyReason}},
+			expectedRequeueAfter: 10 * time.Second,
+			testSpecificSetup: func(t *test, machinePoolScope *scope.MachinePoolScope, computeManagementClient *mock_computemanagement.MockClient) {
+				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+					Shape:                   common.String("new-shape"),
+					InstanceConfigurationId: common.String("old-id"),
+				}
+				r.Client = interceptor.NewClient(fake.NewClientBuilder().WithScheme(testScheme()).WithObjects(getSecret(), ociMachinePool).Build(), interceptor.Funcs{
+					Create: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+						m := obj.(*infrav2exp.OCIMachinePoolMachine)
+						t.createPoolMachines = append(t.createPoolMachines, *m)
+						return nil
+					},
+				})
+				ms.MachinePool.Spec.Template.Spec.Bootstrap.DataSecretName = common.String("bootstrap")
+				ms.OCIMachinePool.Spec.OCID = common.String("pool-id")
+
+				computeManagementClient.EXPECT().GetInstancePool(gomock.Any(), gomock.Any()).
+					Return(core.GetInstancePoolResponse{
+						InstancePool: core.InstancePool{
+							LifecycleState:          core.InstancePoolLifecycleStateRunning,
+							Id:                      common.String("pool-id"),
+							InstanceConfigurationId: common.String("old-id"),
+							Size:                    common.Int(3),
+						},
+					}, nil)
+				computeManagementClient.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Eq(core.GetInstanceConfigurationRequest{
+					InstanceConfigurationId: common.String("old-id"),
+				})).
+					Return(core.GetInstanceConfigurationResponse{
+						InstanceConfiguration: core.InstanceConfiguration{
+							Id: common.String("old-id"),
+							InstanceDetails: core.ComputeInstanceDetails{
+								LaunchDetails: &core.InstanceConfigurationLaunchInstanceDetails{
+									DefinedTags:   definedTagsInterface,
+									FreeformTags:  tags,
+									CompartmentId: common.String("test-compartment"),
+									Shape:         common.String("old-shape"),
+									CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+										FreeformTags: tags,
+										NsgIds:       []string{"worker-nsg-id"},
+										SubnetId:     common.String("worker-subnet-id"),
+									},
+									SourceDetails: core.InstanceConfigurationInstanceSourceViaImageDetails{},
+									Metadata:      map[string]string{"user_data": "dGVzdA=="},
+								},
+							},
+						},
+					}, nil)
+				computeManagementClient.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).
+					Return(core.CreateInstanceConfigurationResponse{
+						InstanceConfiguration: core.InstanceConfiguration{Id: common.String("new-id")},
+					}, nil)
+				computeManagementClient.EXPECT().ListInstancePoolInstances(gomock.Any(), gomock.Any()).
+					Return(core.ListInstancePoolInstancesResponse{
+						Items: []core.InstanceSummary{{
+							Id:          common.String("id-1"),
+							State:       common.String("Running"),
+							DisplayName: common.String("name-1"),
+						}},
+					}, nil)
+				computeManagementClient.EXPECT().UpdateInstancePool(gomock.Any(), gomock.Eq(core.UpdateInstancePoolRequest{
+					InstancePoolId: common.String("pool-id"),
+					UpdateInstancePoolDetails: core.UpdateInstancePoolDetails{
+						Size:                    common.Int(3),
+						InstanceConfigurationId: common.String("new-id"),
+					},
+				})).
+					Return(core.UpdateInstancePoolResponse{
+						InstancePool: core.InstancePool{
+							LifecycleState:          core.InstancePoolLifecycleStateRunning,
+							Id:                      common.String("pool-id"),
+							InstanceConfigurationId: common.String("old-id"),
+							Size:                    common.Int(3),
+						},
+					}, nil)
+				computeManagementClient.EXPECT().ListInstanceConfigurations(gomock.Any(), gomock.Any()).Times(0)
+				computeManagementClient.EXPECT().DeleteInstanceConfiguration(gomock.Any(), gomock.Any()).Times(0)
+			},
+			validate: func(g *WithT, t *test) {
+				g.Expect(len(t.createPoolMachines)).To(Equal(1))
+				g.Expect(ms.OCIMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId).To(Equal(common.String("new-id")))
+			},
+		},
+		{
 			name:               "delete unwanted machinepool machine",
 			errorExpected:      false,
 			conditionAssertion: []conditionAssertion{{infrav2exp.LaunchTemplateReadyCondition, corev1.ConditionTrue, "", ""}, {infrav2exp.InstancePoolReadyCondition, corev1.ConditionTrue, "", ""}},
@@ -628,7 +717,10 @@ func TestReconciliationFunction(t *testing.T) {
 			setup(t, g)
 			tc.testSpecificSetup(&tc, ms, computeManagementClient)
 			ctx := context.Background()
-			_, err := r.reconcileNormal(ctx, log.FromContext(ctx), ms)
+			result, err := r.reconcileNormal(ctx, log.FromContext(ctx), ms)
+			if tc.expectedRequeueAfter != 0 {
+				g.Expect(result.RequeueAfter).To(Equal(tc.expectedRequeueAfter))
+			}
 			if len(tc.conditionAssertion) > 0 {
 				expectMachinePoolConditions(g, ociMachinePool, tc.conditionAssertion)
 			}

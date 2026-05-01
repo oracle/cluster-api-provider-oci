@@ -21,17 +21,21 @@ package e2e
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	oci_config "github.com/oracle/cluster-api-provider-oci/cloud/config"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
+	"github.com/oracle/cluster-api-provider-oci/cloud/services/computemanagement"
 	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
@@ -676,6 +680,144 @@ var _ = Describe("Workload cluster creation", func() {
 		assertMachinePoolInstanceConfigurationStable(ctx, bootstrapClusterProxy, result.Cluster, result.MachinePools[0], specName, "45s", "5s")
 	})
 
+	It("Machine Pool - Safe Instance Configuration Update [DailyTests]", func() {
+		clusterName = getClusterName(clusterNamePrefix, "mp-safe-update")
+		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
+			ClusterProxy: bootstrapClusterProxy,
+			ConfigCluster: clusterctl.ConfigClusterInput{
+				LogFolder:                filepath.Join(artifactFolder, "clusters", bootstrapClusterProxy.GetName()),
+				ClusterctlConfigPath:     clusterctlConfigPath,
+				KubeconfigPath:           bootstrapClusterProxy.GetKubeconfigPath(),
+				InfrastructureProvider:   clusterctl.DefaultInfrastructureProvider,
+				Flavor:                   "machine-pool",
+				Namespace:                namespace.Name,
+				ClusterName:              clusterName,
+				KubernetesVersion:        e2eConfig.MustGetVariable(capi_e2e.KubernetesVersion),
+				ControlPlaneMachineCount: pointer.Int64(1),
+				WorkerMachineCount:       pointer.Int64(1),
+			},
+			CNIManifestPath:              e2eConfig.MustGetVariable(capi_e2e.CNIPath),
+			WaitForClusterIntervals:      e2eConfig.GetIntervals(specName, "wait-cluster"),
+			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),
+			WaitForMachinePools:          e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes"),
+			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
+		}, result)
+
+		By("Verifying the machine pool create path carries representative approved fields")
+		assertMachinePoolRepresentativeApprovedFields(ctx, bootstrapClusterProxy, result.Cluster, result.MachinePools[0], clusterName, specName)
+
+		By("Patching an existing machine pool with newly approved update fields")
+		mpKey := client.ObjectKey{Name: result.MachinePools[0].Name, Namespace: namespace.Name}
+		initialOMP := &infrav2exp.OCIMachinePool{}
+		Expect(bootstrapClusterProxy.GetClient().Get(ctx, mpKey, initialOMP)).To(Succeed())
+		Expect(initialOMP.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(BeNil())
+		initialICID := *initialOMP.Spec.InstanceConfiguration.InstanceConfigurationId
+
+		patchHelper, err := v1beta1patch.NewHelper(initialOMP, bootstrapClusterProxy.GetClient())
+		Expect(err).ToNot(HaveOccurred())
+		initialOMP.Spec.InstanceDisplayNameFormatter = common.String("updated-worker-${launchCount}")
+		initialOMP.Spec.InstanceConfiguration.IpxeScript = common.String("#!ipxe")
+		initialOMP.Spec.InstanceConfiguration.PreferredMaintenanceAction = infrav2exp.PreferredMaintenanceActionReboot
+		Expect(patchHelper.Patch(ctx, initialOMP)).To(Succeed())
+
+		var desiredICID string
+		By("Waiting for the machine pool spec to point at a new instance configuration")
+		Eventually(func(g Gomega) {
+			updatedOMP := &infrav2exp.OCIMachinePool{}
+			g.Expect(bootstrapClusterProxy.GetClient().Get(ctx, mpKey, updatedOMP)).To(Succeed())
+			g.Expect(updatedOMP.Spec.InstanceDisplayNameFormatter).ToNot(BeNil())
+			g.Expect(*updatedOMP.Spec.InstanceDisplayNameFormatter).To(Equal("updated-worker-${launchCount}"))
+			g.Expect(updatedOMP.Spec.InstanceConfiguration.IpxeScript).ToNot(BeNil())
+			g.Expect(*updatedOMP.Spec.InstanceConfiguration.IpxeScript).To(Equal("#!ipxe"))
+			g.Expect(updatedOMP.Spec.InstanceConfiguration.PreferredMaintenanceAction).To(Equal(infrav2exp.PreferredMaintenanceActionReboot))
+			g.Expect(updatedOMP.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(BeNil())
+			g.Expect(*updatedOMP.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(Equal(initialICID))
+			desiredICID = *updatedOMP.Spec.InstanceConfiguration.InstanceConfigurationId
+		}, e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes")...).Should(Succeed())
+
+		By("Verifying the actual OCI InstancePool switches before cleanup can run")
+		assertMachinePoolActualInstancePoolSwitch(ctx, bootstrapClusterProxy, result.Cluster, result.MachinePools[0], desiredICID, specName)
+	})
+
+	It("Machine Pool - Instance Configuration Field Removal [DailyTests]", func() {
+		clusterName = getClusterName(clusterNamePrefix, "mp-field-removal")
+		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
+			ClusterProxy: bootstrapClusterProxy,
+			ConfigCluster: clusterctl.ConfigClusterInput{
+				LogFolder:                filepath.Join(artifactFolder, "clusters", bootstrapClusterProxy.GetName()),
+				ClusterctlConfigPath:     clusterctlConfigPath,
+				KubeconfigPath:           bootstrapClusterProxy.GetKubeconfigPath(),
+				InfrastructureProvider:   clusterctl.DefaultInfrastructureProvider,
+				Flavor:                   "machine-pool",
+				Namespace:                namespace.Name,
+				ClusterName:              clusterName,
+				KubernetesVersion:        e2eConfig.MustGetVariable(capi_e2e.KubernetesVersion),
+				ControlPlaneMachineCount: pointer.Int64(1),
+				WorkerMachineCount:       pointer.Int64(1),
+			},
+			CNIManifestPath:              e2eConfig.MustGetVariable(capi_e2e.CNIPath),
+			WaitForClusterIntervals:      e2eConfig.GetIntervals(specName, "wait-cluster"),
+			WaitForControlPlaneIntervals: e2eConfig.GetIntervals(specName, "wait-control-plane"),
+			WaitForMachinePools:          e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes"),
+			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
+		}, result)
+
+		mpKey := client.ObjectKey{Name: result.MachinePools[0].Name, Namespace: namespace.Name}
+		initialOMP := &infrav2exp.OCIMachinePool{}
+		Expect(bootstrapClusterProxy.GetClient().Get(ctx, mpKey, initialOMP)).To(Succeed())
+		Expect(initialOMP.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(BeNil())
+		initialICID := *initialOMP.Spec.InstanceConfiguration.InstanceConfigurationId
+
+		By("Adding a removable instance configuration field")
+		patchHelper, err := v1beta1patch.NewHelper(initialOMP, bootstrapClusterProxy.GetClient())
+		Expect(err).ToNot(HaveOccurred())
+		initialOMP.Spec.InstanceConfiguration.IpxeScript = common.String("#!ipxe")
+		Expect(patchHelper.Patch(ctx, initialOMP)).To(Succeed())
+
+		var configuredICID string
+		By("Waiting for the machine pool spec to point at an instance configuration with the field set")
+		Eventually(func(g Gomega) {
+			updatedOMP := &infrav2exp.OCIMachinePool{}
+			g.Expect(bootstrapClusterProxy.GetClient().Get(ctx, mpKey, updatedOMP)).To(Succeed())
+			g.Expect(updatedOMP.Spec.InstanceConfiguration.IpxeScript).ToNot(BeNil())
+			g.Expect(*updatedOMP.Spec.InstanceConfiguration.IpxeScript).To(Equal("#!ipxe"))
+			g.Expect(updatedOMP.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(BeNil())
+			g.Expect(*updatedOMP.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(Equal(initialICID))
+			configuredICID = *updatedOMP.Spec.InstanceConfiguration.InstanceConfigurationId
+		}, e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes")...).Should(Succeed())
+
+		By("Verifying the actual OCI InstancePool switches to the configuration with the field set")
+		assertMachinePoolActualInstancePoolSwitch(ctx, bootstrapClusterProxy, result.Cluster, result.MachinePools[0], configuredICID, specName)
+
+		By("Verifying the actual OCI InstanceConfiguration has the field set")
+		assertMachinePoolInstanceConfigurationIpxeScript(ctx, configuredICID, common.String("#!ipxe"), specName)
+
+		By("Removing the instance configuration field")
+		configuredOMP := &infrav2exp.OCIMachinePool{}
+		Expect(bootstrapClusterProxy.GetClient().Get(ctx, mpKey, configuredOMP)).To(Succeed())
+		patchHelper, err = v1beta1patch.NewHelper(configuredOMP, bootstrapClusterProxy.GetClient())
+		Expect(err).ToNot(HaveOccurred())
+		configuredOMP.Spec.InstanceConfiguration.IpxeScript = nil
+		Expect(patchHelper.Patch(ctx, configuredOMP)).To(Succeed())
+
+		var removedICID string
+		By("Waiting for the machine pool spec to point at a replacement instance configuration")
+		Eventually(func(g Gomega) {
+			updatedOMP := &infrav2exp.OCIMachinePool{}
+			g.Expect(bootstrapClusterProxy.GetClient().Get(ctx, mpKey, updatedOMP)).To(Succeed())
+			g.Expect(updatedOMP.Spec.InstanceConfiguration.IpxeScript).To(BeNil())
+			g.Expect(updatedOMP.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(BeNil())
+			g.Expect(*updatedOMP.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(Equal(configuredICID))
+			removedICID = *updatedOMP.Spec.InstanceConfiguration.InstanceConfigurationId
+		}, e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes")...).Should(Succeed())
+
+		By("Verifying the actual OCI InstancePool switches to the configuration without the field")
+		assertMachinePoolActualInstancePoolSwitch(ctx, bootstrapClusterProxy, result.Cluster, result.MachinePools[0], removedICID, specName)
+
+		By("Verifying the actual OCI InstanceConfiguration no longer has the field")
+		assertMachinePoolInstanceConfigurationIpxeScript(ctx, removedICID, nil, specName)
+	})
+
 	It("Machine Pool - Upgrade [DailyTests]", func() {
 		Expect(e2eConfig.Variables).To(HaveKey(capi_e2e.KubernetesVersionUpgradeFrom))
 		Expect(e2eConfig.Variables).To(HaveKey(capi_e2e.KubernetesVersionUpgradeTo))
@@ -837,6 +979,57 @@ var _ = Describe("Workload cluster creation", func() {
 	})
 })
 
+func assertMachinePoolRepresentativeApprovedFields(ctx context.Context, clusterProxy framework.ClusterProxy, cluster *clusterv1.Cluster, machinePool *clusterv1.MachinePool, clusterName string, specName string) {
+	Expect(ctx).NotTo(BeNil(), "ctx is required for machine pool representative field check")
+	Expect(clusterProxy).ToNot(BeNil(), "clusterProxy is required for machine pool representative field check")
+	Expect(cluster).ToNot(BeNil(), "cluster is required for machine pool representative field check")
+	Expect(machinePool).ToNot(BeNil(), "machinePool is required for machine pool representative field check")
+
+	expectedFormatter := fmt.Sprintf("%s-mp-${launchCount}", clusterName)
+	expectedMaintenanceAction := infrav2exp.PreferredMaintenanceActionLiveMigrate
+
+	lister := clusterProxy.GetClient()
+	Expect(lister).ToNot(BeNil(), "clusterProxy client is required for machine pool representative field check")
+
+	var instancePoolID string
+	var instanceConfigurationID string
+	Eventually(func(g Gomega) {
+		ociMachinePool := &infrav2exp.OCIMachinePool{}
+		err := lister.Get(ctx, client.ObjectKey{Name: machinePool.Name, Namespace: cluster.Namespace}, ociMachinePool)
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(ociMachinePool.Spec.InstanceDisplayNameFormatter).ToNot(BeNil())
+		g.Expect(*ociMachinePool.Spec.InstanceDisplayNameFormatter).To(Equal(expectedFormatter))
+		g.Expect(ociMachinePool.Spec.InstanceConfiguration.PreferredMaintenanceAction).To(Equal(expectedMaintenanceAction))
+		g.Expect(ociMachinePool.Spec.OCID).ToNot(BeNil())
+		g.Expect(*ociMachinePool.Spec.OCID).ToNot(BeEmpty())
+		g.Expect(ociMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(BeNil())
+		g.Expect(*ociMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(BeEmpty())
+		instancePoolID = *ociMachinePool.Spec.OCID
+		instanceConfigurationID = *ociMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId
+	}, e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes")...).Should(Succeed(), "Timed out waiting for representative MachinePool approved fields")
+
+	computeManagementClient := newE2EComputeManagementClient()
+	Eventually(func(g Gomega) {
+		resp, err := computeManagementClient.GetInstancePool(ctx, core.GetInstancePoolRequest{
+			InstancePoolId: common.String(instancePoolID),
+		})
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(resp.InstancePool.InstanceDisplayNameFormatter).ToNot(BeNil())
+		g.Expect(*resp.InstancePool.InstanceDisplayNameFormatter).To(Equal(expectedFormatter))
+	}, e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes")...).Should(Succeed(), "Timed out waiting for actual OCI InstancePool representative fields")
+
+	Eventually(func(g Gomega) {
+		resp, err := computeManagementClient.GetInstanceConfiguration(ctx, core.GetInstanceConfigurationRequest{
+			InstanceConfigurationId: common.String(instanceConfigurationID),
+		})
+		g.Expect(err).NotTo(HaveOccurred())
+		instanceDetails, ok := resp.InstanceConfiguration.InstanceDetails.(core.ComputeInstanceDetails)
+		g.Expect(ok).To(BeTrue(), "Expected compute instance details in MachinePool instance configuration")
+		g.Expect(instanceDetails.LaunchDetails).ToNot(BeNil())
+		g.Expect(instanceDetails.LaunchDetails.PreferredMaintenanceAction).To(Equal(core.InstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionLiveMigrate))
+	}, e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes")...).Should(Succeed(), "Timed out waiting for actual OCI InstanceConfiguration representative fields")
+}
+
 func assertMachinePoolInstanceConfigurationStable(ctx context.Context, clusterProxy framework.ClusterProxy, cluster *clusterv1.Cluster, machinePool *clusterv1.MachinePool, specName string, duration string, interval string) {
 	Expect(ctx).NotTo(BeNil(), "ctx is required for machine pool stability check")
 	Expect(clusterProxy).ToNot(BeNil(), "clusterProxy is required for machine pool stability check")
@@ -874,6 +1067,118 @@ func assertMachinePoolInstanceConfigurationStable(ctx context.Context, clusterPr
 		g.Expect(ociMachinePool.Annotations).To(HaveKey(scope.InstanceConfigurationHashAnnotation))
 		g.Expect(ociMachinePool.Annotations[scope.InstanceConfigurationHashAnnotation]).To(Equal(initialHash))
 	}, duration, interval).Should(Succeed(), "Machine pool instance configuration drifted during stability window")
+}
+
+func assertMachinePoolActualInstancePoolSwitch(ctx context.Context, clusterProxy framework.ClusterProxy, cluster *clusterv1.Cluster, machinePool *clusterv1.MachinePool, desiredInstanceConfigurationID string, specName string) {
+	Expect(ctx).NotTo(BeNil(), "ctx is required for machine pool switch check")
+	Expect(clusterProxy).ToNot(BeNil(), "clusterProxy is required for machine pool switch check")
+	Expect(cluster).ToNot(BeNil(), "cluster is required for machine pool switch check")
+	Expect(machinePool).ToNot(BeNil(), "machinePool is required for machine pool switch check")
+	Expect(desiredInstanceConfigurationID).ToNot(BeEmpty(), "desired instance configuration ID is required for machine pool switch check")
+
+	lister := clusterProxy.GetClient()
+	Expect(lister).ToNot(BeNil(), "clusterProxy client is required for machine pool switch check")
+
+	var instancePoolID string
+	Eventually(func(g Gomega) {
+		ociMachinePool := &infrav2exp.OCIMachinePool{}
+		err := lister.Get(ctx, client.ObjectKey{Name: machinePool.Name, Namespace: cluster.Namespace}, ociMachinePool)
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(ociMachinePool.Spec.OCID).ToNot(BeNil())
+		g.Expect(*ociMachinePool.Spec.OCID).ToNot(BeEmpty())
+		g.Expect(ociMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(BeNil())
+		g.Expect(*ociMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId).To(Equal(desiredInstanceConfigurationID))
+		instancePoolID = *ociMachinePool.Spec.OCID
+	}, e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes")...).Should(Succeed(), "Timed out waiting for the desired machine pool instance configuration ID")
+
+	computeManagementClient := newE2EComputeManagementClient()
+	Eventually(func(g Gomega) {
+		resp, err := computeManagementClient.GetInstancePool(ctx, core.GetInstancePoolRequest{
+			InstancePoolId: common.String(instancePoolID),
+		})
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(resp.InstancePool.InstanceConfigurationId).ToNot(BeNil())
+		g.Expect(*resp.InstancePool.InstanceConfigurationId).To(Equal(desiredInstanceConfigurationID))
+	}, e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes")...).Should(Succeed(), "Timed out waiting for the actual OCI InstancePool to switch instance configuration")
+}
+
+func assertMachinePoolInstanceConfigurationIpxeScript(ctx context.Context, instanceConfigurationID string, expected *string, specName string) {
+	Expect(ctx).NotTo(BeNil(), "ctx is required for machine pool instance configuration field check")
+	Expect(instanceConfigurationID).ToNot(BeEmpty(), "instance configuration ID is required for machine pool instance configuration field check")
+
+	computeManagementClient := newE2EComputeManagementClient()
+	Eventually(func(g Gomega) {
+		resp, err := computeManagementClient.GetInstanceConfiguration(ctx, core.GetInstanceConfigurationRequest{
+			InstanceConfigurationId: common.String(instanceConfigurationID),
+		})
+		g.Expect(err).NotTo(HaveOccurred())
+		instanceDetails, ok := resp.InstanceConfiguration.InstanceDetails.(core.ComputeInstanceDetails)
+		g.Expect(ok).To(BeTrue(), "Expected compute instance details in MachinePool instance configuration")
+		g.Expect(instanceDetails.LaunchDetails).ToNot(BeNil())
+		if expected == nil {
+			g.Expect(instanceDetails.LaunchDetails.IpxeScript).To(BeNil())
+			return
+		}
+		g.Expect(instanceDetails.LaunchDetails.IpxeScript).ToNot(BeNil())
+		g.Expect(*instanceDetails.LaunchDetails.IpxeScript).To(Equal(*expected))
+	}, e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes")...).Should(Succeed(), "Timed out waiting for actual OCI InstanceConfiguration ipxeScript state")
+}
+
+func newE2EComputeManagementClient() computemanagement.Client {
+	ociAuthConfigProvider := newE2EOciAuthConfigProvider()
+	clientProvider, err := scope.NewClientProvider(scope.ClientProviderParams{OciAuthConfigProvider: ociAuthConfigProvider})
+	Expect(err).NotTo(HaveOccurred())
+
+	region, err := ociAuthConfigProvider.Region()
+	Expect(err).NotTo(HaveOccurred())
+	ociClients, err := clientProvider.GetOrBuildClient(region)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(ociClients.ComputeManagementClient).NotTo(BeNil())
+
+	return ociClients.ComputeManagementClient
+}
+
+func newE2EOciAuthConfigProvider() common.ConfigurationProvider {
+	s, useInstancePrincipalFlagSet := os.LookupEnv("USE_INSTANCE_PRINCIPAL_B64")
+	useInstancePrincipal := false
+	if useInstancePrincipalFlagSet {
+		useInstancePrincipalStr, err := base64.StdEncoding.DecodeString(s)
+		Expect(err).NotTo(HaveOccurred())
+		useInstancePrincipal, err = strconv.ParseBool(string(useInstancePrincipalStr))
+		Expect(err).NotTo(HaveOccurred())
+	}
+	if useInstancePrincipal {
+		ociAuthConfigProvider, err := oci_config.NewConfigurationProvider(&oci_config.AuthConfig{
+			UseInstancePrincipals: true,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		return ociAuthConfigProvider
+	}
+
+	tenancyID, err := base64.StdEncoding.DecodeString(os.Getenv("OCI_TENANCY_ID_B64"))
+	Expect(err).NotTo(HaveOccurred())
+	userID, err := base64.StdEncoding.DecodeString(os.Getenv("OCI_USER_ID_B64"))
+	Expect(err).NotTo(HaveOccurred())
+	passphrase, err := base64.StdEncoding.DecodeString(os.Getenv("OCI_CREDENTIALS_PASSPHRASE_B64"))
+	Expect(err).NotTo(HaveOccurred())
+	key, err := base64.StdEncoding.DecodeString(os.Getenv("OCI_CREDENTIALS_KEY_B64"))
+	Expect(err).NotTo(HaveOccurred())
+	fingerprint, err := base64.StdEncoding.DecodeString(os.Getenv("OCI_CREDENTIALS_FINGERPRINT_B64"))
+	Expect(err).NotTo(HaveOccurred())
+	region, err := base64.StdEncoding.DecodeString(os.Getenv("OCI_REGION_B64"))
+	Expect(err).NotTo(HaveOccurred())
+
+	ociAuthConfigProvider, err := oci_config.NewConfigurationProvider(&oci_config.AuthConfig{
+		Region:                string(region),
+		TenancyID:             string(tenancyID),
+		UserID:                string(userID),
+		PrivateKey:            string(key),
+		Fingerprint:           string(fingerprint),
+		Passphrase:            string(passphrase),
+		UseInstancePrincipals: false,
+	})
+	Expect(err).NotTo(HaveOccurred())
+	return ociAuthConfigProvider
 }
 
 func verifyMultipleNsgSubnet(ctx context.Context, namespace string, clusterName string, mcDeployments []*clusterv1.MachineDeployment) {
