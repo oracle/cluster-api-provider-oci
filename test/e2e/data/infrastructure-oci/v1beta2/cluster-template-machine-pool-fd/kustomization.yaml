@@ -1,0 +1,4 @@
+bases:
+  - ../cluster-template-machine-pool
+patchesStrategicMerge:
+  - ./machine-pool.yaml

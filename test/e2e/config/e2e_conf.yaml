@@ -70,6 +70,7 @@ providers:
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-remote-vcn-peering.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-externally-managed-vcn.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-machine-pool.yaml"
+          - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-machine-pool-fd.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-managed.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-managed-node-recycling.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-managed-self-managed-nodes.yaml"

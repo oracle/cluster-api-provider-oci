@@ -1839,6 +1839,135 @@ func TestInstancePoolCreate(t *testing.T) {
 	}
 }
 
+func TestBuildInstancePoolPlacement(t *testing.T) {
+	tests := []struct {
+		name             string
+		placementDetails []infrav2exp.PlacementDetails
+		expected         []core.CreateInstancePoolPlacementConfigurationDetails
+		errorExpected    bool
+	}{
+		{
+			name: "uses requested fault domains for selected availability domain",
+			placementDetails: []infrav2exp.PlacementDetails{
+				{
+					AvailabilityDomain: 1,
+					FaultDomains:       []string{"fd-2"},
+				},
+			},
+			expected: []core.CreateInstancePoolPlacementConfigurationDetails{
+				{
+					AvailabilityDomain: common.String("test-ad-1"),
+					PrimarySubnetId:    common.String("subnet-id"),
+					FaultDomains:       []string{"fd-2"},
+				},
+			},
+		},
+		{
+			name: "uses cluster fault domains when selected availability domain omits fault domains",
+			placementDetails: []infrav2exp.PlacementDetails{
+				{
+					AvailabilityDomain: 2,
+				},
+			},
+			expected: []core.CreateInstancePoolPlacementConfigurationDetails{
+				{
+					AvailabilityDomain: common.String("test-ad-2"),
+					PrimarySubnetId:    common.String("subnet-id"),
+					FaultDomains:       []string{"fd-3", "fd-4"},
+				},
+			},
+		},
+		{
+			name: "uses all availability domains and cluster fault domains when placement details are omitted",
+			expected: []core.CreateInstancePoolPlacementConfigurationDetails{
+				{
+					AvailabilityDomain: common.String("test-ad-1"),
+					PrimarySubnetId:    common.String("subnet-id"),
+					FaultDomains:       []string{"fd-1", "fd-2"},
+				},
+				{
+					AvailabilityDomain: common.String("test-ad-2"),
+					PrimarySubnetId:    common.String("subnet-id"),
+					FaultDomains:       []string{"fd-3", "fd-4"},
+				},
+			},
+		},
+		{
+			name: "errors when more placement details are requested than cluster availability domains",
+			placementDetails: []infrav2exp.PlacementDetails{
+				{AvailabilityDomain: 1},
+				{AvailabilityDomain: 2},
+				{AvailabilityDomain: 3},
+			},
+			errorExpected: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			infraMachinePool := &infrav2exp.OCIMachinePool{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "default",
+				},
+				Spec: infrav2exp.OCIMachinePoolSpec{
+					PlacementDetails: tc.placementDetails,
+				},
+			}
+			scheme := runtime.NewScheme()
+			g.Expect(corev1.AddToScheme(scheme)).To(Succeed())
+			g.Expect(infrav2exp.AddToScheme(scheme)).To(Succeed())
+
+			ms, err := NewMachinePoolScope(MachinePoolScopeParams{
+				ComputeManagementClient: mock_computemanagement.NewMockClient(mockCtrl),
+				OCIMachinePool:          infraMachinePool,
+				OCIClusterAccessor: OCISelfManagedCluster{
+					OCICluster: &infrastructurev1beta2.OCICluster{
+						Spec: infrastructurev1beta2.OCIClusterSpec{
+							NetworkSpec: infrastructurev1beta2.NetworkSpec{
+								Vcn: infrastructurev1beta2.VCN{
+									Subnets: []*infrastructurev1beta2.Subnet{
+										{
+											Role: infrastructurev1beta2.WorkerRole,
+											ID:   common.String("subnet-id"),
+										},
+									},
+								},
+							},
+							AvailabilityDomains: map[string]infrastructurev1beta2.OCIAvailabilityDomain{
+								"test-ad-1": {
+									Name:         "test-ad-1",
+									FaultDomains: []string{"fd-1", "fd-2"},
+								},
+								"test-ad-2": {
+									Name:         "test-ad-2",
+									FaultDomains: []string{"fd-3", "fd-4"},
+								},
+							},
+						},
+					},
+				},
+				Cluster:     &clusterv1.Cluster{},
+				MachinePool: &clusterv1.MachinePool{},
+				Client:      fake.NewClientBuilder().WithScheme(scheme).WithObjects(infraMachinePool).Build(),
+			})
+			g.Expect(err).To(BeNil())
+
+			placements, err := ms.BuildInstancePoolPlacement()
+			if tc.errorExpected {
+				g.Expect(err).To(Not(BeNil()))
+				return
+			}
+			g.Expect(err).To(BeNil())
+			g.Expect(placements).To(ConsistOf(tc.expected))
+		})
+	}
+}
+
 func TestInstancePoolUpdate(t *testing.T) {
 	var (
 		ms                      *MachinePoolScope

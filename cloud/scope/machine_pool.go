@@ -372,10 +372,14 @@ func (s *MachinePoolScope) BuildInstancePoolPlacement() ([]core.CreateInstancePo
 	for _, ad := range ads {
 		for _, specPlacment := range specPlacementDetails {
 			if strings.HasSuffix(ad.Name, strconv.Itoa(specPlacment.AvailabilityDomain)) {
+				faultDomains := ad.FaultDomains
+				if len(specPlacment.FaultDomains) > 0 {
+					faultDomains = specPlacment.FaultDomains
+				}
 				placement := core.CreateInstancePoolPlacementConfigurationDetails{
 					AvailabilityDomain: common.String(ad.Name),
 					PrimarySubnetId:    s.GetWorkerMachineSubnet(),
-					FaultDomains:       ad.FaultDomains,
+					FaultDomains:       faultDomains,
 				}
 				s.Info("Adding machine placement for AD", "AD", ad.Name)
 				placements = append(placements, placement)

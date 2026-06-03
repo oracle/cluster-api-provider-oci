@@ -7,6 +7,8 @@ set -o pipefail
 
 version::get_version_vars() {
     GIT_COMMIT="$(git rev-parse HEAD^{commit})"
+    GIT_MAJOR=""
+    GIT_MINOR=""
 
     if git_status=$(git status --porcelain 2>/dev/null) && [[ -z ${git_status} ]]; then
         GIT_TREE_STATE="clean"

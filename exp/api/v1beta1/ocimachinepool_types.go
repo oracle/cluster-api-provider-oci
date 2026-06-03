@@ -109,6 +109,11 @@ type InstanceConfiguration struct {
 type PlacementDetails struct {
 	// The availability domain to place instances.
 	AvailabilityDomain int `mandatory:"true" json:"availabilityDomain"`
+
+	// FaultDomains defines the list of fault domains in which to place instances.
+	// If omitted, all known fault domains for the availability domain are used.
+	// +optional
+	FaultDomains []string `json:"faultDomains,omitempty"`
 }
 
 // LaunchDetails Instance launch details for creating an instance from an instance configuration
