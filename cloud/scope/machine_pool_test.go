@@ -1990,15 +1990,6 @@ func TestInstancePoolUpdate(t *testing.T) {
 		},
 	}
 
-	definedTagsInterface := make(map[string]map[string]interface{})
-	for ns, mapNs := range definedTags {
-		mapValues := make(map[string]interface{})
-		for k, v := range mapNs {
-			mapValues[k] = v
-		}
-		definedTagsInterface[ns] = mapValues
-	}
-
 	setup := func(t *testing.T, g *WithT) {
 		var err error
 		mockCtrl = gomock.NewController(t)
@@ -2047,6 +2038,10 @@ func TestInstancePoolUpdate(t *testing.T) {
 						Name:         "ad-1",
 						FaultDomains: []string{"fd-5", "fd-6"},
 					},
+					"ad-2": {
+						Name:         "ad-2",
+						FaultDomains: []string{"fd-7", "fd-8"},
+					},
 				},
 			},
 		}
@@ -2091,6 +2086,19 @@ func TestInstancePoolUpdate(t *testing.T) {
 		mockCtrl.Finish()
 	}
 
+	matchingPlacementConfigurations := []core.InstancePoolPlacementConfiguration{
+		{
+			AvailabilityDomain: common.String("ad-1"),
+			PrimarySubnetId:    common.String("subnet-id"),
+			FaultDomains:       []string{"fd-5", "fd-6"},
+		},
+		{
+			AvailabilityDomain: common.String("ad-2"),
+			PrimarySubnetId:    common.String("subnet-id"),
+			FaultDomains:       []string{"fd-7", "fd-8"},
+		},
+	}
+
 	tests := []struct {
 		name                string
 		errorExpected       bool
@@ -2108,6 +2116,7 @@ func TestInstancePoolUpdate(t *testing.T) {
 			instancepool: &core.InstancePool{
 				Size:                    common.Int(3),
 				InstanceConfigurationId: common.String("config_id"),
+				PlacementConfigurations: matchingPlacementConfigurations,
 			},
 			testSpecificSetup: func(ms *MachinePoolScope) {
 				ms.OCIMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId = common.String("config_id")
@@ -2119,6 +2128,7 @@ func TestInstancePoolUpdate(t *testing.T) {
 			instancepool: &core.InstancePool{
 				Size:                    common.Int(3),
 				InstanceConfigurationId: common.String("config_id"),
+				PlacementConfigurations: matchingPlacementConfigurations,
 			},
 			testSpecificSetup: func(ms *MachinePoolScope) {
 				ms.OCIMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId = common.String("config_id_new")
@@ -2136,11 +2146,98 @@ func TestInstancePoolUpdate(t *testing.T) {
 			},
 		},
 		{
+			name:          "instance pool update due to availability domain and fault domain change",
+			errorExpected: false,
+			instancepool: &core.InstancePool{
+				Size:                    common.Int(3),
+				InstanceConfigurationId: common.String("config_id"),
+				PlacementConfigurations: []core.InstancePoolPlacementConfiguration{
+					{
+						AvailabilityDomain: common.String("ad-1"),
+						PrimarySubnetId:    common.String("subnet-id"),
+						FaultDomains:       []string{"fd-5", "fd-6"},
+					},
+				},
+			},
+			testSpecificSetup: func(ms *MachinePoolScope) {
+				ms.OCIMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId = common.String("config_id")
+				ms.OCIMachinePool.Spec.PlacementDetails = []infrav2exp.PlacementDetails{
+					{
+						AvailabilityDomain: 2,
+						FaultDomains:       []string{"fd-7"},
+					},
+				}
+				computeManagementClient.EXPECT().UpdateInstancePool(gomock.Any(), gomock.Eq(core.UpdateInstancePoolRequest{
+					UpdateInstancePoolDetails: core.UpdateInstancePoolDetails{
+						Size:                    common.Int(3),
+						InstanceConfigurationId: common.String("config_id"),
+						PlacementConfigurations: []core.UpdateInstancePoolPlacementConfigurationDetails{
+							{
+								AvailabilityDomain: common.String("ad-2"),
+								PrimarySubnetId:    common.String("subnet-id"),
+								FaultDomains:       []string{"fd-7"},
+							},
+						},
+					},
+				})).
+					Return(core.UpdateInstancePoolResponse{
+						InstancePool: core.InstancePool{
+							Id: common.String("id"),
+						},
+					}, nil)
+			},
+		},
+		{
+			name:          "instance pool placement update omits size when replicas are externally managed",
+			errorExpected: false,
+			instancepool: &core.InstancePool{
+				Size:                    common.Int(5),
+				InstanceConfigurationId: common.String("config_id"),
+				PlacementConfigurations: []core.InstancePoolPlacementConfiguration{
+					{
+						AvailabilityDomain: common.String("ad-1"),
+						PrimarySubnetId:    common.String("subnet-id"),
+						FaultDomains:       []string{"fd-5", "fd-6"},
+					},
+				},
+			},
+			testSpecificSetup: func(ms *MachinePoolScope) {
+				ms.MachinePool.Annotations = map[string]string{
+					clusterv1.ReplicasManagedByAnnotation: "",
+				}
+				ms.OCIMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId = common.String("config_id")
+				ms.OCIMachinePool.Spec.PlacementDetails = []infrav2exp.PlacementDetails{
+					{
+						AvailabilityDomain: 2,
+						FaultDomains:       []string{"fd-7"},
+					},
+				}
+				computeManagementClient.EXPECT().UpdateInstancePool(gomock.Any(), gomock.Eq(core.UpdateInstancePoolRequest{
+					UpdateInstancePoolDetails: core.UpdateInstancePoolDetails{
+						InstanceConfigurationId: common.String("config_id"),
+						PlacementConfigurations: []core.UpdateInstancePoolPlacementConfigurationDetails{
+							{
+								AvailabilityDomain: common.String("ad-2"),
+								PrimarySubnetId:    common.String("subnet-id"),
+								FaultDomains:       []string{"fd-7"},
+							},
+						},
+					},
+				})).
+					Return(core.UpdateInstancePoolResponse{
+						InstancePool: core.InstancePool{
+							Id: common.String("id"),
+						},
+					}, nil)
+			},
+		},
+		{
 			name:          "no update due to change in replica size as annotation is set",
 			errorExpected: false,
 			instancepool: &core.InstancePool{
 				Size:                    common.Int(3),
 				InstanceConfigurationId: common.String("config_id"),
+				PlacementConfigurations: matchingPlacementConfigurations,
 			},
 			testSpecificSetup: func(ms *MachinePoolScope) {
 				ms.MachinePool.Annotations = map[string]string{
@@ -2167,6 +2264,143 @@ func TestInstancePoolUpdate(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestInstancePoolUpdateSkipsDefaultPlacementDrift(t *testing.T) {
+	g := NewWithT(t)
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	replicas := int32(3)
+	infraMachinePool := &infrav2exp.OCIMachinePool{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test",
+			Namespace: "default",
+		},
+		Spec: infrav2exp.OCIMachinePoolSpec{
+			InstanceConfiguration: infrav2exp.InstanceConfiguration{
+				InstanceConfigurationId: common.String("config_id"),
+			},
+		},
+	}
+	ms, err := NewMachinePoolScope(MachinePoolScopeParams{
+		ComputeManagementClient: mock_computemanagement.NewMockClient(mockCtrl),
+		OCIMachinePool:          infraMachinePool,
+		OCIClusterAccessor: OCISelfManagedCluster{
+			OCICluster: &infrastructurev1beta2.OCICluster{},
+		},
+		Cluster: &clusterv1.Cluster{},
+		MachinePool: &clusterv1.MachinePool{
+			Spec: clusterv1.MachinePoolSpec{
+				Replicas: &replicas,
+			},
+		},
+		Client: fake.NewClientBuilder().WithObjects(infraMachinePool).Build(),
+	})
+	g.Expect(err).To(BeNil())
+
+	instancePool := &core.InstancePool{
+		Size:                    common.Int(3),
+		InstanceConfigurationId: common.String("config_id"),
+	}
+
+	updatedPool, err := ms.UpdatePool(context.Background(), instancePool)
+	g.Expect(err).To(BeNil())
+	g.Expect(updatedPool).To(Equal(instancePool))
+}
+
+func TestInstancePoolUpdatePrimarySubnetPlacement(t *testing.T) {
+	g := NewWithT(t)
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	replicas := int32(3)
+	computeManagementClient := mock_computemanagement.NewMockClient(mockCtrl)
+	infraMachinePool := &infrav2exp.OCIMachinePool{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test",
+			Namespace: "default",
+		},
+		Spec: infrav2exp.OCIMachinePoolSpec{
+			PlacementDetails: []infrav2exp.PlacementDetails{
+				{
+					AvailabilityDomain: 1,
+					FaultDomains:       []string{"fd-5"},
+				},
+			},
+			InstanceConfiguration: infrav2exp.InstanceConfiguration{
+				InstanceConfigurationId: common.String("config_id"),
+			},
+		},
+	}
+	ms, err := NewMachinePoolScope(MachinePoolScopeParams{
+		ComputeManagementClient: computeManagementClient,
+		OCIMachinePool:          infraMachinePool,
+		OCIClusterAccessor: OCISelfManagedCluster{
+			OCICluster: &infrastructurev1beta2.OCICluster{
+				Spec: infrastructurev1beta2.OCIClusterSpec{
+					NetworkSpec: infrastructurev1beta2.NetworkSpec{
+						Vcn: infrastructurev1beta2.VCN{
+							Subnets: []*infrastructurev1beta2.Subnet{
+								{
+									Role: infrastructurev1beta2.WorkerRole,
+									ID:   common.String("new-subnet-id"),
+								},
+							},
+						},
+					},
+					AvailabilityDomains: map[string]infrastructurev1beta2.OCIAvailabilityDomain{
+						"ad-1": {
+							Name:         "ad-1",
+							FaultDomains: []string{"fd-5"},
+						},
+					},
+				},
+			},
+		},
+		Cluster: &clusterv1.Cluster{},
+		MachinePool: &clusterv1.MachinePool{
+			Spec: clusterv1.MachinePoolSpec{
+				Replicas: &replicas,
+			},
+		},
+		Client: fake.NewClientBuilder().WithObjects(infraMachinePool).Build(),
+	})
+	g.Expect(err).To(BeNil())
+
+	instancePool := &core.InstancePool{
+		Id:                      common.String("pool-id"),
+		Size:                    common.Int(3),
+		InstanceConfigurationId: common.String("config_id"),
+		PlacementConfigurations: []core.InstancePoolPlacementConfiguration{
+			{
+				AvailabilityDomain: common.String("ad-1"),
+				PrimarySubnetId:    common.String("old-subnet-id"),
+				FaultDomains:       []string{"fd-5"},
+			},
+		},
+	}
+	computeManagementClient.EXPECT().UpdateInstancePool(gomock.Any(), gomock.Eq(core.UpdateInstancePoolRequest{
+		InstancePoolId: common.String("pool-id"),
+		UpdateInstancePoolDetails: core.UpdateInstancePoolDetails{
+			Size:                    common.Int(3),
+			InstanceConfigurationId: common.String("config_id"),
+			PlacementConfigurations: []core.UpdateInstancePoolPlacementConfigurationDetails{
+				{
+					AvailabilityDomain: common.String("ad-1"),
+					PrimarySubnetId:    common.String("new-subnet-id"),
+					FaultDomains:       []string{"fd-5"},
+				},
+			},
+		},
+	})).Return(core.UpdateInstancePoolResponse{
+		InstancePool: core.InstancePool{
+			Id: common.String("pool-id"),
+		},
+	}, nil)
+
+	_, err = ms.UpdatePool(context.Background(), instancePool)
+	g.Expect(err).To(BeNil())
 }
 
 func TestSyncReplicasFromInstancePool(t *testing.T) {

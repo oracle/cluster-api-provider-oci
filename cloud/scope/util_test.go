@@ -196,6 +196,59 @@ func Test_GetSubnetNamesFromId(t *testing.T) {
 	}
 }
 
+func TestSameStringSet(t *testing.T) {
+	tests := []struct {
+		name     string
+		a        []string
+		b        []string
+		expected bool
+	}{
+		{
+			name:     "same values in same order",
+			a:        []string{"fd-1", "fd-2"},
+			b:        []string{"fd-1", "fd-2"},
+			expected: true,
+		},
+		{
+			name:     "same values in different order",
+			a:        []string{"fd-1", "fd-2"},
+			b:        []string{"fd-2", "fd-1"},
+			expected: true,
+		},
+		{
+			name:     "different values",
+			a:        []string{"fd-1", "fd-2"},
+			b:        []string{"fd-1", "fd-3"},
+			expected: false,
+		},
+		{
+			name:     "different lengths",
+			a:        []string{"fd-1", "fd-2"},
+			b:        []string{"fd-1"},
+			expected: false,
+		},
+		{
+			name:     "duplicate counts must match",
+			a:        []string{"fd-1", "fd-1"},
+			b:        []string{"fd-1", "fd-2"},
+			expected: false,
+		},
+		{
+			name:     "same duplicate counts",
+			a:        []string{"fd-1", "fd-2", "fd-1"},
+			b:        []string{"fd-2", "fd-1", "fd-1"},
+			expected: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := gomega.NewWithT(t)
+			g.Expect(sameStringSet(test.a, test.b)).To(gomega.Equal(test.expected))
+		})
+	}
+}
+
 func TestConvertMachineExtendedMetadata(t *testing.T) {
 	t.Run("converts nested json values", func(t *testing.T) {
 		g := gomega.NewWithT(t)

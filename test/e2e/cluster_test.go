@@ -701,6 +701,13 @@ var _ = Describe("Workload cluster creation", func() {
 
 		By("Verifying the machine pool instance pool uses the requested fault domains")
 		assertMachinePoolFaultDomains(ctx, bootstrapClusterProxy, result.MachinePools[0], specName, []string{"FAULT-DOMAIN-1", "FAULT-DOMAIN-2"})
+
+		By("Updating the machine pool fault domains in place")
+		initialInstancePoolID := updateMachinePoolFaultDomains(ctx, bootstrapClusterProxy, result.MachinePools[0], []string{"FAULT-DOMAIN-3"})
+
+		By("Verifying the machine pool instance pool updates to the requested fault domain")
+		assertMachinePoolFaultDomains(ctx, bootstrapClusterProxy, result.MachinePools[0], specName, []string{"FAULT-DOMAIN-3"})
+		assertMachinePoolInstancePoolID(ctx, bootstrapClusterProxy, result.MachinePools[0], specName, initialInstancePoolID)
 	})
 
 	It("Machine Pool - Upgrade [DailyTests]", func() {
@@ -935,6 +942,52 @@ func assertMachinePoolFaultDomains(ctx context.Context, clusterProxy framework.C
 		g.Expect(matchedPlacement).ToNot(BeNil())
 		g.Expect(matchedPlacement.FaultDomains).To(Equal(expectedFaultDomains))
 	}, e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes")...).Should(Succeed(), "Timed out waiting for the machine pool instance pool to report requested fault domains")
+}
+
+func updateMachinePoolFaultDomains(ctx context.Context, clusterProxy framework.ClusterProxy, machinePool *clusterv1.MachinePool, faultDomains []string) string {
+	Expect(ctx).NotTo(BeNil(), "ctx is required for machine pool fault domain update")
+	Expect(clusterProxy).ToNot(BeNil(), "clusterProxy is required for machine pool fault domain update")
+	Expect(machinePool).ToNot(BeNil(), "machinePool is required for machine pool fault domain update")
+
+	lister := clusterProxy.GetClient()
+	Expect(lister).ToNot(BeNil(), "clusterProxy client is required for machine pool fault domain update")
+
+	ociMachinePool := &infrav2exp.OCIMachinePool{}
+	err := lister.Get(ctx, client.ObjectKey{Name: machinePool.Name, Namespace: machinePool.Namespace}, ociMachinePool)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(ociMachinePool.Spec.OCID).ToNot(BeNil())
+	initialInstancePoolID := *ociMachinePool.Spec.OCID
+
+	patchHelper, err := v1beta1patch.NewHelper(ociMachinePool, lister)
+	Expect(err).NotTo(HaveOccurred())
+
+	ociMachinePool.Spec.PlacementDetails = []infrav2exp.PlacementDetails{
+		{
+			AvailabilityDomain: 1,
+			FaultDomains:       faultDomains,
+		},
+	}
+	Expect(patchHelper.Patch(ctx, ociMachinePool)).To(Succeed())
+
+	return initialInstancePoolID
+}
+
+func assertMachinePoolInstancePoolID(ctx context.Context, clusterProxy framework.ClusterProxy, machinePool *clusterv1.MachinePool, specName, expectedInstancePoolID string) {
+	Expect(ctx).NotTo(BeNil(), "ctx is required for machine pool instance pool ID check")
+	Expect(clusterProxy).ToNot(BeNil(), "clusterProxy is required for machine pool instance pool ID check")
+	Expect(machinePool).ToNot(BeNil(), "machinePool is required for machine pool instance pool ID check")
+	Expect(expectedInstancePoolID).ToNot(BeEmpty())
+
+	lister := clusterProxy.GetClient()
+	Expect(lister).ToNot(BeNil(), "clusterProxy client is required for machine pool instance pool ID check")
+
+	Eventually(func(g Gomega) {
+		ociMachinePool := &infrav2exp.OCIMachinePool{}
+		err := lister.Get(ctx, client.ObjectKey{Name: machinePool.Name, Namespace: machinePool.Namespace}, ociMachinePool)
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(ociMachinePool.Spec.OCID).ToNot(BeNil())
+		g.Expect(*ociMachinePool.Spec.OCID).To(Equal(expectedInstancePoolID))
+	}, e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes")...).Should(Succeed(), "Timed out waiting for the machine pool instance pool ID to remain stable")
 }
 
 func verifyMultipleNsgSubnet(ctx context.Context, namespace string, clusterName string, mcDeployments []*clusterv1.MachineDeployment) {
