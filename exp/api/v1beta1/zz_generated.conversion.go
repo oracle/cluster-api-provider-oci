@@ -1369,6 +1369,7 @@ func Convert_v1beta2_PlacementConfig_To_v1beta1_PlacementConfig(in *v1beta2.Plac
 
 func autoConvert_v1beta1_PlacementDetails_To_v1beta2_PlacementDetails(in *PlacementDetails, out *v1beta2.PlacementDetails, s conversion.Scope) error {
 	out.AvailabilityDomain = in.AvailabilityDomain
+	out.FaultDomains = *(*[]string)(unsafe.Pointer(&in.FaultDomains))
 	return nil
 }
 
@@ -1379,6 +1380,7 @@ func Convert_v1beta1_PlacementDetails_To_v1beta2_PlacementDetails(in *PlacementD
 
 func autoConvert_v1beta2_PlacementDetails_To_v1beta1_PlacementDetails(in *v1beta2.PlacementDetails, out *PlacementDetails, s conversion.Scope) error {
 	out.AvailabilityDomain = in.AvailabilityDomain
+	out.FaultDomains = *(*[]string)(unsafe.Pointer(&in.FaultDomains))
 	return nil
 }
 

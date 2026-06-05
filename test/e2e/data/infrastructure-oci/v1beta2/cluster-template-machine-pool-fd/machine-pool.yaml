@@ -1,0 +1,12 @@
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: OCIMachinePool
+metadata:
+  name: "${CLUSTER_NAME}-mp-0"
+  namespace: default
+spec:
+  placementDetails:
+    - availabilityDomain: 1
+      faultDomains:
+        - FAULT-DOMAIN-1
+        - FAULT-DOMAIN-2

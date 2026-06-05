@@ -67,6 +67,26 @@ func GetSubnetNamesFromId(ids []string, subnets []*infrastructurev1beta2.Subnet)
 	return names
 }
 
+// sameStringSet reports whether two string slices contain the same values regardless of order.
+// Duplicate values are counted, so ["a", "a"] and ["a"] are not considered equal.
+func sameStringSet(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	counts := make(map[string]int, len(a))
+	for _, value := range a {
+		counts[value]++
+	}
+	for _, value := range b {
+		counts[value]--
+		if counts[value] < 0 {
+			return false
+		}
+	}
+	return true
+}
+
 // ConvertMachineDefinedTags passes in the OCIMachineSpec DefinedTags and returns a converted map of defined tags
 // to be used when creating API requests.
 func ConvertMachineDefinedTags(machineDefinedTags map[string]map[string]string) map[string]map[string]interface{} {

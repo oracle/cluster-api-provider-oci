@@ -663,6 +663,13 @@ spec:
                     availabilityDomain:
                       description: The availability domain to place instances.
                       type: integer
+                    faultDomains:
+                      description: |-
+                        FaultDomains defines the list of fault domains in which to place instances.
+                        If omitted, all known fault domains for the availability domain are used.
+                      items:
+                        type: string
+                      type: array
                   required:
                   - availabilityDomain
                   type: object
@@ -1404,6 +1411,13 @@ spec:
                     availabilityDomain:
                       description: The availability domain to place instances.
                       type: integer
+                    faultDomains:
+                      description: |-
+                        FaultDomains defines the list of fault domains in which to place instances.
+                        If omitted, all known fault domains for the availability domain are used.
+                      items:
+                        type: string
+                      type: array
                   required:
                   - availabilityDomain
                   type: object
