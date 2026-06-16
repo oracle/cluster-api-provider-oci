@@ -34,6 +34,8 @@ type comparableLaunchDetails struct {
 	CapacityReservationID          *string                              `json:"capacityReservationId,omitempty"`
 	CompartmentID                  *string                              `json:"compartmentId,omitempty"`
 	CreateVnicDetails              *comparableCreateVnicDetails         `json:"createVnicDetails,omitempty"`
+	FreeformTags                   map[string]string                    `json:"freeformTags,omitempty"`
+	DefinedTags                    map[string]map[string]interface{}    `json:"definedTags,omitempty"`
 	Metadata                       map[string]string                    `json:"metadata,omitempty"`
 	ExtendedMetadata               map[string]interface{}               `json:"extendedMetadata,omitempty"`
 	Shape                          *string                              `json:"shape,omitempty"`
@@ -50,14 +52,16 @@ type comparableLaunchDetails struct {
 }
 
 type comparableCreateVnicDetails struct {
-	AssignIPv6IP           *bool    `json:"assignIpv6Ip,omitempty"`
-	AssignPublicIP         *bool    `json:"assignPublicIp,omitempty"`
-	AssignPrivateDNSRecord *bool    `json:"assignPrivateDnsRecord,omitempty"`
-	HostnameLabel          *string  `json:"hostnameLabel,omitempty"`
-	NSGIDs                 []string `json:"nsgIds,omitempty"`
-	PrivateIP              *string  `json:"privateIp,omitempty"`
-	SkipSourceDestCheck    *bool    `json:"skipSourceDestCheck,omitempty"`
-	SubnetID               *string  `json:"subnetId,omitempty"`
+	AssignIPv6IP           *bool                             `json:"assignIpv6Ip,omitempty"`
+	AssignPublicIP         *bool                             `json:"assignPublicIp,omitempty"`
+	AssignPrivateDNSRecord *bool                             `json:"assignPrivateDnsRecord,omitempty"`
+	FreeformTags           map[string]string                 `json:"freeformTags,omitempty"`
+	DefinedTags            map[string]map[string]interface{} `json:"definedTags,omitempty"`
+	HostnameLabel          *string                           `json:"hostnameLabel,omitempty"`
+	NSGIDs                 []string                          `json:"nsgIds,omitempty"`
+	PrivateIP              *string                           `json:"privateIp,omitempty"`
+	SkipSourceDestCheck    *bool                             `json:"skipSourceDestCheck,omitempty"`
+	SubnetID               *string                           `json:"subnetId,omitempty"`
 }
 
 type comparableShapeConfig struct {
@@ -154,6 +158,8 @@ func projectLaunchDetails(in, mask *core.InstanceConfigurationLaunchInstanceDeta
 		CapacityReservationID:          pickString(in.CapacityReservationId, mask.CapacityReservationId),
 		CompartmentID:                  pickString(in.CompartmentId, mask.CompartmentId),
 		CreateVnicDetails:              projectCreateVnicDetails(in.CreateVnicDetails, mask.CreateVnicDetails),
+		FreeformTags:                   normalizeFreeformTags(in.FreeformTags),
+		DefinedTags:                    normalizeDefinedTags(in.DefinedTags),
 		Metadata:                       normalizeMetadata(pickMetadata(in.Metadata, mask.Metadata)),
 		ExtendedMetadata:               pickExtendedMetadata(in.ExtendedMetadata, mask.ExtendedMetadata),
 		Shape:                          pickString(in.Shape, mask.Shape),
@@ -184,6 +190,38 @@ func normalizeMetadata(md map[string]string) map[string]string {
 			continue
 		}
 		output[k] = v
+	}
+	if len(output) == 0 {
+		return nil
+	}
+	return output
+}
+
+func normalizeFreeformTags(tags map[string]string) map[string]string {
+	if len(tags) == 0 {
+		return nil
+	}
+	output := make(map[string]string, len(tags))
+	for k, v := range tags {
+		output[k] = v
+	}
+	return output
+}
+
+func normalizeDefinedTags(tags map[string]map[string]interface{}) map[string]map[string]interface{} {
+	if len(tags) == 0 {
+		return nil
+	}
+	output := make(map[string]map[string]interface{}, len(tags))
+	for namespace, values := range tags {
+		if len(values) == 0 {
+			continue
+		}
+		copiedValues := make(map[string]interface{}, len(values))
+		for k, v := range values {
+			copiedValues[k] = v
+		}
+		output[namespace] = copiedValues
 	}
 	if len(output) == 0 {
 		return nil
@@ -286,6 +324,8 @@ func projectCreateVnicDetails(in, mask *core.InstanceConfigurationCreateVnicDeta
 		AssignIPv6IP:           pickDefaultFalseBool(in.AssignIpv6Ip, mask.AssignIpv6Ip),
 		AssignPublicIP:         pickDefaultFalseBool(in.AssignPublicIp, mask.AssignPublicIp),
 		AssignPrivateDNSRecord: pickBool(in.AssignPrivateDnsRecord, mask.AssignPrivateDnsRecord),
+		FreeformTags:           normalizeFreeformTags(in.FreeformTags),
+		DefinedTags:            normalizeDefinedTags(in.DefinedTags),
 		HostnameLabel:          pickString(in.HostnameLabel, mask.HostnameLabel),
 		NSGIDs:                 nsgIDs,
 		PrivateIP:              pickString(in.PrivateIp, mask.PrivateIp),

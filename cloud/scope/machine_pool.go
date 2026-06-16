@@ -433,11 +433,18 @@ func (s *MachinePoolScope) IsResourceCreatedByClusterAPI(resourceFreeFormTags ma
 
 // GetFreeFormTags gets the free form tags for the MachinePoolScope cluster and returns them
 func (m *MachinePoolScope) GetFreeFormTags() map[string]string {
-	tags := ociutil.BuildClusterTags(m.OCIClusterAccesor.GetOCIResourceIdentifier())
-	if m.OCIClusterAccesor.GetFreeformTags() != nil {
-		for k, v := range m.OCIClusterAccesor.GetFreeformTags() {
-			tags[k] = v
-		}
+	tags := make(map[string]string)
+	for k, v := range m.OCIClusterAccesor.GetFreeformTags() {
+		tags[k] = v
+	}
+	for k, v := range m.OCIMachinePool.Spec.InstanceConfiguration.FreeformTags {
+		tags[k] = v
+	}
+	// Ownership tags must be applied last. Resource discovery and cleanup depend
+	// on these values matching the controller-owned cluster identifiers, so users
+	// cannot override them through cluster or machine pool freeform tags.
+	for k, v := range ociutil.BuildClusterTags(m.OCIClusterAccesor.GetOCIResourceIdentifier()) {
+		tags[k] = v
 	}
 
 	return tags
@@ -540,10 +547,11 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context, _
 	//   configChanged:     desired config hash  vs  actual config hash (projected)
 	//   bootstrapChanged: desired user_data hash  vs  actual user_data hash
 	//
-	// Config uses ComputeComparableHash which projects the actual OCI
-	// response onto only the fields present in the desired spec. This
-	// filters out OCI-returned defaults (e.g. ShapeConfig.MemoryInGBs on
-	// flex shapes) that would otherwise cause continuous recreates (issue #509).
+	// Config uses ComputeComparableHash which filters out OCI-returned scalar
+	// defaults (e.g. ShapeConfig.MemoryInGBs on flex shapes) that would otherwise
+	// cause continuous recreates (issue #509). Tag maps are compared as part of
+	// the launch behavior so tag additions, changes, and removals recreate the
+	// immutable instance configuration.
 	//
 	// Bootstrap compares OCI actual vs desired. We still classify kubeadm
 	// discovery-token-only drift separately for observability, but bootstrap
@@ -612,15 +620,22 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context, _
 // getDefinedTags builds the defined tags map for InstanceConfiguration creation.
 func (m *MachinePoolScope) getDefinedTags() map[string]map[string]interface{} {
 	definedTags := make(map[string]map[string]interface{})
-	if m.OCIClusterAccesor.GetDefinedTags() == nil {
-		return definedTags
-	}
 	for ns, mapNs := range m.OCIClusterAccesor.GetDefinedTags() {
 		mapValues := make(map[string]interface{})
 		for k, v := range mapNs {
 			mapValues[k] = v
 		}
 		definedTags[ns] = mapValues
+	}
+	for ns, mapNs := range m.OCIMachinePool.Spec.InstanceConfiguration.DefinedTags {
+		mapValues, ok := definedTags[ns]
+		if !ok {
+			mapValues = make(map[string]interface{})
+			definedTags[ns] = mapValues
+		}
+		for k, v := range mapNs {
+			mapValues[k] = v
+		}
 	}
 	return definedTags
 }
@@ -860,6 +875,7 @@ func (m *MachinePoolScope) UpdatePool(ctx context.Context, instancePool *core.In
 
 		updateDetails := core.UpdateInstancePoolDetails{
 			InstanceConfigurationId: m.OCIMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId,
+			FreeformTags:            m.GetFreeFormTags(),
 		}
 		if !annotations.ReplicasManagedByExternalAutoscaler(m.MachinePool) {
 			updateDetails.Size = common.Int(replicas)

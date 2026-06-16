@@ -225,6 +225,7 @@ func TestReconciliationFunction(t *testing.T) {
 		ociMachinePool = getOCIMachinePool()
 		client := fake.NewClientBuilder().WithScheme(testScheme()).WithStatusSubresource(ociMachinePool).WithObjects(getSecret(), ociMachinePool, machinePool).Build()
 		ociCluster := getOCIClusterWithOwner()
+		ociCluster.Spec.DefinedTags = definedTags
 		ms, err = scope.NewMachinePoolScope(scope.MachinePoolScopeParams{
 			ComputeManagementClient: computeManagementClient,
 			OCIClusterAccessor: scope.OCISelfManagedCluster{
@@ -290,6 +291,7 @@ func TestReconciliationFunction(t *testing.T) {
 									CompartmentId: common.String("test-compartment"),
 									Shape:         common.String("test-shape"),
 									CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+										DefinedTags:  definedTagsInterface,
 										FreeformTags: tags,
 										NsgIds:       []string{"worker-nsg-id"},
 										SubnetId:     common.String("worker-subnet-id"),
@@ -343,6 +345,7 @@ func TestReconciliationFunction(t *testing.T) {
 									CompartmentId: common.String("test-compartment"),
 									Shape:         common.String("test-shape"),
 									CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+										DefinedTags:  definedTagsInterface,
 										FreeformTags: tags,
 										NsgIds:       []string{"worker-nsg-id"},
 										SubnetId:     common.String("worker-subnet-id"),
@@ -418,6 +421,7 @@ func TestReconciliationFunction(t *testing.T) {
 									CompartmentId: common.String("test-compartment"),
 									Shape:         common.String("test-shape"),
 									CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+										DefinedTags:  definedTagsInterface,
 										FreeformTags: tags,
 										NsgIds:       []string{"worker-nsg-id"},
 										SubnetId:     common.String("worker-subnet-id"),
@@ -529,6 +533,7 @@ func TestReconciliationFunction(t *testing.T) {
 									CompartmentId: common.String("test-compartment"),
 									Shape:         common.String("test-shape"),
 									CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+										DefinedTags:  definedTagsInterface,
 										FreeformTags: tags,
 										NsgIds:       []string{"worker-nsg-id"},
 										SubnetId:     common.String("worker-subnet-id"),
@@ -597,6 +602,7 @@ func TestReconciliationFunction(t *testing.T) {
 									CompartmentId: common.String("test-compartment"),
 									Shape:         common.String("test-shape"),
 									CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+										DefinedTags:  definedTagsInterface,
 										FreeformTags: tags,
 										NsgIds:       []string{"worker-nsg-id"},
 										SubnetId:     common.String("worker-subnet-id"),

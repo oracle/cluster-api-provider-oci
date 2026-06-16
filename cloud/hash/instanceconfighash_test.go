@@ -476,7 +476,7 @@ func TestComputeHash_IgnoresDisplayName(t *testing.T) {
 	g.Expect(hash1).To(Equal(hash2))
 }
 
-func TestComputeHash_IgnoresFreeformTags(t *testing.T) {
+func TestComputeHash_FreeformTagChangeProducesDifferentHash(t *testing.T) {
 	g := NewWithT(t)
 	baseLd := &core.InstanceConfigurationLaunchInstanceDetails{
 		Shape: common.String("VM.Standard2.1"),
@@ -494,7 +494,271 @@ func TestComputeHash_IgnoresFreeformTags(t *testing.T) {
 	hash2, err := ComputeHash(&ld2)
 	g.Expect(err).To(BeNil())
 
+	g.Expect(hash1).ToNot(Equal(hash2))
+}
+
+func TestComputeHash_DefinedTagChangeProducesDifferentHash(t *testing.T) {
+	g := NewWithT(t)
+	baseLd := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape: common.String("VM.Standard2.1"),
+	}
+
+	ld1 := *baseLd
+	ld1.DefinedTags = map[string]map[string]interface{}{"Operations": {"CostCenter": "42"}}
+
+	ld2 := *baseLd
+	ld2.DefinedTags = map[string]map[string]interface{}{"Operations": {"CostCenter": "43"}}
+
+	hash1, err := ComputeHash(&ld1)
+	g.Expect(err).To(BeNil())
+
+	hash2, err := ComputeHash(&ld2)
+	g.Expect(err).To(BeNil())
+
+	g.Expect(hash1).ToNot(Equal(hash2))
+}
+
+func TestComputeHash_DefinedTagOrderIsDeterministic(t *testing.T) {
+	g := NewWithT(t)
+
+	ld1 := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape: common.String("VM.Standard2.1"),
+		DefinedTags: map[string]map[string]interface{}{
+			"Operations": {
+				"CostCenter": "42",
+				"Owner":      "platform",
+			},
+			"Security": {
+				"Profile": "restricted",
+			},
+		},
+	}
+
+	ld2 := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape: common.String("VM.Standard2.1"),
+		DefinedTags: map[string]map[string]interface{}{
+			"Security": {
+				"Profile": "restricted",
+			},
+			"Operations": {
+				"Owner":      "platform",
+				"CostCenter": "42",
+			},
+		},
+	}
+
+	hash1, err := ComputeHash(ld1)
+	g.Expect(err).To(BeNil())
+
+	hash2, err := ComputeHash(ld2)
+	g.Expect(err).To(BeNil())
+
 	g.Expect(hash1).To(Equal(hash2))
+}
+
+func TestComputeHash_FreeformTagOrderIsDeterministic(t *testing.T) {
+	g := NewWithT(t)
+
+	ld1 := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape: common.String("VM.Standard2.1"),
+		FreeformTags: map[string]string{
+			"owner":      "platform",
+			"costcenter": "42",
+			"profile":    "restricted",
+		},
+	}
+
+	ld2 := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape: common.String("VM.Standard2.1"),
+		FreeformTags: map[string]string{
+			"profile":    "restricted",
+			"costcenter": "42",
+			"owner":      "platform",
+		},
+	}
+
+	hash1, err := ComputeHash(ld1)
+	g.Expect(err).To(BeNil())
+
+	hash2, err := ComputeHash(ld2)
+	g.Expect(err).To(BeNil())
+
+	g.Expect(hash1).To(Equal(hash2))
+}
+
+func TestComputeHash_VnicTagChangesProduceDifferentHashes(t *testing.T) {
+	tests := []struct {
+		name  string
+		left  *core.InstanceConfigurationCreateVnicDetails
+		right *core.InstanceConfigurationCreateVnicDetails
+	}{
+		{
+			name: "freeform tags",
+			left: &core.InstanceConfigurationCreateVnicDetails{
+				FreeformTags: map[string]string{"owner": "platform"},
+			},
+			right: &core.InstanceConfigurationCreateVnicDetails{
+				FreeformTags: map[string]string{"owner": "apps"},
+			},
+		},
+		{
+			name: "defined tags",
+			left: &core.InstanceConfigurationCreateVnicDetails{
+				DefinedTags: map[string]map[string]interface{}{"Operations": {"CostCenter": "42"}},
+			},
+			right: &core.InstanceConfigurationCreateVnicDetails{
+				DefinedTags: map[string]map[string]interface{}{"Operations": {"CostCenter": "43"}},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			ld1 := &core.InstanceConfigurationLaunchInstanceDetails{
+				Shape:             common.String("VM.Standard2.1"),
+				CreateVnicDetails: tt.left,
+			}
+			ld2 := &core.InstanceConfigurationLaunchInstanceDetails{
+				Shape:             common.String("VM.Standard2.1"),
+				CreateVnicDetails: tt.right,
+			}
+
+			hash1, err := ComputeHash(ld1)
+			g.Expect(err).To(BeNil())
+
+			hash2, err := ComputeHash(ld2)
+			g.Expect(err).To(BeNil())
+
+			g.Expect(hash1).ToNot(Equal(hash2))
+		})
+	}
+}
+
+func TestComputeHash_VnicTagOrderIsDeterministic(t *testing.T) {
+	tests := []struct {
+		name  string
+		left  *core.InstanceConfigurationCreateVnicDetails
+		right *core.InstanceConfigurationCreateVnicDetails
+	}{
+		{
+			name: "freeform tags",
+			left: &core.InstanceConfigurationCreateVnicDetails{
+				FreeformTags: map[string]string{
+					"owner":      "platform",
+					"costcenter": "42",
+					"profile":    "restricted",
+				},
+			},
+			right: &core.InstanceConfigurationCreateVnicDetails{
+				FreeformTags: map[string]string{
+					"profile":    "restricted",
+					"costcenter": "42",
+					"owner":      "platform",
+				},
+			},
+		},
+		{
+			name: "defined tags",
+			left: &core.InstanceConfigurationCreateVnicDetails{
+				DefinedTags: map[string]map[string]interface{}{
+					"Operations": {
+						"CostCenter": "42",
+						"Owner":      "platform",
+					},
+					"Security": {
+						"Profile": "restricted",
+					},
+				},
+			},
+			right: &core.InstanceConfigurationCreateVnicDetails{
+				DefinedTags: map[string]map[string]interface{}{
+					"Security": {
+						"Profile": "restricted",
+					},
+					"Operations": {
+						"Owner":      "platform",
+						"CostCenter": "42",
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			ld1 := &core.InstanceConfigurationLaunchInstanceDetails{
+				Shape:             common.String("VM.Standard2.1"),
+				CreateVnicDetails: tt.left,
+			}
+			ld2 := &core.InstanceConfigurationLaunchInstanceDetails{
+				Shape:             common.String("VM.Standard2.1"),
+				CreateVnicDetails: tt.right,
+			}
+
+			hash1, err := ComputeHash(ld1)
+			g.Expect(err).To(BeNil())
+
+			hash2, err := ComputeHash(ld2)
+			g.Expect(err).To(BeNil())
+
+			g.Expect(hash1).To(Equal(hash2))
+		})
+	}
+}
+
+func TestComputeHash_NilAndEmptyTagsDoNotAffectHash(t *testing.T) {
+	g := NewWithT(t)
+
+	withNil := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape:             common.String("VM.Standard2.1"),
+		CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{},
+	}
+
+	withEmpty := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape:        common.String("VM.Standard2.1"),
+		FreeformTags: map[string]string{},
+		DefinedTags:  map[string]map[string]interface{}{},
+		CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+			FreeformTags: map[string]string{},
+			DefinedTags:  map[string]map[string]interface{}{},
+		},
+	}
+
+	hashNil, err := ComputeHash(withNil)
+	g.Expect(err).To(BeNil())
+
+	hashEmpty, err := ComputeHash(withEmpty)
+	g.Expect(err).To(BeNil())
+
+	g.Expect(hashNil).To(Equal(hashEmpty))
+}
+
+func TestComputeComparableHash_TagRemovalDetected(t *testing.T) {
+	g := NewWithT(t)
+
+	actual := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape:        common.String("VM.Standard2.1"),
+		FreeformTags: map[string]string{"owner": "platform"},
+		DefinedTags:  map[string]map[string]interface{}{"Operations": {"CostCenter": "42"}},
+		CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+			FreeformTags: map[string]string{"vnic-owner": "platform"},
+			DefinedTags:  map[string]map[string]interface{}{"Network": {"Tier": "worker"}},
+		},
+	}
+	desired := &core.InstanceConfigurationLaunchInstanceDetails{
+		Shape:             common.String("VM.Standard2.1"),
+		CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{},
+	}
+
+	actualHash, err := ComputeComparableHash(actual, desired)
+	g.Expect(err).To(BeNil())
+
+	desiredHash, err := ComputeHash(desired)
+	g.Expect(err).To(BeNil())
+
+	g.Expect(actualHash).ToNot(Equal(desiredHash))
 }
 
 func TestComputeHash_IgnoresUserData(t *testing.T) {
@@ -694,7 +958,7 @@ func TestComputeHash_ComprehensiveTest(t *testing.T) {
 			Nvmes:       &nvmes,
 		},
 
-		// VNIC details - display name/tags/security should be EXCLUDED, NSGs sorted
+		// VNIC details - display name/security attributes excluded, tags included, NSGs sorted
 		CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
 			DisplayName:            common.String("test-vnic"),
 			FreeformTags:           map[string]string{"vnic-tag": "value"},
@@ -793,6 +1057,8 @@ func TestComputeHash_ComprehensiveTest(t *testing.T) {
 	g.Expect(normalized.CreateVnicDetails.SkipSourceDestCheck).To(BeNil())
 	g.Expect(*normalized.CreateVnicDetails.AssignPrivateDNSRecord).To(BeTrue())
 	g.Expect(*normalized.CreateVnicDetails.HostnameLabel).To(Equal("test-host"))
+	g.Expect(normalized.CreateVnicDetails.FreeformTags).To(Equal(map[string]string{"vnic-tag": "value"}))
+	g.Expect(normalized.CreateVnicDetails.DefinedTags).To(Equal(map[string]map[string]interface{}{"vnic-ns": {"key": "val"}}))
 	expectedNSGs := []string{"ocid1.nsg.oc1..nsg1", "ocid1.nsg.oc1..nsg2", "ocid1.nsg.oc1..nsg3"}
 	g.Expect(normalized.CreateVnicDetails.NSGIDs).To(Equal(expectedNSGs))
 
