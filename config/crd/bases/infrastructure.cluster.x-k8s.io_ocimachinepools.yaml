@@ -138,6 +138,17 @@ spec:
                     description: DedicatedVmHostId defines the OCID of the dedicated
                       VM host.
                     type: string
+                  definedTags:
+                    additionalProperties:
+                      additionalProperties:
+                        type: string
+                      type: object
+                    description: |-
+                      Defined tags for instances launched by this machine pool. Each key is
+                      predefined and scoped to a namespace.
+                      These tags override OCICluster defined tags with the same namespace/key.
+                      Example: `{"Operations": {"CostCenter": "42"}}`
+                    type: object
                   extendedMetadata:
                     additionalProperties:
                       x-kubernetes-preserve-unknown-fields: true
@@ -146,6 +157,13 @@ spec:
                       Values support nested JSON objects and arrays and map to OCI InstanceConfigurationLaunchInstanceDetails.extendedMetadata.
                     type: object
                     x-kubernetes-preserve-unknown-fields: true
+                  freeformTags:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      Free-form tags for instances launched by this machine pool.
+                      These tags override OCICluster freeform tags with the same key.
+                    type: object
                   instanceConfigurationId:
                     type: string
                   instanceOptions:
@@ -886,6 +904,17 @@ spec:
                     description: DedicatedVmHostId defines the OCID of the dedicated
                       VM host.
                     type: string
+                  definedTags:
+                    additionalProperties:
+                      additionalProperties:
+                        type: string
+                      type: object
+                    description: |-
+                      Defined tags for instances launched by this machine pool. Each key is
+                      predefined and scoped to a namespace.
+                      These tags override OCICluster defined tags with the same namespace/key.
+                      Example: `{"Operations": {"CostCenter": "42"}}`
+                    type: object
                   extendedMetadata:
                     additionalProperties:
                       x-kubernetes-preserve-unknown-fields: true
@@ -894,6 +923,13 @@ spec:
                       Values support nested JSON objects and arrays and map to OCI InstanceConfigurationLaunchInstanceDetails.extendedMetadata.
                     type: object
                     x-kubernetes-preserve-unknown-fields: true
+                  freeformTags:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      Free-form tags for instances launched by this machine pool.
+                      These tags override OCICluster freeform tags with the same key.
+                    type: object
                   instanceConfigurationId:
                     type: string
                   instanceOptions:

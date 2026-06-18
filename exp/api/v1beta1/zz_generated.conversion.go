@@ -433,6 +433,8 @@ func autoConvert_v1beta1_InstanceConfiguration_To_v1beta2_InstanceConfiguration(
 	out.InstanceConfigurationId = (*string)(unsafe.Pointer(in.InstanceConfigurationId))
 	out.Shape = (*string)(unsafe.Pointer(in.Shape))
 	out.ShapeConfig = (*v1beta2.ShapeConfig)(unsafe.Pointer(in.ShapeConfig))
+	out.FreeformTags = *(*map[string]string)(unsafe.Pointer(&in.FreeformTags))
+	out.DefinedTags = *(*map[string]map[string]string)(unsafe.Pointer(&in.DefinedTags))
 	if in.InstanceVnicConfiguration != nil {
 		in, out := &in.InstanceVnicConfiguration, &out.InstanceVnicConfiguration
 		*out = new(apiv1beta2.NetworkDetails)
@@ -466,6 +468,8 @@ func autoConvert_v1beta2_InstanceConfiguration_To_v1beta1_InstanceConfiguration(
 	out.InstanceConfigurationId = (*string)(unsafe.Pointer(in.InstanceConfigurationId))
 	out.Shape = (*string)(unsafe.Pointer(in.Shape))
 	out.ShapeConfig = (*ShapeConfig)(unsafe.Pointer(in.ShapeConfig))
+	out.FreeformTags = *(*map[string]string)(unsafe.Pointer(&in.FreeformTags))
+	out.DefinedTags = *(*map[string]map[string]string)(unsafe.Pointer(&in.DefinedTags))
 	if in.InstanceVnicConfiguration != nil {
 		in, out := &in.InstanceVnicConfiguration, &out.InstanceVnicConfiguration
 		*out = new(apiv1beta1.NetworkDetails)
