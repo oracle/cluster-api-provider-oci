@@ -94,6 +94,16 @@ type VnicAttachment struct {
 	// https://docs.oracle.com/en-us/iaas/Content/Compute/References/computeshapes.htm
 	// +optional
 	NicIndex *int `json:"nicIndex,omitempty"`
+
+	// HostnameLabel defines the hostname for the VNIC's primary private IP.
+	// Forms part of the FQDN: <hostnameLabel>.<subnetDNSLabel>.<vcnDNSLabel>.oraclevcn.com
+	// +optional
+	HostnameLabel *string `json:"hostnameLabel,omitempty"`
+
+	// AssignPrivateDnsRecord controls whether OCI registers a DNS record
+	// for this VNIC's private IP.
+	// +optional
+	AssignPrivateDnsRecord *bool `json:"assignPrivateDnsRecord,omitempty"`
 }
 
 // LaunchOptionsBootVolumeTypeEnum Enum with underlying type: string
