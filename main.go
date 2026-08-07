@@ -64,6 +64,8 @@ const (
 )
 
 func init() {
+	klog.InitFlags(nil)
+
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(infrastructurev1beta1.AddToScheme(scheme))
 	utilruntime.Must(infrastructurev1beta2.AddToScheme(scheme))
