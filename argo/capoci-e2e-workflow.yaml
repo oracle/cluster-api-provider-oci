@@ -97,7 +97,7 @@ spec:
       - name: ginkgo_skip
         value: ""
       - name: kind_node_image
-        value: "kindest/node:v1.29.6"
+        value: "kindest/node:v1.33.0"
       - name: tag
         value: ""
       - name: node_machine_count
