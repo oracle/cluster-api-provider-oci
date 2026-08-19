@@ -51,6 +51,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*InstancePoolPlacementPrimarySubnet)(nil), (*v1beta2.InstancePoolPlacementPrimarySubnet)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_InstancePoolPlacementPrimarySubnet_To_v1beta2_InstancePoolPlacementPrimarySubnet(a.(*InstancePoolPlacementPrimarySubnet), b.(*v1beta2.InstancePoolPlacementPrimarySubnet), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*v1beta2.InstancePoolPlacementPrimarySubnet)(nil), (*InstancePoolPlacementPrimarySubnet)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta2_InstancePoolPlacementPrimarySubnet_To_v1beta1_InstancePoolPlacementPrimarySubnet(a.(*v1beta2.InstancePoolPlacementPrimarySubnet), b.(*InstancePoolPlacementPrimarySubnet), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*InstanceSourceViaImageConfig)(nil), (*v1beta2.InstanceSourceViaImageConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta1_InstanceSourceViaImageConfig_To_v1beta2_InstanceSourceViaImageConfig(a.(*InstanceSourceViaImageConfig), b.(*v1beta2.InstanceSourceViaImageConfig), scope)
 	}); err != nil {
@@ -58,16 +68,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*v1beta2.InstanceSourceViaImageConfig)(nil), (*InstanceSourceViaImageConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta2_InstanceSourceViaImageConfig_To_v1beta1_InstanceSourceViaImageConfig(a.(*v1beta2.InstanceSourceViaImageConfig), b.(*InstanceSourceViaImageConfig), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*InstanceVnicConfiguration)(nil), (*v1beta2.InstanceVnicConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_InstanceVnicConfiguration_To_v1beta2_InstanceVnicConfiguration(a.(*InstanceVnicConfiguration), b.(*v1beta2.InstanceVnicConfiguration), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*v1beta2.InstanceVnicConfiguration)(nil), (*InstanceVnicConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta2_InstanceVnicConfiguration_To_v1beta1_InstanceVnicConfiguration(a.(*v1beta2.InstanceVnicConfiguration), b.(*InstanceVnicConfiguration), scope)
 	}); err != nil {
 		return err
 	}
@@ -88,6 +88,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*v1beta2.LaunchDetails)(nil), (*LaunchDetails)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta2_LaunchDetails_To_v1beta1_LaunchDetails(a.(*v1beta2.LaunchDetails), b.(*LaunchDetails), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*LaunchInstanceLicensingConfig)(nil), (*v1beta2.LaunchInstanceLicensingConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_LaunchInstanceLicensingConfig_To_v1beta2_LaunchInstanceLicensingConfig(a.(*LaunchInstanceLicensingConfig), b.(*v1beta2.LaunchInstanceLicensingConfig), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*v1beta2.LaunchInstanceLicensingConfig)(nil), (*LaunchInstanceLicensingConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta2_LaunchInstanceLicensingConfig_To_v1beta1_LaunchInstanceLicensingConfig(a.(*v1beta2.LaunchInstanceLicensingConfig), b.(*LaunchInstanceLicensingConfig), scope)
 	}); err != nil {
 		return err
 	}
@@ -454,6 +464,11 @@ func autoConvert_v1beta1_InstanceConfiguration_To_v1beta2_InstanceConfiguration(
 	out.IsPvEncryptionInTransitEnabled = (*bool)(unsafe.Pointer(in.IsPvEncryptionInTransitEnabled))
 	out.InstanceSourceViaImageDetails = (*v1beta2.InstanceSourceViaImageConfig)(unsafe.Pointer(in.InstanceSourceViaImageDetails))
 	out.CapacityReservationId = (*string)(unsafe.Pointer(in.CapacityReservationId))
+	out.ClusterPlacementGroupId = (*string)(unsafe.Pointer(in.ClusterPlacementGroupId))
+	out.IpxeScript = (*string)(unsafe.Pointer(in.IpxeScript))
+	out.LaunchMode = v1beta2.LaunchModeEnum(in.LaunchMode)
+	out.LicensingConfigs = *(*[]v1beta2.LaunchInstanceLicensingConfig)(unsafe.Pointer(&in.LicensingConfigs))
+	out.PreferredMaintenanceAction = v1beta2.PreferredMaintenanceActionEnum(in.PreferredMaintenanceAction)
 	out.Metadata = *(*map[string]string)(unsafe.Pointer(&in.Metadata))
 	out.ExtendedMetadata = *(*map[string]v1.JSON)(unsafe.Pointer(&in.ExtendedMetadata))
 	return nil
@@ -489,6 +504,11 @@ func autoConvert_v1beta2_InstanceConfiguration_To_v1beta1_InstanceConfiguration(
 	out.IsPvEncryptionInTransitEnabled = (*bool)(unsafe.Pointer(in.IsPvEncryptionInTransitEnabled))
 	out.InstanceSourceViaImageDetails = (*InstanceSourceViaImageConfig)(unsafe.Pointer(in.InstanceSourceViaImageDetails))
 	out.CapacityReservationId = (*string)(unsafe.Pointer(in.CapacityReservationId))
+	out.ClusterPlacementGroupId = (*string)(unsafe.Pointer(in.ClusterPlacementGroupId))
+	out.IpxeScript = (*string)(unsafe.Pointer(in.IpxeScript))
+	out.LaunchMode = LaunchModeEnum(in.LaunchMode)
+	out.LicensingConfigs = *(*[]LaunchInstanceLicensingConfig)(unsafe.Pointer(&in.LicensingConfigs))
+	out.PreferredMaintenanceAction = PreferredMaintenanceActionEnum(in.PreferredMaintenanceAction)
 	out.Metadata = *(*map[string]string)(unsafe.Pointer(&in.Metadata))
 	out.ExtendedMetadata = *(*map[string]v1.JSON)(unsafe.Pointer(&in.ExtendedMetadata))
 	return nil
@@ -497,6 +517,28 @@ func autoConvert_v1beta2_InstanceConfiguration_To_v1beta1_InstanceConfiguration(
 // Convert_v1beta2_InstanceConfiguration_To_v1beta1_InstanceConfiguration is an autogenerated conversion function.
 func Convert_v1beta2_InstanceConfiguration_To_v1beta1_InstanceConfiguration(in *v1beta2.InstanceConfiguration, out *InstanceConfiguration, s conversion.Scope) error {
 	return autoConvert_v1beta2_InstanceConfiguration_To_v1beta1_InstanceConfiguration(in, out, s)
+}
+
+func autoConvert_v1beta1_InstancePoolPlacementPrimarySubnet_To_v1beta2_InstancePoolPlacementPrimarySubnet(in *InstancePoolPlacementPrimarySubnet, out *v1beta2.InstancePoolPlacementPrimarySubnet, s conversion.Scope) error {
+	out.SubnetId = (*string)(unsafe.Pointer(in.SubnetId))
+	out.IsAssignIpv6Ip = (*bool)(unsafe.Pointer(in.IsAssignIpv6Ip))
+	return nil
+}
+
+// Convert_v1beta1_InstancePoolPlacementPrimarySubnet_To_v1beta2_InstancePoolPlacementPrimarySubnet is an autogenerated conversion function.
+func Convert_v1beta1_InstancePoolPlacementPrimarySubnet_To_v1beta2_InstancePoolPlacementPrimarySubnet(in *InstancePoolPlacementPrimarySubnet, out *v1beta2.InstancePoolPlacementPrimarySubnet, s conversion.Scope) error {
+	return autoConvert_v1beta1_InstancePoolPlacementPrimarySubnet_To_v1beta2_InstancePoolPlacementPrimarySubnet(in, out, s)
+}
+
+func autoConvert_v1beta2_InstancePoolPlacementPrimarySubnet_To_v1beta1_InstancePoolPlacementPrimarySubnet(in *v1beta2.InstancePoolPlacementPrimarySubnet, out *InstancePoolPlacementPrimarySubnet, s conversion.Scope) error {
+	out.SubnetId = (*string)(unsafe.Pointer(in.SubnetId))
+	out.IsAssignIpv6Ip = (*bool)(unsafe.Pointer(in.IsAssignIpv6Ip))
+	return nil
+}
+
+// Convert_v1beta2_InstancePoolPlacementPrimarySubnet_To_v1beta1_InstancePoolPlacementPrimarySubnet is an autogenerated conversion function.
+func Convert_v1beta2_InstancePoolPlacementPrimarySubnet_To_v1beta1_InstancePoolPlacementPrimarySubnet(in *v1beta2.InstancePoolPlacementPrimarySubnet, out *InstancePoolPlacementPrimarySubnet, s conversion.Scope) error {
+	return autoConvert_v1beta2_InstancePoolPlacementPrimarySubnet_To_v1beta1_InstancePoolPlacementPrimarySubnet(in, out, s)
 }
 
 func autoConvert_v1beta1_InstanceSourceViaImageConfig_To_v1beta2_InstanceSourceViaImageConfig(in *InstanceSourceViaImageConfig, out *v1beta2.InstanceSourceViaImageConfig, s conversion.Scope) error {
@@ -523,40 +565,6 @@ func autoConvert_v1beta2_InstanceSourceViaImageConfig_To_v1beta1_InstanceSourceV
 // Convert_v1beta2_InstanceSourceViaImageConfig_To_v1beta1_InstanceSourceViaImageConfig is an autogenerated conversion function.
 func Convert_v1beta2_InstanceSourceViaImageConfig_To_v1beta1_InstanceSourceViaImageConfig(in *v1beta2.InstanceSourceViaImageConfig, out *InstanceSourceViaImageConfig, s conversion.Scope) error {
 	return autoConvert_v1beta2_InstanceSourceViaImageConfig_To_v1beta1_InstanceSourceViaImageConfig(in, out, s)
-}
-
-func autoConvert_v1beta1_InstanceVnicConfiguration_To_v1beta2_InstanceVnicConfiguration(in *InstanceVnicConfiguration, out *v1beta2.InstanceVnicConfiguration, s conversion.Scope) error {
-	out.AssignPublicIp = in.AssignPublicIp
-	out.SubnetName = in.SubnetName
-	out.NSGId = (*string)(unsafe.Pointer(in.NSGId))
-	out.SkipSourceDestCheck = (*bool)(unsafe.Pointer(in.SkipSourceDestCheck))
-	out.NsgNames = *(*[]string)(unsafe.Pointer(&in.NsgNames))
-	out.HostnameLabel = (*string)(unsafe.Pointer(in.HostnameLabel))
-	out.DisplayName = (*string)(unsafe.Pointer(in.DisplayName))
-	out.AssignPrivateDnsRecord = (*bool)(unsafe.Pointer(in.AssignPrivateDnsRecord))
-	return nil
-}
-
-// Convert_v1beta1_InstanceVnicConfiguration_To_v1beta2_InstanceVnicConfiguration is an autogenerated conversion function.
-func Convert_v1beta1_InstanceVnicConfiguration_To_v1beta2_InstanceVnicConfiguration(in *InstanceVnicConfiguration, out *v1beta2.InstanceVnicConfiguration, s conversion.Scope) error {
-	return autoConvert_v1beta1_InstanceVnicConfiguration_To_v1beta2_InstanceVnicConfiguration(in, out, s)
-}
-
-func autoConvert_v1beta2_InstanceVnicConfiguration_To_v1beta1_InstanceVnicConfiguration(in *v1beta2.InstanceVnicConfiguration, out *InstanceVnicConfiguration, s conversion.Scope) error {
-	out.AssignPublicIp = in.AssignPublicIp
-	out.SubnetName = in.SubnetName
-	out.NSGId = (*string)(unsafe.Pointer(in.NSGId))
-	out.SkipSourceDestCheck = (*bool)(unsafe.Pointer(in.SkipSourceDestCheck))
-	out.NsgNames = *(*[]string)(unsafe.Pointer(&in.NsgNames))
-	out.HostnameLabel = (*string)(unsafe.Pointer(in.HostnameLabel))
-	out.DisplayName = (*string)(unsafe.Pointer(in.DisplayName))
-	out.AssignPrivateDnsRecord = (*bool)(unsafe.Pointer(in.AssignPrivateDnsRecord))
-	return nil
-}
-
-// Convert_v1beta2_InstanceVnicConfiguration_To_v1beta1_InstanceVnicConfiguration is an autogenerated conversion function.
-func Convert_v1beta2_InstanceVnicConfiguration_To_v1beta1_InstanceVnicConfiguration(in *v1beta2.InstanceVnicConfiguration, out *InstanceVnicConfiguration, s conversion.Scope) error {
-	return autoConvert_v1beta2_InstanceVnicConfiguration_To_v1beta1_InstanceVnicConfiguration(in, out, s)
 }
 
 func autoConvert_v1beta1_KeyValue_To_v1beta2_KeyValue(in *KeyValue, out *v1beta2.KeyValue, s conversion.Scope) error {
@@ -601,6 +609,28 @@ func autoConvert_v1beta2_LaunchDetails_To_v1beta1_LaunchDetails(in *v1beta2.Laun
 // Convert_v1beta2_LaunchDetails_To_v1beta1_LaunchDetails is an autogenerated conversion function.
 func Convert_v1beta2_LaunchDetails_To_v1beta1_LaunchDetails(in *v1beta2.LaunchDetails, out *LaunchDetails, s conversion.Scope) error {
 	return autoConvert_v1beta2_LaunchDetails_To_v1beta1_LaunchDetails(in, out, s)
+}
+
+func autoConvert_v1beta1_LaunchInstanceLicensingConfig_To_v1beta2_LaunchInstanceLicensingConfig(in *LaunchInstanceLicensingConfig, out *v1beta2.LaunchInstanceLicensingConfig, s conversion.Scope) error {
+	out.Type = v1beta2.LaunchInstanceLicensingConfigTypeEnum(in.Type)
+	out.LicenseType = v1beta2.LaunchInstanceLicensingConfigLicenseTypeEnum(in.LicenseType)
+	return nil
+}
+
+// Convert_v1beta1_LaunchInstanceLicensingConfig_To_v1beta2_LaunchInstanceLicensingConfig is an autogenerated conversion function.
+func Convert_v1beta1_LaunchInstanceLicensingConfig_To_v1beta2_LaunchInstanceLicensingConfig(in *LaunchInstanceLicensingConfig, out *v1beta2.LaunchInstanceLicensingConfig, s conversion.Scope) error {
+	return autoConvert_v1beta1_LaunchInstanceLicensingConfig_To_v1beta2_LaunchInstanceLicensingConfig(in, out, s)
+}
+
+func autoConvert_v1beta2_LaunchInstanceLicensingConfig_To_v1beta1_LaunchInstanceLicensingConfig(in *v1beta2.LaunchInstanceLicensingConfig, out *LaunchInstanceLicensingConfig, s conversion.Scope) error {
+	out.Type = LaunchInstanceLicensingConfigTypeEnum(in.Type)
+	out.LicenseType = LaunchInstanceLicensingConfigLicenseTypeEnum(in.LicenseType)
+	return nil
+}
+
+// Convert_v1beta2_LaunchInstanceLicensingConfig_To_v1beta1_LaunchInstanceLicensingConfig is an autogenerated conversion function.
+func Convert_v1beta2_LaunchInstanceLicensingConfig_To_v1beta1_LaunchInstanceLicensingConfig(in *v1beta2.LaunchInstanceLicensingConfig, out *LaunchInstanceLicensingConfig, s conversion.Scope) error {
+	return autoConvert_v1beta2_LaunchInstanceLicensingConfig_To_v1beta1_LaunchInstanceLicensingConfig(in, out, s)
 }
 
 func autoConvert_v1beta1_NodeEvictionNodePoolSettings_To_v1beta2_NodeEvictionNodePoolSettings(in *NodeEvictionNodePoolSettings, out *v1beta2.NodeEvictionNodePoolSettings, s conversion.Scope) error {
@@ -906,6 +936,8 @@ func autoConvert_v1beta1_OCIMachinePoolSpec_To_v1beta2_OCIMachinePoolSpec(in *OC
 	if err := Convert_v1beta1_InstanceConfiguration_To_v1beta2_InstanceConfiguration(&in.InstanceConfiguration, &out.InstanceConfiguration, s); err != nil {
 		return err
 	}
+	out.InstanceDisplayNameFormatter = (*string)(unsafe.Pointer(in.InstanceDisplayNameFormatter))
+	out.InstanceHostnameFormatter = (*string)(unsafe.Pointer(in.InstanceHostnameFormatter))
 	out.ProviderIDList = *(*[]string)(unsafe.Pointer(&in.ProviderIDList))
 	return nil
 }
@@ -922,6 +954,8 @@ func autoConvert_v1beta2_OCIMachinePoolSpec_To_v1beta1_OCIMachinePoolSpec(in *v1
 	if err := Convert_v1beta2_InstanceConfiguration_To_v1beta1_InstanceConfiguration(&in.InstanceConfiguration, &out.InstanceConfiguration, s); err != nil {
 		return err
 	}
+	out.InstanceDisplayNameFormatter = (*string)(unsafe.Pointer(in.InstanceDisplayNameFormatter))
+	out.InstanceHostnameFormatter = (*string)(unsafe.Pointer(in.InstanceHostnameFormatter))
 	out.ProviderIDList = *(*[]string)(unsafe.Pointer(&in.ProviderIDList))
 	return nil
 }
@@ -1374,6 +1408,7 @@ func Convert_v1beta2_PlacementConfig_To_v1beta1_PlacementConfig(in *v1beta2.Plac
 func autoConvert_v1beta1_PlacementDetails_To_v1beta2_PlacementDetails(in *PlacementDetails, out *v1beta2.PlacementDetails, s conversion.Scope) error {
 	out.AvailabilityDomain = in.AvailabilityDomain
 	out.FaultDomains = *(*[]string)(unsafe.Pointer(&in.FaultDomains))
+	out.PrimaryVnicSubnets = (*v1beta2.InstancePoolPlacementPrimarySubnet)(unsafe.Pointer(in.PrimaryVnicSubnets))
 	return nil
 }
 
@@ -1385,6 +1420,7 @@ func Convert_v1beta1_PlacementDetails_To_v1beta2_PlacementDetails(in *PlacementD
 func autoConvert_v1beta2_PlacementDetails_To_v1beta1_PlacementDetails(in *v1beta2.PlacementDetails, out *PlacementDetails, s conversion.Scope) error {
 	out.AvailabilityDomain = in.AvailabilityDomain
 	out.FaultDomains = *(*[]string)(unsafe.Pointer(&in.FaultDomains))
+	out.PrimaryVnicSubnets = (*InstancePoolPlacementPrimarySubnet)(unsafe.Pointer(in.PrimaryVnicSubnets))
 	return nil
 }
 
@@ -1419,6 +1455,7 @@ func Convert_v1beta2_PodConfig_To_v1beta1_PodConfig(in *v1beta2.PodConfig, out *
 
 func autoConvert_v1beta1_ShapeConfig_To_v1beta2_ShapeConfig(in *ShapeConfig, out *v1beta2.ShapeConfig, s conversion.Scope) error {
 	out.Ocpus = (*string)(unsafe.Pointer(in.Ocpus))
+	out.Vcpus = (*int)(unsafe.Pointer(in.Vcpus))
 	out.MemoryInGBs = (*string)(unsafe.Pointer(in.MemoryInGBs))
 	out.BaselineOcpuUtilization = in.BaselineOcpuUtilization
 	out.Nvmes = (*int)(unsafe.Pointer(in.Nvmes))
@@ -1432,6 +1469,7 @@ func Convert_v1beta1_ShapeConfig_To_v1beta2_ShapeConfig(in *ShapeConfig, out *v1
 
 func autoConvert_v1beta2_ShapeConfig_To_v1beta1_ShapeConfig(in *v1beta2.ShapeConfig, out *ShapeConfig, s conversion.Scope) error {
 	out.Ocpus = (*string)(unsafe.Pointer(in.Ocpus))
+	out.Vcpus = (*int)(unsafe.Pointer(in.Vcpus))
 	out.MemoryInGBs = (*string)(unsafe.Pointer(in.MemoryInGBs))
 	out.BaselineOcpuUtilization = in.BaselineOcpuUtilization
 	out.Nvmes = (*int)(unsafe.Pointer(in.Nvmes))

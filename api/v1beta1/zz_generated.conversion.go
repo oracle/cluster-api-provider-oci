@@ -1144,6 +1144,7 @@ func autoConvert_v1beta1_AmdVmPlatformConfig_To_v1beta2_AmdVmPlatformConfig(in *
 	out.IsTrustedPlatformModuleEnabled = (*bool)(unsafe.Pointer(in.IsTrustedPlatformModuleEnabled))
 	out.IsMeasuredBootEnabled = (*bool)(unsafe.Pointer(in.IsMeasuredBootEnabled))
 	out.IsMemoryEncryptionEnabled = (*bool)(unsafe.Pointer(in.IsMemoryEncryptionEnabled))
+	out.IsSymmetricMultiThreadingEnabled = (*bool)(unsafe.Pointer(in.IsSymmetricMultiThreadingEnabled))
 	return nil
 }
 
@@ -1157,6 +1158,7 @@ func autoConvert_v1beta2_AmdVmPlatformConfig_To_v1beta1_AmdVmPlatformConfig(in *
 	out.IsTrustedPlatformModuleEnabled = (*bool)(unsafe.Pointer(in.IsTrustedPlatformModuleEnabled))
 	out.IsMeasuredBootEnabled = (*bool)(unsafe.Pointer(in.IsMeasuredBootEnabled))
 	out.IsMemoryEncryptionEnabled = (*bool)(unsafe.Pointer(in.IsMemoryEncryptionEnabled))
+	out.IsSymmetricMultiThreadingEnabled = (*bool)(unsafe.Pointer(in.IsSymmetricMultiThreadingEnabled))
 	return nil
 }
 
@@ -1625,6 +1627,10 @@ func autoConvert_v1beta1_IntelSkylakeBmPlatformConfig_To_v1beta2_IntelSkylakeBmP
 	out.IsTrustedPlatformModuleEnabled = (*bool)(unsafe.Pointer(in.IsTrustedPlatformModuleEnabled))
 	out.IsMeasuredBootEnabled = (*bool)(unsafe.Pointer(in.IsMeasuredBootEnabled))
 	out.IsMemoryEncryptionEnabled = (*bool)(unsafe.Pointer(in.IsMemoryEncryptionEnabled))
+	out.IsSymmetricMultiThreadingEnabled = (*bool)(unsafe.Pointer(in.IsSymmetricMultiThreadingEnabled))
+	out.IsInputOutputMemoryManagementUnitEnabled = (*bool)(unsafe.Pointer(in.IsInputOutputMemoryManagementUnitEnabled))
+	out.PercentageOfCoresEnabled = (*int)(unsafe.Pointer(in.PercentageOfCoresEnabled))
+	out.NumaNodesPerSocket = v1beta2.IntelSkylakeBmPlatformConfigNumaNodesPerSocketEnum(in.NumaNodesPerSocket)
 	return nil
 }
 
@@ -1638,6 +1644,10 @@ func autoConvert_v1beta2_IntelSkylakeBmPlatformConfig_To_v1beta1_IntelSkylakeBmP
 	out.IsTrustedPlatformModuleEnabled = (*bool)(unsafe.Pointer(in.IsTrustedPlatformModuleEnabled))
 	out.IsMeasuredBootEnabled = (*bool)(unsafe.Pointer(in.IsMeasuredBootEnabled))
 	out.IsMemoryEncryptionEnabled = (*bool)(unsafe.Pointer(in.IsMemoryEncryptionEnabled))
+	out.IsSymmetricMultiThreadingEnabled = (*bool)(unsafe.Pointer(in.IsSymmetricMultiThreadingEnabled))
+	out.IsInputOutputMemoryManagementUnitEnabled = (*bool)(unsafe.Pointer(in.IsInputOutputMemoryManagementUnitEnabled))
+	out.PercentageOfCoresEnabled = (*int)(unsafe.Pointer(in.PercentageOfCoresEnabled))
+	out.NumaNodesPerSocket = IntelSkylakeBmPlatformConfigNumaNodesPerSocketEnum(in.NumaNodesPerSocket)
 	return nil
 }
 
@@ -1651,6 +1661,7 @@ func autoConvert_v1beta1_IntelVmPlatformConfig_To_v1beta2_IntelVmPlatformConfig(
 	out.IsTrustedPlatformModuleEnabled = (*bool)(unsafe.Pointer(in.IsTrustedPlatformModuleEnabled))
 	out.IsMeasuredBootEnabled = (*bool)(unsafe.Pointer(in.IsMeasuredBootEnabled))
 	out.IsMemoryEncryptionEnabled = (*bool)(unsafe.Pointer(in.IsMemoryEncryptionEnabled))
+	out.IsSymmetricMultiThreadingEnabled = (*bool)(unsafe.Pointer(in.IsSymmetricMultiThreadingEnabled))
 	return nil
 }
 
@@ -1664,6 +1675,7 @@ func autoConvert_v1beta2_IntelVmPlatformConfig_To_v1beta1_IntelVmPlatformConfig(
 	out.IsTrustedPlatformModuleEnabled = (*bool)(unsafe.Pointer(in.IsTrustedPlatformModuleEnabled))
 	out.IsMeasuredBootEnabled = (*bool)(unsafe.Pointer(in.IsMeasuredBootEnabled))
 	out.IsMemoryEncryptionEnabled = (*bool)(unsafe.Pointer(in.IsMemoryEncryptionEnabled))
+	out.IsSymmetricMultiThreadingEnabled = (*bool)(unsafe.Pointer(in.IsSymmetricMultiThreadingEnabled))
 	return nil
 }
 

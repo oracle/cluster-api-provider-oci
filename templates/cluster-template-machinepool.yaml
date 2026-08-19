@@ -83,11 +83,11 @@ spec:
       shape: "${OCI_CONTROL_PLANE_MACHINE_TYPE=VM.Standard.E4.Flex}"
       shapeConfig:
         ocpus: "${OCI_CONTROL_PLANE_MACHINE_TYPE_OCPUS=1}"
+      instanceOptions:
+        areLegacyImdsEndpointsDisabled: true
       metadata:
         ssh_authorized_keys: "${OCI_SSH_KEY}"
       isPvEncryptionInTransitEnabled: ${OCI_CONTROL_PLANE_PV_TRANSIT_ENCRYPTION=true}
-      instanceOptions:
-        areLegacyImdsEndpointsDisabled: true
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachinePool
@@ -117,6 +117,12 @@ metadata:
   name: ${CLUSTER_NAME}-mp-0
   namespace: default
 spec:
+  instanceDisplayNameFormatter: "${CLUSTER_NAME}-mp-$${launchCount}"
+  # instanceHostnameFormatter requires VCN/subnet DNS hostnames to be enabled.
+  # OCI rejects Instance Pool creation when the target subnet does not have a
+  # valid DNS resolver. See:
+  # https://docs.oracle.com/en-us/iaas/Content/Network/Concepts/dns.htm
+  # instanceHostnameFormatter: "${CLUSTER_NAME}-host-$${launchCount}"
   instanceConfiguration:
     instanceOptions:
       areLegacyImdsEndpointsDisabled: true
@@ -125,6 +131,22 @@ spec:
     shape: "${OCI_NODE_MACHINE_TYPE=VM.Standard.E4.Flex}"
     shapeConfig:
       ocpus: "${OCI_NODE_MACHINE_TYPE_OCPUS=1}"
+      # Use vcpus only when validating vCPU-based shape config behavior.
+      # vcpus: ${OCI_NODE_MACHINE_TYPE_VCPUS=6}
+    # LIVE_MIGRATE support depends on the instance shape, region, platform,
+    # and image. Verify support before enabling it:
+    # https://docs.oracle.com/en-us/iaas/Content/Compute/Tasks/movinganinstance.htm
+    # preferredMaintenanceAction: LIVE_MIGRATE
+    # launchMode can be enabled for explicit launch mode validation.
+    # launchMode: PARAVIRTUALIZED
+    # clusterPlacementGroupId requires an existing OCI Cluster Placement Group OCID.
+    # Replace the placeholder with a real CPG OCID before uncommenting.
+    # clusterPlacementGroupId: "<cluster-placement-group-ocid>"
+    # licensingConfigs requires a valid Windows licensing scenario.
+    # licensingConfigs:
+    #   - type: WINDOWS
+    #     licenseType: BRING_YOUR_OWN_LICENSE
+
     metadata:
       ssh_authorized_keys: "${OCI_SSH_KEY}"
 

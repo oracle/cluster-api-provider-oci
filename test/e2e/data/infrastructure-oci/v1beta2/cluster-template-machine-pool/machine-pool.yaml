@@ -27,6 +27,7 @@ metadata:
   name: "${CLUSTER_NAME}-mp-0"
   namespace: default
 spec:
+  instanceDisplayNameFormatter: "${CLUSTER_NAME}-mp-$${launchCount}"
   instanceConfiguration:
     instanceOptions:
       areLegacyImdsEndpointsDisabled: true
