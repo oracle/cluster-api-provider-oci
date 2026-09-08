@@ -31,26 +31,34 @@ import (
 )
 
 type fakeOCIBackend struct {
-	compute *fakeComputeClient
-	vcn     *fakeVCNClient
+	compute  *fakeComputeClient
+	vcn      *fakeVCNClient
+	identity *fakeIdentityClient
+	nlb      *fakeNetworkLoadBalancerClient
 }
 
 func newFakeOCIBackend() *fakeOCIBackend {
 	return &fakeOCIBackend{
-		compute: newFakeComputeClient(),
-		vcn:     &fakeVCNClient{},
+		compute:  newFakeComputeClient(),
+		vcn:      newFakeVCNClient(),
+		identity: &fakeIdentityClient{},
+		nlb:      newFakeNetworkLoadBalancerClient(),
 	}
 }
 
 func (f *fakeOCIBackend) reset() {
 	f.compute.reset()
 	f.vcn.reset()
+	f.identity.reset()
+	f.nlb.reset()
 }
 
 func (f *fakeOCIBackend) clientProvider() (*scope.ClientProvider, error) {
 	return scope.MockNewClientProvider(scope.MockOCIClients{
-		ComputeClient: f.compute,
-		VCNClient:     f.vcn,
+		ComputeClient:             f.compute,
+		VCNClient:                 f.vcn,
+		IdentityClient:            f.identity,
+		NetworkLoadBalancerClient: f.nlb,
 	})
 }
 
@@ -176,14 +184,41 @@ func (*fakeComputeClient) ListVnicAttachments(_ context.Context, request core.Li
 type fakeVCNClient struct {
 	vcn.Client
 
-	mu           sync.Mutex
-	getVNICCount int
+	mu sync.Mutex
+
+	getVNICCount          int
+	nextID                int
+	vcns                  map[string]core.Vcn
+	internetGateways      map[string]core.InternetGateway
+	natGateways           map[string]core.NatGateway
+	serviceGateways       map[string]core.ServiceGateway
+	networkSecurityGroups map[string]core.NetworkSecurityGroup
+	routeTables           map[string]core.RouteTable
+	subnets               map[string]core.Subnet
+	createCounts          map[string]int
+	deleteOrder           []string
+}
+
+func newFakeVCNClient() *fakeVCNClient {
+	f := &fakeVCNClient{}
+	f.reset()
+	return f
 }
 
 func (f *fakeVCNClient) reset() {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.getVNICCount = 0
+	f.nextID = 0
+	f.vcns = map[string]core.Vcn{}
+	f.internetGateways = map[string]core.InternetGateway{}
+	f.natGateways = map[string]core.NatGateway{}
+	f.serviceGateways = map[string]core.ServiceGateway{}
+	f.networkSecurityGroups = map[string]core.NetworkSecurityGroup{}
+	f.routeTables = map[string]core.RouteTable{}
+	f.subnets = map[string]core.Subnet{}
+	f.createCounts = map[string]int{}
+	f.deleteOrder = nil
 }
 
 func (f *fakeVCNClient) getVNICCalls() int {

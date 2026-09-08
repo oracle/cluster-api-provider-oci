@@ -28,22 +28,22 @@ import (
 	"github.com/oracle/cluster-api-provider-oci/cloud/config"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/compute"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/identity"
+	"github.com/oracle/cluster-api-provider-oci/cloud/services/loadbalancer"
+	"github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/volume"
-	"github.com/oracle/oci-go-sdk/v65/loadbalancer"
-	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
-	"github.com/oracle/oci-go-sdk/v65/workrequests"
+	"github.com/oracle/cluster-api-provider-oci/cloud/services/workrequests"
 	"k8s.io/klog/v2/klogr"
 )
 
 type MockOCIClients struct {
 	VCNClient                 vcn.Client
 	ComputeClient             compute.ComputeClient
-	NetworkLoadBalancerClient *networkloadbalancer.NetworkLoadBalancerClient
-	LoadBalancerClient        *loadbalancer.LoadBalancerClient
+	NetworkLoadBalancerClient nlb.NetworkLoadBalancerClient
+	LoadBalancerClient        lb.LoadBalancerClient
 	IdentityClient            identity.Client
 	BlockVolumeClient         volume.BlockVolumeClient
-	WorkRequestsClient        *workrequests.WorkRequestClient
+	WorkRequestsClient        workrequests.Client
 }
 
 var (
