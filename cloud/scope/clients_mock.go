@@ -28,6 +28,7 @@ import (
 	"github.com/oracle/cluster-api-provider-oci/cloud/config"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/base"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/compute"
+	"github.com/oracle/cluster-api-provider-oci/cloud/services/computemanagement"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/containerengine"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/identity"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/loadbalancer"
@@ -41,6 +42,7 @@ import (
 type MockOCIClients struct {
 	VCNClient                 vcn.Client
 	ComputeClient             compute.ComputeClient
+	ComputeManagementClient   computemanagement.Client
 	NetworkLoadBalancerClient nlb.NetworkLoadBalancerClient
 	LoadBalancerClient        lb.LoadBalancerClient
 	IdentityClient            identity.Client
@@ -63,6 +65,7 @@ func MockNewClientProvider(mockClients MockOCIClients) (*ClientProvider, error) 
 		IdentityClient:            mockClients.IdentityClient,
 		BlockVolumeClient:         mockClients.BlockVolumeClient,
 		ComputeClient:             mockClients.ComputeClient,
+		ComputeManagementClient:   mockClients.ComputeManagementClient,
 		WorkRequestsClient:        mockClients.WorkRequestsClient,
 		ContainerEngineClient:     mockClients.ContainerEngineClient,
 		BaseClient:                mockClients.BaseClient,

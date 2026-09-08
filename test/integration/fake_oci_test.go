@@ -31,22 +31,24 @@ import (
 )
 
 type fakeOCIBackend struct {
-	compute  *fakeComputeClient
-	vcn      *fakeVCNClient
-	identity *fakeIdentityClient
-	nlb      *fakeNetworkLoadBalancerClient
-	oke      *fakeContainerEngineClient
-	base     *fakeBaseClient
+	compute           *fakeComputeClient
+	vcn               *fakeVCNClient
+	identity          *fakeIdentityClient
+	nlb               *fakeNetworkLoadBalancerClient
+	oke               *fakeContainerEngineClient
+	base              *fakeBaseClient
+	computeManagement *fakeComputeManagementClient
 }
 
 func newFakeOCIBackend() *fakeOCIBackend {
 	return &fakeOCIBackend{
-		compute:  newFakeComputeClient(),
-		vcn:      newFakeVCNClient(),
-		identity: &fakeIdentityClient{},
-		nlb:      newFakeNetworkLoadBalancerClient(),
-		oke:      newFakeContainerEngineClient(),
-		base:     &fakeBaseClient{},
+		compute:           newFakeComputeClient(),
+		vcn:               newFakeVCNClient(),
+		identity:          &fakeIdentityClient{},
+		nlb:               newFakeNetworkLoadBalancerClient(),
+		oke:               newFakeContainerEngineClient(),
+		base:              &fakeBaseClient{},
+		computeManagement: newFakeComputeManagementClient(),
 	}
 }
 
@@ -57,6 +59,7 @@ func (f *fakeOCIBackend) reset() {
 	f.nlb.reset()
 	f.oke.reset()
 	f.base.reset()
+	f.computeManagement.reset()
 }
 
 func (f *fakeOCIBackend) clientProvider() (*scope.ClientProvider, error) {
@@ -67,6 +70,7 @@ func (f *fakeOCIBackend) clientProvider() (*scope.ClientProvider, error) {
 		NetworkLoadBalancerClient: f.nlb,
 		ContainerEngineClient:     f.oke,
 		BaseClient:                f.base,
+		ComputeManagementClient:   f.computeManagement,
 	})
 }
 
