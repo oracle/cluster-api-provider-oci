@@ -101,7 +101,30 @@ type fakeContainerEngineClient struct {
 	virtualNodePoolInspectCount int
 	virtualNodeListCount        int
 	lastVirtualNodeListSize     int
+	operationFailures           map[fakeOKEOperation]error
+	operationAttempts           map[fakeOKEOperation]int
+	clusterCreateState          oke.ClusterLifecycleStateEnum
+	clusterUpdateState          oke.ClusterLifecycleStateEnum
+	nodePoolCreateState         oke.NodePoolLifecycleStateEnum
+	nodePoolUpdateState         oke.NodePoolLifecycleStateEnum
+	virtualNodePoolCreateState  oke.VirtualNodePoolLifecycleStateEnum
+	virtualNodePoolUpdateState  oke.VirtualNodePoolLifecycleStateEnum
 }
+
+type fakeOKEOperation string
+
+const (
+	createClusterOperation         fakeOKEOperation = "create OKE cluster"
+	updateClusterOperation         fakeOKEOperation = "update OKE cluster"
+	deleteClusterOperation         fakeOKEOperation = "delete OKE cluster"
+	createKubeconfigOperation      fakeOKEOperation = "create OKE kubeconfig"
+	createNodePoolOperation        fakeOKEOperation = "create OKE node pool"
+	updateNodePoolOperation        fakeOKEOperation = "update OKE node pool"
+	deleteNodePoolOperation        fakeOKEOperation = "delete OKE node pool"
+	createVirtualNodePoolOperation fakeOKEOperation = "create OKE virtual node pool"
+	updateVirtualNodePoolOperation fakeOKEOperation = "update OKE virtual node pool"
+	deleteVirtualNodePoolOperation fakeOKEOperation = "delete OKE virtual node pool"
+)
 
 type fakeWorkRequestResource struct {
 	entityType string
@@ -136,6 +159,14 @@ func (f *fakeContainerEngineClient) reset() {
 	f.virtualNodePoolInspectCount = 0
 	f.virtualNodeListCount = 0
 	f.lastVirtualNodeListSize = 0
+	f.operationFailures = map[fakeOKEOperation]error{}
+	f.operationAttempts = map[fakeOKEOperation]int{}
+	f.clusterCreateState = oke.ClusterLifecycleStateActive
+	f.clusterUpdateState = oke.ClusterLifecycleStateActive
+	f.nodePoolCreateState = oke.NodePoolLifecycleStateActive
+	f.nodePoolUpdateState = oke.NodePoolLifecycleStateActive
+	f.virtualNodePoolCreateState = oke.VirtualNodePoolLifecycleStateActive
+	f.virtualNodePoolUpdateState = oke.VirtualNodePoolLifecycleStateActive
 }
 
 func (f *fakeContainerEngineClient) counts() (active, creates, updates, deletes, kubeconfigs int) {
@@ -178,9 +209,172 @@ func (f *fakeContainerEngineClient) virtualNodePoolDebug() (size, listCalls, las
 	return size, f.virtualNodeListCount, f.lastVirtualNodeListSize
 }
 
+func (f *fakeContainerEngineClient) setFailure(operation fakeOKEOperation, err error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.operationFailures[operation] = err
+}
+
+func (f *fakeContainerEngineClient) clearFailure(operation fakeOKEOperation) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	delete(f.operationFailures, operation)
+}
+
+func (f *fakeContainerEngineClient) operationAttemptCount(operation fakeOKEOperation) int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.operationAttempts[operation]
+}
+
+func (f *fakeContainerEngineClient) operationFailureLocked(operation fakeOKEOperation) error {
+	f.operationAttempts[operation]++
+	return f.operationFailures[operation]
+}
+
+func (f *fakeContainerEngineClient) setClusterCreateState(state oke.ClusterLifecycleStateEnum) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.clusterCreateState = state
+}
+
+func (f *fakeContainerEngineClient) setClusterUpdateState(state oke.ClusterLifecycleStateEnum) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.clusterUpdateState = state
+}
+
+func (f *fakeContainerEngineClient) setClusterState(id string, state oke.ClusterLifecycleStateEnum) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	cluster, ok := f.clusters[id]
+	if !ok {
+		return
+	}
+	cluster.LifecycleState = state
+	f.clusters[id] = cluster
+}
+
+func (f *fakeContainerEngineClient) seedCluster(cluster oke.Cluster) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.clusters[stringValue(cluster.Id)] = cluster
+}
+
+func (f *fakeContainerEngineClient) cluster(id string) (oke.Cluster, bool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	cluster, ok := f.clusters[id]
+	return cluster, ok
+}
+
+func (f *fakeContainerEngineClient) setNodePoolCreateState(state oke.NodePoolLifecycleStateEnum) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.nodePoolCreateState = state
+}
+
+func (f *fakeContainerEngineClient) setNodePoolUpdateState(state oke.NodePoolLifecycleStateEnum) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.nodePoolUpdateState = state
+}
+
+func (f *fakeContainerEngineClient) setNodePoolState(id string, state oke.NodePoolLifecycleStateEnum) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	pool, ok := f.nodePools[id]
+	if !ok {
+		return
+	}
+	pool.LifecycleState = state
+	f.nodePools[id] = pool
+}
+
+func (f *fakeContainerEngineClient) seedNodePool(pool oke.NodePool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if pool.Nodes == nil {
+		pool.Nodes = fakeNodesForPool(&pool)
+	}
+	f.nodePools[stringValue(pool.Id)] = pool
+}
+
+func (f *fakeContainerEngineClient) nodePool(id string) (oke.NodePool, bool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	pool, ok := f.nodePools[id]
+	return pool, ok
+}
+
+func (f *fakeContainerEngineClient) resizeNodePool(id string, size int) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	pool, ok := f.nodePools[id]
+	if !ok {
+		return
+	}
+	if pool.NodeConfigDetails == nil {
+		pool.NodeConfigDetails = &oke.NodePoolNodeConfigDetails{}
+	}
+	pool.NodeConfigDetails.Size = common.Int(size)
+	pool.Nodes = fakeNodesForPool(&pool)
+	f.nodePools[id] = pool
+}
+
+func (f *fakeContainerEngineClient) seedVirtualNodePool(pool oke.VirtualNodePool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.virtualNodePools[stringValue(pool.Id)] = pool
+}
+
+func (f *fakeContainerEngineClient) virtualNodePool(id string) (oke.VirtualNodePool, bool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	pool, ok := f.virtualNodePools[id]
+	return pool, ok
+}
+
+func (f *fakeContainerEngineClient) setVirtualNodePoolCreateState(state oke.VirtualNodePoolLifecycleStateEnum) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.virtualNodePoolCreateState = state
+}
+
+func (f *fakeContainerEngineClient) setVirtualNodePoolUpdateState(state oke.VirtualNodePoolLifecycleStateEnum) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.virtualNodePoolUpdateState = state
+}
+
+func (f *fakeContainerEngineClient) setVirtualNodePoolState(id string, state oke.VirtualNodePoolLifecycleStateEnum) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	pool, ok := f.virtualNodePools[id]
+	if !ok {
+		return
+	}
+	pool.LifecycleState = state
+	f.virtualNodePools[id] = pool
+}
+
+func (f *fakeContainerEngineClient) resizeVirtualNodePool(id string, size int) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	pool, ok := f.virtualNodePools[id]
+	if !ok {
+		return
+	}
+	pool.Size = common.Int(size)
+	f.virtualNodePools[id] = pool
+}
+
 func (f *fakeContainerEngineClient) CreateCluster(_ context.Context, request oke.CreateClusterRequest) (oke.CreateClusterResponse, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if err := f.operationFailureLocked(createClusterOperation); err != nil {
+		return oke.CreateClusterResponse{}, err
+	}
 	f.nextID++
 	f.createCount++
 	id := "ocid1.cluster.oc1..integration-" + strconv.Itoa(f.nextID)
@@ -202,7 +396,7 @@ func (f *fakeContainerEngineClient) CreateCluster(_ context.Context, request oke
 		FreeformTags:             cloneStringMap(details.FreeformTags),
 		DefinedTags:              cloneDefinedTags(details.DefinedTags),
 		Options:                  options,
-		LifecycleState:           oke.ClusterLifecycleStateActive,
+		LifecycleState:           f.clusterCreateState,
 		Endpoints:                &oke.ClusterEndpoints{PublicEndpoint: common.String("198.51.100.10"), PrivateEndpoint: common.String("10.0.0.2:6443")},
 		ImagePolicyConfig:        &oke.ImagePolicyConfig{IsPolicyEnabled: common.Bool(false), KeyDetails: []oke.KeyDetails{}},
 		ClusterPodNetworkOptions: append([]oke.ClusterPodNetworkOptionDetails(nil), details.ClusterPodNetworkOptions...),
@@ -273,16 +467,34 @@ func (f *fakeContainerEngineClient) ListClusters(_ context.Context, request oke.
 	return oke.ListClustersResponse{Items: items}, nil
 }
 
-func (f *fakeContainerEngineClient) UpdateCluster(_ context.Context, _ oke.UpdateClusterRequest) (oke.UpdateClusterResponse, error) {
+func (f *fakeContainerEngineClient) UpdateCluster(_ context.Context, request oke.UpdateClusterRequest) (oke.UpdateClusterResponse, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if err := f.operationFailureLocked(updateClusterOperation); err != nil {
+		return oke.UpdateClusterResponse{}, err
+	}
+	id := stringValue(request.ClusterId)
+	cluster, ok := f.clusters[id]
+	if !ok {
+		return oke.UpdateClusterResponse{}, ociutil.ErrNotFound
+	}
 	f.updateCount++
+	details := request.UpdateClusterDetails
+	cluster.Name = details.Name
+	cluster.KubernetesVersion = details.KubernetesVersion
+	cluster.FreeformTags = cloneStringMap(details.FreeformTags)
+	cluster.DefinedTags = cloneDefinedTags(details.DefinedTags)
+	cluster.LifecycleState = f.clusterUpdateState
+	f.clusters[id] = cluster
 	return oke.UpdateClusterResponse{}, nil
 }
 
 func (f *fakeContainerEngineClient) DeleteCluster(_ context.Context, request oke.DeleteClusterRequest) (oke.DeleteClusterResponse, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if err := f.operationFailureLocked(deleteClusterOperation); err != nil {
+		return oke.DeleteClusterResponse{}, err
+	}
 	id := stringValue(request.ClusterId)
 	if _, ok := f.clusters[id]; !ok {
 		return oke.DeleteClusterResponse{}, ociutil.ErrNotFound
@@ -295,6 +507,9 @@ func (f *fakeContainerEngineClient) DeleteCluster(_ context.Context, request oke
 func (f *fakeContainerEngineClient) CreateKubeconfig(context.Context, oke.CreateKubeconfigRequest) (oke.CreateKubeconfigResponse, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if err := f.operationFailureLocked(createKubeconfigOperation); err != nil {
+		return oke.CreateKubeconfigResponse{}, err
+	}
 	f.kubeconfigCount++
 	return oke.CreateKubeconfigResponse{
 		Content:      io.NopCloser(strings.NewReader(integrationKubeconfig)),
@@ -305,6 +520,9 @@ func (f *fakeContainerEngineClient) CreateKubeconfig(context.Context, oke.Create
 func (f *fakeContainerEngineClient) CreateNodePool(_ context.Context, request oke.CreateNodePoolRequest) (oke.CreateNodePoolResponse, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if err := f.operationFailureLocked(createNodePoolOperation); err != nil {
+		return oke.CreateNodePoolResponse{}, err
+	}
 	f.nextID++
 	f.nodePoolCreateCount++
 	id := "ocid1.nodepool.oc1..integration-" + strconv.Itoa(f.nextID)
@@ -313,7 +531,7 @@ func (f *fakeContainerEngineClient) CreateNodePool(_ context.Context, request ok
 	nodeConfig := normalizeNodePoolConfig(details.NodeConfigDetails)
 	nodePool := oke.NodePool{
 		Id:                           common.String(id),
-		LifecycleState:               oke.NodePoolLifecycleStateActive,
+		LifecycleState:               f.nodePoolCreateState,
 		CompartmentId:                details.CompartmentId,
 		ClusterId:                    details.ClusterId,
 		Name:                         details.Name,
@@ -367,6 +585,9 @@ func (f *fakeContainerEngineClient) ListNodePools(_ context.Context, request oke
 func (f *fakeContainerEngineClient) UpdateNodePool(_ context.Context, request oke.UpdateNodePoolRequest) (oke.UpdateNodePoolResponse, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if err := f.operationFailureLocked(updateNodePoolOperation); err != nil {
+		return oke.UpdateNodePoolResponse{}, err
+	}
 	id := stringValue(request.NodePoolId)
 	nodePool, ok := f.nodePools[id]
 	if !ok {
@@ -392,6 +613,7 @@ func (f *fakeContainerEngineClient) UpdateNodePool(_ context.Context, request ok
 		nodePool.NodePoolCyclingDetails = details.NodePoolCyclingDetails
 	}
 	nodePool.Nodes = fakeNodesForPool(&nodePool)
+	nodePool.LifecycleState = f.nodePoolUpdateState
 	f.nodePools[id] = nodePool
 	return oke.UpdateNodePoolResponse{OpcWorkRequestId: common.String("work-request-update-" + id)}, nil
 }
@@ -399,6 +621,9 @@ func (f *fakeContainerEngineClient) UpdateNodePool(_ context.Context, request ok
 func (f *fakeContainerEngineClient) DeleteNodePool(_ context.Context, request oke.DeleteNodePoolRequest) (oke.DeleteNodePoolResponse, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if err := f.operationFailureLocked(deleteNodePoolOperation); err != nil {
+		return oke.DeleteNodePoolResponse{}, err
+	}
 	id := stringValue(request.NodePoolId)
 	if _, ok := f.nodePools[id]; !ok {
 		return oke.DeleteNodePoolResponse{}, ociutil.ErrNotFound
@@ -411,6 +636,9 @@ func (f *fakeContainerEngineClient) DeleteNodePool(_ context.Context, request ok
 func (f *fakeContainerEngineClient) CreateVirtualNodePool(_ context.Context, request oke.CreateVirtualNodePoolRequest) (oke.CreateVirtualNodePoolResponse, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if err := f.operationFailureLocked(createVirtualNodePoolOperation); err != nil {
+		return oke.CreateVirtualNodePoolResponse{}, err
+	}
 	f.nextID++
 	f.virtualNodePoolCreateCount++
 	id := "ocid1.virtualnodepool.oc1..integration-" + strconv.Itoa(f.nextID)
@@ -428,7 +656,7 @@ func (f *fakeContainerEngineClient) CreateVirtualNodePool(_ context.Context, req
 		Size:                     details.Size,
 		NsgIds:                   append([]string(nil), details.NsgIds...),
 		PodConfiguration:         clonePodConfiguration(details.PodConfiguration),
-		LifecycleState:           oke.VirtualNodePoolLifecycleStateActive,
+		LifecycleState:           f.virtualNodePoolCreateState,
 		FreeformTags:             cloneStringMap(details.FreeformTags),
 		DefinedTags:              cloneDefinedTags(details.DefinedTags),
 		VirtualNodeTags:          details.VirtualNodeTags,
@@ -469,6 +697,9 @@ func (f *fakeContainerEngineClient) ListVirtualNodePools(_ context.Context, requ
 func (f *fakeContainerEngineClient) UpdateVirtualNodePool(_ context.Context, request oke.UpdateVirtualNodePoolRequest) (oke.UpdateVirtualNodePoolResponse, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if err := f.operationFailureLocked(updateVirtualNodePoolOperation); err != nil {
+		return oke.UpdateVirtualNodePoolResponse{}, err
+	}
 	id := stringValue(request.VirtualNodePoolId)
 	pool, ok := f.virtualNodePools[id]
 	if !ok {
@@ -492,6 +723,7 @@ func (f *fakeContainerEngineClient) UpdateVirtualNodePool(_ context.Context, req
 	if details.VirtualNodeTags != nil {
 		pool.VirtualNodeTags = details.VirtualNodeTags
 	}
+	pool.LifecycleState = f.virtualNodePoolUpdateState
 	f.virtualNodePools[id] = pool
 	return oke.UpdateVirtualNodePoolResponse{OpcWorkRequestId: common.String("work-request-update-" + id)}, nil
 }
@@ -499,6 +731,9 @@ func (f *fakeContainerEngineClient) UpdateVirtualNodePool(_ context.Context, req
 func (f *fakeContainerEngineClient) DeleteVirtualNodePool(_ context.Context, request oke.DeleteVirtualNodePoolRequest) (oke.DeleteVirtualNodePoolResponse, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if err := f.operationFailureLocked(deleteVirtualNodePoolOperation); err != nil {
+		return oke.DeleteVirtualNodePoolResponse{}, err
+	}
 	id := stringValue(request.VirtualNodePoolId)
 	if _, ok := f.virtualNodePools[id]; !ok {
 		return oke.DeleteVirtualNodePoolResponse{}, ociutil.ErrNotFound

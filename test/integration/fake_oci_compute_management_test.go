@@ -97,6 +97,41 @@ func (f *fakeComputeManagementClient) instancePoolState() (size int, configurati
 	return size, configurationID
 }
 
+func (f *fakeComputeManagementClient) seedInstancePool(pool core.InstancePool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.instancePools[stringValue(pool.Id)] = pool
+}
+
+func (f *fakeComputeManagementClient) setInstancePoolState(id string, state core.InstancePoolLifecycleStateEnum) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	pool, ok := f.instancePools[id]
+	if !ok {
+		return
+	}
+	pool.LifecycleState = state
+	f.instancePools[id] = pool
+}
+
+func (f *fakeComputeManagementClient) resizeInstancePool(id string, size int) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	pool, ok := f.instancePools[id]
+	if !ok {
+		return
+	}
+	pool.Size = common.Int(size)
+	f.instancePools[id] = pool
+}
+
+func (f *fakeComputeManagementClient) instancePool(id string) (core.InstancePool, bool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	pool, ok := f.instancePools[id]
+	return pool, ok
+}
+
 func (f *fakeComputeManagementClient) setFailure(operation fakeComputeManagementOperation, err error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()

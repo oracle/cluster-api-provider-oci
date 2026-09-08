@@ -77,11 +77,22 @@ func (f *fakeOCIBackend) clientProvider() (*scope.ClientProvider, error) {
 type fakeComputeClient struct {
 	mu sync.Mutex
 
-	instances       map[string]core.Instance
-	launchCount     int
-	terminateCount  int
-	inspectionCount int
+	instances               map[string]core.Instance
+	launchCount             int
+	terminateCount          int
+	inspectionCount         int
+	launchLifecycleState    core.InstanceLifecycleStateEnum
+	terminateLifecycleState core.InstanceLifecycleStateEnum
+	operationFailures       map[fakeComputeOperation]error
+	operationAttempts       map[fakeComputeOperation]int
 }
+
+type fakeComputeOperation string
+
+const (
+	launchInstanceOperation    fakeComputeOperation = "launch instance"
+	terminateInstanceOperation fakeComputeOperation = "terminate instance"
+)
 
 func newFakeComputeClient() *fakeComputeClient {
 	f := &fakeComputeClient{}
@@ -96,6 +107,10 @@ func (f *fakeComputeClient) reset() {
 	f.launchCount = 0
 	f.terminateCount = 0
 	f.inspectionCount = 0
+	f.launchLifecycleState = core.InstanceLifecycleStateRunning
+	f.terminateLifecycleState = core.InstanceLifecycleStateTerminated
+	f.operationFailures = map[fakeComputeOperation]error{}
+	f.operationAttempts = map[fakeComputeOperation]int{}
 }
 
 func (f *fakeComputeClient) counts() (launches, terminations, inspections int) {
@@ -104,9 +119,65 @@ func (f *fakeComputeClient) counts() (launches, terminations, inspections int) {
 	return f.launchCount, f.terminateCount, f.inspectionCount
 }
 
+func (f *fakeComputeClient) setFailure(operation fakeComputeOperation, err error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.operationFailures[operation] = err
+}
+
+func (f *fakeComputeClient) clearFailure(operation fakeComputeOperation) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	delete(f.operationFailures, operation)
+}
+
+func (f *fakeComputeClient) operationAttemptCount(operation fakeComputeOperation) int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.operationAttempts[operation]
+}
+
+func (f *fakeComputeClient) setLaunchLifecycleState(state core.InstanceLifecycleStateEnum) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.launchLifecycleState = state
+}
+
+func (f *fakeComputeClient) setInstanceLifecycleState(id string, state core.InstanceLifecycleStateEnum) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	instance, ok := f.instances[id]
+	if !ok {
+		return
+	}
+	instance.LifecycleState = state
+	f.instances[id] = instance
+}
+
+func (f *fakeComputeClient) seedInstance(instance core.Instance) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.instances[stringValue(instance.Id)] = instance
+}
+
+func (f *fakeComputeClient) instance(id string) (core.Instance, bool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	instance, ok := f.instances[id]
+	return instance, ok
+}
+
+func (f *fakeComputeClient) operationFailureLocked(operation fakeComputeOperation) error {
+	f.operationAttempts[operation]++
+	return f.operationFailures[operation]
+}
+
 func (f *fakeComputeClient) LaunchInstance(_ context.Context, request core.LaunchInstanceRequest) (core.LaunchInstanceResponse, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if err := f.operationFailureLocked(launchInstanceOperation); err != nil {
+		return core.LaunchInstanceResponse{}, err
+	}
 
 	f.launchCount++
 	instanceID := fmt.Sprintf("ocid1.instance.oc1..integration-%d", f.launchCount)
@@ -117,7 +188,7 @@ func (f *fakeComputeClient) LaunchInstance(_ context.Context, request core.Launc
 		AvailabilityDomain: request.LaunchInstanceDetails.AvailabilityDomain,
 		FaultDomain:        request.LaunchInstanceDetails.FaultDomain,
 		FreeformTags:       cloneStringMap(request.LaunchInstanceDetails.FreeformTags),
-		LifecycleState:     core.InstanceLifecycleStateRunning,
+		LifecycleState:     f.launchLifecycleState,
 	}
 	f.instances[instanceID] = instance
 	return core.LaunchInstanceResponse{Instance: instance}, nil
@@ -126,13 +197,16 @@ func (f *fakeComputeClient) LaunchInstance(_ context.Context, request core.Launc
 func (f *fakeComputeClient) TerminateInstance(_ context.Context, request core.TerminateInstanceRequest) (core.TerminateInstanceResponse, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if err := f.operationFailureLocked(terminateInstanceOperation); err != nil {
+		return core.TerminateInstanceResponse{}, err
+	}
 
 	instance, ok := f.instances[stringValue(request.InstanceId)]
 	if !ok {
 		return core.TerminateInstanceResponse{}, fmt.Errorf("terminate unknown instance %q", stringValue(request.InstanceId))
 	}
 	f.terminateCount++
-	instance.LifecycleState = core.InstanceLifecycleStateTerminated
+	instance.LifecycleState = f.terminateLifecycleState
 	f.instances[stringValue(request.InstanceId)] = instance
 	return core.TerminateInstanceResponse{}, nil
 }
@@ -209,6 +283,8 @@ type fakeVCNClient struct {
 	subnets               map[string]core.Subnet
 	createCounts          map[string]int
 	deleteOrder           []string
+	operationFailures     map[fakeVCNOperation]error
+	operationAttempts     map[fakeVCNOperation]int
 }
 
 func newFakeVCNClient() *fakeVCNClient {
@@ -231,6 +307,8 @@ func (f *fakeVCNClient) reset() {
 	f.subnets = map[string]core.Subnet{}
 	f.createCounts = map[string]int{}
 	f.deleteOrder = nil
+	f.operationFailures = map[fakeVCNOperation]error{}
+	f.operationAttempts = map[fakeVCNOperation]int{}
 }
 
 func (f *fakeVCNClient) getVNICCalls() int {

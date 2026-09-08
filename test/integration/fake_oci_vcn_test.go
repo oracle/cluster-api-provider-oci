@@ -27,6 +27,13 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/core"
 )
 
+type fakeVCNOperation string
+
+const (
+	createSubnetOperation fakeVCNOperation = "create subnet"
+	deleteVCNOperation    fakeVCNOperation = "delete VCN"
+)
+
 type fakeNetworkCounts struct {
 	VCNs             int
 	InternetGateways int
@@ -63,6 +70,35 @@ func (f *fakeVCNClient) nextResourceIDLocked(resource string) *string {
 	f.nextID++
 	f.createCounts[resource]++
 	return common.String(fmt.Sprintf("ocid1.%s.oc1..integration-%d", resource, f.nextID))
+}
+
+func (f *fakeVCNClient) setFailure(operation fakeVCNOperation, err error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.operationFailures[operation] = err
+}
+
+func (f *fakeVCNClient) clearFailure(operation fakeVCNOperation) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	delete(f.operationFailures, operation)
+}
+
+func (f *fakeVCNClient) operationAttemptCount(operation fakeVCNOperation) int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.operationAttempts[operation]
+}
+
+func (f *fakeVCNClient) operationFailureLocked(operation fakeVCNOperation) error {
+	f.operationAttempts[operation]++
+	return f.operationFailures[operation]
+}
+
+func (f *fakeVCNClient) seedVCN(vcn core.Vcn) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.vcns[stringValue(vcn.Id)] = vcn
 }
 
 func (f *fakeVCNClient) ListVcns(_ context.Context, request core.ListVcnsRequest) (core.ListVcnsResponse, error) {
@@ -122,6 +158,9 @@ func (f *fakeVCNClient) UpdateVcn(_ context.Context, request core.UpdateVcnReque
 func (f *fakeVCNClient) DeleteVcn(_ context.Context, request core.DeleteVcnRequest) (core.DeleteVcnResponse, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if err := f.operationFailureLocked(deleteVCNOperation); err != nil {
+		return core.DeleteVcnResponse{}, err
+	}
 	if len(f.internetGateways)+len(f.natGateways)+len(f.serviceGateways)+len(f.networkSecurityGroups)+len(f.routeTables)+len(f.subnets) != 0 {
 		return core.DeleteVcnResponse{}, fmt.Errorf("cannot delete VCN before dependent resources")
 	}
@@ -487,6 +526,9 @@ func (f *fakeVCNClient) GetSubnet(_ context.Context, request core.GetSubnetReque
 func (f *fakeVCNClient) CreateSubnet(_ context.Context, request core.CreateSubnetRequest) (core.CreateSubnetResponse, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if err := f.operationFailureLocked(createSubnetOperation); err != nil {
+		return core.CreateSubnetResponse{}, err
+	}
 	id := f.nextResourceIDLocked("subnet")
 	details := request.CreateSubnetDetails
 	subnet := core.Subnet{

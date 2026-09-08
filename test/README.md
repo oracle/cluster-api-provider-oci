@@ -6,6 +6,11 @@ the CAPOCI controllers in-process. It does not require OCI credentials,
 Docker, or access to an OCI tenancy. OCI behavior used by controller lifecycle
 tests is provided by stateful in-process client fakes.
 
+The suite covers happy-path lifecycles, deterministic cloud failure recovery,
+asynchronous resource-state transitions, ownership-safe resource adoption, and
+external-autoscaler behavior. Async scenarios advance fake cloud state and
+trigger a Kubernetes event instead of waiting for production requeue delays.
+
 Run the suite with:
 
 ```bash
