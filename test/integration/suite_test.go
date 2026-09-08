@@ -46,11 +46,21 @@ import (
 )
 
 var (
-	testContext     = context.Background()
-	testEnvironment *testenv.Environment
+	testContext               = context.Background()
+	testEnvironment           *testenv.Environment
+	fakeOCI                   *fakeOCIBackend
+	integrationClientProvider *scope.ClientProvider
 )
 
 func TestMain(m *testing.M) {
+	fakeOCI = newFakeOCIBackend()
+	var err error
+	integrationClientProvider, err = fakeOCI.clientProvider()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "create fake OCI client provider: %v\n", err)
+		os.Exit(1)
+	}
+
 	repositoryRoot, err := findRepositoryRoot()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "find repository root: %v\n", err)
@@ -109,9 +119,11 @@ func setupManager(ctx context.Context, mgr manager.Manager) error {
 			name: scope.OCIClusterKind,
 			setup: func() error {
 				return (&controllers.OCIClusterReconciler{
-					Client:   mgr.GetClient(),
-					Scheme:   mgr.GetScheme(),
-					Recorder: mgr.GetEventRecorderFor("integration-ocicluster-controller"),
+					Client:         mgr.GetClient(),
+					Scheme:         mgr.GetScheme(),
+					ClientProvider: integrationClientProvider,
+					Region:         scope.MockTestRegion,
+					Recorder:       mgr.GetEventRecorderFor("integration-ocicluster-controller"),
 				}).SetupWithManager(ctx, mgr, controllerOptions)
 			},
 		},
@@ -119,9 +131,11 @@ func setupManager(ctx context.Context, mgr manager.Manager) error {
 			name: scope.OCIMachineKind,
 			setup: func() error {
 				return (&controllers.OCIMachineReconciler{
-					Client:   mgr.GetClient(),
-					Scheme:   mgr.GetScheme(),
-					Recorder: mgr.GetEventRecorderFor("integration-ocimachine-controller"),
+					Client:         mgr.GetClient(),
+					Scheme:         mgr.GetScheme(),
+					ClientProvider: integrationClientProvider,
+					Region:         scope.MockTestRegion,
+					Recorder:       mgr.GetEventRecorderFor("integration-ocimachine-controller"),
 				}).SetupWithManager(ctx, mgr, controllerOptions)
 			},
 		},
@@ -129,9 +143,11 @@ func setupManager(ctx context.Context, mgr manager.Manager) error {
 			name: scope.OCIManagedClusterKind,
 			setup: func() error {
 				return (&controllers.OCIManagedClusterReconciler{
-					Client:   mgr.GetClient(),
-					Scheme:   mgr.GetScheme(),
-					Recorder: mgr.GetEventRecorderFor("integration-ocimanagedcluster-controller"),
+					Client:         mgr.GetClient(),
+					Scheme:         mgr.GetScheme(),
+					ClientProvider: integrationClientProvider,
+					Region:         scope.MockTestRegion,
+					Recorder:       mgr.GetEventRecorderFor("integration-ocimanagedcluster-controller"),
 				}).SetupWithManager(ctx, mgr, controllerOptions)
 			},
 		},
@@ -139,9 +155,11 @@ func setupManager(ctx context.Context, mgr manager.Manager) error {
 			name: scope.OCIManagedClusterControlPlaneKind,
 			setup: func() error {
 				return (&controllers.OCIManagedClusterControlPlaneReconciler{
-					Client:   mgr.GetClient(),
-					Scheme:   mgr.GetScheme(),
-					Recorder: mgr.GetEventRecorderFor("integration-ocimanagedcontrolplane-controller"),
+					Client:         mgr.GetClient(),
+					Scheme:         mgr.GetScheme(),
+					ClientProvider: integrationClientProvider,
+					Region:         scope.MockTestRegion,
+					Recorder:       mgr.GetEventRecorderFor("integration-ocimanagedcontrolplane-controller"),
 				}).SetupWithManager(ctx, mgr, controllerOptions)
 			},
 		},
@@ -149,9 +167,11 @@ func setupManager(ctx context.Context, mgr manager.Manager) error {
 			name: scope.OCIMachinePoolKind,
 			setup: func() error {
 				return (&expcontrollers.OCIMachinePoolReconciler{
-					Client:   mgr.GetClient(),
-					Scheme:   mgr.GetScheme(),
-					Recorder: mgr.GetEventRecorderFor("integration-ocimachinepool-controller"),
+					Client:         mgr.GetClient(),
+					Scheme:         mgr.GetScheme(),
+					ClientProvider: integrationClientProvider,
+					Region:         scope.MockTestRegion,
+					Recorder:       mgr.GetEventRecorderFor("integration-ocimachinepool-controller"),
 				}).SetupWithManager(ctx, mgr, controllerOptions)
 			},
 		},
@@ -159,9 +179,11 @@ func setupManager(ctx context.Context, mgr manager.Manager) error {
 			name: scope.OCIManagedMachinePoolKind,
 			setup: func() error {
 				return (&expcontrollers.OCIManagedMachinePoolReconciler{
-					Client:   mgr.GetClient(),
-					Scheme:   mgr.GetScheme(),
-					Recorder: mgr.GetEventRecorderFor("integration-ocimanagedmachinepool-controller"),
+					Client:         mgr.GetClient(),
+					Scheme:         mgr.GetScheme(),
+					ClientProvider: integrationClientProvider,
+					Region:         scope.MockTestRegion,
+					Recorder:       mgr.GetEventRecorderFor("integration-ocimanagedmachinepool-controller"),
 				}).SetupWithManager(ctx, mgr, controllerOptions)
 			},
 		},
@@ -169,9 +191,11 @@ func setupManager(ctx context.Context, mgr manager.Manager) error {
 			name: scope.OCIVirtualMachinePoolKind,
 			setup: func() error {
 				return (&expcontrollers.OCIVirtualMachinePoolReconciler{
-					Client:   mgr.GetClient(),
-					Scheme:   mgr.GetScheme(),
-					Recorder: mgr.GetEventRecorderFor("integration-ocivirtualmachinepool-controller"),
+					Client:         mgr.GetClient(),
+					Scheme:         mgr.GetScheme(),
+					ClientProvider: integrationClientProvider,
+					Region:         scope.MockTestRegion,
+					Recorder:       mgr.GetEventRecorderFor("integration-ocivirtualmachinepool-controller"),
 				}).SetupWithManager(ctx, mgr, controllerOptions)
 			},
 		},
@@ -179,9 +203,11 @@ func setupManager(ctx context.Context, mgr manager.Manager) error {
 			name: "OCIMachinePoolMachine",
 			setup: func() error {
 				return (&expcontrollers.OCIMachinePoolMachineReconciler{
-					Client:   mgr.GetClient(),
-					Scheme:   mgr.GetScheme(),
-					Recorder: mgr.GetEventRecorderFor("integration-ocimachinepoolmachine-controller"),
+					Client:         mgr.GetClient(),
+					Scheme:         mgr.GetScheme(),
+					ClientProvider: integrationClientProvider,
+					Region:         scope.MockTestRegion,
+					Recorder:       mgr.GetEventRecorderFor("integration-ocimachinepoolmachine-controller"),
 				}).SetupWithManager(ctx, mgr, controllerOptions)
 			},
 		},

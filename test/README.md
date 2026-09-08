@@ -3,7 +3,8 @@
 The integration suite starts a local Kubernetes API server and etcd with
 `envtest`, installs the CAPI and CAPOCI CRDs and admission webhooks, and runs
 the CAPOCI controllers in-process. It does not require OCI credentials,
-Docker, or access to an OCI tenancy.
+Docker, or access to an OCI tenancy. OCI behavior used by controller lifecycle
+tests is provided by stateful in-process client fakes.
 
 Run the suite with:
 
