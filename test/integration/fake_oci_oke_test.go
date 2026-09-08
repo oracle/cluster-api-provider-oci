@@ -82,18 +82,25 @@ type fakeContainerEngineClient struct {
 
 	mu sync.Mutex
 
-	nextID               int
-	clusters             map[string]oke.Cluster
-	workRequests         map[string]fakeWorkRequestResource
-	createCount          int
-	updateCount          int
-	deleteCount          int
-	kubeconfigCount      int
-	nodePools            map[string]oke.NodePool
-	nodePoolCreateCount  int
-	nodePoolUpdateCount  int
-	nodePoolDeleteCount  int
-	nodePoolInspectCount int
+	nextID                      int
+	clusters                    map[string]oke.Cluster
+	workRequests                map[string]fakeWorkRequestResource
+	createCount                 int
+	updateCount                 int
+	deleteCount                 int
+	kubeconfigCount             int
+	nodePools                   map[string]oke.NodePool
+	nodePoolCreateCount         int
+	nodePoolUpdateCount         int
+	nodePoolDeleteCount         int
+	nodePoolInspectCount        int
+	virtualNodePools            map[string]oke.VirtualNodePool
+	virtualNodePoolCreateCount  int
+	virtualNodePoolUpdateCount  int
+	virtualNodePoolDeleteCount  int
+	virtualNodePoolInspectCount int
+	virtualNodeListCount        int
+	lastVirtualNodeListSize     int
 }
 
 type fakeWorkRequestResource struct {
@@ -122,6 +129,13 @@ func (f *fakeContainerEngineClient) reset() {
 	f.nodePoolUpdateCount = 0
 	f.nodePoolDeleteCount = 0
 	f.nodePoolInspectCount = 0
+	f.virtualNodePools = map[string]oke.VirtualNodePool{}
+	f.virtualNodePoolCreateCount = 0
+	f.virtualNodePoolUpdateCount = 0
+	f.virtualNodePoolDeleteCount = 0
+	f.virtualNodePoolInspectCount = 0
+	f.virtualNodeListCount = 0
+	f.lastVirtualNodeListSize = 0
 }
 
 func (f *fakeContainerEngineClient) counts() (active, creates, updates, deletes, kubeconfigs int) {
@@ -134,6 +148,34 @@ func (f *fakeContainerEngineClient) nodePoolCounts() (active, creates, updates, 
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return len(f.nodePools), f.nodePoolCreateCount, f.nodePoolUpdateCount, f.nodePoolDeleteCount, f.nodePoolInspectCount
+}
+
+func (f *fakeContainerEngineClient) virtualNodePoolCounts() (active, creates, updates, deletes, inspections int) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return len(f.virtualNodePools), f.virtualNodePoolCreateCount, f.virtualNodePoolUpdateCount, f.virtualNodePoolDeleteCount, f.virtualNodePoolInspectCount
+}
+
+func (f *fakeContainerEngineClient) virtualNodePoolSize() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for _, pool := range f.virtualNodePools {
+		if pool.Size != nil {
+			return *pool.Size
+		}
+	}
+	return 0
+}
+
+func (f *fakeContainerEngineClient) virtualNodePoolDebug() (size, listCalls, lastListSize int) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for _, pool := range f.virtualNodePools {
+		if pool.Size != nil {
+			size = *pool.Size
+		}
+	}
+	return size, f.virtualNodeListCount, f.lastVirtualNodeListSize
 }
 
 func (f *fakeContainerEngineClient) CreateCluster(_ context.Context, request oke.CreateClusterRequest) (oke.CreateClusterResponse, error) {
@@ -366,6 +408,120 @@ func (f *fakeContainerEngineClient) DeleteNodePool(_ context.Context, request ok
 	return oke.DeleteNodePoolResponse{OpcWorkRequestId: common.String("work-request-delete-" + id)}, nil
 }
 
+func (f *fakeContainerEngineClient) CreateVirtualNodePool(_ context.Context, request oke.CreateVirtualNodePoolRequest) (oke.CreateVirtualNodePoolResponse, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.nextID++
+	f.virtualNodePoolCreateCount++
+	id := "ocid1.virtualnodepool.oc1..integration-" + strconv.Itoa(f.nextID)
+	workRequestID := "work-request-create-" + id
+	details := request.CreateVirtualNodePoolDetails
+	pool := oke.VirtualNodePool{
+		Id:                       common.String(id),
+		CompartmentId:            details.CompartmentId,
+		ClusterId:                details.ClusterId,
+		DisplayName:              details.DisplayName,
+		KubernetesVersion:        common.String("v1.34.1"),
+		PlacementConfigurations:  append([]oke.PlacementConfiguration(nil), details.PlacementConfigurations...),
+		InitialVirtualNodeLabels: append([]oke.InitialVirtualNodeLabel(nil), details.InitialVirtualNodeLabels...),
+		Taints:                   append([]oke.Taint(nil), details.Taints...),
+		Size:                     details.Size,
+		NsgIds:                   append([]string(nil), details.NsgIds...),
+		PodConfiguration:         clonePodConfiguration(details.PodConfiguration),
+		LifecycleState:           oke.VirtualNodePoolLifecycleStateActive,
+		FreeformTags:             cloneStringMap(details.FreeformTags),
+		DefinedTags:              cloneDefinedTags(details.DefinedTags),
+		VirtualNodeTags:          details.VirtualNodeTags,
+	}
+	f.virtualNodePools[id] = pool
+	f.workRequests[workRequestID] = fakeWorkRequestResource{entityType: "VirtualNodePool", id: id}
+	return oke.CreateVirtualNodePoolResponse{
+		OpcWorkRequestId: common.String(workRequestID),
+		OpcRequestId:     common.String("request-create-" + id),
+	}, nil
+}
+
+func (f *fakeContainerEngineClient) GetVirtualNodePool(_ context.Context, request oke.GetVirtualNodePoolRequest) (oke.GetVirtualNodePoolResponse, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.virtualNodePoolInspectCount++
+	pool, ok := f.virtualNodePools[stringValue(request.VirtualNodePoolId)]
+	if !ok {
+		return oke.GetVirtualNodePoolResponse{}, ociutil.ErrNotFound
+	}
+	return oke.GetVirtualNodePoolResponse{VirtualNodePool: pool}, nil
+}
+
+func (f *fakeContainerEngineClient) ListVirtualNodePools(_ context.Context, request oke.ListVirtualNodePoolsRequest) (oke.ListVirtualNodePoolsResponse, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.virtualNodePoolInspectCount++
+	items := make([]oke.VirtualNodePoolSummary, 0, len(f.virtualNodePools))
+	for _, pool := range f.virtualNodePools {
+		if request.Name != nil && stringValue(pool.DisplayName) != stringValue(request.Name) {
+			continue
+		}
+		items = append(items, virtualNodePoolSummary(pool))
+	}
+	return oke.ListVirtualNodePoolsResponse{Items: items}, nil
+}
+
+func (f *fakeContainerEngineClient) UpdateVirtualNodePool(_ context.Context, request oke.UpdateVirtualNodePoolRequest) (oke.UpdateVirtualNodePoolResponse, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	id := stringValue(request.VirtualNodePoolId)
+	pool, ok := f.virtualNodePools[id]
+	if !ok {
+		return oke.UpdateVirtualNodePoolResponse{}, ociutil.ErrNotFound
+	}
+	f.virtualNodePoolUpdateCount++
+	details := request.UpdateVirtualNodePoolDetails
+	pool.DisplayName = details.DisplayName
+	pool.InitialVirtualNodeLabels = append([]oke.InitialVirtualNodeLabel(nil), details.InitialVirtualNodeLabels...)
+	pool.Taints = append([]oke.Taint(nil), details.Taints...)
+	pool.Size = details.Size
+	pool.PlacementConfigurations = append([]oke.PlacementConfiguration(nil), details.PlacementConfigurations...)
+	pool.NsgIds = append([]string(nil), details.NsgIds...)
+	pool.PodConfiguration = clonePodConfiguration(details.PodConfiguration)
+	if details.FreeformTags != nil {
+		pool.FreeformTags = cloneStringMap(details.FreeformTags)
+	}
+	if details.DefinedTags != nil {
+		pool.DefinedTags = cloneDefinedTags(details.DefinedTags)
+	}
+	if details.VirtualNodeTags != nil {
+		pool.VirtualNodeTags = details.VirtualNodeTags
+	}
+	f.virtualNodePools[id] = pool
+	return oke.UpdateVirtualNodePoolResponse{OpcWorkRequestId: common.String("work-request-update-" + id)}, nil
+}
+
+func (f *fakeContainerEngineClient) DeleteVirtualNodePool(_ context.Context, request oke.DeleteVirtualNodePoolRequest) (oke.DeleteVirtualNodePoolResponse, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	id := stringValue(request.VirtualNodePoolId)
+	if _, ok := f.virtualNodePools[id]; !ok {
+		return oke.DeleteVirtualNodePoolResponse{}, ociutil.ErrNotFound
+	}
+	delete(f.virtualNodePools, id)
+	f.virtualNodePoolDeleteCount++
+	return oke.DeleteVirtualNodePoolResponse{OpcWorkRequestId: common.String("work-request-delete-" + id)}, nil
+}
+
+func (f *fakeContainerEngineClient) ListVirtualNodes(_ context.Context, request oke.ListVirtualNodesRequest) (oke.ListVirtualNodesResponse, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.virtualNodePoolInspectCount++
+	f.virtualNodeListCount++
+	pool, ok := f.virtualNodePools[stringValue(request.VirtualNodePoolId)]
+	if !ok {
+		return oke.ListVirtualNodesResponse{}, ociutil.ErrNotFound
+	}
+	items := fakeVirtualNodesForPool(&pool)
+	f.lastVirtualNodeListSize = len(items)
+	return oke.ListVirtualNodesResponse{Items: items}, nil
+}
+
 func normalizeNodePoolConfig(input *oke.CreateNodePoolNodeConfigDetails) *oke.NodePoolNodeConfigDetails {
 	if input == nil {
 		return &oke.NodePoolNodeConfigDetails{}
@@ -483,6 +639,67 @@ func nodePoolSummary(nodePool oke.NodePool) oke.NodePoolSummary {
 		NodeEvictionNodePoolSettings: nodePool.NodeEvictionNodePoolSettings,
 		NodePoolCyclingDetails:       nodePool.NodePoolCyclingDetails,
 	}
+}
+
+func clonePodConfiguration(input *oke.PodConfiguration) *oke.PodConfiguration {
+	if input == nil {
+		return nil
+	}
+	return &oke.PodConfiguration{
+		SubnetId: input.SubnetId,
+		Shape:    input.Shape,
+		NsgIds:   append([]string(nil), input.NsgIds...),
+	}
+}
+
+func virtualNodePoolSummary(pool oke.VirtualNodePool) oke.VirtualNodePoolSummary {
+	return oke.VirtualNodePoolSummary{
+		Id:                       pool.Id,
+		CompartmentId:            pool.CompartmentId,
+		ClusterId:                pool.ClusterId,
+		DisplayName:              pool.DisplayName,
+		KubernetesVersion:        pool.KubernetesVersion,
+		PlacementConfigurations:  append([]oke.PlacementConfiguration(nil), pool.PlacementConfigurations...),
+		InitialVirtualNodeLabels: append([]oke.InitialVirtualNodeLabel(nil), pool.InitialVirtualNodeLabels...),
+		Taints:                   append([]oke.Taint(nil), pool.Taints...),
+		Size:                     pool.Size,
+		NsgIds:                   append([]string(nil), pool.NsgIds...),
+		PodConfiguration:         clonePodConfiguration(pool.PodConfiguration),
+		LifecycleState:           pool.LifecycleState,
+		FreeformTags:             cloneStringMap(pool.FreeformTags),
+		DefinedTags:              cloneDefinedTags(pool.DefinedTags),
+		VirtualNodeTags:          pool.VirtualNodeTags,
+	}
+}
+
+func fakeVirtualNodesForPool(pool *oke.VirtualNodePool) []oke.VirtualNodeSummary {
+	if pool == nil || pool.Size == nil {
+		return nil
+	}
+	var availabilityDomain, faultDomain, subnetID *string
+	if len(pool.PlacementConfigurations) > 0 {
+		availabilityDomain = pool.PlacementConfigurations[0].AvailabilityDomain
+		if len(pool.PlacementConfigurations[0].FaultDomain) > 0 {
+			faultDomain = common.String(pool.PlacementConfigurations[0].FaultDomain[0])
+		}
+		subnetID = pool.PlacementConfigurations[0].SubnetId
+	}
+	nodes := make([]oke.VirtualNodeSummary, 0, *pool.Size)
+	for i := 0; i < *pool.Size; i++ {
+		number := strconv.Itoa(i + 1)
+		nodes = append(nodes, oke.VirtualNodeSummary{
+			Id:                 common.String("ocid1.virtualnode.oc1..integration-" + number),
+			DisplayName:        common.String("virtual-node-" + number),
+			VirtualNodePoolId:  pool.Id,
+			KubernetesVersion:  pool.KubernetesVersion,
+			AvailabilityDomain: availabilityDomain,
+			FaultDomain:        faultDomain,
+			SubnetId:           subnetID,
+			NsgIds:             append([]string(nil), pool.NsgIds...),
+			LifecycleState:     oke.VirtualNodeLifecycleStateActive,
+		})
+	}
+	return nodes
 }
 
 func normalizedOKEOptions(input *oke.ClusterCreateOptions) *oke.ClusterCreateOptions {
