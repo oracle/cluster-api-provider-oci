@@ -26,7 +26,9 @@ import (
 	"sync"
 
 	"github.com/oracle/cluster-api-provider-oci/cloud/config"
+	"github.com/oracle/cluster-api-provider-oci/cloud/services/base"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/compute"
+	"github.com/oracle/cluster-api-provider-oci/cloud/services/containerengine"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/identity"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/loadbalancer"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer"
@@ -44,6 +46,8 @@ type MockOCIClients struct {
 	IdentityClient            identity.Client
 	BlockVolumeClient         volume.BlockVolumeClient
 	WorkRequestsClient        workrequests.Client
+	ContainerEngineClient     containerengine.Client
+	BaseClient                base.BaseClient
 }
 
 var (
@@ -60,6 +64,8 @@ func MockNewClientProvider(mockClients MockOCIClients) (*ClientProvider, error) 
 		BlockVolumeClient:         mockClients.BlockVolumeClient,
 		ComputeClient:             mockClients.ComputeClient,
 		WorkRequestsClient:        mockClients.WorkRequestsClient,
+		ContainerEngineClient:     mockClients.ContainerEngineClient,
+		BaseClient:                mockClients.BaseClient,
 	}}
 
 	authConfig, err := MockAuthConfig()

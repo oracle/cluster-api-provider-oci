@@ -35,6 +35,8 @@ type fakeOCIBackend struct {
 	vcn      *fakeVCNClient
 	identity *fakeIdentityClient
 	nlb      *fakeNetworkLoadBalancerClient
+	oke      *fakeContainerEngineClient
+	base     *fakeBaseClient
 }
 
 func newFakeOCIBackend() *fakeOCIBackend {
@@ -43,6 +45,8 @@ func newFakeOCIBackend() *fakeOCIBackend {
 		vcn:      newFakeVCNClient(),
 		identity: &fakeIdentityClient{},
 		nlb:      newFakeNetworkLoadBalancerClient(),
+		oke:      newFakeContainerEngineClient(),
+		base:     &fakeBaseClient{},
 	}
 }
 
@@ -51,6 +55,8 @@ func (f *fakeOCIBackend) reset() {
 	f.vcn.reset()
 	f.identity.reset()
 	f.nlb.reset()
+	f.oke.reset()
+	f.base.reset()
 }
 
 func (f *fakeOCIBackend) clientProvider() (*scope.ClientProvider, error) {
@@ -59,6 +65,8 @@ func (f *fakeOCIBackend) clientProvider() (*scope.ClientProvider, error) {
 		VCNClient:                 f.vcn,
 		IdentityClient:            f.identity,
 		NetworkLoadBalancerClient: f.nlb,
+		ContainerEngineClient:     f.oke,
+		BaseClient:                f.base,
 	})
 }
 
