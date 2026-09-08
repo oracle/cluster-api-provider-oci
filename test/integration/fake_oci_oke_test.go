@@ -82,13 +82,23 @@ type fakeContainerEngineClient struct {
 
 	mu sync.Mutex
 
-	nextID          int
-	clusters        map[string]oke.Cluster
-	workRequestIDs  map[string]string
-	createCount     int
-	updateCount     int
-	deleteCount     int
-	kubeconfigCount int
+	nextID               int
+	clusters             map[string]oke.Cluster
+	workRequests         map[string]fakeWorkRequestResource
+	createCount          int
+	updateCount          int
+	deleteCount          int
+	kubeconfigCount      int
+	nodePools            map[string]oke.NodePool
+	nodePoolCreateCount  int
+	nodePoolUpdateCount  int
+	nodePoolDeleteCount  int
+	nodePoolInspectCount int
+}
+
+type fakeWorkRequestResource struct {
+	entityType string
+	id         string
 }
 
 func newFakeContainerEngineClient() *fakeContainerEngineClient {
@@ -102,17 +112,28 @@ func (f *fakeContainerEngineClient) reset() {
 	defer f.mu.Unlock()
 	f.nextID = 0
 	f.clusters = map[string]oke.Cluster{}
-	f.workRequestIDs = map[string]string{}
+	f.workRequests = map[string]fakeWorkRequestResource{}
+	f.nodePools = map[string]oke.NodePool{}
 	f.createCount = 0
 	f.updateCount = 0
 	f.deleteCount = 0
 	f.kubeconfigCount = 0
+	f.nodePoolCreateCount = 0
+	f.nodePoolUpdateCount = 0
+	f.nodePoolDeleteCount = 0
+	f.nodePoolInspectCount = 0
 }
 
 func (f *fakeContainerEngineClient) counts() (active, creates, updates, deletes, kubeconfigs int) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return len(f.clusters), f.createCount, f.updateCount, f.deleteCount, f.kubeconfigCount
+}
+
+func (f *fakeContainerEngineClient) nodePoolCounts() (active, creates, updates, deletes, inspections int) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return len(f.nodePools), f.nodePoolCreateCount, f.nodePoolUpdateCount, f.nodePoolDeleteCount, f.nodePoolInspectCount
 }
 
 func (f *fakeContainerEngineClient) CreateCluster(_ context.Context, request oke.CreateClusterRequest) (oke.CreateClusterResponse, error) {
@@ -146,7 +167,7 @@ func (f *fakeContainerEngineClient) CreateCluster(_ context.Context, request oke
 		Type:                     clusterType,
 	}
 	f.clusters[id] = cluster
-	f.workRequestIDs[workRequestID] = id
+	f.workRequests[workRequestID] = fakeWorkRequestResource{entityType: "cluster", id: id}
 	return oke.CreateClusterResponse{
 		OpcWorkRequestId: common.String(workRequestID),
 		OpcRequestId:     common.String("request-create-" + id),
@@ -156,7 +177,7 @@ func (f *fakeContainerEngineClient) CreateCluster(_ context.Context, request oke
 func (f *fakeContainerEngineClient) GetWorkRequest(_ context.Context, request oke.GetWorkRequestRequest) (oke.GetWorkRequestResponse, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	clusterID, ok := f.workRequestIDs[stringValue(request.WorkRequestId)]
+	resource, ok := f.workRequests[stringValue(request.WorkRequestId)]
 	if !ok {
 		return oke.GetWorkRequestResponse{}, ociutil.ErrNotFound
 	}
@@ -164,11 +185,11 @@ func (f *fakeContainerEngineClient) GetWorkRequest(_ context.Context, request ok
 		WorkRequest: oke.WorkRequest{
 			Id: request.WorkRequestId,
 			Resources: []oke.WorkRequestResource{{
-				EntityType: common.String("cluster"),
-				Identifier: common.String(clusterID),
+				EntityType: common.String(resource.entityType),
+				Identifier: common.String(resource.id),
 			}},
 		},
-		OpcRequestId: common.String("request-work-" + clusterID),
+		OpcRequestId: common.String("request-work-" + resource.id),
 	}, nil
 }
 
@@ -237,6 +258,231 @@ func (f *fakeContainerEngineClient) CreateKubeconfig(context.Context, oke.Create
 		Content:      io.NopCloser(strings.NewReader(integrationKubeconfig)),
 		OpcRequestId: common.String("request-kubeconfig"),
 	}, nil
+}
+
+func (f *fakeContainerEngineClient) CreateNodePool(_ context.Context, request oke.CreateNodePoolRequest) (oke.CreateNodePoolResponse, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.nextID++
+	f.nodePoolCreateCount++
+	id := "ocid1.nodepool.oc1..integration-" + strconv.Itoa(f.nextID)
+	workRequestID := "work-request-create-" + id
+	details := request.CreateNodePoolDetails
+	nodeConfig := normalizeNodePoolConfig(details.NodeConfigDetails)
+	nodePool := oke.NodePool{
+		Id:                           common.String(id),
+		LifecycleState:               oke.NodePoolLifecycleStateActive,
+		CompartmentId:                details.CompartmentId,
+		ClusterId:                    details.ClusterId,
+		Name:                         details.Name,
+		KubernetesVersion:            details.KubernetesVersion,
+		NodeMetadata:                 cloneStringMap(details.NodeMetadata),
+		NodeShapeConfig:              normalizeNodeShapeConfig(details.NodeShapeConfig),
+		NodeSourceDetails:            normalizeNodeSource(details.NodeSourceDetails),
+		NodeShape:                    details.NodeShape,
+		InitialNodeLabels:            append([]oke.KeyValue(nil), details.InitialNodeLabels...),
+		SshPublicKey:                 details.SshPublicKey,
+		NodeConfigDetails:            nodeConfig,
+		FreeformTags:                 cloneStringMap(details.FreeformTags),
+		DefinedTags:                  cloneDefinedTags(details.DefinedTags),
+		NodeEvictionNodePoolSettings: details.NodeEvictionNodePoolSettings,
+		NodePoolCyclingDetails:       details.NodePoolCyclingDetails,
+	}
+	nodePool.Nodes = fakeNodesForPool(&nodePool)
+	f.nodePools[id] = nodePool
+	f.workRequests[workRequestID] = fakeWorkRequestResource{entityType: "nodepool", id: id}
+	return oke.CreateNodePoolResponse{
+		OpcWorkRequestId: common.String(workRequestID),
+		OpcRequestId:     common.String("request-create-" + id),
+	}, nil
+}
+
+func (f *fakeContainerEngineClient) GetNodePool(_ context.Context, request oke.GetNodePoolRequest) (oke.GetNodePoolResponse, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.nodePoolInspectCount++
+	nodePool, ok := f.nodePools[stringValue(request.NodePoolId)]
+	if !ok {
+		return oke.GetNodePoolResponse{}, ociutil.ErrNotFound
+	}
+	return oke.GetNodePoolResponse{NodePool: nodePool}, nil
+}
+
+func (f *fakeContainerEngineClient) ListNodePools(_ context.Context, request oke.ListNodePoolsRequest) (oke.ListNodePoolsResponse, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.nodePoolInspectCount++
+	items := make([]oke.NodePoolSummary, 0, len(f.nodePools))
+	for _, nodePool := range f.nodePools {
+		if request.Name != nil && stringValue(nodePool.Name) != stringValue(request.Name) {
+			continue
+		}
+		items = append(items, nodePoolSummary(nodePool))
+	}
+	return oke.ListNodePoolsResponse{Items: items}, nil
+}
+
+func (f *fakeContainerEngineClient) UpdateNodePool(_ context.Context, request oke.UpdateNodePoolRequest) (oke.UpdateNodePoolResponse, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	id := stringValue(request.NodePoolId)
+	nodePool, ok := f.nodePools[id]
+	if !ok {
+		return oke.UpdateNodePoolResponse{}, ociutil.ErrNotFound
+	}
+	f.nodePoolUpdateCount++
+	details := request.UpdateNodePoolDetails
+	nodePool.Name = details.Name
+	nodePool.KubernetesVersion = details.KubernetesVersion
+	nodePool.NodeShape = details.NodeShape
+	nodePool.NodeShapeConfig = normalizeUpdateNodeShapeConfig(details.NodeShapeConfig)
+	nodePool.NodeSourceDetails = normalizeNodeSource(details.NodeSourceDetails)
+	nodePool.SshPublicKey = details.SshPublicKey
+	nodePool.NodeMetadata = cloneStringMap(details.NodeMetadata)
+	nodePool.InitialNodeLabels = append([]oke.KeyValue(nil), details.InitialNodeLabels...)
+	if details.NodeConfigDetails != nil {
+		applyNodePoolConfigUpdate(nodePool.NodeConfigDetails, details.NodeConfigDetails)
+	}
+	if details.NodeEvictionNodePoolSettings != nil {
+		nodePool.NodeEvictionNodePoolSettings = details.NodeEvictionNodePoolSettings
+	}
+	if details.NodePoolCyclingDetails != nil {
+		nodePool.NodePoolCyclingDetails = details.NodePoolCyclingDetails
+	}
+	nodePool.Nodes = fakeNodesForPool(&nodePool)
+	f.nodePools[id] = nodePool
+	return oke.UpdateNodePoolResponse{OpcWorkRequestId: common.String("work-request-update-" + id)}, nil
+}
+
+func (f *fakeContainerEngineClient) DeleteNodePool(_ context.Context, request oke.DeleteNodePoolRequest) (oke.DeleteNodePoolResponse, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	id := stringValue(request.NodePoolId)
+	if _, ok := f.nodePools[id]; !ok {
+		return oke.DeleteNodePoolResponse{}, ociutil.ErrNotFound
+	}
+	delete(f.nodePools, id)
+	f.nodePoolDeleteCount++
+	return oke.DeleteNodePoolResponse{OpcWorkRequestId: common.String("work-request-delete-" + id)}, nil
+}
+
+func normalizeNodePoolConfig(input *oke.CreateNodePoolNodeConfigDetails) *oke.NodePoolNodeConfigDetails {
+	if input == nil {
+		return &oke.NodePoolNodeConfigDetails{}
+	}
+	podNetwork := input.NodePoolPodNetworkOptionDetails
+	if details, ok := podNetwork.(oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails); ok {
+		if details.MaxPodsPerNode == nil {
+			details.MaxPodsPerNode = common.Int(31)
+		}
+		podNetwork = details
+	}
+	return &oke.NodePoolNodeConfigDetails{
+		Size:                            input.Size,
+		NsgIds:                          append([]string(nil), input.NsgIds...),
+		KmsKeyId:                        input.KmsKeyId,
+		IsPvEncryptionInTransitEnabled:  input.IsPvEncryptionInTransitEnabled,
+		FreeformTags:                    cloneStringMap(input.FreeformTags),
+		DefinedTags:                     cloneDefinedTags(input.DefinedTags),
+		PlacementConfigs:                append([]oke.NodePoolPlacementConfigDetails(nil), input.PlacementConfigs...),
+		NodePoolPodNetworkOptionDetails: podNetwork,
+	}
+}
+
+func applyNodePoolConfigUpdate(actual *oke.NodePoolNodeConfigDetails, update *oke.UpdateNodePoolNodeConfigDetails) {
+	if actual == nil || update == nil {
+		return
+	}
+	if update.Size != nil {
+		actual.Size = update.Size
+	}
+	actual.NsgIds = append([]string(nil), update.NsgIds...)
+	actual.KmsKeyId = update.KmsKeyId
+	actual.IsPvEncryptionInTransitEnabled = update.IsPvEncryptionInTransitEnabled
+	if len(update.PlacementConfigs) > 0 {
+		actual.PlacementConfigs = append([]oke.NodePoolPlacementConfigDetails(nil), update.PlacementConfigs...)
+	}
+	if update.NodePoolPodNetworkOptionDetails != nil {
+		podNetwork := update.NodePoolPodNetworkOptionDetails
+		if details, ok := podNetwork.(oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails); ok {
+			if details.MaxPodsPerNode == nil {
+				details.MaxPodsPerNode = common.Int(31)
+			}
+			podNetwork = details
+		}
+		actual.NodePoolPodNetworkOptionDetails = podNetwork
+	}
+}
+
+func normalizeNodeShapeConfig(input *oke.CreateNodeShapeConfigDetails) *oke.NodeShapeConfig {
+	if input == nil {
+		return nil
+	}
+	return &oke.NodeShapeConfig{Ocpus: input.Ocpus, MemoryInGBs: input.MemoryInGBs}
+}
+
+func normalizeUpdateNodeShapeConfig(input *oke.UpdateNodeShapeConfigDetails) *oke.NodeShapeConfig {
+	if input == nil {
+		return nil
+	}
+	return &oke.NodeShapeConfig{Ocpus: input.Ocpus, MemoryInGBs: input.MemoryInGBs}
+}
+
+func normalizeNodeSource(input oke.NodeSourceDetails) oke.NodeSourceDetails {
+	switch source := input.(type) {
+	case *oke.NodeSourceViaImageDetails:
+		return *source
+	case oke.NodeSourceViaImageDetails:
+		return source
+	default:
+		return input
+	}
+}
+
+func fakeNodesForPool(nodePool *oke.NodePool) []oke.Node {
+	if nodePool == nil || nodePool.NodeConfigDetails == nil || nodePool.NodeConfigDetails.Size == nil {
+		return nil
+	}
+	var availabilityDomain, subnetID *string
+	if len(nodePool.NodeConfigDetails.PlacementConfigs) > 0 {
+		availabilityDomain = nodePool.NodeConfigDetails.PlacementConfigs[0].AvailabilityDomain
+		subnetID = nodePool.NodeConfigDetails.PlacementConfigs[0].SubnetId
+	}
+	nodes := make([]oke.Node, 0, *nodePool.NodeConfigDetails.Size)
+	for i := 0; i < *nodePool.NodeConfigDetails.Size; i++ {
+		number := strconv.Itoa(i + 1)
+		nodes = append(nodes, oke.Node{
+			Id:                 common.String("ocid1.instance.oc1..managed-node-" + number),
+			Name:               common.String("managed-node-" + number),
+			KubernetesVersion:  nodePool.KubernetesVersion,
+			AvailabilityDomain: availabilityDomain,
+			SubnetId:           subnetID,
+			NodePoolId:         nodePool.Id,
+			LifecycleState:     oke.NodeLifecycleStateActive,
+		})
+	}
+	return nodes
+}
+
+func nodePoolSummary(nodePool oke.NodePool) oke.NodePoolSummary {
+	return oke.NodePoolSummary{
+		Id:                           nodePool.Id,
+		LifecycleState:               nodePool.LifecycleState,
+		CompartmentId:                nodePool.CompartmentId,
+		ClusterId:                    nodePool.ClusterId,
+		Name:                         nodePool.Name,
+		KubernetesVersion:            nodePool.KubernetesVersion,
+		NodeShapeConfig:              nodePool.NodeShapeConfig,
+		NodeSourceDetails:            nodePool.NodeSourceDetails,
+		NodeShape:                    nodePool.NodeShape,
+		InitialNodeLabels:            append([]oke.KeyValue(nil), nodePool.InitialNodeLabels...),
+		SshPublicKey:                 nodePool.SshPublicKey,
+		NodeConfigDetails:            nodePool.NodeConfigDetails,
+		FreeformTags:                 cloneStringMap(nodePool.FreeformTags),
+		DefinedTags:                  cloneDefinedTags(nodePool.DefinedTags),
+		NodeEvictionNodePoolSettings: nodePool.NodeEvictionNodePoolSettings,
+		NodePoolCyclingDetails:       nodePool.NodePoolCyclingDetails,
+	}
 }
 
 func normalizedOKEOptions(input *oke.ClusterCreateOptions) *oke.ClusterCreateOptions {
