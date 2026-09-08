@@ -1,4 +1,20 @@
-#Prerequisite 
+# Integration tests
+
+The integration suite starts a local Kubernetes API server and etcd with
+`envtest`, installs the CAPI and CAPOCI CRDs and admission webhooks, and runs
+the CAPOCI controllers in-process. It does not require OCI credentials,
+Docker, or access to an OCI tenancy.
+
+Run the suite with:
+
+```bash
+make test-integration
+```
+
+`make test-unit` runs only the unit suite. `make test` runs both suites.
+
+# End-to-end test prerequisites
+
 - Install `envsubst`
 - Install `kustomize`
 - If you have a running `kind` cluster, please delete the `kind` cluster
