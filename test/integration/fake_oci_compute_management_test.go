@@ -31,6 +31,14 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/core"
 )
 
+type fakeComputeManagementOperation string
+
+const (
+	createInstancePoolOperation    fakeComputeManagementOperation = "create instance pool"
+	updateInstancePoolOperation    fakeComputeManagementOperation = "update instance pool"
+	terminateInstancePoolOperation fakeComputeManagementOperation = "terminate instance pool"
+)
+
 type fakeComputeManagementClient struct {
 	mu sync.Mutex
 
@@ -44,6 +52,8 @@ type fakeComputeManagementClient struct {
 	instancePoolUpdates          int
 	instancePoolTerminates       int
 	instancePoolInspections      int
+	operationFailures            map[fakeComputeManagementOperation]error
+	operationAttempts            map[fakeComputeManagementOperation]int
 }
 
 func newFakeComputeManagementClient() *fakeComputeManagementClient {
@@ -65,6 +75,8 @@ func (f *fakeComputeManagementClient) reset() {
 	f.instancePoolUpdates = 0
 	f.instancePoolTerminates = 0
 	f.instancePoolInspections = 0
+	f.operationFailures = map[fakeComputeManagementOperation]error{}
+	f.operationAttempts = map[fakeComputeManagementOperation]int{}
 }
 
 func (f *fakeComputeManagementClient) counts() (configurations, pools, configCreates, configDeletes, poolCreates, poolUpdates, poolTerminates, inspections int) {
@@ -83,6 +95,29 @@ func (f *fakeComputeManagementClient) instancePoolState() (size int, configurati
 		configurationID = stringValue(pool.InstanceConfigurationId)
 	}
 	return size, configurationID
+}
+
+func (f *fakeComputeManagementClient) setFailure(operation fakeComputeManagementOperation, err error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.operationFailures[operation] = err
+}
+
+func (f *fakeComputeManagementClient) clearFailure(operation fakeComputeManagementOperation) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	delete(f.operationFailures, operation)
+}
+
+func (f *fakeComputeManagementClient) operationAttemptCount(operation fakeComputeManagementOperation) int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.operationAttempts[operation]
+}
+
+func (f *fakeComputeManagementClient) operationFailureLocked(operation fakeComputeManagementOperation) error {
+	f.operationAttempts[operation]++
+	return f.operationFailures[operation]
 }
 
 func (f *fakeComputeManagementClient) CreateInstanceConfiguration(_ context.Context, request core.CreateInstanceConfigurationRequest) (core.CreateInstanceConfigurationResponse, error) {
@@ -163,6 +198,9 @@ func (f *fakeComputeManagementClient) DeleteInstanceConfiguration(_ context.Cont
 func (f *fakeComputeManagementClient) CreateInstancePool(_ context.Context, request core.CreateInstancePoolRequest) (core.CreateInstancePoolResponse, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if err := f.operationFailureLocked(createInstancePoolOperation); err != nil {
+		return core.CreateInstancePoolResponse{}, err
+	}
 	f.nextID++
 	f.instancePoolCreates++
 	id := "ocid1.instancepool.oc1..integration-" + strconv.Itoa(f.nextID)
@@ -248,6 +286,9 @@ func (f *fakeComputeManagementClient) ListInstancePoolInstances(_ context.Contex
 func (f *fakeComputeManagementClient) UpdateInstancePool(_ context.Context, request core.UpdateInstancePoolRequest) (core.UpdateInstancePoolResponse, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if err := f.operationFailureLocked(updateInstancePoolOperation); err != nil {
+		return core.UpdateInstancePoolResponse{}, err
+	}
 	id := stringValue(request.InstancePoolId)
 	pool, ok := f.instancePools[id]
 	if !ok {
@@ -282,6 +323,9 @@ func (f *fakeComputeManagementClient) UpdateInstancePool(_ context.Context, requ
 func (f *fakeComputeManagementClient) TerminateInstancePool(_ context.Context, request core.TerminateInstancePoolRequest) (core.TerminateInstancePoolResponse, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if err := f.operationFailureLocked(terminateInstancePoolOperation); err != nil {
+		return core.TerminateInstancePoolResponse{}, err
+	}
 	id := stringValue(request.InstancePoolId)
 	if _, ok := f.instancePools[id]; !ok {
 		return core.TerminateInstancePoolResponse{}, ociutil.ErrNotFound
