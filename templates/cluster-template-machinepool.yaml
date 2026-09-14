@@ -28,6 +28,7 @@ spec:
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCICluster
 metadata:
+  namespace: "${NAMESPACE}"
   labels:
     cluster.x-k8s.io/cluster-name: "${CLUSTER_NAME}"
   name: "${CLUSTER_NAME}"
@@ -74,6 +75,7 @@ spec:
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCIMachineTemplate
 metadata:
+  namespace: "${NAMESPACE}"
   name: "${CLUSTER_NAME}-control-plane"
 spec:
   template:
@@ -93,7 +95,7 @@ apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachinePool
 metadata:
   name: ${CLUSTER_NAME}-mp-0
-  namespace: default
+  namespace: "${NAMESPACE}"
 spec:
   clusterName: ${CLUSTER_NAME}
   replicas: ${NODE_MACHINE_COUNT}
@@ -115,7 +117,7 @@ apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCIMachinePool
 metadata:
   name: ${CLUSTER_NAME}-mp-0
-  namespace: default
+  namespace: "${NAMESPACE}"
 spec:
   instanceConfiguration:
     instanceOptions:
@@ -137,6 +139,7 @@ spec:
 apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
 kind: KubeadmConfig
 metadata:
+  namespace: "${NAMESPACE}"
   name: "${CLUSTER_NAME}-mp-0"
 spec:
   joinConfiguration:

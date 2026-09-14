@@ -1,6 +1,7 @@
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: ClusterClass
 metadata:
+  namespace: "${NAMESPACE}"
   name: test-cluster-class
 spec:
   controlPlane:
@@ -159,6 +160,7 @@ spec:
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCIClusterTemplate
 metadata:
+  namespace: "${NAMESPACE}"
   name: ocicluster
 spec:
   template:
@@ -167,6 +169,7 @@ spec:
 kind: KubeadmControlPlaneTemplate
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1
 metadata:
+  namespace: "${NAMESPACE}"
   name: control-plane
 spec:
   template:
@@ -196,6 +199,7 @@ spec:
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCIMachineTemplate
 metadata:
+  namespace: "${NAMESPACE}"
   name: control-plane
 spec:
   template:
@@ -210,6 +214,7 @@ spec:
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCIMachineTemplate
 metadata:
+  namespace: "${NAMESPACE}"
   name: worker-machine-template
 spec:
   template:
@@ -224,6 +229,7 @@ spec:
 apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
 kind: KubeadmConfigTemplate
 metadata:
+  namespace: "${NAMESPACE}"
   name: worker-bootstrap-template
 spec:
   template:

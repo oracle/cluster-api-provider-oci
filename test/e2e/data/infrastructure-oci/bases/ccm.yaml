@@ -2,7 +2,7 @@ apiVersion: addons.cluster.x-k8s.io/v1beta1
 kind: ClusterResourceSet
 metadata:
   name: ${CLUSTER_NAME}-ccm-resource-set
-  namespace: default
+  namespace: "${NAMESPACE}"
 spec:
   clusterSelector:
     matchLabels:
@@ -16,7 +16,7 @@ apiVersion: addons.cluster.x-k8s.io/v1beta1
 kind: ClusterResourceSet
 metadata:
   name: ${CLUSTER_NAME}-csi-resource-set
-  namespace: default
+  namespace: "${NAMESPACE}"
 spec:
   clusterSelector:
     matchLabels:
@@ -284,7 +284,7 @@ metadata:
   labels:
     type: generated
   name: ${CLUSTER_NAME}-oci-cloud-controller-manager
-  namespace: default
+  namespace: "${NAMESPACE}"
 ---
 apiVersion: v1
 data:
@@ -765,4 +765,4 @@ metadata:
   labels:
     type: generated
   name: ${CLUSTER_NAME}-oci-csi
-  namespace: default
+  namespace: "${NAMESPACE}"

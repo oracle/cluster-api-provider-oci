@@ -4,11 +4,12 @@ metadata:
   labels:
     cni: "antrea"
   name: "${CLUSTER_NAME}"
-  namespace: default
+  namespace: "${NAMESPACE}"
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCICluster
 metadata:
+  namespace: "${NAMESPACE}"
   name: "${CLUSTER_NAME}"
 spec:
   networkSpec:

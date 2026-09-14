@@ -2,6 +2,7 @@
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: Cluster
 metadata:
+  namespace: "${NAMESPACE}"
   labels:
     cni: ${CLUSTER_NAME}-0
   name: "${CLUSTER_NAME}"
