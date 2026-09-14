@@ -5,7 +5,7 @@ metadata:
     cluster.x-k8s.io/cluster-name: "${CLUSTER_NAME}"
     cni: "calico"
   name: "${CLUSTER_NAME}"
-  namespace: default
+  namespace: "${NAMESPACE}"
 spec:
   clusterNetwork:
     pods:
@@ -29,6 +29,7 @@ spec:
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: OCICluster
 metadata:
+  namespace: "${NAMESPACE}"
   labels:
     cluster.x-k8s.io/cluster-name: "${CLUSTER_NAME}"
   name: "${CLUSTER_NAME}"
@@ -39,7 +40,7 @@ kind: KubeadmControlPlane
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1
 metadata:
   name: "${CLUSTER_NAME}-control-plane"
-  namespace: default
+  namespace: "${NAMESPACE}"
 spec:
   version: "${KUBERNETES_VERSION}"
   replicas: ${CONTROL_PLANE_MACHINE_COUNT}
@@ -75,6 +76,7 @@ spec:
 kind: OCIMachineTemplate
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 metadata:
+  namespace: "${NAMESPACE}"
   name: "${CLUSTER_NAME}-control-plane"
 spec:
   template:

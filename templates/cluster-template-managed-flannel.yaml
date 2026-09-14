@@ -20,6 +20,7 @@ spec:
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCIManagedCluster
 metadata:
+  namespace: "${NAMESPACE}"
   labels:
     cluster.x-k8s.io/cluster-name: "${CLUSTER_NAME}"
   name: "${CLUSTER_NAME}"
@@ -248,7 +249,7 @@ apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachinePool
 metadata:
   name: ${CLUSTER_NAME}-mp-0
-  namespace: default
+  namespace: "${NAMESPACE}"
 spec:
   clusterName: ${CLUSTER_NAME}
   replicas: ${NODE_MACHINE_COUNT}
@@ -267,7 +268,7 @@ apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCIManagedMachinePool
 metadata:
   name: ${CLUSTER_NAME}-mp-0
-  namespace: default
+  namespace: "${NAMESPACE}"
 spec:
   version: "${KUBERNETES_VERSION}"
   nodeShape: "${OCI_MANAGED_NODE_SHAPE=VM.Standard.E4.Flex}"

@@ -1,6 +1,7 @@
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCIClusterIdentity
 metadata:
+  namespace: "${NAMESPACE}"
   name: cluster-identity-user-principal
 spec:
   type: UserPrincipal
@@ -12,6 +13,7 @@ spec:
 apiVersion: v1
 kind: Secret
 metadata:
+  namespace: "${NAMESPACE}"
   name: user-credentials
 type: Opaque
 data:

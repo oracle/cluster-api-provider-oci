@@ -2,6 +2,7 @@
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCICluster
 metadata:
+  namespace: "${NAMESPACE}"
   name: "${CLUSTER_NAME}"
 spec:
   region: "${OCI_ALTERNATIVE_REGION}"
@@ -320,6 +321,7 @@ spec:
 kind: OCIMachineTemplate
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 metadata:
+  namespace: "${NAMESPACE}"
   name: "${CLUSTER_NAME}-control-plane"
 spec:
   template:

@@ -20,6 +20,7 @@ spec:
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCIManagedCluster
 metadata:
+  namespace: "${NAMESPACE}"
   labels:
     cluster.x-k8s.io/cluster-name: "${CLUSTER_NAME}"
   name: "${CLUSTER_NAME}"
@@ -39,7 +40,7 @@ apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachinePool
 metadata:
   name: ${CLUSTER_NAME}-mp-0
-  namespace: default
+  namespace: "${NAMESPACE}"
   annotations:
     "cluster.x-k8s.io/replicas-managed-by": ""
 spec:
@@ -60,6 +61,6 @@ apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCIVirtualMachinePool
 metadata:
   name: ${CLUSTER_NAME}-mp-0
-  namespace: default
+  namespace: "${NAMESPACE}"
 spec:
 ---

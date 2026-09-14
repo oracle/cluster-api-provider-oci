@@ -1,6 +1,7 @@
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: OCICluster
 metadata:
+  namespace: "${NAMESPACE}"
   labels:
     cluster.x-k8s.io/cluster-name: "${CLUSTER_NAME}"
   name: "${CLUSTER_NAME}"
@@ -10,6 +11,7 @@ spec:
 kind: OCIMachineTemplate
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 metadata:
+  namespace: "${NAMESPACE}"
   name: "${CLUSTER_NAME}-control-plane"
 spec:
   template:
