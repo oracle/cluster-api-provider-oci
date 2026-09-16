@@ -100,5 +100,38 @@ func deleteAndIgnoreNotFound(t *testing.T, object client.Object) {
 	t.Helper()
 	if err := testEnvironment.Delete(testContext, object); err != nil && !apierrors.IsNotFound(err) {
 		t.Errorf("delete %T %s: %v", object, client.ObjectKeyFromObject(object), err)
+		return
 	}
+
+	key := client.ObjectKeyFromObject(object)
+	if _, ok := object.(*corev1.Namespace); ok {
+		g := NewWithT(t)
+		g.Eventually(func() bool {
+			stored := &corev1.Namespace{}
+			err := testEnvironment.GetAPIReader().Get(testContext, key, stored)
+			if apierrors.IsNotFound(err) {
+				return true
+			}
+			if err != nil {
+				return false
+			}
+			if !stored.DeletionTimestamp.IsZero() && len(stored.Spec.Finalizers) > 0 {
+				stored.Spec.Finalizers = nil
+				if err := testEnvironment.SubResource("finalize").Update(testContext, stored); err != nil && !apierrors.IsNotFound(err) && !apierrors.IsConflict(err) {
+					return false
+				}
+			}
+			return false
+		}).WithTimeout(15*time.Second).WithPolling(50*time.Millisecond).
+			Should(BeTrue(), "timed out waiting for namespace %s deletion", key)
+		return
+	}
+
+	probe := object.DeepCopyObject().(client.Object)
+	g := NewWithT(t)
+	g.Eventually(func() bool {
+		err := testEnvironment.GetAPIReader().Get(testContext, key, probe)
+		return apierrors.IsNotFound(err)
+	}).WithTimeout(15*time.Second).WithPolling(50*time.Millisecond).
+		Should(BeTrue(), "timed out waiting for %T %s deletion", object, key)
 }

@@ -22,13 +22,21 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"sync/atomic"
 
+	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/compute"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
 )
+
+var fakeOCIResourceSequence atomic.Uint64
+
+func nextFakeOCID(resource string) string {
+	return fmt.Sprintf("ocid1.%s.oc1..integration-%d", resource, fakeOCIResourceSequence.Add(1))
+}
 
 type fakeOCIBackend struct {
 	compute           *fakeComputeClient
@@ -167,6 +175,12 @@ func (f *fakeComputeClient) instance(id string) (core.Instance, bool) {
 	return instance, ok
 }
 
+func (f *fakeComputeClient) removeInstance(id string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	delete(f.instances, id)
+}
+
 func (f *fakeComputeClient) operationFailureLocked(operation fakeComputeOperation) error {
 	f.operationAttempts[operation]++
 	return f.operationFailures[operation]
@@ -180,7 +194,7 @@ func (f *fakeComputeClient) LaunchInstance(_ context.Context, request core.Launc
 	}
 
 	f.launchCount++
-	instanceID := fmt.Sprintf("ocid1.instance.oc1..integration-%d", f.launchCount)
+	instanceID := nextFakeOCID("instance")
 	instance := core.Instance{
 		Id:                 common.String(instanceID),
 		DisplayName:        request.LaunchInstanceDetails.DisplayName,
@@ -203,7 +217,7 @@ func (f *fakeComputeClient) TerminateInstance(_ context.Context, request core.Te
 
 	instance, ok := f.instances[stringValue(request.InstanceId)]
 	if !ok {
-		return core.TerminateInstanceResponse{}, fmt.Errorf("terminate unknown instance %q", stringValue(request.InstanceId))
+		return core.TerminateInstanceResponse{}, ociutil.ErrNotFound
 	}
 	f.terminateCount++
 	instance.LifecycleState = f.terminateLifecycleState
@@ -218,7 +232,7 @@ func (f *fakeComputeClient) GetInstance(_ context.Context, request core.GetInsta
 	f.inspectionCount++
 	instance, ok := f.instances[stringValue(request.InstanceId)]
 	if !ok {
-		return core.GetInstanceResponse{}, fmt.Errorf("get unknown instance %q", stringValue(request.InstanceId))
+		return core.GetInstanceResponse{}, ociutil.ErrNotFound
 	}
 	return core.GetInstanceResponse{Instance: instance}, nil
 }
@@ -273,7 +287,6 @@ type fakeVCNClient struct {
 	mu sync.Mutex
 
 	getVNICCount          int
-	nextID                int
 	vcns                  map[string]core.Vcn
 	internetGateways      map[string]core.InternetGateway
 	natGateways           map[string]core.NatGateway
@@ -297,7 +310,6 @@ func (f *fakeVCNClient) reset() {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.getVNICCount = 0
-	f.nextID = 0
 	f.vcns = map[string]core.Vcn{}
 	f.internetGateways = map[string]core.InternetGateway{}
 	f.natGateways = map[string]core.NatGateway{}

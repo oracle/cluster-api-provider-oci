@@ -89,7 +89,6 @@ var _ identityservice.Client = &fakeIdentityClient{}
 type fakeNetworkLoadBalancerClient struct {
 	mu sync.Mutex
 
-	nextID        int
 	loadBalancers map[string]networkloadbalancer.NetworkLoadBalancer
 	createCount   int
 	deleteCount   int
@@ -104,7 +103,6 @@ func newFakeNetworkLoadBalancerClient() *fakeNetworkLoadBalancerClient {
 func (f *fakeNetworkLoadBalancerClient) reset() {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.nextID = 0
 	f.loadBalancers = map[string]networkloadbalancer.NetworkLoadBalancer{}
 	f.createCount = 0
 	f.deleteCount = 0
@@ -148,9 +146,8 @@ func (f *fakeNetworkLoadBalancerClient) GetNetworkLoadBalancer(_ context.Context
 func (f *fakeNetworkLoadBalancerClient) CreateNetworkLoadBalancer(_ context.Context, request networkloadbalancer.CreateNetworkLoadBalancerRequest) (networkloadbalancer.CreateNetworkLoadBalancerResponse, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.nextID++
 	f.createCount++
-	id := fmt.Sprintf("ocid1.networkloadbalancer.oc1..integration-%d", f.nextID)
+	id := nextFakeOCID("networkloadbalancer")
 	details := request.CreateNetworkLoadBalancerDetails
 	backendSets := make(map[string]networkloadbalancer.BackendSet, len(details.BackendSets))
 	for name, backendSet := range details.BackendSets {

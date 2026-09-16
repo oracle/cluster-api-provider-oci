@@ -42,7 +42,6 @@ const (
 type fakeComputeManagementClient struct {
 	mu sync.Mutex
 
-	nextID                       int
 	instanceConfigurations       map[string]core.InstanceConfiguration
 	instanceConfigurationOrder   []string
 	instancePools                map[string]core.InstancePool
@@ -65,7 +64,6 @@ func newFakeComputeManagementClient() *fakeComputeManagementClient {
 func (f *fakeComputeManagementClient) reset() {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.nextID = 0
 	f.instanceConfigurations = map[string]core.InstanceConfiguration{}
 	f.instanceConfigurationOrder = nil
 	f.instancePools = map[string]core.InstancePool{}
@@ -158,9 +156,8 @@ func (f *fakeComputeManagementClient) operationFailureLocked(operation fakeCompu
 func (f *fakeComputeManagementClient) CreateInstanceConfiguration(_ context.Context, request core.CreateInstanceConfigurationRequest) (core.CreateInstanceConfigurationResponse, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.nextID++
 	f.instanceConfigurationCreates++
-	id := "ocid1.instanceconfiguration.oc1..integration-" + strconv.Itoa(f.nextID)
+	id := nextFakeOCID("instanceconfiguration")
 	now := common.SDKTime{Time: time.Now().UTC()}
 	details, ok := request.CreateInstanceConfiguration.(core.CreateInstanceConfigurationDetails)
 	if !ok {
@@ -236,9 +233,8 @@ func (f *fakeComputeManagementClient) CreateInstancePool(_ context.Context, requ
 	if err := f.operationFailureLocked(createInstancePoolOperation); err != nil {
 		return core.CreateInstancePoolResponse{}, err
 	}
-	f.nextID++
 	f.instancePoolCreates++
-	id := "ocid1.instancepool.oc1..integration-" + strconv.Itoa(f.nextID)
+	id := nextFakeOCID("instancepool")
 	now := common.SDKTime{Time: time.Now().UTC()}
 	details := request.CreateInstancePoolDetails
 	placements := make([]core.InstancePoolPlacementConfiguration, 0, len(details.PlacementConfigurations))

@@ -155,6 +155,32 @@ func TestOCIMachineAdoptsOnlyOwnedInstance(t *testing.T) {
 	g.Expect(ownedAfter.LifecycleState).To(Equal(core.InstanceLifecycleStateTerminated))
 }
 
+func TestOCIMachineDeletionSucceedsWhenInstanceIsAlreadyAbsent(t *testing.T) {
+	g := NewWithT(t)
+	fakeOCI.reset()
+	fixture := createOCIMachineFixture(t, "machine-externally-deleted", "machine-externally-deleted-integration")
+	unpauseCluster(t, fixture.cluster)
+
+	key := client.ObjectKeyFromObject(fixture.ociMachine)
+	var instanceID string
+	g.Eventually(func(g Gomega) {
+		stored := &infrastructurev1beta2.OCIMachine{}
+		g.Expect(testEnvironment.GetAPIReader().Get(testContext, key, stored)).To(Succeed())
+		g.Expect(stored.Spec.InstanceId).NotTo(BeNil())
+		instanceID = *stored.Spec.InstanceId
+		g.Expect(stored.Status.Ready).To(BeTrue())
+	}).WithTimeout(15 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
+
+	fakeOCI.compute.removeInstance(instanceID)
+	g.Expect(testEnvironment.Delete(testContext, fixture.ociMachine)).To(Succeed())
+	g.Eventually(func() bool {
+		err := testEnvironment.GetAPIReader().Get(testContext, key, &infrastructurev1beta2.OCIMachine{})
+		return apierrors.IsNotFound(err)
+	}).WithTimeout(10 * time.Second).WithPolling(100 * time.Millisecond).Should(BeTrue())
+	_, terminations, _ := fakeOCI.compute.counts()
+	g.Expect(terminations).To(BeZero(), "an already absent instance must not be terminated again")
+}
+
 type ociMachineFixture struct {
 	namespace       *corev1.Namespace
 	cluster         *clusterv1.Cluster

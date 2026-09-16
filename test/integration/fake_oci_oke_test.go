@@ -82,7 +82,6 @@ type fakeContainerEngineClient struct {
 
 	mu sync.Mutex
 
-	nextID                      int
 	clusters                    map[string]oke.Cluster
 	workRequests                map[string]fakeWorkRequestResource
 	createCount                 int
@@ -140,7 +139,6 @@ func newFakeContainerEngineClient() *fakeContainerEngineClient {
 func (f *fakeContainerEngineClient) reset() {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.nextID = 0
 	f.clusters = map[string]oke.Cluster{}
 	f.workRequests = map[string]fakeWorkRequestResource{}
 	f.nodePools = map[string]oke.NodePool{}
@@ -375,9 +373,8 @@ func (f *fakeContainerEngineClient) CreateCluster(_ context.Context, request oke
 	if err := f.operationFailureLocked(createClusterOperation); err != nil {
 		return oke.CreateClusterResponse{}, err
 	}
-	f.nextID++
 	f.createCount++
-	id := "ocid1.cluster.oc1..integration-" + strconv.Itoa(f.nextID)
+	id := nextFakeOCID("cluster")
 	workRequestID := "work-request-create-" + id
 	details := request.CreateClusterDetails
 	clusterType := details.Type
@@ -523,9 +520,8 @@ func (f *fakeContainerEngineClient) CreateNodePool(_ context.Context, request ok
 	if err := f.operationFailureLocked(createNodePoolOperation); err != nil {
 		return oke.CreateNodePoolResponse{}, err
 	}
-	f.nextID++
 	f.nodePoolCreateCount++
-	id := "ocid1.nodepool.oc1..integration-" + strconv.Itoa(f.nextID)
+	id := nextFakeOCID("nodepool")
 	workRequestID := "work-request-create-" + id
 	details := request.CreateNodePoolDetails
 	nodeConfig := normalizeNodePoolConfig(details.NodeConfigDetails)
@@ -639,9 +635,8 @@ func (f *fakeContainerEngineClient) CreateVirtualNodePool(_ context.Context, req
 	if err := f.operationFailureLocked(createVirtualNodePoolOperation); err != nil {
 		return oke.CreateVirtualNodePoolResponse{}, err
 	}
-	f.nextID++
 	f.virtualNodePoolCreateCount++
-	id := "ocid1.virtualnodepool.oc1..integration-" + strconv.Itoa(f.nextID)
+	id := nextFakeOCID("virtualnodepool")
 	workRequestID := "work-request-create-" + id
 	details := request.CreateVirtualNodePoolDetails
 	pool := oke.VirtualNodePool{

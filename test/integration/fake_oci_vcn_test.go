@@ -67,9 +67,8 @@ func (f *fakeVCNClient) networkCounts() fakeNetworkCounts {
 }
 
 func (f *fakeVCNClient) nextResourceIDLocked(resource string) *string {
-	f.nextID++
 	f.createCounts[resource]++
-	return common.String(fmt.Sprintf("ocid1.%s.oc1..integration-%d", resource, f.nextID))
+	return common.String(nextFakeOCID(resource))
 }
 
 func (f *fakeVCNClient) setFailure(operation fakeVCNOperation, err error) {
