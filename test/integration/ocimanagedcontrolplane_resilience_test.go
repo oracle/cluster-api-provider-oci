@@ -52,6 +52,7 @@ func TestOCIManagedControlPlaneRecoversFromCloudFailuresAndAsyncStates(t *testin
 		}
 	})
 	unpauseCluster(t, fixture.cluster)
+	triggerObjectReconcile(t, fixture.controlPlane)
 
 	waitForOKEAttempt(t, createClusterOperation, 0)
 	controlPlaneKey := client.ObjectKeyFromObject(fixture.controlPlane)
@@ -173,6 +174,7 @@ func TestOCIManagedControlPlaneAdoptsOnlyOwnedOKECluster(t *testing.T) {
 	fakeOCI.oke.seedCluster(owned)
 
 	unpauseCluster(t, fixture.cluster)
+	triggerObjectReconcile(t, fixture.controlPlane)
 	waitForManagedControlPlaneReady(t, fixture, ownedID, 0)
 	foreignAfter, ok := fakeOCI.oke.cluster(foreignID)
 	g.Expect(ok).To(BeTrue())

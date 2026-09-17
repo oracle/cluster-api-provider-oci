@@ -36,6 +36,7 @@ func TestOCIMachinePoolHonorsExternalAutoscaler(t *testing.T) {
 	fakeOCI.reset()
 	fixture := createInstancePoolFixture(t, true, 1)
 	unpauseCluster(t, fixture.cluster)
+	triggerObjectReconcile(t, fixture.ociMachinePool)
 	key := client.ObjectKeyFromObject(fixture.ociMachinePool)
 	waitForInstanceMachinePool(t, key, 1, 1, 1, 1, 1, 0)
 	stored := &infrav2exp.OCIMachinePool{}
@@ -79,6 +80,7 @@ func TestOCIManagedMachinePoolHonorsExternalAutoscaler(t *testing.T) {
 	fakeOCI.reset()
 	fixture := createManagedMachinePoolFixture(t, true, 1)
 	unpauseCluster(t, fixture.cluster)
+	triggerObjectReconcile(t, fixture.managedMachinePool)
 	key := client.ObjectKeyFromObject(fixture.managedMachinePool)
 	waitForManagedMachinePool(t, key, 1, 1, 1, 0)
 	stored := &infrav2exp.OCIManagedMachinePool{}
@@ -118,6 +120,7 @@ func TestOCIVirtualMachinePoolHonorsExternalAutoscaler(t *testing.T) {
 	fakeOCI.reset()
 	fixture := createVirtualMachinePoolFixture(t, true, 1)
 	unpauseCluster(t, fixture.cluster)
+	triggerObjectReconcile(t, fixture.virtualMachinePool)
 	key := client.ObjectKeyFromObject(fixture.virtualMachinePool)
 	waitForVirtualMachinePool(t, key, 1, 1, 1, 0)
 	stored := &infrav2exp.OCIVirtualMachinePool{}

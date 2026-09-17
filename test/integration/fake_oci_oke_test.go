@@ -78,7 +78,7 @@ func (f *fakeBaseClient) count() int {
 var _ baseservice.BaseClient = &fakeBaseClient{}
 
 type fakeContainerEngineClient struct {
-	okeservice.Client
+	unexpectedContainerEngineClient
 
 	mu sync.Mutex
 

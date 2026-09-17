@@ -61,6 +61,7 @@ func TestOCIMachinePoolAdoptsOnlyOwnedInstancePool(t *testing.T) {
 	fakeOCI.computeManagement.seedInstancePool(owned)
 
 	unpauseCluster(t, fixture.cluster)
+	triggerObjectReconcile(t, fixture.ociMachinePool)
 	key := client.ObjectKeyFromObject(fixture.ociMachinePool)
 	g.Eventually(func(g Gomega) {
 		stored := &infrav2exp.OCIMachinePool{}
@@ -116,6 +117,7 @@ func TestOCIManagedMachinePoolAdoptsOnlyOwnedNodePool(t *testing.T) {
 	fakeOCI.oke.seedNodePool(owned)
 
 	unpauseCluster(t, fixture.cluster)
+	triggerObjectReconcile(t, fixture.managedMachinePool)
 	key := client.ObjectKeyFromObject(fixture.managedMachinePool)
 	g.Eventually(func(g Gomega) {
 		stored := &infrav2exp.OCIManagedMachinePool{}
@@ -155,6 +157,7 @@ func TestOCIVirtualMachinePoolAdoptsOnlyOwnedVirtualNodePool(t *testing.T) {
 	fakeOCI.oke.seedVirtualNodePool(owned)
 
 	unpauseCluster(t, fixture.cluster)
+	triggerObjectReconcile(t, fixture.virtualMachinePool)
 	key := client.ObjectKeyFromObject(fixture.virtualMachinePool)
 	g.Eventually(func(g Gomega) {
 		stored := &infrav2exp.OCIVirtualMachinePool{}

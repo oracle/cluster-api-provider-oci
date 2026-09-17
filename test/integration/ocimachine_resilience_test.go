@@ -51,6 +51,7 @@ func TestOCIMachineRecoversFromCloudFailuresAndPendingState(t *testing.T) {
 		fakeOCI.compute.clearFailure(terminateInstanceOperation)
 	})
 	unpauseCluster(t, fixture.cluster)
+	triggerObjectReconcile(t, fixture.ociMachine)
 
 	waitForComputeAttempt(t, launchInstanceOperation, 0)
 	g.Eventually(func(g Gomega) {
@@ -137,6 +138,7 @@ func TestOCIMachineAdoptsOnlyOwnedInstance(t *testing.T) {
 	fakeOCI.compute.seedInstance(owned)
 
 	unpauseCluster(t, fixture.cluster)
+	triggerObjectReconcile(t, fixture.ociMachine)
 	waitForOCIMachineReady(t, fixture.ociMachine, goodID, 0)
 	foreignAfter, ok := fakeOCI.compute.instance(wrongID)
 	g.Expect(ok).To(BeTrue())
@@ -160,6 +162,7 @@ func TestOCIMachineDeletionSucceedsWhenInstanceIsAlreadyAbsent(t *testing.T) {
 	fakeOCI.reset()
 	fixture := createOCIMachineFixture(t, "machine-externally-deleted", "machine-externally-deleted-integration")
 	unpauseCluster(t, fixture.cluster)
+	triggerObjectReconcile(t, fixture.ociMachine)
 
 	key := client.ObjectKeyFromObject(fixture.ociMachine)
 	var instanceID string

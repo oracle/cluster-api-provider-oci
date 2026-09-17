@@ -46,6 +46,7 @@ func TestOCIManagedMachinePoolRecoversFromCloudFailuresAndAsyncStates(t *testing
 		}
 	})
 	unpauseCluster(t, fixture.cluster)
+	triggerObjectReconcile(t, fixture.managedMachinePool)
 
 	waitForOKEAttempt(t, createNodePoolOperation, 0)
 	key := client.ObjectKeyFromObject(fixture.managedMachinePool)
@@ -159,6 +160,7 @@ func TestOCIVirtualMachinePoolRecoversFromCloudFailuresAndAsyncStates(t *testing
 		}
 	})
 	unpauseCluster(t, fixture.cluster)
+	triggerObjectReconcile(t, fixture.virtualMachinePool)
 
 	waitForOKEAttempt(t, createVirtualNodePoolOperation, 0)
 	key := client.ObjectKeyFromObject(fixture.virtualMachinePool)

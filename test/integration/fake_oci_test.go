@@ -282,7 +282,7 @@ func (*fakeComputeClient) ListVnicAttachments(_ context.Context, request core.Li
 }
 
 type fakeVCNClient struct {
-	vcn.Client
+	unexpectedVCNClient
 
 	mu sync.Mutex
 

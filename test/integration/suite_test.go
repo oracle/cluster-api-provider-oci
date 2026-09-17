@@ -24,7 +24,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	goruntime "runtime"
 	"strings"
 	"testing"
 
@@ -258,11 +257,30 @@ func setupManager(ctx context.Context, mgr manager.Manager) error {
 }
 
 func findRepositoryRoot() (string, error) {
-	_, filename, _, ok := goruntime.Caller(0)
-	if !ok {
-		return "", fmt.Errorf("determine caller path")
+	directory, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("get working directory: %w", err)
 	}
-	return filepath.Clean(filepath.Join(filepath.Dir(filename), "..", "..")), nil
+
+	for {
+		goModPath := filepath.Join(directory, "go.mod")
+		info, err := os.Stat(goModPath)
+		if err == nil {
+			if info.IsDir() {
+				return "", fmt.Errorf("repository marker %s is a directory", goModPath)
+			}
+			return directory, nil
+		}
+		if !os.IsNotExist(err) {
+			return "", fmt.Errorf("inspect repository marker %s: %w", goModPath, err)
+		}
+
+		parent := filepath.Dir(directory)
+		if parent == directory {
+			return "", fmt.Errorf("could not find repository go.mod from working directory")
+		}
+		directory = parent
+	}
 }
 
 func findModuleDirectory(ctx context.Context, workingDirectory, modulePath string) (string, error) {

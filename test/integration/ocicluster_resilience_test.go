@@ -101,6 +101,7 @@ func TestOCIClusterRecoversPartialNetworkAndAdoptsOnlyOwnedVCN(t *testing.T) {
 	fakeOCI.vcn.seedVCN(ownedVCN)
 
 	unpauseCluster(t, cluster)
+	triggerObjectReconcile(t, ociCluster)
 	waitForVCNAttempt(t, createSubnetOperation, 0)
 	ociClusterKey := client.ObjectKeyFromObject(ociCluster)
 	g.Eventually(func(g Gomega) {
