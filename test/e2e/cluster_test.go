@@ -338,7 +338,7 @@ var _ = Describe("Workload cluster creation", func() {
 			svcPort:                   int32(80),
 			svcPortName:               "nginx-web",
 			containerName:             "nginx",
-			containerImage:            "k8s.gcr.io/nginx-slim:0.8",
+			containerImage:            "registry.k8s.io/e2e-test-images/nginx:1.14-4",
 			containerPort:             int32(80),
 			podTerminationGracePeriod: int64(30),
 			volMountPath:              "/usr/share/nginx/html",
