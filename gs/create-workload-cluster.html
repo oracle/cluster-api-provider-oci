@@ -1,0 +1,332 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Create Workload Cluster - Kubernetes Cluster API Provider for Oracle Cloud Infrastructure</title>
+        <!-- Custom HTML head -->
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href=".././src/css/mdbook-admonish.css">
+        <link rel="stylesheet" href="../././mdbook-admonish.css">
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../introduction.html">Introduction</a></li><li class="chapter-item expanded affix "><a href="../prerequisites.html">Prerequisites</a></li><li class="chapter-item expanded "><a href="../gs/gs.html"><strong aria-hidden="true">1.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../gs/overview.html"><strong aria-hidden="true">1.1.</strong> Overview</a></li><li class="chapter-item expanded "><a href="../gs/custom-machine-images.html"><strong aria-hidden="true">1.2.</strong> Prepare custom OCI images</a></li><li class="chapter-item expanded "><a href="../gs/iam.html"><strong aria-hidden="true">1.3.</strong> Configure users and policies</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../gs/iam/iam-oke.html"><strong aria-hidden="true">1.3.1.</strong> Configure policies for an OKE cluster</a></li><li class="chapter-item expanded "><a href="../gs/iam/iam-self-provisioned.html"><strong aria-hidden="true">1.3.2.</strong> Configure policies for a self-provisioned cluster</a></li><li class="chapter-item expanded "><a href="../gs/iam/iam-ocid.html"><strong aria-hidden="true">1.3.3.</strong> User configuration and OCIDs</a></li></ol></li><li class="chapter-item expanded "><a href="../gs/provision-mgmt-cluster.html"><strong aria-hidden="true">1.4.</strong> Provision a management cluster</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../gs/mgmt/mgmt-kind.html"><strong aria-hidden="true">1.4.1.</strong> Provision a management cluster with kind</a></li><li class="chapter-item expanded "><a href="../gs/mgmt/mgmt-oke.html"><strong aria-hidden="true">1.4.2.</strong> Provision a management cluster with OKE</a></li></ol></li><li class="chapter-item expanded "><a href="../gs/install-cluster-api.html"><strong aria-hidden="true">1.5.</strong> Install Cluster API for Oracle Cloud Infrastructure</a></li><li class="chapter-item expanded "><a href="../gs/create-workload-cluster.html" class="active"><strong aria-hidden="true">1.6.</strong> Create Workload Cluster</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../gs/create-mhc-workload-cluster.html"><strong aria-hidden="true">1.6.1.</strong> MachineHealthChecks</a></li><li class="chapter-item expanded "><a href="../gs/create-gpu-workload-cluster.html"><strong aria-hidden="true">1.6.2.</strong> Create GPU Workload Cluster</a></li><li class="chapter-item expanded "><a href="../gs/create-windows-workload-cluster.html"><strong aria-hidden="true">1.6.3.</strong> Create Windows Workload Cluster</a></li></ol></li><li class="chapter-item expanded "><a href="../gs/create-workload-templates.html"><strong aria-hidden="true">1.7.</strong> Create Workload Templates</a></li><li class="chapter-item expanded "><a href="../gs/externally-managed-cluster-infrastructure.html"><strong aria-hidden="true">1.8.</strong> Using externally managed infrastructure</a></li><li class="chapter-item expanded "><a href="../gs/install-oci-ccm.html"><strong aria-hidden="true">1.9.</strong> Install Oracle Cloud Infrastructure Cloud Controller Manager</a></li><li class="chapter-item expanded "><a href="../gs/install-csi.html"><strong aria-hidden="true">1.10.</strong> Install Container Storage Interface (CSI)</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../gs/pvc-bv.html"><strong aria-hidden="true">1.10.1.</strong> Provision a PVC on the Block Volume Service</a></li><li class="chapter-item expanded "><a href="../gs/pvc-fss.html"><strong aria-hidden="true">1.10.2.</strong> Provision a PVC on the File Storage Service</a></li></ol></li><li class="chapter-item expanded "><a href="../gs/customize-worker-node.html"><strong aria-hidden="true">1.11.</strong> Customize worker nodes</a></li><li class="chapter-item expanded "><a href="../gs/multi-tenancy.html"><strong aria-hidden="true">1.12.</strong> Multi Tenancy</a></li><li class="chapter-item expanded "><a href="../gs/advanced.html"><strong aria-hidden="true">1.13.</strong> Advanced Options</a></li></ol></li><li class="chapter-item expanded "><a href="../networking/networking.html"><strong aria-hidden="true">2.</strong> Networking Guide</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../networking/infrastructure.html"><strong aria-hidden="true">2.1.</strong> Default Network Infrastructure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../networking/calico.html"><strong aria-hidden="true">2.1.1.</strong> Using Calico</a></li><li class="chapter-item expanded "><a href="../networking/antrea.html"><strong aria-hidden="true">2.1.2.</strong> Using Antrea</a></li><li class="chapter-item expanded "><a href="../networking/ipv6.html"><strong aria-hidden="true">2.1.3.</strong> Using IPv6</a></li></ol></li><li class="chapter-item expanded "><a href="../networking/custom-networking.html"><strong aria-hidden="true">2.2.</strong> Custom Networking</a></li><li class="chapter-item expanded "><a href="../networking/private-cluster.html"><strong aria-hidden="true">2.3.</strong> Private Cluster</a></li></ol></li><li class="chapter-item expanded "><a href="../managed/managedcluster.html"><strong aria-hidden="true">3.</strong> Managed Clusters (OKE)</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../managed/virtual-nodes-and-enhanced-clusters.html"><strong aria-hidden="true">3.1.</strong> Virtual Nodes and Enhanced Clusters</a></li><li class="chapter-item expanded "><a href="../managed/self-managed-nodes.html"><strong aria-hidden="true">3.2.</strong> Self managed nodes</a></li><li class="chapter-item expanded "><a href="../managed/boot-volume-expansion.html"><strong aria-hidden="true">3.3.</strong> Boot volume expansion</a></li><li class="chapter-item expanded "><a href="../managed/networking.html"><strong aria-hidden="true">3.4.</strong> Networking customizations</a></li><li class="chapter-item expanded "><a href="../managed/features.html"><strong aria-hidden="true">3.5.</strong> Features</a></li></ol></li><li class="chapter-item expanded "><a href="../reference/reference.html"><strong aria-hidden="true">4.</strong> Reference</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../reference/api-reference.html"><strong aria-hidden="true">4.1.</strong> API Reference</a></li><li class="chapter-item expanded "><a href="../reference/glossary.html"><strong aria-hidden="true">4.2.</strong> Glossary</a></li></ol></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Kubernetes Cluster API Provider for Oracle Cloud Infrastructure</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/oracle/cluster-api-provider-oci" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="create-a-workload-cluster"><a class="header" href="#create-a-workload-cluster">Create a workload cluster</a></h1>
+<h2 id="workload-cluster-templates"><a class="header" href="#workload-cluster-templates">Workload Cluster Templates</a></h2>
+<p>Choose one of the available templates for to create your workload clusters from the
+<a href="https://github.com/oracle/cluster-api-provider-oci/releases/latest">latest released artifacts</a>. Please note that the templates provided 
+are to be considered as references and can be customized further as 
+the [CAPOCI API Reference][api-reference]. Each workload cluster template can be
+further configured  with the parameters below.</p>
+<h2 id="workload-cluster-parameters"><a class="header" href="#workload-cluster-parameters">Workload Cluster Parameters</a></h2>
+<p>The following Oracle Cloud Infrastructure (OCI) configuration parameters are available
+when creating a workload cluster on OCI using one of our predefined templates:</p>
+<div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Default Value</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>OCI_COMPARTMENT_ID</code></td><td></td><td>The OCID of the compartment in which to create the required compute, storage and network resources.</td></tr>
+<tr><td><code>OCI_IMAGE_ID</code></td><td></td><td>The OCID of the image for the kubernetes nodes. This same image is used for both the control plane and the worker nodes.</td></tr>
+<tr><td><code>OCI_CONTROL_PLANE_MACHINE_TYPE</code></td><td>VM.Standard.E4.Flex</td><td>The <a href="https://docs.oracle.com/en-us/iaas/Content/Compute/References/computeshapes.htm">shape</a> of the Kubernetes control plane machine.</td></tr>
+<tr><td><code>OCI_CONTROL_PLANE_MACHINE_TYPE_OCPUS</code></td><td>1</td><td>The number of OCPUs allocated to the control plane instance.</td></tr>
+<tr><td><code>OCI_NODE_MACHINE_TYPE</code></td><td>VM.Standard.E4.Flex</td><td>The <a href="https://docs.oracle.com/en-us/iaas/Content/Compute/References/computeshapes.htm">shape</a> of the Kubernetes worker machine.</td></tr>
+<tr><td><code>OCI_NODE_MACHINE_TYPE_OCPUS</code></td><td>1</td><td>The number of OCPUs allocated to the worker instance.</td></tr>
+<tr><td><code>OCI_SSH_KEY</code></td><td></td><td>The public SSH key to be added to the Kubernetes nodes. It can be used to login to the node and troubleshoot failures.</td></tr>
+<tr><td><code>OCI_CONTROL_PLANE_PV_TRANSIT_ENCRYPTION</code></td><td>true</td><td>Enables <a href="https://docs.oracle.com/en-us/iaas/Content/File/Tasks/intransitencryption.htm">in-flight Transport Layer Security (TLS) 1.2 encryption</a> of data between control plane nodes and their associated block storage devices.</td></tr>
+<tr><td><code>OCI_NODE_PV_TRANSIT_ENCRYPTION</code></td><td>true</td><td>Enables <a href="https://docs.oracle.com/en-us/iaas/Content/File/Tasks/intransitencryption.htm">in-flight Transport Layer Security (TLS) 1.2 encryption</a> of data between worker nodes and their associated block storage devices.</td></tr>
+</tbody></table>
+</div>
+<blockquote>
+<p>Note: Only specific <a href="https://docs.oracle.com/en-us/iaas/releasenotes/changes/60d602f5-abb3-4639-aa19-292a5744a808/">bare metal shapes</a>
+support in-transit encryption. If an unsupported shape is specified, the deployment will fail completely.</p>
+</blockquote>
+<blockquote>
+<p>Note: Using the predefined templates the machine's memory size is automatically allocated based on the chosen shape 
+and OCPU count.</p>
+</blockquote>
+<p>The following Cluster API parameters are also available:</p>
+<div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Default Value</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>CLUSTER_NAME</code></td><td></td><td>The name of the workload cluster to create.</td></tr>
+<tr><td><code>CONTROL_PLANE_MACHINE_COUNT</code></td><td>1</td><td>The number of control plane machines for the workload cluster.</td></tr>
+<tr><td><code>KUBERNETES_VERSION</code></td><td></td><td>The Kubernetes version installed on the workload cluster nodes. If this environment variable is not configured, the version must be specified in the <code>.cluster-api/clusterctl.yaml</code> file</td></tr>
+<tr><td><code>NAMESPACE</code></td><td></td><td>The namespace for the workload cluster. If not specified, the current namespace is used.</td></tr>
+<tr><td><code>POD_CIDR</code></td><td>192.168.0.0/16</td><td>CIDR range of the Kubernetes pod-to-pod network.</td></tr>
+<tr><td><code>SERVICE_CIDR</code></td><td>10.128.0.0/12</td><td>CIDR range of the Kubernetes pod-to-services network.</td></tr>
+<tr><td><code>NODE_MACHINE_COUNT</code></td><td></td><td>The number of worker machines for the workload cluster.</td></tr>
+</tbody></table>
+</div>
+<h2 id="create-a-new-workload-cluster-on-virtual-instances-using-an-ubuntu-custom-image"><a class="header" href="#create-a-new-workload-cluster-on-virtual-instances-using-an-ubuntu-custom-image">Create a new workload cluster on virtual instances using an Ubuntu custom image</a></h2>
+<p>The following command will create a workload cluster comprising a single 
+control plane node and single worker node using the default values as specified in the preceding 
+<a href="#workload-cluster-parameters">Workload Cluster Parameters</a> table:</p>
+<pre><code class="language-bash">OCI_COMPARTMENT_ID=&lt;compartment-id&gt; \
+OCI_IMAGE_ID=&lt;ubuntu-custom-image-id&gt; \
+OCI_SSH_KEY=&lt;ssh-key&gt;  \
+CONTROL_PLANE_MACHINE_COUNT=1 \
+KUBERNETES_VERSION=v1.20.10 \
+NAMESPACE=default \
+NODE_MACHINE_COUNT=1 \
+clusterctl generate cluster &lt;cluster-name&gt;\
+--from cluster-template.yaml | kubectl apply -f -
+</code></pre>
+<h2 id="create-a-new-workload-cluster-on-bare-metal-instances-using-an-ubuntu-custom-image"><a class="header" href="#create-a-new-workload-cluster-on-bare-metal-instances-using-an-ubuntu-custom-image">Create a new workload cluster on bare metal instances using an Ubuntu custom image</a></h2>
+<p>The following command uses the <code>OCI_CONTROL_PLANE_MACHINE_TYPE</code> and <code>OCI_NODE_MACHINE_TYPE</code> 
+parameters to specify bare metal shapes instead of using CAPOCI's default virtual 
+instance shape. The <code>OCI_CONTROL_PLANE_PV_TRANSIT_ENCRYPTION</code> and <code>OCI_NODE_PV_TRANSIT_ENCRYPTION</code> 
+parameters disable encryption of data in flight between the bare metal instance and the block storage resources.</p>
+<pre><code class="language-bash">OCI_COMPARTMENT_ID=&lt;compartment-id&gt; \
+OCI_IMAGE_ID=&lt;ubuntu-custom-image-id&gt; \
+OCI_SSH_KEY=&lt;ssh-key&gt;  \
+OCI_CONTROL_PLANE_MACHINE_TYPE=BM.Standard2.52 \
+OCI_CONTROL_PLANE_MACHINE_TYPE_OCPUS=52 \
+OCI_CONTROL_PLANE_PV_TRANSIT_ENCRYPTION=false \
+OCI_NODE_MACHINE_TYPE=BM.Standard2.52 \
+OCI_NODE_MACHINE_TYPE_OCPUS=52 \
+OCI_NODE_PV_TRANSIT_ENCRYPTION=false \
+CONTROL_PLANE_MACHINE_COUNT=1 \
+KUBERNETES_VERSION=v1.20.10 \
+NAMESPACE=default \
+WORKER_MACHINE_COUNT=1 \
+clusterctl generate cluster &lt;cluster-name&gt;\
+--from cluster-template.yaml| kubectl apply -f -
+</code></pre>
+<h2 id="create-a-new-workload-cluster-on-virtual-instances-using-an-oracle-linux-custom-image"><a class="header" href="#create-a-new-workload-cluster-on-virtual-instances-using-an-oracle-linux-custom-image">Create a new workload cluster on virtual instances using an Oracle Linux custom image</a></h2>
+<pre><code class="language-bash">OCI_COMPARTMENT_ID=&lt;compartment-id&gt; \
+OCI_IMAGE_ID=&lt;oracle-linux-custom-image-id&gt; \
+OCI_SSH_KEY=&lt;ssh-key&gt;  \
+CONTROL_PLANE_MACHINE_COUNT=1 \
+KUBERNETES_VERSION=v1.20.10 \
+NAMESPACE=default \
+WORKER_MACHINE_COUNT=1 \
+clusterctl generate cluster &lt;cluster-name&gt;\
+--from cluster-template-oraclelinux.yaml | kubectl apply -f -
+</code></pre>
+<h2 id="create-a-workload-cluster-in-an-alternative-region"><a class="header" href="#create-a-workload-cluster-in-an-alternative-region">Create a workload cluster in an alternative region</a></h2>
+<p>CAPOCI provides a way to launch and manage your workload cluster in multiple
+regions. Choose the <code>cluster-template-alternative-region.yaml</code> template when
+creating your workload clusters from the <a href="https://github.com/oracle/cluster-api-provider-oci/releases/latest">latest released artifacts</a>.
+Currently, the other templates do not support the ability to change the workload
+cluster region. </p>
+<p>Each cluster can be further configured with the parameters
+defined in <a href="#workload-cluster-parameters">Workload Cluster Parameters</a> and
+additionally with the parameter below.</p>
+<div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Default Value</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>OCI_WORKLOAD_REGION</code></td><td>Configured as <a href="./install-cluster-api.html#configure-authentication"><code>OCI_REGION</code></a></td><td>The <a href="https://docs.oracle.com/en-us/iaas/Content/General/Concepts/regions.htm">OCI region</a> in which to launch the workload cluster.</td></tr>
+</tbody></table>
+</div>
+<p>The following example configures the CAPOCI provider to authenticate in
+<code>us-phoenix-1</code> and launch a workload cluster in <code>us-sanjose-1</code>.</p>
+<blockquote>
+<p>Note: Ensure the specified image is available in your chosen region or the launch will fail.</p>
+</blockquote>
+<p>To configure authentication for management cluster, follow the steps in 
+<a href="./install-cluster-api.html#configure-authentication">Configure authentication</a>.</p>
+<p>Extend the preceding configuration with the following additional configuration
+parameter and initialize the CAPOCI provider.</p>
+<pre><code class="language-bash">...
+export OCI_REGION=us-phoenix-1
+...
+   
+clusterctl init --infrastructure oci
+</code></pre>
+<p>Create a new workload cluster in San Jose (<code>us-sanjose-1</code>) by explicitly setting the
+<code>OCI_WORKLOAD_REGION</code> environment variable when invoking <code>clusterctl</code>:</p>
+<pre><code class="language-bash">OCI_WORKLOAD_REGION=us-sanjose-1 \
+OCI_COMPARTMENT_ID=&lt;compartment-id&gt; \
+OCI_IMAGE_ID=&lt;in-region-custom-image-id&gt; \
+OCI_SSH_KEY=&lt;ssh-key&gt;  \
+CONTROL_PLANE_MACHINE_COUNT=1 \
+KUBERNETES_VERSION=v1.20.10 \
+NAMESPACE=default \
+NODE_MACHINE_COUNT=1 \
+clusterctl generate cluster &lt;cluster-name&gt;\
+--from cluster-template-alternative-region.yaml | kubectl apply -f -
+</code></pre>
+<h3 id="access-workload-cluster-kubeconfig"><a class="header" href="#access-workload-cluster-kubeconfig">Access workload cluster Kubeconfig</a></h3>
+<p>Execute the following command to list all the workload clusters present:</p>
+<pre><code class="language-bash">kubectl get clusters -A
+</code></pre>
+<p>Execute the following command to access the kubeconfig of a workload cluster:</p>
+<pre><code class="language-bash">clusterctl get kubeconfig &lt;cluster-name&gt; -n default &gt; &lt;cluster-name&gt;.kubeconfig
+</code></pre>
+<h3 id="install-a-cni-provider"><a class="header" href="#install-a-cni-provider">Install a CNI Provider</a></h3>
+<p>After creating a workload cluster, a <a href="https://www.cni.dev/">CNI</a> provider must be installed in the workload cluster. Until you install a
+a <a href="https://www.cni.dev/">CNI</a> provider, the cluster nodes will not go into the <code>Ready</code> state.</p>
+<p>For example, you can install <a href="../networking/calico.html">Calico</a> as follows:</p>
+<pre><code class="language-bash">kubectl --kubeconfig=&lt;cluster-name&gt;.kubeconfig \
+  apply -f https://docs.projectcalico.org/v3.21/manifests/calico.yaml
+</code></pre>
+<p>You can use your preferred CNI provider. Currently, the following providers have been tested and verified to work:</p>
+<div class="table-wrapper"><table><thead><tr><th>CNI</th><th>CNI Version</th><th>Kubernetes Version</th><th>CAPOCI Version</th></tr></thead><tbody>
+<tr><td><a href="../networking/calico.html">Calico</a></td><td>3.21</td><td>1.20.10</td><td>0.1</td></tr>
+<tr><td><a href="../networking/antrea.html">Antrea</a></td><td></td><td>1.20.10</td><td>0.1</td></tr>
+</tbody></table>
+</div>
+<p>If you have tested an alternative CNI provider and verified it to work, please send us a PR to add it to the list.</p>
+<p>If you have an issue with your alternative CNI provider, please raise an issue on GitHub.</p>
+<h3 id="install-oci-cloud-controller-manager-and-csi-in-a-self-provisioned-cluster"><a class="header" href="#install-oci-cloud-controller-manager-and-csi-in-a-self-provisioned-cluster">Install OCI Cloud Controller Manager and CSI in a self-provisioned cluster</a></h3>
+<p>By default, the <a href="https://github.com/oracle/oci-cloud-controller-manager">OCI Cloud Controller Manager (CCM)</a> is not installed into a workload cluster. To install the OCI CCM, follow <a href="./install-oci-ccm.html">these instructions</a>.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../gs/install-cluster-api.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                            <a rel="next" href="../gs/create-mhc-workload-cluster.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../gs/install-cluster-api.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                    <a rel="next" href="../gs/create-mhc-workload-cluster.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        <script src="../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../searcher.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+    </body>
+</html>

@@ -1,0 +1,542 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Custom Networking - Kubernetes Cluster API Provider for Oracle Cloud Infrastructure</title>
+        <!-- Custom HTML head -->
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href=".././src/css/mdbook-admonish.css">
+        <link rel="stylesheet" href="../././mdbook-admonish.css">
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../introduction.html">Introduction</a></li><li class="chapter-item expanded affix "><a href="../prerequisites.html">Prerequisites</a></li><li class="chapter-item expanded "><a href="../gs/gs.html"><strong aria-hidden="true">1.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../gs/overview.html"><strong aria-hidden="true">1.1.</strong> Overview</a></li><li class="chapter-item expanded "><a href="../gs/custom-machine-images.html"><strong aria-hidden="true">1.2.</strong> Prepare custom OCI images</a></li><li class="chapter-item expanded "><a href="../gs/iam.html"><strong aria-hidden="true">1.3.</strong> Configure users and policies</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../gs/iam/iam-oke.html"><strong aria-hidden="true">1.3.1.</strong> Configure policies for an OKE cluster</a></li><li class="chapter-item expanded "><a href="../gs/iam/iam-self-provisioned.html"><strong aria-hidden="true">1.3.2.</strong> Configure policies for a self-provisioned cluster</a></li><li class="chapter-item expanded "><a href="../gs/iam/iam-ocid.html"><strong aria-hidden="true">1.3.3.</strong> User configuration and OCIDs</a></li></ol></li><li class="chapter-item expanded "><a href="../gs/provision-mgmt-cluster.html"><strong aria-hidden="true">1.4.</strong> Provision a management cluster</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../gs/mgmt/mgmt-kind.html"><strong aria-hidden="true">1.4.1.</strong> Provision a management cluster with kind</a></li><li class="chapter-item expanded "><a href="../gs/mgmt/mgmt-oke.html"><strong aria-hidden="true">1.4.2.</strong> Provision a management cluster with OKE</a></li></ol></li><li class="chapter-item expanded "><a href="../gs/install-cluster-api.html"><strong aria-hidden="true">1.5.</strong> Install Cluster API for Oracle Cloud Infrastructure</a></li><li class="chapter-item expanded "><a href="../gs/create-workload-cluster.html"><strong aria-hidden="true">1.6.</strong> Create Workload Cluster</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../gs/create-mhc-workload-cluster.html"><strong aria-hidden="true">1.6.1.</strong> MachineHealthChecks</a></li><li class="chapter-item expanded "><a href="../gs/create-gpu-workload-cluster.html"><strong aria-hidden="true">1.6.2.</strong> Create GPU Workload Cluster</a></li><li class="chapter-item expanded "><a href="../gs/create-windows-workload-cluster.html"><strong aria-hidden="true">1.6.3.</strong> Create Windows Workload Cluster</a></li></ol></li><li class="chapter-item expanded "><a href="../gs/create-workload-templates.html"><strong aria-hidden="true">1.7.</strong> Create Workload Templates</a></li><li class="chapter-item expanded "><a href="../gs/externally-managed-cluster-infrastructure.html"><strong aria-hidden="true">1.8.</strong> Using externally managed infrastructure</a></li><li class="chapter-item expanded "><a href="../gs/install-oci-ccm.html"><strong aria-hidden="true">1.9.</strong> Install Oracle Cloud Infrastructure Cloud Controller Manager</a></li><li class="chapter-item expanded "><a href="../gs/install-csi.html"><strong aria-hidden="true">1.10.</strong> Install Container Storage Interface (CSI)</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../gs/pvc-bv.html"><strong aria-hidden="true">1.10.1.</strong> Provision a PVC on the Block Volume Service</a></li><li class="chapter-item expanded "><a href="../gs/pvc-fss.html"><strong aria-hidden="true">1.10.2.</strong> Provision a PVC on the File Storage Service</a></li></ol></li><li class="chapter-item expanded "><a href="../gs/customize-worker-node.html"><strong aria-hidden="true">1.11.</strong> Customize worker nodes</a></li><li class="chapter-item expanded "><a href="../gs/multi-tenancy.html"><strong aria-hidden="true">1.12.</strong> Multi Tenancy</a></li><li class="chapter-item expanded "><a href="../gs/advanced.html"><strong aria-hidden="true">1.13.</strong> Advanced Options</a></li></ol></li><li class="chapter-item expanded "><a href="../networking/networking.html"><strong aria-hidden="true">2.</strong> Networking Guide</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../networking/infrastructure.html"><strong aria-hidden="true">2.1.</strong> Default Network Infrastructure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../networking/calico.html"><strong aria-hidden="true">2.1.1.</strong> Using Calico</a></li><li class="chapter-item expanded "><a href="../networking/antrea.html"><strong aria-hidden="true">2.1.2.</strong> Using Antrea</a></li><li class="chapter-item expanded "><a href="../networking/ipv6.html"><strong aria-hidden="true">2.1.3.</strong> Using IPv6</a></li></ol></li><li class="chapter-item expanded "><a href="../networking/custom-networking.html" class="active"><strong aria-hidden="true">2.2.</strong> Custom Networking</a></li><li class="chapter-item expanded "><a href="../networking/private-cluster.html"><strong aria-hidden="true">2.3.</strong> Private Cluster</a></li></ol></li><li class="chapter-item expanded "><a href="../managed/managedcluster.html"><strong aria-hidden="true">3.</strong> Managed Clusters (OKE)</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../managed/virtual-nodes-and-enhanced-clusters.html"><strong aria-hidden="true">3.1.</strong> Virtual Nodes and Enhanced Clusters</a></li><li class="chapter-item expanded "><a href="../managed/self-managed-nodes.html"><strong aria-hidden="true">3.2.</strong> Self managed nodes</a></li><li class="chapter-item expanded "><a href="../managed/boot-volume-expansion.html"><strong aria-hidden="true">3.3.</strong> Boot volume expansion</a></li><li class="chapter-item expanded "><a href="../managed/networking.html"><strong aria-hidden="true">3.4.</strong> Networking customizations</a></li><li class="chapter-item expanded "><a href="../managed/features.html"><strong aria-hidden="true">3.5.</strong> Features</a></li></ol></li><li class="chapter-item expanded "><a href="../reference/reference.html"><strong aria-hidden="true">4.</strong> Reference</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../reference/api-reference.html"><strong aria-hidden="true">4.1.</strong> API Reference</a></li><li class="chapter-item expanded "><a href="../reference/glossary.html"><strong aria-hidden="true">4.2.</strong> Glossary</a></li></ol></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Kubernetes Cluster API Provider for Oracle Cloud Infrastructure</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/oracle/cluster-api-provider-oci" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="custom-networking"><a class="header" href="#custom-networking">Custom networking</a></h1>
+<p>The <a href="infrastructure.html">default networking</a> can be modified to achieve the following:</p>
+<ul>
+<li>your own CIDR range for VCN. This is useful if you want to perform peering with another VCN or another cloud provider and you need to avoid IP Overlapping</li>
+<li>your own custom security rules using <a href="../reference/glossary.html#nsg">NSGs</a>. This is useful if you want to use your own CNI provider and it has a different security posture than the default</li>
+<li>your own custom security rules using network security lists</li>
+<li>change the masks and name of your different subnets. This is useful to either expand or constrain the size of your subnets as well as to use your own preferred naming convention</li>
+</ul>
+<p>The <code>OCICluster</code> spec in the cluster templates can be modified to customize the network spec.</p>
+<h2 id="example-spec-for-custom-cidr-range"><a class="header" href="#example-spec-for-custom-cidr-range">Example spec for custom CIDR range</a></h2>
+<p>The spec below shows how to change the CIDR range of the VCN from the default <code>10.0.0.0/16</code> to <code>172.16.0.0/16</code>.</p>
+<pre><code class="language-yaml">apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: OCICluster
+metadata:
+  name: &quot;${CLUSTER_NAME}&quot;
+spec:
+  compartmentId: &quot;${OCI_COMPARTMENT_ID}&quot;
+  networkSpec:
+    vcn:
+      name: ${CLUSTER_NAME}
+      cidr: &quot;172.16.0.0/16&quot;
+      subnets:
+        - name: ep-subnet
+          role: control-plane-endpoint
+          type: public
+          cidr: &quot;172.16.0.0/28&quot;
+        - name: cp-mc-subnet
+          role: control-plane
+          type: private
+          cidr: &quot;172.16.5.0/28&quot;
+        - name: worker-subnet
+          role: worker
+          type: private
+          cidr: &quot;172.16.10.0/24&quot;
+        - name: svc-lb-subnet
+          role: service-lb
+          type: public
+          cidr: &quot;172.16.20.0/24&quot;
+</code></pre>
+<h2 id="example-spec-to-modify-default-nsg-security-rules"><a class="header" href="#example-spec-to-modify-default-nsg-security-rules">Example spec to modify default NSG security rules</a></h2>
+<p>The spec below shows how to change the default NSG rules.</p>
+<pre><code class="language-yaml">---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: OCICluster
+metadata:
+  name: &quot;${CLUSTER_NAME}&quot;
+spec:
+  compartmentId: &quot;${OCI_COMPARTMENT_ID}&quot;
+  networkSpec:
+    vcn:
+      name: ${CLUSTER_NAME}
+      cidr: &quot;172.16.0.0/16&quot;
+      networkSecurityGroup:
+        list:
+          - name: ep-nsg
+            role: control-plane-endpoint
+            egressRules:
+              - egressRule:
+                  isStateless: false
+                  destination: &quot;172.16.5.0/28&quot;
+                  protocol: &quot;6&quot;
+                  destinationType: &quot;CIDR_BLOCK&quot;
+                  description: &quot;All traffic to control plane nodes&quot;
+                  tcpOptions:
+                    destinationPortRange:
+                      max: 6443
+                      min: 6443
+            ingressRules:
+              - ingressRule:
+                  isStateless: false
+                  source: &quot;0.0.0.0/0&quot;
+                  protocol: &quot;6&quot;
+                  sourceType: &quot;CIDR_BLOCK&quot;
+                  description: &quot;External access to Kubernetes API endpoint&quot;
+                  tcpOptions:
+                    destinationPortRange:
+                      max: 6443
+                      min: 6443
+              - ingressRule:
+                  isStateless: false
+                  source: &quot;172.16.5.0/28&quot;
+                  protocol: &quot;6&quot;
+                  sourceType: &quot;CIDR_BLOCK&quot;
+                  description: &quot;Control plane worker nodes to API Server endpoint&quot;
+              - ingressRule:
+                  isStateless: false
+                  source: &quot;0.0.0.0/0&quot;
+                  protocol: &quot;6&quot;
+                  sourceType: &quot;CIDR_BLOCK&quot;
+                  description: &quot;SSH access&quot;
+                  tcpOptions:
+                    destinationPortRange:
+                      max: 22
+                      min: 22
+          - name: cp-mc-nsg
+            role: control-plane
+            egressRules:
+              - egressRule:
+                  isStateless: false
+                  destination: &quot;0.0.0.0/0&quot;
+                  protocol: &quot;6&quot;
+                  destinationType: &quot;CIDR_BLOCK&quot;
+                  description: &quot;control plane machine access to internet&quot;
+            ingressRules:
+              - ingressRule:
+                  isStateless: false
+                  source: &quot;172.16.0.0/16&quot;
+                  protocol: &quot;all&quot;
+                  sourceType: &quot;CIDR_BLOCK&quot;
+                  description: &quot;Allow inter vcn communication&quot;
+              - ingressRule:
+                  isStateless: false
+                  source: &quot;0.0.0.0/0&quot;
+                  protocol: &quot;6&quot;
+                  sourceType: &quot;CIDR_BLOCK&quot;
+                  description: &quot;SSH access&quot;
+                  tcpOptions:
+                    destinationPortRange:
+                      max: 22
+                      min: 22
+          - name: worker-nsg
+            role: worker
+            egressRules:
+              - egressRule:
+                  isStateless: false
+                  destination: &quot;0.0.0.0/0&quot;
+                  protocol: &quot;6&quot;
+                  destinationType: &quot;CIDR_BLOCK&quot;
+                  description: &quot;Worker Nodes access to Internet&quot;
+            ingressRules:
+              - ingressRule:
+                  isStateless: false
+                  source: &quot;172.16.0.0/16&quot;
+                  protocol: &quot;all&quot;
+                  sourceType: &quot;CIDR_BLOCK&quot;
+                  description: &quot;Allow inter vcn communication&quot;
+          - name: service-lb-nsg
+            role: service-lb
+            ingressRules:
+              - ingressRule:
+                  isStateless: false
+                  source: &quot;172.16.0.0/16&quot;
+                  protocol: &quot;all&quot;
+                  sourceType: &quot;CIDR_BLOCK&quot;
+                  description: &quot;Allow ingress from vcn subnets&quot;
+      subnets:
+        - name: ep-subnet
+          role: control-plane-endpoint
+          type: public
+          cidr: &quot;172.16.0.0/28&quot;
+        - name: cp-mc-subnet
+          role: control-plane
+          type: private
+          cidr: &quot;172.16.5.0/28&quot;
+        - name: worker-subnet
+          role: worker
+          type: private
+          cidr: &quot;172.16.10.0/24&quot;
+        - name: svc-lb-subnet
+          role: service-lb
+          type: public
+          cidr: &quot;172.16.20.0/24&quot;
+</code></pre>
+<h2 id="example-spec-to-use-security-lists-instead-of-network-security-groups"><a class="header" href="#example-spec-to-use-security-lists-instead-of-network-security-groups">Example spec to use Security Lists instead of Network Security Groups</a></h2>
+<p>The spec below shows how to implement the security posture using security lists instead of NSGs.</p>
+<pre><code class="language-yaml">---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: OCICluster
+metadata:
+  name: &quot;${CLUSTER_NAME}&quot;
+spec:
+  compartmentId: &quot;${OCI_COMPARTMENT_ID}&quot;
+  networkSpec:
+    vcn:
+      name: ${CLUSTER_NAME}
+      subnets:
+        - name: ep-subnet
+          role: control-plane-endpoint
+          type: public
+          securityList:
+            name: ep-seclist
+            egressRules:
+              - destination: &quot;10.0.0.0/29&quot;
+                protocol: &quot;6&quot;
+                destinationType: &quot;CIDR_BLOCK&quot;
+                description: &quot;All traffic to control plane nodes&quot;
+                tcpOptions:
+                  destinationPortRange:
+                    max: 6443
+                    min: 6443
+            ingressRules:
+              - source: &quot;0.0.0.0/0&quot;
+                protocol: &quot;6&quot;
+                sourceType: &quot;CIDR_BLOCK&quot;
+                description: &quot;External access to Kubernetes API endpoint&quot;
+                tcpOptions:
+                  destinationPortRange:
+                    max: 6443
+                    min: 6443
+              - source: &quot;10.0.0.0/29&quot;
+                protocol: &quot;6&quot;
+                sourceType: &quot;CIDR_BLOCK&quot;
+                description: &quot;Control plane worker nodes to API Server endpoint&quot;
+              - source: &quot;0.0.0.0/0&quot;
+                protocol: &quot;6&quot;
+                sourceType: &quot;CIDR_BLOCK&quot;
+                description: &quot;SSH access&quot;
+                tcpOptions:
+                  destinationPortRange:
+                    max: 22
+                    min: 22
+        - name: cp-mc-subnet
+          role: control-plane
+          type: private
+          securityList:
+            name: cp-mc-seclist
+            egressRules:
+              - destination: &quot;0.0.0.0/0&quot;
+                protocol: &quot;6&quot;
+                destinationType: &quot;CIDR_BLOCK&quot;
+                description: &quot;control plane machine access to internet&quot;
+            ingressRules:
+              - source: &quot;10.0.0.0/16&quot;
+                protocol: &quot;all&quot;
+                sourceType: &quot;CIDR_BLOCK&quot;
+                description: &quot;Allow inter vcn communication&quot;
+              - source: &quot;0.0.0.0/0&quot;
+                protocol: &quot;6&quot;
+                sourceType: &quot;CIDR_BLOCK&quot;
+                description: &quot;SSH access&quot;
+                tcpOptions:
+                  destinationPortRange:
+                    max: 22
+                    min: 22
+        - name: worker-subnet
+          role: worker
+          type: private
+          securityList:
+            name: node-seclist
+            egressRules:
+              - destination: &quot;0.0.0.0/0&quot;
+                protocol: &quot;6&quot;
+                destinationType: &quot;CIDR_BLOCK&quot;
+                description: &quot;Worker Nodes access to Internet&quot;
+            ingressRules:
+              - source: &quot;10.0.0.0/16&quot;
+                protocol: &quot;all&quot;
+                sourceType: &quot;CIDR_BLOCK&quot;
+                description: &quot;Allow inter vcn communication&quot;
+        - name: svc-lb-subnet
+          role: service-lb
+          type: public
+          securityList:
+            name: service-lb-seclist
+            ingressRules:
+              - source: &quot;10.0.0.0/16&quot;
+                protocol: &quot;all&quot;
+                sourceType: &quot;CIDR_BLOCK&quot;
+                description: &quot;Allow ingress from vcn subnets&quot;
+</code></pre>
+<p>Related documentation: <a href="https://docs.oracle.com/en-us/iaas/Content/Network/Concepts/securityrules.htm#comparison">comparison of Security Lists and Network Security Groups</a></p>
+<h2 id="example-spec-for-externally-managed-vcn-infrastructure"><a class="header" href="#example-spec-for-externally-managed-vcn-infrastructure">Example spec for externally managed VCN infrastructure</a></h2>
+<div id="admonition-info" class="admonition info">
+<div class="admonition-title">
+<p>Info</p>
+<p><a class="admonition-anchor-link" href="#admonition-info"></a></p>
+</div>
+<div>
+<p>See <a href="../gs/externally-managed-cluster-infrastructure.html#example-spec-for-externally-managed-vcn-infrastructure">externally managed infrastructure</a> for how to create a cluster
+using existing VCN infrastructure.</p>
+</div>
+</div>
+<h2 id="example-spec-to-use-oci-load-balancer-as-api-server-load-balancer"><a class="header" href="#example-spec-to-use-oci-load-balancer-as-api-server-load-balancer">Example spec to use OCI Load Balancer as API Server load balancer</a></h2>
+<p>By default, CAPOCI uses <a href="https://docs.oracle.com/en-us/iaas/Content/NetworkLoadBalancer/introducton.htm#Overview">OCI Network Load Balancer</a> as API Server load balancer. The load balancer front-ends
+control plane hosts to provide high availability access to Kubernetes API. The following spec can be used to 
+use <a href="https://docs.oracle.com/en-us/iaas/Content/Balance/Concepts/balanceoverview.htm#Overview_of_Load_Balancing">OCI Load Balancer</a> as the API Server load balancer. The change from the default spec is to set 
+<code>loadBalancerType</code> field to &quot;lb&quot; in the <code>OCICluster</code> resource.</p>
+<pre><code class="language-yaml">apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: OCICluster
+metadata:
+  name: &quot;${CLUSTER_NAME}&quot;
+spec:
+  compartmentId: &quot;${OCI_COMPARTMENT_ID}&quot;
+  networkSpec:
+    apiServerLoadBalancer:
+      loadBalancerType: &quot;lb&quot;
+</code></pre>
+<h2 id="example-spec-to-use-custom-role"><a class="header" href="#example-spec-to-use-custom-role">Example spec to use custom role</a></h2>
+<p>CAPOCI can be used to create Subnet/NSG in the VCN for custom workloads such as private load balancers,
+dedicated subnet for DB connection etc. The roles for such custom subnest must be defined as <code>custom</code>.
+The following spec shows an example for this scenario.</p>
+<pre><code class="language-yaml">---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: OCICluster
+metadata:
+  name: &quot;${CLUSTER_NAME}&quot;
+spec:
+  compartmentId: &quot;${OCI_COMPARTMENT_ID}&quot;
+  networkSpec:
+    vcn:
+      name: ${CLUSTER_NAME}
+      subnets:
+        - name: db
+          role: custom
+          type: public
+          cidr: &quot;172.16.5.0/28&quot;
+      networkSecurityGroup:
+        list:
+          - name: db
+            role: custom
+            egressRules:
+              - egressRule:
+                  isStateless: false
+                  destination: &quot;172.16.5.0/28&quot;
+                  protocol: &quot;6&quot;
+                  destinationType: &quot;CIDR_BLOCK&quot;
+                  description: &quot;All traffic to control plane nodes&quot;
+                  tcpOptions:
+                    destinationPortRange:
+                      max: 6443
+                      min: 6443
+</code></pre>
+<h2 id="example-spec-to-use-network-security-group-as-destination-in-security-rule"><a class="header" href="#example-spec-to-use-network-security-group-as-destination-in-security-rule">Example spec to use Network Security Group as destination in security rule</a></h2>
+<p>The spec below shows how to specify a Network Security Group as a destination in security rule. The Network Security
+Group name is mentioned in the <code>destination</code> field in the below example. All the required Network Security Groups 
+must be defined in the template, CAPOCI will not lookup Network Security Group from the VCN.</p>
+<pre><code class="language-yaml">---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: OCICluster
+metadata:
+  name: &quot;${CLUSTER_NAME}&quot;
+spec:
+  compartmentId: &quot;${OCI_COMPARTMENT_ID}&quot;
+  networkSpec:
+    vcn:
+      name: ${CLUSTER_NAME}
+      cidr: &quot;172.16.0.0/16&quot;
+      networkSecurityGroup:
+        list:
+          - name: ep-nsg
+            role: control-plane-endpoint
+            egressRules:
+              - egressRule:
+                  isStateless: false
+                  destination: &quot;cp-mc-nsg&quot;
+                  protocol: &quot;6&quot;
+                  destinationType: &quot;NETWORK_SECURITY_GROUP&quot;
+                  description: &quot;All traffic to control plane nodes&quot;
+                  tcpOptions:
+                    destinationPortRange:
+                      max: 6443
+                      min: 6443
+          - name: cp-mc-nsg
+            role: control-plane
+            egressRules:
+              - egressRule:
+                  isStateless: false
+                  destination: &quot;0.0.0.0/0&quot;
+                  protocol: &quot;6&quot;
+                  destinationType: &quot;CIDR_BLOCK&quot;
+                  description: &quot;control plane machine access to internet&quot;
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../networking/ipv6.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                            <a rel="next" href="../networking/private-cluster.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../networking/ipv6.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                    <a rel="next" href="../networking/private-cluster.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        <script src="../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../searcher.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+    </body>
+</html>
