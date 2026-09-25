@@ -769,6 +769,10 @@ spec:
                                 description: Whether Secure Boot is enabled on the
                                   instance.
                                 type: boolean
+                              isSymmetricMultiThreadingEnabled:
+                                description: Whether symmetric multithreading is enabled
+                                  on the instance.
+                                type: boolean
                               isTrustedPlatformModuleEnabled:
                                 description: Whether the Trusted Platform Module (TPM)
                                   is enabled on the instance.
@@ -830,6 +834,10 @@ spec:
                             description: AmdMilanBmPlatformConfig describe Intel Skylke
                               BM platform configuration
                             properties:
+                              isInputOutputMemoryManagementUnitEnabled:
+                                description: Whether the input-output memory management
+                                  unit is enabled.
+                                type: boolean
                               isMeasuredBootEnabled:
                                 description: Whether the Measured Boot feature is
                                   enabled on the instance.
@@ -844,10 +852,26 @@ spec:
                                 description: Whether Secure Boot is enabled on the
                                   instance.
                                 type: boolean
+                              isSymmetricMultiThreadingEnabled:
+                                description: Whether symmetric multithreading is enabled
+                                  on the instance.
+                                type: boolean
                               isTrustedPlatformModuleEnabled:
                                 description: Whether the Trusted Platform Module (TPM)
                                   is enabled on the instance.
                                 type: boolean
+                              numaNodesPerSocket:
+                                description: The number of NUMA nodes per socket (NPS).
+                                enum:
+                                - NPS1
+                                - NPS2
+                                type: string
+                              percentageOfCoresEnabled:
+                                description: The percentage of cores enabled.
+                                maximum: 100
+                                minimum: 25
+                                multipleOf: 25
+                                type: integer
                             type: object
                           intelVmPlatformConfig:
                             description: AmdMilanBmPlatformConfig describe Intel VM
@@ -866,6 +890,10 @@ spec:
                               isSecureBootEnabled:
                                 description: Whether Secure Boot is enabled on the
                                   instance.
+                                type: boolean
+                              isSymmetricMultiThreadingEnabled:
+                                description: Whether symmetric multithreading is enabled
+                                  on the instance.
                                 type: boolean
                               isTrustedPlatformModuleEnabled:
                                 description: Whether the Trusted Platform Module (TPM)
@@ -1743,6 +1771,10 @@ spec:
                                 description: Whether Secure Boot is enabled on the
                                   instance.
                                 type: boolean
+                              isSymmetricMultiThreadingEnabled:
+                                description: Whether symmetric multithreading is enabled
+                                  on the instance.
+                                type: boolean
                               isTrustedPlatformModuleEnabled:
                                 description: Whether the Trusted Platform Module (TPM)
                                   is enabled on the instance.
@@ -1804,6 +1836,10 @@ spec:
                             description: AmdMilanBmPlatformConfig describe Intel Skylke
                               BM platform configuration
                             properties:
+                              isInputOutputMemoryManagementUnitEnabled:
+                                description: Whether the input-output memory management
+                                  unit is enabled.
+                                type: boolean
                               isMeasuredBootEnabled:
                                 description: Whether the Measured Boot feature is
                                   enabled on the instance.
@@ -1818,10 +1854,26 @@ spec:
                                 description: Whether Secure Boot is enabled on the
                                   instance.
                                 type: boolean
+                              isSymmetricMultiThreadingEnabled:
+                                description: Whether symmetric multithreading is enabled
+                                  on the instance.
+                                type: boolean
                               isTrustedPlatformModuleEnabled:
                                 description: Whether the Trusted Platform Module (TPM)
                                   is enabled on the instance.
                                 type: boolean
+                              numaNodesPerSocket:
+                                description: The number of NUMA nodes per socket (NPS).
+                                enum:
+                                - NPS1
+                                - NPS2
+                                type: string
+                              percentageOfCoresEnabled:
+                                description: The percentage of cores enabled.
+                                maximum: 100
+                                minimum: 25
+                                multipleOf: 25
+                                type: integer
                             type: object
                           intelVmPlatformConfig:
                             description: AmdMilanBmPlatformConfig describe Intel VM
@@ -1840,6 +1892,10 @@ spec:
                               isSecureBootEnabled:
                                 description: Whether Secure Boot is enabled on the
                                   instance.
+                                type: boolean
+                              isSymmetricMultiThreadingEnabled:
+                                description: Whether symmetric multithreading is enabled
+                                  on the instance.
                                 type: boolean
                               isTrustedPlatformModuleEnabled:
                                 description: Whether the Trusted Platform Module (TPM)

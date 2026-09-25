@@ -68,6 +68,396 @@ func TestComputeHash_ConsistentResults(t *testing.T) {
 	g.Expect(hash1).To(Equal(hash2))
 }
 
+func TestComputeHash_ApprovedParityFieldsAffectDesiredHashAndProjection(t *testing.T) {
+	baseLaunchDetails := func() *core.InstanceConfigurationLaunchInstanceDetails {
+		return &core.InstanceConfigurationLaunchInstanceDetails{
+			Shape: common.String("VM.Standard.E4.Flex"),
+		}
+	}
+
+	tests := []struct {
+		name   string
+		mutate func(*core.InstanceConfigurationLaunchInstanceDetails)
+		assert func(g *WithT, projected *comparableLaunchDetails)
+	}{
+		{
+			name: "cluster placement group id",
+			mutate: func(ld *core.InstanceConfigurationLaunchInstanceDetails) {
+				ld.ClusterPlacementGroupId = common.String("ocid1.clusterplacementgroup.oc1..test")
+			},
+			assert: func(g *WithT, projected *comparableLaunchDetails) {
+				g.Expect(*projected.ClusterPlacementGroupID).To(Equal("ocid1.clusterplacementgroup.oc1..test"))
+			},
+		},
+		{
+			name: "ipxe script",
+			mutate: func(ld *core.InstanceConfigurationLaunchInstanceDetails) {
+				ld.IpxeScript = common.String("#!ipxe")
+			},
+			assert: func(g *WithT, projected *comparableLaunchDetails) {
+				g.Expect(*projected.IpxeScript).To(Equal("#!ipxe"))
+			},
+		},
+		{
+			name: "launch mode",
+			mutate: func(ld *core.InstanceConfigurationLaunchInstanceDetails) {
+				ld.LaunchMode = core.InstanceConfigurationLaunchInstanceDetailsLaunchModeNative
+			},
+			assert: func(g *WithT, projected *comparableLaunchDetails) {
+				g.Expect(projected.LaunchMode).To(Equal(string(core.InstanceConfigurationLaunchInstanceDetailsLaunchModeNative)))
+			},
+		},
+		{
+			name: "licensing configs",
+			mutate: func(ld *core.InstanceConfigurationLaunchInstanceDetails) {
+				ld.LicensingConfigs = []core.LaunchInstanceLicensingConfig{
+					core.LaunchInstanceWindowsLicensingConfig{
+						LicenseType: core.LaunchInstanceLicensingConfigLicenseTypeBringYourOwnLicense,
+					},
+				}
+			},
+			assert: func(g *WithT, projected *comparableLaunchDetails) {
+				g.Expect(projected.LicensingConfigs).To(Equal([]comparableLicensingConfig{{
+					Type:        string(core.LaunchInstanceLicensingConfigTypeWindows),
+					LicenseType: string(core.LaunchInstanceLicensingConfigLicenseTypeBringYourOwnLicense),
+				}}))
+			},
+		},
+		{
+			name: "preferred maintenance action",
+			mutate: func(ld *core.InstanceConfigurationLaunchInstanceDetails) {
+				ld.PreferredMaintenanceAction = core.InstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionReboot
+			},
+			assert: func(g *WithT, projected *comparableLaunchDetails) {
+				g.Expect(projected.PreferredMaintenanceAction).To(Equal(string(core.InstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionReboot)))
+			},
+		},
+		{
+			name: "shape vcpus",
+			mutate: func(ld *core.InstanceConfigurationLaunchInstanceDetails) {
+				ld.ShapeConfig = &core.InstanceConfigurationLaunchInstanceShapeConfigDetails{
+					Vcpus: common.Int(4),
+				}
+			},
+			assert: func(g *WithT, projected *comparableLaunchDetails) {
+				g.Expect(*projected.ShapeConfig.VCPUs).To(Equal(4))
+			},
+		},
+		{
+			name: "AMD VM SMT",
+			mutate: func(ld *core.InstanceConfigurationLaunchInstanceDetails) {
+				ld.PlatformConfig = core.AmdVmPlatformConfig{
+					IsSymmetricMultiThreadingEnabled: common.Bool(true),
+				}
+			},
+			assert: func(g *WithT, projected *comparableLaunchDetails) {
+				g.Expect(projected.PlatformConfig.Type).To(Equal("AmdVmPlatformConfig"))
+				g.Expect(projected.PlatformConfig.IsSymmetricMultiThreadingEnabled).To(BeNil())
+			},
+		},
+		{
+			name: "Intel Skylake BM approved knobs",
+			mutate: func(ld *core.InstanceConfigurationLaunchInstanceDetails) {
+				ld.PlatformConfig = core.IntelSkylakeBmPlatformConfig{
+					IsSymmetricMultiThreadingEnabled:         common.Bool(true),
+					IsInputOutputMemoryManagementUnitEnabled: common.Bool(true),
+					PercentageOfCoresEnabled:                 common.Int(50),
+					NumaNodesPerSocket:                       core.IntelSkylakeBmPlatformConfigNumaNodesPerSocketNps2,
+				}
+			},
+			assert: func(g *WithT, projected *comparableLaunchDetails) {
+				g.Expect(projected.PlatformConfig.Type).To(Equal("IntelSkylakeBmPlatformConfig"))
+				g.Expect(projected.PlatformConfig.IsSymmetricMultiThreadingEnabled).To(BeNil())
+				g.Expect(*projected.PlatformConfig.IsInputOutputMemoryManagementUnitEnabled).To(BeTrue())
+				g.Expect(*projected.PlatformConfig.PercentageOfCoresEnabled).To(Equal(50))
+				g.Expect(projected.PlatformConfig.NumaNodesPerSocket).To(Equal(string(core.IntelSkylakeBmPlatformConfigNumaNodesPerSocketNps2)))
+			},
+		},
+		{
+			name: "Intel VM SMT",
+			mutate: func(ld *core.InstanceConfigurationLaunchInstanceDetails) {
+				ld.PlatformConfig = core.IntelVmPlatformConfig{
+					IsSymmetricMultiThreadingEnabled: common.Bool(true),
+				}
+			},
+			assert: func(g *WithT, projected *comparableLaunchDetails) {
+				g.Expect(projected.PlatformConfig.Type).To(Equal("IntelVmPlatformConfig"))
+				g.Expect(projected.PlatformConfig.IsSymmetricMultiThreadingEnabled).To(BeNil())
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			base := baseLaunchDetails()
+			baseHash, err := ComputeHash(base)
+			g.Expect(err).To(BeNil())
+
+			desired := baseLaunchDetails()
+			tt.mutate(desired)
+
+			desiredHash, err := ComputeHash(desired)
+			g.Expect(err).To(BeNil())
+			g.Expect(desiredHash).ToNot(Equal(baseHash))
+
+			projected := projectLaunchDetails(desired, desired)
+			tt.assert(g, projected)
+
+			comparableHash, err := ComputeComparableHash(desired, desired)
+			g.Expect(err).To(BeNil())
+			g.Expect(comparableHash).To(Equal(desiredHash))
+		})
+	}
+}
+
+func TestComputeComparableHash_NormalizesInstanceConfigurationPlatformConfigTypes(t *testing.T) {
+	tests := []struct {
+		name    string
+		desired core.InstanceConfigurationLaunchInstancePlatformConfig
+		actual  core.InstanceConfigurationLaunchInstancePlatformConfig
+	}{
+		{
+			name: "AMD Milan BM",
+			desired: core.AmdMilanBmPlatformConfig{
+				IsSecureBootEnabled:                      common.Bool(true),
+				IsTrustedPlatformModuleEnabled:           common.Bool(true),
+				IsMeasuredBootEnabled:                    common.Bool(true),
+				IsMemoryEncryptionEnabled:                common.Bool(true),
+				IsSymmetricMultiThreadingEnabled:         common.Bool(true),
+				IsAccessControlServiceEnabled:            common.Bool(true),
+				AreVirtualInstructionsEnabled:            common.Bool(true),
+				IsInputOutputMemoryManagementUnitEnabled: common.Bool(true),
+				PercentageOfCoresEnabled:                 common.Int(50),
+				NumaNodesPerSocket:                       core.AmdMilanBmPlatformConfigNumaNodesPerSocketNps2,
+			},
+			actual: core.InstanceConfigurationAmdMilanBmLaunchInstancePlatformConfig{
+				IsSecureBootEnabled:                      common.Bool(true),
+				IsTrustedPlatformModuleEnabled:           common.Bool(true),
+				IsMeasuredBootEnabled:                    common.Bool(true),
+				IsMemoryEncryptionEnabled:                common.Bool(true),
+				IsSymmetricMultiThreadingEnabled:         common.Bool(true),
+				IsAccessControlServiceEnabled:            common.Bool(true),
+				AreVirtualInstructionsEnabled:            common.Bool(true),
+				IsInputOutputMemoryManagementUnitEnabled: common.Bool(true),
+				PercentageOfCoresEnabled:                 common.Int(50),
+				NumaNodesPerSocket:                       core.InstanceConfigurationAmdMilanBmLaunchInstancePlatformConfigNumaNodesPerSocketNps2,
+			},
+		},
+		{
+			name: "AMD Rome BM GPU",
+			desired: core.AmdRomeBmGpuPlatformConfig{
+				IsSecureBootEnabled:                      common.Bool(true),
+				IsTrustedPlatformModuleEnabled:           common.Bool(true),
+				IsMeasuredBootEnabled:                    common.Bool(true),
+				IsMemoryEncryptionEnabled:                common.Bool(true),
+				IsSymmetricMultiThreadingEnabled:         common.Bool(true),
+				IsAccessControlServiceEnabled:            common.Bool(true),
+				AreVirtualInstructionsEnabled:            common.Bool(true),
+				IsInputOutputMemoryManagementUnitEnabled: common.Bool(true),
+				NumaNodesPerSocket:                       core.AmdRomeBmGpuPlatformConfigNumaNodesPerSocketNps2,
+			},
+			actual: core.InstanceConfigurationAmdRomeBmGpuLaunchInstancePlatformConfig{
+				IsSecureBootEnabled:                      common.Bool(true),
+				IsTrustedPlatformModuleEnabled:           common.Bool(true),
+				IsMeasuredBootEnabled:                    common.Bool(true),
+				IsMemoryEncryptionEnabled:                common.Bool(true),
+				IsSymmetricMultiThreadingEnabled:         common.Bool(true),
+				IsAccessControlServiceEnabled:            common.Bool(true),
+				AreVirtualInstructionsEnabled:            common.Bool(true),
+				IsInputOutputMemoryManagementUnitEnabled: common.Bool(true),
+				NumaNodesPerSocket:                       core.InstanceConfigurationAmdRomeBmGpuLaunchInstancePlatformConfigNumaNodesPerSocketNps2,
+			},
+		},
+		{
+			name: "AMD Rome BM",
+			desired: core.AmdRomeBmPlatformConfig{
+				IsSecureBootEnabled:                      common.Bool(true),
+				IsTrustedPlatformModuleEnabled:           common.Bool(true),
+				IsMeasuredBootEnabled:                    common.Bool(true),
+				IsMemoryEncryptionEnabled:                common.Bool(true),
+				IsSymmetricMultiThreadingEnabled:         common.Bool(true),
+				IsAccessControlServiceEnabled:            common.Bool(true),
+				AreVirtualInstructionsEnabled:            common.Bool(true),
+				IsInputOutputMemoryManagementUnitEnabled: common.Bool(true),
+				PercentageOfCoresEnabled:                 common.Int(50),
+				NumaNodesPerSocket:                       core.AmdRomeBmPlatformConfigNumaNodesPerSocketNps2,
+			},
+			actual: core.InstanceConfigurationAmdRomeBmLaunchInstancePlatformConfig{
+				IsSecureBootEnabled:                      common.Bool(true),
+				IsTrustedPlatformModuleEnabled:           common.Bool(true),
+				IsMeasuredBootEnabled:                    common.Bool(true),
+				IsMemoryEncryptionEnabled:                common.Bool(true),
+				IsSymmetricMultiThreadingEnabled:         common.Bool(true),
+				IsAccessControlServiceEnabled:            common.Bool(true),
+				AreVirtualInstructionsEnabled:            common.Bool(true),
+				IsInputOutputMemoryManagementUnitEnabled: common.Bool(true),
+				PercentageOfCoresEnabled:                 common.Int(50),
+				NumaNodesPerSocket:                       core.InstanceConfigurationAmdRomeBmLaunchInstancePlatformConfigNumaNodesPerSocketNps2,
+			},
+		},
+		{
+			name: "AMD VM",
+			desired: core.AmdVmPlatformConfig{
+				IsSecureBootEnabled:              common.Bool(true),
+				IsTrustedPlatformModuleEnabled:   common.Bool(true),
+				IsMeasuredBootEnabled:            common.Bool(true),
+				IsMemoryEncryptionEnabled:        common.Bool(true),
+				IsSymmetricMultiThreadingEnabled: common.Bool(true),
+			},
+			actual: core.InstanceConfigurationAmdVmLaunchInstancePlatformConfig{
+				IsSecureBootEnabled:              common.Bool(true),
+				IsTrustedPlatformModuleEnabled:   common.Bool(true),
+				IsMeasuredBootEnabled:            common.Bool(true),
+				IsMemoryEncryptionEnabled:        common.Bool(true),
+				IsSymmetricMultiThreadingEnabled: common.Bool(true),
+			},
+		},
+		{
+			name: "Intel Icelake BM",
+			desired: core.IntelIcelakeBmPlatformConfig{
+				IsSecureBootEnabled:                      common.Bool(true),
+				IsTrustedPlatformModuleEnabled:           common.Bool(true),
+				IsMeasuredBootEnabled:                    common.Bool(true),
+				IsMemoryEncryptionEnabled:                common.Bool(true),
+				IsSymmetricMultiThreadingEnabled:         common.Bool(true),
+				IsInputOutputMemoryManagementUnitEnabled: common.Bool(true),
+				PercentageOfCoresEnabled:                 common.Int(50),
+				NumaNodesPerSocket:                       core.IntelIcelakeBmPlatformConfigNumaNodesPerSocketNps2,
+			},
+			actual: core.InstanceConfigurationIntelIcelakeBmLaunchInstancePlatformConfig{
+				IsSecureBootEnabled:                      common.Bool(true),
+				IsTrustedPlatformModuleEnabled:           common.Bool(true),
+				IsMeasuredBootEnabled:                    common.Bool(true),
+				IsMemoryEncryptionEnabled:                common.Bool(true),
+				IsSymmetricMultiThreadingEnabled:         common.Bool(true),
+				IsInputOutputMemoryManagementUnitEnabled: common.Bool(true),
+				PercentageOfCoresEnabled:                 common.Int(50),
+				NumaNodesPerSocket:                       core.InstanceConfigurationIntelIcelakeBmLaunchInstancePlatformConfigNumaNodesPerSocketNps2,
+			},
+		},
+		{
+			name: "Intel Skylake BM",
+			desired: core.IntelSkylakeBmPlatformConfig{
+				IsSecureBootEnabled:                      common.Bool(true),
+				IsTrustedPlatformModuleEnabled:           common.Bool(true),
+				IsMeasuredBootEnabled:                    common.Bool(true),
+				IsMemoryEncryptionEnabled:                common.Bool(true),
+				IsSymmetricMultiThreadingEnabled:         common.Bool(true),
+				IsInputOutputMemoryManagementUnitEnabled: common.Bool(true),
+				PercentageOfCoresEnabled:                 common.Int(50),
+				NumaNodesPerSocket:                       core.IntelSkylakeBmPlatformConfigNumaNodesPerSocketNps2,
+			},
+			actual: core.InstanceConfigurationIntelSkylakeBmLaunchInstancePlatformConfig{
+				IsSecureBootEnabled:                      common.Bool(true),
+				IsTrustedPlatformModuleEnabled:           common.Bool(true),
+				IsMeasuredBootEnabled:                    common.Bool(true),
+				IsMemoryEncryptionEnabled:                common.Bool(true),
+				IsSymmetricMultiThreadingEnabled:         common.Bool(true),
+				IsInputOutputMemoryManagementUnitEnabled: common.Bool(true),
+				PercentageOfCoresEnabled:                 common.Int(50),
+				NumaNodesPerSocket:                       core.InstanceConfigurationIntelSkylakeBmLaunchInstancePlatformConfigNumaNodesPerSocketNps2,
+			},
+		},
+		{
+			name: "Intel VM",
+			desired: core.IntelVmPlatformConfig{
+				IsSecureBootEnabled:              common.Bool(true),
+				IsTrustedPlatformModuleEnabled:   common.Bool(true),
+				IsMeasuredBootEnabled:            common.Bool(true),
+				IsMemoryEncryptionEnabled:        common.Bool(true),
+				IsSymmetricMultiThreadingEnabled: common.Bool(true),
+			},
+			actual: core.InstanceConfigurationIntelVmLaunchInstancePlatformConfig{
+				IsSecureBootEnabled:              common.Bool(true),
+				IsTrustedPlatformModuleEnabled:   common.Bool(true),
+				IsMeasuredBootEnabled:            common.Bool(true),
+				IsMemoryEncryptionEnabled:        common.Bool(true),
+				IsSymmetricMultiThreadingEnabled: common.Bool(true),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			desired := &core.InstanceConfigurationLaunchInstanceDetails{
+				Shape:          common.String("VM.Standard.E4.Flex"),
+				PlatformConfig: tt.desired,
+			}
+			actual := &core.InstanceConfigurationLaunchInstanceDetails{
+				Shape:          common.String("VM.Standard.E4.Flex"),
+				PlatformConfig: tt.actual,
+			}
+
+			desiredHash, err := ComputeHash(desired)
+			g.Expect(err).To(BeNil())
+
+			actualHash, err := ComputeComparableHash(actual, desired)
+			g.Expect(err).To(BeNil())
+
+			g.Expect(actualHash).To(Equal(desiredHash))
+		})
+	}
+}
+
+func TestComputeComparableHash_NormalizesOmittedDefaultEnabledSMT(t *testing.T) {
+	tests := []struct {
+		name       string
+		desiredSMT *bool
+		actualSMT  *bool
+		wantEqual  bool
+	}{
+		{
+			name:       "desired true matches omitted OCI readback",
+			desiredSMT: common.Bool(true),
+			wantEqual:  true,
+		},
+		{
+			name:       "desired false differs from omitted OCI readback",
+			desiredSMT: common.Bool(false),
+			wantEqual:  false,
+		},
+		{
+			name:       "desired false matches false OCI readback",
+			desiredSMT: common.Bool(false),
+			actualSMT:  common.Bool(false),
+			wantEqual:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			desired := &core.InstanceConfigurationLaunchInstanceDetails{
+				Shape: common.String("VM.Standard.E3.Flex"),
+				PlatformConfig: core.AmdVmPlatformConfig{
+					IsSymmetricMultiThreadingEnabled: tt.desiredSMT,
+				},
+			}
+			actual := &core.InstanceConfigurationLaunchInstanceDetails{
+				Shape: common.String("VM.Standard.E3.Flex"),
+				PlatformConfig: core.InstanceConfigurationAmdVmLaunchInstancePlatformConfig{
+					IsSymmetricMultiThreadingEnabled: tt.actualSMT,
+				},
+			}
+
+			desiredHash, err := ComputeHash(desired)
+			g.Expect(err).To(BeNil())
+
+			actualHash, err := ComputeComparableHash(actual, desired)
+			g.Expect(err).To(BeNil())
+
+			if tt.wantEqual {
+				g.Expect(actualHash).To(Equal(desiredHash))
+			} else {
+				g.Expect(actualHash).ToNot(Equal(desiredHash))
+			}
+		})
+	}
+}
+
 func TestNormalizeLaunchDetails_NilInput(t *testing.T) {
 	g := NewWithT(t)
 	result := projectLaunchDetails(nil, nil)
@@ -77,17 +467,15 @@ func TestNormalizeLaunchDetails_NilInput(t *testing.T) {
 func TestNormalizeLaunchDetails_StripsIgnoredFields(t *testing.T) {
 	g := NewWithT(t)
 	original := &core.InstanceConfigurationLaunchInstanceDetails{
-		DisplayName:        common.String("test-instance"),
-		Shape:              common.String("VM.Standard2.1"),
-		FreeformTags:       map[string]string{"tag1": "value1"},
-		DefinedTags:        map[string]map[string]interface{}{"namespace": {"key": "value"}},
-		SecurityAttributes: map[string]map[string]interface{}{"security": {"attr": "val"}},
+		DisplayName:  common.String("test-instance"),
+		Shape:        common.String("VM.Standard2.1"),
+		FreeformTags: map[string]string{"tag1": "value1"},
+		DefinedTags:  map[string]map[string]interface{}{"namespace": {"key": "value"}},
 		CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
-			DisplayName:        common.String("vnic"),
-			FreeformTags:       map[string]string{"vnic-tag": "vnic-value"},
-			DefinedTags:        map[string]map[string]interface{}{"vnic-ns": {"vnic-key": "vnic-value"}},
-			SecurityAttributes: map[string]map[string]interface{}{"vnic-sec": {"vnic-attr": "vnic-val"}},
-			NsgIds:             []string{"nsg1", "nsg2"},
+			DisplayName:  common.String("vnic"),
+			FreeformTags: map[string]string{"vnic-tag": "vnic-value"},
+			DefinedTags:  map[string]map[string]interface{}{"vnic-ns": {"vnic-key": "vnic-value"}},
+			NsgIds:       []string{"nsg1", "nsg2"},
 		},
 	}
 
@@ -483,10 +871,10 @@ func TestComputeHash_FreeformTagChangeProducesDifferentHash(t *testing.T) {
 	}
 
 	ld1 := *baseLd
-	ld1.FreeformTags = map[string]string{"tag1": "value1"}
+	ld1.FreeformTags = map[string]string{"oci-default": "value1"}
 
 	ld2 := *baseLd
-	ld2.FreeformTags = map[string]string{"tag2": "value2"}
+	ld2.FreeformTags = map[string]string{"oci-default": "value2"}
 
 	hash1, err := ComputeHash(&ld1)
 	g.Expect(err).To(BeNil())
@@ -857,6 +1245,7 @@ func TestComputeComparableHash_IgnoresShapeDefaultsNotPresentInDesired(t *testin
 		ShapeConfig: &core.InstanceConfigurationLaunchInstanceShapeConfigDetails{
 			Ocpus:       common.Float32(1),
 			MemoryInGBs: common.Float32(16),
+			Vcpus:       common.Int(2),
 		},
 	}
 
@@ -898,6 +1287,110 @@ func TestComputeComparableHash_IgnoresFalseDefaultsForSupportedFields(t *testing
 	g.Expect(actualHash).To(Equal(desiredHash))
 }
 
+func TestComputeComparableHash_IgnoresDefaultOnlyReadbackChurn(t *testing.T) {
+	g := NewWithT(t)
+	desired := &core.InstanceConfigurationLaunchInstanceDetails{
+		CompartmentId: common.String("ocid1.compartment.oc1..test"),
+		Shape:         common.String("VM.Standard.E4.Flex"),
+		ShapeConfig: &core.InstanceConfigurationLaunchInstanceShapeConfigDetails{
+			Ocpus: common.Float32(1),
+		},
+		CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+			SubnetId: common.String("ocid1.subnet.oc1..test"),
+		},
+		Metadata: map[string]string{
+			"user_data": "desired-bootstrap",
+		},
+	}
+	actual := &core.InstanceConfigurationLaunchInstanceDetails{
+		CompartmentId: common.String("ocid1.compartment.oc1..test"),
+		DisplayName:   common.String("server-filled-name"),
+		DefinedTags:   map[string]map[string]interface{}{"Oracle-Tags": {"CreatedBy": "oci"}},
+		Shape:         common.String("VM.Standard.E4.Flex"),
+		ShapeConfig: &core.InstanceConfigurationLaunchInstanceShapeConfigDetails{
+			Ocpus:       common.Float32(1),
+			MemoryInGBs: common.Float32(16),
+		},
+		CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
+			SubnetId:       common.String("ocid1.subnet.oc1..test"),
+			DisplayName:    common.String("server-filled-vnic"),
+			AssignPublicIp: common.Bool(false),
+		},
+		AgentConfig: &core.InstanceConfigurationLaunchInstanceAgentConfigDetails{},
+		LaunchMode:  core.InstanceConfigurationLaunchInstanceDetailsLaunchModeNative,
+		Metadata: map[string]string{
+			"user_data": "different-bootstrap-is-tracked-separately",
+		},
+		PreferredMaintenanceAction: core.InstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionLiveMigrate,
+		LicensingConfigs: []core.LaunchInstanceLicensingConfig{
+			core.LaunchInstanceWindowsLicensingConfig{LicenseType: core.LaunchInstanceLicensingConfigLicenseTypeOciProvided},
+		},
+	}
+
+	desiredHash, err := ComputeHash(desired)
+	g.Expect(err).To(BeNil())
+
+	actualHash, err := ComputeComparableHash(actual, desired)
+	g.Expect(err).To(BeNil())
+
+	g.Expect(actualHash).To(Equal(desiredHash))
+}
+
+func TestComputeComparableHash_DetectsSetToUnsetOptionalLaunchFields(t *testing.T) {
+	tests := []struct {
+		name   string
+		actual *core.InstanceConfigurationLaunchInstanceDetails
+	}{
+		{
+			name: "cluster placement group id",
+			actual: &core.InstanceConfigurationLaunchInstanceDetails{
+				ClusterPlacementGroupId: common.String("ocid1.clusterplacementgroup.oc1..test"),
+			},
+		},
+		{
+			name: "ipxe script",
+			actual: &core.InstanceConfigurationLaunchInstanceDetails{
+				IpxeScript: common.String("#!ipxe"),
+			},
+		},
+		// Note: launch mode is intentionally excluded here.
+		// OCI can return any launch mode value (including CUSTOM) as a service default,
+		// so we cannot safely distinguish "user removed the field" from "OCI returned its default."
+		// Removal of this field is therefore not detectable, consistent with preferred maintenance action.
+		// Note: preferred maintenance action is intentionally excluded here.
+		// Both LIVE_MIGRATE and REBOOT are valid OCI service defaults depending on shape,
+		// so we cannot distinguish "user removed the field" from "OCI returned its default."
+		// We treat both as untracked defaults to prevent continuous reconciliation on shapes
+		// that return REBOOT by default. Removal of this field is therefore not detectable.
+		// Note: VCPUs are intentionally excluded here. OCI can return a calculated
+		// VCPU value when the field was omitted, so desired-hash annotations detect
+		// explicit removal without treating service defaults as perpetual drift.
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			actual := &core.InstanceConfigurationLaunchInstanceDetails{
+				Shape: common.String("VM.Standard2.1"),
+			}
+			*actual = *tt.actual
+			actual.Shape = common.String("VM.Standard2.1")
+
+			desired := &core.InstanceConfigurationLaunchInstanceDetails{
+				Shape: common.String("VM.Standard2.1"),
+			}
+
+			actualHash, err := ComputeComparableHash(actual, desired)
+			g.Expect(err).To(BeNil())
+
+			desiredHash, err := ComputeHash(desired)
+			g.Expect(err).To(BeNil())
+
+			g.Expect(actualHash).ToNot(Equal(desiredHash))
+		})
+	}
+}
+
 func TestComputeComparableHash_DetectsTrueToFalseVNICUpdates(t *testing.T) {
 	g := NewWithT(t)
 	desired := &core.InstanceConfigurationLaunchInstanceDetails{
@@ -932,11 +1425,10 @@ func TestComputeHash_ComprehensiveTest(t *testing.T) {
 	var nvmes int = 1
 
 	ld := &core.InstanceConfigurationLaunchInstanceDetails{
-		// Fields that should be EXCLUDED
-		DisplayName:        common.String("test-instance"),
-		FreeformTags:       map[string]string{"env": "test", "team": "platform"},
-		DefinedTags:        map[string]map[string]interface{}{"oracle-tags": {"CreatedBy": "test"}},
-		SecurityAttributes: map[string]map[string]interface{}{"security": {"level": "high"}},
+		// Fields that should be excluded from the InstanceConfiguration identity.
+		DisplayName:  common.String("test-instance"),
+		FreeformTags: map[string]string{"env": "test", "team": "platform"},
+		DefinedTags:  map[string]map[string]interface{}{"oracle-tags": {"CreatedBy": "test"}},
 
 		// Fields that should be included
 		Shape:             common.String("VM.Standard.E4.Flex"),
@@ -958,12 +1450,11 @@ func TestComputeHash_ComprehensiveTest(t *testing.T) {
 			Nvmes:       &nvmes,
 		},
 
-		// VNIC details - display name/security attributes excluded, tags included, NSGs sorted
+		// VNIC details - display name excluded, tags included, NSGs sorted
 		CreateVnicDetails: &core.InstanceConfigurationCreateVnicDetails{
 			DisplayName:            common.String("test-vnic"),
 			FreeformTags:           map[string]string{"vnic-tag": "value"},
 			DefinedTags:            map[string]map[string]interface{}{"vnic-ns": {"key": "val"}},
-			SecurityAttributes:     map[string]map[string]interface{}{"vnic-sec": {"attr": "val"}},
 			AssignPublicIp:         common.Bool(false),
 			SkipSourceDestCheck:    common.Bool(false),
 			AssignPrivateDnsRecord: common.Bool(true),
@@ -1267,6 +1758,51 @@ func TestComputeComparableHash_ExtendedMetadataClearDetected(t *testing.T) {
 			g.Expect(err).To(BeNil())
 
 			g.Expect(hashActual).ToNot(Equal(hashDesired))
+		})
+	}
+}
+
+// TestComputeComparableHash_OciEnumDefaultsDoNotCauseDrift verifies that when
+// the desired spec omits LaunchMode or PreferredMaintenanceAction, OCI returning
+// any of its known service defaults does not produce a hash mismatch (which
+// would cause continuous reconciliation).
+func TestComputeComparableHash_OciEnumDefaultsDoNotCauseDrift(t *testing.T) {
+	shape := common.String("VM.Standard.E4.Flex")
+
+	cases := []struct {
+		name    string
+		actual  core.InstanceConfigurationLaunchInstanceDetailsLaunchModeEnum
+		maintAc core.InstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionEnum
+	}{
+		{"NATIVE launch mode not drift", core.InstanceConfigurationLaunchInstanceDetailsLaunchModeNative, ""},
+		{"PARAVIRTUALIZED launch mode not drift", core.InstanceConfigurationLaunchInstanceDetailsLaunchModeParavirtualized, ""},
+		{"EMULATED launch mode not drift", core.InstanceConfigurationLaunchInstanceDetailsLaunchModeEmulated, ""},
+		{"CUSTOM launch mode not drift", core.InstanceConfigurationLaunchInstanceDetailsLaunchModeCustom, ""},
+		{"LIVE_MIGRATE maintenance not drift", "", core.InstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionLiveMigrate},
+		{"REBOOT maintenance not drift", "", core.InstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionReboot},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			// desired: user did not set LaunchMode or PreferredMaintenanceAction
+			desired := &core.InstanceConfigurationLaunchInstanceDetails{Shape: shape}
+
+			// actual: OCI returned a service default the user never asked for
+			actual := &core.InstanceConfigurationLaunchInstanceDetails{
+				Shape:                      shape,
+				LaunchMode:                 tc.actual,
+				PreferredMaintenanceAction: tc.maintAc,
+			}
+
+			hashDesired, err := ComputeComparableHash(desired, desired)
+			g.Expect(err).To(BeNil())
+
+			hashActual, err := ComputeComparableHash(actual, desired)
+			g.Expect(err).To(BeNil())
+
+			g.Expect(hashActual).To(Equal(hashDesired), "OCI service default should not appear as drift")
 		})
 	}
 }

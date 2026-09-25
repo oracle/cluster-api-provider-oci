@@ -17,9 +17,14 @@
 package v1beta1
 
 import (
+	"os"
+	"reflect"
+	"strings"
 	"testing"
 
 	. "github.com/onsi/gomega"
+	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/apitesting/fuzzer"
@@ -58,6 +63,59 @@ func OCIMachinePoolHubFuzzer(obj *v1beta2.OCIMachinePool, c randfill.Continue) {
 	c.FillNoCustom(obj)
 	// Replace fuzzed bytes with valid JSON so the roundtrip works
 	obj.Spec.InstanceConfiguration.ExtendedMetadata = sampleExtendedMetadata()
+}
+
+func TestOCIMachinePoolDeferredAndOutOfScopeFieldsRemainAbsent(t *testing.T) {
+	g := NewWithT(t)
+
+	assertNoJSONField := func(obj interface{}, field string) {
+		t.Helper()
+		typ := reflect.TypeOf(obj)
+		if typ.Kind() == reflect.Pointer {
+			typ = typ.Elem()
+		}
+		for i := 0; i < typ.NumField(); i++ {
+			jsonTag := typ.Field(i).Tag.Get("json")
+			if strings.Split(jsonTag, ",")[0] == field {
+				t.Fatalf("%s unexpectedly exposes json field %q", typ.Name(), field)
+			}
+		}
+	}
+
+	apiChecks := []struct {
+		obj    interface{}
+		fields []string
+	}{
+		{OCIMachinePoolSpec{}, []string{"displayName", "loadBalancers", "placementConfigurations"}},
+		{InstanceConfiguration{}, []string{"availabilityDomain", "blockVolumes", "faultDomain", "instanceSourceImageFilterDetails", "secondaryVnics"}},
+		{infrastructurev1beta1.NetworkDetails{}, []string{"privateIp"}},
+		{PlacementDetails{}, []string{"secondaryVnicSubnets"}},
+		{v1beta2.OCIMachinePoolSpec{}, []string{"displayName", "loadBalancers", "placementConfigurations"}},
+		{v1beta2.InstanceConfiguration{}, []string{"availabilityDomain", "blockVolumes", "faultDomain", "instanceSourceImageFilterDetails", "secondaryVnics"}},
+		{infrastructurev1beta2.NetworkDetails{}, []string{"privateIp"}},
+		{v1beta2.PlacementDetails{}, []string{"secondaryVnicSubnets"}},
+	}
+	for _, check := range apiChecks {
+		for _, field := range check.fields {
+			assertNoJSONField(check.obj, field)
+		}
+	}
+
+	crdBytes, err := os.ReadFile("../../../config/crd/bases/infrastructure.cluster.x-k8s.io_ocimachinepools.yaml")
+	g.Expect(err).To(BeNil())
+	crd := string(crdBytes)
+	for _, field := range []string{
+		"blockVolumes:",
+		"faultDomain:",
+		"instanceSourceImageFilterDetails:",
+		"loadBalancers:",
+		"placementConfigurations:",
+		"privateIp:",
+		"secondaryVnicSubnets:",
+		"secondaryVnics:",
+	} {
+		g.Expect(crd).ToNot(ContainSubstring(field), "CRD unexpectedly exposes %s", field)
+	}
 }
 
 func TestFuzzyConversion(t *testing.T) {
