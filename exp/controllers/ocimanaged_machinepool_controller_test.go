@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -199,6 +200,7 @@ func TestNormalReconciliationFunction(t *testing.T) {
 		testSpecificSetup       func(t *test, machinePoolScope *scope.ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient)
 		validate                func(g *WithT, t *test)
 		expectedFailureMessages []string
+		expectedError           string
 		createPoolMachines      []infrav2exp.OCIMachinePoolMachine
 		deletePoolMachines      []clusterv1.Machine
 	}
@@ -475,6 +477,33 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			},
 		},
 		{
+			name:               "node pool update rejection is visible",
+			errorExpected:      true,
+			expectedError:      "failed to update Node Pool: maxPodsPerNode 110 exceeds the shape capacity of 31",
+			expectedEvent:      "Warning ReconcileError failed to update Node Pool: maxPodsPerNode 110 exceeds the shape capacity of 31",
+			conditionAssertion: []conditionAssertion{{infrav2exp.NodePoolReadyCondition, corev1.ConditionTrue, "", ""}},
+			testSpecificSetup: func(t *test, machinePoolScope *scope.ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
+				machinePoolScope.OCIManagedMachinePool.Spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails.VcnIpNativePodNetworkOptions.MaxPodsPerNode = common.Int(110)
+				okeClient.EXPECT().GetNodePool(gomock.Any(), gomock.Any()).Return(oke.GetNodePoolResponse{
+					NodePool: oke.NodePool{
+						Id:             common.String("test"),
+						Name:           common.String("test"),
+						NodeShape:      common.String("test-shape"),
+						LifecycleState: oke.NodePoolLifecycleStateActive,
+						FreeformTags:   tags,
+						NodeConfigDetails: &oke.NodePoolNodeConfigDetails{
+							Size: common.Int(3),
+							NodePoolPodNetworkOptionDetails: oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
+								MaxPodsPerNode: common.Int(31),
+							},
+						},
+					},
+				}, nil)
+				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Any()).Return(oke.UpdateNodePoolResponse{},
+					errors.New("maxPodsPerNode 110 exceeds the shape capacity of 31"))
+			},
+		},
+		{
 			name:                    "node pool in error state",
 			errorExpected:           true,
 			expectedFailureMessages: []string{"test error!", "Node Pool status FAILED is unexpected"},
@@ -525,6 +554,9 @@ func TestNormalReconciliationFunction(t *testing.T) {
 			tc.testSpecificSetup(&tc, ms, okeClient)
 			ctx := context.Background()
 			_, err := r.reconcileNormal(ctx, log.FromContext(ctx), ms)
+			if tc.expectedError != "" {
+				g.Expect(err).To(MatchError(tc.expectedError))
+			}
 			if len(tc.conditionAssertion) > 0 {
 				expectConditions(g, ociManagedMachinePool, tc.conditionAssertion)
 			}

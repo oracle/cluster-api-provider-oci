@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
@@ -36,6 +37,95 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
+
+func TestManagedMachinePoolUpdateMaxPodsPerNode(t *testing.T) {
+	ociRejection := errors.New("maxPodsPerNode 110 exceeds the shape capacity of 31")
+	tests := []struct {
+		name           string
+		desired        *int
+		actual         int
+		updateRequired bool
+		updateError    error
+	}{
+		{name: "omitted value matches OKE default", actual: 31},
+		{name: "matching custom value needs no update", desired: common.Int(110), actual: 110},
+		{name: "increase from default sends explicit value", desired: common.Int(110), actual: 31, updateRequired: true},
+		{name: "lower custom value is preserved", desired: common.Int(25), actual: 31, updateRequired: true},
+		{name: "OCI capacity rejection is preserved", desired: common.Int(110), actual: 31, updateRequired: true, updateError: ociRejection},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+			mockCtrl := gomock.NewController(t)
+			okeClient := mock_containerengine.NewMockClient(mockCtrl)
+			logger := logr.Discard()
+			replicas := int32(3)
+			ms := &ManagedMachinePoolScope{
+				Logger:                &logger,
+				ContainerEngineClient: okeClient,
+				OCIManagedCluster:     &infrastructurev1beta2.OCIManagedCluster{},
+				MachinePool: &clusterv1.MachinePool{
+					Spec: clusterv1.MachinePoolSpec{Replicas: &replicas},
+				},
+				OCIManagedMachinePool: &infrav2exp.OCIManagedMachinePool{
+					ObjectMeta: metav1.ObjectMeta{Name: "test-pool"},
+					Spec: infrav2exp.OCIManagedMachinePoolSpec{
+						ID:        common.String("pool-id"),
+						NodeShape: "VM.Standard.E4.Flex",
+						NodeSourceViaImage: &infrav2exp.NodeSourceViaImage{
+							ImageId: common.String("image-id"),
+						},
+						NodePoolNodeConfig: &infrav2exp.NodePoolNodeConfig{
+							PlacementConfigs: []infrav2exp.PlacementConfig{},
+							NodePoolPodNetworkOptionDetails: &infrav2exp.NodePoolPodNetworkOptionDetails{
+								CniType: infrastructurev1beta2.VCNNativeCNI,
+								VcnIpNativePodNetworkOptions: infrav2exp.VcnIpNativePodNetworkOptions{
+									MaxPodsPerNode: tc.desired,
+									SubnetNames:    []string{},
+								},
+							},
+						},
+					},
+				},
+			}
+			pool := &oke.NodePool{
+				Id:        common.String("pool-id"),
+				Name:      common.String("test-pool"),
+				NodeShape: common.String("VM.Standard.E4.Flex"),
+				NodeSourceDetails: oke.NodeSourceViaImageDetails{
+					ImageId: common.String("image-id"),
+				},
+				NodeConfigDetails: &oke.NodePoolNodeConfigDetails{
+					Size: common.Int(3),
+					NodePoolPodNetworkOptionDetails: oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
+						MaxPodsPerNode: common.Int(tc.actual),
+					},
+				},
+			}
+			originalSpec := ms.OCIManagedMachinePool.Spec.DeepCopy()
+			if tc.updateRequired {
+				okeClient.EXPECT().UpdateNodePool(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, request oke.UpdateNodePoolRequest) (oke.UpdateNodePoolResponse, error) {
+						g.Expect(request.NodePoolId).To(Equal(common.String("pool-id")))
+						options, ok := request.NodeConfigDetails.NodePoolPodNetworkOptionDetails.(oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails)
+						g.Expect(ok).To(BeTrue())
+						g.Expect(options.MaxPodsPerNode).To(Equal(tc.desired))
+						return oke.UpdateNodePoolResponse{}, tc.updateError
+					})
+			}
+
+			updated, err := ms.UpdateNodePool(context.Background(), pool)
+			g.Expect(ms.OCIManagedMachinePool.Spec).To(Equal(*originalSpec))
+			g.Expect(updated).To(Equal(tc.updateRequired && tc.updateError == nil))
+			if tc.updateError != nil {
+				g.Expect(err).To(MatchError(ContainSubstring(tc.updateError.Error())))
+				g.Expect(errors.Is(err, tc.updateError)).To(BeTrue())
+			} else {
+				g.Expect(err).NotTo(HaveOccurred())
+			}
+		})
+	}
+}
 
 func TestManagedMachinePoolCreate(t *testing.T) {
 	var (
