@@ -333,6 +333,7 @@ func (r *OCIManagedMachinePoolReconciler) reconcileNormal(ctx context.Context, l
 		v1beta1conditions.MarkTrue(machinePoolScope.OCIManagedMachinePool, infrav2exp.NodePoolReadyCondition)
 		isUpdated, err := machinePoolScope.UpdateNodePool(ctx, nodePool)
 		if err != nil {
+			r.Recorder.Event(machinePoolScope.OCIManagedMachinePool, corev1.EventTypeWarning, "ReconcileError", err.Error())
 			return reconcile.Result{}, err
 		}
 		if isUpdated {
