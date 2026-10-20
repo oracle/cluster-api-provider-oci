@@ -47,6 +47,14 @@ type OCIMachinePoolSpec struct {
 	// InstanceConfiguration defines the configuration of the instance pool instances.
 	InstanceConfiguration InstanceConfiguration `json:"instanceConfiguration,omitempty"`
 
+	// InstanceDisplayNameFormatter defines a formatter for instance display names in the instance pool.
+	// +optional
+	InstanceDisplayNameFormatter *string `json:"instanceDisplayNameFormatter,omitempty"`
+
+	// InstanceHostnameFormatter defines a formatter for instance hostnames in the instance pool.
+	// +optional
+	InstanceHostnameFormatter *string `json:"instanceHostnameFormatter,omitempty"`
+
 	// ProviderIDList are the identification IDs of machine instances provided by the provider.
 	// This field must match the provider IDs as seen on the node objects corresponding to a machine pool's machine instances.
 	// +optional
@@ -108,6 +116,29 @@ type InstanceConfiguration struct {
 	// For more information, see Capacity Reservations (https://docs.cloud.oracle.com/iaas/Content/Compute/Tasks/reserve-capacity.htm#default).
 	CapacityReservationId *string `json:"capacityReservationId,omitempty"`
 
+	// ClusterPlacementGroupId defines the OCID of the cluster placement group of the instance.
+	// +optional
+	ClusterPlacementGroupId *string `json:"clusterPlacementGroupId,omitempty"`
+
+	// IpxeScript is the custom iPXE script that will run when the instance boots.
+	// +optional
+	IpxeScript *string `json:"ipxeScript,omitempty"`
+
+	// LaunchMode specifies the configuration mode for launching virtual machine instances.
+	// +kubebuilder:validation:Enum=NATIVE;EMULATED;PARAVIRTUALIZED;CUSTOM
+	// +optional
+	LaunchMode LaunchModeEnum `json:"launchMode,omitempty"`
+
+	// LicensingConfigs defines licensing configurations associated with target launch values.
+	// +kubebuilder:validation:MaxItems=1
+	// +optional
+	LicensingConfigs []LaunchInstanceLicensingConfig `json:"licensingConfigs,omitempty"`
+
+	// PreferredMaintenanceAction defines the preferred maintenance action for an instance.
+	// +kubebuilder:validation:Enum=LIVE_MIGRATE;REBOOT
+	// +optional
+	PreferredMaintenanceAction PreferredMaintenanceActionEnum `json:"preferredMaintenanceAction,omitempty"`
+
 	// Custom metadata key/value pairs that you provide, such as the SSH public key
 	// required to connect to the instance.
 	Metadata map[string]string `json:"metadata,omitempty"`
@@ -126,6 +157,11 @@ type PlacementDetails struct {
 	// If omitted, all known fault domains for the availability domain are used.
 	// +optional
 	FaultDomains []string `json:"faultDomains,omitempty"`
+
+	// PrimaryVnicSubnets defines primary VNIC subnet placement details.
+	// When set, overrides the cluster-level default worker subnet for this availability domain.
+	// +optional
+	PrimaryVnicSubnets *InstancePoolPlacementPrimarySubnet `json:"primaryVnicSubnets,omitempty"`
 }
 
 // LaunchDetails Instance launch details for creating an instance from an instance configuration
@@ -144,6 +180,11 @@ type ShapeConfig struct {
 	// The total number of OCPUs available to the instance.
 	Ocpus *string `json:"ocpus,omitempty"`
 
+	// The total number of VCPUs available to the instance.
+	// +kubebuilder:validation:Minimum=2
+	// +kubebuilder:validation:MultipleOf=2
+	Vcpus *int `json:"vcpus,omitempty"`
+
 	// The total amount of memory available to the instance, in gigabytes.
 	MemoryInGBs *string `json:"memoryInGBs,omitempty"`
 
@@ -159,34 +200,54 @@ type ShapeConfig struct {
 	Nvmes *int `json:"nvmes,omitempty"`
 }
 
-// InstanceVnicConfiguration defines the configuration options for the network
-type InstanceVnicConfiguration struct {
+// InstancePoolPlacementPrimarySubnet defines primary VNIC subnet placement details.
+type InstancePoolPlacementPrimarySubnet struct {
+	// SubnetId defines the subnet OCID for the primary VNIC.
+	// +optional
+	SubnetId *string `json:"subnetId,omitempty"`
 
-	// AssignPublicIp defines whether the instance should have a public IP address
-	AssignPublicIp bool `json:"assignPublicIp,omitempty"`
-
-	// SubnetName defines the subnet name to use for the VNIC
-	SubnetName string `json:"subnetName,omitempty"`
-
-	// Deprecated, use 	NsgNames parameter to define the NSGs
-	NSGId *string `json:"nsgId,omitempty"`
-
-	// SkipSourceDestCheck defines whether the source/destination check is disabled on the VNIC.
-	SkipSourceDestCheck *bool `json:"skipSourceDestCheck,omitempty"`
-
-	// NsgNames defines a list of the nsg names of the network security groups (NSGs) to add the VNIC to.
-	NsgNames []string `json:"nsgNames,omitempty"`
-
-	// HostnameLabel defines the hostname for the VNIC's primary private IP. Used for DNS.
-	HostnameLabel *string `json:"hostnameLabel,omitempty"`
-
-	// DisplayName defines a user-friendly name. Does not have to be unique, and it's changeable.
-	// Avoid entering confidential information.
-	DisplayName *string `json:"displayName,omitempty"`
-
-	// AssignPrivateDnsRecord defines whether the VNIC should be assigned a DNS record.
-	AssignPrivateDnsRecord *bool `json:"assignPrivateDnsRecord,omitempty"`
+	// IsAssignIpv6Ip determines whether to assign an IPv6 address at instance and VNIC creation.
+	// +optional
+	IsAssignIpv6Ip *bool `json:"isAssignIpv6Ip,omitempty"`
 }
+
+type LaunchModeEnum string
+
+const (
+	LaunchModeNative          LaunchModeEnum = "NATIVE"
+	LaunchModeEmulated        LaunchModeEnum = "EMULATED"
+	LaunchModeParavirtualized LaunchModeEnum = "PARAVIRTUALIZED"
+	LaunchModeCustom          LaunchModeEnum = "CUSTOM"
+)
+
+type PreferredMaintenanceActionEnum string
+
+const (
+	PreferredMaintenanceActionLiveMigrate PreferredMaintenanceActionEnum = "LIVE_MIGRATE"
+	PreferredMaintenanceActionReboot      PreferredMaintenanceActionEnum = "REBOOT"
+)
+
+type LaunchInstanceLicensingConfig struct {
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Enum=WINDOWS
+	Type LaunchInstanceLicensingConfigTypeEnum `json:"type,omitempty"`
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Enum=OCI_PROVIDED;BRING_YOUR_OWN_LICENSE
+	LicenseType LaunchInstanceLicensingConfigLicenseTypeEnum `json:"licenseType,omitempty"`
+}
+
+type LaunchInstanceLicensingConfigTypeEnum string
+
+const (
+	LaunchInstanceLicensingConfigTypeWindows LaunchInstanceLicensingConfigTypeEnum = "WINDOWS"
+)
+
+type LaunchInstanceLicensingConfigLicenseTypeEnum string
+
+const (
+	LaunchInstanceLicensingConfigLicenseTypeOCIProvided         LaunchInstanceLicensingConfigLicenseTypeEnum = "OCI_PROVIDED"
+	LaunchInstanceLicensingConfigLicenseTypeBringYourOwnLicense LaunchInstanceLicensingConfigLicenseTypeEnum = "BRING_YOUR_OWN_LICENSE"
+)
 
 // InstanceSourceViaImageConfig The configuration options for booting up instances via images
 type InstanceSourceViaImageConfig struct {

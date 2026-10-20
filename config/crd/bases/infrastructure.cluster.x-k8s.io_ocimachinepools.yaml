@@ -134,6 +134,10 @@ spec:
                       You can opt out of all default reservations by specifying an empty string as input for this field.
                       For more information, see Capacity Reservations (https://docs.cloud.oracle.com/iaas/Content/Compute/Tasks/reserve-capacity.htm#default).
                     type: string
+                  clusterPlacementGroupId:
+                    description: ClusterPlacementGroupId defines the OCID of the cluster
+                      placement group of the instance.
+                    type: string
                   dedicatedVmHostId:
                     description: DedicatedVmHostId defines the OCID of the dedicated
                       VM host.
@@ -261,10 +265,23 @@ spec:
                           the VNIC
                         type: string
                     type: object
+                  ipxeScript:
+                    description: IpxeScript is the custom iPXE script that will run
+                      when the instance boots.
+                    type: string
                   isPvEncryptionInTransitEnabled:
                     default: true
                     description: Is in transit encryption of volumes required.
                     type: boolean
+                  launchMode:
+                    description: LaunchMode specifies the configuration mode for launching
+                      virtual machine instances.
+                    enum:
+                    - NATIVE
+                    - EMULATED
+                    - PARAVIRTUALIZED
+                    - CUSTOM
+                    type: string
                   launchOptions:
                     description: LaunchOptions defines the options for tuning the
                       compatibility and performance of VM shapes
@@ -313,6 +330,26 @@ spec:
                           storage volumes on platform images.
                         type: string
                     type: object
+                  licensingConfigs:
+                    description: LicensingConfigs defines licensing configurations
+                      associated with target launch values.
+                    items:
+                      properties:
+                        licenseType:
+                          enum:
+                          - OCI_PROVIDED
+                          - BRING_YOUR_OWN_LICENSE
+                          type: string
+                        type:
+                          enum:
+                          - WINDOWS
+                          type: string
+                      required:
+                      - licenseType
+                      - type
+                      type: object
+                    maxItems: 1
+                    type: array
                   metadata:
                     additionalProperties:
                       type: string
@@ -516,6 +553,10 @@ spec:
                           isSecureBootEnabled:
                             description: Whether Secure Boot is enabled on the instance.
                             type: boolean
+                          isSymmetricMultiThreadingEnabled:
+                            description: Whether symmetric multithreading is enabled
+                              on the instance.
+                            type: boolean
                           isTrustedPlatformModuleEnabled:
                             description: Whether the Trusted Platform Module (TPM)
                               is enabled on the instance.
@@ -575,6 +616,10 @@ spec:
                         description: AmdMilanBmPlatformConfig describe Intel Skylke
                           BM platform configuration
                         properties:
+                          isInputOutputMemoryManagementUnitEnabled:
+                            description: Whether the input-output memory management
+                              unit is enabled.
+                            type: boolean
                           isMeasuredBootEnabled:
                             description: Whether the Measured Boot feature is enabled
                               on the instance.
@@ -587,10 +632,26 @@ spec:
                           isSecureBootEnabled:
                             description: Whether Secure Boot is enabled on the instance.
                             type: boolean
+                          isSymmetricMultiThreadingEnabled:
+                            description: Whether symmetric multithreading is enabled
+                              on the instance.
+                            type: boolean
                           isTrustedPlatformModuleEnabled:
                             description: Whether the Trusted Platform Module (TPM)
                               is enabled on the instance.
                             type: boolean
+                          numaNodesPerSocket:
+                            description: The number of NUMA nodes per socket (NPS).
+                            enum:
+                            - NPS1
+                            - NPS2
+                            type: string
+                          percentageOfCoresEnabled:
+                            description: The percentage of cores enabled.
+                            maximum: 100
+                            minimum: 25
+                            multipleOf: 25
+                            type: integer
                         type: object
                       intelVmPlatformConfig:
                         description: AmdMilanBmPlatformConfig describe Intel VM platform
@@ -607,6 +668,10 @@ spec:
                             type: boolean
                           isSecureBootEnabled:
                             description: Whether Secure Boot is enabled on the instance.
+                            type: boolean
+                          isSymmetricMultiThreadingEnabled:
+                            description: Whether symmetric multithreading is enabled
+                              on the instance.
                             type: boolean
                           isTrustedPlatformModuleEnabled:
                             description: Whether the Trusted Platform Module (TPM)
@@ -642,6 +707,13 @@ spec:
                             type: boolean
                         type: object
                     type: object
+                  preferredMaintenanceAction:
+                    description: PreferredMaintenanceAction defines the preferred
+                      maintenance action for an instance.
+                    enum:
+                    - LIVE_MIGRATE
+                    - REBOOT
+                    type: string
                   shape:
                     type: string
                   shapeConfig:
@@ -668,8 +740,21 @@ spec:
                       ocpus:
                         description: The total number of OCPUs available to the instance.
                         type: string
+                      vcpus:
+                        description: The total number of VCPUs available to the instance.
+                        minimum: 2
+                        multipleOf: 2
+                        type: integer
                     type: object
                 type: object
+              instanceDisplayNameFormatter:
+                description: InstanceDisplayNameFormatter defines a formatter for
+                  instance display names in the instance pool.
+                type: string
+              instanceHostnameFormatter:
+                description: InstanceHostnameFormatter defines a formatter for instance
+                  hostnames in the instance pool.
+                type: string
               ocid:
                 description: OCID is the OCID of the associated InstancePool
                 type: string
@@ -688,6 +773,20 @@ spec:
                       items:
                         type: string
                       type: array
+                    primaryVnicSubnets:
+                      description: |-
+                        PrimaryVnicSubnets defines primary VNIC subnet placement details.
+                        When set, overrides the cluster-level default worker subnet for this availability domain.
+                      properties:
+                        isAssignIpv6Ip:
+                          description: IsAssignIpv6Ip determines whether to assign
+                            an IPv6 address at instance and VNIC creation.
+                          type: boolean
+                        subnetId:
+                          description: SubnetId defines the subnet OCID for the primary
+                            VNIC.
+                          type: string
+                      type: object
                   required:
                   - availabilityDomain
                   type: object
@@ -900,6 +999,10 @@ spec:
                       You can opt out of all default reservations by specifying an empty string as input for this field.
                       For more information, see Capacity Reservations (https://docs.cloud.oracle.com/iaas/Content/Compute/Tasks/reserve-capacity.htm#default).
                     type: string
+                  clusterPlacementGroupId:
+                    description: ClusterPlacementGroupId defines the OCID of the cluster
+                      placement group of the instance.
+                    type: string
                   dedicatedVmHostId:
                     description: DedicatedVmHostId defines the OCID of the dedicated
                       VM host.
@@ -1028,9 +1131,22 @@ spec:
                           the VNIC
                         type: string
                     type: object
+                  ipxeScript:
+                    description: IpxeScript is the custom iPXE script that will run
+                      when the instance boots.
+                    type: string
                   isPvEncryptionInTransitEnabled:
                     description: Is in transit encryption of volumes required.
                     type: boolean
+                  launchMode:
+                    description: LaunchMode specifies the configuration mode for launching
+                      virtual machine instances.
+                    enum:
+                    - NATIVE
+                    - EMULATED
+                    - PARAVIRTUALIZED
+                    - CUSTOM
+                    type: string
                   launchOptions:
                     description: LaunchOptions defines the options for tuning the
                       compatibility and performance of VM shapes
@@ -1079,6 +1195,30 @@ spec:
                           storage volumes on platform images.
                         type: string
                     type: object
+                  licensingConfigs:
+                    description: LicensingConfigs defines licensing configurations
+                      associated with target launch values.
+                    items:
+                      description: LaunchInstanceLicensingConfig defines a launch
+                        licensing configuration.
+                      properties:
+                        licenseType:
+                          description: LicenseType defines the OS license type.
+                          enum:
+                          - OCI_PROVIDED
+                          - BRING_YOUR_OWN_LICENSE
+                          type: string
+                        type:
+                          description: Type identifies the licensing config type.
+                          enum:
+                          - WINDOWS
+                          type: string
+                      required:
+                      - licenseType
+                      - type
+                      type: object
+                    maxItems: 1
+                    type: array
                   metadata:
                     additionalProperties:
                       type: string
@@ -1282,6 +1422,10 @@ spec:
                           isSecureBootEnabled:
                             description: Whether Secure Boot is enabled on the instance.
                             type: boolean
+                          isSymmetricMultiThreadingEnabled:
+                            description: Whether symmetric multithreading is enabled
+                              on the instance.
+                            type: boolean
                           isTrustedPlatformModuleEnabled:
                             description: Whether the Trusted Platform Module (TPM)
                               is enabled on the instance.
@@ -1341,6 +1485,10 @@ spec:
                         description: AmdMilanBmPlatformConfig describe Intel Skylke
                           BM platform configuration
                         properties:
+                          isInputOutputMemoryManagementUnitEnabled:
+                            description: Whether the input-output memory management
+                              unit is enabled.
+                            type: boolean
                           isMeasuredBootEnabled:
                             description: Whether the Measured Boot feature is enabled
                               on the instance.
@@ -1353,10 +1501,26 @@ spec:
                           isSecureBootEnabled:
                             description: Whether Secure Boot is enabled on the instance.
                             type: boolean
+                          isSymmetricMultiThreadingEnabled:
+                            description: Whether symmetric multithreading is enabled
+                              on the instance.
+                            type: boolean
                           isTrustedPlatformModuleEnabled:
                             description: Whether the Trusted Platform Module (TPM)
                               is enabled on the instance.
                             type: boolean
+                          numaNodesPerSocket:
+                            description: The number of NUMA nodes per socket (NPS).
+                            enum:
+                            - NPS1
+                            - NPS2
+                            type: string
+                          percentageOfCoresEnabled:
+                            description: The percentage of cores enabled.
+                            maximum: 100
+                            minimum: 25
+                            multipleOf: 25
+                            type: integer
                         type: object
                       intelVmPlatformConfig:
                         description: AmdMilanBmPlatformConfig describe Intel VM platform
@@ -1373,6 +1537,10 @@ spec:
                             type: boolean
                           isSecureBootEnabled:
                             description: Whether Secure Boot is enabled on the instance.
+                            type: boolean
+                          isSymmetricMultiThreadingEnabled:
+                            description: Whether symmetric multithreading is enabled
+                              on the instance.
                             type: boolean
                           isTrustedPlatformModuleEnabled:
                             description: Whether the Trusted Platform Module (TPM)
@@ -1408,6 +1576,13 @@ spec:
                             type: boolean
                         type: object
                     type: object
+                  preferredMaintenanceAction:
+                    description: PreferredMaintenanceAction defines the preferred
+                      maintenance action for an instance.
+                    enum:
+                    - LIVE_MIGRATE
+                    - REBOOT
+                    type: string
                   shape:
                     type: string
                   shapeConfig:
@@ -1434,8 +1609,21 @@ spec:
                       ocpus:
                         description: The total number of OCPUs available to the instance.
                         type: string
+                      vcpus:
+                        description: The total number of VCPUs available to the instance.
+                        minimum: 2
+                        multipleOf: 2
+                        type: integer
                     type: object
                 type: object
+              instanceDisplayNameFormatter:
+                description: InstanceDisplayNameFormatter defines a formatter for
+                  instance display names in the instance pool.
+                type: string
+              instanceHostnameFormatter:
+                description: InstanceHostnameFormatter defines a formatter for instance
+                  hostnames in the instance pool.
+                type: string
               ocid:
                 description: OCID is the OCID of the associated InstancePool
                 type: string
@@ -1454,6 +1642,20 @@ spec:
                       items:
                         type: string
                       type: array
+                    primaryVnicSubnets:
+                      description: |-
+                        PrimaryVnicSubnets defines primary VNIC subnet placement details.
+                        When set, overrides the cluster-level default worker subnet for this availability domain.
+                      properties:
+                        isAssignIpv6Ip:
+                          description: IsAssignIpv6Ip determines whether to assign
+                            an IPv6 address at instance and VNIC creation.
+                          type: boolean
+                        subnetId:
+                          description: SubnetId defines the subnet OCID for the primary
+                            VNIC.
+                          type: string
+                      type: object
                   required:
                   - availabilityDomain
                   type: object

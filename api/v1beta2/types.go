@@ -369,6 +369,15 @@ type AmdRomeBmPlatformConfig struct {
 	NumaNodesPerSocket AmdRomeBmPlatformConfigNumaNodesPerSocketEnum `json:"numaNodesPerSocket,omitempty"`
 }
 
+// IntelSkylakeBmPlatformConfigNumaNodesPerSocketEnum Enum with underlying type: string
+type IntelSkylakeBmPlatformConfigNumaNodesPerSocketEnum string
+
+// Set of constants representing the allowable values for IntelSkylakeBmPlatformConfigNumaNodesPerSocketEnum
+const (
+	IntelSkylakeBmPlatformConfigNumaNodesPerSocketNps1 IntelSkylakeBmPlatformConfigNumaNodesPerSocketEnum = "NPS1"
+	IntelSkylakeBmPlatformConfigNumaNodesPerSocketNps2 IntelSkylakeBmPlatformConfigNumaNodesPerSocketEnum = "NPS2"
+)
+
 // IntelSkylakeBmPlatformConfig The platform configuration of a bare metal instance that uses one of the following shapes:
 // BM.Standard2.52, BM.GPU2.2, BM.GPU3.8, or BM.DenseIO2.52 (the Intel Skylake platform).
 type IntelSkylakeBmPlatformConfig struct {
@@ -383,6 +392,22 @@ type IntelSkylakeBmPlatformConfig struct {
 
 	// Whether the instance is a confidential instance. If this value is `true`, the instance is a confidential instance. The default value is `false`.
 	IsMemoryEncryptionEnabled *bool `json:"isMemoryEncryptionEnabled,omitempty"`
+
+	// Whether symmetric multithreading is enabled on the instance.
+	IsSymmetricMultiThreadingEnabled *bool `json:"isSymmetricMultiThreadingEnabled,omitempty"`
+
+	// Whether the input-output memory management unit is enabled.
+	IsInputOutputMemoryManagementUnitEnabled *bool `json:"isInputOutputMemoryManagementUnitEnabled,omitempty"`
+
+	// The percentage of cores enabled.
+	// +kubebuilder:validation:Minimum=25
+	// +kubebuilder:validation:Maximum=100
+	// +kubebuilder:validation:MultipleOf=25
+	PercentageOfCoresEnabled *int `json:"percentageOfCoresEnabled,omitempty"`
+
+	// The number of NUMA nodes per socket (NPS).
+	// +kubebuilder:validation:Enum=NPS1;NPS2
+	NumaNodesPerSocket IntelSkylakeBmPlatformConfigNumaNodesPerSocketEnum `json:"numaNodesPerSocket,omitempty"`
 }
 
 // AmdRomeBmGpuPlatformConfigNumaNodesPerSocketEnum Enum with underlying type: string
@@ -502,6 +527,9 @@ type IntelVmPlatformConfig struct {
 
 	// Whether the instance is a confidential instance. If this value is `true`, the instance is a confidential instance. The default value is `false`.
 	IsMemoryEncryptionEnabled *bool `json:"isMemoryEncryptionEnabled,omitempty"`
+
+	// Whether symmetric multithreading is enabled on the instance.
+	IsSymmetricMultiThreadingEnabled *bool `json:"isSymmetricMultiThreadingEnabled,omitempty"`
 }
 
 // AmdVmPlatformConfig The platform configuration of a virtual machine instance that uses the AMD platform.
@@ -517,6 +545,9 @@ type AmdVmPlatformConfig struct {
 
 	// Whether the instance is a confidential instance. If this value is `true`, the instance is a confidential instance. The default value is `false`.
 	IsMemoryEncryptionEnabled *bool `json:"isMemoryEncryptionEnabled,omitempty"`
+
+	// Whether symmetric multithreading is enabled on the instance.
+	IsSymmetricMultiThreadingEnabled *bool `json:"isSymmetricMultiThreadingEnabled,omitempty"`
 }
 
 // InstanceOptions Optional mutable instance options
