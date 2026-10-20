@@ -750,7 +750,7 @@ func setMachinePoolSpecDefaults(spec *infrav2exp.OCIManagedMachinePoolSpec) {
 	}
 	podNetworkOptions := spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails
 	if podNetworkOptions != nil {
-		if podNetworkOptions.CniType == infrastructurev1beta2.VCNNativeCNI {
+		if podNetworkOptions.CniType == infrastructurev1beta2.VCNNativeCNI && podNetworkOptions.VcnIpNativePodNetworkOptions.MaxPodsPerNode == nil {
 			// 31 is the default max pods per node returned by OKE API
 			spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails.VcnIpNativePodNetworkOptions.MaxPodsPerNode = common.Int(31)
 		}
