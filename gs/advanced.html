@@ -1,0 +1,298 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Advanced Options - Kubernetes Cluster API Provider for Oracle Cloud Infrastructure</title>
+        <!-- Custom HTML head -->
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href=".././src/css/mdbook-admonish.css">
+        <link rel="stylesheet" href="../././mdbook-admonish.css">
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../introduction.html">Introduction</a></li><li class="chapter-item expanded affix "><a href="../prerequisites.html">Prerequisites</a></li><li class="chapter-item expanded "><a href="../gs/gs.html"><strong aria-hidden="true">1.</strong> Getting Started</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../gs/overview.html"><strong aria-hidden="true">1.1.</strong> Overview</a></li><li class="chapter-item expanded "><a href="../gs/custom-machine-images.html"><strong aria-hidden="true">1.2.</strong> Prepare custom OCI images</a></li><li class="chapter-item expanded "><a href="../gs/iam.html"><strong aria-hidden="true">1.3.</strong> Configure users and policies</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../gs/iam/iam-oke.html"><strong aria-hidden="true">1.3.1.</strong> Configure policies for an OKE cluster</a></li><li class="chapter-item expanded "><a href="../gs/iam/iam-self-provisioned.html"><strong aria-hidden="true">1.3.2.</strong> Configure policies for a self-provisioned cluster</a></li><li class="chapter-item expanded "><a href="../gs/iam/iam-ocid.html"><strong aria-hidden="true">1.3.3.</strong> User configuration and OCIDs</a></li></ol></li><li class="chapter-item expanded "><a href="../gs/provision-mgmt-cluster.html"><strong aria-hidden="true">1.4.</strong> Provision a management cluster</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../gs/mgmt/mgmt-kind.html"><strong aria-hidden="true">1.4.1.</strong> Provision a management cluster with kind</a></li><li class="chapter-item expanded "><a href="../gs/mgmt/mgmt-oke.html"><strong aria-hidden="true">1.4.2.</strong> Provision a management cluster with OKE</a></li></ol></li><li class="chapter-item expanded "><a href="../gs/install-cluster-api.html"><strong aria-hidden="true">1.5.</strong> Install Cluster API for Oracle Cloud Infrastructure</a></li><li class="chapter-item expanded "><a href="../gs/create-workload-cluster.html"><strong aria-hidden="true">1.6.</strong> Create Workload Cluster</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../gs/create-mhc-workload-cluster.html"><strong aria-hidden="true">1.6.1.</strong> MachineHealthChecks</a></li><li class="chapter-item expanded "><a href="../gs/create-gpu-workload-cluster.html"><strong aria-hidden="true">1.6.2.</strong> Create GPU Workload Cluster</a></li><li class="chapter-item expanded "><a href="../gs/create-windows-workload-cluster.html"><strong aria-hidden="true">1.6.3.</strong> Create Windows Workload Cluster</a></li></ol></li><li class="chapter-item expanded "><a href="../gs/create-workload-templates.html"><strong aria-hidden="true">1.7.</strong> Create Workload Templates</a></li><li class="chapter-item expanded "><a href="../gs/externally-managed-cluster-infrastructure.html"><strong aria-hidden="true">1.8.</strong> Using externally managed infrastructure</a></li><li class="chapter-item expanded "><a href="../gs/install-oci-ccm.html"><strong aria-hidden="true">1.9.</strong> Install Oracle Cloud Infrastructure Cloud Controller Manager</a></li><li class="chapter-item expanded "><a href="../gs/install-csi.html"><strong aria-hidden="true">1.10.</strong> Install Container Storage Interface (CSI)</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../gs/pvc-bv.html"><strong aria-hidden="true">1.10.1.</strong> Provision a PVC on the Block Volume Service</a></li><li class="chapter-item expanded "><a href="../gs/pvc-fss.html"><strong aria-hidden="true">1.10.2.</strong> Provision a PVC on the File Storage Service</a></li></ol></li><li class="chapter-item expanded "><a href="../gs/customize-worker-node.html"><strong aria-hidden="true">1.11.</strong> Customize worker nodes</a></li><li class="chapter-item expanded "><a href="../gs/multi-tenancy.html"><strong aria-hidden="true">1.12.</strong> Multi Tenancy</a></li><li class="chapter-item expanded "><a href="../gs/advanced.html" class="active"><strong aria-hidden="true">1.13.</strong> Advanced Options</a></li></ol></li><li class="chapter-item expanded "><a href="../networking/networking.html"><strong aria-hidden="true">2.</strong> Networking Guide</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../networking/infrastructure.html"><strong aria-hidden="true">2.1.</strong> Default Network Infrastructure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../networking/calico.html"><strong aria-hidden="true">2.1.1.</strong> Using Calico</a></li><li class="chapter-item expanded "><a href="../networking/antrea.html"><strong aria-hidden="true">2.1.2.</strong> Using Antrea</a></li><li class="chapter-item expanded "><a href="../networking/ipv6.html"><strong aria-hidden="true">2.1.3.</strong> Using IPv6</a></li></ol></li><li class="chapter-item expanded "><a href="../networking/custom-networking.html"><strong aria-hidden="true">2.2.</strong> Custom Networking</a></li><li class="chapter-item expanded "><a href="../networking/private-cluster.html"><strong aria-hidden="true">2.3.</strong> Private Cluster</a></li></ol></li><li class="chapter-item expanded "><a href="../managed/managedcluster.html"><strong aria-hidden="true">3.</strong> Managed Clusters (OKE)</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../managed/virtual-nodes-and-enhanced-clusters.html"><strong aria-hidden="true">3.1.</strong> Virtual Nodes and Enhanced Clusters</a></li><li class="chapter-item expanded "><a href="../managed/self-managed-nodes.html"><strong aria-hidden="true">3.2.</strong> Self managed nodes</a></li><li class="chapter-item expanded "><a href="../managed/boot-volume-expansion.html"><strong aria-hidden="true">3.3.</strong> Boot volume expansion</a></li><li class="chapter-item expanded "><a href="../managed/networking.html"><strong aria-hidden="true">3.4.</strong> Networking customizations</a></li><li class="chapter-item expanded "><a href="../managed/features.html"><strong aria-hidden="true">3.5.</strong> Features</a></li></ol></li><li class="chapter-item expanded "><a href="../reference/reference.html"><strong aria-hidden="true">4.</strong> Reference</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../reference/api-reference.html"><strong aria-hidden="true">4.1.</strong> API Reference</a></li><li class="chapter-item expanded "><a href="../reference/glossary.html"><strong aria-hidden="true">4.2.</strong> Glossary</a></li></ol></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Kubernetes Cluster API Provider for Oracle Cloud Infrastructure</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/oracle/cluster-api-provider-oci" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="advanced-options"><a class="header" href="#advanced-options">Advanced Options</a></h1>
+<h2 id="disable-oci-client-initialization-on-startup"><a class="header" href="#disable-oci-client-initialization-on-startup">Disable OCI Client initialization on startup</a></h2>
+<p>CAPOCI supports setting OCI principals at <a href="./multi-tenancy.html">cluster level</a>, hence CAPOCI can be
+installed without providing OCI user credentials. The following environment variable need to be exported
+to install CAPOCI without providing any OCI credentials.</p>
+<pre><code class="language-shell">export INIT_OCI_CLIENTS_ON_STARTUP=false
+</code></pre>
+<p>If the above setting is used, and <a href="./multi-tenancy.html">Cluster Identity</a> is not used, the OCICluster will
+go into error state, and the following error will show up in the CAPOCI pod logs.</p>
+<p><code>OCI authentication credentials could not be retrieved from pod or cluster level,please install Cluster API Provider for OCI with OCI authentication credentials or set Cluster Identity in the OCICluster</code></p>
+<h2 id="setup-heterogeneous-cluster"><a class="header" href="#setup-heterogeneous-cluster">Setup heterogeneous cluster</a></h2>
+<blockquote>
+<p>This section assumes you have <a href="./create-windows-workload-cluster.html">setup a Windows workload cluster</a>.</p>
+</blockquote>
+<p>To add Linux nodes to the existing Windows workload cluster use the following YAML as a guide to provision 
+just the new Linux machines.</p>
+<p>Create a file and call it <code>cluster-template-windows-calico-heterogeneous.yaml</code>. Then add the following:</p>
+<pre><code class="language-yaml">apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: OCIMachineTemplate
+metadata:
+  name: &quot;${CLUSTER_NAME}-md-0&quot;
+spec:
+  template:
+    spec:
+      imageId: &quot;${OCI_IMAGE_ID}&quot;
+      compartmentId: &quot;${OCI_COMPARTMENT_ID}&quot;
+      shape: &quot;${OCI_NODE_MACHINE_TYPE=VM.Standard.E4.Flex}&quot;
+      shapeConfig:
+        ocpus: &quot;${OCI_NODE_MACHINE_TYPE_OCPUS=1}&quot;
+      metadata:
+        ssh_authorized_keys: &quot;${OCI_SSH_KEY}&quot;
+      isPvEncryptionInTransitEnabled: ${OCI_NODE_PV_TRANSIT_ENCRYPTION=true}
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1alpha4
+kind: KubeadmConfigTemplate
+metadata:
+  name: &quot;${CLUSTER_NAME}-md-0&quot;
+spec:
+  template:
+    spec:
+      joinConfiguration:
+        nodeRegistration:
+          kubeletExtraArgs:
+            cloud-provider: external
+            provider-id: oci://{{ ds[&quot;id&quot;] }}
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  name: &quot;${CLUSTER_NAME}-md-0&quot;
+spec:
+  clusterName: &quot;${CLUSTER_NAME}&quot;
+  replicas: ${NODE_MACHINE_COUNT}
+  selector:
+    matchLabels:
+  template:
+    spec:
+      clusterName: &quot;${CLUSTER_NAME}&quot;
+      version: &quot;${KUBERNETES_VERSION}&quot;
+      bootstrap:
+        configRef:
+          name: &quot;${CLUSTER_NAME}-md-0&quot;
+          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+          kind: KubeadmConfigTemplate
+      infrastructureRef:
+        name: &quot;${CLUSTER_NAME}-md-0&quot;
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        kind: OCIMachineTemplate
+</code></pre>
+<p>Then apply the template</p>
+<pre><code class="language-bash">OCI_IMAGE_ID=&lt;your new linux image OCID&gt; \
+OCI_NODE_IMAGE_ID=&lt;your new linux image OCID&gt; \
+OCI_COMPARTMENT_ID=&lt;your compartment&gt; \
+NODE_MACHINE_COUNT=2 \
+OCI_NODE_MACHINE_TYPE=&lt;shape&gt; \
+OCI_NODE_MACHINE_TYPE_OCPUS=4 \
+OCI_SSH_KEY=&quot;&lt;your public ssh key&gt;&quot; \
+clusterctl generate cluster &lt;cluster-name&gt; --kubernetes-version &lt;kubernetes-version&gt; \
+--target-namespace default \
+--from cluster-template-windows-calico-heterogeneous.yaml | kubectl apply -f -
+</code></pre>
+<p>After a few minutes the instances will come up and the CNI will be installed.</p>
+<h3 id="node-constraints"><a class="header" href="#node-constraints">Node constraints</a></h3>
+<p>All future deployments make sure to setup node constraints using something like <a href="https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector"><code>nodeselctor</code></a>. Example:</p>
+<div class="table-wrapper"><table><thead><tr><th>Windows</th><th>Linux</th></tr></thead><tbody>
+<tr><td><code>nodeSelector: kubernetes.io/os: windows</code></td><td><code>nodeSelector:kubernetes.io/os: linux</code></td></tr>
+</tbody></table>
+</div><br/>
+<details>
+  <summary>nodeSelector examples - click to expand</summary>
+<p>Linux nginx deployment example:</p>
+<pre><code class="language-bash">apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-nginx-linux
+spec:
+  selector:
+    matchLabels:
+      run: my-nginx-linux
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        run: my-nginx-linux
+    spec:
+      nodeSelector:
+        kubernetes.io/os: linux
+      containers:
+      - args:
+        - /bin/sh
+        - -c
+        - sleep 3600
+        name: nginx
+        image: nginx:latest
+</code></pre>
+<p>For a Windows deployment example see the <a href="https://kubernetes.io/docs/concepts/windows/user-guide/#getting-started-deploying-a-windows-workload">Kubernetes Getting Started: Deploying a Windows workload</a> documentation</p>
+</details>
+<p>Without doing this it is possible that the Kubernetes scheduler will try to deploy your Windows pods onto a Linux worker, or vice versa.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../gs/multi-tenancy.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                            <a rel="next" href="../networking/networking.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../gs/multi-tenancy.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                    <a rel="next" href="../networking/networking.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        <script src="../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../searcher.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+    </body>
+</html>
