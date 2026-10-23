@@ -1,6 +1,6 @@
 # Build the manager binary
-ARG BUILDER_IMAGE=golang:1.24.3
-FROM ${BUILDER_IMAGE} as builder
+ARG BUILDER_IMAGE=golang:1.26.10
+FROM ${BUILDER_IMAGE} AS builder
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
@@ -24,6 +24,7 @@ COPY version/ version/
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=${ARCH} go build -ldflags "${LDFLAGS} -extldflags '-static'"  -o manager ${package}
 
 FROM ghcr.io/oracle/oraclelinux:9-slim
+RUN microdnf update -y ca-certificates && microdnf clean all && update-ca-trust
 WORKDIR /
 COPY --from=builder /workspace/manager .
 USER 65532:65532

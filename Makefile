@@ -22,7 +22,7 @@ REGISTRY ?= ghcr.io/oracle
 PROD_REGISTRY ?= ghcr.io/oracle
 IMAGE_NAME ?= cluster-api-oci-controller
 CONTROLLER_IMG ?= $(REGISTRY)/$(IMAGE_NAME)
-BUILDER_IMAGE ?= golang:1.24.3
+BUILDER_IMAGE ?= golang:1.26.10
 TAG ?= dev
 ARCH ?= amd64
 ALL_ARCH = amd64 arm64 
@@ -209,7 +209,7 @@ docker-pull-prerequisites:
 
 .PHONY: lint docker-build
 docker-build: docker-pull-prerequisites ## Build the docker image for controller-manager
-	docker build --build-arg BUILDER_IMAGE=$(BUILDER_IMAGE) --build-arg ARCH=$(ARCH) --build-arg LDFLAGS="$(LDFLAGS)" . -t $(CONTROLLER_IMG)-$(ARCH):$(TAG)
+	docker build --platform linux/$(ARCH) --build-arg BUILDER_IMAGE=$(BUILDER_IMAGE) --build-arg ARCH=$(ARCH) --build-arg LDFLAGS="$(LDFLAGS)" . -t $(CONTROLLER_IMG)-$(ARCH):$(TAG)
 	$(MAKE) set-manifest-image MANIFEST_IMG=$(CONTROLLER_IMG)-$(ARCH) MANIFEST_TAG=$(TAG) TARGET_RESOURCE="./config/default/manager_image_patch.yaml"
 	$(MAKE) set-manifest-pull-policy TARGET_RESOURCE="./config/default/manager_pull_policy.yaml"
 
