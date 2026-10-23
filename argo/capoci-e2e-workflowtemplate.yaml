@@ -345,6 +345,15 @@ spec:
             # Clone repository and checkout ref
             git clone --depth 1 --branch "{{workflow.parameters.git_ref}}" "{{workflow.parameters.git_repo}}" /workspace
 
+            # Build and smoke-test both release architectures before provisioning a cluster.
+            docker run --privileged --rm docker.io/tonistiigi/binfmt@sha256:400a4873b838d1b89194d982c45e5fb3cda4593fbfd7e08a02e76b03b21166f0 --install arm64
+            make docker-build-all CONTROLLER_IMG=capoci-build-check TAG=preflight PULL_POLICY=IfNotPresent
+            for arch in amd64 arm64; do
+              image="capoci-build-check-${arch}:preflight"
+              docker image inspect "${image}" | jq -e --arg arch "${arch}" '.[0].Os == "linux" and .[0].Architecture == $arch'
+              docker run --rm --platform "linux/${arch}" "${image}" --help
+            done
+
             # Optional Ginkgo focus override
             if [ -n "${GINKGO_FOCUS_PARAM:-}" ]; then
               export GINKGO_FOCUS="${GINKGO_FOCUS_PARAM}"
