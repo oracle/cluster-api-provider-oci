@@ -131,9 +131,12 @@ spec:
       sidecars:
         - name: dind
           image: docker.io/library/docker:24-dind
+          command: ["sh", "-ec"]
           args:
-            - "--host=tcp://0.0.0.0:2375"
-            - "--host=unix:///var/run/docker.sock"
+            - |
+              # Keep binfmt registrations alive after the installer exits.
+              [ -e /proc/sys/fs/binfmt_misc/register ] || mount -t binfmt_misc binfmt_misc /proc/sys/fs/binfmt_misc
+              exec dockerd-entrypoint.sh --host=tcp://0.0.0.0:2375 --host=unix:///var/run/docker.sock
           env:
             - name: DOCKER_TLS_CERTDIR
               value: ""
