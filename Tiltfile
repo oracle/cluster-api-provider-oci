@@ -42,7 +42,7 @@ if "default_registry" in settings:
 
 tilt_helper_dockerfile_header = """
 # Tilt image
-FROM golang:1.24.3 as tilt-helper
+FROM golang:1.26.10 as tilt-helper
 # Support live reloading with Tilt
 RUN go install github.com/go-delve/delve/cmd/dlv@latest
 RUN wget --output-document /restart.sh --quiet https://raw.githubusercontent.com/tilt-dev/rerun-process-wrapper/master/restart.sh  && \
