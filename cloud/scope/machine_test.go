@@ -1155,10 +1155,11 @@ func TestInstanceReconciliation(t *testing.T) {
 				ms.OCIMachine.Spec.PlatformConfig = &infrastructurev1beta2.PlatformConfig{
 					PlatformConfigType: infrastructurev1beta2.PlatformConfigTypeAmdvm,
 					AmdVmPlatformConfig: infrastructurev1beta2.AmdVmPlatformConfig{
-						IsMeasuredBootEnabled:          common.Bool(false),
-						IsTrustedPlatformModuleEnabled: common.Bool(true),
-						IsSecureBootEnabled:            common.Bool(true),
-						IsMemoryEncryptionEnabled:      common.Bool(true),
+						IsMeasuredBootEnabled:            common.Bool(false),
+						IsTrustedPlatformModuleEnabled:   common.Bool(true),
+						IsSecureBootEnabled:              common.Bool(true),
+						IsMemoryEncryptionEnabled:        common.Bool(true),
+						IsSymmetricMultiThreadingEnabled: common.Bool(false),
 					},
 				}
 				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
@@ -1167,10 +1168,11 @@ func TestInstanceReconciliation(t *testing.T) {
 				})).Return(core.ListInstancesResponse{}, nil)
 				computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
 					return platformConfigMatcher(request, core.AmdVmPlatformConfig{
-						IsMeasuredBootEnabled:          common.Bool(false),
-						IsTrustedPlatformModuleEnabled: common.Bool(true),
-						IsSecureBootEnabled:            common.Bool(true),
-						IsMemoryEncryptionEnabled:      common.Bool(true),
+						IsMeasuredBootEnabled:            common.Bool(false),
+						IsTrustedPlatformModuleEnabled:   common.Bool(true),
+						IsSecureBootEnabled:              common.Bool(true),
+						IsMemoryEncryptionEnabled:        common.Bool(true),
+						IsSymmetricMultiThreadingEnabled: common.Bool(false),
 					})
 				})).Return(core.LaunchInstanceResponse{}, nil)
 			},
@@ -1183,10 +1185,11 @@ func TestInstanceReconciliation(t *testing.T) {
 				ms.OCIMachine.Spec.PlatformConfig = &infrastructurev1beta2.PlatformConfig{
 					PlatformConfigType: infrastructurev1beta2.PlatformConfigTypeIntelVm,
 					IntelVmPlatformConfig: infrastructurev1beta2.IntelVmPlatformConfig{
-						IsMeasuredBootEnabled:          common.Bool(false),
-						IsTrustedPlatformModuleEnabled: common.Bool(true),
-						IsSecureBootEnabled:            common.Bool(true),
-						IsMemoryEncryptionEnabled:      common.Bool(false),
+						IsMeasuredBootEnabled:            common.Bool(false),
+						IsTrustedPlatformModuleEnabled:   common.Bool(true),
+						IsSecureBootEnabled:              common.Bool(true),
+						IsMemoryEncryptionEnabled:        common.Bool(false),
+						IsSymmetricMultiThreadingEnabled: common.Bool(false),
 					},
 				}
 				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
@@ -1195,10 +1198,11 @@ func TestInstanceReconciliation(t *testing.T) {
 				})).Return(core.ListInstancesResponse{}, nil)
 				computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
 					return platformConfigMatcher(request, core.IntelVmPlatformConfig{
-						IsMeasuredBootEnabled:          common.Bool(false),
-						IsTrustedPlatformModuleEnabled: common.Bool(true),
-						IsSecureBootEnabled:            common.Bool(true),
-						IsMemoryEncryptionEnabled:      common.Bool(false),
+						IsMeasuredBootEnabled:            common.Bool(false),
+						IsTrustedPlatformModuleEnabled:   common.Bool(true),
+						IsSecureBootEnabled:              common.Bool(true),
+						IsMemoryEncryptionEnabled:        common.Bool(false),
+						IsSymmetricMultiThreadingEnabled: common.Bool(false),
 					})
 				})).Return(core.LaunchInstanceResponse{}, nil)
 			},
@@ -1325,10 +1329,14 @@ func TestInstanceReconciliation(t *testing.T) {
 				ms.OCIMachine.Spec.PlatformConfig = &infrastructurev1beta2.PlatformConfig{
 					PlatformConfigType: infrastructurev1beta2.PlatformConfigTypeIntelSkylakeBm,
 					IntelSkylakeBmPlatformConfig: infrastructurev1beta2.IntelSkylakeBmPlatformConfig{
-						IsMeasuredBootEnabled:          common.Bool(false),
-						IsTrustedPlatformModuleEnabled: common.Bool(true),
-						IsSecureBootEnabled:            common.Bool(true),
-						IsMemoryEncryptionEnabled:      common.Bool(false),
+						IsMeasuredBootEnabled:                    common.Bool(false),
+						IsTrustedPlatformModuleEnabled:           common.Bool(true),
+						IsSecureBootEnabled:                      common.Bool(true),
+						IsMemoryEncryptionEnabled:                common.Bool(false),
+						IsSymmetricMultiThreadingEnabled:         common.Bool(false),
+						IsInputOutputMemoryManagementUnitEnabled: common.Bool(false),
+						PercentageOfCoresEnabled:                 common.Int(50),
+						NumaNodesPerSocket:                       infrastructurev1beta2.IntelSkylakeBmPlatformConfigNumaNodesPerSocketNps2,
 					},
 				}
 				computeClient.EXPECT().ListInstances(gomock.Any(), gomock.Eq(core.ListInstancesRequest{
@@ -1337,10 +1345,14 @@ func TestInstanceReconciliation(t *testing.T) {
 				})).Return(core.ListInstancesResponse{}, nil)
 				computeClient.EXPECT().LaunchInstance(gomock.Any(), Eq(func(request interface{}) error {
 					return platformConfigMatcher(request, core.IntelSkylakeBmPlatformConfig{
-						IsMeasuredBootEnabled:          common.Bool(false),
-						IsTrustedPlatformModuleEnabled: common.Bool(true),
-						IsSecureBootEnabled:            common.Bool(true),
-						IsMemoryEncryptionEnabled:      common.Bool(false),
+						IsMeasuredBootEnabled:                    common.Bool(false),
+						IsTrustedPlatformModuleEnabled:           common.Bool(true),
+						IsSecureBootEnabled:                      common.Bool(true),
+						IsMemoryEncryptionEnabled:                common.Bool(false),
+						IsSymmetricMultiThreadingEnabled:         common.Bool(false),
+						IsInputOutputMemoryManagementUnitEnabled: common.Bool(false),
+						PercentageOfCoresEnabled:                 common.Int(50),
+						NumaNodesPerSocket:                       core.IntelSkylakeBmPlatformConfigNumaNodesPerSocketNps2,
 					})
 				})).Return(core.LaunchInstanceResponse{}, nil)
 			},
