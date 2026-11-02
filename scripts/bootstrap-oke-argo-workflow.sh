@@ -130,6 +130,9 @@ verify_cluster_access() {
 apply_manifest() {
   log "Applying manifest: ${ARGO_INSTALL_MANIFEST}"
   kubectl --context "${KUBE_CONTEXT}" -n "${ARGO_NAMESPACE}" apply -f "${ARGO_INSTALL_MANIFEST}"
+
+  log "Applying artifact repository configuration."
+  kubectl --context "${KUBE_CONTEXT}" -n "${ARGO_NAMESPACE}" apply -f "${REPO_ROOT}/argo/workflow-controller-configmap.yaml"
 }
 
 ensure_namespace() {
