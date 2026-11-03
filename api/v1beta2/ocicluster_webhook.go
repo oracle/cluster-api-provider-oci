@@ -68,10 +68,9 @@ func (*OCIClusterWebhook) Default(_ context.Context, obj runtime.Object) error {
 
 func (c *OCICluster) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	w := new(OCIClusterWebhook)
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(c).
-		WithDefaulter(w).
-		WithValidator(w).
+	return ctrl.NewWebhookManagedBy(mgr, c).
+		WithCustomDefaulter(w).
+		WithCustomValidator(w).
 		Complete()
 }
 

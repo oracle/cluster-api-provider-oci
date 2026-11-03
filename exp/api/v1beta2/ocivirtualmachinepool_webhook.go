@@ -41,10 +41,9 @@ var (
 
 func (m *OCIVirtualMachinePool) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	w := new(OCIVirtualMachinePoolWebhook)
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(m).
-		WithDefaulter(w).
-		WithValidator(w).
+	return ctrl.NewWebhookManagedBy(mgr, m).
+		WithCustomDefaulter(w).
+		WithCustomValidator(w).
 		Complete()
 }
 

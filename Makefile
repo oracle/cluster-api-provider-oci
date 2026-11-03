@@ -88,8 +88,8 @@ CONVERSION_GEN_BIN := conversion-gen
 CONVERSION_GEN := $(BIN_DIR)/conversion-gen
 
 # set up `setup-envtest` to install kubebuilder dependency
-export KUBEBUILDER_ENVTEST_KUBERNETES_VERSION ?= 1.34.0
-SETUP_ENVTEST_VER := release-0.22
+export KUBEBUILDER_ENVTEST_KUBERNETES_VERSION ?= 1.36.0
+SETUP_ENVTEST_VER := release-0.23
 SETUP_ENVTEST_BIN := setup-envtest
 SETUP_ENVTEST := $(abspath $(TOOLS_BIN_DIR)/$(SETUP_ENVTEST_BIN)-$(SETUP_ENVTEST_VER))
 SETUP_ENVTEST_PKG := sigs.k8s.io/controller-runtime/tools/setup-envtest
@@ -388,16 +388,16 @@ kubectl: $(KUBECTL) ## Build a local copy of kubectl.
 kustomize: $(KUSTOMIZE) ## Build a local copy of kustomize.
 
 $(CONTROLLER_GEN): ## Download controller-gen locally if necessary.
-	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) sigs.k8s.io/controller-tools/cmd/controller-gen $(CONTROLLER_GEN_BIN) v0.19.0
+	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) sigs.k8s.io/controller-tools/cmd/controller-gen $(CONTROLLER_GEN_BIN) v0.20.0
 
 $(CONVERSION_GEN): ## Download controller-gen locally if necessary.
-	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) k8s.io/code-generator/cmd/conversion-gen $(CONVERSION_GEN_BIN) v0.34.3
+	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) k8s.io/code-generator/cmd/conversion-gen $(CONVERSION_GEN_BIN) v0.35.0
 
 $(KUSTOMIZE): ## Download kustomize locally if necessary.
 	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) sigs.k8s.io/kustomize/kustomize/v4 $(KUSTOMIZE_BIN) $(KUSTOMIZE_VER)
 
 $(GINKGO): ## Build ginkgo.
-	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) github.com/onsi/ginkgo/v2/ginkgo $(GINKGO_BIN) v2.27.2
+	GOBIN=$(BIN_DIR)/ $(GO_INSTALL) github.com/onsi/ginkgo/v2/ginkgo $(GINKGO_BIN) v2.28.1
 
 $(GOLANGCI_LINT): ## Build golanci-lint.
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(BIN_DIR) $(GOLANGCI_LINT_VERSION)

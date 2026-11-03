@@ -6,24 +6,24 @@ require (
 	github.com/go-logr/logr v1.4.3
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.7.0
-	github.com/onsi/ginkgo/v2 v2.27.2
-	github.com/onsi/gomega v1.38.2
+	github.com/onsi/ginkgo/v2 v2.28.1
+	github.com/onsi/gomega v1.39.1
 	github.com/oracle/oci-go-sdk/v65 v65.81.1
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.22.0
 	github.com/spf13/pflag v1.0.10
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/api v0.34.3
-	k8s.io/apiextensions-apiserver v0.34.3
-	k8s.io/apimachinery v0.34.3
-	k8s.io/client-go v0.34.3
-	k8s.io/component-base v0.34.3
+	k8s.io/api v0.35.4
+	k8s.io/apiextensions-apiserver v0.35.4
+	k8s.io/apimachinery v0.35.4
+	k8s.io/client-go v0.35.4
+	k8s.io/component-base v0.35.4
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397
-	sigs.k8s.io/cluster-api v1.12.3
-	sigs.k8s.io/cluster-api/test v1.12.3
-	sigs.k8s.io/controller-runtime v0.22.5
-	sigs.k8s.io/kind v0.31.0
+	sigs.k8s.io/cluster-api v1.13.7
+	sigs.k8s.io/cluster-api/test v1.13.7
+	sigs.k8s.io/controller-runtime v0.23.3
+	sigs.k8s.io/kind v0.33.0
 	sigs.k8s.io/randfill v1.0.0
 )
 
@@ -158,4 +158,4 @@ require (
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
 
-replace sigs.k8s.io/cluster-api => sigs.k8s.io/cluster-api v1.12.3
+replace sigs.k8s.io/cluster-api => sigs.k8s.io/cluster-api v1.13.7
