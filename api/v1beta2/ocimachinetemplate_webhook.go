@@ -38,9 +38,8 @@ var (
 
 func (m *OCIMachineTemplate) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	w := new(OCIMachineTemplateWebhook)
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(m).
-		WithValidator(w).
+	return ctrl.NewWebhookManagedBy(mgr, m).
+		WithCustomValidator(w).
 		Complete()
 }
 
