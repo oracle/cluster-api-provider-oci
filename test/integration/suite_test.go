@@ -24,6 +24,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
@@ -35,11 +36,18 @@ import (
 	expv1beta2 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	expcontrollers "github.com/oracle/cluster-api-provider-oci/exp/controllers"
 	testenv "github.com/oracle/cluster-api-provider-oci/internal/test/envtest"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	k8sversion "k8s.io/apimachinery/pkg/version"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/klog/v2"
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+	contractutil "sigs.k8s.io/cluster-api/util/contract"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -52,6 +60,8 @@ var (
 )
 
 func TestMain(m *testing.M) {
+	ctrl.SetLogger(klog.Background())
+
 	fakeOCI = newFakeOCIBackend()
 	var err error
 	integrationClientProvider, err = fakeOCI.clientProvider()
@@ -109,6 +119,10 @@ func integrationScheme() *runtime.Scheme {
 }
 
 func setupManager(ctx context.Context, mgr manager.Manager) error {
+	clusterv1beta1.SetAPIVersionGetter(func(gk schema.GroupKind) (string, error) {
+		return apiVersionForContract(ctx, mgr.GetAPIReader(), gk)
+	})
+
 	controllerOptions := controller.Options{MaxConcurrentReconciles: 1}
 	setups := []struct {
 		name  string
@@ -254,6 +268,59 @@ func setupManager(ctx context.Context, mgr manager.Manager) error {
 		}
 	}
 	return nil
+}
+
+func apiVersionForContract(ctx context.Context, reader client.Reader, gk schema.GroupKind) (string, error) {
+	crd := &unstructured.Unstructured{}
+	crd.SetName(contractutil.CalculateCRDName(gk.Group, gk.Kind))
+	crd.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "apiextensions.k8s.io",
+		Version: "v1",
+		Kind:    "CustomResourceDefinition",
+	})
+	if err := reader.Get(ctx, client.ObjectKeyFromObject(crd), crd); err != nil {
+		return "", fmt.Errorf("get CustomResourceDefinition for %s: %w", gk, err)
+	}
+
+	var versions []string
+	for _, contractVersion := range []string{"v1beta2", "v1beta1"} {
+		value := crd.GetLabels()[clusterv1.GroupVersion.Group+"/"+contractVersion]
+		if value != "" {
+			versions = strings.Split(value, "_")
+			break
+		}
+	}
+
+	// The integration environment installs generated CRD bases directly, before
+	// Kustomize adds CAPOCI's effective contract labels. Fall back to the served
+	// versions in those bases so CAPI reference conversion can run in envtest.
+	if len(versions) == 0 {
+		crdVersions, found, err := unstructured.NestedSlice(crd.Object, "spec", "versions")
+		if err != nil {
+			return "", fmt.Errorf("read versions from %s: %w", crd.GetName(), err)
+		}
+		if !found {
+			return "", fmt.Errorf("no versions found on %s", crd.GetName())
+		}
+		for _, item := range crdVersions {
+			version, ok := item.(map[string]interface{})
+			if !ok || version["served"] != true {
+				continue
+			}
+			name, ok := version["name"].(string)
+			if ok && name != "" {
+				versions = append(versions, name)
+			}
+		}
+	}
+	if len(versions) == 0 {
+		return "", fmt.Errorf("no compatible API versions found on %s", crd.GetName())
+	}
+
+	sort.Slice(versions, func(i, j int) bool {
+		return k8sversion.CompareKubeAwareVersionStrings(versions[i], versions[j]) < 0
+	})
+	return schema.GroupVersion{Group: gk.Group, Version: versions[len(versions)-1]}.String(), nil
 }
 
 func findRepositoryRoot() (string, error) {

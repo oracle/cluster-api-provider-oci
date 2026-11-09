@@ -31,6 +31,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -67,6 +68,9 @@ func TestOCIMachinePoolRecoversFromCloudFailures(t *testing.T) {
 
 	machinePool := instanceCAPIMachinePool(cluster, bootstrapSecret.Name, 2)
 	g.Expect(testEnvironment.Create(testContext, machinePool)).To(Succeed())
+	storedV1Beta1MachinePool := &clusterv1beta1.MachinePool{}
+	g.Expect(testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(machinePool), storedV1Beta1MachinePool)).To(Succeed())
+	g.Expect(storedV1Beta1MachinePool.Spec.Template.Spec.InfrastructureRef.APIVersion).To(Equal(infrav2exp.GroupVersion.String()))
 	ociMachinePool := instanceInfrastructureMachinePool(machinePool, cluster.Name)
 	g.Expect(testEnvironment.Create(testContext, ociMachinePool)).To(Succeed())
 
