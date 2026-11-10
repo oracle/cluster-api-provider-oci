@@ -401,6 +401,9 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 	launchDetails.InstanceOptions = m.getInstanceOptions()
 	launchDetails.AvailabilityConfig = m.getAvailabilityConfig()
 	launchDetails.PreemptibleInstanceConfig = m.getPreemptibleInstanceConfig()
+	if err := validatePlatformConfig(m.OCIMachine.Spec.PlatformConfig); err != nil {
+		return nil, err
+	}
 	launchDetails.PlatformConfig = m.getPlatformConfig()
 
 	// Appending block volumes created with launchVolumeAttachments to instance attachments
@@ -1247,24 +1250,31 @@ func (m *MachineScope) getPlatformConfig() core.PlatformConfig {
 			}
 		case infrastructurev1beta2.PlatformConfigTypeAmdvm:
 			return core.AmdVmPlatformConfig{
-				IsSecureBootEnabled:            platformConfig.AmdVmPlatformConfig.IsSecureBootEnabled,
-				IsTrustedPlatformModuleEnabled: platformConfig.AmdVmPlatformConfig.IsTrustedPlatformModuleEnabled,
-				IsMeasuredBootEnabled:          platformConfig.AmdVmPlatformConfig.IsMeasuredBootEnabled,
-				IsMemoryEncryptionEnabled:      platformConfig.AmdVmPlatformConfig.IsMemoryEncryptionEnabled,
+				IsSecureBootEnabled:              platformConfig.AmdVmPlatformConfig.IsSecureBootEnabled,
+				IsTrustedPlatformModuleEnabled:   platformConfig.AmdVmPlatformConfig.IsTrustedPlatformModuleEnabled,
+				IsMeasuredBootEnabled:            platformConfig.AmdVmPlatformConfig.IsMeasuredBootEnabled,
+				IsMemoryEncryptionEnabled:        platformConfig.AmdVmPlatformConfig.IsMemoryEncryptionEnabled,
+				IsSymmetricMultiThreadingEnabled: platformConfig.AmdVmPlatformConfig.IsSymmetricMultiThreadingEnabled,
 			}
 		case infrastructurev1beta2.PlatformConfigTypeIntelVm:
 			return core.IntelVmPlatformConfig{
-				IsSecureBootEnabled:            platformConfig.IntelVmPlatformConfig.IsSecureBootEnabled,
-				IsTrustedPlatformModuleEnabled: platformConfig.IntelVmPlatformConfig.IsTrustedPlatformModuleEnabled,
-				IsMeasuredBootEnabled:          platformConfig.IntelVmPlatformConfig.IsMeasuredBootEnabled,
-				IsMemoryEncryptionEnabled:      platformConfig.IntelVmPlatformConfig.IsMemoryEncryptionEnabled,
+				IsSecureBootEnabled:              platformConfig.IntelVmPlatformConfig.IsSecureBootEnabled,
+				IsTrustedPlatformModuleEnabled:   platformConfig.IntelVmPlatformConfig.IsTrustedPlatformModuleEnabled,
+				IsMeasuredBootEnabled:            platformConfig.IntelVmPlatformConfig.IsMeasuredBootEnabled,
+				IsMemoryEncryptionEnabled:        platformConfig.IntelVmPlatformConfig.IsMemoryEncryptionEnabled,
+				IsSymmetricMultiThreadingEnabled: platformConfig.IntelVmPlatformConfig.IsSymmetricMultiThreadingEnabled,
 			}
 		case infrastructurev1beta2.PlatformConfigTypeIntelSkylakeBm:
+			numaNodesPerSocket, _ := core.GetMappingIntelSkylakeBmPlatformConfigNumaNodesPerSocketEnum(string(platformConfig.IntelSkylakeBmPlatformConfig.NumaNodesPerSocket))
 			return core.IntelSkylakeBmPlatformConfig{
-				IsSecureBootEnabled:            platformConfig.IntelSkylakeBmPlatformConfig.IsSecureBootEnabled,
-				IsTrustedPlatformModuleEnabled: platformConfig.IntelSkylakeBmPlatformConfig.IsTrustedPlatformModuleEnabled,
-				IsMeasuredBootEnabled:          platformConfig.IntelSkylakeBmPlatformConfig.IsMeasuredBootEnabled,
-				IsMemoryEncryptionEnabled:      platformConfig.IntelSkylakeBmPlatformConfig.IsMemoryEncryptionEnabled,
+				IsSecureBootEnabled:                      platformConfig.IntelSkylakeBmPlatformConfig.IsSecureBootEnabled,
+				IsTrustedPlatformModuleEnabled:           platformConfig.IntelSkylakeBmPlatformConfig.IsTrustedPlatformModuleEnabled,
+				IsMeasuredBootEnabled:                    platformConfig.IntelSkylakeBmPlatformConfig.IsMeasuredBootEnabled,
+				IsMemoryEncryptionEnabled:                platformConfig.IntelSkylakeBmPlatformConfig.IsMemoryEncryptionEnabled,
+				IsSymmetricMultiThreadingEnabled:         platformConfig.IntelSkylakeBmPlatformConfig.IsSymmetricMultiThreadingEnabled,
+				IsInputOutputMemoryManagementUnitEnabled: platformConfig.IntelSkylakeBmPlatformConfig.IsInputOutputMemoryManagementUnitEnabled,
+				PercentageOfCoresEnabled:                 platformConfig.IntelSkylakeBmPlatformConfig.PercentageOfCoresEnabled,
+				NumaNodesPerSocket:                       numaNodesPerSocket,
 			}
 		case infrastructurev1beta2.PlatformConfigTypeAmdMilanBm:
 			numaNodesPerSocket, _ := core.GetMappingAmdMilanBmPlatformConfigNumaNodesPerSocketEnum(string(platformConfig.AmdMilanBmPlatformConfig.NumaNodesPerSocket))
@@ -1282,6 +1292,20 @@ func (m *MachineScope) getPlatformConfig() core.PlatformConfig {
 			}
 		default:
 		}
+	}
+	return nil
+}
+
+func validatePlatformConfig(platformConfig *infrastructurev1beta2.PlatformConfig) error {
+	if platformConfig == nil || platformConfig.PlatformConfigType != infrastructurev1beta2.PlatformConfigTypeIntelSkylakeBm {
+		return nil
+	}
+	numaNodesPerSocket := platformConfig.IntelSkylakeBmPlatformConfig.NumaNodesPerSocket
+	if numaNodesPerSocket == "" {
+		return nil
+	}
+	if _, ok := core.GetMappingIntelSkylakeBmPlatformConfigNumaNodesPerSocketEnum(string(numaNodesPerSocket)); !ok {
+		return errors.Errorf("unsupported Intel Skylake NUMA nodes per socket %q", numaNodesPerSocket)
 	}
 	return nil
 }
