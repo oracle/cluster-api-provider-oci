@@ -21,13 +21,16 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 
+	jsonpatch "github.com/evanphx/json-patch/v5"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	infrastructurev1beta2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -39,30 +42,47 @@ import (
 )
 
 func TestWebhookRegistrationServesAdmissionReviews(t *testing.T) {
+	kubernetesVersion := "v1.35.0"
 	tests := []struct {
 		name                  string
 		object                runtime.Object
 		kind                  string
 		setup                 func(ctrl.Manager) error
 		wantAdmissionWebhooks int
+		defaultPath           []string
+		wantDefault           interface{}
 	}{
 		{
-			name:   "OCICluster",
-			object: &infrastructurev1beta2.OCICluster{},
-			kind:   "OCICluster",
+			name: "OCICluster",
+			object: &infrastructurev1beta2.OCICluster{
+				Spec: infrastructurev1beta2.OCIClusterSpec{
+					CompartmentId:         "ocid1.compartment.oc1..test",
+					OCIResourceIdentifier: "registration-test",
+				},
+			},
+			kind: "OCICluster",
 			setup: func(mgr ctrl.Manager) error {
 				return (&infrastructurev1beta2.OCICluster{}).SetupWebhookWithManager(mgr)
 			},
 			wantAdmissionWebhooks: 2,
+			defaultPath:           []string{"spec", "networkSpec", "apiServerLoadBalancer", "networkVisibility"},
+			wantDefault:           string(infrastructurev1beta2.LBNetworkVisibilityInherited),
 		},
 		{
-			name:   "OCIManagedCluster",
-			object: &infrastructurev1beta2.OCIManagedCluster{},
-			kind:   "OCIManagedCluster",
+			name: "OCIManagedCluster",
+			object: &infrastructurev1beta2.OCIManagedCluster{
+				Spec: infrastructurev1beta2.OCIManagedClusterSpec{
+					CompartmentId:         "ocid1.compartment.oc1..test",
+					OCIResourceIdentifier: "registration-test",
+				},
+			},
+			kind: "OCIManagedCluster",
 			setup: func(mgr ctrl.Manager) error {
 				return (&infrastructurev1beta2.OCIManagedCluster{}).SetupWebhookWithManager(mgr)
 			},
 			wantAdmissionWebhooks: 2,
+			defaultPath:           []string{"spec", "networkSpec", "vcn", "cidr"},
+			wantDefault:           infrastructurev1beta2.VcnDefaultCidr,
 		},
 		{
 			name:   "OCIManagedControlPlane",
@@ -72,24 +92,36 @@ func TestWebhookRegistrationServesAdmissionReviews(t *testing.T) {
 				return (&infrastructurev1beta2.OCIManagedControlPlane{}).SetupWebhookWithManager(mgr)
 			},
 			wantAdmissionWebhooks: 2,
+			defaultPath:           []string{"spec", "clusterPodNetworkOptions"},
+			wantDefault:           []interface{}{map[string]interface{}{"cniType": string(infrastructurev1beta2.VCNNativeCNI)}},
 		},
 		{
-			name:   "OCIMachineTemplate",
-			object: &infrastructurev1beta2.OCIMachineTemplate{},
-			kind:   "OCIMachineTemplate",
+			name: "OCIMachineTemplate",
+			object: &infrastructurev1beta2.OCIMachineTemplate{
+				Spec: infrastructurev1beta2.OCIMachineTemplateSpec{
+					Template: infrastructurev1beta2.OCIMachineTemplateResource{
+						Spec: infrastructurev1beta2.OCIMachineSpec{Shape: "VM.Standard.E4.Flex"},
+					},
+				},
+			},
+			kind: "OCIMachineTemplate",
 			setup: func(mgr ctrl.Manager) error {
 				return (&infrastructurev1beta2.OCIMachineTemplate{}).SetupWebhookWithManager(mgr)
 			},
 			wantAdmissionWebhooks: 1,
 		},
 		{
-			name:   "OCIManagedMachinePool",
-			object: &infrastructurev1beta2exp.OCIManagedMachinePool{},
-			kind:   "OCIManagedMachinePool",
+			name: "OCIManagedMachinePool",
+			object: &infrastructurev1beta2exp.OCIManagedMachinePool{
+				Spec: infrastructurev1beta2exp.OCIManagedMachinePoolSpec{Version: &kubernetesVersion},
+			},
+			kind: "OCIManagedMachinePool",
 			setup: func(mgr ctrl.Manager) error {
 				return (&infrastructurev1beta2exp.OCIManagedMachinePool{}).SetupWebhookWithManager(mgr)
 			},
 			wantAdmissionWebhooks: 2,
+			defaultPath:           []string{"spec", "nodePoolNodeConfig", "nodePoolPodNetworkOptionDetails", "cniType"},
+			wantDefault:           string(infrastructurev1beta2.VCNNativeCNI),
 		},
 		{
 			name:   "OCIVirtualMachinePool",
@@ -99,6 +131,8 @@ func TestWebhookRegistrationServesAdmissionReviews(t *testing.T) {
 				return (&infrastructurev1beta2exp.OCIVirtualMachinePool{}).SetupWebhookWithManager(mgr)
 			},
 			wantAdmissionWebhooks: 2,
+			defaultPath:           []string{"spec", "podConfiguration", "shape"},
+			wantDefault:           "Pod.Standard.E4.Flex",
 		},
 	}
 
@@ -132,6 +166,7 @@ func TestWebhookRegistrationServesAdmissionReviews(t *testing.T) {
 			}
 			object := tt.object.DeepCopyObject()
 			object.GetObjectKind().SetGroupVersionKind(gvk)
+			object.(metav1.Object).SetName("registration-test")
 			objectJSON, err := json.Marshal(object)
 			if err != nil {
 				t.Fatalf("marshal admission object: %v", err)
@@ -173,6 +208,33 @@ func TestWebhookRegistrationServesAdmissionReviews(t *testing.T) {
 					}
 					if responseReview.Response.UID != uid {
 						t.Fatalf("AdmissionReview response UID = %q, want %q", responseReview.Response.UID, uid)
+					}
+					if !responseReview.Response.Allowed {
+						t.Fatalf("admission denied: %+v", responseReview.Response.Result)
+					}
+					if responseReview.Response.Result == nil || responseReview.Response.Result.Code != http.StatusOK {
+						t.Fatalf("admission result = %+v, want code %d", responseReview.Response.Result, http.StatusOK)
+					}
+					if strings.HasPrefix(path, "/mutate-") {
+						if responseReview.Response.PatchType == nil || *responseReview.Response.PatchType != admissionv1.PatchTypeJSONPatch {
+							t.Fatalf("admission patch type = %v, want JSONPatch", responseReview.Response.PatchType)
+						}
+						patch, err := jsonpatch.DecodePatch(responseReview.Response.Patch)
+						if err != nil {
+							t.Fatalf("decode defaulting patch: %v", err)
+						}
+						defaultedJSON, err := patch.Apply(objectJSON)
+						if err != nil {
+							t.Fatalf("apply defaulting patch: %v", err)
+						}
+						var defaulted unstructured.Unstructured
+						if err := json.Unmarshal(defaultedJSON, &defaulted); err != nil {
+							t.Fatalf("unmarshal defaulted object: %v", err)
+						}
+						got, found, err := unstructured.NestedFieldNoCopy(defaulted.Object, tt.defaultPath...)
+						if err != nil || !found || !reflect.DeepEqual(got, tt.wantDefault) {
+							t.Fatalf("default at %v = %#v (found %t, error %v), want %#v", tt.defaultPath, got, found, err, tt.wantDefault)
+						}
 					}
 				})
 			}
