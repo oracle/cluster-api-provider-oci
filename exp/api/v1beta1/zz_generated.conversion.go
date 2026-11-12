@@ -28,6 +28,7 @@ import (
 	apiv1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	v1beta2 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	corev1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
@@ -201,6 +202,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*OCIMachinePoolMachineV1Beta2Status)(nil), (*v1beta2.OCIMachinePoolMachineV1Beta2Status)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_OCIMachinePoolMachineV1Beta2Status_To_v1beta2_OCIMachinePoolMachineV1Beta2Status(a.(*OCIMachinePoolMachineV1Beta2Status), b.(*v1beta2.OCIMachinePoolMachineV1Beta2Status), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*v1beta2.OCIMachinePoolMachineV1Beta2Status)(nil), (*OCIMachinePoolMachineV1Beta2Status)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta2_OCIMachinePoolMachineV1Beta2Status_To_v1beta1_OCIMachinePoolMachineV1Beta2Status(a.(*v1beta2.OCIMachinePoolMachineV1Beta2Status), b.(*OCIMachinePoolMachineV1Beta2Status), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*OCIMachinePoolSpec)(nil), (*v1beta2.OCIMachinePoolSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta1_OCIMachinePoolSpec_To_v1beta2_OCIMachinePoolSpec(a.(*OCIMachinePoolSpec), b.(*v1beta2.OCIMachinePoolSpec), scope)
 	}); err != nil {
@@ -218,6 +229,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*v1beta2.OCIMachinePoolStatus)(nil), (*OCIMachinePoolStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta2_OCIMachinePoolStatus_To_v1beta1_OCIMachinePoolStatus(a.(*v1beta2.OCIMachinePoolStatus), b.(*OCIMachinePoolStatus), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*OCIMachinePoolV1Beta2Status)(nil), (*v1beta2.OCIMachinePoolV1Beta2Status)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_OCIMachinePoolV1Beta2Status_To_v1beta2_OCIMachinePoolV1Beta2Status(a.(*OCIMachinePoolV1Beta2Status), b.(*v1beta2.OCIMachinePoolV1Beta2Status), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*v1beta2.OCIMachinePoolV1Beta2Status)(nil), (*OCIMachinePoolV1Beta2Status)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta2_OCIMachinePoolV1Beta2Status_To_v1beta1_OCIMachinePoolV1Beta2Status(a.(*v1beta2.OCIMachinePoolV1Beta2Status), b.(*OCIMachinePoolV1Beta2Status), scope)
 	}); err != nil {
 		return err
 	}
@@ -296,6 +317,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*OCIManagedMachinePoolV1Beta2Status)(nil), (*v1beta2.OCIManagedMachinePoolV1Beta2Status)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_OCIManagedMachinePoolV1Beta2Status_To_v1beta2_OCIManagedMachinePoolV1Beta2Status(a.(*OCIManagedMachinePoolV1Beta2Status), b.(*v1beta2.OCIManagedMachinePoolV1Beta2Status), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*v1beta2.OCIManagedMachinePoolV1Beta2Status)(nil), (*OCIManagedMachinePoolV1Beta2Status)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta2_OCIManagedMachinePoolV1Beta2Status_To_v1beta1_OCIManagedMachinePoolV1Beta2Status(a.(*v1beta2.OCIManagedMachinePoolV1Beta2Status), b.(*OCIManagedMachinePoolV1Beta2Status), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*OCIVirtualMachinePool)(nil), (*v1beta2.OCIVirtualMachinePool)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta1_OCIVirtualMachinePool_To_v1beta2_OCIVirtualMachinePool(a.(*OCIVirtualMachinePool), b.(*v1beta2.OCIVirtualMachinePool), scope)
 	}); err != nil {
@@ -333,6 +364,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*v1beta2.OCIVirtualMachinePoolStatus)(nil), (*OCIVirtualMachinePoolStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta2_OCIVirtualMachinePoolStatus_To_v1beta1_OCIVirtualMachinePoolStatus(a.(*v1beta2.OCIVirtualMachinePoolStatus), b.(*OCIVirtualMachinePoolStatus), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*OCIVirtualMachinePoolV1Beta2Status)(nil), (*v1beta2.OCIVirtualMachinePoolV1Beta2Status)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_OCIVirtualMachinePoolV1Beta2Status_To_v1beta2_OCIVirtualMachinePoolV1Beta2Status(a.(*OCIVirtualMachinePoolV1Beta2Status), b.(*v1beta2.OCIVirtualMachinePoolV1Beta2Status), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*v1beta2.OCIVirtualMachinePoolV1Beta2Status)(nil), (*OCIVirtualMachinePoolV1Beta2Status)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta2_OCIVirtualMachinePoolV1Beta2Status_To_v1beta1_OCIVirtualMachinePoolV1Beta2Status(a.(*v1beta2.OCIVirtualMachinePoolV1Beta2Status), b.(*OCIVirtualMachinePoolV1Beta2Status), scope)
 	}); err != nil {
 		return err
 	}
@@ -880,6 +921,7 @@ func Convert_v1beta2_OCIMachinePoolMachineSpec_To_v1beta1_OCIMachinePoolMachineS
 func autoConvert_v1beta1_OCIMachinePoolMachineStatus_To_v1beta2_OCIMachinePoolMachineStatus(in *OCIMachinePoolMachineStatus, out *v1beta2.OCIMachinePoolMachineStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
 	out.Conditions = *(*corev1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
+	out.V1Beta2 = (*v1beta2.OCIMachinePoolMachineV1Beta2Status)(unsafe.Pointer(in.V1Beta2))
 	return nil
 }
 
@@ -891,12 +933,33 @@ func Convert_v1beta1_OCIMachinePoolMachineStatus_To_v1beta2_OCIMachinePoolMachin
 func autoConvert_v1beta2_OCIMachinePoolMachineStatus_To_v1beta1_OCIMachinePoolMachineStatus(in *v1beta2.OCIMachinePoolMachineStatus, out *OCIMachinePoolMachineStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
 	out.Conditions = *(*corev1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
+	out.V1Beta2 = (*OCIMachinePoolMachineV1Beta2Status)(unsafe.Pointer(in.V1Beta2))
 	return nil
 }
 
 // Convert_v1beta2_OCIMachinePoolMachineStatus_To_v1beta1_OCIMachinePoolMachineStatus is an autogenerated conversion function.
 func Convert_v1beta2_OCIMachinePoolMachineStatus_To_v1beta1_OCIMachinePoolMachineStatus(in *v1beta2.OCIMachinePoolMachineStatus, out *OCIMachinePoolMachineStatus, s conversion.Scope) error {
 	return autoConvert_v1beta2_OCIMachinePoolMachineStatus_To_v1beta1_OCIMachinePoolMachineStatus(in, out, s)
+}
+
+func autoConvert_v1beta1_OCIMachinePoolMachineV1Beta2Status_To_v1beta2_OCIMachinePoolMachineV1Beta2Status(in *OCIMachinePoolMachineV1Beta2Status, out *v1beta2.OCIMachinePoolMachineV1Beta2Status, s conversion.Scope) error {
+	out.Conditions = *(*[]metav1.Condition)(unsafe.Pointer(&in.Conditions))
+	return nil
+}
+
+// Convert_v1beta1_OCIMachinePoolMachineV1Beta2Status_To_v1beta2_OCIMachinePoolMachineV1Beta2Status is an autogenerated conversion function.
+func Convert_v1beta1_OCIMachinePoolMachineV1Beta2Status_To_v1beta2_OCIMachinePoolMachineV1Beta2Status(in *OCIMachinePoolMachineV1Beta2Status, out *v1beta2.OCIMachinePoolMachineV1Beta2Status, s conversion.Scope) error {
+	return autoConvert_v1beta1_OCIMachinePoolMachineV1Beta2Status_To_v1beta2_OCIMachinePoolMachineV1Beta2Status(in, out, s)
+}
+
+func autoConvert_v1beta2_OCIMachinePoolMachineV1Beta2Status_To_v1beta1_OCIMachinePoolMachineV1Beta2Status(in *v1beta2.OCIMachinePoolMachineV1Beta2Status, out *OCIMachinePoolMachineV1Beta2Status, s conversion.Scope) error {
+	out.Conditions = *(*[]metav1.Condition)(unsafe.Pointer(&in.Conditions))
+	return nil
+}
+
+// Convert_v1beta2_OCIMachinePoolMachineV1Beta2Status_To_v1beta1_OCIMachinePoolMachineV1Beta2Status is an autogenerated conversion function.
+func Convert_v1beta2_OCIMachinePoolMachineV1Beta2Status_To_v1beta1_OCIMachinePoolMachineV1Beta2Status(in *v1beta2.OCIMachinePoolMachineV1Beta2Status, out *OCIMachinePoolMachineV1Beta2Status, s conversion.Scope) error {
+	return autoConvert_v1beta2_OCIMachinePoolMachineV1Beta2Status_To_v1beta1_OCIMachinePoolMachineV1Beta2Status(in, out, s)
 }
 
 func autoConvert_v1beta1_OCIMachinePoolSpec_To_v1beta2_OCIMachinePoolSpec(in *OCIMachinePoolSpec, out *v1beta2.OCIMachinePoolSpec, s conversion.Scope) error {
@@ -938,6 +1001,7 @@ func autoConvert_v1beta1_OCIMachinePoolStatus_To_v1beta2_OCIMachinePoolStatus(in
 	out.FailureReason = (*string)(unsafe.Pointer(in.FailureReason))
 	out.FailureMessage = (*string)(unsafe.Pointer(in.FailureMessage))
 	out.InfrastructureMachineKind = in.InfrastructureMachineKind
+	out.V1Beta2 = (*v1beta2.OCIMachinePoolV1Beta2Status)(unsafe.Pointer(in.V1Beta2))
 	return nil
 }
 
@@ -953,12 +1017,33 @@ func autoConvert_v1beta2_OCIMachinePoolStatus_To_v1beta1_OCIMachinePoolStatus(in
 	out.FailureReason = (*string)(unsafe.Pointer(in.FailureReason))
 	out.FailureMessage = (*string)(unsafe.Pointer(in.FailureMessage))
 	out.InfrastructureMachineKind = in.InfrastructureMachineKind
+	out.V1Beta2 = (*OCIMachinePoolV1Beta2Status)(unsafe.Pointer(in.V1Beta2))
 	return nil
 }
 
 // Convert_v1beta2_OCIMachinePoolStatus_To_v1beta1_OCIMachinePoolStatus is an autogenerated conversion function.
 func Convert_v1beta2_OCIMachinePoolStatus_To_v1beta1_OCIMachinePoolStatus(in *v1beta2.OCIMachinePoolStatus, out *OCIMachinePoolStatus, s conversion.Scope) error {
 	return autoConvert_v1beta2_OCIMachinePoolStatus_To_v1beta1_OCIMachinePoolStatus(in, out, s)
+}
+
+func autoConvert_v1beta1_OCIMachinePoolV1Beta2Status_To_v1beta2_OCIMachinePoolV1Beta2Status(in *OCIMachinePoolV1Beta2Status, out *v1beta2.OCIMachinePoolV1Beta2Status, s conversion.Scope) error {
+	out.Conditions = *(*[]metav1.Condition)(unsafe.Pointer(&in.Conditions))
+	return nil
+}
+
+// Convert_v1beta1_OCIMachinePoolV1Beta2Status_To_v1beta2_OCIMachinePoolV1Beta2Status is an autogenerated conversion function.
+func Convert_v1beta1_OCIMachinePoolV1Beta2Status_To_v1beta2_OCIMachinePoolV1Beta2Status(in *OCIMachinePoolV1Beta2Status, out *v1beta2.OCIMachinePoolV1Beta2Status, s conversion.Scope) error {
+	return autoConvert_v1beta1_OCIMachinePoolV1Beta2Status_To_v1beta2_OCIMachinePoolV1Beta2Status(in, out, s)
+}
+
+func autoConvert_v1beta2_OCIMachinePoolV1Beta2Status_To_v1beta1_OCIMachinePoolV1Beta2Status(in *v1beta2.OCIMachinePoolV1Beta2Status, out *OCIMachinePoolV1Beta2Status, s conversion.Scope) error {
+	out.Conditions = *(*[]metav1.Condition)(unsafe.Pointer(&in.Conditions))
+	return nil
+}
+
+// Convert_v1beta2_OCIMachinePoolV1Beta2Status_To_v1beta1_OCIMachinePoolV1Beta2Status is an autogenerated conversion function.
+func Convert_v1beta2_OCIMachinePoolV1Beta2Status_To_v1beta1_OCIMachinePoolV1Beta2Status(in *v1beta2.OCIMachinePoolV1Beta2Status, out *OCIMachinePoolV1Beta2Status, s conversion.Scope) error {
+	return autoConvert_v1beta2_OCIMachinePoolV1Beta2Status_To_v1beta1_OCIMachinePoolV1Beta2Status(in, out, s)
 }
 
 func autoConvert_v1beta1_OCIManagedMachinePool_To_v1beta2_OCIManagedMachinePool(in *OCIManagedMachinePool, out *v1beta2.OCIManagedMachinePool, s conversion.Scope) error {
@@ -1081,6 +1166,7 @@ func autoConvert_v1beta1_OCIManagedMachinePoolStatus_To_v1beta2_OCIManagedMachin
 	out.FailureReason = (*string)(unsafe.Pointer(in.FailureReason))
 	out.FailureMessages = *(*[]string)(unsafe.Pointer(&in.FailureMessages))
 	out.InfrastructureMachineKind = in.InfrastructureMachineKind
+	out.V1Beta2 = (*v1beta2.OCIManagedMachinePoolV1Beta2Status)(unsafe.Pointer(in.V1Beta2))
 	return nil
 }
 
@@ -1097,6 +1183,7 @@ func autoConvert_v1beta2_OCIManagedMachinePoolStatus_To_v1beta1_OCIManagedMachin
 	out.FailureReason = (*errors.MachineStatusError)(unsafe.Pointer(in.FailureReason))
 	out.FailureMessages = *(*[]string)(unsafe.Pointer(&in.FailureMessages))
 	out.InfrastructureMachineKind = in.InfrastructureMachineKind
+	out.V1Beta2 = (*OCIManagedMachinePoolV1Beta2Status)(unsafe.Pointer(in.V1Beta2))
 	return nil
 }
 
@@ -1221,6 +1308,26 @@ func Convert_v1beta2_OCIManagedMachinePoolTemplateSpec_To_v1beta1_OCIManagedMach
 	return autoConvert_v1beta2_OCIManagedMachinePoolTemplateSpec_To_v1beta1_OCIManagedMachinePoolTemplateSpec(in, out, s)
 }
 
+func autoConvert_v1beta1_OCIManagedMachinePoolV1Beta2Status_To_v1beta2_OCIManagedMachinePoolV1Beta2Status(in *OCIManagedMachinePoolV1Beta2Status, out *v1beta2.OCIManagedMachinePoolV1Beta2Status, s conversion.Scope) error {
+	out.Conditions = *(*[]metav1.Condition)(unsafe.Pointer(&in.Conditions))
+	return nil
+}
+
+// Convert_v1beta1_OCIManagedMachinePoolV1Beta2Status_To_v1beta2_OCIManagedMachinePoolV1Beta2Status is an autogenerated conversion function.
+func Convert_v1beta1_OCIManagedMachinePoolV1Beta2Status_To_v1beta2_OCIManagedMachinePoolV1Beta2Status(in *OCIManagedMachinePoolV1Beta2Status, out *v1beta2.OCIManagedMachinePoolV1Beta2Status, s conversion.Scope) error {
+	return autoConvert_v1beta1_OCIManagedMachinePoolV1Beta2Status_To_v1beta2_OCIManagedMachinePoolV1Beta2Status(in, out, s)
+}
+
+func autoConvert_v1beta2_OCIManagedMachinePoolV1Beta2Status_To_v1beta1_OCIManagedMachinePoolV1Beta2Status(in *v1beta2.OCIManagedMachinePoolV1Beta2Status, out *OCIManagedMachinePoolV1Beta2Status, s conversion.Scope) error {
+	out.Conditions = *(*[]metav1.Condition)(unsafe.Pointer(&in.Conditions))
+	return nil
+}
+
+// Convert_v1beta2_OCIManagedMachinePoolV1Beta2Status_To_v1beta1_OCIManagedMachinePoolV1Beta2Status is an autogenerated conversion function.
+func Convert_v1beta2_OCIManagedMachinePoolV1Beta2Status_To_v1beta1_OCIManagedMachinePoolV1Beta2Status(in *v1beta2.OCIManagedMachinePoolV1Beta2Status, out *OCIManagedMachinePoolV1Beta2Status, s conversion.Scope) error {
+	return autoConvert_v1beta2_OCIManagedMachinePoolV1Beta2Status_To_v1beta1_OCIManagedMachinePoolV1Beta2Status(in, out, s)
+}
+
 func autoConvert_v1beta1_OCIVirtualMachinePool_To_v1beta2_OCIVirtualMachinePool(in *OCIVirtualMachinePool, out *v1beta2.OCIVirtualMachinePool, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
 	if err := Convert_v1beta1_OCIVirtualMachinePoolSpec_To_v1beta2_OCIVirtualMachinePoolSpec(&in.Spec, &out.Spec, s); err != nil {
@@ -1321,6 +1428,7 @@ func autoConvert_v1beta1_OCIVirtualMachinePoolStatus_To_v1beta2_OCIVirtualMachin
 	out.FailureReason = (*errors.MachinePoolStatusFailure)(unsafe.Pointer(in.FailureReason))
 	out.FailureMessages = *(*[]string)(unsafe.Pointer(&in.FailureMessages))
 	out.InfrastructureMachineKind = in.InfrastructureMachineKind
+	out.V1Beta2 = (*v1beta2.OCIVirtualMachinePoolV1Beta2Status)(unsafe.Pointer(in.V1Beta2))
 	return nil
 }
 
@@ -1337,12 +1445,33 @@ func autoConvert_v1beta2_OCIVirtualMachinePoolStatus_To_v1beta1_OCIVirtualMachin
 	out.FailureReason = (*errors.MachinePoolStatusFailure)(unsafe.Pointer(in.FailureReason))
 	out.FailureMessages = *(*[]string)(unsafe.Pointer(&in.FailureMessages))
 	out.InfrastructureMachineKind = in.InfrastructureMachineKind
+	out.V1Beta2 = (*OCIVirtualMachinePoolV1Beta2Status)(unsafe.Pointer(in.V1Beta2))
 	return nil
 }
 
 // Convert_v1beta2_OCIVirtualMachinePoolStatus_To_v1beta1_OCIVirtualMachinePoolStatus is an autogenerated conversion function.
 func Convert_v1beta2_OCIVirtualMachinePoolStatus_To_v1beta1_OCIVirtualMachinePoolStatus(in *v1beta2.OCIVirtualMachinePoolStatus, out *OCIVirtualMachinePoolStatus, s conversion.Scope) error {
 	return autoConvert_v1beta2_OCIVirtualMachinePoolStatus_To_v1beta1_OCIVirtualMachinePoolStatus(in, out, s)
+}
+
+func autoConvert_v1beta1_OCIVirtualMachinePoolV1Beta2Status_To_v1beta2_OCIVirtualMachinePoolV1Beta2Status(in *OCIVirtualMachinePoolV1Beta2Status, out *v1beta2.OCIVirtualMachinePoolV1Beta2Status, s conversion.Scope) error {
+	out.Conditions = *(*[]metav1.Condition)(unsafe.Pointer(&in.Conditions))
+	return nil
+}
+
+// Convert_v1beta1_OCIVirtualMachinePoolV1Beta2Status_To_v1beta2_OCIVirtualMachinePoolV1Beta2Status is an autogenerated conversion function.
+func Convert_v1beta1_OCIVirtualMachinePoolV1Beta2Status_To_v1beta2_OCIVirtualMachinePoolV1Beta2Status(in *OCIVirtualMachinePoolV1Beta2Status, out *v1beta2.OCIVirtualMachinePoolV1Beta2Status, s conversion.Scope) error {
+	return autoConvert_v1beta1_OCIVirtualMachinePoolV1Beta2Status_To_v1beta2_OCIVirtualMachinePoolV1Beta2Status(in, out, s)
+}
+
+func autoConvert_v1beta2_OCIVirtualMachinePoolV1Beta2Status_To_v1beta1_OCIVirtualMachinePoolV1Beta2Status(in *v1beta2.OCIVirtualMachinePoolV1Beta2Status, out *OCIVirtualMachinePoolV1Beta2Status, s conversion.Scope) error {
+	out.Conditions = *(*[]metav1.Condition)(unsafe.Pointer(&in.Conditions))
+	return nil
+}
+
+// Convert_v1beta2_OCIVirtualMachinePoolV1Beta2Status_To_v1beta1_OCIVirtualMachinePoolV1Beta2Status is an autogenerated conversion function.
+func Convert_v1beta2_OCIVirtualMachinePoolV1Beta2Status_To_v1beta1_OCIVirtualMachinePoolV1Beta2Status(in *v1beta2.OCIVirtualMachinePoolV1Beta2Status, out *OCIVirtualMachinePoolV1Beta2Status, s conversion.Scope) error {
+	return autoConvert_v1beta2_OCIVirtualMachinePoolV1Beta2Status_To_v1beta1_OCIVirtualMachinePoolV1Beta2Status(in, out, s)
 }
 
 func autoConvert_v1beta1_PlacementConfig_To_v1beta2_PlacementConfig(in *PlacementConfig, out *v1beta2.PlacementConfig, s conversion.Scope) error {

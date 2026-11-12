@@ -545,6 +545,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*OCIClusterV1Beta2Status)(nil), (*v1beta2.OCIClusterV1Beta2Status)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_OCIClusterV1Beta2Status_To_v1beta2_OCIClusterV1Beta2Status(a.(*OCIClusterV1Beta2Status), b.(*v1beta2.OCIClusterV1Beta2Status), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*v1beta2.OCIClusterV1Beta2Status)(nil), (*OCIClusterV1Beta2Status)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta2_OCIClusterV1Beta2Status_To_v1beta1_OCIClusterV1Beta2Status(a.(*v1beta2.OCIClusterV1Beta2Status), b.(*OCIClusterV1Beta2Status), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*OCIMachine)(nil), (*v1beta2.OCIMachine)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta1_OCIMachine_To_v1beta2_OCIMachine(a.(*OCIMachine), b.(*v1beta2.OCIMachine), scope)
 	}); err != nil {
@@ -620,6 +630,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*OCIMachineV1Beta2Status)(nil), (*v1beta2.OCIMachineV1Beta2Status)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_OCIMachineV1Beta2Status_To_v1beta2_OCIMachineV1Beta2Status(a.(*OCIMachineV1Beta2Status), b.(*v1beta2.OCIMachineV1Beta2Status), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*v1beta2.OCIMachineV1Beta2Status)(nil), (*OCIMachineV1Beta2Status)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta2_OCIMachineV1Beta2Status_To_v1beta1_OCIMachineV1Beta2Status(a.(*v1beta2.OCIMachineV1Beta2Status), b.(*OCIMachineV1Beta2Status), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*OCIManagedCluster)(nil), (*v1beta2.OCIManagedCluster)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta1_OCIManagedCluster_To_v1beta2_OCIManagedCluster(a.(*OCIManagedCluster), b.(*v1beta2.OCIManagedCluster), scope)
 	}); err != nil {
@@ -690,6 +710,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*OCIManagedClusterV1Beta2Status)(nil), (*v1beta2.OCIManagedClusterV1Beta2Status)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_OCIManagedClusterV1Beta2Status_To_v1beta2_OCIManagedClusterV1Beta2Status(a.(*OCIManagedClusterV1Beta2Status), b.(*v1beta2.OCIManagedClusterV1Beta2Status), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*v1beta2.OCIManagedClusterV1Beta2Status)(nil), (*OCIManagedClusterV1Beta2Status)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta2_OCIManagedClusterV1Beta2Status_To_v1beta1_OCIManagedClusterV1Beta2Status(a.(*v1beta2.OCIManagedClusterV1Beta2Status), b.(*OCIManagedClusterV1Beta2Status), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*OCIManagedControlPlane)(nil), (*v1beta2.OCIManagedControlPlane)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta1_OCIManagedControlPlane_To_v1beta2_OCIManagedControlPlane(a.(*OCIManagedControlPlane), b.(*v1beta2.OCIManagedControlPlane), scope)
 	}); err != nil {
@@ -757,6 +787,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*v1beta2.OCIManagedControlPlaneTemplateSpec)(nil), (*OCIManagedControlPlaneTemplateSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta2_OCIManagedControlPlaneTemplateSpec_To_v1beta1_OCIManagedControlPlaneTemplateSpec(a.(*v1beta2.OCIManagedControlPlaneTemplateSpec), b.(*OCIManagedControlPlaneTemplateSpec), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*OCIManagedControlPlaneV1Beta2Status)(nil), (*v1beta2.OCIManagedControlPlaneV1Beta2Status)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_OCIManagedControlPlaneV1Beta2Status_To_v1beta2_OCIManagedControlPlaneV1Beta2Status(a.(*OCIManagedControlPlaneV1Beta2Status), b.(*v1beta2.OCIManagedControlPlaneV1Beta2Status), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*v1beta2.OCIManagedControlPlaneV1Beta2Status)(nil), (*OCIManagedControlPlaneV1Beta2Status)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta2_OCIManagedControlPlaneV1Beta2Status_To_v1beta1_OCIManagedControlPlaneV1Beta2Status(a.(*v1beta2.OCIManagedControlPlaneV1Beta2Status), b.(*OCIManagedControlPlaneV1Beta2Status), scope)
 	}); err != nil {
 		return err
 	}
@@ -2349,6 +2389,7 @@ func autoConvert_v1beta1_OCIClusterStatus_To_v1beta2_OCIClusterStatus(in *OCIClu
 	// WARNING: in.AvailabilityDomains requires manual conversion: does not exist in peer-type
 	out.Ready = in.Ready
 	out.Conditions = *(*corev1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
+	out.V1Beta2 = (*v1beta2.OCIClusterV1Beta2Status)(unsafe.Pointer(in.V1Beta2))
 	return nil
 }
 
@@ -2356,6 +2397,7 @@ func autoConvert_v1beta2_OCIClusterStatus_To_v1beta1_OCIClusterStatus(in *v1beta
 	out.FailureDomains = *(*corev1beta1.FailureDomains)(unsafe.Pointer(&in.FailureDomains))
 	out.Ready = in.Ready
 	out.Conditions = *(*corev1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
+	out.V1Beta2 = (*OCIClusterV1Beta2Status)(unsafe.Pointer(in.V1Beta2))
 	return nil
 }
 
@@ -2478,6 +2520,26 @@ func autoConvert_v1beta2_OCIClusterTemplateSpec_To_v1beta1_OCIClusterTemplateSpe
 // Convert_v1beta2_OCIClusterTemplateSpec_To_v1beta1_OCIClusterTemplateSpec is an autogenerated conversion function.
 func Convert_v1beta2_OCIClusterTemplateSpec_To_v1beta1_OCIClusterTemplateSpec(in *v1beta2.OCIClusterTemplateSpec, out *OCIClusterTemplateSpec, s conversion.Scope) error {
 	return autoConvert_v1beta2_OCIClusterTemplateSpec_To_v1beta1_OCIClusterTemplateSpec(in, out, s)
+}
+
+func autoConvert_v1beta1_OCIClusterV1Beta2Status_To_v1beta2_OCIClusterV1Beta2Status(in *OCIClusterV1Beta2Status, out *v1beta2.OCIClusterV1Beta2Status, s conversion.Scope) error {
+	out.Conditions = *(*[]v1.Condition)(unsafe.Pointer(&in.Conditions))
+	return nil
+}
+
+// Convert_v1beta1_OCIClusterV1Beta2Status_To_v1beta2_OCIClusterV1Beta2Status is an autogenerated conversion function.
+func Convert_v1beta1_OCIClusterV1Beta2Status_To_v1beta2_OCIClusterV1Beta2Status(in *OCIClusterV1Beta2Status, out *v1beta2.OCIClusterV1Beta2Status, s conversion.Scope) error {
+	return autoConvert_v1beta1_OCIClusterV1Beta2Status_To_v1beta2_OCIClusterV1Beta2Status(in, out, s)
+}
+
+func autoConvert_v1beta2_OCIClusterV1Beta2Status_To_v1beta1_OCIClusterV1Beta2Status(in *v1beta2.OCIClusterV1Beta2Status, out *OCIClusterV1Beta2Status, s conversion.Scope) error {
+	out.Conditions = *(*[]v1.Condition)(unsafe.Pointer(&in.Conditions))
+	return nil
+}
+
+// Convert_v1beta2_OCIClusterV1Beta2Status_To_v1beta1_OCIClusterV1Beta2Status is an autogenerated conversion function.
+func Convert_v1beta2_OCIClusterV1Beta2Status_To_v1beta1_OCIClusterV1Beta2Status(in *v1beta2.OCIClusterV1Beta2Status, out *OCIClusterV1Beta2Status, s conversion.Scope) error {
+	return autoConvert_v1beta2_OCIClusterV1Beta2Status_To_v1beta1_OCIClusterV1Beta2Status(in, out, s)
 }
 
 func autoConvert_v1beta1_OCIMachine_To_v1beta2_OCIMachine(in *OCIMachine, out *v1beta2.OCIMachine, s conversion.Scope) error {
@@ -2649,6 +2711,7 @@ func autoConvert_v1beta1_OCIMachineStatus_To_v1beta2_OCIMachineStatus(in *OCIMac
 	out.CreateBackendWorkRequestId = in.CreateBackendWorkRequestId
 	out.DeleteBackendWorkRequestId = in.DeleteBackendWorkRequestId
 	out.Conditions = *(*corev1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
+	out.V1Beta2 = (*v1beta2.OCIMachineV1Beta2Status)(unsafe.Pointer(in.V1Beta2))
 	return nil
 }
 
@@ -2666,6 +2729,7 @@ func autoConvert_v1beta2_OCIMachineStatus_To_v1beta1_OCIMachineStatus(in *v1beta
 	out.CreateBackendWorkRequestId = in.CreateBackendWorkRequestId
 	out.DeleteBackendWorkRequestId = in.DeleteBackendWorkRequestId
 	out.Conditions = *(*corev1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
+	out.V1Beta2 = (*OCIMachineV1Beta2Status)(unsafe.Pointer(in.V1Beta2))
 	return nil
 }
 
@@ -2790,6 +2854,26 @@ func Convert_v1beta2_OCIMachineTemplateSpec_To_v1beta1_OCIMachineTemplateSpec(in
 	return autoConvert_v1beta2_OCIMachineTemplateSpec_To_v1beta1_OCIMachineTemplateSpec(in, out, s)
 }
 
+func autoConvert_v1beta1_OCIMachineV1Beta2Status_To_v1beta2_OCIMachineV1Beta2Status(in *OCIMachineV1Beta2Status, out *v1beta2.OCIMachineV1Beta2Status, s conversion.Scope) error {
+	out.Conditions = *(*[]v1.Condition)(unsafe.Pointer(&in.Conditions))
+	return nil
+}
+
+// Convert_v1beta1_OCIMachineV1Beta2Status_To_v1beta2_OCIMachineV1Beta2Status is an autogenerated conversion function.
+func Convert_v1beta1_OCIMachineV1Beta2Status_To_v1beta2_OCIMachineV1Beta2Status(in *OCIMachineV1Beta2Status, out *v1beta2.OCIMachineV1Beta2Status, s conversion.Scope) error {
+	return autoConvert_v1beta1_OCIMachineV1Beta2Status_To_v1beta2_OCIMachineV1Beta2Status(in, out, s)
+}
+
+func autoConvert_v1beta2_OCIMachineV1Beta2Status_To_v1beta1_OCIMachineV1Beta2Status(in *v1beta2.OCIMachineV1Beta2Status, out *OCIMachineV1Beta2Status, s conversion.Scope) error {
+	out.Conditions = *(*[]v1.Condition)(unsafe.Pointer(&in.Conditions))
+	return nil
+}
+
+// Convert_v1beta2_OCIMachineV1Beta2Status_To_v1beta1_OCIMachineV1Beta2Status is an autogenerated conversion function.
+func Convert_v1beta2_OCIMachineV1Beta2Status_To_v1beta1_OCIMachineV1Beta2Status(in *v1beta2.OCIMachineV1Beta2Status, out *OCIMachineV1Beta2Status, s conversion.Scope) error {
+	return autoConvert_v1beta2_OCIMachineV1Beta2Status_To_v1beta1_OCIMachineV1Beta2Status(in, out, s)
+}
+
 func autoConvert_v1beta1_OCIManagedCluster_To_v1beta2_OCIManagedCluster(in *OCIManagedCluster, out *v1beta2.OCIManagedCluster, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
 	if err := Convert_v1beta1_OCIManagedClusterSpec_To_v1beta2_OCIManagedClusterSpec(&in.Spec, &out.Spec, s); err != nil {
@@ -2904,6 +2988,7 @@ func autoConvert_v1beta1_OCIManagedClusterStatus_To_v1beta2_OCIManagedClusterSta
 	// WARNING: in.AvailabilityDomains requires manual conversion: does not exist in peer-type
 	out.Ready = in.Ready
 	out.Conditions = *(*corev1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
+	out.V1Beta2 = (*v1beta2.OCIManagedClusterV1Beta2Status)(unsafe.Pointer(in.V1Beta2))
 	return nil
 }
 
@@ -2911,6 +2996,7 @@ func autoConvert_v1beta2_OCIManagedClusterStatus_To_v1beta1_OCIManagedClusterSta
 	out.FailureDomains = *(*corev1beta1.FailureDomains)(unsafe.Pointer(&in.FailureDomains))
 	out.Ready = in.Ready
 	out.Conditions = *(*corev1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
+	out.V1Beta2 = (*OCIManagedClusterV1Beta2Status)(unsafe.Pointer(in.V1Beta2))
 	return nil
 }
 
@@ -3035,6 +3121,26 @@ func Convert_v1beta2_OCIManagedClusterTemplateSpec_To_v1beta1_OCIManagedClusterT
 	return autoConvert_v1beta2_OCIManagedClusterTemplateSpec_To_v1beta1_OCIManagedClusterTemplateSpec(in, out, s)
 }
 
+func autoConvert_v1beta1_OCIManagedClusterV1Beta2Status_To_v1beta2_OCIManagedClusterV1Beta2Status(in *OCIManagedClusterV1Beta2Status, out *v1beta2.OCIManagedClusterV1Beta2Status, s conversion.Scope) error {
+	out.Conditions = *(*[]v1.Condition)(unsafe.Pointer(&in.Conditions))
+	return nil
+}
+
+// Convert_v1beta1_OCIManagedClusterV1Beta2Status_To_v1beta2_OCIManagedClusterV1Beta2Status is an autogenerated conversion function.
+func Convert_v1beta1_OCIManagedClusterV1Beta2Status_To_v1beta2_OCIManagedClusterV1Beta2Status(in *OCIManagedClusterV1Beta2Status, out *v1beta2.OCIManagedClusterV1Beta2Status, s conversion.Scope) error {
+	return autoConvert_v1beta1_OCIManagedClusterV1Beta2Status_To_v1beta2_OCIManagedClusterV1Beta2Status(in, out, s)
+}
+
+func autoConvert_v1beta2_OCIManagedClusterV1Beta2Status_To_v1beta1_OCIManagedClusterV1Beta2Status(in *v1beta2.OCIManagedClusterV1Beta2Status, out *OCIManagedClusterV1Beta2Status, s conversion.Scope) error {
+	out.Conditions = *(*[]v1.Condition)(unsafe.Pointer(&in.Conditions))
+	return nil
+}
+
+// Convert_v1beta2_OCIManagedClusterV1Beta2Status_To_v1beta1_OCIManagedClusterV1Beta2Status is an autogenerated conversion function.
+func Convert_v1beta2_OCIManagedClusterV1Beta2Status_To_v1beta1_OCIManagedClusterV1Beta2Status(in *v1beta2.OCIManagedClusterV1Beta2Status, out *OCIManagedClusterV1Beta2Status, s conversion.Scope) error {
+	return autoConvert_v1beta2_OCIManagedClusterV1Beta2Status_To_v1beta1_OCIManagedClusterV1Beta2Status(in, out, s)
+}
+
 func autoConvert_v1beta1_OCIManagedControlPlane_To_v1beta2_OCIManagedControlPlane(in *OCIManagedControlPlane, out *v1beta2.OCIManagedControlPlane, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
 	if err := Convert_v1beta1_OCIManagedControlPlaneSpec_To_v1beta2_OCIManagedControlPlaneSpec(&in.Spec, &out.Spec, s); err != nil {
@@ -3147,6 +3253,7 @@ func autoConvert_v1beta1_OCIManagedControlPlaneStatus_To_v1beta2_OCIManagedContr
 	out.Conditions = *(*corev1beta1.Conditions)(unsafe.Pointer(&in.Conditions))
 	out.Version = (*string)(unsafe.Pointer(in.Version))
 	out.Initialized = in.Initialized
+	out.V1Beta2 = (*v1beta2.OCIManagedControlPlaneV1Beta2Status)(unsafe.Pointer(in.V1Beta2))
 	return nil
 }
 
@@ -3161,6 +3268,7 @@ func autoConvert_v1beta2_OCIManagedControlPlaneStatus_To_v1beta1_OCIManagedContr
 	out.Version = (*string)(unsafe.Pointer(in.Version))
 	// WARNING: in.AddonStatus requires manual conversion: does not exist in peer-type
 	out.Initialized = in.Initialized
+	out.V1Beta2 = (*OCIManagedControlPlaneV1Beta2Status)(unsafe.Pointer(in.V1Beta2))
 	return nil
 }
 
@@ -3278,6 +3386,26 @@ func autoConvert_v1beta2_OCIManagedControlPlaneTemplateSpec_To_v1beta1_OCIManage
 // Convert_v1beta2_OCIManagedControlPlaneTemplateSpec_To_v1beta1_OCIManagedControlPlaneTemplateSpec is an autogenerated conversion function.
 func Convert_v1beta2_OCIManagedControlPlaneTemplateSpec_To_v1beta1_OCIManagedControlPlaneTemplateSpec(in *v1beta2.OCIManagedControlPlaneTemplateSpec, out *OCIManagedControlPlaneTemplateSpec, s conversion.Scope) error {
 	return autoConvert_v1beta2_OCIManagedControlPlaneTemplateSpec_To_v1beta1_OCIManagedControlPlaneTemplateSpec(in, out, s)
+}
+
+func autoConvert_v1beta1_OCIManagedControlPlaneV1Beta2Status_To_v1beta2_OCIManagedControlPlaneV1Beta2Status(in *OCIManagedControlPlaneV1Beta2Status, out *v1beta2.OCIManagedControlPlaneV1Beta2Status, s conversion.Scope) error {
+	out.Conditions = *(*[]v1.Condition)(unsafe.Pointer(&in.Conditions))
+	return nil
+}
+
+// Convert_v1beta1_OCIManagedControlPlaneV1Beta2Status_To_v1beta2_OCIManagedControlPlaneV1Beta2Status is an autogenerated conversion function.
+func Convert_v1beta1_OCIManagedControlPlaneV1Beta2Status_To_v1beta2_OCIManagedControlPlaneV1Beta2Status(in *OCIManagedControlPlaneV1Beta2Status, out *v1beta2.OCIManagedControlPlaneV1Beta2Status, s conversion.Scope) error {
+	return autoConvert_v1beta1_OCIManagedControlPlaneV1Beta2Status_To_v1beta2_OCIManagedControlPlaneV1Beta2Status(in, out, s)
+}
+
+func autoConvert_v1beta2_OCIManagedControlPlaneV1Beta2Status_To_v1beta1_OCIManagedControlPlaneV1Beta2Status(in *v1beta2.OCIManagedControlPlaneV1Beta2Status, out *OCIManagedControlPlaneV1Beta2Status, s conversion.Scope) error {
+	out.Conditions = *(*[]v1.Condition)(unsafe.Pointer(&in.Conditions))
+	return nil
+}
+
+// Convert_v1beta2_OCIManagedControlPlaneV1Beta2Status_To_v1beta1_OCIManagedControlPlaneV1Beta2Status is an autogenerated conversion function.
+func Convert_v1beta2_OCIManagedControlPlaneV1Beta2Status_To_v1beta1_OCIManagedControlPlaneV1Beta2Status(in *v1beta2.OCIManagedControlPlaneV1Beta2Status, out *OCIManagedControlPlaneV1Beta2Status, s conversion.Scope) error {
+	return autoConvert_v1beta2_OCIManagedControlPlaneV1Beta2Status_To_v1beta1_OCIManagedControlPlaneV1Beta2Status(in, out, s)
 }
 
 func autoConvert_v1beta1_PeerRouteRule_To_v1beta2_PeerRouteRule(in *PeerRouteRule, out *v1beta2.PeerRouteRule, s conversion.Scope) error {

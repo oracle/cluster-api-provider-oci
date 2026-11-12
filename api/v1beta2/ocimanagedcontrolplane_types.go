@@ -234,6 +234,19 @@ type OCIManagedControlPlaneStatus struct {
 	// uploaded kubernetes config-map.
 	// +optional
 	Initialized bool `json:"initialized"`
+
+	// V1Beta2 groups the fields used for the CAPI v1beta2 contract transition.
+	// +optional
+	V1Beta2 *OCIManagedControlPlaneV1Beta2Status `json:"v1beta2,omitempty"`
+}
+
+// OCIManagedControlPlaneV1Beta2Status groups the standard conditions used during the CAPI v1beta2 contract transition.
+type OCIManagedControlPlaneV1Beta2Status struct {
+	// Conditions represents the observations of the resource's current state.
+	// +optional
+	// +listType=map
+	// +listMapKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // Addon defines the properties of an addon.
@@ -339,4 +352,20 @@ func (c *OCIManagedControlPlane) RemoveAddonStatus(name string) {
 
 func init() {
 	SchemeBuilder.Register(&OCIManagedControlPlane{}, &OCIManagedControlPlaneList{})
+}
+
+// GetV1Beta2Conditions returns the standard conditions for this object.
+func (c *OCIManagedControlPlane) GetV1Beta2Conditions() []metav1.Condition {
+	if c.Status.V1Beta2 == nil {
+		return nil
+	}
+	return c.Status.V1Beta2.Conditions
+}
+
+// SetV1Beta2Conditions sets the standard conditions for this object.
+func (c *OCIManagedControlPlane) SetV1Beta2Conditions(conditions []metav1.Condition) {
+	if c.Status.V1Beta2 == nil {
+		c.Status.V1Beta2 = &OCIManagedControlPlaneV1Beta2Status{}
+	}
+	c.Status.V1Beta2.Conditions = conditions
 }
