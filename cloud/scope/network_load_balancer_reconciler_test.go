@@ -1357,6 +1357,85 @@ func TestNLBDeletion(t *testing.T) {
 		})
 	}
 }
+func TestGetNetworkLoadbalancerIp(t *testing.T) {
+	tests := []struct {
+		name        string
+		nlb         networkloadbalancer.NetworkLoadBalancer
+		expectedIP  string
+		errContains string
+	}{
+		{
+			name:        "no ip addresses returns error",
+			nlb:         networkloadbalancer.NetworkLoadBalancer{IsPrivate: common.Bool(false)},
+			errContains: "nlb does not have valid ip addresses",
+		},
+		{
+			name: "private nlb returns first ip",
+			nlb: networkloadbalancer.NetworkLoadBalancer{
+				IsPrivate: common.Bool(true),
+				IpAddresses: []networkloadbalancer.IpAddress{
+					{IpAddress: common.String("10.0.0.1"), IsPublic: common.Bool(false)},
+				},
+			},
+			expectedIP: "10.0.0.1",
+		},
+		{
+			name: "private nlb with nil IpAddress returns error",
+			nlb: networkloadbalancer.NetworkLoadBalancer{
+				IsPrivate:   common.Bool(true),
+				IpAddresses: []networkloadbalancer.IpAddress{{IpAddress: nil}},
+			},
+			errContains: "nlb does not have valid private ip address",
+		},
+		{
+			name: "public nlb with nil IsPublic on entry does not panic",
+			nlb: networkloadbalancer.NetworkLoadBalancer{
+				IsPrivate: common.Bool(false),
+				IpAddresses: []networkloadbalancer.IpAddress{
+					{IpAddress: common.String("1.2.3.4"), IsPublic: nil},
+				},
+			},
+			errContains: "nlb does not have valid public ip address",
+		},
+		{
+			name: "public nlb skips private entries and returns public ip",
+			nlb: networkloadbalancer.NetworkLoadBalancer{
+				IsPrivate: common.Bool(false),
+				IpAddresses: []networkloadbalancer.IpAddress{
+					{IpAddress: common.String("10.0.0.1"), IsPublic: common.Bool(false)},
+					{IpAddress: common.String("2.2.2.2"), IsPublic: common.Bool(true)},
+				},
+			},
+			expectedIP: "2.2.2.2",
+		},
+		{
+			name: "public nlb with no public entry returns error",
+			nlb: networkloadbalancer.NetworkLoadBalancer{
+				IsPrivate: common.Bool(false),
+				IpAddresses: []networkloadbalancer.IpAddress{
+					{IpAddress: common.String("10.0.0.1"), IsPublic: common.Bool(false)},
+				},
+			},
+			errContains: "nlb does not have valid public ip address",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			scope := newTestClusterScope(t)
+			ip, err := scope.getNetworkLoadbalancerIp(tt.nlb)
+			if tt.errContains != "" {
+				g.Expect(err).To(HaveOccurred())
+				g.Expect(err.Error()).To(ContainSubstring(tt.errContains))
+				return
+			}
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(*ip).To(Equal(tt.expectedIP))
+		})
+	}
+}
+
 func getDefinedTags() (map[string]map[string]string, map[string]map[string]interface{}) {
 	definedTags := map[string]map[string]string{
 		"ns1": {
