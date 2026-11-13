@@ -1143,6 +1143,11 @@ func (in *ShapeConfig) DeepCopyInto(out *ShapeConfig) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.Vcpus != nil {
+		in, out := &in.Vcpus, &out.Vcpus
+		*out = new(int)
+		**out = **in
+	}
 	if in.MemoryInGBs != nil {
 		in, out := &in.MemoryInGBs, &out.MemoryInGBs
 		*out = new(string)
