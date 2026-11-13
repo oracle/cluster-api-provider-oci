@@ -349,6 +349,7 @@ func (m *MachinePoolScope) buildInstanceConfigurationShapeConfig() (core.Instanc
 			}
 			shapeConfig.BaselineOcpuUtilization = value
 		}
+		shapeConfig.Vcpus = shapeConfigSpec.Vcpus
 		shapeConfig.Nvmes = shapeConfigSpec.Nvmes
 	}
 
