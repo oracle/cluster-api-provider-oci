@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
@@ -258,6 +259,7 @@ func TestReconciliationFunction(t *testing.T) {
 		expectedFailureMessages []string
 		createPoolMachines      []infrav2exp.OCIMachinePoolMachine
 		deletePoolMachines      []clusterv1.Machine
+		expectedRequeueAfter    time.Duration
 		validate                func(g *WithT, t *test)
 	}
 	tests := []test{
@@ -269,9 +271,13 @@ func TestReconciliationFunction(t *testing.T) {
 			},
 		},
 		{
-			name:               "instance pool create",
-			errorExpected:      false,
-			conditionAssertion: []conditionAssertion{{infrav2exp.LaunchTemplateReadyCondition, corev1.ConditionTrue, "", ""}},
+			name:          "instance pool create",
+			errorExpected: false,
+			conditionAssertion: []conditionAssertion{
+				{infrav2exp.LaunchTemplateReadyCondition, corev1.ConditionTrue, "", ""},
+				{infrav2exp.InstancePoolReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityInfo, infrav2exp.InstancePoolNotReadyReason},
+			},
+			expectedRequeueAfter: 10 * time.Second,
 			testSpecificSetup: func(t *test, machinePoolScope *scope.MachinePoolScope, computeManagementClient *mock_computemanagement.MockClient) {
 				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
 					Shape:                   common.String("test-shape"),
@@ -313,11 +319,16 @@ func TestReconciliationFunction(t *testing.T) {
 						},
 					}, nil)
 			},
+			validate: func(g *WithT, t *test) {
+				g.Expect(ms.OCIMachinePool.Spec.OCID).To(Equal(common.String("id")))
+				g.Expect(ms.OCIMachinePool.Spec.ProviderID).To(Equal(common.String("oci://id")))
+			},
 		},
 		{
-			name:               "instance pool running",
-			errorExpected:      false,
-			conditionAssertion: []conditionAssertion{{infrav2exp.LaunchTemplateReadyCondition, corev1.ConditionTrue, "", ""}, {infrav2exp.InstancePoolReadyCondition, corev1.ConditionTrue, "", ""}},
+			name:                 "instance pool running",
+			errorExpected:        false,
+			conditionAssertion:   []conditionAssertion{{infrav2exp.LaunchTemplateReadyCondition, corev1.ConditionTrue, "", ""}, {infrav2exp.InstancePoolReadyCondition, corev1.ConditionTrue, "", ""}},
+			expectedRequeueAfter: 300 * time.Second,
 			testSpecificSetup: func(t *test, machinePoolScope *scope.MachinePoolScope, computeManagementClient *mock_computemanagement.MockClient) {
 				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
 					Shape:                   common.String("test-shape"),
@@ -387,9 +398,10 @@ func TestReconciliationFunction(t *testing.T) {
 			},
 		},
 		{
-			name:               "instance pool running with externally managed replicas",
-			errorExpected:      false,
-			conditionAssertion: []conditionAssertion{{infrav2exp.LaunchTemplateReadyCondition, corev1.ConditionTrue, "", ""}, {infrav2exp.InstancePoolReadyCondition, corev1.ConditionTrue, "", ""}},
+			name:                 "instance pool running with externally managed replicas",
+			errorExpected:        false,
+			conditionAssertion:   []conditionAssertion{{infrav2exp.LaunchTemplateReadyCondition, corev1.ConditionTrue, "", ""}, {infrav2exp.InstancePoolReadyCondition, corev1.ConditionTrue, "", ""}},
+			expectedRequeueAfter: 300 * time.Second,
 			testSpecificSetup: func(t *test, machinePoolScope *scope.MachinePoolScope, computeManagementClient *mock_computemanagement.MockClient) {
 				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
 					Shape:                   common.String("test-shape"),
@@ -464,9 +476,10 @@ func TestReconciliationFunction(t *testing.T) {
 			},
 		},
 		{
-			name:               "delete unwanted machinepool machine",
-			errorExpected:      false,
-			conditionAssertion: []conditionAssertion{{infrav2exp.LaunchTemplateReadyCondition, corev1.ConditionTrue, "", ""}, {infrav2exp.InstancePoolReadyCondition, corev1.ConditionTrue, "", ""}},
+			name:                 "delete unwanted machinepool machine",
+			errorExpected:        false,
+			conditionAssertion:   []conditionAssertion{{infrav2exp.LaunchTemplateReadyCondition, corev1.ConditionTrue, "", ""}, {infrav2exp.InstancePoolReadyCondition, corev1.ConditionTrue, "", ""}},
+			expectedRequeueAfter: 300 * time.Second,
 			testSpecificSetup: func(t *test, machinePoolScope *scope.MachinePoolScope, computeManagementClient *mock_computemanagement.MockClient) {
 				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
 					Shape:                   common.String("test-shape"),
@@ -634,7 +647,7 @@ func TestReconciliationFunction(t *testing.T) {
 			setup(t, g)
 			tc.testSpecificSetup(&tc, ms, computeManagementClient)
 			ctx := context.Background()
-			_, err := r.reconcileNormal(ctx, log.FromContext(ctx), ms)
+			result, err := r.reconcileNormal(ctx, log.FromContext(ctx), ms)
 			if len(tc.conditionAssertion) > 0 {
 				expectMachinePoolConditions(g, ociMachinePool, tc.conditionAssertion)
 			}
@@ -643,6 +656,7 @@ func TestReconciliationFunction(t *testing.T) {
 			} else {
 				g.Expect(err).To(BeNil())
 			}
+			g.Expect(result.RequeueAfter).To(Equal(tc.expectedRequeueAfter))
 			if tc.expectedEvent != "" {
 				g.Eventually(recorder.Events).Should(Receive(ContainSubstring(tc.expectedEvent)))
 			}
