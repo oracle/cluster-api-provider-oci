@@ -19,6 +19,7 @@ package v1beta2_test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -43,6 +44,15 @@ import (
 
 func TestWebhookRegistrationServesAdmissionReviews(t *testing.T) {
 	kubernetesVersion := "v1.35.0"
+	invalidateMachineTemplate := func(object runtime.Object) string {
+		object.(*infrastructurev1beta2.OCIMachineTemplate).Spec.Template.Spec.Shape = ""
+		return "spec.template.spec.shape"
+	}
+	invalidateManagedMachinePool := func(object runtime.Object) string {
+		version := "not-a-version"
+		object.(*infrastructurev1beta2exp.OCIManagedMachinePool).Spec.Version = &version
+		return "spec.version"
+	}
 	tests := []struct {
 		name                  string
 		object                runtime.Object
@@ -51,6 +61,8 @@ func TestWebhookRegistrationServesAdmissionReviews(t *testing.T) {
 		wantAdmissionWebhooks int
 		defaultPath           []string
 		wantDefault           interface{}
+		invalidCreate         func(runtime.Object) string
+		invalidUpdate         func(runtime.Object) string
 	}{
 		{
 			name: "OCICluster",
@@ -67,6 +79,14 @@ func TestWebhookRegistrationServesAdmissionReviews(t *testing.T) {
 			wantAdmissionWebhooks: 2,
 			defaultPath:           []string{"spec", "networkSpec", "apiServerLoadBalancer", "networkVisibility"},
 			wantDefault:           string(infrastructurev1beta2.LBNetworkVisibilityInherited),
+			invalidCreate: func(object runtime.Object) string {
+				object.(*infrastructurev1beta2.OCICluster).Spec.CompartmentId = "invalid"
+				return "spec.compartmentId"
+			},
+			invalidUpdate: func(object runtime.Object) string {
+				object.(*infrastructurev1beta2.OCICluster).Spec.Region = "us-ashburn-1"
+				return "spec.region"
+			},
 		},
 		{
 			name: "OCIManagedCluster",
@@ -83,6 +103,14 @@ func TestWebhookRegistrationServesAdmissionReviews(t *testing.T) {
 			wantAdmissionWebhooks: 2,
 			defaultPath:           []string{"spec", "networkSpec", "vcn", "cidr"},
 			wantDefault:           infrastructurev1beta2.VcnDefaultCidr,
+			invalidCreate: func(object runtime.Object) string {
+				object.(*infrastructurev1beta2.OCIManagedCluster).Spec.CompartmentId = "invalid"
+				return "spec.compartmentId"
+			},
+			invalidUpdate: func(object runtime.Object) string {
+				object.(*infrastructurev1beta2.OCIManagedCluster).Spec.Region = "us-ashburn-1"
+				return "spec.region"
+			},
 		},
 		{
 			name:   "OCIManagedControlPlane",
@@ -94,6 +122,11 @@ func TestWebhookRegistrationServesAdmissionReviews(t *testing.T) {
 			wantAdmissionWebhooks: 2,
 			defaultPath:           []string{"spec", "clusterPodNetworkOptions"},
 			wantDefault:           []interface{}{map[string]interface{}{"cniType": string(infrastructurev1beta2.VCNNativeCNI)}},
+			invalidCreate: func(object runtime.Object) string {
+				object.(metav1.Object).SetName(strings.Repeat("a", 32))
+				return "Name"
+			},
+			// ValidateUpdate currently accepts all decoded objects.
 		},
 		{
 			name: "OCIMachineTemplate",
@@ -109,6 +142,8 @@ func TestWebhookRegistrationServesAdmissionReviews(t *testing.T) {
 				return (&infrastructurev1beta2.OCIMachineTemplate{}).SetupWebhookWithManager(mgr)
 			},
 			wantAdmissionWebhooks: 1,
+			invalidCreate:         invalidateMachineTemplate,
+			invalidUpdate:         invalidateMachineTemplate,
 		},
 		{
 			name: "OCIManagedMachinePool",
@@ -122,9 +157,12 @@ func TestWebhookRegistrationServesAdmissionReviews(t *testing.T) {
 			wantAdmissionWebhooks: 2,
 			defaultPath:           []string{"spec", "nodePoolNodeConfig", "nodePoolPodNetworkOptionDetails", "cniType"},
 			wantDefault:           string(infrastructurev1beta2.VCNNativeCNI),
+			invalidCreate:         invalidateManagedMachinePool,
+			invalidUpdate:         invalidateManagedMachinePool,
 		},
 		{
-			name:   "OCIVirtualMachinePool",
+			name: "OCIVirtualMachinePool",
+			// Create and update validators currently accept all decoded objects.
 			object: &infrastructurev1beta2exp.OCIVirtualMachinePool{},
 			kind:   "OCIVirtualMachinePool",
 			setup: func(mgr ctrl.Manager) error {
@@ -171,75 +209,146 @@ func TestWebhookRegistrationServesAdmissionReviews(t *testing.T) {
 			if err != nil {
 				t.Fatalf("marshal admission object: %v", err)
 			}
+			updatedObject := object.DeepCopyObject()
+			updatedObject.(metav1.Object).SetLabels(map[string]string{"registration-test": "updated"})
+			updatedJSON, err := json.Marshal(updatedObject)
+			if err != nil {
+				t.Fatalf("marshal updated admission object: %v", err)
+			}
+			malformedJSON := []byte(fmt.Sprintf(`{"apiVersion":%q,"kind":%q,"spec":"invalid"}`, gvk.GroupVersion().String(), gvk.Kind))
 
 			for _, path := range server.admissionPaths {
 				t.Run(path, func(t *testing.T) {
-					uid := types.UID("webhook-registration-test")
-					review := admissionv1.AdmissionReview{
-						TypeMeta: metav1.TypeMeta{APIVersion: admissionv1.SchemeGroupVersion.String(), Kind: "AdmissionReview"},
-						Request: &admissionv1.AdmissionRequest{
-							UID:       uid,
-							Kind:      metav1.GroupVersionKind(gvk),
-							Resource:  metav1.GroupVersionResource{Group: gvk.Group, Version: gvk.Version, Resource: strings.ToLower(gvk.Kind) + "s"},
-							Operation: admissionv1.Create,
-							Object:    runtime.RawExtension{Raw: objectJSON},
-							OldObject: runtime.RawExtension{Raw: objectJSON},
-						},
+					type admissionCase struct {
+						name       string
+						operation  admissionv1.Operation
+						objectJSON []byte
+						wantCode   int32
+						wantField  string
 					}
-					reviewJSON, err := json.Marshal(review)
-					if err != nil {
-						t.Fatalf("marshal AdmissionReview: %v", err)
+					cases := []admissionCase{
+						{name: "valid-create", operation: admissionv1.Create, objectJSON: objectJSON, wantCode: http.StatusOK},
+						{name: "valid-update", operation: admissionv1.Update, objectJSON: updatedJSON, wantCode: http.StatusOK},
+						{name: "malformed-create", operation: admissionv1.Create, objectJSON: malformedJSON, wantCode: http.StatusBadRequest},
+						{name: "malformed-update", operation: admissionv1.Update, objectJSON: malformedJSON, wantCode: http.StatusBadRequest},
 					}
-
-					request := httptest.NewRequest(http.MethodPost, path, bytes.NewReader(reviewJSON))
-					request.Header.Set("Content-Type", "application/json")
-					response := httptest.NewRecorder()
-					server.WebhookMux().ServeHTTP(response, request)
-
-					if response.Code != http.StatusOK {
-						t.Fatalf("AdmissionReview status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
-					}
-					var responseReview admissionv1.AdmissionReview
-					if err := json.Unmarshal(response.Body.Bytes(), &responseReview); err != nil {
-						t.Fatalf("unmarshal AdmissionReview response: %v", err)
-					}
-					if responseReview.Response == nil {
-						t.Fatal("AdmissionReview response is nil")
-					}
-					if responseReview.Response.UID != uid {
-						t.Fatalf("AdmissionReview response UID = %q, want %q", responseReview.Response.UID, uid)
-					}
-					if !responseReview.Response.Allowed {
-						t.Fatalf("admission denied: %+v", responseReview.Response.Result)
-					}
-					if responseReview.Response.Result == nil || responseReview.Response.Result.Code != http.StatusOK {
-						t.Fatalf("admission result = %+v, want code %d", responseReview.Response.Result, http.StatusOK)
-					}
-					if strings.HasPrefix(path, "/mutate-") {
-						if responseReview.Response.PatchType == nil || *responseReview.Response.PatchType != admissionv1.PatchTypeJSONPatch {
-							t.Fatalf("admission patch type = %v, want JSONPatch", responseReview.Response.PatchType)
+					if strings.HasPrefix(path, "/validate-") {
+						for _, invalid := range []struct {
+							operation admissionv1.Operation
+							mutate    func(runtime.Object) string
+						}{
+							{admissionv1.Create, tt.invalidCreate},
+							{admissionv1.Update, tt.invalidUpdate},
+						} {
+							if invalid.mutate == nil {
+								continue
+							}
+							invalidObject := object.DeepCopyObject()
+							field := invalid.mutate(invalidObject)
+							invalidJSON, err := json.Marshal(invalidObject)
+							if err != nil {
+								t.Fatalf("marshal invalid admission object: %v", err)
+							}
+							cases = append(cases, admissionCase{
+								name:       "invalid-" + strings.ToLower(string(invalid.operation)),
+								operation:  invalid.operation,
+								objectJSON: invalidJSON,
+								wantCode:   http.StatusUnprocessableEntity,
+								wantField:  field,
+							})
 						}
-						patch, err := jsonpatch.DecodePatch(responseReview.Response.Patch)
-						if err != nil {
-							t.Fatalf("decode defaulting patch: %v", err)
-						}
-						defaultedJSON, err := patch.Apply(objectJSON)
-						if err != nil {
-							t.Fatalf("apply defaulting patch: %v", err)
-						}
-						var defaulted unstructured.Unstructured
-						if err := json.Unmarshal(defaultedJSON, &defaulted); err != nil {
-							t.Fatalf("unmarshal defaulted object: %v", err)
-						}
-						got, found, err := unstructured.NestedFieldNoCopy(defaulted.Object, tt.defaultPath...)
-						if err != nil || !found || !reflect.DeepEqual(got, tt.wantDefault) {
-							t.Fatalf("default at %v = %#v (found %t, error %v), want %#v", tt.defaultPath, got, found, err, tt.wantDefault)
-						}
+					}
+					for _, tc := range cases {
+						t.Run(tc.name, func(t *testing.T) {
+							request := admissionv1.AdmissionRequest{
+								UID:       types.UID("webhook-registration-test"),
+								Kind:      metav1.GroupVersionKind(gvk),
+								Resource:  metav1.GroupVersionResource{Group: gvk.Group, Version: gvk.Version, Resource: strings.ToLower(gvk.Kind) + "s"},
+								Operation: tc.operation,
+								Object:    runtime.RawExtension{Raw: tc.objectJSON},
+							}
+							if tc.operation == admissionv1.Update {
+								request.OldObject = runtime.RawExtension{Raw: objectJSON}
+							}
+							response := serveAdmissionReview(t, server, path, request)
+							wantAllowed := tc.wantCode == http.StatusOK
+							if response.Allowed != wantAllowed {
+								t.Fatalf("admission allowed = %t, want %t; result: %+v", response.Allowed, wantAllowed, response.Result)
+							}
+							if response.Result == nil || response.Result.Code != tc.wantCode {
+								t.Fatalf("admission result = %+v, want code %d", response.Result, tc.wantCode)
+							}
+							if tc.wantField != "" {
+								if response.Result.Reason != metav1.StatusReasonInvalid || response.Result.Details == nil {
+									t.Fatalf("admission result = %+v, want Invalid status with field details", response.Result)
+								}
+								found := false
+								for _, cause := range response.Result.Details.Causes {
+									if cause.Field == tc.wantField {
+										found = true
+									}
+								}
+								if !found {
+									t.Fatalf("admission causes = %+v, want field %q", response.Result.Details.Causes, tc.wantField)
+								}
+							}
+							if wantAllowed && strings.HasPrefix(path, "/mutate-") {
+								if response.PatchType == nil || *response.PatchType != admissionv1.PatchTypeJSONPatch {
+									t.Fatalf("admission patch type = %v, want JSONPatch", response.PatchType)
+								}
+								patch, err := jsonpatch.DecodePatch(response.Patch)
+								if err != nil {
+									t.Fatalf("decode defaulting patch: %v", err)
+								}
+								defaultedJSON, err := patch.Apply(tc.objectJSON)
+								if err != nil {
+									t.Fatalf("apply defaulting patch: %v", err)
+								}
+								var defaulted unstructured.Unstructured
+								if err := json.Unmarshal(defaultedJSON, &defaulted); err != nil {
+									t.Fatalf("unmarshal defaulted object: %v", err)
+								}
+								got, found, err := unstructured.NestedFieldNoCopy(defaulted.Object, tt.defaultPath...)
+								if err != nil || !found || !reflect.DeepEqual(got, tt.wantDefault) {
+									t.Fatalf("default at %v = %#v (found %t, error %v), want %#v", tt.defaultPath, got, found, err, tt.wantDefault)
+								}
+							}
+						})
 					}
 				})
 			}
 		})
 	}
+}
+
+func serveAdmissionReview(t *testing.T, server webhook.Server, path string, request admissionv1.AdmissionRequest) *admissionv1.AdmissionResponse {
+	t.Helper()
+	review := admissionv1.AdmissionReview{
+		TypeMeta: metav1.TypeMeta{APIVersion: admissionv1.SchemeGroupVersion.String(), Kind: "AdmissionReview"},
+		Request:  &request,
+	}
+	reviewJSON, err := json.Marshal(review)
+	if err != nil {
+		t.Fatalf("marshal AdmissionReview: %v", err)
+	}
+	httpRequest := httptest.NewRequest(http.MethodPost, path, bytes.NewReader(reviewJSON))
+	httpRequest.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+	server.WebhookMux().ServeHTTP(response, httpRequest)
+	if response.Code != http.StatusOK {
+		t.Fatalf("AdmissionReview status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
+	}
+	var responseReview admissionv1.AdmissionReview
+	if err := json.Unmarshal(response.Body.Bytes(), &responseReview); err != nil {
+		t.Fatalf("unmarshal AdmissionReview response: %v", err)
+	}
+	if responseReview.Response == nil {
+		t.Fatal("AdmissionReview response is nil")
+	}
+	if responseReview.Response.UID != request.UID {
+		t.Fatalf("AdmissionReview response UID = %q, want %q", responseReview.Response.UID, request.UID)
+	}
+	return responseReview.Response
 }
 
 type webhookTestManager struct {
