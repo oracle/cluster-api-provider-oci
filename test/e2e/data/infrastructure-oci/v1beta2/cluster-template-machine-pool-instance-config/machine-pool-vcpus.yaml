@@ -1,0 +1,52 @@
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachinePool
+metadata:
+  name: "${CLUSTER_NAME}-mp-vcpus"
+  namespace: "${NAMESPACE}"
+spec:
+  clusterName: "${CLUSTER_NAME}"
+  replicas: "${WORKER_MACHINE_COUNT}"
+  template:
+    spec:
+      bootstrap:
+        configRef:
+          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+          kind: KubeadmConfig
+          name: "${CLUSTER_NAME}-mp-vcpus"
+      clusterName: "${CLUSTER_NAME}"
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        kind: OCIMachinePool
+        name: "${CLUSTER_NAME}-mp-vcpus"
+      version: "${KUBERNETES_VERSION}"
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: OCIMachinePool
+metadata:
+  name: "${CLUSTER_NAME}-mp-vcpus"
+  namespace: "${NAMESPACE}"
+spec:
+  instanceConfiguration:
+    instanceOptions:
+      areLegacyImdsEndpointsDisabled: true
+    metadata:
+      ssh_authorized_keys: "${OCI_SSH_KEY}"
+    instanceSourceViaImageConfig:
+      imageId: "${OCI_IMAGE_ID}"
+    shape: "${OCI_NODE_MACHINE_TYPE=VM.Standard.E4.Flex}"
+    shapeConfig:
+      vcpus: 4
+
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+kind: KubeadmConfig
+metadata:
+  namespace: "${NAMESPACE}"
+  name: "${CLUSTER_NAME}-mp-vcpus"
+spec:
+  joinConfiguration:
+    nodeRegistration:
+      kubeletExtraArgs:
+        cloud-provider: external
+        provider-id: oci://{{ ds["id"] }}
