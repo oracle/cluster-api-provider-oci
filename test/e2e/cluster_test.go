@@ -658,7 +658,7 @@ var _ = Describe("Workload cluster creation", func() {
 				ClusterctlConfigPath:     clusterctlConfigPath,
 				KubeconfigPath:           bootstrapClusterProxy.GetKubeconfigPath(),
 				InfrastructureProvider:   clusterctl.DefaultInfrastructureProvider,
-				Flavor:                   "machine-pool",
+				Flavor:                   "machine-pool-instance-config",
 				Namespace:                namespace.Name,
 				ClusterName:              clusterName,
 				KubernetesVersion:        e2eConfig.MustGetVariable(capi_e2e.KubernetesVersion),
@@ -672,8 +672,49 @@ var _ = Describe("Workload cluster creation", func() {
 			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
 		}, result)
 
-		By("Verifying the machine pool instance configuration remains stable after initial reconciliation")
-		assertMachinePoolInstanceConfigurationStable(ctx, bootstrapClusterProxy, result.Cluster, result.MachinePools[0], specName, "45s", "5s")
+		Expect(result.MachinePools).To(HaveLen(2))
+		var vcpuPool *clusterv1.MachinePool
+		ocpuPools := 0
+		for _, pool := range result.MachinePools {
+			Expect(pool.Spec.Replicas).To(Equal(pointer.Int32(1)), "MachinePool %s replicas", pool.Name)
+			ociPool := &infrav2exp.OCIMachinePool{}
+			Expect(bootstrapClusterProxy.GetClient().Get(ctx, client.ObjectKey{
+				Namespace: pool.Namespace, Name: pool.Spec.Template.Spec.InfrastructureRef.Name,
+			}, ociPool)).To(Succeed(), "Getting infrastructure for MachinePool %s", pool.Name)
+			shapeConfig := ociPool.Spec.InstanceConfiguration.ShapeConfig
+			Expect(shapeConfig).NotTo(BeNil(), "OCIMachinePool %s shape configuration", ociPool.Name)
+			if shapeConfig.Vcpus != nil {
+				Expect(shapeConfig.Vcpus).To(Equal(pointer.Int(4)), "OCIMachinePool %s VCPUs", ociPool.Name)
+				Expect(shapeConfig.Ocpus).To(BeNil(), "OCIMachinePool %s must use VCPUs only", ociPool.Name)
+				Expect(vcpuPool).To(BeNil(), "Expected exactly one VCPU pool")
+				vcpuPool = pool
+			} else {
+				Expect(shapeConfig.Ocpus).To(Equal(pointer.String("1")), "OCIMachinePool %s OCPUs", ociPool.Name)
+				ocpuPools++
+			}
+		}
+		Expect(ocpuPools).To(Equal(1))
+		Expect(vcpuPool).NotTo(BeNil(), "Expected one VCPU pool")
+
+		By("Verifying the VCPU pool's node is ready and reports four CPUs")
+		workloadCluster := bootstrapClusterProxy.GetWorkloadCluster(ctx, result.Cluster.Namespace, result.Cluster.Name)
+		Expect(workloadCluster).NotTo(BeNil())
+		workloadClient := workloadCluster.GetClient()
+		Expect(workloadClient).NotTo(BeNil())
+		Eventually(func(g Gomega) {
+			pool := &clusterv1.MachinePool{}
+			g.Expect(bootstrapClusterProxy.GetClient().Get(ctx, client.ObjectKeyFromObject(vcpuPool), pool)).To(Succeed(), "Getting MachinePool %s", vcpuPool.Name)
+			g.Expect(pool.Status.NodeRefs).To(HaveLen(1), "MachinePool %s node references", pool.Name)
+			node := &corev1.Node{}
+			g.Expect(workloadClient.Get(ctx, client.ObjectKey{Name: pool.Status.NodeRefs[0].Name}, node)).To(Succeed(), "Getting node for MachinePool %s", pool.Name)
+			g.Expect(node.Status.Conditions).To(ContainElement(And(
+				HaveField("Type", corev1.NodeReady), HaveField("Status", corev1.ConditionTrue),
+			)), "Node %s readiness", node.Name)
+			g.Expect(node.Status.Capacity.Cpu().Value()).To(Equal(int64(4)), "Node %s CPU capacity", node.Name)
+		}, e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes")...).Should(Succeed(), "VCPU MachinePool %s did not produce a ready four-CPU node", vcpuPool.Name)
+
+		By("Verifying both machine pool instance configurations remain stable after initial reconciliation")
+		assertMachinePoolInstanceConfigurationStable(ctx, bootstrapClusterProxy, result.Cluster, result.MachinePools, specName, "45s", "5s")
 	})
 
 	It("Machine Pool - Fault Domain Placement [DailyTests]", func() {
@@ -871,42 +912,53 @@ var _ = Describe("Workload cluster creation", func() {
 	})
 })
 
-func assertMachinePoolInstanceConfigurationStable(ctx context.Context, clusterProxy framework.ClusterProxy, cluster *clusterv1.Cluster, machinePool *clusterv1.MachinePool, specName string, duration string, interval string) {
+func assertMachinePoolInstanceConfigurationStable(ctx context.Context, clusterProxy framework.ClusterProxy, cluster *clusterv1.Cluster, machinePools []*clusterv1.MachinePool, specName string, duration string, interval string) {
 	Expect(ctx).NotTo(BeNil(), "ctx is required for machine pool stability check")
 	Expect(clusterProxy).ToNot(BeNil(), "clusterProxy is required for machine pool stability check")
 	Expect(cluster).ToNot(BeNil(), "cluster is required for machine pool stability check")
-	Expect(machinePool).ToNot(BeNil(), "machinePool is required for machine pool stability check")
+	Expect(machinePools).To(HaveLen(2), "two machine pools are required for machine pool stability check")
 
 	lister := clusterProxy.GetClient()
 	Expect(lister).ToNot(BeNil(), "clusterProxy client is required for machine pool stability check")
 
-	var initialGeneration int64
-	var initialInstanceConfigurationID string
-	var initialHash string
+	type baseline struct {
+		key                     client.ObjectKey
+		generation              int64
+		instanceConfigurationID string
+		hash                    string
+	}
+	baselines := make([]baseline, len(machinePools))
+	for i, machinePool := range machinePools {
+		Expect(machinePool).NotTo(BeNil(), "machinePool is required for machine pool stability check")
+		baselines[i].key = client.ObjectKey{Name: machinePool.Spec.Template.Spec.InfrastructureRef.Name, Namespace: cluster.Namespace}
+	}
 
 	Eventually(func(g Gomega) {
-		ociMachinePool := &infrav2exp.OCIMachinePool{}
-		err := lister.Get(ctx, client.ObjectKey{Name: machinePool.Name, Namespace: cluster.Namespace}, ociMachinePool)
-		g.Expect(err).NotTo(HaveOccurred())
-		g.Expect(ociMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(BeNil())
-		g.Expect(*ociMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(BeEmpty())
-		g.Expect(ociMachinePool.Annotations).To(HaveKey(scope.InstanceConfigurationHashAnnotation))
-		g.Expect(ociMachinePool.Annotations[scope.InstanceConfigurationHashAnnotation]).ToNot(BeEmpty())
+		for i := range baselines {
+			initial := &baselines[i]
+			ociMachinePool := &infrav2exp.OCIMachinePool{}
+			g.Expect(lister.Get(ctx, initial.key, ociMachinePool)).To(Succeed(), "Getting OCIMachinePool %s", initial.key)
+			g.Expect(ociMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(BeNil(), "OCIMachinePool %s instance configuration ID", initial.key)
+			g.Expect(*ociMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(BeEmpty(), "OCIMachinePool %s instance configuration ID", initial.key)
+			g.Expect(ociMachinePool.Annotations).To(HaveKey(scope.InstanceConfigurationHashAnnotation), "OCIMachinePool %s annotations", initial.key)
+			g.Expect(ociMachinePool.Annotations[scope.InstanceConfigurationHashAnnotation]).ToNot(BeEmpty(), "OCIMachinePool %s instance configuration hash", initial.key)
 
-		initialGeneration = ociMachinePool.Generation
-		initialInstanceConfigurationID = *ociMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId
-		initialHash = ociMachinePool.Annotations[scope.InstanceConfigurationHashAnnotation]
-	}, e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes")...).Should(Succeed(), "Timed out waiting for the machine pool instance configuration to become ready")
+			initial.generation = ociMachinePool.Generation
+			initial.instanceConfigurationID = *ociMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId
+			initial.hash = ociMachinePool.Annotations[scope.InstanceConfigurationHashAnnotation]
+		}
+	}, e2eConfig.GetIntervals(specName, "wait-machine-pool-nodes")...).Should(Succeed(), "Timed out waiting for the machine pool instance configurations to become ready")
 
 	Consistently(func(g Gomega) {
-		ociMachinePool := &infrav2exp.OCIMachinePool{}
-		err := lister.Get(ctx, client.ObjectKey{Name: machinePool.Name, Namespace: cluster.Namespace}, ociMachinePool)
-		g.Expect(err).NotTo(HaveOccurred())
-		g.Expect(ociMachinePool.Generation).To(Equal(initialGeneration))
-		g.Expect(ociMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(BeNil())
-		g.Expect(*ociMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId).To(Equal(initialInstanceConfigurationID))
-		g.Expect(ociMachinePool.Annotations).To(HaveKey(scope.InstanceConfigurationHashAnnotation))
-		g.Expect(ociMachinePool.Annotations[scope.InstanceConfigurationHashAnnotation]).To(Equal(initialHash))
+		for _, initial := range baselines {
+			ociMachinePool := &infrav2exp.OCIMachinePool{}
+			g.Expect(lister.Get(ctx, initial.key, ociMachinePool)).To(Succeed(), "Getting OCIMachinePool %s", initial.key)
+			g.Expect(ociMachinePool.Generation).To(Equal(initial.generation), "OCIMachinePool %s generation", initial.key)
+			g.Expect(ociMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(BeNil(), "OCIMachinePool %s instance configuration ID", initial.key)
+			g.Expect(*ociMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId).To(Equal(initial.instanceConfigurationID), "OCIMachinePool %s instance configuration ID", initial.key)
+			g.Expect(ociMachinePool.Annotations).To(HaveKey(scope.InstanceConfigurationHashAnnotation), "OCIMachinePool %s annotations", initial.key)
+			g.Expect(ociMachinePool.Annotations[scope.InstanceConfigurationHashAnnotation]).To(Equal(initial.hash), "OCIMachinePool %s instance configuration hash", initial.key)
+		}
 	}, duration, interval).Should(Succeed(), "Machine pool instance configuration drifted during stability window")
 }
 

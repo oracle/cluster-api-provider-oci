@@ -1,0 +1,3 @@
+bases:
+  - ../cluster-template-machine-pool
+  - ./machine-pool-vcpus.yaml

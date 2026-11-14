@@ -299,6 +299,7 @@ generate-e2e-templates: $(KUSTOMIZE)
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-remote-vcn-peering --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-remote-vcn-peering.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-externally-managed-vcn --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-externally-managed-vcn.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-machine-pool --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-machine-pool.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-machine-pool-instance-config --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-machine-pool-instance-config.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-machine-pool-fd --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-machine-pool-fd.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-managed --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-managed.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-managed-node-recycling --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-managed-node-recycling.yaml
