@@ -2838,3 +2838,25 @@ func TestSyncReplicasFromInstancePool(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildInstanceConfigurationShapeConfigCPUs(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		spec *infrav2exp.ShapeConfig
+		want core.InstanceConfigurationLaunchInstanceShapeConfigDetails
+	}{
+		{name: "absent"},
+		{name: "empty", spec: &infrav2exp.ShapeConfig{}},
+		{name: "ocpus", spec: &infrav2exp.ShapeConfig{Ocpus: common.String("1.5")}, want: core.InstanceConfigurationLaunchInstanceShapeConfigDetails{Ocpus: common.Float32(1.5)}},
+		{name: "vcpus", spec: &infrav2exp.ShapeConfig{Vcpus: common.Int(2)}, want: core.InstanceConfigurationLaunchInstanceShapeConfigDetails{Vcpus: common.Int(2)}},
+		{name: "zero vcpus", spec: &infrav2exp.ShapeConfig{Vcpus: common.Int(0)}, want: core.InstanceConfigurationLaunchInstanceShapeConfigDetails{Vcpus: common.Int(0)}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+			ms := &MachinePoolScope{OCIMachinePool: &infrav2exp.OCIMachinePool{Spec: infrav2exp.OCIMachinePoolSpec{InstanceConfiguration: infrav2exp.InstanceConfiguration{ShapeConfig: tc.spec}}}}
+			got, err := ms.buildInstanceConfigurationShapeConfig()
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(got).To(Equal(tc.want))
+		})
+	}
+}

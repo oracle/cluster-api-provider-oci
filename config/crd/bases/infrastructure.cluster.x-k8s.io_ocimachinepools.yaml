@@ -668,7 +668,16 @@ spec:
                       ocpus:
                         description: The total number of OCPUs available to the instance.
                         type: string
+                      vcpus:
+                        description: |-
+                          The total number of VCPUs available to the instance, as an alternative to OCPUs.
+                          Ocpus and Vcpus are mutually exclusive.
+                        type: integer
                     type: object
+                    x-kubernetes-validations:
+                    - message: ocpus and vcpus are mutually exclusive; specify at
+                        most one
+                      rule: '!has(self.ocpus) || !has(self.vcpus)'
                 type: object
               ocid:
                 description: OCID is the OCID of the associated InstancePool
@@ -1434,7 +1443,16 @@ spec:
                       ocpus:
                         description: The total number of OCPUs available to the instance.
                         type: string
+                      vcpus:
+                        description: |-
+                          The total number of VCPUs available to the instance, as an alternative to OCPUs.
+                          Ocpus and Vcpus are mutually exclusive.
+                        type: integer
                     type: object
+                    x-kubernetes-validations:
+                    - message: ocpus and vcpus are mutually exclusive; specify at
+                        most one
+                      rule: '!has(self.ocpus) || !has(self.vcpus)'
                 type: object
               ocid:
                 description: OCID is the OCID of the associated InstancePool
