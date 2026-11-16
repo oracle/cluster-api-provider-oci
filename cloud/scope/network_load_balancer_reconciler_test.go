@@ -264,6 +264,46 @@ func TestBuildNLBHealthChecker(t *testing.T) {
 	}
 }
 
+func TestIsHealthCheckerEqual(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		actual   *string
+		desired  *string
+		expected bool
+	}{
+		{"both omitted", nil, nil, true},
+		{"omitted and empty", nil, common.String(""), true},
+		{"empty and omitted", common.String(""), nil, true},
+		{"both empty", common.String(""), common.String(""), true},
+		{"matching regex", common.String("ready"), common.String("ready"), true},
+		{"different regex", common.String("ready"), common.String("ok"), false},
+		{"regex and omitted", common.String("ready"), nil, false},
+		{"omitted and regex", nil, common.String("ready"), false},
+		{"regex and empty", common.String("ready"), common.String(""), false},
+		{"empty and regex", common.String(""), common.String("ready"), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := &networkloadbalancer.HealthChecker{ResponseBodyRegex: tt.actual}
+			desired := &networkloadbalancer.HealthChecker{ResponseBodyRegex: tt.desired}
+			NewWithT(t).Expect(isHealthCheckerEqual(actual, desired)).To(Equal(tt.expected))
+		})
+	}
+
+	t.Run("empty regex does not hide timeout drift", func(t *testing.T) {
+		actual := &networkloadbalancer.HealthChecker{ResponseBodyRegex: common.String(""), TimeoutInMillis: common.Int(3000)}
+		desired := &networkloadbalancer.HealthChecker{TimeoutInMillis: common.Int(5000)}
+		NewWithT(t).Expect(isHealthCheckerEqual(actual, desired)).To(BeFalse())
+	})
+	t.Run("url path retains strict comparison", func(t *testing.T) {
+		actual := &networkloadbalancer.HealthChecker{UrlPath: common.String("")}
+		desired := &networkloadbalancer.HealthChecker{}
+		NewWithT(t).Expect(isHealthCheckerEqual(actual, desired)).To(BeFalse())
+	})
+}
+
 func TestNLBReconciliation(t *testing.T) {
 	var (
 		cs                 *ClusterScope
@@ -308,6 +348,7 @@ func TestNLBReconciliation(t *testing.T) {
 
 	tests := []struct {
 		name                string
+		repeatReconcile     bool
 		errorExpected       bool
 		objects             []client.Object
 		expectedEvent       string
@@ -317,8 +358,9 @@ func TestNLBReconciliation(t *testing.T) {
 		testSpecificSetup   func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient)
 	}{
 		{
-			name:          "nlb exists",
-			errorExpected: false,
+			name:            "nlb with empty response body regex stays reconciled",
+			repeatReconcile: true,
+			errorExpected:   false,
 			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
 				clusterScope.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerId = common.String("nlb-id")
 				nlbClient.EXPECT().GetNetworkLoadBalancer(gomock.Any(), gomock.Eq(networkloadbalancer.GetNetworkLoadBalancerRequest{
@@ -341,18 +383,19 @@ func TestNLBReconciliation(t *testing.T) {
 							BackendSets: map[string]networkloadbalancer.BackendSet{
 								APIServerLBBackendSetName: {
 									HealthChecker: &networkloadbalancer.HealthChecker{
-										Protocol:         networkloadbalancer.HealthCheckProtocolsHttps,
-										Port:             common.Int(6443),
-										IntervalInMillis: common.Int(10000),
-										TimeoutInMillis:  common.Int(3000),
-										Retries:          common.Int(3),
-										UrlPath:          common.String(HealthCheckerDefaultURLPath),
-										ReturnCode:       common.Int(200),
+										Protocol:          networkloadbalancer.HealthCheckProtocolsHttps,
+										Port:              common.Int(6443),
+										IntervalInMillis:  common.Int(10000),
+										TimeoutInMillis:   common.Int(3000),
+										Retries:           common.Int(3),
+										UrlPath:           common.String(HealthCheckerDefaultURLPath),
+										ReturnCode:        common.Int(200),
+										ResponseBodyRegex: common.String(""),
 									},
 								},
 							},
 						},
-					}, nil)
+					}, nil).Times(2)
 			},
 		},
 		{
@@ -1093,6 +1136,9 @@ func TestNLBReconciliation(t *testing.T) {
 				}
 			} else {
 				g.Expect(err).To(BeNil())
+			}
+			if tc.repeatReconcile {
+				g.Expect(cs.ReconcileApiServerNLB(context.Background())).To(Succeed())
 			}
 		})
 	}
