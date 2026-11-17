@@ -21,7 +21,6 @@ credentials.
       export OCI_USER_ID=<insert-user-ocid-here>
       export OCI_CREDENTIALS_FINGERPRINT=<insert-fingerprint-here>
       export OCI_REGION=<insert-region-here>
-      # if Passphrase is present
       export OCI_TENANCY_ID_B64="$(echo -n "$OCI_TENANCY_ID" | base64 | tr -d '\n')"
       export OCI_CREDENTIALS_FINGERPRINT_B64="$(echo -n "$OCI_CREDENTIALS_FINGERPRINT" | base64 | tr -d '\n')"
       export OCI_USER_ID_B64="$(echo -n "$OCI_USER_ID" | base64 | tr -d '\n')"
