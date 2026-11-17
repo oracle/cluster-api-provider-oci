@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -313,7 +314,7 @@ func (m *VirtualMachinePoolScope) CreateVirtualNodePool(ctx context.Context) (*o
 	resources := wrResponse.Resources
 	var nodePoolId *string
 	for _, resource := range resources {
-		if ptr.StringEquals(resource.EntityType, "VirtualNodePool") {
+		if strings.EqualFold(ptr.ToString(resource.EntityType), "VirtualNodePool") {
 			nodePoolId = resource.Identifier
 		}
 	}
