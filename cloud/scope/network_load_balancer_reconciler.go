@@ -344,7 +344,7 @@ func isHealthCheckerEqual(actual, desired *networkloadbalancer.HealthChecker) bo
 	if !ptr.IntEqual(actual.ReturnCode, desired.ReturnCode) {
 		return false
 	}
-	if !ptr.StringEqual(actual.ResponseBodyRegex, desired.ResponseBodyRegex) {
+	if ptr.ToString(actual.ResponseBodyRegex) != ptr.ToString(desired.ResponseBodyRegex) {
 		return false
 	}
 	if !bytes.Equal(actual.RequestData, desired.RequestData) {
