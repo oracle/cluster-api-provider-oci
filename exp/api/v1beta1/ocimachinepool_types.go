@@ -146,7 +146,9 @@ type ShapeConfig struct {
 	Ocpus *string `json:"ocpus,omitempty"`
 
 	// The total number of VCPUs available to the instance, as an alternative to OCPUs.
-	// Ocpus and Vcpus are mutually exclusive.
+	// Ocpus and Vcpus are mutually exclusive. Must be a positive multiple of 2.
+	// +kubebuilder:validation:Minimum=2
+	// +kubebuilder:validation:MultipleOf=2
 	Vcpus *int `json:"vcpus,omitempty"`
 
 	// The total amount of memory available to the instance, in gigabytes.

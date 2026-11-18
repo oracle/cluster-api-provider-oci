@@ -324,6 +324,12 @@ func (m *MachinePoolScope) buildInstanceConfigurationShapeConfig() (core.Instanc
 	shapeConfig := core.InstanceConfigurationLaunchInstanceShapeConfigDetails{}
 	shapeConfigSpec := m.OCIMachinePool.Spec.InstanceConfiguration.ShapeConfig
 	if shapeConfigSpec != nil {
+		if shapeConfigSpec.Ocpus != nil && shapeConfigSpec.Vcpus != nil {
+			return shapeConfig, errors.New("ocpus and vcpus are mutually exclusive; specify at most one")
+		}
+		if shapeConfigSpec.Vcpus != nil && (*shapeConfigSpec.Vcpus < 2 || *shapeConfigSpec.Vcpus%2 != 0) {
+			return shapeConfig, errors.New("vcpus must be a positive multiple of 2")
+		}
 		if shapeConfigSpec.Ocpus != nil {
 			ocpus, err := strconv.ParseFloat(*shapeConfigSpec.Ocpus, 32)
 			if err != nil {

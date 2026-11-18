@@ -37,6 +37,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -163,6 +164,28 @@ func TestInstanceConfigCreate(t *testing.T) {
 	teardown := func(t *testing.T, g *WithT) {
 		mockCtrl.Finish()
 	}
+
+	t.Run("invalid CPU config bypassing admission", func(t *testing.T) {
+		g := NewWithT(t)
+		defer teardown(t, g)
+		setup(t, g)
+		ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+			Shape:                   common.String("test-shape"),
+			InstanceConfigurationId: common.String("test"),
+			ShapeConfig:             &infrav2exp.ShapeConfig{Ocpus: common.String(""), Vcpus: common.Int(0)},
+		}
+		computeManagementClient.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Any()).
+			Return(core.GetInstanceConfigurationResponse{InstanceConfiguration: core.InstanceConfiguration{Id: common.String("test")}}, nil)
+		computeManagementClient.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).Times(0)
+
+		err := ms.ReconcileInstanceConfiguration(context.Background(), nil)
+		g.Expect(err).To(MatchError("ocpus and vcpus are mutually exclusive; specify at most one"))
+		condition := v1beta1conditions.Get(ms.OCIMachinePool, infrav2exp.LaunchTemplateReadyCondition)
+		g.Expect(condition).NotTo(BeNil())
+		g.Expect(condition.Status).To(Equal(corev1.ConditionFalse))
+		g.Expect(condition.Reason).To(Equal(infrav2exp.LaunchTemplateCreateFailedReason))
+		g.Expect(condition.Message).To(Equal(err.Error()))
+	})
 
 	tests := []struct {
 		name                 string
@@ -2841,20 +2864,34 @@ func TestSyncReplicasFromInstancePool(t *testing.T) {
 
 func TestBuildInstanceConfigurationShapeConfigCPUs(t *testing.T) {
 	for _, tc := range []struct {
-		name string
-		spec *infrav2exp.ShapeConfig
-		want core.InstanceConfigurationLaunchInstanceShapeConfigDetails
+		name    string
+		spec    *infrav2exp.ShapeConfig
+		want    core.InstanceConfigurationLaunchInstanceShapeConfigDetails
+		wantErr string
 	}{
 		{name: "absent"},
 		{name: "empty", spec: &infrav2exp.ShapeConfig{}},
 		{name: "ocpus", spec: &infrav2exp.ShapeConfig{Ocpus: common.String("1.5")}, want: core.InstanceConfigurationLaunchInstanceShapeConfigDetails{Ocpus: common.Float32(1.5)}},
 		{name: "vcpus", spec: &infrav2exp.ShapeConfig{Vcpus: common.Int(2)}, want: core.InstanceConfigurationLaunchInstanceShapeConfigDetails{Vcpus: common.Int(2)}},
-		{name: "zero vcpus", spec: &infrav2exp.ShapeConfig{Vcpus: common.Int(0)}, want: core.InstanceConfigurationLaunchInstanceShapeConfigDetails{Vcpus: common.Int(0)}},
+		{name: "four vcpus", spec: &infrav2exp.ShapeConfig{Vcpus: common.Int(4)}, want: core.InstanceConfigurationLaunchInstanceShapeConfigDetails{Vcpus: common.Int(4)}},
+		{name: "zero vcpus", spec: &infrav2exp.ShapeConfig{Vcpus: common.Int(0)}, wantErr: "vcpus must be a positive multiple of 2"},
+		{name: "negative even vcpus", spec: &infrav2exp.ShapeConfig{Vcpus: common.Int(-2)}, wantErr: "vcpus must be a positive multiple of 2"},
+		{name: "negative odd vcpus", spec: &infrav2exp.ShapeConfig{Vcpus: common.Int(-1)}, wantErr: "vcpus must be a positive multiple of 2"},
+		{name: "one vcpu", spec: &infrav2exp.ShapeConfig{Vcpus: common.Int(1)}, wantErr: "vcpus must be a positive multiple of 2"},
+		{name: "three vcpus", spec: &infrav2exp.ShapeConfig{Vcpus: common.Int(3)}, wantErr: "vcpus must be a positive multiple of 2"},
+		{name: "both", spec: &infrav2exp.ShapeConfig{Ocpus: common.String("1"), Vcpus: common.Int(2)}, wantErr: "ocpus and vcpus are mutually exclusive; specify at most one"},
+		{name: "both with empty ocpus and zero vcpus", spec: &infrav2exp.ShapeConfig{Ocpus: common.String(""), Vcpus: common.Int(0)}, wantErr: "ocpus and vcpus are mutually exclusive; specify at most one"},
+		{name: "invalid ocpus only", spec: &infrav2exp.ShapeConfig{Ocpus: common.String("")}, wantErr: "ocpus provided  is not a valid floating point"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
 			ms := &MachinePoolScope{OCIMachinePool: &infrav2exp.OCIMachinePool{Spec: infrav2exp.OCIMachinePoolSpec{InstanceConfiguration: infrav2exp.InstanceConfiguration{ShapeConfig: tc.spec}}}}
 			got, err := ms.buildInstanceConfigurationShapeConfig()
+			if tc.wantErr != "" {
+				g.Expect(err).To(MatchError(tc.wantErr))
+				g.Expect(got).To(BeZero())
+				return
+			}
 			g.Expect(err).NotTo(HaveOccurred())
 			g.Expect(got).To(Equal(tc.want))
 		})
