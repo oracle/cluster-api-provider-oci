@@ -1355,6 +1355,130 @@ func TestBackfillAnnotations_Upgrade(t *testing.T) {
 		return ms, computeMgmt
 	}
 
+	t.Run("CPU intent transitions", func(t *testing.T) {
+		for _, tc := range []struct {
+			name, previous, desired                                        string
+			memoryOnly, numericDrift, bootstrapDrift, failFirst, omitShape bool
+			wantCreate                                                     bool
+		}{
+			{name: "remove vcpus", previous: "vcpus", desired: "default", wantCreate: true},
+			{name: "remove ocpus", previous: "ocpus", desired: "default", wantCreate: true},
+			{name: "remove vcpus retain memory", previous: "vcpus", desired: "default", memoryOnly: true, wantCreate: true},
+			{name: "switch to ocpus", previous: "vcpus", desired: "ocpus", wantCreate: true},
+			{name: "switch to vcpus", previous: "ocpus", desired: "vcpus", wantCreate: true},
+			{name: "never specified", desired: "default"},
+			{name: "never specified absent shape", desired: "default", omitShape: true},
+			{name: "never specified memory only", desired: "default", memoryOnly: true},
+			{name: "unknown history ocpus", desired: "ocpus"},
+			{name: "unknown history vcpus", desired: "vcpus"},
+			{name: "unrecognized history", previous: "unknown", desired: "default"},
+			{name: "unrecognized history vcpus", previous: "unknown", desired: "vcpus"},
+			{name: "unknown history numeric drift", desired: "vcpus", numericDrift: true, wantCreate: true},
+			{name: "unknown history bootstrap drift", desired: "default", bootstrapDrift: true, wantCreate: true},
+			{name: "failed removal retries", previous: "vcpus", desired: "default", failFirst: true, wantCreate: true},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				g := NewWithT(t)
+				ms, computeMgmt := buildScope(t)
+				shape := &infrav2exp.ShapeConfig{}
+				switch tc.desired {
+				case "ocpus":
+					shape.Ocpus = common.String("1")
+				case "vcpus":
+					shape.Vcpus = common.Int(2)
+				}
+				if tc.memoryOnly {
+					shape.MemoryInGBs = common.String("16")
+				}
+				if tc.omitShape {
+					shape = nil
+				}
+				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+					Shape: common.String("test-shape"), InstanceConfigurationId: common.String("test"), ShapeConfig: shape,
+				}
+				ms.OCIMachinePool.Annotations = map[string]string{
+					InstanceConfigurationCPUModeAnnotation: tc.previous,
+					InstanceConfigurationHashAnnotation:    "stale-observational-hash",
+					BootstrapDataHashAnnotation:            "stale-bootstrap-hash",
+				}
+				if tc.previous == "" {
+					delete(ms.OCIMachinePool.Annotations, InstanceConfigurationCPUModeAnnotation)
+				}
+				actual := matchingActualLaunch()
+				actual.ShapeConfig = &core.InstanceConfigurationLaunchInstanceShapeConfigDetails{
+					Ocpus: common.Float32(1), Vcpus: common.Int(2), MemoryInGBs: common.Float32(16),
+				}
+				if tc.numericDrift {
+					actual.ShapeConfig.Vcpus = common.Int(4)
+				}
+				if tc.bootstrapDrift {
+					actual.Metadata = map[string]string{"user_data": "b2xk"}
+				}
+				computeMgmt.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Any()).Return(core.GetInstanceConfigurationResponse{
+					InstanceConfiguration: core.InstanceConfiguration{Id: common.String("test"), InstanceDetails: core.ComputeInstanceDetails{LaunchDetails: actual}},
+				}, nil)
+				var created *core.InstanceConfigurationLaunchInstanceDetails
+				if tc.wantCreate {
+					if tc.failFirst {
+						computeMgmt.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).Return(core.CreateInstanceConfigurationResponse{}, fmt.Errorf("create failed"))
+						g.Expect(ms.ReconcileInstanceConfiguration(context.Background(), nil)).To(MatchError("create failed"))
+						g.Expect(ms.OCIMachinePool.Annotations[InstanceConfigurationCPUModeAnnotation]).To(Equal(tc.previous))
+						g.Expect(ms.PatchObject(context.Background())).To(Succeed())
+						persisted := &infrav2exp.OCIMachinePool{}
+						g.Expect(ms.Client.Get(context.Background(), client.ObjectKeyFromObject(ms.OCIMachinePool), persisted)).To(Succeed())
+						g.Expect(persisted.Annotations[InstanceConfigurationCPUModeAnnotation]).To(Equal(tc.previous))
+						retry, err := NewMachinePoolScope(MachinePoolScopeParams{
+							ComputeManagementClient: computeMgmt, OCIMachinePool: persisted, OCIClusterAccessor: ms.OCIClusterAccesor,
+							Cluster: ms.Cluster, MachinePool: ms.MachinePool, Client: ms.Client,
+						})
+						g.Expect(err).NotTo(HaveOccurred())
+						ms = retry
+						computeMgmt.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Any()).Return(core.GetInstanceConfigurationResponse{
+							InstanceConfiguration: core.InstanceConfiguration{Id: common.String("test"), InstanceDetails: core.ComputeInstanceDetails{LaunchDetails: actual}},
+						}, nil)
+					}
+					computeMgmt.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, req core.CreateInstanceConfigurationRequest) (core.CreateInstanceConfigurationResponse, error) {
+						created = req.CreateInstanceConfiguration.(core.CreateInstanceConfigurationDetails).InstanceDetails.(core.ComputeInstanceDetails).LaunchDetails
+						return core.CreateInstanceConfigurationResponse{InstanceConfiguration: core.InstanceConfiguration{Id: common.String("new-id")}}, nil
+					})
+					computeMgmt.EXPECT().ListInstanceConfigurations(gomock.Any(), gomock.Any()).Return(core.ListInstanceConfigurationsResponse{}, nil)
+				}
+				g.Expect(ms.ReconcileInstanceConfiguration(context.Background(), nil)).To(Succeed())
+				if tc.wantCreate {
+					g.Expect(created).NotTo(BeNil())
+					if tc.desired == "default" && !tc.memoryOnly {
+						g.Expect(created.ShapeConfig).To(BeNil())
+					} else {
+						g.Expect(created.ShapeConfig.Ocpus != nil).To(Equal(tc.desired == "ocpus"))
+						g.Expect(created.ShapeConfig.Vcpus != nil).To(Equal(tc.desired == "vcpus"))
+						if tc.memoryOnly {
+							g.Expect(created.ShapeConfig.MemoryInGBs).To(Equal(common.Float32(16)))
+						}
+					}
+				}
+				stored := &infrav2exp.OCIMachinePool{}
+				g.Expect(ms.Client.Get(context.Background(), client.ObjectKeyFromObject(ms.OCIMachinePool), stored)).To(Succeed())
+				g.Expect(stored.Annotations[InstanceConfigurationCPUModeAnnotation]).To(Equal(tc.desired))
+				wantID := "test"
+				if tc.wantCreate {
+					wantID = "new-id"
+				}
+				g.Expect(stored.Spec.InstanceConfiguration.InstanceConfigurationId).To(Equal(common.String(wantID)))
+				fresh, err := NewMachinePoolScope(MachinePoolScopeParams{
+					ComputeManagementClient: computeMgmt, OCIMachinePool: stored, OCIClusterAccessor: ms.OCIClusterAccesor,
+					Cluster: ms.Cluster, MachinePool: ms.MachinePool, Client: ms.Client,
+				})
+				g.Expect(err).NotTo(HaveOccurred())
+				actual = matchingActualLaunch()
+				actual.ShapeConfig = &core.InstanceConfigurationLaunchInstanceShapeConfigDetails{Ocpus: common.Float32(1), Vcpus: common.Int(2), MemoryInGBs: common.Float32(16)}
+				computeMgmt.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Eq(core.GetInstanceConfigurationRequest{InstanceConfigurationId: common.String(wantID)})).Return(core.GetInstanceConfigurationResponse{
+					InstanceConfiguration: core.InstanceConfiguration{Id: common.String(wantID), InstanceDetails: core.ComputeInstanceDetails{LaunchDetails: actual}},
+				}, nil)
+				g.Expect(fresh.ReconcileInstanceConfiguration(context.Background(), nil)).To(Succeed())
+			})
+		}
+	})
+
 	// -----------------------------------------------------------------
 	t.Run("both annotations missing, config matches — backfill only, no recreate", func(t *testing.T) {
 		g := NewWithT(t)
