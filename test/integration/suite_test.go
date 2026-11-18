@@ -45,6 +45,7 @@ import (
 	"k8s.io/klog/v2"
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+	capiconversion "sigs.k8s.io/cluster-api/core/webhooks/conversion"
 	contractutil "sigs.k8s.io/cluster-api/util/contract"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -119,11 +120,20 @@ func integrationScheme() *runtime.Scheme {
 }
 
 func setupManager(ctx context.Context, mgr manager.Manager) error {
-	clusterv1beta1.SetAPIVersionGetter(func(gk schema.GroupKind) (string, error) {
+	capiconversion.SetAPIVersionGetter(func(ctx context.Context, gk schema.GroupKind) (string, error) {
 		return apiVersionForContract(ctx, mgr.GetAPIReader(), gk)
 	})
 
 	controllerOptions := controller.Options{MaxConcurrentReconciles: 1}
+	if err := ctrl.NewWebhookManagedBy(mgr, &clusterv1.Cluster{}).WithConverter(capiconversion.Cluster).Complete(); err != nil {
+		return fmt.Errorf("set up Cluster conversion: %w", err)
+	}
+	if err := ctrl.NewWebhookManagedBy(mgr, &clusterv1.Machine{}).WithConverter(capiconversion.Machine).Complete(); err != nil {
+		return fmt.Errorf("set up Machine conversion: %w", err)
+	}
+	if err := ctrl.NewWebhookManagedBy(mgr, &clusterv1.MachinePool{}).WithConverter(capiconversion.MachinePool).Complete(); err != nil {
+		return fmt.Errorf("set up MachinePool conversion: %w", err)
+	}
 	setups := []struct {
 		name  string
 		setup func() error

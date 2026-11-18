@@ -76,8 +76,9 @@ func Start(ctx context.Context, options Options) (*Environment, error) {
 		CRDDirectoryPaths:     options.CRDDirectoryPaths,
 		ErrorIfCRDPathMissing: true,
 		WebhookInstallOptions: controllerenvtest.WebhookInstallOptions{
-			Paths:            options.WebhookManifestPaths,
-			LocalServingHost: "127.0.0.1",
+			Paths:                   options.WebhookManifestPaths,
+			LocalServingHost:        "127.0.0.1",
+			IgnoreSchemeConvertible: true,
 		},
 	}
 

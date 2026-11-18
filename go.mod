@@ -3,6 +3,7 @@ module github.com/oracle/cluster-api-provider-oci
 go 1.26.10
 
 require (
+	github.com/blang/semver/v4 v4.0.0
 	github.com/evanphx/json-patch/v5 v5.9.11
 	github.com/go-logr/logr v1.4.4
 	github.com/golang/mock v1.6.0
@@ -42,7 +43,6 @@ require (
 	github.com/adrg/xdg v0.5.3 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/clipperhouse/displaywidth v0.10.0 // indirect

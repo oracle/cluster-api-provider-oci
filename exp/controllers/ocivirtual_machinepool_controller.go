@@ -340,7 +340,7 @@ func (r *OCIVirtualMachinePoolReconciler) reconcileNormal(ctx context.Context, l
 		machinePoolScope.OCIVirtualMachinePool.Status.FailureMessages = append(machinePoolScope.OCIVirtualMachinePool.Status.FailureMessages, err.Error())
 		v1beta1conditions.MarkFalse(machinePoolScope.OCIVirtualMachinePool, infrav2exp.VirtualNodePoolReadyCondition, infrav2exp.VirtualNodePoolProvisionFailedReason, clusterv1beta1.ConditionSeverityError, "")
 		r.Recorder.Eventf(machinePoolScope.OCIVirtualMachinePool, corev1.EventTypeWarning, "ReconcileError",
-			"Virtual Node pool has invalid lifecycle state %s, lifecycle details is %s", nodePool.LifecycleState, nodePool.LifecycleDetails)
+			"Virtual Node pool has invalid lifecycle state %s, lifecycle details is %s", nodePool.LifecycleState, ptr.ToString(nodePool.LifecycleDetails))
 		return reconcile.Result{}, err
 	}
 }
