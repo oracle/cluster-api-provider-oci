@@ -20,18 +20,20 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"regexp"
 
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"sigs.k8s.io/cluster-api/util/version"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 var logger = ctrl.Log.WithName("ocimachinepool-resource")
+
+var kubeSemver = regexp.MustCompile(`^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)([-0-9a-zA-Z_\.+]*)?$`)
 
 type OCIManagedMachinePoolWebhook struct{}
 
@@ -97,7 +99,7 @@ func (m *OCIManagedMachinePool) validateVersion(allErrs field.ErrorList) field.E
 			field.Invalid(field.NewPath("spec", "version"), m.Spec.Version, "field is required"))
 	}
 	if m.Spec.Version != nil {
-		if !version.KubeSemver.MatchString(*m.Spec.Version) {
+		if !kubeSemver.MatchString(*m.Spec.Version) {
 			allErrs = append(
 				allErrs,
 				field.Invalid(field.NewPath("spec", "version"), m.Spec.Version, "must be a valid semantic version"))

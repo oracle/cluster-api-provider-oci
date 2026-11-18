@@ -86,7 +86,7 @@ func TestMain(m *testing.M) {
 		Scheme: integrationScheme(),
 		CRDDirectoryPaths: []string{
 			filepath.Join(repositoryRoot, "config", "crd", "bases"),
-			filepath.Join(capiModuleDirectory, "config", "crd", "bases"),
+			filepath.Join(capiModuleDirectory, "core", "config", "crd", "bases"),
 		},
 		WebhookManifestPaths: []string{
 			filepath.Join(repositoryRoot, "config", "webhook", "manifests.yaml"),
