@@ -190,7 +190,11 @@ func TestAwaitNLBWorkRequestPreservesListWorkRequestErrorsError(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected an error")
 	}
-	for _, expected := range []string{requestID, "Failed to fetch the work-request-errors using nlb client"} {
+	for _, expected := range []string{
+		fmt.Sprintf("WorkRequest %s failed", *workRequestID),
+		requestID,
+		"Failed to fetch the work-request-errors using nlb client",
+	} {
 		if !strings.Contains(err.Error(), expected) {
 			t.Errorf("expected error to contain %q, got %v", expected, err)
 		}
