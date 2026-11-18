@@ -145,7 +145,7 @@ func TestOCIMachinePoolShapeConfigValidation(t *testing.T) {
 				setShape(pool, map[string]interface{}{"ocpus": "1"})
 				g.Expect(testEnvironment.Create(testContext, pool)).To(Succeed())
 				t.Cleanup(func() { deleteAndIgnoreNotFound(t, pool) })
-				for _, target := range []map[string]interface{}{{"vcpus": int64(2)}, {"ocpus": "1"}} {
+				for _, target := range []map[string]interface{}{{"vcpus": int64(2)}, {}, {"ocpus": "1"}, {"ocpus": nil, "vcpus": nil}, {"vcpus": int64(2)}, nil} {
 					setShape(pool, map[string]interface{}{"ocpus": "1", "vcpus": int64(2)})
 					assertInvalid(t, testEnvironment.Update(testContext, pool), "spec.instanceConfiguration.shapeConfig", "ocpus and vcpus are mutually exclusive; specify at most one")
 					setShape(pool, target)
