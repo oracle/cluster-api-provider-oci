@@ -23,14 +23,20 @@ import (
 	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
 	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+	"sigs.k8s.io/cluster-api/util"
+	"sigs.k8s.io/cluster-api/util/annotations"
+	v1beta2conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions/v1beta2"
 	v1beta1patch "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/patch"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 )
 
 type OCIMachinePoolMachineReconciler struct {
@@ -58,9 +64,47 @@ func (r *OCIMachinePoolMachineReconciler) Reconcile(ctx context.Context, req ctr
 		}
 		return ctrl.Result{}, err
 	}
+	isPaused := annotations.HasPaused(ociMachinePoolMachine)
+	if name := ociMachinePoolMachine.Labels[clusterv1.ClusterNameLabel]; name != "" {
+		cluster := &clusterv1.Cluster{}
+		if err := r.Get(ctx, client.ObjectKey{Namespace: ociMachinePoolMachine.Namespace, Name: name}, cluster); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return ctrl.Result{}, err
+			}
+		} else {
+			isPaused = annotations.IsPaused(cluster, ociMachinePoolMachine)
+		}
+	}
+	if isPaused {
+		return ctrl.Result{}, nil
+	}
 	helper, err := v1beta1patch.NewHelper(ociMachinePoolMachine, r.Client)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 	defer func() {
-		if err := helper.Patch(ctx, ociMachinePoolMachine); err != nil && reterr == nil {
+		if !ociMachinePoolMachine.GetDeletionTimestamp().IsZero() {
+			v1beta2conditions.Set(ociMachinePoolMachine, metav1.Condition{
+				Type:   clusterv1.DeletingCondition,
+				Status: metav1.ConditionTrue,
+				Reason: clusterv1.DeletingReason,
+			})
+			v1beta2conditions.Set(ociMachinePoolMachine, metav1.Condition{
+				Type:    clusterv1.ReadyCondition,
+				Status:  metav1.ConditionFalse,
+				Reason:  clusterv1.DeletingReason,
+				Message: "Infrastructure is being deleted",
+			})
+		} else {
+			v1beta2conditions.Set(ociMachinePoolMachine, metav1.Condition{
+				Type:   clusterv1.DeletingCondition,
+				Status: metav1.ConditionFalse,
+				Reason: clusterv1.NotDeletingReason,
+			})
+		}
+		if err := helper.Patch(ctx, ociMachinePoolMachine, v1beta1patch.WithOwnedV1Beta2Conditions{
+			Conditions: []string{clusterv1.ReadyCondition, clusterv1.DeletingCondition},
+		}); err != nil && reterr == nil {
 			reterr = err
 		}
 	}()
@@ -71,10 +115,15 @@ func (r *OCIMachinePoolMachineReconciler) Reconcile(ctx context.Context, req ctr
 }
 
 func (r *OCIMachinePoolMachineReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
-	err := ctrl.NewControllerManagedBy(mgr).
+	clusterToObjectFunc, err := util.ClusterToTypedObjectsMapper(r.Client, &infrav2exp.OCIMachinePoolMachineList{}, mgr.GetScheme())
+	if err != nil {
+		return err
+	}
+	err = ctrl.NewControllerManagedBy(mgr).
 		WithOptions(options).
 		For(&infrav2exp.OCIMachinePoolMachine{}).
 		WithEventFilter(predicates.ResourceNotPaused(mgr.GetScheme(), ctrl.LoggerFrom(ctx))).
+		Watches(&clusterv1.Cluster{}, handler.EnqueueRequestsFromMapFunc(clusterToObjectFunc)).
 		Complete(r)
 
 	if err != nil {

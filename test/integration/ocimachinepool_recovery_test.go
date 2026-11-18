@@ -57,8 +57,7 @@ func TestOCIMachinePoolRecoversFromCloudFailures(t *testing.T) {
 	g.Expect(testEnvironment.Create(testContext, ociCluster)).To(Succeed())
 	storedOCICluster := &infrastructurev1beta2.OCICluster{}
 	g.Expect(testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(ociCluster), storedOCICluster)).To(Succeed())
-	storedOCICluster.Status.Ready = true
-	g.Expect(testEnvironment.Status().Update(testContext, storedOCICluster)).To(Succeed())
+	setLegacyReady(t, storedOCICluster, true)
 
 	bootstrapSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: "instance-pool-recovery-bootstrap", Namespace: namespace.Name},

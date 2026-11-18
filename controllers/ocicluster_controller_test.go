@@ -23,8 +23,13 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	mock_scope "github.com/oracle/cluster-api-provider-oci/cloud/scope/mocks"
+	"github.com/oracle/cluster-api-provider-oci/cloud/services/identity/mock_identity"
+	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn/mock_vcn"
 	"github.com/oracle/oci-go-sdk/v65/common"
+	"github.com/oracle/oci-go-sdk/v65/core"
+	"github.com/oracle/oci-go-sdk/v65/identity"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,6 +39,7 @@ import (
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
+	v1beta2conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -86,7 +92,7 @@ func TestOCIClusterReconciler_Reconcile(t *testing.T) {
 			defer teardown(t, g)
 			setup(t, g)
 
-			client := fake.NewClientBuilder().WithObjects(tc.objects...).Build()
+			client := fake.NewClientBuilder().WithObjects(tc.objects...).WithStatusSubresource(tc.objects...).Build()
 			r = OCIClusterReconciler{
 				Client:   client,
 				Scheme:   runtime.NewScheme(),
@@ -107,6 +113,53 @@ func TestOCIClusterReconciler_Reconcile(t *testing.T) {
 				g.Eventually(recorder.Events).Should(Receive(ContainSubstring(tc.expectedEvent)))
 			}
 		})
+	}
+}
+
+func TestOCIClusterReconciler_RepeatedErrorsDoNotChangeStatus(t *testing.T) {
+	g := NewWithT(t)
+	ctx := context.Background()
+	mockCtrl := gomock.NewController(t)
+	vcnClient := mock_vcn.NewMockClient(mockCtrl)
+	identityClient := mock_identity.NewMockClient(mockCtrl)
+	identityClient.EXPECT().ListRegions(gomock.Any()).Return(identity.ListRegionsResponse{
+		Items: []identity.Region{{Name: common.String(scope.MockTestRegion), Key: common.String("LXN")}},
+	}, nil).Times(2)
+	clientProvider, err := scope.MockNewClientProvider(scope.MockOCIClients{
+		VCNClient: vcnClient, IdentityClient: identityClient,
+	})
+	g.Expect(err).NotTo(HaveOccurred())
+	ociCluster := getOCIClusterWithOwner()
+	ociCluster.Spec.Region = scope.MockTestRegion
+	ociCluster.Spec.NetworkSpec.Vcn.ID = common.String("existing-vcn")
+	kubeClient := fake.NewClientBuilder().WithObjects(getCluster(), ociCluster).
+		WithStatusSubresource(ociCluster).Build()
+	r := &OCIClusterReconciler{
+		Client: kubeClient, ClientProvider: clientProvider, Region: scope.MockTestRegion,
+		Recorder: record.NewFakeRecorder(20),
+	}
+	key := client.ObjectKeyFromObject(ociCluster)
+	var resourceVersion string
+	for _, requestID := range []string{"first-request", "second-request"} {
+		ociError := errors.Errorf("NotAuthorizedOrNotFound: Opc request id: %s", requestID)
+		vcnClient.EXPECT().GetVcn(gomock.Any(), core.GetVcnRequest{
+			VcnId: common.String("existing-vcn"),
+		}).Return(core.GetVcnResponse{}, ociError)
+		_, err := r.Reconcile(ctx, reconcile.Request{NamespacedName: key})
+		g.Expect(errors.Is(err, ociError)).To(BeTrue(), "the full error must still be returned for logging and backoff")
+		g.Expect(err.Error()).To(ContainSubstring(requestID))
+		stored := &infrastructurev1beta2.OCICluster{}
+		g.Expect(kubeClient.Get(ctx, key, stored)).To(Succeed())
+		condition := v1beta2conditions.Get(stored, clusterv1.ReadyCondition)
+		g.Expect(condition).NotTo(BeNil())
+		g.Expect(condition.Status).To(Equal(metav1.ConditionFalse))
+		g.Expect(condition.Reason).To(Equal(infrastructurev1beta2.ReconcileFailedReason))
+		g.Expect(condition.Message).To(Equal("Please check controller logs for errors"))
+		g.Expect(v1beta1conditions.IsFalse(stored, infrastructurev1beta2.ClusterReadyCondition)).To(BeTrue())
+		if resourceVersion != "" {
+			g.Expect(stored.ResourceVersion).To(Equal(resourceVersion), "an equivalent failure must not trigger another object update")
+		}
+		resourceVersion = stored.ResourceVersion
 	}
 }
 

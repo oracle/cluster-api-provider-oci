@@ -124,7 +124,7 @@ func TestMachinePoolReconciliation(t *testing.T) {
 			defer teardown(t, g)
 			setup(t, g)
 
-			client := fake.NewClientBuilder().WithScheme(testScheme()).WithObjects(tc.objects...).Build()
+			client := fake.NewClientBuilder().WithStatusSubresource(&infrav2exp.OCIMachinePoolMachine{}).WithScheme(testScheme()).WithObjects(tc.objects...).WithStatusSubresource(tc.objects...).Build()
 			r = OCIMachinePoolReconciler{
 				Client:         client,
 				Scheme:         testScheme(),
@@ -224,7 +224,7 @@ func TestReconciliationFunction(t *testing.T) {
 		computeManagementClient = mock_computemanagement.NewMockClient(mockCtrl)
 		machinePool := getMachinePool()
 		ociMachinePool = getOCIMachinePool()
-		client := fake.NewClientBuilder().WithScheme(testScheme()).WithStatusSubresource(ociMachinePool).WithObjects(getSecret(), ociMachinePool, machinePool).Build()
+		client := fake.NewClientBuilder().WithStatusSubresource(&infrav2exp.OCIMachinePoolMachine{}).WithScheme(testScheme()).WithStatusSubresource(ociMachinePool).WithObjects(getSecret(), ociMachinePool, machinePool).Build()
 		ociCluster := getOCIClusterWithOwner()
 		ociCluster.Spec.DefinedTags = definedTags
 		ms, err = scope.NewMachinePoolScope(scope.MachinePoolScopeParams{
@@ -334,11 +334,11 @@ func TestReconciliationFunction(t *testing.T) {
 					Shape:                   common.String("test-shape"),
 					InstanceConfigurationId: common.String("test"),
 				}
-				r.Client = interceptor.NewClient(fake.NewClientBuilder().WithScheme(testScheme()).WithObjects(getSecret(), ociMachinePool).Build(), interceptor.Funcs{
+				r.Client = interceptor.NewClient(fake.NewClientBuilder().WithStatusSubresource(&infrav2exp.OCIMachinePoolMachine{}).WithScheme(testScheme()).WithObjects(getSecret(), ociMachinePool).Build(), interceptor.Funcs{
 					Create: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
 						m := obj.(*infrav2exp.OCIMachinePoolMachine)
 						t.createPoolMachines = append(t.createPoolMachines, *m)
-						return nil
+						return client.Create(ctx, obj, opts...)
 					},
 				})
 				ms.MachinePool.Spec.Template.Spec.Bootstrap.DataSecretName = common.String("bootstrap")
@@ -410,11 +410,11 @@ func TestReconciliationFunction(t *testing.T) {
 				ms.MachinePool.Annotations = map[string]string{
 					clusterv1beta1.ReplicasManagedByAnnotation: "",
 				}
-				r.Client = interceptor.NewClient(fake.NewClientBuilder().WithScheme(testScheme()).WithObjects(getSecret(), ociMachinePool, ms.MachinePool).Build(), interceptor.Funcs{
+				r.Client = interceptor.NewClient(fake.NewClientBuilder().WithStatusSubresource(&infrav2exp.OCIMachinePoolMachine{}).WithScheme(testScheme()).WithObjects(getSecret(), ociMachinePool, ms.MachinePool).Build(), interceptor.Funcs{
 					Create: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
 						m := obj.(*infrav2exp.OCIMachinePoolMachine)
 						t.createPoolMachines = append(t.createPoolMachines, *m)
-						return nil
+						return client.Create(ctx, obj, opts...)
 					},
 				})
 				ms.Client = r.Client
@@ -485,7 +485,7 @@ func TestReconciliationFunction(t *testing.T) {
 					Shape:                   common.String("test-shape"),
 					InstanceConfigurationId: common.String("test"),
 				}
-				fakeClient := fake.NewClientBuilder().WithScheme(testScheme()).WithObjects(&infrav2exp.OCIMachinePoolMachine{
+				fakeClient := fake.NewClientBuilder().WithStatusSubresource(&infrav2exp.OCIMachinePoolMachine{}).WithScheme(testScheme()).WithObjects(&infrav2exp.OCIMachinePoolMachine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "test",
@@ -523,7 +523,7 @@ func TestReconciliationFunction(t *testing.T) {
 					Create: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
 						m := obj.(*infrav2exp.OCIMachinePoolMachine)
 						t.createPoolMachines = append(t.createPoolMachines, *m)
-						return nil
+						return client.Create(ctx, obj, opts...)
 					},
 					Delete: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
 						m := obj.(*clusterv1.Machine)
@@ -707,7 +707,7 @@ func TestDeleteeconciliationFunction(t *testing.T) {
 		computeManagementClient = mock_computemanagement.NewMockClient(mockCtrl)
 		machinePool := getMachinePool()
 		ociMachinePool = getOCIMachinePool()
-		client := fake.NewClientBuilder().WithScheme(testScheme()).WithObjects(getSecret(), ociMachinePool).Build()
+		client := fake.NewClientBuilder().WithStatusSubresource(&infrav2exp.OCIMachinePoolMachine{}).WithScheme(testScheme()).WithObjects(getSecret(), ociMachinePool).Build()
 		ociCluster := getOCIClusterWithOwner()
 		ms, err = scope.NewMachinePoolScope(scope.MachinePoolScopeParams{
 			ComputeManagementClient: computeManagementClient,

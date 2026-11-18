@@ -19,6 +19,11 @@ package v1beta2
 import clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 
 const (
+	// ReconcileFailedReason indicates that infrastructure reconciliation failed.
+	ReconcileFailedReason = "ReconcileFailed"
+	// NotReconciledReason indicates that an overall condition could not be calculated.
+	NotReconciledReason = "NotReconciled"
+
 	// InstanceReadyCondition Ready indicates the instance is in a Running state.
 	InstanceReadyCondition clusterv1beta1.ConditionType = "InstanceReady"
 	// InstanceNotFoundReason used when the instance couldn't be retrieved.
@@ -108,6 +113,8 @@ const (
 	ControlPlaneProvisionFailedReason = "ControlPlaneProvisionFailed"
 	// ControlPlaneNotReadyReason used when the control plane is in a pending state.
 	ControlPlaneNotReadyReason = "ControlPlaneNotReady"
+	// ControlPlaneNotInitializedReason indicates that the managed endpoint or kubeconfig is not ready.
+	ControlPlaneNotInitializedReason = "NotInitialized"
 	// ControlPlaneDeletionInProgress Control Plane deletion is in progress state.
 	ControlPlaneDeletionInProgress = "ControlPlaneDeletionInProgress"
 	// ControlPlaneNotFoundReason used when the control plane couldn't be retrieved.

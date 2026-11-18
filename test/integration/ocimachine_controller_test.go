@@ -186,6 +186,7 @@ func TestOCIMachineLifecycle(t *testing.T) {
 		g.Expect(stored.Spec.ProviderID).NotTo(BeNil())
 		g.Expect(*stored.Spec.ProviderID).To(Equal(fmt.Sprintf("oci://%s", *stored.Spec.InstanceId)))
 		g.Expect(stored.Status.Ready).To(BeTrue())
+		expectModernHealth(g, stored, "Ready", metav1.ConditionTrue)
 		g.Expect(v1beta1conditions.IsTrue(stored, infrastructurev1beta2.InstanceReadyCondition)).To(BeTrue())
 		g.Expect(stored.Status.Addresses).To(ContainElement(clusterv1beta1.MachineAddress{
 			Type:    clusterv1beta1.MachineInternalIP,

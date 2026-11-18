@@ -41,6 +41,7 @@ import (
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
+	v1beta2conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -124,7 +125,7 @@ func TestControlPlaneReconciliation(t *testing.T) {
 			defer teardown(t, g)
 			setup(t, g)
 
-			client := fake.NewClientBuilder().WithObjects(tc.objects...).Build()
+			client := fake.NewClientBuilder().WithObjects(tc.objects...).WithStatusSubresource(tc.objects...).Build()
 			r = OCIManagedClusterControlPlaneReconciler{
 				Client:         client,
 				Scheme:         runtime.NewScheme(),
@@ -493,6 +494,11 @@ func TestControlPlaneDeletionFunction(t *testing.T) {
 		okeClient = mock_containerengine.NewMockClient(mockCtrl)
 		baseClient = mock_base.NewMockBaseClient(mockCtrl)
 		ociManagedControlPlane = getOCIManagedControlPlane()
+		v1beta2conditions.Set(ociManagedControlPlane, metav1.Condition{
+			Type:   string(infrastructurev1beta2.ControlPlaneReadyCondition),
+			Status: metav1.ConditionTrue,
+			Reason: clusterv1.ReadyReason,
+		})
 		ociCluster := getOCIManagedClusterWithOwner()
 		ociClusterAccess := scope.OCIManagedCluster{
 			OCIManagedCluster: ociCluster,
@@ -525,6 +531,7 @@ func TestControlPlaneDeletionFunction(t *testing.T) {
 		conditionAssertion      []conditionAssertion
 		testSpecificSetup       func(controlPlaneScope *scope.ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient)
 		expectedFailureMessages []string
+		expectNotFound          bool
 	}{
 		{
 			name:               "control plane to be deleted",
@@ -549,6 +556,7 @@ func TestControlPlaneDeletionFunction(t *testing.T) {
 		},
 		{
 			name:               "control plane not found",
+			expectNotFound:     true,
 			errorExpected:      false,
 			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.ControlPlaneNotFoundReason, corev1.ConditionTrue, "", ""}},
 			testSpecificSetup: func(controlPlaneScope *scope.ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
@@ -602,6 +610,13 @@ func TestControlPlaneDeletionFunction(t *testing.T) {
 			tc.testSpecificSetup(ms, okeClient)
 			ctx := context.Background()
 			_, err := r.reconcileDelete(ctx, ms, ociManagedControlPlane)
+			if tc.expectNotFound {
+				condition := v1beta2conditions.Get(ociManagedControlPlane, string(infrastructurev1beta2.ControlPlaneReadyCondition))
+				g.Expect(condition).NotTo(BeNil())
+				g.Expect(condition.Status).To(Equal(metav1.ConditionFalse))
+				g.Expect(condition.Reason).To(Equal(infrastructurev1beta2.ControlPlaneNotFoundReason))
+				g.Expect(v1beta2conditions.Get(ociManagedControlPlane, infrastructurev1beta2.ControlPlaneNotFoundReason)).To(BeNil())
+			}
 			if len(tc.conditionAssertion) > 0 {
 				expectControlPlaneConditions(g, ociManagedControlPlane, tc.conditionAssertion)
 			}

@@ -33,6 +33,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -108,16 +109,28 @@ func TestConditionsBridgeAPI(t *testing.T) {
 			g.Expect(err).NotTo(HaveOccurred())
 			var status map[string]interface{}
 			g.Expect(json.Unmarshal(data, &status)).To(Succeed())
-			object.Object["status"] = status
-			g.Expect(apiClient.Status().Update(testContext, object, client.FieldOwner("bridge-initial"))).To(Succeed())
+			g.Expect(retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				if err := apiClient.Get(testContext, key, object); err != nil {
+					return err
+				}
+				object.Object["status"] = status
+				return apiClient.Status().Update(testContext, object, client.FieldOwner("bridge-initial"))
+			})).To(Succeed())
 
 			// Legacy metadata, spec and status writes must retain the modern condition list.
-			object.SetLabels(map[string]string{"legacy-client-edit": "retained"})
 			editTags := kind == "OCICluster" || kind == "OCIManagedCluster" || kind == "OCIMachine"
-			if editTags {
-				g.Expect(unstructured.SetNestedStringMap(object.Object, map[string]string{"bridge-edit": "retained"}, "spec", "freeformTags")).To(Succeed())
-			}
-			g.Expect(apiClient.Update(testContext, object)).To(Succeed())
+			g.Expect(retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				if err := apiClient.Get(testContext, key, object); err != nil {
+					return err
+				}
+				object.SetLabels(map[string]string{"legacy-client-edit": "retained"})
+				if editTags {
+					if err := unstructured.SetNestedStringMap(object.Object, map[string]string{"bridge-edit": "retained"}, "spec", "freeformTags"); err != nil {
+						return err
+					}
+				}
+				return apiClient.Update(testContext, object)
+			})).To(Succeed())
 			g.Expect(apiClient.Status().Patch(testContext, object,
 				client.RawPatch(types.MergePatchType, []byte(`{"status":{"ready":false}}`)))).To(Succeed())
 
@@ -158,7 +171,7 @@ func TestConditionsBridgeAPI(t *testing.T) {
 				for i := range standardConditions {
 					standardConditions[i].LastTransitionTime = metav1.NewTime(standardConditions[i].LastTransitionTime.UTC())
 				}
-				g.Expect(standardConditions).To(ConsistOf(modern[0], other))
+				g.Expect(standardConditions).To(ContainElements(modern[0], other))
 			}
 		})
 	}

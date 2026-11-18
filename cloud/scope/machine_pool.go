@@ -46,6 +46,7 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
+	v1beta2conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions/v1beta2"
 	v1beta1patch "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -142,7 +143,11 @@ func (m *MachinePoolScope) setBootstrapDataHashAnnotation(h string) {
 
 // PatchObject persists the cluster configuration and status.
 func (m *MachinePoolScope) PatchObject(ctx context.Context) error {
-	return m.patchHelper.Patch(ctx, m.OCIMachinePool)
+	return m.patchHelper.Patch(ctx, m.OCIMachinePool, v1beta1patch.WithOwnedConditions{
+		Conditions: []clusterv1beta1.ConditionType{clusterv1beta1.ReadyCondition, infrav2exp.LaunchTemplateReadyCondition, infrav2exp.InstancePoolReadyCondition},
+	}, v1beta1patch.WithOwnedV1Beta2Conditions{
+		Conditions: []string{clusterv1.ReadyCondition, clusterv1.DeletingCondition, string(infrav2exp.LaunchTemplateReadyCondition), string(infrav2exp.InstancePoolReadyCondition), infrav2exp.MachinePoolMachinesReadyCondition},
+	})
 }
 
 // Close closes the current scope persisting the cluster configuration and status.
@@ -699,6 +704,12 @@ func (m *MachinePoolScope) createInstanceConfiguration(
 	resp, err := m.ComputeManagementClient.CreateInstanceConfiguration(ctx, req)
 	if err != nil {
 		v1beta1conditions.MarkFalse(m.OCIMachinePool, infrav2exp.LaunchTemplateReadyCondition, infrav2exp.LaunchTemplateCreateFailedReason, clusterv1beta1.ConditionSeverityError, "%s", err.Error())
+		v1beta2conditions.Set(m.OCIMachinePool, metav1.Condition{
+			Type:    string(infrav2exp.LaunchTemplateReadyCondition),
+			Status:  metav1.ConditionFalse,
+			Reason:  infrav2exp.LaunchTemplateCreateFailedReason,
+			Message: fmt.Sprintf("%s", err.Error()),
+		})
 		m.Info("failed to create instance configuration")
 		return err
 	}
@@ -750,6 +761,12 @@ func (m *MachinePoolScope) getLaunchInstanceDetails(instanceConfigurationSpec in
 	shapeConfig, err := m.buildInstanceConfigurationShapeConfig()
 	if err != nil {
 		v1beta1conditions.MarkFalse(m.OCIMachinePool, infrav2exp.LaunchTemplateReadyCondition, infrav2exp.LaunchTemplateCreateFailedReason, clusterv1beta1.ConditionSeverityError, "%s", err.Error())
+		v1beta2conditions.Set(m.OCIMachinePool, metav1.Condition{
+			Type:    string(infrav2exp.LaunchTemplateReadyCondition),
+			Status:  metav1.ConditionFalse,
+			Reason:  infrav2exp.LaunchTemplateCreateFailedReason,
+			Message: fmt.Sprintf("%s", err.Error()),
+		})
 		m.Info("failed to create instance configuration due to shape config")
 		return nil, err
 	}

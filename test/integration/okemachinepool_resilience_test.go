@@ -29,6 +29,7 @@ import (
 	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -76,6 +77,7 @@ func TestOCIManagedMachinePoolRecoversFromCloudFailuresAndAsyncStates(t *testing
 		g.Expect(stored.Spec.ID).NotTo(BeNil())
 		nodePoolID = *stored.Spec.ID
 		g.Expect(stored.Status.Ready).To(BeFalse())
+		expectModernHealth(g, stored, "Ready", metav1.ConditionFalse)
 		g.Expect(stored.Status.NodepoolLifecycleState).To(Equal(string(oke.NodePoolLifecycleStateCreating)))
 		condition := v1beta1conditions.Get(stored, infrav2exp.NodePoolReadyCondition)
 		g.Expect(condition).NotTo(BeNil())
@@ -106,6 +108,10 @@ func TestOCIManagedMachinePoolRecoversFromCloudFailuresAndAsyncStates(t *testing
 		_, creates, updates, _, _ := fakeOCI.oke.nodePoolCounts()
 		g.Expect(creates).To(Equal(1))
 		g.Expect(updates).To(BeZero())
+		stored := &infrav2exp.OCIManagedMachinePool{}
+		g.Expect(testEnvironment.GetAPIReader().Get(testContext, key, stored)).To(Succeed())
+		g.Expect(stored.Status.Ready).To(BeTrue())
+		expectModernHealth(g, stored, "Ready", metav1.ConditionFalse)
 	}).WithTimeout(10 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
 
 	fakeOCI.oke.clearFailure(updateNodePoolOperation)
@@ -130,6 +136,8 @@ func TestOCIManagedMachinePoolRecoversFromCloudFailuresAndAsyncStates(t *testing
 		stored := &infrav2exp.OCIManagedMachinePool{}
 		g.Expect(testEnvironment.GetAPIReader().Get(testContext, key, stored)).To(Succeed())
 		g.Expect(stored.DeletionTimestamp.IsZero()).To(BeFalse())
+		expectModernHealth(g, stored, "Deleting", metav1.ConditionTrue)
+		expectModernHealth(g, stored, "Ready", metav1.ConditionFalse)
 		g.Expect(controllerutil.ContainsFinalizer(stored, infrav2exp.ManagedMachinePoolFinalizer)).To(BeTrue())
 		active, _, _, deletes, _ := fakeOCI.oke.nodePoolCounts()
 		g.Expect(active).To(Equal(1))
@@ -190,6 +198,7 @@ func TestOCIVirtualMachinePoolRecoversFromCloudFailuresAndAsyncStates(t *testing
 		g.Expect(stored.Spec.ID).NotTo(BeNil())
 		poolID = *stored.Spec.ID
 		g.Expect(stored.Status.Ready).To(BeFalse())
+		expectModernHealth(g, stored, "Ready", metav1.ConditionFalse)
 		g.Expect(stored.Status.NodepoolLifecycleState).To(Equal(string(oke.VirtualNodePoolLifecycleStateCreating)))
 		condition := v1beta1conditions.Get(stored, infrav2exp.VirtualNodePoolReadyCondition)
 		g.Expect(condition).NotTo(BeNil())
@@ -219,6 +228,10 @@ func TestOCIVirtualMachinePoolRecoversFromCloudFailuresAndAsyncStates(t *testing
 		_, creates, updates, _, _ := fakeOCI.oke.virtualNodePoolCounts()
 		g.Expect(creates).To(Equal(1))
 		g.Expect(updates).To(BeZero())
+		stored := &infrav2exp.OCIVirtualMachinePool{}
+		g.Expect(testEnvironment.GetAPIReader().Get(testContext, key, stored)).To(Succeed())
+		g.Expect(stored.Status.Ready).To(BeTrue())
+		expectModernHealth(g, stored, "Ready", metav1.ConditionFalse)
 	}).WithTimeout(10 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
 
 	fakeOCI.oke.clearFailure(updateVirtualNodePoolOperation)
@@ -242,6 +255,8 @@ func TestOCIVirtualMachinePoolRecoversFromCloudFailuresAndAsyncStates(t *testing
 		stored := &infrav2exp.OCIVirtualMachinePool{}
 		g.Expect(testEnvironment.GetAPIReader().Get(testContext, key, stored)).To(Succeed())
 		g.Expect(stored.DeletionTimestamp.IsZero()).To(BeFalse())
+		expectModernHealth(g, stored, "Deleting", metav1.ConditionTrue)
+		expectModernHealth(g, stored, "Ready", metav1.ConditionFalse)
 		g.Expect(controllerutil.ContainsFinalizer(stored, infrav2exp.VirtualMachinePoolFinalizer)).To(BeTrue())
 		active, _, _, deletes, _ := fakeOCI.oke.virtualNodePoolCounts()
 		g.Expect(active).To(Equal(1))

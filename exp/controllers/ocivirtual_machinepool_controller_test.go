@@ -36,6 +36,7 @@ import (
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
+	v1beta2conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -107,7 +108,7 @@ func TestVirtualMachinePoolReconciliation(t *testing.T) {
 			defer teardown(t, g)
 			setup(t, g)
 
-			client := fake.NewClientBuilder().WithScheme(testScheme()).WithObjects(tc.objects...).Build()
+			client := fake.NewClientBuilder().WithStatusSubresource(&infrav2exp.OCIMachinePoolMachine{}).WithScheme(testScheme()).WithObjects(tc.objects...).WithStatusSubresource(tc.objects...).Build()
 			r = OCIVirtualMachinePoolReconciler{
 				Client:         client,
 				Scheme:         testScheme(),
@@ -155,7 +156,7 @@ func TestNormalReconciliationFunctionForVirtualMP(t *testing.T) {
 	setup := func(t *testing.T, g *WithT) {
 		var err error
 		mockCtrl = gomock.NewController(t)
-		client := fake.NewClientBuilder().WithScheme(testScheme()).WithObjects(getSecret()).Build()
+		client := fake.NewClientBuilder().WithStatusSubresource(&infrav2exp.OCIMachinePoolMachine{}).WithScheme(testScheme()).WithObjects(getSecret()).Build()
 		okeClient = mock_containerengine.NewMockClient(mockCtrl)
 		machinePool := getMachinePool()
 		ociVirtualMachinePool = getOCIVirtualMachinePool()
@@ -254,11 +255,11 @@ func TestNormalReconciliationFunctionForVirtualMP(t *testing.T) {
 			errorExpected:      false,
 			conditionAssertion: []conditionAssertion{{infrav2exp.VirtualNodePoolReadyCondition, corev1.ConditionTrue, "", ""}},
 			testSpecificSetup: func(t *test, machinePoolScope *scope.VirtualMachinePoolScope, okeClient *mock_containerengine.MockClient) {
-				r.Client = interceptor.NewClient(fake.NewClientBuilder().WithScheme(testScheme()).WithObjects(getSecret(), ociVirtualMachinePool).Build(), interceptor.Funcs{
+				r.Client = interceptor.NewClient(fake.NewClientBuilder().WithStatusSubresource(&infrav2exp.OCIMachinePoolMachine{}).WithScheme(testScheme()).WithObjects(getSecret(), ociVirtualMachinePool).Build(), interceptor.Funcs{
 					Create: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
 						m := obj.(*infrav2exp.OCIMachinePoolMachine)
 						t.createPoolMachines = append(t.createPoolMachines, *m)
-						return nil
+						return client.Create(ctx, obj, opts...)
 					},
 				})
 				okeClient.EXPECT().GetVirtualNodePool(gomock.Any(), gomock.Eq(oke.GetVirtualNodePoolRequest{
@@ -327,7 +328,7 @@ func TestNormalReconciliationFunctionForVirtualMP(t *testing.T) {
 			errorExpected:      false,
 			conditionAssertion: []conditionAssertion{{infrav2exp.VirtualNodePoolReadyCondition, corev1.ConditionTrue, "", ""}},
 			testSpecificSetup: func(t *test, machinePoolScope *scope.VirtualMachinePoolScope, okeClient *mock_containerengine.MockClient) {
-				fakeClient := fake.NewClientBuilder().WithScheme(testScheme()).WithObjects(&infrav2exp.OCIMachinePoolMachine{
+				fakeClient := fake.NewClientBuilder().WithStatusSubresource(&infrav2exp.OCIMachinePoolMachine{}).WithScheme(testScheme()).WithObjects(&infrav2exp.OCIMachinePoolMachine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "test",
@@ -364,7 +365,7 @@ func TestNormalReconciliationFunctionForVirtualMP(t *testing.T) {
 					Create: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
 						m := obj.(*infrav2exp.OCIMachinePoolMachine)
 						t.createPoolMachines = append(t.createPoolMachines, *m)
-						return nil
+						return client.Create(ctx, obj, opts...)
 					},
 					Delete: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
 						m := obj.(*clusterv1.Machine)
@@ -565,10 +566,15 @@ func TestVMPDeletionFunction(t *testing.T) {
 	setup := func(t *testing.T, g *WithT) {
 		var err error
 		mockCtrl = gomock.NewController(t)
-		client := fake.NewClientBuilder().WithScheme(testScheme()).WithObjects(getSecret()).Build()
+		client := fake.NewClientBuilder().WithStatusSubresource(&infrav2exp.OCIMachinePoolMachine{}).WithScheme(testScheme()).WithObjects(getSecret()).Build()
 		okeClient = mock_containerengine.NewMockClient(mockCtrl)
 		machinePool := getMachinePool()
 		ociVirtualMachinePool = getOCIVirtualMachinePool()
+		v1beta2conditions.Set(ociVirtualMachinePool, metav1.Condition{
+			Type:   string(infrav2exp.VirtualNodePoolReadyCondition),
+			Status: metav1.ConditionTrue,
+			Reason: clusterv1.ReadyReason,
+		})
 		ociCluster := getOCIManagedClusterWithOwner()
 		ociManagedControlPlane := infrastructurev1beta2.OCIManagedControlPlane{
 			Spec: infrastructurev1beta2.OCIManagedControlPlaneSpec{
@@ -607,6 +613,7 @@ func TestVMPDeletionFunction(t *testing.T) {
 		conditionAssertion      []conditionAssertion
 		testSpecificSetup       func(machinePoolScope *scope.VirtualMachinePoolScope, okeClient *mock_containerengine.MockClient)
 		expectedFailureMessages []string
+		expectNotFound          bool
 	}{
 		{
 			name:               "virtual node pool to be deleted",
@@ -631,6 +638,7 @@ func TestVMPDeletionFunction(t *testing.T) {
 		},
 		{
 			name:               "virtual node pool not found",
+			expectNotFound:     true,
 			errorExpected:      false,
 			conditionAssertion: []conditionAssertion{{infrav2exp.VirtualNodePoolNotFoundReason, corev1.ConditionTrue, "", ""}},
 			testSpecificSetup: func(machinePoolScope *scope.VirtualMachinePoolScope, okeClient *mock_containerengine.MockClient) {
@@ -642,6 +650,7 @@ func TestVMPDeletionFunction(t *testing.T) {
 		},
 		{
 			name:               "virtual node pool",
+			expectNotFound:     true,
 			errorExpected:      false,
 			conditionAssertion: []conditionAssertion{{infrav2exp.VirtualNodePoolNotFoundReason, corev1.ConditionTrue, "", ""}},
 			testSpecificSetup: func(machinePoolScope *scope.VirtualMachinePoolScope, okeClient *mock_containerengine.MockClient) {
@@ -695,6 +704,13 @@ func TestVMPDeletionFunction(t *testing.T) {
 			tc.testSpecificSetup(ms, okeClient)
 			ctx := context.Background()
 			_, err := r.reconcileDelete(ctx, ms)
+			if tc.expectNotFound {
+				condition := v1beta2conditions.Get(ociVirtualMachinePool, string(infrav2exp.VirtualNodePoolReadyCondition))
+				g.Expect(condition).NotTo(BeNil())
+				g.Expect(condition.Status).To(Equal(metav1.ConditionFalse))
+				g.Expect(condition.Reason).To(Equal(infrav2exp.VirtualNodePoolNotFoundReason))
+				g.Expect(v1beta2conditions.Get(ociVirtualMachinePool, infrav2exp.VirtualNodePoolNotFoundReason)).To(BeNil())
+			}
 			if len(tc.conditionAssertion) > 0 {
 				expectVMPConditions(g, ociVirtualMachinePool, tc.conditionAssertion)
 			}

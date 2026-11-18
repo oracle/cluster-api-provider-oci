@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	strings "strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -43,6 +44,7 @@ import (
 	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
+	v1beta2conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions/v1beta2"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -172,6 +174,57 @@ func (r *OCIMachinePoolReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	// Always close the scope when exiting this function so we can persist any OCIMachinePool changes.
 	defer func() {
+		if !ociMachinePool.GetDeletionTimestamp().IsZero() {
+			v1beta2conditions.Set(ociMachinePool, metav1.Condition{
+				Type:   clusterv1.DeletingCondition,
+				Status: metav1.ConditionTrue,
+				Reason: clusterv1.DeletingReason,
+			})
+			v1beta2conditions.Set(ociMachinePool, metav1.Condition{
+				Type:    clusterv1.ReadyCondition,
+				Status:  metav1.ConditionFalse,
+				Reason:  clusterv1.DeletingReason,
+				Message: "Infrastructure is being deleted",
+			})
+		} else {
+			v1beta2conditions.Set(ociMachinePool, metav1.Condition{
+				Type:   clusterv1.DeletingCondition,
+				Status: metav1.ConditionFalse,
+				Reason: clusterv1.NotDeletingReason,
+			})
+			if reterr != nil {
+				v1beta2conditions.Set(ociMachinePool, metav1.Condition{
+					Type:    clusterv1.ReadyCondition,
+					Status:  metav1.ConditionFalse,
+					Reason:  infrastructurev1beta2.ReconcileFailedReason,
+					Message: "Please check controller logs for errors",
+				})
+			} else if ociMachinePool.Status.FailureReason != nil || ociMachinePool.Status.FailureMessage != nil {
+				var messages []string
+				if ociMachinePool.Status.FailureReason != nil {
+					messages = append(messages, *ociMachinePool.Status.FailureReason)
+				}
+				if ociMachinePool.Status.FailureMessage != nil {
+					messages = append(messages, *ociMachinePool.Status.FailureMessage)
+				}
+				v1beta2conditions.Set(ociMachinePool, metav1.Condition{
+					Type:    clusterv1.ReadyCondition,
+					Status:  metav1.ConditionFalse,
+					Reason:  infrastructurev1beta2.ReconcileFailedReason,
+					Message: strings.Join(messages, ": "),
+				})
+			} else {
+				componentConditions := []string{string(infrav2exp.LaunchTemplateReadyCondition), string(infrav2exp.InstancePoolReadyCondition), infrav2exp.MachinePoolMachinesReadyCondition}
+				if err := v1beta2conditions.SetSummaryCondition(ociMachinePool, ociMachinePool, clusterv1.ReadyCondition, v1beta2conditions.ForConditionTypes(componentConditions)); err != nil {
+					v1beta2conditions.Set(ociMachinePool, metav1.Condition{
+						Type:    clusterv1.ReadyCondition,
+						Status:  metav1.ConditionUnknown,
+						Reason:  infrastructurev1beta2.NotReconciledReason,
+						Message: err.Error(),
+					})
+				}
+			}
+		}
 		if err := machinePoolScope.Close(ctx); err != nil && reterr == nil {
 			reterr = err
 		}
@@ -306,6 +359,12 @@ func (r *OCIMachinePoolReconciler) reconcileNormal(ctx context.Context, logger l
 	}
 
 	if !ptr.ToBool(machinePoolScope.Cluster.Status.Initialization.InfrastructureProvisioned) {
+		v1beta2conditions.Set(machinePoolScope.OCIMachinePool, metav1.Condition{
+			Type:    string(infrav2exp.InstancePoolReadyCondition),
+			Status:  metav1.ConditionFalse,
+			Reason:  infrastructurev1beta2.WaitingForClusterInfrastructureReason,
+			Message: "Waiting for cluster infrastructure",
+		})
 		logger.Info("Cluster infrastructure is not ready yet")
 		return reconcile.Result{}, nil
 	}
@@ -314,6 +373,11 @@ func (r *OCIMachinePoolReconciler) reconcileNormal(ctx context.Context, logger l
 	if machinePoolScope.MachinePool.Spec.Template.Spec.Bootstrap.DataSecretName == nil {
 		r.Recorder.Event(machinePoolScope.OCIMachinePool, corev1.EventTypeNormal, infrastructurev1beta2.WaitingForBootstrapDataReason, "Bootstrap data secret reference is not yet available")
 		v1beta1conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav2exp.InstancePoolReadyCondition, infrastructurev1beta2.WaitingForBootstrapDataReason, clusterv1beta1.ConditionSeverityInfo, "")
+		v1beta2conditions.Set(machinePoolScope.OCIMachinePool, metav1.Condition{
+			Type:   string(infrav2exp.InstancePoolReadyCondition),
+			Status: metav1.ConditionFalse,
+			Reason: infrastructurev1beta2.WaitingForBootstrapDataReason,
+		})
 		logger.Info("Bootstrap data secret reference is not yet available")
 		return reconcile.Result{}, nil
 	}
@@ -323,6 +387,11 @@ func (r *OCIMachinePoolReconciler) reconcileNormal(ctx context.Context, logger l
 	if err != nil {
 		r.Recorder.Event(machinePoolScope.OCIMachinePool, corev1.EventTypeWarning, "ReconcileError", err.Error())
 		v1beta1conditions.MarkUnknown(machinePoolScope.OCIMachinePool, infrav2exp.InstancePoolReadyCondition, infrav2exp.InstancePoolNotFoundReason, "")
+		v1beta2conditions.Set(machinePoolScope.OCIMachinePool, metav1.Condition{
+			Type:   string(infrav2exp.InstancePoolReadyCondition),
+			Status: metav1.ConditionUnknown,
+			Reason: infrav2exp.InstancePoolNotFoundReason,
+		})
 		return ctrl.Result{}, err
 	}
 
@@ -335,12 +404,22 @@ func (r *OCIMachinePoolReconciler) reconcileNormal(ctx context.Context, logger l
 
 	// set the LaunchTemplateReady condition
 	v1beta1conditions.MarkTrue(machinePoolScope.OCIMachinePool, infrav2exp.LaunchTemplateReadyCondition)
+	v1beta2conditions.Set(machinePoolScope.OCIMachinePool, metav1.Condition{
+		Type:   string(infrav2exp.LaunchTemplateReadyCondition),
+		Status: metav1.ConditionTrue,
+		Reason: clusterv1.ReadyReason,
+	})
 
 	if instancePool == nil {
 		instancePool, err = machinePoolScope.CreateInstancePool(ctx)
 		if err != nil {
 			r.Recorder.Event(machinePoolScope.OCIMachinePool, corev1.EventTypeWarning, "ReconcileError", err.Error())
 			v1beta1conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav2exp.InstancePoolReadyCondition, infrav2exp.InstancePoolProvisionFailedReason, clusterv1beta1.ConditionSeverityError, "")
+			v1beta2conditions.Set(machinePoolScope.OCIMachinePool, metav1.Condition{
+				Type:   string(infrav2exp.InstancePoolReadyCondition),
+				Status: metav1.ConditionFalse,
+				Reason: infrav2exp.InstancePoolProvisionFailedReason,
+			})
 			return ctrl.Result{}, err
 		}
 		r.Recorder.Eventf(machinePoolScope.OCIMachinePool, corev1.EventTypeNormal, "InstancePoolCreated", "Created new Instance Pool: %s", machinePoolScope.OCIMachinePool.GetName())
@@ -354,10 +433,20 @@ func (r *OCIMachinePoolReconciler) reconcileNormal(ctx context.Context, logger l
 	case core.InstancePoolLifecycleStateProvisioning, core.InstancePoolLifecycleStateStarting:
 		machinePoolScope.Info("Instance Pool is pending")
 		v1beta1conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav2exp.InstancePoolReadyCondition, infrav2exp.InstancePoolNotReadyReason, clusterv1beta1.ConditionSeverityInfo, "")
+		v1beta2conditions.Set(machinePoolScope.OCIMachinePool, metav1.Condition{
+			Type:   string(infrav2exp.InstancePoolReadyCondition),
+			Status: metav1.ConditionFalse,
+			Reason: infrav2exp.InstancePoolNotReadyReason,
+		})
 		return reconcile.Result{RequeueAfter: 10 * time.Second}, nil
 	case core.InstancePoolLifecycleStateScaling:
 		machinePoolScope.Info("Instance Pool is scaling")
 		v1beta1conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav2exp.InstancePoolReadyCondition, infrav2exp.InstancePoolNotReadyReason, clusterv1beta1.ConditionSeverityInfo, "")
+		v1beta2conditions.Set(machinePoolScope.OCIMachinePool, metav1.Condition{
+			Type:   string(infrav2exp.InstancePoolReadyCondition),
+			Status: metav1.ConditionFalse,
+			Reason: infrav2exp.InstancePoolNotReadyReason,
+		})
 		return reconcile.Result{RequeueAfter: 10 * time.Second}, nil
 	case core.InstancePoolLifecycleStateRunning:
 		machinePoolScope.Info("Instance pool is active")
@@ -366,6 +455,11 @@ func (r *OCIMachinePoolReconciler) reconcileNormal(ctx context.Context, logger l
 		r.Recorder.Eventf(machinePoolScope.OCIMachinePool, corev1.EventTypeNormal, "InstancePoolReady",
 			"Instance pool is in ready state")
 		v1beta1conditions.MarkTrue(machinePoolScope.OCIMachinePool, infrav2exp.InstancePoolReadyCondition)
+		v1beta2conditions.Set(machinePoolScope.OCIMachinePool, metav1.Condition{
+			Type:   string(infrav2exp.InstancePoolReadyCondition),
+			Status: metav1.ConditionTrue,
+			Reason: clusterv1.ReadyReason,
+		})
 
 		machines, err := machinePoolScope.SetListandSetMachinePoolInstances(ctx)
 		if err != nil {
@@ -405,6 +499,11 @@ func (r *OCIMachinePoolReconciler) reconcileNormal(ctx context.Context, logger l
 		machinePoolScope.SetReady()
 	default:
 		v1beta1conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav2exp.InstancePoolReadyCondition, infrav2exp.InstancePoolProvisionFailedReason, clusterv1beta1.ConditionSeverityError, "")
+		v1beta2conditions.Set(machinePoolScope.OCIMachinePool, metav1.Condition{
+			Type:   string(infrav2exp.InstancePoolReadyCondition),
+			Status: metav1.ConditionFalse,
+			Reason: infrav2exp.InstancePoolProvisionFailedReason,
+		})
 		machinePoolScope.SetFailureReason(cloudutil.CreateError)
 		machinePoolScope.SetFailureMessage(errors.Errorf("Instance Pool status %q is unexpected", instancePool.LifecycleState))
 		r.Recorder.Eventf(machinePoolScope.OCIMachinePool, corev1.EventTypeWarning, "ReconcileError",
@@ -430,6 +529,11 @@ func (r *OCIMachinePoolReconciler) reconcileDelete(ctx context.Context, machineP
 	if instancePool == nil {
 		machinePoolScope.OCIMachinePool.Status.Ready = false
 		v1beta1conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav2exp.InstancePoolReadyCondition, infrav2exp.InstancePoolNotFoundReason, clusterv1beta1.ConditionSeverityWarning, "")
+		v1beta2conditions.Set(machinePoolScope.OCIMachinePool, metav1.Condition{
+			Type:   string(infrav2exp.InstancePoolReadyCondition),
+			Status: metav1.ConditionFalse,
+			Reason: infrav2exp.InstancePoolNotFoundReason,
+		})
 		machinePoolScope.Info("Instance Pool may already be deleted")
 		r.Recorder.Eventf(machinePoolScope.OCIMachinePool, corev1.EventTypeNormal, infrav2exp.InstancePoolNotFoundReason, "Unable to find matching instance pool")
 	} else {
@@ -442,6 +546,11 @@ func (r *OCIMachinePoolReconciler) reconcileDelete(ctx context.Context, machineP
 			// Instance Pool is already deleted
 			machinePoolScope.OCIMachinePool.Status.Ready = false
 			v1beta1conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav2exp.InstancePoolReadyCondition, infrav2exp.InstancePoolDeletionInProgress, clusterv1beta1.ConditionSeverityWarning, "")
+			v1beta2conditions.Set(machinePoolScope.OCIMachinePool, metav1.Condition{
+				Type:   string(infrav2exp.InstancePoolReadyCondition),
+				Status: metav1.ConditionFalse,
+				Reason: infrav2exp.InstancePoolDeletionInProgress,
+			})
 			r.Recorder.Eventf(machinePoolScope.OCIMachinePool, corev1.EventTypeWarning, "DeletionInProgress", "Instance Pool deletion in progress: %s - %s", ptr.ToString(instancePool.DisplayName), ptr.ToString(instancePool.Id))
 			machinePoolScope.Info("Instance Pool is already deleted", "displayName", instancePool.DisplayName, "id", instancePool.Id)
 		default:
@@ -482,6 +591,7 @@ func (r *OCIMachinePoolReconciler) reconcileDelete(ctx context.Context, machineP
 
 func (r *OCIMachinePoolReconciler) reconcileMachines(ctx context.Context, err error, machinePoolScope *scope.MachinePoolScope, specInfraMachines []infrav2exp.OCIMachinePoolMachine) error {
 	params := cloudutil.MachineParams{
+		InfraMachinePool:     machinePoolScope.OCIMachinePool,
 		Cluster:              machinePoolScope.Cluster,
 		MachinePool:          machinePoolScope.MachinePool,
 		InfraMachinePoolName: machinePoolScope.OCIMachinePool.Name,
@@ -495,14 +605,29 @@ func (r *OCIMachinePoolReconciler) reconcileMachines(ctx context.Context, err er
 	err = cloudutil.CreateMachinePoolMachinesIfNotExists(ctx, params)
 	if err != nil {
 		r.Recorder.Event(machinePoolScope.OCIMachinePool, corev1.EventTypeWarning, "FailedToCreateNewMachines", err.Error())
-		v1beta1conditions.MarkFalse(machinePoolScope.OCIMachinePool, clusterv1beta1.ReadyCondition, "FailedToCreateNewMachines", clusterv1beta1.ConditionSeverityWarning, "")
+		v1beta1conditions.MarkFalse(machinePoolScope.OCIMachinePool, clusterv1beta1.ReadyCondition, infrav2exp.FailedToCreateNewMachinesReason, clusterv1beta1.ConditionSeverityWarning, "")
+		v1beta2conditions.Set(machinePoolScope.OCIMachinePool, metav1.Condition{
+			Type:   infrav2exp.MachinePoolMachinesReadyCondition,
+			Status: metav1.ConditionFalse,
+			Reason: infrav2exp.FailedToCreateNewMachinesReason,
+		})
 		return errors.Wrap(err, "failed to create missing machines")
 	}
 
 	err = cloudutil.DeleteOrphanedMachinePoolMachines(ctx, params)
 	if err != nil {
-		v1beta1conditions.MarkFalse(machinePoolScope.OCIMachinePool, clusterv1beta1.ReadyCondition, "FailedToDeleteOrphanedMachines", clusterv1beta1.ConditionSeverityWarning, "")
+		v1beta1conditions.MarkFalse(machinePoolScope.OCIMachinePool, clusterv1beta1.ReadyCondition, infrav2exp.FailedToDeleteOrphanedMachinesReason, clusterv1beta1.ConditionSeverityWarning, "")
+		v1beta2conditions.Set(machinePoolScope.OCIMachinePool, metav1.Condition{
+			Type:   infrav2exp.MachinePoolMachinesReadyCondition,
+			Status: metav1.ConditionFalse,
+			Reason: infrav2exp.FailedToDeleteOrphanedMachinesReason,
+		})
 		return errors.Wrap(err, "failed to delete orphaned machines")
 	}
+	v1beta2conditions.Set(machinePoolScope.OCIMachinePool, metav1.Condition{
+		Type:   infrav2exp.MachinePoolMachinesReadyCondition,
+		Status: metav1.ConditionTrue,
+		Reason: clusterv1.ReadyReason,
+	})
 	return nil
 }

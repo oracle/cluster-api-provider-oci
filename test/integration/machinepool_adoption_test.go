@@ -207,8 +207,7 @@ func createInstancePoolFixture(t *testing.T, externallyManaged bool, replicas in
 	g.Expect(testEnvironment.Create(testContext, fixture.ociCluster)).To(Succeed())
 	storedOCICluster := &infrastructurev1beta2.OCICluster{}
 	g.Expect(testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(fixture.ociCluster), storedOCICluster)).To(Succeed())
-	storedOCICluster.Status.Ready = true
-	g.Expect(testEnvironment.Status().Update(testContext, storedOCICluster)).To(Succeed())
+	setLegacyReady(t, storedOCICluster, true)
 	fixture.bootstrap = &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: "instance-pool-advanced-bootstrap", Namespace: fixture.namespace.Name},
 		Data:       map[string][]byte{"value": []byte("#!/bin/sh\necho instance-pool-advanced")},
@@ -240,6 +239,7 @@ func prepareManagedMachinePoolForAdoption(t *testing.T, fixture *managedMachineP
 	g := NewWithT(t)
 	stored := &infrav2exp.OCIManagedMachinePool{}
 	g.Expect(testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(fixture.managedMachinePool), stored)).To(Succeed())
+	before := stored.DeepCopy()
 	stored.Spec.NodePoolNodeConfig = &infrav2exp.NodePoolNodeConfig{
 		NsgNames: []string{"worker"},
 		PlacementConfigs: []infrav2exp.PlacementConfig{{
@@ -249,7 +249,7 @@ func prepareManagedMachinePoolForAdoption(t *testing.T, fixture *managedMachineP
 		}},
 		NodePoolPodNetworkOptionDetails: &infrav2exp.NodePoolPodNetworkOptionDetails{CniType: infrastructurev1beta2.FlannelCNI},
 	}
-	g.Expect(testEnvironment.Update(testContext, stored)).To(Succeed())
+	g.Expect(testEnvironment.Patch(testContext, stored, client.MergeFrom(before))).To(Succeed())
 }
 
 func adoptedManagedNodePool(fixture *managedMachinePoolFixture, id string, tags map[string]string, size int) oke.NodePool {
@@ -281,6 +281,7 @@ func prepareVirtualMachinePoolForAdoption(t *testing.T, fixture *virtualMachineP
 	g := NewWithT(t)
 	stored := &infrav2exp.OCIVirtualMachinePool{}
 	g.Expect(testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(fixture.virtualMachinePool), stored)).To(Succeed())
+	before := stored.DeepCopy()
 	stored.Spec.PlacementConfigs = []infrav2exp.VirtualNodepoolPlacementConfig{{
 		AvailabilityDomain: common.String("integration-ad-1"),
 		FaultDomains:       []string{"FAULT-DOMAIN-1", "FAULT-DOMAIN-2", "FAULT-DOMAIN-3"},
@@ -288,7 +289,7 @@ func prepareVirtualMachinePoolForAdoption(t *testing.T, fixture *virtualMachineP
 	}}
 	stored.Spec.NsgNames = []string{"worker"}
 	stored.Spec.PodConfiguration = infrav2exp.PodConfig{SubnetName: common.String("pod"), NsgNames: []string{"pod"}}
-	g.Expect(testEnvironment.Update(testContext, stored)).To(Succeed())
+	g.Expect(testEnvironment.Patch(testContext, stored, client.MergeFrom(before))).To(Succeed())
 }
 
 func adoptedVirtualNodePool(fixture *virtualMachinePoolFixture, id string, tags map[string]string, size int) oke.VirtualNodePool {
