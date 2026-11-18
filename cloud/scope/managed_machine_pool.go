@@ -333,9 +333,6 @@ func (m *ManagedMachinePoolScope) CreateNodePool(ctx context.Context) (*oke.Node
 		return nil, errors.Wrapf(err, "failed to create OCIManagedMachinePool")
 	}
 
-	if err != nil {
-		return nil, err
-	}
 	wrResponse, err := m.ContainerEngineClient.GetWorkRequest(ctx, oke.GetWorkRequestRequest{
 		WorkRequestId: response.OpcWorkRequestId,
 	})
@@ -352,7 +349,7 @@ func (m *ManagedMachinePoolScope) CreateNodePool(ctx context.Context) (*oke.Node
 	m.Logger.Info("Work request affected resources", "resources", resources)
 	if nodePoolId == nil {
 		return nil, errors.New(fmt.Sprintf("node pool ws not created with the request, please create a "+
-			"support ticket with opc-request-id %s", *wrResponse.OpcRequestId))
+			"support ticket with opc-request-id %s", ptr.ToString(wrResponse.OpcRequestId)))
 	}
 	m.OCIManagedMachinePool.Spec.ID = nodePoolId
 	m.Info("Created Node Pool", "id", nodePoolId)
