@@ -235,7 +235,7 @@ func TestNormalReconciliationFunctionForVirtualMP(t *testing.T) {
 						Resources: []oke.WorkRequestResource{
 							{
 								Identifier: common.String("virtual-node-pool"),
-								EntityType: common.String("VirtualNodePool"),
+								EntityType: common.String("virtualnodepool"),
 							},
 						},
 					}}, nil)

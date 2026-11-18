@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -301,9 +302,6 @@ func (m *VirtualMachinePoolScope) CreateVirtualNodePool(ctx context.Context) (*o
 		return nil, errors.Wrapf(err, "failed to create OCIVirtualMachinePool")
 	}
 
-	if err != nil {
-		return nil, err
-	}
 	wrResponse, err := m.ContainerEngineClient.GetWorkRequest(ctx, oke.GetWorkRequestRequest{
 		WorkRequestId: response.OpcWorkRequestId,
 	})
@@ -313,14 +311,14 @@ func (m *VirtualMachinePoolScope) CreateVirtualNodePool(ctx context.Context) (*o
 	resources := wrResponse.Resources
 	var nodePoolId *string
 	for _, resource := range resources {
-		if ptr.StringEquals(resource.EntityType, "VirtualNodePool") {
+		if strings.EqualFold(ptr.ToString(resource.EntityType), "VirtualNodePool") {
 			nodePoolId = resource.Identifier
 		}
 	}
 	m.Logger.Info("Work request affected resources", "resources", resources)
 	if nodePoolId == nil {
 		return nil, errors.New(fmt.Sprintf("node pool ws not created with the request, please create a "+
-			"support ticket with opc-request-id %s", *wrResponse.OpcRequestId))
+			"support ticket with opc-request-id %s", ptr.ToString(wrResponse.OpcRequestId)))
 	}
 	m.OCIVirtualMachinePool.Spec.ID = nodePoolId
 	m.Info("Created Node Pool", "id", nodePoolId)

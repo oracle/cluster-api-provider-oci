@@ -902,6 +902,45 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 				}
 			},
 		},
+		{
+			name:          "nodepool unmatched resources with request ID",
+			errorExpected: true,
+			matchError:    errors.New("node pool ws not created with the request, please create a support ticket with opc-request-id request-id"),
+			testSpecificSetup: func(ms *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
+				ms.OCIManagedMachinePool.Spec.NodeSourceViaImage = &infrav2exp.NodeSourceViaImage{ImageId: common.String("image-id")}
+				okeClient.EXPECT().CreateNodePool(gomock.Any(), gomock.Any()).
+					Return(oke.CreateNodePoolResponse{OpcWorkRequestId: common.String("work-request-id")}, nil)
+				okeClient.EXPECT().GetWorkRequest(gomock.Any(), gomock.Eq(oke.GetWorkRequestRequest{
+					WorkRequestId: common.String("work-request-id"),
+				})).Return(oke.GetWorkRequestResponse{
+					OpcRequestId: common.String("request-id"),
+					WorkRequest: oke.WorkRequest{
+						Resources: []oke.WorkRequestResource{
+							{Identifier: common.String("unrelated-id"), EntityType: common.String("unrelated")},
+						},
+					},
+				}, nil)
+			},
+		},
+		{
+			name:          "nodepool unmatched resources without request ID",
+			errorExpected: true,
+			matchError:    errors.New("node pool ws not created with the request, please create a support ticket with opc-request-id "),
+			testSpecificSetup: func(ms *ManagedMachinePoolScope, okeClient *mock_containerengine.MockClient) {
+				ms.OCIManagedMachinePool.Spec.NodeSourceViaImage = &infrav2exp.NodeSourceViaImage{ImageId: common.String("image-id")}
+				okeClient.EXPECT().CreateNodePool(gomock.Any(), gomock.Any()).
+					Return(oke.CreateNodePoolResponse{OpcWorkRequestId: common.String("work-request-id")}, nil)
+				okeClient.EXPECT().GetWorkRequest(gomock.Any(), gomock.Eq(oke.GetWorkRequestRequest{
+					WorkRequestId: common.String("work-request-id"),
+				})).Return(oke.GetWorkRequestResponse{
+					WorkRequest: oke.WorkRequest{
+						Resources: []oke.WorkRequestResource{
+							{Identifier: common.String("unrelated-id"), EntityType: common.String("unrelated")},
+						},
+					},
+				}, nil)
+			},
+		},
 	}
 
 	for _, tc := range tests {
@@ -910,8 +949,10 @@ func TestManagedMachinePoolCreate(t *testing.T) {
 			defer teardown(t, g)
 			setup(t, g)
 			tc.testSpecificSetup(ms, okeClient)
-			_, err := ms.CreateNodePool(context.Background())
+			nodePool, err := ms.CreateNodePool(context.Background())
 			if tc.errorExpected {
+				g.Expect(nodePool).To(BeNil())
+				g.Expect(ms.OCIManagedMachinePool.Spec.ID).To(BeNil())
 				g.Expect(err).To(Not(BeNil()))
 				if tc.errorSubStringMatch {
 					g.Expect(err.Error()).To(ContainSubstring(tc.matchError.Error()))

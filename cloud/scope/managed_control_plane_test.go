@@ -307,6 +307,45 @@ func TestControlPlaneReconciliation(t *testing.T) {
 					}, nil)
 			},
 		},
+		{
+			name:          "control plane unmatched resources with request ID",
+			errorExpected: true,
+			matchError:    errors.New("oke cluster ws not created with the request, please create a support ticket with opc-request-id request-id"),
+			testSpecificSetup: func(cs *ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
+				okeClient.EXPECT().ListClusters(gomock.Any(), gomock.Any()).Return(oke.ListClustersResponse{}, nil)
+				okeClient.EXPECT().CreateCluster(gomock.Any(), gomock.Any()).
+					Return(oke.CreateClusterResponse{OpcWorkRequestId: common.String("work-request-id")}, nil)
+				okeClient.EXPECT().GetWorkRequest(gomock.Any(), gomock.Eq(oke.GetWorkRequestRequest{
+					WorkRequestId: common.String("work-request-id"),
+				})).Return(oke.GetWorkRequestResponse{
+					OpcRequestId: common.String("request-id"),
+					WorkRequest: oke.WorkRequest{
+						Resources: []oke.WorkRequestResource{
+							{Identifier: common.String("unrelated-id"), EntityType: common.String("unrelated")},
+						},
+					},
+				}, nil)
+			},
+		},
+		{
+			name:          "control plane unmatched resources without request ID",
+			errorExpected: true,
+			matchError:    errors.New("oke cluster ws not created with the request, please create a support ticket with opc-request-id "),
+			testSpecificSetup: func(cs *ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
+				okeClient.EXPECT().ListClusters(gomock.Any(), gomock.Any()).Return(oke.ListClustersResponse{}, nil)
+				okeClient.EXPECT().CreateCluster(gomock.Any(), gomock.Any()).
+					Return(oke.CreateClusterResponse{OpcWorkRequestId: common.String("work-request-id")}, nil)
+				okeClient.EXPECT().GetWorkRequest(gomock.Any(), gomock.Eq(oke.GetWorkRequestRequest{
+					WorkRequestId: common.String("work-request-id"),
+				})).Return(oke.GetWorkRequestResponse{
+					WorkRequest: oke.WorkRequest{
+						Resources: []oke.WorkRequestResource{
+							{Identifier: common.String("unrelated-id"), EntityType: common.String("unrelated")},
+						},
+					},
+				}, nil)
+			},
+		},
 	}
 
 	for _, tc := range tests {
@@ -315,8 +354,10 @@ func TestControlPlaneReconciliation(t *testing.T) {
 			defer teardown(t, g)
 			setup(t, g)
 			tc.testSpecificSetup(cs, okeClient)
-			_, err := cs.GetOrCreateControlPlane(context.Background())
+			cluster, err := cs.GetOrCreateControlPlane(context.Background())
 			if tc.errorExpected {
+				g.Expect(cluster).To(BeNil())
+				g.Expect(cs.OCIManagedControlPlane.Spec.ID).To(BeNil())
 				g.Expect(err).To(Not(BeNil()))
 				if tc.errorSubStringMatch {
 					g.Expect(err.Error()).To(ContainSubstring(tc.matchError.Error()))
