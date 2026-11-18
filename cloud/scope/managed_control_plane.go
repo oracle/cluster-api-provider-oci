@@ -267,7 +267,7 @@ func (s *ManagedControlPlaneScope) GetOrCreateControlPlane(ctx context.Context) 
 	}
 	if clusterId == nil {
 		return nil, errors.New(fmt.Sprintf("oke cluster ws not created with the request, please create a "+
-			"support ticket with opc-request-id %s", *wrResponse.OpcRequestId))
+			"support ticket with opc-request-id %s", ptr.ToString(wrResponse.OpcRequestId)))
 	}
 	s.OCIManagedControlPlane.Spec.ID = clusterId
 	return s.getOKEClusterFromOCID(ctx, clusterId)
