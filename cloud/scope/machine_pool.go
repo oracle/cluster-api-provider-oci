@@ -51,9 +51,10 @@ import (
 )
 
 const (
-	OCIMachinePoolKind                  = "OCIMachinePool"
-	InstanceConfigurationHashAnnotation = "oci.oraclecloud.com/instance-configuration-hash"
-	BootstrapDataHashAnnotation         = "oci.oraclecloud.com/bootstrap-data-hash"
+	OCIMachinePoolKind                     = "OCIMachinePool"
+	InstanceConfigurationHashAnnotation    = "oci.oraclecloud.com/instance-configuration-hash"
+	InstanceConfigurationCPUModeAnnotation = "oci.oraclecloud.com/instance-configuration-cpu-mode"
+	BootstrapDataHashAnnotation            = "oci.oraclecloud.com/bootstrap-data-hash"
 )
 
 // MachinePoolScopeParams defines the params need to create a new MachineScope
@@ -324,6 +325,12 @@ func (m *MachinePoolScope) buildInstanceConfigurationShapeConfig() (core.Instanc
 	shapeConfig := core.InstanceConfigurationLaunchInstanceShapeConfigDetails{}
 	shapeConfigSpec := m.OCIMachinePool.Spec.InstanceConfiguration.ShapeConfig
 	if shapeConfigSpec != nil {
+		if shapeConfigSpec.Ocpus != nil && shapeConfigSpec.Vcpus != nil {
+			return shapeConfig, errors.New("ocpus and vcpus are mutually exclusive; specify at most one")
+		}
+		if shapeConfigSpec.Vcpus != nil && (*shapeConfigSpec.Vcpus < 2 || *shapeConfigSpec.Vcpus%2 != 0) {
+			return shapeConfig, errors.New("vcpus must be a positive multiple of 2")
+		}
 		if shapeConfigSpec.Ocpus != nil {
 			ocpus, err := strconv.ParseFloat(*shapeConfigSpec.Ocpus, 32)
 			if err != nil {
@@ -349,6 +356,7 @@ func (m *MachinePoolScope) buildInstanceConfigurationShapeConfig() (core.Instanc
 			}
 			shapeConfig.BaselineOcpuUtilization = value
 		}
+		shapeConfig.Vcpus = shapeConfigSpec.Vcpus
 		shapeConfig.Nvmes = shapeConfigSpec.Nvmes
 	}
 
@@ -472,6 +480,19 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context, _
 		return err
 	}
 
+	desiredCPUMode := "default"
+	if desiredLaunch.ShapeConfig != nil {
+		if desiredLaunch.ShapeConfig.Ocpus != nil {
+			desiredCPUMode = "ocpus"
+		} else if desiredLaunch.ShapeConfig.Vcpus != nil {
+			desiredCPUMode = "vcpus"
+		}
+	}
+	previousCPUMode := m.OCIMachinePool.Annotations[InstanceConfigurationCPUModeAnnotation]
+	knownCPUMode := previousCPUMode == "ocpus" || previousCPUMode == "vcpus" || previousCPUMode == "default"
+	// OCI defaults hide removed CPU fields from the projected hash comparison.
+	cpuModeChanged := knownCPUMode && previousCPUMode != desiredCPUMode
+
 	// Compute config hash (excludes user_data — tracked separately)
 	desiredConfigHash, err := hash.ComputeHash(desiredLaunch)
 	if err != nil {
@@ -493,6 +514,7 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context, _
 		}
 		m.setInstanceConfigurationHashAnnotation(desiredConfigHash)
 		m.setBootstrapDataHashAnnotation(desiredBootstrapHash)
+		m.OCIMachinePool.Annotations[InstanceConfigurationCPUModeAnnotation] = desiredCPUMode
 		if err := m.PatchObject(ctx); err != nil {
 			return err
 		}
@@ -572,12 +594,13 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context, _
 		"desiredIgnoringToken", desiredBootstrapHashIgnoringToken,
 		"actualIgnoringToken", actualBootstrapHashIgnoringToken)
 
-	if !configChanged && !bootstrapChanged {
+	if !configChanged && !bootstrapChanged && !cpuModeChanged {
 		m.Info("Instance configuration is up-to-date, no recreate",
 			"configHash", desiredConfigHash,
 			"bootstrapHash", desiredBootstrapHash)
 		// Keep annotations consistent for observability
-		needsAnnotationUpdate := false
+		needsAnnotationUpdate := previousCPUMode != desiredCPUMode
+		m.OCIMachinePool.Annotations[InstanceConfigurationCPUModeAnnotation] = desiredCPUMode
 		if storedConfigHash != actualConfigHash {
 			m.setInstanceConfigurationHashAnnotation(actualConfigHash)
 			needsAnnotationUpdate = true
@@ -595,6 +618,7 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context, _
 	// At least one signal changed, create new IC
 	m.Info("creating new version for instance configuration",
 		"needsUpdate", configChanged,
+		"cpuModeChanged", cpuModeChanged,
 		"userDataHashChanged", bootstrapChanged,
 		"tokenOnlyBootstrapChanged", tokenOnlyBootstrapChanged,
 		"desiredConfigHash", desiredConfigHash,
@@ -607,6 +631,7 @@ func (m *MachinePoolScope) ReconcileInstanceConfiguration(ctx context.Context, _
 	}
 	m.setInstanceConfigurationHashAnnotation(desiredConfigHash)
 	m.setBootstrapDataHashAnnotation(desiredBootstrapHash)
+	m.OCIMachinePool.Annotations[InstanceConfigurationCPUModeAnnotation] = desiredCPUMode
 	if err := m.PatchObject(ctx); err != nil {
 		return err
 	}

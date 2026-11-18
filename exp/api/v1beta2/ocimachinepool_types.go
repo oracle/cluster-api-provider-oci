@@ -139,9 +139,18 @@ type LaunchDetails struct {
 
 // ShapeConfig defines the configuration options for the compute instance shape
 // https://docs.oracle.com/en-us/iaas/api/#/en/iaas/20160918/datatypes/LaunchInstanceShapeConfigDetails
+// +kubebuilder:validation:XValidation:rule="!has(self.ocpus) || !has(self.vcpus)",message="ocpus and vcpus are mutually exclusive; specify at most one"
 type ShapeConfig struct {
 	// The total number of OCPUs available to the instance.
+	// Omitting both CPU fields uses shape defaults for future workers. Existing workers are unchanged.
 	Ocpus *string `json:"ocpus,omitempty"`
+
+	// The total number of VCPUs available to the instance, as an alternative to OCPUs.
+	// Ocpus and Vcpus are mutually exclusive. Must be a positive multiple of 2.
+	// Removing the selected CPU field after reconciliation restores shape defaults for future workers.
+	// +kubebuilder:validation:Minimum=2
+	// +kubebuilder:validation:MultipleOf=2
+	Vcpus *int `json:"vcpus,omitempty"`
 
 	// The total amount of memory available to the instance, in gigabytes.
 	MemoryInGBs *string `json:"memoryInGBs,omitempty"`

@@ -37,6 +37,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -163,6 +164,28 @@ func TestInstanceConfigCreate(t *testing.T) {
 	teardown := func(t *testing.T, g *WithT) {
 		mockCtrl.Finish()
 	}
+
+	t.Run("invalid CPU config bypassing admission", func(t *testing.T) {
+		g := NewWithT(t)
+		defer teardown(t, g)
+		setup(t, g)
+		ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+			Shape:                   common.String("test-shape"),
+			InstanceConfigurationId: common.String("test"),
+			ShapeConfig:             &infrav2exp.ShapeConfig{Ocpus: common.String(""), Vcpus: common.Int(0)},
+		}
+		computeManagementClient.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Any()).
+			Return(core.GetInstanceConfigurationResponse{InstanceConfiguration: core.InstanceConfiguration{Id: common.String("test")}}, nil)
+		computeManagementClient.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).Times(0)
+
+		err := ms.ReconcileInstanceConfiguration(context.Background(), nil)
+		g.Expect(err).To(MatchError("ocpus and vcpus are mutually exclusive; specify at most one"))
+		condition := v1beta1conditions.Get(ms.OCIMachinePool, infrav2exp.LaunchTemplateReadyCondition)
+		g.Expect(condition).NotTo(BeNil())
+		g.Expect(condition.Status).To(Equal(corev1.ConditionFalse))
+		g.Expect(condition.Reason).To(Equal(infrav2exp.LaunchTemplateCreateFailedReason))
+		g.Expect(condition.Message).To(Equal(err.Error()))
+	})
 
 	tests := []struct {
 		name                 string
@@ -1331,6 +1354,130 @@ func TestBackfillAnnotations_Upgrade(t *testing.T) {
 		}
 		return ms, computeMgmt
 	}
+
+	t.Run("CPU intent transitions", func(t *testing.T) {
+		for _, tc := range []struct {
+			name, previous, desired                                        string
+			memoryOnly, numericDrift, bootstrapDrift, failFirst, omitShape bool
+			wantCreate                                                     bool
+		}{
+			{name: "remove vcpus", previous: "vcpus", desired: "default", wantCreate: true},
+			{name: "remove ocpus", previous: "ocpus", desired: "default", wantCreate: true},
+			{name: "remove vcpus retain memory", previous: "vcpus", desired: "default", memoryOnly: true, wantCreate: true},
+			{name: "switch to ocpus", previous: "vcpus", desired: "ocpus", wantCreate: true},
+			{name: "switch to vcpus", previous: "ocpus", desired: "vcpus", wantCreate: true},
+			{name: "never specified", desired: "default"},
+			{name: "never specified absent shape", desired: "default", omitShape: true},
+			{name: "never specified memory only", desired: "default", memoryOnly: true},
+			{name: "unknown history ocpus", desired: "ocpus"},
+			{name: "unknown history vcpus", desired: "vcpus"},
+			{name: "unrecognized history", previous: "unknown", desired: "default"},
+			{name: "unrecognized history vcpus", previous: "unknown", desired: "vcpus"},
+			{name: "unknown history numeric drift", desired: "vcpus", numericDrift: true, wantCreate: true},
+			{name: "unknown history bootstrap drift", desired: "default", bootstrapDrift: true, wantCreate: true},
+			{name: "failed removal retries", previous: "vcpus", desired: "default", failFirst: true, wantCreate: true},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				g := NewWithT(t)
+				ms, computeMgmt := buildScope(t)
+				shape := &infrav2exp.ShapeConfig{}
+				switch tc.desired {
+				case "ocpus":
+					shape.Ocpus = common.String("1")
+				case "vcpus":
+					shape.Vcpus = common.Int(2)
+				}
+				if tc.memoryOnly {
+					shape.MemoryInGBs = common.String("16")
+				}
+				if tc.omitShape {
+					shape = nil
+				}
+				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+					Shape: common.String("test-shape"), InstanceConfigurationId: common.String("test"), ShapeConfig: shape,
+				}
+				ms.OCIMachinePool.Annotations = map[string]string{
+					InstanceConfigurationCPUModeAnnotation: tc.previous,
+					InstanceConfigurationHashAnnotation:    "stale-observational-hash",
+					BootstrapDataHashAnnotation:            "stale-bootstrap-hash",
+				}
+				if tc.previous == "" {
+					delete(ms.OCIMachinePool.Annotations, InstanceConfigurationCPUModeAnnotation)
+				}
+				actual := matchingActualLaunch()
+				actual.ShapeConfig = &core.InstanceConfigurationLaunchInstanceShapeConfigDetails{
+					Ocpus: common.Float32(1), Vcpus: common.Int(2), MemoryInGBs: common.Float32(16),
+				}
+				if tc.numericDrift {
+					actual.ShapeConfig.Vcpus = common.Int(4)
+				}
+				if tc.bootstrapDrift {
+					actual.Metadata = map[string]string{"user_data": "b2xk"}
+				}
+				computeMgmt.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Any()).Return(core.GetInstanceConfigurationResponse{
+					InstanceConfiguration: core.InstanceConfiguration{Id: common.String("test"), InstanceDetails: core.ComputeInstanceDetails{LaunchDetails: actual}},
+				}, nil)
+				var created *core.InstanceConfigurationLaunchInstanceDetails
+				if tc.wantCreate {
+					if tc.failFirst {
+						computeMgmt.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).Return(core.CreateInstanceConfigurationResponse{}, fmt.Errorf("create failed"))
+						g.Expect(ms.ReconcileInstanceConfiguration(context.Background(), nil)).To(MatchError("create failed"))
+						g.Expect(ms.OCIMachinePool.Annotations[InstanceConfigurationCPUModeAnnotation]).To(Equal(tc.previous))
+						g.Expect(ms.PatchObject(context.Background())).To(Succeed())
+						persisted := &infrav2exp.OCIMachinePool{}
+						g.Expect(ms.Client.Get(context.Background(), client.ObjectKeyFromObject(ms.OCIMachinePool), persisted)).To(Succeed())
+						g.Expect(persisted.Annotations[InstanceConfigurationCPUModeAnnotation]).To(Equal(tc.previous))
+						retry, err := NewMachinePoolScope(MachinePoolScopeParams{
+							ComputeManagementClient: computeMgmt, OCIMachinePool: persisted, OCIClusterAccessor: ms.OCIClusterAccesor,
+							Cluster: ms.Cluster, MachinePool: ms.MachinePool, Client: ms.Client,
+						})
+						g.Expect(err).NotTo(HaveOccurred())
+						ms = retry
+						computeMgmt.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Any()).Return(core.GetInstanceConfigurationResponse{
+							InstanceConfiguration: core.InstanceConfiguration{Id: common.String("test"), InstanceDetails: core.ComputeInstanceDetails{LaunchDetails: actual}},
+						}, nil)
+					}
+					computeMgmt.EXPECT().CreateInstanceConfiguration(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, req core.CreateInstanceConfigurationRequest) (core.CreateInstanceConfigurationResponse, error) {
+						created = req.CreateInstanceConfiguration.(core.CreateInstanceConfigurationDetails).InstanceDetails.(core.ComputeInstanceDetails).LaunchDetails
+						return core.CreateInstanceConfigurationResponse{InstanceConfiguration: core.InstanceConfiguration{Id: common.String("new-id")}}, nil
+					})
+					computeMgmt.EXPECT().ListInstanceConfigurations(gomock.Any(), gomock.Any()).Return(core.ListInstanceConfigurationsResponse{}, nil)
+				}
+				g.Expect(ms.ReconcileInstanceConfiguration(context.Background(), nil)).To(Succeed())
+				if tc.wantCreate {
+					g.Expect(created).NotTo(BeNil())
+					if tc.desired == "default" && !tc.memoryOnly {
+						g.Expect(created.ShapeConfig).To(BeNil())
+					} else {
+						g.Expect(created.ShapeConfig.Ocpus != nil).To(Equal(tc.desired == "ocpus"))
+						g.Expect(created.ShapeConfig.Vcpus != nil).To(Equal(tc.desired == "vcpus"))
+						if tc.memoryOnly {
+							g.Expect(created.ShapeConfig.MemoryInGBs).To(Equal(common.Float32(16)))
+						}
+					}
+				}
+				stored := &infrav2exp.OCIMachinePool{}
+				g.Expect(ms.Client.Get(context.Background(), client.ObjectKeyFromObject(ms.OCIMachinePool), stored)).To(Succeed())
+				g.Expect(stored.Annotations[InstanceConfigurationCPUModeAnnotation]).To(Equal(tc.desired))
+				wantID := "test"
+				if tc.wantCreate {
+					wantID = "new-id"
+				}
+				g.Expect(stored.Spec.InstanceConfiguration.InstanceConfigurationId).To(Equal(common.String(wantID)))
+				fresh, err := NewMachinePoolScope(MachinePoolScopeParams{
+					ComputeManagementClient: computeMgmt, OCIMachinePool: stored, OCIClusterAccessor: ms.OCIClusterAccesor,
+					Cluster: ms.Cluster, MachinePool: ms.MachinePool, Client: ms.Client,
+				})
+				g.Expect(err).NotTo(HaveOccurred())
+				actual = matchingActualLaunch()
+				actual.ShapeConfig = &core.InstanceConfigurationLaunchInstanceShapeConfigDetails{Ocpus: common.Float32(1), Vcpus: common.Int(2), MemoryInGBs: common.Float32(16)}
+				computeMgmt.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Eq(core.GetInstanceConfigurationRequest{InstanceConfigurationId: common.String(wantID)})).Return(core.GetInstanceConfigurationResponse{
+					InstanceConfiguration: core.InstanceConfiguration{Id: common.String(wantID), InstanceDetails: core.ComputeInstanceDetails{LaunchDetails: actual}},
+				}, nil)
+				g.Expect(fresh.ReconcileInstanceConfiguration(context.Background(), nil)).To(Succeed())
+			})
+		}
+	})
 
 	// -----------------------------------------------------------------
 	t.Run("both annotations missing, config matches — backfill only, no recreate", func(t *testing.T) {
@@ -2835,6 +2982,42 @@ func TestSyncReplicasFromInstancePool(t *testing.T) {
 			g.Expect(err).To(BeNil())
 			g.Expect(updatedMachinePool.Spec.Replicas).ToNot(BeNil())
 			g.Expect(*updatedMachinePool.Spec.Replicas).To(Equal(tc.expectedReplicas))
+		})
+	}
+}
+
+func TestBuildInstanceConfigurationShapeConfigCPUs(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		spec    *infrav2exp.ShapeConfig
+		want    core.InstanceConfigurationLaunchInstanceShapeConfigDetails
+		wantErr string
+	}{
+		{name: "absent"},
+		{name: "empty", spec: &infrav2exp.ShapeConfig{}},
+		{name: "ocpus", spec: &infrav2exp.ShapeConfig{Ocpus: common.String("1.5")}, want: core.InstanceConfigurationLaunchInstanceShapeConfigDetails{Ocpus: common.Float32(1.5)}},
+		{name: "vcpus", spec: &infrav2exp.ShapeConfig{Vcpus: common.Int(2)}, want: core.InstanceConfigurationLaunchInstanceShapeConfigDetails{Vcpus: common.Int(2)}},
+		{name: "four vcpus", spec: &infrav2exp.ShapeConfig{Vcpus: common.Int(4)}, want: core.InstanceConfigurationLaunchInstanceShapeConfigDetails{Vcpus: common.Int(4)}},
+		{name: "zero vcpus", spec: &infrav2exp.ShapeConfig{Vcpus: common.Int(0)}, wantErr: "vcpus must be a positive multiple of 2"},
+		{name: "negative even vcpus", spec: &infrav2exp.ShapeConfig{Vcpus: common.Int(-2)}, wantErr: "vcpus must be a positive multiple of 2"},
+		{name: "negative odd vcpus", spec: &infrav2exp.ShapeConfig{Vcpus: common.Int(-1)}, wantErr: "vcpus must be a positive multiple of 2"},
+		{name: "one vcpu", spec: &infrav2exp.ShapeConfig{Vcpus: common.Int(1)}, wantErr: "vcpus must be a positive multiple of 2"},
+		{name: "three vcpus", spec: &infrav2exp.ShapeConfig{Vcpus: common.Int(3)}, wantErr: "vcpus must be a positive multiple of 2"},
+		{name: "both", spec: &infrav2exp.ShapeConfig{Ocpus: common.String("1"), Vcpus: common.Int(2)}, wantErr: "ocpus and vcpus are mutually exclusive; specify at most one"},
+		{name: "both with empty ocpus and zero vcpus", spec: &infrav2exp.ShapeConfig{Ocpus: common.String(""), Vcpus: common.Int(0)}, wantErr: "ocpus and vcpus are mutually exclusive; specify at most one"},
+		{name: "invalid ocpus only", spec: &infrav2exp.ShapeConfig{Ocpus: common.String("")}, wantErr: "ocpus provided  is not a valid floating point"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+			ms := &MachinePoolScope{OCIMachinePool: &infrav2exp.OCIMachinePool{Spec: infrav2exp.OCIMachinePoolSpec{InstanceConfiguration: infrav2exp.InstanceConfiguration{ShapeConfig: tc.spec}}}}
+			got, err := ms.buildInstanceConfigurationShapeConfig()
+			if tc.wantErr != "" {
+				g.Expect(err).To(MatchError(tc.wantErr))
+				g.Expect(got).To(BeZero())
+				return
+			}
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(got).To(Equal(tc.want))
 		})
 	}
 }
