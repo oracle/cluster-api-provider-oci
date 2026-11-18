@@ -671,7 +671,9 @@ spec:
                       vcpus:
                         description: |-
                           The total number of VCPUs available to the instance, as an alternative to OCPUs.
-                          Ocpus and Vcpus are mutually exclusive.
+                          Ocpus and Vcpus are mutually exclusive. Must be a positive multiple of 2.
+                        minimum: 2
+                        multipleOf: 2
                         type: integer
                     type: object
                     x-kubernetes-validations:
@@ -1446,7 +1448,9 @@ spec:
                       vcpus:
                         description: |-
                           The total number of VCPUs available to the instance, as an alternative to OCPUs.
-                          Ocpus and Vcpus are mutually exclusive.
+                          Ocpus and Vcpus are mutually exclusive. Must be a positive multiple of 2.
+                        minimum: 2
+                        multipleOf: 2
                         type: integer
                     type: object
                     x-kubernetes-validations:

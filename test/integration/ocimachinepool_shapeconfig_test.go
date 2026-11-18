@@ -54,14 +54,14 @@ func TestOCIMachinePoolShapeConfigValidation(t *testing.T) {
 				}
 				NewWithT(t).Expect(unstructured.SetNestedMap(pool.Object, shape, "spec", "instanceConfiguration", "shapeConfig")).To(Succeed())
 			}
-			assertInvalid := func(t *testing.T, err error) {
+			assertInvalid := func(t *testing.T, err error, field, message string) {
 				t.Helper()
 				g := NewWithT(t)
 				g.Expect(apierrors.IsInvalid(err)).To(BeTrue(), "expected an invalid shapeConfig, got %v", err)
 				status := err.(apierrors.APIStatus).Status()
 				g.Expect(status.Details.Causes).To(ContainElement(And(
-					HaveField("Field", "spec.instanceConfiguration.shapeConfig"),
-					HaveField("Message", ContainSubstring("ocpus and vcpus are mutually exclusive; specify at most one")),
+					HaveField("Field", field),
+					HaveField("Message", ContainSubstring(message)),
 				)))
 			}
 			assertStored := func(t *testing.T, pool *unstructured.Unstructured, shape map[string]interface{}) {
@@ -86,15 +86,23 @@ func TestOCIMachinePoolShapeConfigValidation(t *testing.T) {
 				name    string
 				shape   map[string]interface{}
 				invalid bool
+				numeric bool
+				message string
 			}{
 				{name: "absent"},
 				{name: "empty", shape: map[string]interface{}{}},
 				{name: "ocpus", shape: map[string]interface{}{"ocpus": "1"}},
 				{name: "vcpus", shape: map[string]interface{}{"vcpus": int64(2)}},
-				{name: "zero vcpus", shape: map[string]interface{}{"vcpus": int64(0)}},
+				{name: "four vcpus", shape: map[string]interface{}{"vcpus": int64(4)}},
+				{name: "zero vcpus", shape: map[string]interface{}{"vcpus": int64(0)}, numeric: true, message: "greater than or equal to 2"},
+				{name: "negative even vcpus", shape: map[string]interface{}{"vcpus": int64(-2)}, numeric: true, message: "greater than or equal to 2"},
+				{name: "negative odd vcpus", shape: map[string]interface{}{"vcpus": int64(-1)}, numeric: true, message: "greater than or equal to 2"},
+				{name: "one vcpu", shape: map[string]interface{}{"vcpus": int64(1)}, numeric: true, message: "greater than or equal to 2"},
+				{name: "three vcpus", shape: map[string]interface{}{"vcpus": int64(3)}, numeric: true, message: "multiple of 2"},
 				{name: "both", shape: map[string]interface{}{"ocpus": "1", "vcpus": int64(2)}, invalid: true},
 				{name: "empty ocpus and vcpus", shape: map[string]interface{}{"ocpus": "", "vcpus": int64(2)}, invalid: true},
-				{name: "ocpus and zero vcpus", shape: map[string]interface{}{"ocpus": "1", "vcpus": int64(0)}, invalid: true},
+				{name: "ocpus and zero vcpus", shape: map[string]interface{}{"ocpus": "1", "vcpus": int64(0)}, numeric: true, message: "greater than or equal to 2"},
+				{name: "empty ocpus and zero vcpus", shape: map[string]interface{}{"ocpus": "", "vcpus": int64(0)}, numeric: true, message: "greater than or equal to 2"},
 				{name: "null ocpus", shape: map[string]interface{}{"ocpus": nil, "vcpus": int64(2)}},
 				{name: "null vcpus", shape: map[string]interface{}{"ocpus": "1", "vcpus": nil}},
 				{name: "both null", shape: map[string]interface{}{"ocpus": nil, "vcpus": nil}},
@@ -118,8 +126,10 @@ func TestOCIMachinePoolShapeConfigValidation(t *testing.T) {
 							} else {
 								err = testEnvironment.Update(testContext, pool)
 							}
-							if tc.invalid {
-								assertInvalid(t, err)
+							if tc.numeric {
+								assertInvalid(t, err, "spec.instanceConfiguration.shapeConfig.vcpus", tc.message)
+							} else if tc.invalid {
+								assertInvalid(t, err, "spec.instanceConfiguration.shapeConfig", "ocpus and vcpus are mutually exclusive; specify at most one")
 							} else {
 								g.Expect(err).NotTo(HaveOccurred())
 								assertStored(t, pool, tc.shape)
@@ -137,7 +147,7 @@ func TestOCIMachinePoolShapeConfigValidation(t *testing.T) {
 				t.Cleanup(func() { deleteAndIgnoreNotFound(t, pool) })
 				for _, target := range []map[string]interface{}{{"vcpus": int64(2)}, {"ocpus": "1"}} {
 					setShape(pool, map[string]interface{}{"ocpus": "1", "vcpus": int64(2)})
-					assertInvalid(t, testEnvironment.Update(testContext, pool))
+					assertInvalid(t, testEnvironment.Update(testContext, pool), "spec.instanceConfiguration.shapeConfig", "ocpus and vcpus are mutually exclusive; specify at most one")
 					setShape(pool, target)
 					g.Expect(testEnvironment.Update(testContext, pool)).To(Succeed())
 					assertStored(t, pool, target)
