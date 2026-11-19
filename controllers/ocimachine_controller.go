@@ -141,7 +141,7 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			OCIManagedCluster: ociManagedCluster,
 		}
 	} else {
-		r.Recorder.Eventf(ociMachine, corev1.EventTypeWarning, "InfrastructureClusterTypeNotSupported", fmt.Sprintf("Infrastructure Cluster Type %s is not supported", cluster.Spec.InfrastructureRef.Kind))
+		r.Recorder.Eventf(ociMachine, corev1.EventTypeWarning, "InfrastructureClusterTypeNotSupported", "Infrastructure Cluster Type %s is not supported", cluster.Spec.InfrastructureRef.Kind)
 		return ctrl.Result{}, errors.New(fmt.Sprintf("Infrastructure Cluster Type %s is not supported", cluster.Spec.InfrastructureRef.Kind))
 	}
 

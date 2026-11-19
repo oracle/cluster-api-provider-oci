@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -171,7 +170,7 @@ func (r *OCIClusterReconciler) reconcileComponent(ctx context.Context, cluster *
 
 	trimmedComponentName := strings.ReplaceAll(componentName, " ", "")
 	r.Recorder.Eventf(cluster, corev1.EventTypeNormal, readyEventtype,
-		fmt.Sprintf("%s is in ready state", trimmedComponentName))
+		"%s is in ready state", trimmedComponentName)
 
 	return nil
 }

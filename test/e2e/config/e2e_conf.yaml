@@ -8,8 +8,8 @@ providers:
   - name: cluster-api
     type: CoreProvider
     versions:
-      - name: v1.13.7
-        value: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.13.7/core-components.yaml
+      - name: v1.14.4
+        value: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.14.4/core-components.yaml
         type: url
         files:
           - sourcePath: "../data/shared/v1beta2/metadata.yaml"
@@ -21,8 +21,8 @@ providers:
   - name: kubeadm
     type: BootstrapProvider
     versions:
-      - name: v1.13.7
-        value: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.13.7/bootstrap-components.yaml
+      - name: v1.14.4
+        value: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.14.4/bootstrap-components.yaml
         type: url
         files:
           - sourcePath: "../data/shared/v1beta2/metadata.yaml"
@@ -34,8 +34,8 @@ providers:
   - name: kubeadm
     type: ControlPlaneProvider
     versions:
-      - name: v1.13.7
-        value: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.13.7/control-plane-components.yaml
+      - name: v1.14.4
+        value: https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.14.4/control-plane-components.yaml
         type: url
         files:
           - sourcePath: "../data/shared/v1beta2/metadata.yaml"
@@ -84,7 +84,8 @@ providers:
           - sourcePath: "../data/infrastructure-oci/v1beta1/metadata.yaml"
 
 variables:
-  KUBERNETES_VERSION: "v1.36.2"
+  # Match the base OCI image; upgrade tests cover v1.36.2 separately.
+  KUBERNETES_VERSION: "v1.35.6"
   OCI_MANAGED_KUBERNETES_VERSION: "v1.35.2"
   OCI_MANAGED_KUBERNETES_VERSION_UPGRADE: "v1.36.1"
   EXP_CLUSTER_RESOURCE_SET: "true"

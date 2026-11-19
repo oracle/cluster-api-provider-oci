@@ -146,7 +146,7 @@ func (r *OCIMachinePoolReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			OCIManagedCluster: ociManagedCluster,
 		}
 	} else {
-		r.Recorder.Eventf(ociMachinePool, corev1.EventTypeWarning, "InfrastructureClusterTypeNotSupported", fmt.Sprintf("Infrastructure Cluster Type %s is not supported", cluster.Spec.InfrastructureRef.Kind))
+		r.Recorder.Eventf(ociMachinePool, corev1.EventTypeWarning, "InfrastructureClusterTypeNotSupported", "Infrastructure Cluster Type %s is not supported", cluster.Spec.InfrastructureRef.Kind)
 		return ctrl.Result{}, errors.New(fmt.Sprintf("Infrastructure Cluster Type %s is not supported", cluster.Spec.InfrastructureRef.Kind))
 	}
 
@@ -442,11 +442,11 @@ func (r *OCIMachinePoolReconciler) reconcileDelete(ctx context.Context, machineP
 			// Instance Pool is already deleted
 			machinePoolScope.OCIMachinePool.Status.Ready = false
 			v1beta1conditions.MarkFalse(machinePoolScope.OCIMachinePool, infrav2exp.InstancePoolReadyCondition, infrav2exp.InstancePoolDeletionInProgress, clusterv1beta1.ConditionSeverityWarning, "")
-			r.Recorder.Eventf(machinePoolScope.OCIMachinePool, corev1.EventTypeWarning, "DeletionInProgress", "Instance Pool deletion in progress: %s - %s", instancePool.DisplayName, instancePool.Id)
+			r.Recorder.Eventf(machinePoolScope.OCIMachinePool, corev1.EventTypeWarning, "DeletionInProgress", "Instance Pool deletion in progress: %s - %s", ptr.ToString(instancePool.DisplayName), ptr.ToString(instancePool.Id))
 			machinePoolScope.Info("Instance Pool is already deleted", "displayName", instancePool.DisplayName, "id", instancePool.Id)
 		default:
 			if err := machinePoolScope.TerminateInstancePool(ctx, instancePool); err != nil {
-				r.Recorder.Eventf(machinePoolScope.OCIMachinePool, corev1.EventTypeWarning, "FailedDelete", "Failed to delete instance pool %q: %v", instancePool.Id, err)
+				r.Recorder.Eventf(machinePoolScope.OCIMachinePool, corev1.EventTypeWarning, "FailedDelete", "Failed to delete instance pool %q: %v", ptr.ToString(instancePool.Id), err)
 				return ctrl.Result{}, errors.Wrap(err, "failed to delete instance pool")
 			} else {
 				// check back after 30 seconds
@@ -470,7 +470,7 @@ func (r *OCIMachinePoolReconciler) reconcileDelete(ctx context.Context, machineP
 		machinePoolScope.Info("deleting instance configuration", "id", *instanceConfigurationId)
 		req := core.DeleteInstanceConfigurationRequest{InstanceConfigurationId: instanceConfigurationId}
 		if _, err := machinePoolScope.ComputeManagementClient.DeleteInstanceConfiguration(ctx, req); err != nil {
-			r.Recorder.Eventf(machinePoolScope.OCIMachinePool, corev1.EventTypeWarning, "FailedDelete", "Failed to delete instance configuration %q: %v", instanceConfigurationId, err)
+			r.Recorder.Eventf(machinePoolScope.OCIMachinePool, corev1.EventTypeWarning, "FailedDelete", "Failed to delete instance configuration %q: %v", ptr.ToString(instanceConfigurationId), err)
 			return ctrl.Result{}, errors.Wrap(err, "failed to delete instance configuration")
 		}
 	}
