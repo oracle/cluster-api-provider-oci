@@ -84,7 +84,8 @@ providers:
           - sourcePath: "../data/infrastructure-oci/v1beta1/metadata.yaml"
 
 variables:
-  KUBERNETES_VERSION: "v1.36.2"
+  # Match the base OCI image; upgrade tests cover v1.36.2 separately.
+  KUBERNETES_VERSION: "v1.35.6"
   OCI_MANAGED_KUBERNETES_VERSION: "v1.35.2"
   OCI_MANAGED_KUBERNETES_VERSION_UPGRADE: "v1.36.1"
   EXP_CLUSTER_RESOURCE_SET: "true"
