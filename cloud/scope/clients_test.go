@@ -19,7 +19,6 @@ package scope
 import (
 	"net/http"
 	"reflect"
-	"strings"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -242,12 +241,9 @@ func TestSetCAPOCIRequestHeaders(t *testing.T) {
 		t.Fatalf("unexpected interceptor error on second call: %v", err)
 	}
 
-	userAgent := request.Header.Get("User-Agent")
-	if !strings.Contains(userAgent, originalUserAgent) {
-		t.Fatalf("expected user-agent %q to preserve original content %q", userAgent, originalUserAgent)
-	}
-	if strings.Count(userAgent, capociUserAgentToken) != 1 {
-		t.Fatalf("expected user-agent %q to contain %q exactly once", userAgent, capociUserAgentToken)
+	wantUserAgent := originalUserAgent + " Oracle-ClusterAPI/" + version.GitVersion
+	if userAgent := request.Header.Get("User-Agent"); userAgent != wantUserAgent {
+		t.Fatalf("expected user-agent %q, got %q", wantUserAgent, userAgent)
 	}
 	if request.Header.Get("X-CAPOCI-VERSION") != version.GitVersion {
 		t.Fatalf("expected X-CAPOCI-VERSION %q, got %q", version.GitVersion, request.Header.Get("X-CAPOCI-VERSION"))

@@ -370,7 +370,8 @@ func (c *ClientProvider) createBaseClient(region string, ociAuthConfigProvider c
 
 func setCAPOCIRequestHeaders() func(request *http.Request) error {
 	return func(request *http.Request) error {
-		request.Header.Set("User-Agent", appendUserAgentToken(request.Header.Get("User-Agent"), capociUserAgentToken))
+		userAgentToken := capociUserAgentToken + "/" + version.GitVersion
+		request.Header.Set("User-Agent", appendUserAgentToken(request.Header.Get("User-Agent"), userAgentToken))
 		request.Header.Set("X-CAPOCI-VERSION", version.GitVersion)
 		return nil
 	}
