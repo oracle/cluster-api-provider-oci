@@ -295,3 +295,31 @@ func TestOCIManagedMachinePool_ValidateUpdate(t *testing.T) {
 		})
 	}
 }
+
+func TestOCIManagedMachinePoolValidateVersion(t *testing.T) {
+	for _, tt := range []struct {
+		version string
+		valid   bool
+	}{
+		{"v1.36.0", true},
+		{"v1.36.0-rc.1", true},
+		{"v1.36.0+build.1", true},
+		{"v1.36.0_build.1", false},
+		{"v1.36.0abc", false},
+		{"v1.36.0-", false},
+		{"v1.36.0-01", false},
+		{"v1.36.0++", false},
+		{"v1.36.0-alpha..1", false},
+		{"1.36.0", false},
+		{"v01.36.0", false},
+		{"v1.36", false},
+		{"v1.36.0 invalid", false},
+	} {
+		t.Run(tt.version, func(t *testing.T) {
+			pool := &OCIManagedMachinePool{Spec: OCIManagedMachinePoolSpec{Version: &tt.version}}
+			if valid := len(pool.validateVersion(nil)) == 0; valid != tt.valid {
+				t.Errorf("validateVersion(%q) valid = %t, want %t", tt.version, valid, tt.valid)
+			}
+		})
+	}
+}

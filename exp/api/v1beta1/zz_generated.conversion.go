@@ -31,7 +31,7 @@ import (
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	corev1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
-	errors "sigs.k8s.io/cluster-api/errors"
+	errors "sigs.k8s.io/cluster-api/api/deprecated/errors"
 )
 
 func init() {
