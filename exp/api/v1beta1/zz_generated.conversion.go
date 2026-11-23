@@ -1419,6 +1419,7 @@ func Convert_v1beta2_PodConfig_To_v1beta1_PodConfig(in *v1beta2.PodConfig, out *
 
 func autoConvert_v1beta1_ShapeConfig_To_v1beta2_ShapeConfig(in *ShapeConfig, out *v1beta2.ShapeConfig, s conversion.Scope) error {
 	out.Ocpus = (*string)(unsafe.Pointer(in.Ocpus))
+	out.Vcpus = (*int)(unsafe.Pointer(in.Vcpus))
 	out.MemoryInGBs = (*string)(unsafe.Pointer(in.MemoryInGBs))
 	out.BaselineOcpuUtilization = in.BaselineOcpuUtilization
 	out.Nvmes = (*int)(unsafe.Pointer(in.Nvmes))
@@ -1432,6 +1433,7 @@ func Convert_v1beta1_ShapeConfig_To_v1beta2_ShapeConfig(in *ShapeConfig, out *v1
 
 func autoConvert_v1beta2_ShapeConfig_To_v1beta1_ShapeConfig(in *v1beta2.ShapeConfig, out *ShapeConfig, s conversion.Scope) error {
 	out.Ocpus = (*string)(unsafe.Pointer(in.Ocpus))
+	out.Vcpus = (*int)(unsafe.Pointer(in.Vcpus))
 	out.MemoryInGBs = (*string)(unsafe.Pointer(in.MemoryInGBs))
 	out.BaselineOcpuUtilization = in.BaselineOcpuUtilization
 	out.Nvmes = (*int)(unsafe.Pointer(in.Nvmes))

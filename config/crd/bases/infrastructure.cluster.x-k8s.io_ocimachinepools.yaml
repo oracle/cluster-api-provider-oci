@@ -666,9 +666,23 @@ spec:
                           used for storage. A single drive has 6.8 TB available.
                         type: integer
                       ocpus:
-                        description: The total number of OCPUs available to the instance.
+                        description: |-
+                          The total number of OCPUs available to the instance.
+                          Omitting both CPU fields uses shape defaults for future workers. Existing workers are unchanged.
                         type: string
+                      vcpus:
+                        description: |-
+                          The total number of VCPUs available to the instance, as an alternative to OCPUs.
+                          Ocpus and Vcpus are mutually exclusive. Must be a positive multiple of 2.
+                          Removing the selected CPU field after reconciliation restores shape defaults for future workers.
+                        minimum: 2
+                        multipleOf: 2
+                        type: integer
                     type: object
+                    x-kubernetes-validations:
+                    - message: ocpus and vcpus are mutually exclusive; specify at
+                        most one
+                      rule: '!has(self.ocpus) || !has(self.vcpus)'
                 type: object
               ocid:
                 description: OCID is the OCID of the associated InstancePool
@@ -1432,9 +1446,23 @@ spec:
                           used for storage. A single drive has 6.8 TB available.
                         type: integer
                       ocpus:
-                        description: The total number of OCPUs available to the instance.
+                        description: |-
+                          The total number of OCPUs available to the instance.
+                          Omitting both CPU fields uses shape defaults for future workers. Existing workers are unchanged.
                         type: string
+                      vcpus:
+                        description: |-
+                          The total number of VCPUs available to the instance, as an alternative to OCPUs.
+                          Ocpus and Vcpus are mutually exclusive. Must be a positive multiple of 2.
+                          Removing the selected CPU field after reconciliation restores shape defaults for future workers.
+                        minimum: 2
+                        multipleOf: 2
+                        type: integer
                     type: object
+                    x-kubernetes-validations:
+                    - message: ocpus and vcpus are mutually exclusive; specify at
+                        most one
+                      rule: '!has(self.ocpus) || !has(self.vcpus)'
                 type: object
               ocid:
                 description: OCID is the OCID of the associated InstancePool
