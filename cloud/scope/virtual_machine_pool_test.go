@@ -167,7 +167,7 @@ func TestVirtualMachinePoolCreate(t *testing.T) {
 		testSpecificSetup   func(cs *VirtualMachinePoolScope, okeClient *mock_containerengine.MockClient)
 	}{
 		{
-			name:          "virtual nodepool create all",
+			name:          "virtual nodepool create all with lowercase entity type",
 			errorExpected: false,
 			testSpecificSetup: func(cs *VirtualMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
@@ -237,11 +237,19 @@ func TestVirtualMachinePoolCreate(t *testing.T) {
 					WorkRequestId: common.String("opc-work-request-id"),
 				})).
 					Return(oke.GetWorkRequestResponse{
+						OpcRequestId: common.String("request-id"),
 						WorkRequest: oke.WorkRequest{
 							Resources: []oke.WorkRequestResource{
 								{
 									Identifier: common.String("oke-virtual-np-id"),
-									EntityType: common.String("VirtualNodePool"),
+									EntityType: common.String("virtualnodepool"),
+								},
+								{
+									Identifier: common.String("nil-entity-type-id"),
+								},
+								{
+									Identifier: common.String("unrelated-id"),
+									EntityType: common.String("NodePool"),
 								},
 							},
 						},
@@ -342,6 +350,47 @@ func TestVirtualMachinePoolCreate(t *testing.T) {
 			},
 		},
 		{
+			name:          "virtual nodepool unrelated work request resources",
+			errorExpected: true,
+			matchError:    errors.New("node pool ws not created with the request, please create a support ticket with opc-request-id request-id"),
+			testSpecificSetup: func(cs *VirtualMachinePoolScope, okeClient *mock_containerengine.MockClient) {
+				ms.OCIVirtualMachinePool.Spec.PodConfiguration.SubnetName = common.String("pod-subnet")
+				okeClient.EXPECT().CreateVirtualNodePool(gomock.Any(), gomock.Any()).
+					Return(oke.CreateVirtualNodePoolResponse{OpcWorkRequestId: common.String("work-request-id")}, nil)
+				okeClient.EXPECT().GetWorkRequest(gomock.Any(), gomock.Eq(oke.GetWorkRequestRequest{
+					WorkRequestId: common.String("work-request-id"),
+				})).Return(oke.GetWorkRequestResponse{
+					OpcRequestId: common.String("request-id"),
+					WorkRequest: oke.WorkRequest{
+						Resources: []oke.WorkRequestResource{
+							{Identifier: common.String("nil-entity-type-id")},
+							{Identifier: common.String("unrelated-id"), EntityType: common.String("NodePool")},
+						},
+					},
+				}, nil)
+			},
+		},
+		{
+			name:          "virtual nodepool unmatched resources without request ID",
+			errorExpected: true,
+			matchError:    errors.New("node pool ws not created with the request, please create a support ticket with opc-request-id "),
+			testSpecificSetup: func(cs *VirtualMachinePoolScope, okeClient *mock_containerengine.MockClient) {
+				ms.OCIVirtualMachinePool.Spec.PodConfiguration.SubnetName = common.String("pod-subnet")
+				okeClient.EXPECT().CreateVirtualNodePool(gomock.Any(), gomock.Any()).
+					Return(oke.CreateVirtualNodePoolResponse{OpcWorkRequestId: common.String("work-request-id")}, nil)
+				okeClient.EXPECT().GetWorkRequest(gomock.Any(), gomock.Eq(oke.GetWorkRequestRequest{
+					WorkRequestId: common.String("work-request-id"),
+				})).Return(oke.GetWorkRequestResponse{
+					WorkRequest: oke.WorkRequest{
+						Resources: []oke.WorkRequestResource{
+							{Identifier: common.String("nil-entity-type-id")},
+							{Identifier: common.String("unrelated-id"), EntityType: common.String("NodePool")},
+						},
+					},
+				}, nil)
+			},
+		},
+		{
 			name:          "virtual nodepool no worker subnets",
 			errorExpected: true,
 			matchError:    errors.New("worker subnets are not specified"),
@@ -377,8 +426,10 @@ func TestVirtualMachinePoolCreate(t *testing.T) {
 			defer teardown(t, g)
 			setup(t, g)
 			tc.testSpecificSetup(ms, okeClient)
-			_, err := ms.CreateVirtualNodePool(context.Background())
+			nodePool, err := ms.CreateVirtualNodePool(context.Background())
 			if tc.errorExpected {
+				g.Expect(nodePool).To(BeNil())
+				g.Expect(ms.OCIVirtualMachinePool.Spec.ID).To(BeNil())
 				g.Expect(err).To(Not(BeNil()))
 				if tc.errorSubStringMatch {
 					g.Expect(err.Error()).To(ContainSubstring(tc.matchError.Error()))
@@ -387,6 +438,11 @@ func TestVirtualMachinePoolCreate(t *testing.T) {
 				}
 			} else {
 				g.Expect(err).To(BeNil())
+				g.Expect(ms.OCIVirtualMachinePool.Spec.ID).To(Equal(common.String("oke-virtual-np-id")))
+				g.Expect(nodePool).To(Equal(&oke.VirtualNodePool{
+					Id:           common.String("oke-np-id"),
+					FreeformTags: tags,
+				}))
 			}
 		})
 	}
