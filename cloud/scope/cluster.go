@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
 	identityClient "github.com/oracle/cluster-api-provider-oci/cloud/services/identity"
@@ -34,9 +34,8 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/identity"
 	"github.com/pkg/errors"
 	"k8s.io/klog/v2/klogr"
-	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
-	v1beta1patch "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/patch"
+	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -69,7 +68,7 @@ type ClusterScopeParams struct {
 type ClusterScope struct {
 	*logr.Logger
 	client                    client.Client
-	patchHelper               *v1beta1patch.Helper
+	patchHelper               *patch.Helper
 	Cluster                   *clusterv1.Cluster
 	VCNClient                 vcn.Client
 	NetworkLoadBalancerClient nlb.NetworkLoadBalancerClient
@@ -169,8 +168,9 @@ func (s *ClusterScope) setFailureDomains(ctx context.Context) error {
 			if err != nil {
 				return errors.New(fmt.Sprintf("availability domain is not a valid integer: availability domain %s", k))
 			}
-			s.SetFailureDomain(adNumber, clusterv1beta1.FailureDomainSpec{
-				ControlPlane: true,
+			s.SetFailureDomain(adNumber, clusterv1.FailureDomain{
+				Name:         adNumber,
+				ControlPlane: common.Bool(true),
 				Attributes:   map[string]string{AvailabilityDomain: k},
 			})
 		}
@@ -178,8 +178,10 @@ func (s *ClusterScope) setFailureDomains(ctx context.Context) error {
 		// only first element is used, hence break at the end
 		for k := range adMap {
 			for i, fd := range adMap[k].FaultDomains {
-				s.SetFailureDomain(strconv.Itoa(i+1), clusterv1beta1.FailureDomainSpec{
-					ControlPlane: true,
+				fdID := strconv.Itoa(i + 1)
+				s.SetFailureDomain(fdID, clusterv1.FailureDomain{
+					Name:         fdID,
+					ControlPlane: common.Bool(true),
 					Attributes: map[string]string{
 						AvailabilityDomain: k,
 						FaultDomain:        fd,
@@ -195,14 +197,14 @@ func (s *ClusterScope) setFailureDomains(ctx context.Context) error {
 }
 
 // SetFailureDomain sets the cluster's failure domain in the status
-func (s *ClusterScope) SetFailureDomain(id string, spec clusterv1beta1.FailureDomainSpec) {
+func (s *ClusterScope) SetFailureDomain(id string, spec clusterv1.FailureDomain) {
 	s.OCIClusterAccessor.SetFailureDomain(id, spec)
 }
 
 // setAvailabiltyDomainSpec builds the OCIAvailabilityDomain list and sets the OCICluster's spec with this list
 // so that other parts of the provider have access to ADs and FDs without having to make multiple calls to identity.
-func (s *ClusterScope) setAvailabiltyDomainSpec(ctx context.Context, ads []identity.AvailabilityDomain) (map[string]infrastructurev1beta2.OCIAvailabilityDomain, error) {
-	clusterAds := make(map[string]infrastructurev1beta2.OCIAvailabilityDomain)
+func (s *ClusterScope) setAvailabiltyDomainSpec(ctx context.Context, ads []identity.AvailabilityDomain) (map[string]infrastructurev1beta3.OCIAvailabilityDomain, error) {
+	clusterAds := make(map[string]infrastructurev1beta3.OCIAvailabilityDomain)
 	for _, ad := range ads {
 		reqFd := identity.ListFaultDomainsRequest{
 			CompartmentId:      common.String(s.GetCompartmentId()),
@@ -220,7 +222,7 @@ func (s *ClusterScope) setAvailabiltyDomainSpec(ctx context.Context, ads []ident
 		}
 
 		adName := *ad.Name
-		clusterAds[adName] = infrastructurev1beta2.OCIAvailabilityDomain{
+		clusterAds[adName] = infrastructurev1beta3.OCIAvailabilityDomain{
 			Name:         adName,
 			FaultDomains: faultDomains,
 		}
@@ -278,7 +280,7 @@ func (s *ClusterScope) GetOCIClusterAccessor() OCIClusterAccessor {
 	return s.OCIClusterAccessor
 }
 
-func (s *ClusterScope) getDRG() *infrastructurev1beta2.DRG {
+func (s *ClusterScope) getDRG() *infrastructurev1beta3.DRG {
 	return s.OCIClusterAccessor.GetNetworkSpec().VCNPeering.DRG
 }
 

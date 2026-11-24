@@ -18,16 +18,17 @@ package scope
 
 import (
 	"fmt"
+	"slices"
 
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
+	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	corev1 "k8s.io/api/core/v1"
-	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
-	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 )
 
 // OCISelfManagedCluster is the ClusterAccessor implementation for self managed clusters
 type OCISelfManagedCluster struct {
-	OCICluster *infrastructurev1beta2.OCICluster
+	OCICluster *infrastructurev1beta3.OCICluster
 }
 
 func (c OCISelfManagedCluster) GetNameSpace() string {
@@ -38,7 +39,7 @@ func (c OCISelfManagedCluster) GetRegion() string {
 	return c.OCICluster.Spec.Region
 }
 
-func (c OCISelfManagedCluster) GetClientOverrides() *infrastructurev1beta2.ClientOverrides {
+func (c OCISelfManagedCluster) GetClientOverrides() *infrastructurev1beta3.ClientOverrides {
 	return c.OCICluster.Spec.ClientOverrides
 }
 
@@ -46,8 +47,8 @@ func (c OCISelfManagedCluster) GetIdentityRef() *corev1.ObjectReference {
 	return c.OCICluster.Spec.IdentityRef
 }
 
-func (c OCISelfManagedCluster) MarkConditionFalse(t clusterv1beta1.ConditionType, reason string, severity clusterv1beta1.ConditionSeverity, messageFormat string, messageArgs ...interface{}) {
-	v1beta1conditions.MarkFalse(c.OCICluster, infrastructurev1beta2.ClusterReadyCondition, reason, severity, messageFormat, messageArgs...)
+func (c OCISelfManagedCluster) MarkConditionFalse(t string, reason string, messageFormat string, messageArgs ...any) {
+	ociutil.MarkConditionFalse(c.OCICluster, infrastructurev1beta3.ClusterReadyCondition, reason, messageFormat, messageArgs...)
 }
 
 func (c OCISelfManagedCluster) GetOCIResourceIdentifier() string {
@@ -70,44 +71,72 @@ func (c OCISelfManagedCluster) GetFreeformTags() map[string]string {
 	return c.OCICluster.Spec.FreeformTags
 }
 
-func (c OCISelfManagedCluster) GetDRG() *infrastructurev1beta2.DRG {
+func (c OCISelfManagedCluster) GetDRG() *infrastructurev1beta3.DRG {
 	return c.OCICluster.Spec.NetworkSpec.VCNPeering.DRG
 }
 
-func (c OCISelfManagedCluster) GetVCNPeering() *infrastructurev1beta2.VCNPeering {
+func (c OCISelfManagedCluster) GetVCNPeering() *infrastructurev1beta3.VCNPeering {
 	return c.OCICluster.Spec.NetworkSpec.VCNPeering
 }
 
-func (c OCISelfManagedCluster) GetNetworkSpec() *infrastructurev1beta2.NetworkSpec {
+func (c OCISelfManagedCluster) GetNetworkSpec() *infrastructurev1beta3.NetworkSpec {
 	return &c.OCICluster.Spec.NetworkSpec
 }
 
-func (c OCISelfManagedCluster) SetControlPlaneEndpoint(endpoint clusterv1beta1.APIEndpoint) {
+func (c OCISelfManagedCluster) SetControlPlaneEndpoint(endpoint clusterv1.APIEndpoint) {
 	c.OCICluster.Spec.ControlPlaneEndpoint = endpoint
 }
 
-func (c OCISelfManagedCluster) GetFailureDomains() clusterv1beta1.FailureDomains {
+func (c OCISelfManagedCluster) GetFailureDomains() []clusterv1.FailureDomain {
 	return c.OCICluster.Status.FailureDomains
 }
 
-func (c OCISelfManagedCluster) SetFailureDomain(id string, spec clusterv1beta1.FailureDomainSpec) {
-	if c.OCICluster.Status.FailureDomains == nil {
-		c.OCICluster.Status.FailureDomains = make(clusterv1beta1.FailureDomains)
-	}
-	c.OCICluster.Status.FailureDomains[id] = spec
+func (c OCISelfManagedCluster) SetFailureDomain(id string, spec clusterv1.FailureDomain) {
+	spec.Name = id
+	c.OCICluster.Status.FailureDomains = upsertFailureDomain(c.OCICluster.Status.FailureDomains, spec)
 }
 
-func (c OCISelfManagedCluster) GetAvailabilityDomains() map[string]infrastructurev1beta2.OCIAvailabilityDomain {
+func (c OCISelfManagedCluster) GetAvailabilityDomains() map[string]infrastructurev1beta3.OCIAvailabilityDomain {
 	return c.OCICluster.Spec.AvailabilityDomains
 }
-func (c OCISelfManagedCluster) SetAvailabilityDomains(ads map[string]infrastructurev1beta2.OCIAvailabilityDomain) {
+
+func (c OCISelfManagedCluster) SetAvailabilityDomains(ads map[string]infrastructurev1beta3.OCIAvailabilityDomain) {
 	c.OCICluster.Spec.AvailabilityDomains = ads
 }
 
-func (c OCISelfManagedCluster) GetControlPlaneEndpoint() clusterv1beta1.APIEndpoint {
+func (c OCISelfManagedCluster) GetControlPlaneEndpoint() clusterv1.APIEndpoint {
 	return c.OCICluster.Spec.ControlPlaneEndpoint
 }
 
 func (c OCISelfManagedCluster) GetProviderID(instanceId string) string {
 	return fmt.Sprintf("oci://%s", instanceId)
+}
+
+func upsertFailureDomain(domains []clusterv1.FailureDomain, fd clusterv1.FailureDomain) []clusterv1.FailureDomain {
+	for i := range domains {
+		if domains[i].Name == fd.Name {
+			domains[i] = fd
+			return domains
+		}
+	}
+	domains = append(domains, fd)
+	slices.SortFunc(domains, func(a, b clusterv1.FailureDomain) int {
+		if a.Name < b.Name {
+			return -1
+		}
+		if a.Name > b.Name {
+			return 1
+		}
+		return 0
+	})
+	return domains
+}
+
+func findFailureDomain(domains []clusterv1.FailureDomain, name string) (clusterv1.FailureDomain, bool) {
+	for _, fd := range domains {
+		if fd.Name == name {
+			return fd, true
+		}
+	}
+	return clusterv1.FailureDomain{}, false
 }

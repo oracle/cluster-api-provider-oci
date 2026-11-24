@@ -19,7 +19,7 @@ package scope
 import (
 	"encoding/json"
 
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
@@ -29,7 +29,7 @@ const (
 )
 
 // GetNsgNamesFromId returns the names of the NSGs with the provided IDs
-func GetNsgNamesFromId(ids []string, nsgs []*infrastructurev1beta2.NSG) []string {
+func GetNsgNamesFromId(ids []string, nsgs []*infrastructurev1beta3.NSG) []string {
 	if len(ids) == 0 {
 		return nil
 	}
@@ -45,7 +45,7 @@ func GetNsgNamesFromId(ids []string, nsgs []*infrastructurev1beta2.NSG) []string
 }
 
 // GetSubnetNameFromId returns the name of the Subnet with the provided ID
-func GetSubnetNameFromId(id *string, subnets []*infrastructurev1beta2.Subnet) string {
+func GetSubnetNameFromId(id *string, subnets []*infrastructurev1beta3.Subnet) string {
 	for _, subnet := range ptr.ToSubnetSlice(subnets) {
 		if ptr.ToString(id) == ptr.ToString(subnet.ID) {
 			return subnet.Name
@@ -55,7 +55,7 @@ func GetSubnetNameFromId(id *string, subnets []*infrastructurev1beta2.Subnet) st
 }
 
 // GetSubnetNamesFromId returns the names of the Subnets with the provided IDs
-func GetSubnetNamesFromId(ids []string, subnets []*infrastructurev1beta2.Subnet) []string {
+func GetSubnetNamesFromId(ids []string, subnets []*infrastructurev1beta3.Subnet) []string {
 	names := make([]string, 0)
 	for _, id := range ids {
 		for _, subnet := range ptr.ToSubnetSlice(subnets) {

@@ -23,15 +23,14 @@ import (
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/containerengine/mock_containerengine"
-	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
+	infrav3exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta3"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -72,39 +71,39 @@ func TestVirtualMachinePoolCreate(t *testing.T) {
 		var err error
 		mockCtrl = gomock.NewController(t)
 		okeClient = mock_containerengine.NewMockClient(mockCtrl)
-		ociManagedCluster := &infrastructurev1beta2.OCIManagedCluster{
+		ociManagedCluster := &infrastructurev1beta3.OCIManagedCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				UID: "cluster_uid",
 			},
-			Spec: infrastructurev1beta2.OCIManagedClusterSpec{
+			Spec: infrastructurev1beta3.OCIManagedClusterSpec{
 				CompartmentId: "test-compartment",
 				DefinedTags:   definedTags,
-				NetworkSpec: infrastructurev1beta2.NetworkSpec{
-					Vcn: infrastructurev1beta2.VCN{
+				NetworkSpec: infrastructurev1beta3.NetworkSpec{
+					Vcn: infrastructurev1beta3.VCN{
 						ID: common.String("vcn-id"),
-						Subnets: []*infrastructurev1beta2.Subnet{
+						Subnets: []*infrastructurev1beta3.Subnet{
 							{
-								Role: infrastructurev1beta2.WorkerRole,
+								Role: infrastructurev1beta3.WorkerRole,
 								ID:   common.String("subnet-id"),
-								Type: infrastructurev1beta2.Private,
+								Type: infrastructurev1beta3.Private,
 								Name: "worker-subnet",
 							},
 							{
-								Role: infrastructurev1beta2.PodRole,
+								Role: infrastructurev1beta3.PodRole,
 								ID:   common.String("pod-subnet-id"),
-								Type: infrastructurev1beta2.Private,
+								Type: infrastructurev1beta3.Private,
 								Name: "pod-subnet",
 							},
 						},
-						NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
-							List: []*infrastructurev1beta2.NSG{
+						NetworkSecurityGroup: infrastructurev1beta3.NetworkSecurityGroup{
+							List: []*infrastructurev1beta3.NSG{
 								{
-									Role: infrastructurev1beta2.WorkerRole,
+									Role: infrastructurev1beta3.WorkerRole,
 									ID:   common.String("nsg-id"),
 									Name: "worker-nsg",
 								},
 								{
-									Role: infrastructurev1beta2.PodRole,
+									Role: infrastructurev1beta3.PodRole,
 									ID:   common.String("pod-nsg-id"),
 									Name: "pod-nsg",
 								},
@@ -112,7 +111,7 @@ func TestVirtualMachinePoolCreate(t *testing.T) {
 						},
 					},
 				},
-				AvailabilityDomains: map[string]infrastructurev1beta2.OCIAvailabilityDomain{
+				AvailabilityDomains: map[string]infrastructurev1beta3.OCIAvailabilityDomain{
 					"ad-1": {
 						Name:         "ad-1",
 						FaultDomains: []string{"fd-5", "fd-6"},
@@ -125,19 +124,19 @@ func TestVirtualMachinePoolCreate(t *testing.T) {
 
 		ms, err = NewVirtualMachinePoolScope(VirtualMachinePoolScopeParams{
 			ContainerEngineClient: okeClient,
-			OCIManagedControlPlane: &infrastructurev1beta2.OCIManagedControlPlane{
+			OCIManagedControlPlane: &infrastructurev1beta3.OCIManagedControlPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
-				Spec: infrastructurev1beta2.OCIManagedControlPlaneSpec{
+				Spec: infrastructurev1beta3.OCIManagedControlPlaneSpec{
 					ID: common.String("cluster-id"),
 				},
 			},
-			OCIVirtualMachinePool: &infrav2exp.OCIVirtualMachinePool{
+			OCIVirtualMachinePool: &infrav3exp.OCIVirtualMachinePool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
-				Spec: infrav2exp.OCIVirtualMachinePoolSpec{},
+				Spec: infrav3exp.OCIVirtualMachinePoolSpec{},
 			},
 			OCIManagedCluster: ociManagedCluster,
 			Cluster: &clusterv1.Cluster{
@@ -171,23 +170,23 @@ func TestVirtualMachinePoolCreate(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(cs *VirtualMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
-				ms.OCIVirtualMachinePool.Spec = infrav2exp.OCIVirtualMachinePoolSpec{
+				ms.OCIVirtualMachinePool.Spec = infrav3exp.OCIVirtualMachinePoolSpec{
 					NsgNames: []string{"worker-nsg"},
-					InitialVirtualNodeLabels: []infrav2exp.KeyValue{{
+					InitialVirtualNodeLabels: []infrav3exp.KeyValue{{
 						Key:   common.String("key"),
 						Value: common.String("value"),
 					}},
-					Taints: []infrav2exp.Taint{{
+					Taints: []infrav3exp.Taint{{
 						Key:    common.String("key"),
 						Value:  common.String("value"),
 						Effect: common.String("effect"),
 					}},
-					PodConfiguration: infrav2exp.PodConfig{
+					PodConfiguration: infrav3exp.PodConfig{
 						NsgNames:   []string{"pod-nsg"},
 						Shape:      common.String("pod-shape"),
 						SubnetName: common.String("pod-subnet"),
 					},
-					PlacementConfigs: []infrav2exp.VirtualNodepoolPlacementConfig{
+					PlacementConfigs: []infrav3exp.VirtualNodepoolPlacementConfig{
 						{
 							AvailabilityDomain: common.String("test-ad"),
 							SubnetName:         common.String("worker-subnet"),
@@ -270,18 +269,18 @@ func TestVirtualMachinePoolCreate(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(cs *VirtualMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
-				ms.OCIVirtualMachinePool.Spec = infrav2exp.OCIVirtualMachinePoolSpec{
+				ms.OCIVirtualMachinePool.Spec = infrav3exp.OCIVirtualMachinePoolSpec{
 					NsgNames: []string{"worker-nsg"},
-					InitialVirtualNodeLabels: []infrav2exp.KeyValue{{
+					InitialVirtualNodeLabels: []infrav3exp.KeyValue{{
 						Key:   common.String("key"),
 						Value: common.String("value"),
 					}},
-					Taints: []infrav2exp.Taint{{
+					Taints: []infrav3exp.Taint{{
 						Key:    common.String("key"),
 						Value:  common.String("value"),
 						Effect: common.String("effect"),
 					}},
-					PodConfiguration: infrav2exp.PodConfig{
+					PodConfiguration: infrav3exp.PodConfig{
 						NsgNames:   []string{"pod-nsg"},
 						Shape:      common.String("pod-shape"),
 						SubnetName: common.String("pod-subnet"),
@@ -396,8 +395,8 @@ func TestVirtualMachinePoolCreate(t *testing.T) {
 			matchError:    errors.New("worker subnets are not specified"),
 			testSpecificSetup: func(cs *VirtualMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
-				ms.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets = []*infrastructurev1beta2.Subnet{}
-				ms.OCIVirtualMachinePool.Spec = infrav2exp.OCIVirtualMachinePoolSpec{}
+				ms.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets = []*infrastructurev1beta3.Subnet{}
+				ms.OCIVirtualMachinePool.Spec = infrav3exp.OCIVirtualMachinePoolSpec{}
 			},
 		},
 		{
@@ -407,8 +406,8 @@ func TestVirtualMachinePoolCreate(t *testing.T) {
 				"worker-subnet-invalid")),
 			testSpecificSetup: func(cs *VirtualMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
-				ms.OCIVirtualMachinePool.Spec = infrav2exp.OCIVirtualMachinePoolSpec{
-					PlacementConfigs: []infrav2exp.VirtualNodepoolPlacementConfig{
+				ms.OCIVirtualMachinePool.Spec = infrav3exp.OCIVirtualMachinePoolSpec{
+					PlacementConfigs: []infrav3exp.VirtualNodepoolPlacementConfig{
 						{
 							AvailabilityDomain: common.String("test-ad"),
 							SubnetName:         common.String("worker-subnet-invalid"),
@@ -483,39 +482,39 @@ func TestVirtualMachinePoolUpdate(t *testing.T) {
 		var err error
 		mockCtrl = gomock.NewController(t)
 		okeClient = mock_containerengine.NewMockClient(mockCtrl)
-		ociManagedCluster := &infrastructurev1beta2.OCIManagedCluster{
+		ociManagedCluster := &infrastructurev1beta3.OCIManagedCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				UID: "cluster_uid",
 			},
-			Spec: infrastructurev1beta2.OCIManagedClusterSpec{
+			Spec: infrastructurev1beta3.OCIManagedClusterSpec{
 				CompartmentId: "test-compartment",
 				DefinedTags:   definedTags,
-				NetworkSpec: infrastructurev1beta2.NetworkSpec{
-					Vcn: infrastructurev1beta2.VCN{
+				NetworkSpec: infrastructurev1beta3.NetworkSpec{
+					Vcn: infrastructurev1beta3.VCN{
 						ID: common.String("vcn-id"),
-						Subnets: []*infrastructurev1beta2.Subnet{
+						Subnets: []*infrastructurev1beta3.Subnet{
 							{
-								Role: infrastructurev1beta2.WorkerRole,
+								Role: infrastructurev1beta3.WorkerRole,
 								ID:   common.String("subnet-id"),
-								Type: infrastructurev1beta2.Private,
+								Type: infrastructurev1beta3.Private,
 								Name: "worker-subnet",
 							},
 							{
-								Role: infrastructurev1beta2.PodRole,
+								Role: infrastructurev1beta3.PodRole,
 								ID:   common.String("pod-subnet-id"),
-								Type: infrastructurev1beta2.Private,
+								Type: infrastructurev1beta3.Private,
 								Name: "pod-subnet",
 							},
 						},
-						NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
-							List: []*infrastructurev1beta2.NSG{
+						NetworkSecurityGroup: infrastructurev1beta3.NetworkSecurityGroup{
+							List: []*infrastructurev1beta3.NSG{
 								{
-									Role: infrastructurev1beta2.WorkerRole,
+									Role: infrastructurev1beta3.WorkerRole,
 									ID:   common.String("nsg-id"),
 									Name: "worker-nsg",
 								},
 								{
-									Role: infrastructurev1beta2.PodRole,
+									Role: infrastructurev1beta3.PodRole,
 									ID:   common.String("pod-nsg-id"),
 									Name: "pod-nsg",
 								},
@@ -523,7 +522,7 @@ func TestVirtualMachinePoolUpdate(t *testing.T) {
 						},
 					},
 				},
-				AvailabilityDomains: map[string]infrastructurev1beta2.OCIAvailabilityDomain{
+				AvailabilityDomains: map[string]infrastructurev1beta3.OCIAvailabilityDomain{
 					"ad-1": {
 						Name:         "ad-1",
 						FaultDomains: []string{"fd-5", "fd-6"},
@@ -536,19 +535,19 @@ func TestVirtualMachinePoolUpdate(t *testing.T) {
 
 		ms, err = NewVirtualMachinePoolScope(VirtualMachinePoolScopeParams{
 			ContainerEngineClient: okeClient,
-			OCIManagedControlPlane: &infrastructurev1beta2.OCIManagedControlPlane{
+			OCIManagedControlPlane: &infrastructurev1beta3.OCIManagedControlPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
-				Spec: infrastructurev1beta2.OCIManagedControlPlaneSpec{
+				Spec: infrastructurev1beta3.OCIManagedControlPlaneSpec{
 					ID: common.String("cluster-id"),
 				},
 			},
-			OCIVirtualMachinePool: &infrav2exp.OCIVirtualMachinePool{
+			OCIVirtualMachinePool: &infrav3exp.OCIVirtualMachinePool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
-				Spec: infrav2exp.OCIVirtualMachinePoolSpec{},
+				Spec: infrav3exp.OCIVirtualMachinePoolSpec{},
 			},
 			OCIManagedCluster: ociManagedCluster,
 			Cluster: &clusterv1.Cluster{
@@ -584,24 +583,24 @@ func TestVirtualMachinePoolUpdate(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(cs *VirtualMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
-				ms.OCIVirtualMachinePool.Spec = infrav2exp.OCIVirtualMachinePoolSpec{
+				ms.OCIVirtualMachinePool.Spec = infrav3exp.OCIVirtualMachinePoolSpec{
 					ID:       common.String("test"),
 					NsgNames: []string{"worker-nsg"},
-					InitialVirtualNodeLabels: []infrav2exp.KeyValue{{
+					InitialVirtualNodeLabels: []infrav3exp.KeyValue{{
 						Key:   common.String("key"),
 						Value: common.String("value"),
 					}},
-					Taints: []infrav2exp.Taint{{
+					Taints: []infrav3exp.Taint{{
 						Key:    common.String("key"),
 						Value:  common.String("value"),
 						Effect: common.String("effect"),
 					}},
-					PodConfiguration: infrav2exp.PodConfig{
+					PodConfiguration: infrav3exp.PodConfig{
 						NsgNames:   []string{"pod-nsg"},
 						Shape:      common.String("pod-shape"),
 						SubnetName: common.String("pod-subnet"),
 					},
-					PlacementConfigs: []infrav2exp.VirtualNodepoolPlacementConfig{
+					PlacementConfigs: []infrav3exp.VirtualNodepoolPlacementConfig{
 						{
 							AvailabilityDomain: common.String("test-ad"),
 							SubnetName:         common.String("worker-subnet"),
@@ -650,24 +649,24 @@ func TestVirtualMachinePoolUpdate(t *testing.T) {
 				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
 				newReplicas := int32(4)
 				ms.MachinePool.Spec.Replicas = &newReplicas
-				ms.OCIVirtualMachinePool.Spec = infrav2exp.OCIVirtualMachinePoolSpec{
+				ms.OCIVirtualMachinePool.Spec = infrav3exp.OCIVirtualMachinePoolSpec{
 					ID:       common.String("test"),
 					NsgNames: []string{"worker-nsg"},
-					InitialVirtualNodeLabels: []infrav2exp.KeyValue{{
+					InitialVirtualNodeLabels: []infrav3exp.KeyValue{{
 						Key:   common.String("key"),
 						Value: common.String("value"),
 					}},
-					Taints: []infrav2exp.Taint{{
+					Taints: []infrav3exp.Taint{{
 						Key:    common.String("key"),
 						Value:  common.String("value"),
 						Effect: common.String("effect"),
 					}},
-					PodConfiguration: infrav2exp.PodConfig{
+					PodConfiguration: infrav3exp.PodConfig{
 						NsgNames:   []string{"pod-nsg"},
 						Shape:      common.String("pod-shape"),
 						SubnetName: common.String("pod-subnet"),
 					},
-					PlacementConfigs: []infrav2exp.VirtualNodepoolPlacementConfig{
+					PlacementConfigs: []infrav3exp.VirtualNodepoolPlacementConfig{
 						{
 							AvailabilityDomain: common.String("test-ad"),
 							SubnetName:         common.String("worker-subnet"),
@@ -747,27 +746,27 @@ func TestVirtualMachinePoolUpdate(t *testing.T) {
 			testSpecificSetup: func(cs *VirtualMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
 				ms.MachinePool.Annotations = make(map[string]string)
-				ms.MachinePool.Annotations[clusterv1beta1.ReplicasManagedByAnnotation] = ""
+				ms.MachinePool.Annotations[clusterv1.ReplicasManagedByAnnotation] = ""
 				newReplicas := int32(4)
 				ms.MachinePool.Spec.Replicas = &newReplicas
-				ms.OCIVirtualMachinePool.Spec = infrav2exp.OCIVirtualMachinePoolSpec{
+				ms.OCIVirtualMachinePool.Spec = infrav3exp.OCIVirtualMachinePoolSpec{
 					ID:       common.String("test"),
 					NsgNames: []string{"worker-nsg"},
-					InitialVirtualNodeLabels: []infrav2exp.KeyValue{{
+					InitialVirtualNodeLabels: []infrav3exp.KeyValue{{
 						Key:   common.String("key"),
 						Value: common.String("value"),
 					}},
-					Taints: []infrav2exp.Taint{{
+					Taints: []infrav3exp.Taint{{
 						Key:    common.String("key"),
 						Value:  common.String("value"),
 						Effect: common.String("effect"),
 					}},
-					PodConfiguration: infrav2exp.PodConfig{
+					PodConfiguration: infrav3exp.PodConfig{
 						NsgNames:   []string{"pod-nsg"},
 						Shape:      common.String("pod-shape"),
 						SubnetName: common.String("pod-subnet"),
 					},
-					PlacementConfigs: []infrav2exp.VirtualNodepoolPlacementConfig{
+					PlacementConfigs: []infrav3exp.VirtualNodepoolPlacementConfig{
 						{
 							AvailabilityDomain: common.String("test-ad"),
 							SubnetName:         common.String("worker-subnet"),
@@ -814,24 +813,24 @@ func TestVirtualMachinePoolUpdate(t *testing.T) {
 			errorExpected: false,
 			testSpecificSetup: func(cs *VirtualMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
-				ms.OCIVirtualMachinePool.Spec = infrav2exp.OCIVirtualMachinePoolSpec{
+				ms.OCIVirtualMachinePool.Spec = infrav3exp.OCIVirtualMachinePoolSpec{
 					ID:       common.String("test"),
 					NsgNames: []string{"worker-nsg"},
-					InitialVirtualNodeLabels: []infrav2exp.KeyValue{{
+					InitialVirtualNodeLabels: []infrav3exp.KeyValue{{
 						Key:   common.String("key"),
 						Value: common.String("value"),
 					}},
-					Taints: []infrav2exp.Taint{{
+					Taints: []infrav3exp.Taint{{
 						Key:    common.String("key"),
 						Value:  common.String("value"),
 						Effect: common.String("effect"),
 					}},
-					PodConfiguration: infrav2exp.PodConfig{
+					PodConfiguration: infrav3exp.PodConfig{
 						NsgNames:   []string{"pod-nsg"},
 						Shape:      common.String("pod-shape"),
 						SubnetName: common.String("pod-subnet"),
 					},
-					PlacementConfigs: []infrav2exp.VirtualNodepoolPlacementConfig{
+					PlacementConfigs: []infrav3exp.VirtualNodepoolPlacementConfig{
 						{
 							AvailabilityDomain: common.String("test-ad"),
 							SubnetName:         common.String("worker-subnet"),
@@ -911,24 +910,24 @@ func TestVirtualMachinePoolUpdate(t *testing.T) {
 			testSpecificSetup: func(cs *VirtualMachinePoolScope, okeClient *mock_containerengine.MockClient) {
 				ms.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
 				ms.OCIVirtualMachinePool.Name = "changed"
-				ms.OCIVirtualMachinePool.Spec = infrav2exp.OCIVirtualMachinePoolSpec{
+				ms.OCIVirtualMachinePool.Spec = infrav3exp.OCIVirtualMachinePoolSpec{
 					ID:       common.String("test"),
 					NsgNames: []string{"worker-nsg"},
-					InitialVirtualNodeLabels: []infrav2exp.KeyValue{{
+					InitialVirtualNodeLabels: []infrav3exp.KeyValue{{
 						Key:   common.String("key"),
 						Value: common.String("value"),
 					}},
-					Taints: []infrav2exp.Taint{{
+					Taints: []infrav3exp.Taint{{
 						Key:    common.String("key"),
 						Value:  common.String("value"),
 						Effect: common.String("effect"),
 					}},
-					PodConfiguration: infrav2exp.PodConfig{
+					PodConfiguration: infrav3exp.PodConfig{
 						NsgNames:   []string{"pod-nsg"},
 						Shape:      common.String("pod-shape"),
 						SubnetName: common.String("pod-subnet"),
 					},
-					PlacementConfigs: []infrav2exp.VirtualNodepoolPlacementConfig{
+					PlacementConfigs: []infrav3exp.VirtualNodepoolPlacementConfig{
 						{
 							AvailabilityDomain: common.String("test-ad"),
 							SubnetName:         common.String("worker-subnet"),

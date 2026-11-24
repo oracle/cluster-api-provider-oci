@@ -23,7 +23,7 @@ import (
 	"sync"
 
 	"github.com/go-logr/logr"
-	"github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	"github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/cluster-api-provider-oci/cloud/metrics"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/base"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/compute"
@@ -69,7 +69,7 @@ type ClientProvider struct {
 	ociClients            map[string]OCIClients
 	ociClientsLock        *sync.RWMutex
 	ociAuthConfigProvider common.ConfigurationProvider
-	ociClientOverrides    *v1beta2.ClientOverrides
+	ociClientOverrides    *v1beta3.ClientOverrides
 	certOverride          *x509.CertPool
 }
 
@@ -79,7 +79,7 @@ type ClientProviderParams struct {
 	OciAuthConfigProvider common.ConfigurationProvider
 
 	// ClientOverrides contains information about client host url overrides.
-	ClientOverrides *v1beta2.ClientOverrides
+	ClientOverrides *v1beta3.ClientOverrides
 
 	// CertOverride a x509 CertPool to use as an override for client TLSClientConfig
 	CertOverride *x509.CertPool

@@ -27,11 +27,13 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/oracle/cluster-api-provider-oci/api/v1beta2"
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	"github.com/oracle/cluster-api-provider-oci/api/v1beta3"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/cluster-api-provider-oci/cloud/config"
+	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
+	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
-	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
+	infrav3exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta3"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/common/auth"
 	"github.com/pkg/errors"
@@ -39,11 +41,11 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util"
-	v1beta1patch "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/patch"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/labels/format"
+	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -59,8 +61,8 @@ var (
 
 // GetClusterIdentityFromRef returns the OCIClusterIdentity referenced by the OCICluster.
 // nolint:nilnil
-func GetClusterIdentityFromRef(ctx context.Context, c client.Client, ociClusterNamespace string, ref *corev1.ObjectReference) (*infrastructurev1beta2.OCIClusterIdentity, error) {
-	identity := &infrastructurev1beta2.OCIClusterIdentity{}
+func GetClusterIdentityFromRef(ctx context.Context, c client.Client, ociClusterNamespace string, ref *corev1.ObjectReference) (*infrastructurev1beta3.OCIClusterIdentity, error) {
+	identity := &infrastructurev1beta3.OCIClusterIdentity{}
 	if ref != nil {
 		namespace := ref.Namespace
 		if namespace == "" {
@@ -76,7 +78,7 @@ func GetClusterIdentityFromRef(ctx context.Context, c client.Client, ociClusterN
 }
 
 // getOCIClientCertFromSecret returns the cert referenced by the OCICluster.
-func getOCIClientCertFromSecret(ctx context.Context, c client.Client, ociClusterNamespace string, overrides *infrastructurev1beta2.ClientOverrides) (*corev1.Secret, error) {
+func getOCIClientCertFromSecret(ctx context.Context, c client.Client, ociClusterNamespace string, overrides *infrastructurev1beta3.ClientOverrides) (*corev1.Secret, error) {
 	secret := &corev1.Secret{}
 	if overrides != nil && overrides.CertOverride != nil {
 		certSecretRef := overrides.CertOverride
@@ -93,7 +95,7 @@ func getOCIClientCertFromSecret(ctx context.Context, c client.Client, ociCluster
 	return nil, errors.New("OCI Client Cert not found")
 }
 
-func getOCIClientCertPool(ctx context.Context, c client.Client, namespace string, clientOverrides *infrastructurev1beta2.ClientOverrides) (*x509.CertPool, error) {
+func getOCIClientCertPool(ctx context.Context, c client.Client, namespace string, clientOverrides *infrastructurev1beta3.ClientOverrides) (*x509.CertPool, error) {
 	var pool *x509.CertPool = nil
 	if clientOverrides != nil && clientOverrides.CertOverride != nil {
 		cert, err := getOCIClientCertFromSecret(ctx, c, namespace, clientOverrides)
@@ -115,9 +117,9 @@ func getOCIClientCertPool(ctx context.Context, c client.Client, namespace string
 
 // GetOrBuildClientFromIdentity creates ClientProvider from OCIClusterIdentity object
 // nolint:nilaway
-func GetOrBuildClientFromIdentity(ctx context.Context, c client.Client, identity *infrastructurev1beta2.OCIClusterIdentity, defaultRegion string, clientOverrides *infrastructurev1beta2.ClientOverrides, namespace string) (*scope.ClientProvider, error) {
+func GetOrBuildClientFromIdentity(ctx context.Context, c client.Client, identity *infrastructurev1beta3.OCIClusterIdentity, defaultRegion string, clientOverrides *infrastructurev1beta3.ClientOverrides, namespace string) (*scope.ClientProvider, error) {
 	logger := log.FromContext(ctx)
-	if !reflect.DeepEqual(identity.Spec, v1beta2.OCIClusterIdentitySpec{}) && identity.Spec.Type == infrastructurev1beta2.UserPrincipal {
+	if !reflect.DeepEqual(identity.Spec, v1beta3.OCIClusterIdentitySpec{}) && identity.Spec.Type == infrastructurev1beta3.UserPrincipal {
 		secretRef := identity.Spec.PrincipalSecret
 		key := types.NamespacedName{
 			Namespace: secretRef.Namespace,
@@ -161,7 +163,7 @@ func GetOrBuildClientFromIdentity(ctx context.Context, c client.Client, identity
 			return nil, err
 		}
 		return clientProvider, nil
-	} else if identity.Spec.Type == infrastructurev1beta2.InstancePrincipal {
+	} else if identity.Spec.Type == infrastructurev1beta3.InstancePrincipal {
 		provider, err := auth.InstancePrincipalConfigurationProvider()
 		if err != nil {
 			return nil, err
@@ -179,7 +181,7 @@ func GetOrBuildClientFromIdentity(ctx context.Context, c client.Client, identity
 			return nil, err
 		}
 		return clientProvider, nil
-	} else if identity.Spec.Type == infrastructurev1beta2.WorkloadPrincipal {
+	} else if identity.Spec.Type == infrastructurev1beta3.WorkloadPrincipal {
 		_, containsVersion := os.LookupEnv(auth.ResourcePrincipalVersionEnvVar)
 		if !containsVersion {
 			os.Setenv(auth.ResourcePrincipalVersionEnvVar, auth.ResourcePrincipalVersion2_2)
@@ -220,13 +222,13 @@ func GetOrBuildClientFromIdentity(ctx context.Context, c client.Client, identity
 }
 
 // IsClusterNamespaceAllowed indicates if the cluster namespace is allowed.
-func IsClusterNamespaceAllowed(ctx context.Context, k8sClient client.Client, allowedNamespaces *infrastructurev1beta2.AllowedNamespaces, namespace string) bool {
+func IsClusterNamespaceAllowed(ctx context.Context, k8sClient client.Client, allowedNamespaces *infrastructurev1beta3.AllowedNamespaces, namespace string) bool {
 	if allowedNamespaces == nil {
 		return false
 	}
 
 	// empty value matches with all namespaces
-	if reflect.DeepEqual(*allowedNamespaces, infrastructurev1beta2.AllowedNamespaces{}) {
+	if reflect.DeepEqual(*allowedNamespaces, infrastructurev1beta3.AllowedNamespaces{}) {
 		return true
 	}
 
@@ -329,7 +331,7 @@ func CreateClientProviderFromClusterIdentity(ctx context.Context, client client.
 	}
 
 	if !IsClusterNamespaceAllowed(ctx, client, identity.Spec.AllowedNamespaces, namespace) {
-		clusterAccessor.MarkConditionFalse(infrastructurev1beta2.ClusterReadyCondition, infrastructurev1beta2.NamespaceNotAllowedByIdentity, clusterv1beta1.ConditionSeverityError, "")
+		clusterAccessor.MarkConditionFalse(infrastructurev1beta3.ClusterReadyCondition, infrastructurev1beta3.NamespaceNotAllowedByIdentity, "")
 		return nil, errors.Errorf("OCIClusterIdentity list of allowed namespaces doesn't include current cluster namespace %s", namespace)
 	}
 	clientProvider, err := GetOrBuildClientFromIdentity(ctx, client, identity, defaultRegion, clusterAccessor.GetClientOverrides(), namespace)
@@ -348,7 +350,7 @@ func CreateMachinePoolMachinesIfNotExists(ctx context.Context, params MachinePar
 		return err
 	}
 
-	instanceNameToMachinePoolMachine := make(map[string]infrav2exp.OCIMachinePoolMachine)
+	instanceNameToMachinePoolMachine := make(map[string]infrav3exp.OCIMachinePoolMachine)
 	for _, machine := range machineList.Items {
 		instanceNameToMachinePoolMachine[*machine.Spec.OCID] = machine
 	}
@@ -357,15 +359,28 @@ func CreateMachinePoolMachinesIfNotExists(ctx context.Context, params MachinePar
 		if specMachine.Spec.OCID == nil {
 			continue
 		}
+		desiredProvisioned := ptr.ToBool(specMachine.Status.Initialization.Provisioned)
+		desiredReadyStatus := metav1.ConditionFalse
+		if desiredProvisioned {
+			desiredReadyStatus = metav1.ConditionTrue
+		}
 		if actualMachine, exists := instanceNameToMachinePoolMachine[*specMachine.Spec.OCID]; exists {
-			if !reflect.DeepEqual(specMachine.Status.Ready, actualMachine.Status.Ready) {
-				params.Logger.Info("Setting status of machine to active", "machine", actualMachine.Name)
+			provisionedNeedsUpdate := desiredProvisioned && !ptr.ToBool(actualMachine.Status.Initialization.Provisioned)
+			existingReady := conditions.Get(&actualMachine, clusterv1.ReadyCondition)
+			readyNeedsUpdate := existingReady == nil || existingReady.Status != desiredReadyStatus
+			if provisionedNeedsUpdate || readyNeedsUpdate {
+				params.Logger.Info("Updating machinepool machine status", "machine", actualMachine.Name, "provisioned", desiredProvisioned)
 
-				helper, err := v1beta1patch.NewHelper(&actualMachine, params.Client)
+				helper, err := patch.NewHelper(&actualMachine, params.Client)
 				if err != nil {
 					return err
 				}
-				actualMachine.Status.Ready = true
+				if desiredProvisioned {
+					actualMachine.Status.Initialization.Provisioned = common.Bool(true)
+					ociutil.MarkConditionTrue(&actualMachine, clusterv1.ReadyCondition)
+				} else {
+					ociutil.MarkConditionFalse(&actualMachine, clusterv1.ReadyCondition, infrastructurev1beta3.InstanceNotReadyReason, "")
+				}
 				err = helper.Patch(ctx, &actualMachine)
 				if err != nil {
 					return err
@@ -375,10 +390,10 @@ func CreateMachinePoolMachinesIfNotExists(ctx context.Context, params MachinePar
 		}
 
 		labels := map[string]string{
-			clusterv1beta1.ClusterNameLabel:     params.Cluster.Name,
-			clusterv1beta1.MachinePoolNameLabel: format.MustFormatValue(params.MachinePool.Name),
+			clusterv1.ClusterNameLabel:     params.Cluster.Name,
+			clusterv1.MachinePoolNameLabel: format.MustFormatValue(params.MachinePool.Name),
 		}
-		infraMachine := &infrav2exp.OCIMachinePoolMachine{
+		infraMachine := &infrav3exp.OCIMachinePoolMachine{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace:    params.Namespace,
 				GenerateName: params.MachinePool.Name,
@@ -389,32 +404,44 @@ func CreateMachinePoolMachinesIfNotExists(ctx context.Context, params MachinePar
 					{
 						Kind:       params.InfraMachinePoolKind,
 						Name:       params.InfraMachinePoolName,
-						APIVersion: infrav2exp.GroupVersion.String(),
+						APIVersion: infrav3exp.GroupVersion.String(),
 						UID:        params.InfraMachinePoolUID,
 					},
 				},
 			},
-			Spec: infrav2exp.OCIMachinePoolMachineSpec{
+			Spec: infrav3exp.OCIMachinePoolMachineSpec{
 				OCID:         specMachine.Spec.OCID,
 				ProviderID:   specMachine.Spec.ProviderID,
 				InstanceName: specMachine.Spec.InstanceName,
 				MachineType:  specMachine.Spec.MachineType,
 			},
 		}
-		infraMachine.Status.Ready = specMachine.Status.Ready
-		controllerutil.AddFinalizer(infraMachine, infrav2exp.MachinePoolMachineFinalizer)
+		controllerutil.AddFinalizer(infraMachine, infrav3exp.MachinePoolMachineFinalizer)
 		params.Logger.Info("Creating machinepool  machine", "machine", infraMachine.Name, "instanceName", specMachine.Name)
 
 		if err := params.Client.Create(ctx, infraMachine); err != nil {
 			return errors.Wrap(err, "failed to create machine")
+		}
+		helper, err := patch.NewHelper(infraMachine, params.Client)
+		if err != nil {
+			return err
+		}
+		if desiredProvisioned {
+			infraMachine.Status.Initialization.Provisioned = common.Bool(true)
+			ociutil.MarkConditionTrue(infraMachine, clusterv1.ReadyCondition)
+		} else {
+			ociutil.MarkConditionFalse(infraMachine, clusterv1.ReadyCondition, infrastructurev1beta3.InstanceNotReadyReason, "")
+		}
+		if err := helper.Patch(ctx, infraMachine); err != nil {
+			return errors.Wrap(err, "failed to patch machine status")
 		}
 	}
 
 	return nil
 }
 
-func getMachinepoolMachines(ctx context.Context, c client.Client, machinePool *clusterv1.MachinePool, cluster *clusterv1.Cluster, namespace string) (*infrav2exp.OCIMachinePoolMachineList, error) {
-	machineList := &infrav2exp.OCIMachinePoolMachineList{}
+func getMachinepoolMachines(ctx context.Context, c client.Client, machinePool *clusterv1.MachinePool, cluster *clusterv1.Cluster, namespace string) (*infrav3exp.OCIMachinePoolMachineList, error) {
+	machineList := &infrav3exp.OCIMachinePoolMachineList{}
 	labels := map[string]string{
 		clusterv1.ClusterNameLabel:     cluster.Name,
 		clusterv1.MachinePoolNameLabel: format.MustFormatValue(machinePool.Name),
@@ -514,6 +541,6 @@ type MachineParams struct {
 	InfraMachinePoolKind string                             // the kind of infra machinepool(can be managed/self managed/virtual)
 	InfraMachinePoolUID  types.UID                          // the UID of the infra machinepool
 	Namespace            string                             // the namespace in which machinepool machine has to be created
-	SpecInfraMachines    []infrav2exp.OCIMachinePoolMachine // the spec of actual machines in the pool
+	SpecInfraMachines    []infrav3exp.OCIMachinePoolMachine // the spec of actual machines in the pool
 	Logger               *logr.Logger                       // the logger which has to be used
 }

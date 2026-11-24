@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/identity/mock_identity"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/identity"
@@ -195,42 +195,42 @@ func TestClusterScope_ReconcileFailureDomains(t *testing.T) {
 
 	tests := []struct {
 		name                string
-		spec                infrastructurev1beta2.OCIClusterSpec
+		spec                infrastructurev1beta3.OCIClusterSpec
 		wantErr             bool
 		expectedError       string
 		expectedErrorPrefix string
 	}{
 		{
 			name: "3ad region",
-			spec: infrastructurev1beta2.OCIClusterSpec{CompartmentId: "3ad"},
+			spec: infrastructurev1beta3.OCIClusterSpec{CompartmentId: "3ad"},
 		},
 		{
 			name: "1ad region",
-			spec: infrastructurev1beta2.OCIClusterSpec{CompartmentId: "1ad"},
+			spec: infrastructurev1beta3.OCIClusterSpec{CompartmentId: "1ad"},
 		},
 		{
 			name:          "2ad region",
-			spec:          infrastructurev1beta2.OCIClusterSpec{CompartmentId: "2ad"},
+			spec:          infrastructurev1beta3.OCIClusterSpec{CompartmentId: "2ad"},
 			wantErr:       true,
 			expectedError: "invalid number of Availability Domains, should be either 1 or 3, but got 2",
 		},
 		{
 			name:          "list ad error",
-			spec:          infrastructurev1beta2.OCIClusterSpec{CompartmentId: "list-ad-error"},
+			spec:          infrastructurev1beta3.OCIClusterSpec{CompartmentId: "list-ad-error"},
 			wantErr:       true,
 			expectedError: "some error",
 		},
 		{
 			name:          "list fd error",
-			spec:          infrastructurev1beta2.OCIClusterSpec{CompartmentId: "list-fd-error"},
+			spec:          infrastructurev1beta3.OCIClusterSpec{CompartmentId: "list-fd-error"},
 			wantErr:       true,
 			expectedError: "some error",
 		},
 		{
 			name: "should not call oci api",
-			spec: infrastructurev1beta2.OCIClusterSpec{
+			spec: infrastructurev1beta3.OCIClusterSpec{
 				CompartmentId: "2ad",
-				AvailabilityDomains: map[string]infrastructurev1beta2.OCIAvailabilityDomain{
+				AvailabilityDomains: map[string]infrastructurev1beta3.OCIAvailabilityDomain{
 					"ad-1": {
 						Name:         "ad-1",
 						FaultDomains: []string{"fault-domain-1", "fault-domain-2", "fault-domain-3"},
@@ -241,9 +241,9 @@ func TestClusterScope_ReconcileFailureDomains(t *testing.T) {
 		},
 		{
 			name: "ad does not have number suffix",
-			spec: infrastructurev1beta2.OCIClusterSpec{
+			spec: infrastructurev1beta3.OCIClusterSpec{
 				CompartmentId: "2ad",
-				AvailabilityDomains: map[string]infrastructurev1beta2.OCIAvailabilityDomain{
+				AvailabilityDomains: map[string]infrastructurev1beta3.OCIAvailabilityDomain{
 					"ad1": {
 						Name:         "ad1",
 						FaultDomains: []string{"fault-domain-1", "fault-domain-2", "fault-domain-3"},
@@ -263,9 +263,9 @@ func TestClusterScope_ReconcileFailureDomains(t *testing.T) {
 		},
 		{
 			name: "ad suffix is not a valid integer",
-			spec: infrastructurev1beta2.OCIClusterSpec{
+			spec: infrastructurev1beta3.OCIClusterSpec{
 				CompartmentId: "2ad",
-				AvailabilityDomains: map[string]infrastructurev1beta2.OCIAvailabilityDomain{
+				AvailabilityDomains: map[string]infrastructurev1beta3.OCIAvailabilityDomain{
 					"adone": {
 						Name:         "ad1",
 						FaultDomains: []string{"fault-domain-1", "fault-domain-2", "fault-domain-3"},
@@ -288,7 +288,7 @@ func TestClusterScope_ReconcileFailureDomains(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ociClusterAccessor := OCISelfManagedCluster{
-				OCICluster: &infrastructurev1beta2.OCICluster{
+				OCICluster: &infrastructurev1beta3.OCICluster{
 					Spec: tt.spec,
 					ObjectMeta: metav1.ObjectMeta{
 						UID: "a",

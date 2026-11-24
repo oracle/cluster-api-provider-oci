@@ -24,7 +24,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer/mock_nlb"
 	"github.com/oracle/oci-go-sdk/v65/common"
@@ -40,12 +40,12 @@ func newTestClusterScope(t *testing.T) *ClusterScope {
 
 	client := fake.NewClientBuilder().Build()
 	ociClusterAccessor := OCISelfManagedCluster{
-		&infrastructurev1beta2.OCICluster{
+		&infrastructurev1beta3.OCICluster{
 			ObjectMeta: metav1.ObjectMeta{
 				UID:  "test-uid",
 				Name: "cluster",
 			},
-			Spec: infrastructurev1beta2.OCIClusterSpec{
+			Spec: infrastructurev1beta3.OCIClusterSpec{
 				CompartmentId:         "compartment-id",
 				OCIResourceIdentifier: "resource_uid",
 			},
@@ -69,13 +69,13 @@ func TestBuildNLBHealthChecker(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		spec        infrastructurev1beta2.HealthChecker
+		spec        infrastructurev1beta3.HealthChecker
 		expected    *networkloadbalancer.HealthChecker
 		errContains string
 	}{
 		{
 			name: "default https health checker uses defaults",
-			spec: infrastructurev1beta2.HealthChecker{},
+			spec: infrastructurev1beta3.HealthChecker{},
 			expected: &networkloadbalancer.HealthChecker{
 				Protocol:         networkloadbalancer.HealthCheckProtocolsHttps,
 				Port:             common.Int(ApiServerPort),
@@ -88,7 +88,7 @@ func TestBuildNLBHealthChecker(t *testing.T) {
 		},
 		{
 			name: "http health checker success",
-			spec: infrastructurev1beta2.HealthChecker{
+			spec: infrastructurev1beta3.HealthChecker{
 				Protocol:          common.String("http"),
 				Port:              common.Int(8080),
 				IntervalInMillis:  common.Int(15000),
@@ -111,7 +111,7 @@ func TestBuildNLBHealthChecker(t *testing.T) {
 		},
 		{
 			name: "udp response payload decode failure",
-			spec: infrastructurev1beta2.HealthChecker{
+			spec: infrastructurev1beta3.HealthChecker{
 				Protocol:     common.String("udp"),
 				RequestData:  common.String("Zm9v"),
 				ResponseData: common.String("%%%"),
@@ -120,7 +120,7 @@ func TestBuildNLBHealthChecker(t *testing.T) {
 		},
 		{
 			name: "tcp request payload decode failure",
-			spec: infrastructurev1beta2.HealthChecker{
+			spec: infrastructurev1beta3.HealthChecker{
 				Protocol:    common.String("tcp"),
 				RequestData: common.String("%%%"),
 			},
@@ -128,28 +128,28 @@ func TestBuildNLBHealthChecker(t *testing.T) {
 		},
 		{
 			name: "unsupported protocol returns error",
-			spec: infrastructurev1beta2.HealthChecker{
+			spec: infrastructurev1beta3.HealthChecker{
 				Protocol: common.String("GRPC"),
 			},
 			errContains: "unsupported health checker protocol",
 		},
 		{
 			name: "port zero returns out-of-range error",
-			spec: infrastructurev1beta2.HealthChecker{
+			spec: infrastructurev1beta3.HealthChecker{
 				Port: common.Int(0),
 			},
 			errContains: "health checker port 0 is out of range 1-65535",
 		},
 		{
 			name: "port 65536 returns out-of-range error",
-			spec: infrastructurev1beta2.HealthChecker{
+			spec: infrastructurev1beta3.HealthChecker{
 				Port: common.Int(65536),
 			},
 			errContains: "health checker port 65536 is out of range 1-65535",
 		},
 		{
 			name: "https with requestData returns error",
-			spec: infrastructurev1beta2.HealthChecker{
+			spec: infrastructurev1beta3.HealthChecker{
 				Protocol:    common.String("HTTPS"),
 				RequestData: common.String("Zm9v"),
 			},
@@ -157,7 +157,7 @@ func TestBuildNLBHealthChecker(t *testing.T) {
 		},
 		{
 			name: "tcp with urlPath returns error",
-			spec: infrastructurev1beta2.HealthChecker{
+			spec: infrastructurev1beta3.HealthChecker{
 				Protocol: common.String("TCP"),
 				UrlPath:  common.String("/healthz"),
 			},
@@ -165,7 +165,7 @@ func TestBuildNLBHealthChecker(t *testing.T) {
 		},
 		{
 			name: "https with explicit port and returnCode",
-			spec: infrastructurev1beta2.HealthChecker{
+			spec: infrastructurev1beta3.HealthChecker{
 				Protocol:   common.String("HTTPS"),
 				Port:       common.Int(8443),
 				ReturnCode: common.Int(204),
@@ -182,7 +182,7 @@ func TestBuildNLBHealthChecker(t *testing.T) {
 		},
 		{
 			name: "tcp with requestData only",
-			spec: infrastructurev1beta2.HealthChecker{
+			spec: infrastructurev1beta3.HealthChecker{
 				Protocol:    common.String("TCP"),
 				RequestData: common.String("Zm9v"), // "foo"
 			},
@@ -197,7 +197,7 @@ func TestBuildNLBHealthChecker(t *testing.T) {
 		},
 		{
 			name: "tcp with responseData only",
-			spec: infrastructurev1beta2.HealthChecker{
+			spec: infrastructurev1beta3.HealthChecker{
 				Protocol:     common.String("TCP"),
 				ResponseData: common.String("YmFy"), // "bar"
 			},
@@ -212,7 +212,7 @@ func TestBuildNLBHealthChecker(t *testing.T) {
 		},
 		{
 			name: "tcp with both requestData and responseData",
-			spec: infrastructurev1beta2.HealthChecker{
+			spec: infrastructurev1beta3.HealthChecker{
 				Protocol:     common.String("TCP"),
 				RequestData:  common.String("Zm9v"), // "foo"
 				ResponseData: common.String("YmFy"), // "bar"
@@ -229,7 +229,7 @@ func TestBuildNLBHealthChecker(t *testing.T) {
 		},
 		{
 			name: "udp with both requestData and responseData",
-			spec: infrastructurev1beta2.HealthChecker{
+			spec: infrastructurev1beta3.HealthChecker{
 				Protocol:     common.String("UDP"),
 				RequestData:  common.String("Zm9v"), // "foo"
 				ResponseData: common.String("YmFy"), // "bar"
@@ -319,12 +319,12 @@ func TestNLBReconciliation(t *testing.T) {
 		nlbClient = mock_nlb.NewMockNetworkLoadBalancerClient(mockCtrl)
 		client := fake.NewClientBuilder().Build()
 		ociClusterAccessor = OCISelfManagedCluster{
-			&infrastructurev1beta2.OCICluster{
+			&infrastructurev1beta3.OCICluster{
 				ObjectMeta: metav1.ObjectMeta{
 					UID:  "a",
 					Name: "cluster",
 				},
-				Spec: infrastructurev1beta2.OCIClusterSpec{
+				Spec: infrastructurev1beta3.OCIClusterSpec{
 					CompartmentId:         "compartment-id",
 					OCIResourceIdentifier: "resource_uid",
 				},
@@ -512,13 +512,13 @@ func TestNLBReconciliation(t *testing.T) {
 			errorExpected: true,
 			matchError:    errors.New("cannot have more than 1 control plane endpoint subnet"),
 			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
-				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta2.Subnet{
+				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta3.Subnet{
 					{
-						Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+						Role: infrastructurev1beta3.ControlPlaneEndpointRole,
 						ID:   common.String("s1"),
 					},
 					{
-						Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+						Role: infrastructurev1beta3.ControlPlaneEndpointRole,
 						ID:   common.String("s2"),
 					},
 				}
@@ -533,25 +533,25 @@ func TestNLBReconciliation(t *testing.T) {
 			name:          "create network load balancer, default values",
 			errorExpected: false,
 			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
-				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta2.Subnet{
+				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta3.Subnet{
 					{
-						Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+						Role: infrastructurev1beta3.ControlPlaneEndpointRole,
 						ID:   common.String("s1"),
 					},
 				}
-				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup = infrastructurev1beta2.NetworkSecurityGroup{
-					List: []*infrastructurev1beta2.NSG{
+				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup = infrastructurev1beta3.NetworkSecurityGroup{
+					List: []*infrastructurev1beta3.NSG{
 						{
-							Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+							Role: infrastructurev1beta3.ControlPlaneEndpointRole,
 							ID:   common.String("nsg1"),
 						},
 						{
-							Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+							Role: infrastructurev1beta3.ControlPlaneEndpointRole,
 							ID:   common.String("nsg2"),
 						},
 					},
 				}
-				clusterScope.OCIClusterAccessor.GetNetworkSpec().APIServerLB = infrastructurev1beta2.LoadBalancer{}
+				clusterScope.OCIClusterAccessor.GetNetworkSpec().APIServerLB = infrastructurev1beta3.LoadBalancer{}
 				definedTags, definedTagsInterface := getDefinedTags()
 				ociClusterAccessor.OCICluster.Spec.DefinedTags = definedTags
 				nlbClient.EXPECT().ListNetworkLoadBalancers(gomock.Any(), gomock.Eq(networkloadbalancer.ListNetworkLoadBalancersRequest{
@@ -633,31 +633,31 @@ func TestNLBReconciliation(t *testing.T) {
 			name:          "create network load balancer",
 			errorExpected: false,
 			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
-				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta2.Subnet{
+				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta3.Subnet{
 					{
-						Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+						Role: infrastructurev1beta3.ControlPlaneEndpointRole,
 						ID:   common.String("s1"),
 					},
 				}
-				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup = infrastructurev1beta2.NetworkSecurityGroup{
-					List: []*infrastructurev1beta2.NSG{
+				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup = infrastructurev1beta3.NetworkSecurityGroup{
+					List: []*infrastructurev1beta3.NSG{
 						{
-							Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+							Role: infrastructurev1beta3.ControlPlaneEndpointRole,
 							ID:   common.String("nsg1"),
 						},
 						{
-							Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+							Role: infrastructurev1beta3.ControlPlaneEndpointRole,
 							ID:   common.String("nsg2"),
 						},
 					},
 				}
-				clusterScope.OCIClusterAccessor.GetNetworkSpec().APIServerLB = infrastructurev1beta2.LoadBalancer{
-					NLBSpec: infrastructurev1beta2.NLBSpec{
-						BackendSetDetails: infrastructurev1beta2.BackendSetDetails{
+				clusterScope.OCIClusterAccessor.GetNetworkSpec().APIServerLB = infrastructurev1beta3.LoadBalancer{
+					NLBSpec: infrastructurev1beta3.NLBSpec{
+						BackendSetDetails: infrastructurev1beta3.BackendSetDetails{
 							IsInstantFailoverEnabled: common.Bool(true),
 							IsFailOpen:               common.Bool(false),
 							IsPreserveSource:         common.Bool(false),
-							HealthChecker: infrastructurev1beta2.HealthChecker{
+							HealthChecker: infrastructurev1beta3.HealthChecker{
 								UrlPath:          common.String("readyz"),
 								IntervalInMillis: common.Int(15000),
 								TimeoutInMillis:  common.Int(5000),
@@ -749,32 +749,32 @@ func TestNLBReconciliation(t *testing.T) {
 			name:          "create network load balancer, reserved ip",
 			errorExpected: false,
 			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
-				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta2.Subnet{
+				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta3.Subnet{
 					{
-						Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+						Role: infrastructurev1beta3.ControlPlaneEndpointRole,
 						ID:   common.String("s1"),
 					},
 				}
-				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup = infrastructurev1beta2.NetworkSecurityGroup{
-					List: []*infrastructurev1beta2.NSG{
+				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup = infrastructurev1beta3.NetworkSecurityGroup{
+					List: []*infrastructurev1beta3.NSG{
 						{
-							Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+							Role: infrastructurev1beta3.ControlPlaneEndpointRole,
 							ID:   common.String("nsg1"),
 						},
 						{
-							Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+							Role: infrastructurev1beta3.ControlPlaneEndpointRole,
 							ID:   common.String("nsg2"),
 						},
 					},
 				}
-				clusterScope.OCIClusterAccessor.GetNetworkSpec().APIServerLB = infrastructurev1beta2.LoadBalancer{
-					NLBSpec: infrastructurev1beta2.NLBSpec{
+				clusterScope.OCIClusterAccessor.GetNetworkSpec().APIServerLB = infrastructurev1beta3.LoadBalancer{
+					NLBSpec: infrastructurev1beta3.NLBSpec{
 						ReservedIpIds: []string{"ocid1.publicip.oc1.iad.testocid"},
-						BackendSetDetails: infrastructurev1beta2.BackendSetDetails{
+						BackendSetDetails: infrastructurev1beta3.BackendSetDetails{
 							IsInstantFailoverEnabled: common.Bool(true),
 							IsFailOpen:               common.Bool(false),
 							IsPreserveSource:         common.Bool(false),
-							HealthChecker: infrastructurev1beta2.HealthChecker{
+							HealthChecker: infrastructurev1beta3.HealthChecker{
 								UrlPath: common.String("readyz"),
 							},
 						},
@@ -866,9 +866,9 @@ func TestNLBReconciliation(t *testing.T) {
 			errorSubStringMatch: true,
 			matchError:          errors.New("request failed"),
 			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
-				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta2.Subnet{
+				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta3.Subnet{
 					{
-						Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+						Role: infrastructurev1beta3.ControlPlaneEndpointRole,
 						ID:   common.String("s1"),
 					},
 				}
@@ -922,9 +922,9 @@ func TestNLBReconciliation(t *testing.T) {
 			errorSubStringMatch: true,
 			matchError:          errors.New("No more Ip available in CIDR 1.1.1.1/1: WorkRequest opc-wr-id failed"),
 			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_nlb.MockNetworkLoadBalancerClient) {
-				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta2.Subnet{
+				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta3.Subnet{
 					{
-						Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+						Role: infrastructurev1beta3.ControlPlaneEndpointRole,
 						ID:   common.String("s1"),
 					},
 				}
@@ -1159,12 +1159,12 @@ func TestNLBDeletion(t *testing.T) {
 		nlbClient = mock_nlb.NewMockNetworkLoadBalancerClient(mockCtrl)
 		client := fake.NewClientBuilder().Build()
 		ociClusterAccessor = OCISelfManagedCluster{
-			&infrastructurev1beta2.OCICluster{
+			&infrastructurev1beta3.OCICluster{
 				ObjectMeta: metav1.ObjectMeta{
 					UID:  "a",
 					Name: "cluster",
 				},
-				Spec: infrastructurev1beta2.OCIClusterSpec{
+				Spec: infrastructurev1beta3.OCIClusterSpec{
 					CompartmentId:         "compartment-id",
 					OCIResourceIdentifier: "resource_uid",
 				},
@@ -1430,44 +1430,44 @@ func TestIsAPIServerLBPrivate(t *testing.T) {
 
 	tests := []struct {
 		name               string
-		networkVisibility  infrastructurev1beta2.LBNetworkVisibility
-		controlPlaneSubnet infrastructurev1beta2.SubnetType
+		networkVisibility  infrastructurev1beta3.LBNetworkVisibility
+		controlPlaneSubnet infrastructurev1beta3.SubnetType
 		expected           bool
 	}{
 		{
 			name:               "Private visibility returns true",
-			networkVisibility:  infrastructurev1beta2.LBNetworkVisibilityPrivate,
-			controlPlaneSubnet: infrastructurev1beta2.Public,
+			networkVisibility:  infrastructurev1beta3.LBNetworkVisibilityPrivate,
+			controlPlaneSubnet: infrastructurev1beta3.Public,
 			expected:           true,
 		},
 		{
 			name:               "Public visibility returns false",
-			networkVisibility:  infrastructurev1beta2.LBNetworkVisibilityPublic,
-			controlPlaneSubnet: infrastructurev1beta2.Private,
+			networkVisibility:  infrastructurev1beta3.LBNetworkVisibilityPublic,
+			controlPlaneSubnet: infrastructurev1beta3.Private,
 			expected:           false,
 		},
 		{
 			name:               "Inherited with private subnet returns true",
-			networkVisibility:  infrastructurev1beta2.LBNetworkVisibilityInherited,
-			controlPlaneSubnet: infrastructurev1beta2.Private,
+			networkVisibility:  infrastructurev1beta3.LBNetworkVisibilityInherited,
+			controlPlaneSubnet: infrastructurev1beta3.Private,
 			expected:           true,
 		},
 		{
 			name:               "Inherited with public subnet returns false",
-			networkVisibility:  infrastructurev1beta2.LBNetworkVisibilityInherited,
-			controlPlaneSubnet: infrastructurev1beta2.Public,
+			networkVisibility:  infrastructurev1beta3.LBNetworkVisibilityInherited,
+			controlPlaneSubnet: infrastructurev1beta3.Public,
 			expected:           false,
 		},
 		{
 			name:               "Empty string with private subnet returns true",
 			networkVisibility:  "",
-			controlPlaneSubnet: infrastructurev1beta2.Private,
+			controlPlaneSubnet: infrastructurev1beta3.Private,
 			expected:           true,
 		},
 		{
 			name:               "Empty string with public subnet returns false",
 			networkVisibility:  "",
-			controlPlaneSubnet: infrastructurev1beta2.Public,
+			controlPlaneSubnet: infrastructurev1beta3.Public,
 			expected:           false,
 		},
 	}
@@ -1476,12 +1476,12 @@ func TestIsAPIServerLBPrivate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
 			scope := newTestClusterScope(t)
-			scope.OCIClusterAccessor.GetNetworkSpec().APIServerLB = infrastructurev1beta2.LoadBalancer{
+			scope.OCIClusterAccessor.GetNetworkSpec().APIServerLB = infrastructurev1beta3.LoadBalancer{
 				NetworkVisibility: tt.networkVisibility,
 			}
-			scope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta2.Subnet{
+			scope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta3.Subnet{
 				{
-					Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+					Role: infrastructurev1beta3.ControlPlaneEndpointRole,
 					Type: tt.controlPlaneSubnet,
 				},
 			}

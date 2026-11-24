@@ -24,11 +24,11 @@ import (
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/cluster-api-provider-oci/cloud/hash"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/computemanagement/mock_computemanagement"
-	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
+	infrav3exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta3"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
 	corev1 "k8s.io/api/core/v1"
@@ -37,7 +37,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
-	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -86,29 +86,29 @@ func TestInstanceConfigCreate(t *testing.T) {
 			},
 		}
 		computeManagementClient = mock_computemanagement.NewMockClient(mockCtrl)
-		ociCluster := &infrastructurev1beta2.OCICluster{
+		ociCluster := &infrastructurev1beta3.OCICluster{
 			ObjectMeta: metav1.ObjectMeta{
 				UID: "cluster_uid",
 			},
-			Spec: infrastructurev1beta2.OCIClusterSpec{
+			Spec: infrastructurev1beta3.OCIClusterSpec{
 				CompartmentId:         "test-compartment",
 				DefinedTags:           definedTags,
 				OCIResourceIdentifier: "resource_uid",
-				NetworkSpec: infrastructurev1beta2.NetworkSpec{
-					Vcn: infrastructurev1beta2.VCN{
+				NetworkSpec: infrastructurev1beta3.NetworkSpec{
+					Vcn: infrastructurev1beta3.VCN{
 						ID: common.String("vcn-id"),
-						Subnets: []*infrastructurev1beta2.Subnet{
+						Subnets: []*infrastructurev1beta3.Subnet{
 							{
-								Role: infrastructurev1beta2.WorkerRole,
+								Role: infrastructurev1beta3.WorkerRole,
 								ID:   common.String("subnet-id"),
-								Type: infrastructurev1beta2.Private,
+								Type: infrastructurev1beta3.Private,
 								Name: "worker-subnet",
 							},
 						},
-						NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
-							List: []*infrastructurev1beta2.NSG{
+						NetworkSecurityGroup: infrastructurev1beta3.NetworkSecurityGroup{
+							List: []*infrastructurev1beta3.NSG{
 								{
-									Role: infrastructurev1beta2.WorkerRole,
+									Role: infrastructurev1beta3.WorkerRole,
 									ID:   common.String("nsg-id"),
 									Name: "worker-nsg",
 								},
@@ -116,7 +116,7 @@ func TestInstanceConfigCreate(t *testing.T) {
 						},
 					},
 				},
-				AvailabilityDomains: map[string]infrastructurev1beta2.OCIAvailabilityDomain{
+				AvailabilityDomains: map[string]infrastructurev1beta3.OCIAvailabilityDomain{
 					"ad-1": {
 						Name:         "ad-1",
 						FaultDomains: []string{"fd-5", "fd-6"},
@@ -125,12 +125,12 @@ func TestInstanceConfigCreate(t *testing.T) {
 			},
 		}
 		size := int32(3)
-		machinePool := &infrav2exp.OCIMachinePool{
+		machinePool := &infrav3exp.OCIMachinePool{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            "test",
 				ResourceVersion: "20",
 			},
-			Spec: infrav2exp.OCIMachinePoolSpec{},
+			Spec: infrav3exp.OCIMachinePoolSpec{},
 		}
 		client := fake.NewClientBuilder().WithStatusSubresource(machinePool).WithObjects(secret, machinePool).Build()
 		ms, err = NewMachinePoolScope(MachinePoolScopeParams{
@@ -169,10 +169,10 @@ func TestInstanceConfigCreate(t *testing.T) {
 		g := NewWithT(t)
 		defer teardown(t, g)
 		setup(t, g)
-		ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+		ms.OCIMachinePool.Spec.InstanceConfiguration = infrav3exp.InstanceConfiguration{
 			Shape:                   common.String("test-shape"),
 			InstanceConfigurationId: common.String("test"),
-			ShapeConfig:             &infrav2exp.ShapeConfig{Ocpus: common.String(""), Vcpus: common.Int(0)},
+			ShapeConfig:             &infrav3exp.ShapeConfig{Ocpus: common.String(""), Vcpus: common.Int(0)},
 		}
 		computeManagementClient.EXPECT().GetInstanceConfiguration(gomock.Any(), gomock.Any()).
 			Return(core.GetInstanceConfigurationResponse{InstanceConfiguration: core.InstanceConfiguration{Id: common.String("test")}}, nil)
@@ -180,10 +180,10 @@ func TestInstanceConfigCreate(t *testing.T) {
 
 		err := ms.ReconcileInstanceConfiguration(context.Background(), nil)
 		g.Expect(err).To(MatchError("ocpus and vcpus are mutually exclusive; specify at most one"))
-		condition := v1beta1conditions.Get(ms.OCIMachinePool, infrav2exp.LaunchTemplateReadyCondition)
+		condition := conditions.Get(ms.OCIMachinePool, infrav3exp.LaunchTemplateReadyCondition)
 		g.Expect(condition).NotTo(BeNil())
-		g.Expect(condition.Status).To(Equal(corev1.ConditionFalse))
-		g.Expect(condition.Reason).To(Equal(infrav2exp.LaunchTemplateCreateFailedReason))
+		g.Expect(condition.Status).To(Equal(metav1.ConditionFalse))
+		g.Expect(condition.Reason).To(Equal(infrav3exp.LaunchTemplateCreateFailedReason))
 		g.Expect(condition.Message).To(Equal(err.Error()))
 	})
 
@@ -202,7 +202,7 @@ func TestInstanceConfigCreate(t *testing.T) {
 			name:          "instance config exists",
 			errorExpected: false,
 			testSpecificSetup: func(ms *MachinePoolScope, g *WithT) {
-				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav3exp.InstanceConfiguration{
 					Shape:                   common.String("test-shape"),
 					InstanceConfigurationId: common.String("test"),
 				}
@@ -237,15 +237,15 @@ func TestInstanceConfigCreate(t *testing.T) {
 			name:          "instance config create",
 			errorExpected: false,
 			testSpecificSetup: func(ms *MachinePoolScope, g *WithT) {
-				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav3exp.InstanceConfiguration{
 					Shape: common.String("test-shape"),
-					ShapeConfig: &infrav2exp.ShapeConfig{
+					ShapeConfig: &infrav3exp.ShapeConfig{
 						Ocpus:                   common.String("2"),
 						MemoryInGBs:             common.String("65"),
 						BaselineOcpuUtilization: "BASELINE_1_1",
 						Nvmes:                   common.Int(5),
 					},
-					InstanceVnicConfiguration: &infrastructurev1beta2.NetworkDetails{
+					InstanceVnicConfiguration: &infrastructurev1beta3.NetworkDetails{
 						AssignPublicIp:         true,
 						SubnetName:             "worker-subnet",
 						SkipSourceDestCheck:    common.Bool(true),
@@ -254,23 +254,23 @@ func TestInstanceConfigCreate(t *testing.T) {
 						DisplayName:            common.String("test-display"),
 						AssignPrivateDnsRecord: common.Bool(true),
 					},
-					PlatformConfig: &infrastructurev1beta2.PlatformConfig{
-						PlatformConfigType: infrastructurev1beta2.PlatformConfigTypeAmdvm,
-						AmdVmPlatformConfig: infrastructurev1beta2.AmdVmPlatformConfig{
+					PlatformConfig: &infrastructurev1beta3.PlatformConfig{
+						PlatformConfigType: infrastructurev1beta3.PlatformConfigTypeAmdvm,
+						AmdVmPlatformConfig: infrastructurev1beta3.AmdVmPlatformConfig{
 							IsMeasuredBootEnabled:          common.Bool(false),
 							IsTrustedPlatformModuleEnabled: common.Bool(true),
 							IsSecureBootEnabled:            common.Bool(true),
 							IsMemoryEncryptionEnabled:      common.Bool(true),
 						},
 					},
-					AgentConfig: &infrastructurev1beta2.LaunchInstanceAgentConfig{
+					AgentConfig: &infrastructurev1beta3.LaunchInstanceAgentConfig{
 						IsMonitoringDisabled:  common.Bool(false),
 						IsManagementDisabled:  common.Bool(true),
 						AreAllPluginsDisabled: common.Bool(true),
-						PluginsConfig: []infrastructurev1beta2.InstanceAgentPluginConfig{
+						PluginsConfig: []infrastructurev1beta3.InstanceAgentPluginConfig{
 							{
 								Name:         common.String("test-plugin"),
-								DesiredState: infrastructurev1beta2.InstanceAgentPluginConfigDetailsDesiredStateEnabled,
+								DesiredState: infrastructurev1beta3.InstanceAgentPluginConfigDetailsDesiredStateEnabled,
 							},
 						},
 					},
@@ -354,15 +354,15 @@ func TestInstanceConfigCreate(t *testing.T) {
 			name:          "instance config create - LaunchInstanceAgentConfig contains nil",
 			errorExpected: false,
 			testSpecificSetup: func(ms *MachinePoolScope, g *WithT) {
-				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav3exp.InstanceConfiguration{
 					Shape: common.String("test-shape"),
-					ShapeConfig: &infrav2exp.ShapeConfig{
+					ShapeConfig: &infrav3exp.ShapeConfig{
 						Ocpus:                   common.String("2"),
 						MemoryInGBs:             common.String("65"),
 						BaselineOcpuUtilization: "BASELINE_1_1",
 						Nvmes:                   common.Int(5),
 					},
-					InstanceVnicConfiguration: &infrastructurev1beta2.NetworkDetails{
+					InstanceVnicConfiguration: &infrastructurev1beta3.NetworkDetails{
 						AssignPublicIp:         true,
 						SubnetName:             "worker-subnet",
 						SkipSourceDestCheck:    common.Bool(true),
@@ -371,23 +371,23 @@ func TestInstanceConfigCreate(t *testing.T) {
 						DisplayName:            common.String("test-display"),
 						AssignPrivateDnsRecord: common.Bool(true),
 					},
-					PlatformConfig: &infrastructurev1beta2.PlatformConfig{
-						PlatformConfigType: infrastructurev1beta2.PlatformConfigTypeAmdvm,
-						AmdVmPlatformConfig: infrastructurev1beta2.AmdVmPlatformConfig{
+					PlatformConfig: &infrastructurev1beta3.PlatformConfig{
+						PlatformConfigType: infrastructurev1beta3.PlatformConfigTypeAmdvm,
+						AmdVmPlatformConfig: infrastructurev1beta3.AmdVmPlatformConfig{
 							IsMeasuredBootEnabled:          common.Bool(false),
 							IsTrustedPlatformModuleEnabled: common.Bool(true),
 							IsSecureBootEnabled:            common.Bool(true),
 							IsMemoryEncryptionEnabled:      common.Bool(true),
 						},
 					},
-					AgentConfig: &infrastructurev1beta2.LaunchInstanceAgentConfig{
+					AgentConfig: &infrastructurev1beta3.LaunchInstanceAgentConfig{
 						IsMonitoringDisabled:  nil,
 						IsManagementDisabled:  nil,
 						AreAllPluginsDisabled: nil,
-						PluginsConfig: []infrastructurev1beta2.InstanceAgentPluginConfig{
+						PluginsConfig: []infrastructurev1beta3.InstanceAgentPluginConfig{
 							{
 								Name:         nil,
-								DesiredState: infrastructurev1beta2.InstanceAgentPluginConfigDetailsDesiredStateEnabled,
+								DesiredState: infrastructurev1beta3.InstanceAgentPluginConfigDetailsDesiredStateEnabled,
 							},
 						},
 					},
@@ -471,7 +471,7 @@ func TestInstanceConfigCreate(t *testing.T) {
 			name:          "instance config recreated when bootstrap data differs",
 			errorExpected: false,
 			testSpecificSetup: func(ms *MachinePoolScope, g *WithT) {
-				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav3exp.InstanceConfiguration{
 					Shape:                   common.String("test-shape"),
 					InstanceConfigurationId: common.String("test"),
 				}
@@ -566,7 +566,7 @@ write_files:
 				err = ms.Client.Update(context.Background(), secret)
 				g.Expect(err).To(BeNil())
 
-				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav3exp.InstanceConfiguration{
 					Shape:                   common.String("test-shape"),
 					InstanceConfigurationId: common.String("test"),
 				}
@@ -647,7 +647,7 @@ write_files:
 				err = ms.Client.Update(context.Background(), secret)
 				g.Expect(err).To(BeNil())
 
-				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav3exp.InstanceConfiguration{
 					Shape:                   common.String("test-shape"),
 					InstanceConfigurationId: common.String("test"),
 				}
@@ -693,22 +693,22 @@ write_files:
 			errorExpected: false,
 			testSpecificSetup: func(ms *MachinePoolScope, g *WithT) {
 				networkSpec := ms.OCIClusterAccesor.GetNetworkSpec()
-				networkSpec.Vcn.NetworkSecurityGroup.List = []*infrastructurev1beta2.NSG{
+				networkSpec.Vcn.NetworkSecurityGroup.List = []*infrastructurev1beta3.NSG{
 					{
-						Role: infrastructurev1beta2.WorkerRole,
+						Role: infrastructurev1beta3.WorkerRole,
 						ID:   common.String("nsg-id"),
 						Name: "worker-nsg",
 					},
 					{
-						Role: infrastructurev1beta2.WorkerRole,
+						Role: infrastructurev1beta3.WorkerRole,
 						ID:   common.String("nsg-id-2"),
 						Name: "worker-nsg-2",
 					},
 				}
-				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav3exp.InstanceConfiguration{
 					Shape:                   common.String("test-shape"),
 					InstanceConfigurationId: common.String("test"),
-					InstanceVnicConfiguration: &infrastructurev1beta2.NetworkDetails{
+					InstanceVnicConfiguration: &infrastructurev1beta3.NetworkDetails{
 						NsgNames: []string{"worker-nsg-2", "worker-nsg"},
 					},
 				}
@@ -744,10 +744,10 @@ write_files:
 			name:          "instance config unchanged when actual includes flex shape defaults",
 			errorExpected: false,
 			testSpecificSetup: func(ms *MachinePoolScope, g *WithT) {
-				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav3exp.InstanceConfiguration{
 					Shape:                   common.String("VM.Standard.E4.Flex"),
 					InstanceConfigurationId: common.String("test"),
-					ShapeConfig: &infrav2exp.ShapeConfig{
+					ShapeConfig: &infrav3exp.ShapeConfig{
 						Ocpus: common.String("1"),
 					},
 				}
@@ -786,18 +786,18 @@ write_files:
 			name:          "instance config unchanged when plugin config order differs",
 			errorExpected: false,
 			testSpecificSetup: func(ms *MachinePoolScope, g *WithT) {
-				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav3exp.InstanceConfiguration{
 					Shape:                   common.String("test-shape"),
 					InstanceConfigurationId: common.String("test"),
-					AgentConfig: &infrastructurev1beta2.LaunchInstanceAgentConfig{
-						PluginsConfig: []infrastructurev1beta2.InstanceAgentPluginConfig{
+					AgentConfig: &infrastructurev1beta3.LaunchInstanceAgentConfig{
+						PluginsConfig: []infrastructurev1beta3.InstanceAgentPluginConfig{
 							{
 								Name:         common.String("plugin-b"),
-								DesiredState: infrastructurev1beta2.InstanceAgentPluginConfigDetailsDesiredStateDisabled,
+								DesiredState: infrastructurev1beta3.InstanceAgentPluginConfigDetailsDesiredStateDisabled,
 							},
 							{
 								Name:         common.String("plugin-a"),
-								DesiredState: infrastructurev1beta2.InstanceAgentPluginConfigDetailsDesiredStateEnabled,
+								DesiredState: infrastructurev1beta3.InstanceAgentPluginConfigDetailsDesiredStateEnabled,
 							},
 						},
 					},
@@ -845,7 +845,7 @@ write_files:
 			name:          "instance config recreated when machine pool freeform tags change",
 			errorExpected: false,
 			testSpecificSetup: func(ms *MachinePoolScope, g *WithT) {
-				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav3exp.InstanceConfiguration{
 					Shape:                   common.String("test-shape"),
 					InstanceConfigurationId: common.String("test"),
 					FreeformTags: map[string]string{
@@ -905,7 +905,7 @@ write_files:
 			name:          "instance config recreated when machine pool defined tags change",
 			errorExpected: false,
 			testSpecificSetup: func(ms *MachinePoolScope, g *WithT) {
-				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav3exp.InstanceConfiguration{
 					Shape:                   common.String("test-shape"),
 					InstanceConfigurationId: common.String("test"),
 					DefinedTags: map[string]map[string]string{
@@ -972,16 +972,16 @@ write_files:
 			name:          "instance config update when shape changes",
 			errorExpected: false,
 			testSpecificSetup: func(ms *MachinePoolScope, g *WithT) {
-				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav3exp.InstanceConfiguration{
 					Shape:                   common.String("test-shape"),
 					InstanceConfigurationId: common.String("test"),
-					ShapeConfig: &infrav2exp.ShapeConfig{
+					ShapeConfig: &infrav3exp.ShapeConfig{
 						Ocpus:                   common.String("2"),
 						MemoryInGBs:             common.String("65"),
 						BaselineOcpuUtilization: "BASELINE_1_1",
 						Nvmes:                   common.Int(5),
 					},
-					InstanceVnicConfiguration: &infrastructurev1beta2.NetworkDetails{
+					InstanceVnicConfiguration: &infrastructurev1beta3.NetworkDetails{
 						AssignPublicIp:         true,
 						SubnetName:             "worker-subnet",
 						SkipSourceDestCheck:    common.Bool(true),
@@ -990,23 +990,23 @@ write_files:
 						DisplayName:            common.String("test-display"),
 						AssignPrivateDnsRecord: common.Bool(true),
 					},
-					PlatformConfig: &infrastructurev1beta2.PlatformConfig{
-						PlatformConfigType: infrastructurev1beta2.PlatformConfigTypeAmdvm,
-						AmdVmPlatformConfig: infrastructurev1beta2.AmdVmPlatformConfig{
+					PlatformConfig: &infrastructurev1beta3.PlatformConfig{
+						PlatformConfigType: infrastructurev1beta3.PlatformConfigTypeAmdvm,
+						AmdVmPlatformConfig: infrastructurev1beta3.AmdVmPlatformConfig{
 							IsMeasuredBootEnabled:          common.Bool(false),
 							IsTrustedPlatformModuleEnabled: common.Bool(true),
 							IsSecureBootEnabled:            common.Bool(true),
 							IsMemoryEncryptionEnabled:      common.Bool(true),
 						},
 					},
-					AgentConfig: &infrastructurev1beta2.LaunchInstanceAgentConfig{
+					AgentConfig: &infrastructurev1beta3.LaunchInstanceAgentConfig{
 						IsMonitoringDisabled:  common.Bool(false),
 						IsManagementDisabled:  common.Bool(true),
 						AreAllPluginsDisabled: common.Bool(true),
-						PluginsConfig: []infrastructurev1beta2.InstanceAgentPluginConfig{
+						PluginsConfig: []infrastructurev1beta3.InstanceAgentPluginConfig{
 							{
 								Name:         common.String("test-plugin"),
-								DesiredState: infrastructurev1beta2.InstanceAgentPluginConfigDetailsDesiredStateEnabled,
+								DesiredState: infrastructurev1beta3.InstanceAgentPluginConfigDetailsDesiredStateEnabled,
 							},
 						},
 					},
@@ -1113,7 +1113,7 @@ write_files:
 			name:          "instance config recreated when config changes but bootstrap unchanged",
 			errorExpected: false,
 			testSpecificSetup: func(ms *MachinePoolScope, g *WithT) {
-				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav3exp.InstanceConfiguration{
 					Shape:                   common.String("new-shape"),
 					InstanceConfigurationId: common.String("test"),
 				}
@@ -1164,7 +1164,7 @@ write_files:
 			name:          "instance config recreated when both config and bootstrap change",
 			errorExpected: false,
 			testSpecificSetup: func(ms *MachinePoolScope, g *WithT) {
-				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav3exp.InstanceConfiguration{
 					Shape:                   common.String("new-shape"),
 					InstanceConfigurationId: common.String("test"),
 				}
@@ -1294,24 +1294,24 @@ func TestBackfillAnnotations_Upgrade(t *testing.T) {
 			Data:       map[string][]byte{"value": []byte("test")},
 		}
 		computeMgmt := mock_computemanagement.NewMockClient(mockCtrl)
-		ociCluster := &infrastructurev1beta2.OCICluster{
+		ociCluster := &infrastructurev1beta3.OCICluster{
 			ObjectMeta: metav1.ObjectMeta{UID: "cluster_uid"},
-			Spec: infrastructurev1beta2.OCIClusterSpec{
+			Spec: infrastructurev1beta3.OCIClusterSpec{
 				CompartmentId:         "test-compartment",
 				DefinedTags:           definedTags,
 				OCIResourceIdentifier: "resource_uid",
-				NetworkSpec: infrastructurev1beta2.NetworkSpec{
-					Vcn: infrastructurev1beta2.VCN{
+				NetworkSpec: infrastructurev1beta3.NetworkSpec{
+					Vcn: infrastructurev1beta3.VCN{
 						ID: common.String("vcn-id"),
-						Subnets: []*infrastructurev1beta2.Subnet{{
-							Role: infrastructurev1beta2.WorkerRole,
+						Subnets: []*infrastructurev1beta3.Subnet{{
+							Role: infrastructurev1beta3.WorkerRole,
 							ID:   common.String("subnet-id"),
-							Type: infrastructurev1beta2.Private,
+							Type: infrastructurev1beta3.Private,
 							Name: "worker-subnet",
 						}},
-						NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
-							List: []*infrastructurev1beta2.NSG{{
-								Role: infrastructurev1beta2.WorkerRole,
+						NetworkSecurityGroup: infrastructurev1beta3.NetworkSecurityGroup{
+							List: []*infrastructurev1beta3.NSG{{
+								Role: infrastructurev1beta3.WorkerRole,
 								ID:   common.String("nsg-id"),
 								Name: "worker-nsg",
 							}},
@@ -1321,12 +1321,12 @@ func TestBackfillAnnotations_Upgrade(t *testing.T) {
 			},
 		}
 		size := int32(3)
-		machinePool := &infrav2exp.OCIMachinePool{
+		machinePool := &infrav3exp.OCIMachinePool{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            "test",
 				ResourceVersion: "20",
 			},
-			Spec: infrav2exp.OCIMachinePoolSpec{},
+			Spec: infrav3exp.OCIMachinePoolSpec{},
 		}
 		cl := fake.NewClientBuilder().WithStatusSubresource(machinePool).WithObjects(secret, machinePool).Build()
 		ms, err := NewMachinePoolScope(MachinePoolScopeParams{
@@ -1380,7 +1380,7 @@ func TestBackfillAnnotations_Upgrade(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				g := NewWithT(t)
 				ms, computeMgmt := buildScope(t)
-				shape := &infrav2exp.ShapeConfig{}
+				shape := &infrav3exp.ShapeConfig{}
 				switch tc.desired {
 				case "ocpus":
 					shape.Ocpus = common.String("1")
@@ -1393,7 +1393,7 @@ func TestBackfillAnnotations_Upgrade(t *testing.T) {
 				if tc.omitShape {
 					shape = nil
 				}
-				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+				ms.OCIMachinePool.Spec.InstanceConfiguration = infrav3exp.InstanceConfiguration{
 					Shape: common.String("test-shape"), InstanceConfigurationId: common.String("test"), ShapeConfig: shape,
 				}
 				ms.OCIMachinePool.Annotations = map[string]string{
@@ -1424,7 +1424,7 @@ func TestBackfillAnnotations_Upgrade(t *testing.T) {
 						g.Expect(ms.ReconcileInstanceConfiguration(context.Background(), nil)).To(MatchError("create failed"))
 						g.Expect(ms.OCIMachinePool.Annotations[InstanceConfigurationCPUModeAnnotation]).To(Equal(tc.previous))
 						g.Expect(ms.PatchObject(context.Background())).To(Succeed())
-						persisted := &infrav2exp.OCIMachinePool{}
+						persisted := &infrav3exp.OCIMachinePool{}
 						g.Expect(ms.Client.Get(context.Background(), client.ObjectKeyFromObject(ms.OCIMachinePool), persisted)).To(Succeed())
 						g.Expect(persisted.Annotations[InstanceConfigurationCPUModeAnnotation]).To(Equal(tc.previous))
 						retry, err := NewMachinePoolScope(MachinePoolScopeParams{
@@ -1456,7 +1456,7 @@ func TestBackfillAnnotations_Upgrade(t *testing.T) {
 						}
 					}
 				}
-				stored := &infrav2exp.OCIMachinePool{}
+				stored := &infrav3exp.OCIMachinePool{}
 				g.Expect(ms.Client.Get(context.Background(), client.ObjectKeyFromObject(ms.OCIMachinePool), stored)).To(Succeed())
 				g.Expect(stored.Annotations[InstanceConfigurationCPUModeAnnotation]).To(Equal(tc.desired))
 				wantID := "test"
@@ -1484,7 +1484,7 @@ func TestBackfillAnnotations_Upgrade(t *testing.T) {
 		g := NewWithT(t)
 		ms, computeMgmt := buildScope(t)
 
-		ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+		ms.OCIMachinePool.Spec.InstanceConfiguration = infrav3exp.InstanceConfiguration{
 			Shape:                   common.String("test-shape"),
 			InstanceConfigurationId: common.String("test"),
 		}
@@ -1514,7 +1514,7 @@ func TestBackfillAnnotations_Upgrade(t *testing.T) {
 		g := NewWithT(t)
 		ms, computeMgmt := buildScope(t)
 
-		ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+		ms.OCIMachinePool.Spec.InstanceConfiguration = infrav3exp.InstanceConfiguration{
 			Shape:                   common.String("test-shape"),
 			InstanceConfigurationId: common.String("test"),
 		}
@@ -1547,7 +1547,7 @@ func TestBackfillAnnotations_Upgrade(t *testing.T) {
 		g := NewWithT(t)
 		ms, computeMgmt := buildScope(t)
 
-		ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+		ms.OCIMachinePool.Spec.InstanceConfiguration = infrav3exp.InstanceConfiguration{
 			Shape:                   common.String("test-shape"),
 			InstanceConfigurationId: common.String("test"),
 		}
@@ -1581,7 +1581,7 @@ func TestBackfillAnnotations_Upgrade(t *testing.T) {
 		ms, computeMgmt := buildScope(t)
 
 		// Desired shape is "new-shape", but OCI still has "old-shape".
-		ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+		ms.OCIMachinePool.Spec.InstanceConfiguration = infrav3exp.InstanceConfiguration{
 			Shape:                   common.String("new-shape"),
 			InstanceConfigurationId: common.String("test"),
 		}
@@ -1618,7 +1618,7 @@ func TestBackfillAnnotations_Upgrade(t *testing.T) {
 		g := NewWithT(t)
 		ms, computeMgmt := buildScope(t)
 
-		ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+		ms.OCIMachinePool.Spec.InstanceConfiguration = infrav3exp.InstanceConfiguration{
 			Shape:                   common.String("test-shape"),
 			InstanceConfigurationId: common.String("test"),
 		}
@@ -1665,7 +1665,7 @@ func TestBackfillAnnotations_Upgrade(t *testing.T) {
 		g := NewWithT(t)
 		ms, computeMgmt := buildScope(t)
 
-		ms.OCIMachinePool.Spec.InstanceConfiguration = infrav2exp.InstanceConfiguration{
+		ms.OCIMachinePool.Spec.InstanceConfiguration = infrav3exp.InstanceConfiguration{
 			Shape:                   common.String("test-shape"),
 			InstanceConfigurationId: common.String("test"),
 		}
@@ -1709,22 +1709,22 @@ func TestGetLaunchInstanceDetailsCopiesMetadataAndPropagatesSupportedFields(t *t
 			"value": []byte("test"),
 		},
 	}
-	ociCluster := &infrastructurev1beta2.OCICluster{
-		Spec: infrastructurev1beta2.OCIClusterSpec{
+	ociCluster := &infrastructurev1beta3.OCICluster{
+		Spec: infrastructurev1beta3.OCIClusterSpec{
 			CompartmentId: "test-compartment",
-			NetworkSpec: infrastructurev1beta2.NetworkSpec{
-				Vcn: infrastructurev1beta2.VCN{
-					Subnets: []*infrastructurev1beta2.Subnet{
+			NetworkSpec: infrastructurev1beta3.NetworkSpec{
+				Vcn: infrastructurev1beta3.VCN{
+					Subnets: []*infrastructurev1beta3.Subnet{
 						{
-							Role: infrastructurev1beta2.WorkerRole,
+							Role: infrastructurev1beta3.WorkerRole,
 							ID:   common.String("worker-subnet-id"),
 							Name: "worker-subnet",
 						},
 					},
-					NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
-						List: []*infrastructurev1beta2.NSG{
+					NetworkSecurityGroup: infrastructurev1beta3.NetworkSecurityGroup{
+						List: []*infrastructurev1beta3.NSG{
 							{
-								Role: infrastructurev1beta2.WorkerRole,
+								Role: infrastructurev1beta3.WorkerRole,
 								ID:   common.String("worker-nsg-id"),
 								Name: "worker-nsg",
 							},
@@ -1734,7 +1734,7 @@ func TestGetLaunchInstanceDetailsCopiesMetadataAndPropagatesSupportedFields(t *t
 			},
 		},
 	}
-	machinePool := &infrav2exp.OCIMachinePool{
+	machinePool := &infrav3exp.OCIMachinePool{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test",
 		},
@@ -1766,21 +1766,21 @@ func TestGetLaunchInstanceDetailsCopiesMetadataAndPropagatesSupportedFields(t *t
 	g.Expect(err).To(BeNil())
 
 	metadata := map[string]string{"ssh_authorized_keys": "ssh-rsa test"}
-	spec := infrav2exp.InstanceConfiguration{
+	spec := infrav3exp.InstanceConfiguration{
 		Shape:                          common.String("test-shape"),
 		Metadata:                       metadata,
 		IsPvEncryptionInTransitEnabled: common.Bool(true),
-		InstanceSourceViaImageDetails: &infrav2exp.InstanceSourceViaImageConfig{
+		InstanceSourceViaImageDetails: &infrav3exp.InstanceSourceViaImageConfig{
 			ImageId:             common.String("image-id"),
 			KmsKeyId:            common.String("kms-id"),
 			BootVolumeSizeInGBs: common.Int64(100),
 			BootVolumeVpusPerGB: common.Int64(20),
 		},
-		AvailabilityConfig: &infrastructurev1beta2.LaunchInstanceAvailabilityConfig{
+		AvailabilityConfig: &infrastructurev1beta3.LaunchInstanceAvailabilityConfig{
 			IsLiveMigrationPreferred: common.Bool(true),
-			RecoveryAction:           infrastructurev1beta2.LaunchInstanceAvailabilityConfigDetailsRecoveryActionRestoreInstance,
+			RecoveryAction:           infrastructurev1beta3.LaunchInstanceAvailabilityConfigDetailsRecoveryActionRestoreInstance,
 		},
-		InstanceVnicConfiguration: &infrastructurev1beta2.NetworkDetails{
+		InstanceVnicConfiguration: &infrastructurev1beta3.NetworkDetails{
 			SubnetId:     common.String("explicit-subnet-id"),
 			NSGIds:       []string{"explicit-nsg-id"},
 			AssignIpv6Ip: true,
@@ -1810,8 +1810,8 @@ func TestGetLaunchInstanceDetailsCopiesMetadataAndPropagatesSupportedFields(t *t
 func TestMachinePoolEffectiveInstanceTags(t *testing.T) {
 	g := NewWithT(t)
 
-	ociCluster := &infrastructurev1beta2.OCICluster{
-		Spec: infrastructurev1beta2.OCIClusterSpec{
+	ociCluster := &infrastructurev1beta3.OCICluster{
+		Spec: infrastructurev1beta3.OCIClusterSpec{
 			OCIResourceIdentifier: "resource_uid",
 			FreeformTags: map[string]string{
 				"cluster-only":                    "cluster",
@@ -1830,9 +1830,9 @@ func TestMachinePoolEffectiveInstanceTags(t *testing.T) {
 			},
 		},
 	}
-	machinePool := &infrav2exp.OCIMachinePool{
-		Spec: infrav2exp.OCIMachinePoolSpec{
-			InstanceConfiguration: infrav2exp.InstanceConfiguration{
+	machinePool := &infrav3exp.OCIMachinePool{
+		Spec: infrav3exp.OCIMachinePoolSpec{
+			InstanceConfiguration: infrav3exp.InstanceConfiguration{
 				FreeformTags: map[string]string{
 					"pool-only":       "pool",
 					"overlap":         "pool",
@@ -1896,8 +1896,8 @@ func TestGetLaunchInstanceDetailsAppliesEffectiveInstanceTagsToLaunchAndVnic(t *
 			"value": []byte("test"),
 		},
 	}
-	ociCluster := &infrastructurev1beta2.OCICluster{
-		Spec: infrastructurev1beta2.OCIClusterSpec{
+	ociCluster := &infrastructurev1beta3.OCICluster{
+		Spec: infrastructurev1beta3.OCIClusterSpec{
 			CompartmentId:         "test-compartment",
 			OCIResourceIdentifier: "resource_uid",
 			FreeformTags: map[string]string{
@@ -1910,11 +1910,11 @@ func TestGetLaunchInstanceDetailsAppliesEffectiveInstanceTagsToLaunchAndVnic(t *
 					"Owner":      "cluster-platform",
 				},
 			},
-			NetworkSpec: infrastructurev1beta2.NetworkSpec{
-				Vcn: infrastructurev1beta2.VCN{
-					Subnets: []*infrastructurev1beta2.Subnet{
+			NetworkSpec: infrastructurev1beta3.NetworkSpec{
+				Vcn: infrastructurev1beta3.VCN{
+					Subnets: []*infrastructurev1beta3.Subnet{
 						{
-							Role: infrastructurev1beta2.WorkerRole,
+							Role: infrastructurev1beta3.WorkerRole,
 							ID:   common.String("worker-subnet-id"),
 						},
 					},
@@ -1922,12 +1922,12 @@ func TestGetLaunchInstanceDetailsAppliesEffectiveInstanceTagsToLaunchAndVnic(t *
 			},
 		},
 	}
-	machinePool := &infrav2exp.OCIMachinePool{
+	machinePool := &infrav3exp.OCIMachinePool{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test",
 		},
-		Spec: infrav2exp.OCIMachinePoolSpec{
-			InstanceConfiguration: infrav2exp.InstanceConfiguration{
+		Spec: infrav3exp.OCIMachinePoolSpec{
+			InstanceConfiguration: infrav3exp.InstanceConfiguration{
 				Shape: common.String("test-shape"),
 				FreeformTags: map[string]string{
 					"pool-only": "pool",
@@ -2001,7 +2001,7 @@ func TestGetLaunchInstanceDetailsExtendedMetadata(t *testing.T) {
 			"value": []byte("test"),
 		},
 	}
-	machinePool := &infrav2exp.OCIMachinePool{
+	machinePool := &infrav3exp.OCIMachinePool{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test",
 		},
@@ -2011,8 +2011,8 @@ func TestGetLaunchInstanceDetailsExtendedMetadata(t *testing.T) {
 		ComputeManagementClient: mock_computemanagement.NewMockClient(mockCtrl),
 		OCIMachinePool:          machinePool,
 		OCIClusterAccessor: OCISelfManagedCluster{
-			OCICluster: &infrastructurev1beta2.OCICluster{
-				Spec: infrastructurev1beta2.OCIClusterSpec{
+			OCICluster: &infrastructurev1beta3.OCICluster{
+				Spec: infrastructurev1beta3.OCIClusterSpec{
 					CompartmentId: "test-compartment",
 				},
 			},
@@ -2036,7 +2036,7 @@ func TestGetLaunchInstanceDetailsExtendedMetadata(t *testing.T) {
 	})
 	g.Expect(err).To(BeNil())
 
-	spec := infrav2exp.InstanceConfiguration{
+	spec := infrav3exp.InstanceConfiguration{
 		Shape: common.String("test-shape"),
 		ExtendedMetadata: map[string]apiextensionsv1.JSON{
 			"cilium-primary-vnic": {
@@ -2070,7 +2070,7 @@ func TestGetLaunchInstanceDetailsNilExtendedMetadata(t *testing.T) {
 			"value": []byte("test"),
 		},
 	}
-	machinePool := &infrav2exp.OCIMachinePool{
+	machinePool := &infrav3exp.OCIMachinePool{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test",
 		},
@@ -2080,8 +2080,8 @@ func TestGetLaunchInstanceDetailsNilExtendedMetadata(t *testing.T) {
 		ComputeManagementClient: mock_computemanagement.NewMockClient(mockCtrl),
 		OCIMachinePool:          machinePool,
 		OCIClusterAccessor: OCISelfManagedCluster{
-			OCICluster: &infrastructurev1beta2.OCICluster{
-				Spec: infrastructurev1beta2.OCIClusterSpec{
+			OCICluster: &infrastructurev1beta3.OCICluster{
+				Spec: infrastructurev1beta3.OCIClusterSpec{
 					CompartmentId: "test-compartment",
 				},
 			},
@@ -2105,7 +2105,7 @@ func TestGetLaunchInstanceDetailsNilExtendedMetadata(t *testing.T) {
 	})
 	g.Expect(err).To(BeNil())
 
-	spec := infrav2exp.InstanceConfiguration{
+	spec := infrav3exp.InstanceConfiguration{
 		Shape: common.String("test-shape"),
 	}
 	ms.OCIMachinePool.Spec.InstanceConfiguration = spec
@@ -2159,29 +2159,29 @@ func TestInstancePoolCreate(t *testing.T) {
 			},
 		}
 		computeManagementClient = mock_computemanagement.NewMockClient(mockCtrl)
-		ociCluster := &infrastructurev1beta2.OCICluster{
+		ociCluster := &infrastructurev1beta3.OCICluster{
 			ObjectMeta: metav1.ObjectMeta{
 				UID: "cluster_uid",
 			},
-			Spec: infrastructurev1beta2.OCIClusterSpec{
+			Spec: infrastructurev1beta3.OCIClusterSpec{
 				CompartmentId:         "test-compartment",
 				DefinedTags:           definedTags,
 				OCIResourceIdentifier: "resource_uid",
-				NetworkSpec: infrastructurev1beta2.NetworkSpec{
-					Vcn: infrastructurev1beta2.VCN{
+				NetworkSpec: infrastructurev1beta3.NetworkSpec{
+					Vcn: infrastructurev1beta3.VCN{
 						ID: common.String("vcn-id"),
-						Subnets: []*infrastructurev1beta2.Subnet{
+						Subnets: []*infrastructurev1beta3.Subnet{
 							{
-								Role: infrastructurev1beta2.WorkerRole,
+								Role: infrastructurev1beta3.WorkerRole,
 								ID:   common.String("subnet-id"),
-								Type: infrastructurev1beta2.Private,
+								Type: infrastructurev1beta3.Private,
 								Name: "worker-subnet",
 							},
 						},
-						NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
-							List: []*infrastructurev1beta2.NSG{
+						NetworkSecurityGroup: infrastructurev1beta3.NetworkSecurityGroup{
+							List: []*infrastructurev1beta3.NSG{
 								{
-									Role: infrastructurev1beta2.WorkerRole,
+									Role: infrastructurev1beta3.WorkerRole,
 									ID:   common.String("nsg-id"),
 									Name: "worker-nsg",
 								},
@@ -2189,7 +2189,7 @@ func TestInstancePoolCreate(t *testing.T) {
 						},
 					},
 				},
-				AvailabilityDomains: map[string]infrastructurev1beta2.OCIAvailabilityDomain{
+				AvailabilityDomains: map[string]infrastructurev1beta3.OCIAvailabilityDomain{
 					"ad-1": {
 						Name:         "ad-1",
 						FaultDomains: []string{"fd-5", "fd-6"},
@@ -2198,12 +2198,12 @@ func TestInstancePoolCreate(t *testing.T) {
 			},
 		}
 		size := int32(3)
-		machinePool := &infrav2exp.OCIMachinePool{
+		machinePool := &infrav3exp.OCIMachinePool{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            "test",
 				ResourceVersion: "20",
 			},
-			Spec: infrav2exp.OCIMachinePoolSpec{},
+			Spec: infrav3exp.OCIMachinePoolSpec{},
 		}
 		client := fake.NewClientBuilder().WithStatusSubresource(machinePool).WithObjects(secret, machinePool).Build()
 		ms, err = NewMachinePoolScope(MachinePoolScopeParams{
@@ -2301,13 +2301,13 @@ func TestInstancePoolCreate(t *testing.T) {
 func TestBuildInstancePoolPlacement(t *testing.T) {
 	tests := []struct {
 		name             string
-		placementDetails []infrav2exp.PlacementDetails
+		placementDetails []infrav3exp.PlacementDetails
 		expected         []core.CreateInstancePoolPlacementConfigurationDetails
 		errorExpected    bool
 	}{
 		{
 			name: "uses requested fault domains for selected availability domain",
-			placementDetails: []infrav2exp.PlacementDetails{
+			placementDetails: []infrav3exp.PlacementDetails{
 				{
 					AvailabilityDomain: 1,
 					FaultDomains:       []string{"fd-2"},
@@ -2323,7 +2323,7 @@ func TestBuildInstancePoolPlacement(t *testing.T) {
 		},
 		{
 			name: "uses cluster fault domains when selected availability domain omits fault domains",
-			placementDetails: []infrav2exp.PlacementDetails{
+			placementDetails: []infrav3exp.PlacementDetails{
 				{
 					AvailabilityDomain: 2,
 				},
@@ -2353,7 +2353,7 @@ func TestBuildInstancePoolPlacement(t *testing.T) {
 		},
 		{
 			name: "errors when more placement details are requested than cluster availability domains",
-			placementDetails: []infrav2exp.PlacementDetails{
+			placementDetails: []infrav3exp.PlacementDetails{
 				{AvailabilityDomain: 1},
 				{AvailabilityDomain: 2},
 				{AvailabilityDomain: 3},
@@ -2368,36 +2368,36 @@ func TestBuildInstancePoolPlacement(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
 
-			infraMachinePool := &infrav2exp.OCIMachinePool{
+			infraMachinePool := &infrav3exp.OCIMachinePool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test",
 					Namespace: "default",
 				},
-				Spec: infrav2exp.OCIMachinePoolSpec{
+				Spec: infrav3exp.OCIMachinePoolSpec{
 					PlacementDetails: tc.placementDetails,
 				},
 			}
 			scheme := runtime.NewScheme()
 			g.Expect(corev1.AddToScheme(scheme)).To(Succeed())
-			g.Expect(infrav2exp.AddToScheme(scheme)).To(Succeed())
+			g.Expect(infrav3exp.AddToScheme(scheme)).To(Succeed())
 
 			ms, err := NewMachinePoolScope(MachinePoolScopeParams{
 				ComputeManagementClient: mock_computemanagement.NewMockClient(mockCtrl),
 				OCIMachinePool:          infraMachinePool,
 				OCIClusterAccessor: OCISelfManagedCluster{
-					OCICluster: &infrastructurev1beta2.OCICluster{
-						Spec: infrastructurev1beta2.OCIClusterSpec{
-							NetworkSpec: infrastructurev1beta2.NetworkSpec{
-								Vcn: infrastructurev1beta2.VCN{
-									Subnets: []*infrastructurev1beta2.Subnet{
+					OCICluster: &infrastructurev1beta3.OCICluster{
+						Spec: infrastructurev1beta3.OCIClusterSpec{
+							NetworkSpec: infrastructurev1beta3.NetworkSpec{
+								Vcn: infrastructurev1beta3.VCN{
+									Subnets: []*infrastructurev1beta3.Subnet{
 										{
-											Role: infrastructurev1beta2.WorkerRole,
+											Role: infrastructurev1beta3.WorkerRole,
 											ID:   common.String("subnet-id"),
 										},
 									},
 								},
 							},
-							AvailabilityDomains: map[string]infrastructurev1beta2.OCIAvailabilityDomain{
+							AvailabilityDomains: map[string]infrastructurev1beta3.OCIAvailabilityDomain{
 								"test-ad-1": {
 									Name:         "test-ad-1",
 									FaultDomains: []string{"fd-1", "fd-2"},
@@ -2462,29 +2462,29 @@ func TestInstancePoolUpdate(t *testing.T) {
 			},
 		}
 		computeManagementClient = mock_computemanagement.NewMockClient(mockCtrl)
-		ociCluster := &infrastructurev1beta2.OCICluster{
+		ociCluster := &infrastructurev1beta3.OCICluster{
 			ObjectMeta: metav1.ObjectMeta{
 				UID: "cluster_uid",
 			},
-			Spec: infrastructurev1beta2.OCIClusterSpec{
+			Spec: infrastructurev1beta3.OCIClusterSpec{
 				CompartmentId:         "test-compartment",
 				DefinedTags:           definedTags,
 				OCIResourceIdentifier: "resource_uid",
-				NetworkSpec: infrastructurev1beta2.NetworkSpec{
-					Vcn: infrastructurev1beta2.VCN{
+				NetworkSpec: infrastructurev1beta3.NetworkSpec{
+					Vcn: infrastructurev1beta3.VCN{
 						ID: common.String("vcn-id"),
-						Subnets: []*infrastructurev1beta2.Subnet{
+						Subnets: []*infrastructurev1beta3.Subnet{
 							{
-								Role: infrastructurev1beta2.WorkerRole,
+								Role: infrastructurev1beta3.WorkerRole,
 								ID:   common.String("subnet-id"),
-								Type: infrastructurev1beta2.Private,
+								Type: infrastructurev1beta3.Private,
 								Name: "worker-subnet",
 							},
 						},
-						NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
-							List: []*infrastructurev1beta2.NSG{
+						NetworkSecurityGroup: infrastructurev1beta3.NetworkSecurityGroup{
+							List: []*infrastructurev1beta3.NSG{
 								{
-									Role: infrastructurev1beta2.WorkerRole,
+									Role: infrastructurev1beta3.WorkerRole,
 									ID:   common.String("nsg-id"),
 									Name: "worker-nsg",
 								},
@@ -2492,7 +2492,7 @@ func TestInstancePoolUpdate(t *testing.T) {
 						},
 					},
 				},
-				AvailabilityDomains: map[string]infrastructurev1beta2.OCIAvailabilityDomain{
+				AvailabilityDomains: map[string]infrastructurev1beta3.OCIAvailabilityDomain{
 					"ad-1": {
 						Name:         "ad-1",
 						FaultDomains: []string{"fd-5", "fd-6"},
@@ -2505,12 +2505,12 @@ func TestInstancePoolUpdate(t *testing.T) {
 			},
 		}
 		size := int32(3)
-		machinePool := &infrav2exp.OCIMachinePool{
+		machinePool := &infrav3exp.OCIMachinePool{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            "test",
 				ResourceVersion: "20",
 			},
-			Spec: infrav2exp.OCIMachinePoolSpec{},
+			Spec: infrav3exp.OCIMachinePoolSpec{},
 		}
 		client := fake.NewClientBuilder().WithObjects(secret, machinePool).Build()
 		ms, err = NewMachinePoolScope(MachinePoolScopeParams{
@@ -2621,7 +2621,7 @@ func TestInstancePoolUpdate(t *testing.T) {
 			},
 			testSpecificSetup: func(ms *MachinePoolScope) {
 				ms.OCIMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId = common.String("config_id")
-				ms.OCIMachinePool.Spec.PlacementDetails = []infrav2exp.PlacementDetails{
+				ms.OCIMachinePool.Spec.PlacementDetails = []infrav3exp.PlacementDetails{
 					{
 						AvailabilityDomain: 2,
 						FaultDomains:       []string{"fd-7"},
@@ -2667,7 +2667,7 @@ func TestInstancePoolUpdate(t *testing.T) {
 					clusterv1.ReplicasManagedByAnnotation: "",
 				}
 				ms.OCIMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId = common.String("config_id")
-				ms.OCIMachinePool.Spec.PlacementDetails = []infrav2exp.PlacementDetails{
+				ms.OCIMachinePool.Spec.PlacementDetails = []infrav3exp.PlacementDetails{
 					{
 						AvailabilityDomain: 2,
 						FaultDomains:       []string{"fd-7"},
@@ -2734,13 +2734,13 @@ func TestInstancePoolUpdateSkipsDefaultPlacementDrift(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	replicas := int32(3)
-	infraMachinePool := &infrav2exp.OCIMachinePool{
+	infraMachinePool := &infrav3exp.OCIMachinePool{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
 			Namespace: "default",
 		},
-		Spec: infrav2exp.OCIMachinePoolSpec{
-			InstanceConfiguration: infrav2exp.InstanceConfiguration{
+		Spec: infrav3exp.OCIMachinePoolSpec{
+			InstanceConfiguration: infrav3exp.InstanceConfiguration{
 				InstanceConfigurationId: common.String("config_id"),
 			},
 		},
@@ -2749,7 +2749,7 @@ func TestInstancePoolUpdateSkipsDefaultPlacementDrift(t *testing.T) {
 		ComputeManagementClient: mock_computemanagement.NewMockClient(mockCtrl),
 		OCIMachinePool:          infraMachinePool,
 		OCIClusterAccessor: OCISelfManagedCluster{
-			OCICluster: &infrastructurev1beta2.OCICluster{},
+			OCICluster: &infrastructurev1beta3.OCICluster{},
 		},
 		Cluster: &clusterv1.Cluster{},
 		MachinePool: &clusterv1.MachinePool{
@@ -2778,19 +2778,19 @@ func TestInstancePoolUpdatePrimarySubnetPlacement(t *testing.T) {
 
 	replicas := int32(3)
 	computeManagementClient := mock_computemanagement.NewMockClient(mockCtrl)
-	infraMachinePool := &infrav2exp.OCIMachinePool{
+	infraMachinePool := &infrav3exp.OCIMachinePool{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
 			Namespace: "default",
 		},
-		Spec: infrav2exp.OCIMachinePoolSpec{
-			PlacementDetails: []infrav2exp.PlacementDetails{
+		Spec: infrav3exp.OCIMachinePoolSpec{
+			PlacementDetails: []infrav3exp.PlacementDetails{
 				{
 					AvailabilityDomain: 1,
 					FaultDomains:       []string{"fd-5"},
 				},
 			},
-			InstanceConfiguration: infrav2exp.InstanceConfiguration{
+			InstanceConfiguration: infrav3exp.InstanceConfiguration{
 				InstanceConfigurationId: common.String("config_id"),
 			},
 		},
@@ -2799,19 +2799,19 @@ func TestInstancePoolUpdatePrimarySubnetPlacement(t *testing.T) {
 		ComputeManagementClient: computeManagementClient,
 		OCIMachinePool:          infraMachinePool,
 		OCIClusterAccessor: OCISelfManagedCluster{
-			OCICluster: &infrastructurev1beta2.OCICluster{
-				Spec: infrastructurev1beta2.OCIClusterSpec{
-					NetworkSpec: infrastructurev1beta2.NetworkSpec{
-						Vcn: infrastructurev1beta2.VCN{
-							Subnets: []*infrastructurev1beta2.Subnet{
+			OCICluster: &infrastructurev1beta3.OCICluster{
+				Spec: infrastructurev1beta3.OCIClusterSpec{
+					NetworkSpec: infrastructurev1beta3.NetworkSpec{
+						Vcn: infrastructurev1beta3.VCN{
+							Subnets: []*infrastructurev1beta3.Subnet{
 								{
-									Role: infrastructurev1beta2.WorkerRole,
+									Role: infrastructurev1beta3.WorkerRole,
 									ID:   common.String("new-subnet-id"),
 								},
 							},
 						},
 					},
-					AvailabilityDomains: map[string]infrastructurev1beta2.OCIAvailabilityDomain{
+					AvailabilityDomains: map[string]infrastructurev1beta3.OCIAvailabilityDomain{
 						"ad-1": {
 							Name:         "ad-1",
 							FaultDomains: []string{"fd-5"},
@@ -2887,17 +2887,17 @@ func TestSyncReplicasFromInstancePool(t *testing.T) {
 				"value": []byte("test"),
 			},
 		}
-		ociCluster := &infrastructurev1beta2.OCICluster{
+		ociCluster := &infrastructurev1beta3.OCICluster{
 			ObjectMeta: metav1.ObjectMeta{
 				UID: "cluster_uid",
 			},
-			Spec: infrastructurev1beta2.OCIClusterSpec{
+			Spec: infrastructurev1beta3.OCIClusterSpec{
 				CompartmentId:         "test-compartment",
 				OCIResourceIdentifier: "resource_uid",
 			},
 		}
 		replicas := int32(3)
-		infraMachinePool := &infrav2exp.OCIMachinePool{
+		infraMachinePool := &infrav3exp.OCIMachinePool{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test",
 				Namespace: "default",
@@ -2922,7 +2922,7 @@ func TestSyncReplicasFromInstancePool(t *testing.T) {
 		scheme := runtime.NewScheme()
 		g.Expect(corev1.AddToScheme(scheme)).To(Succeed())
 		g.Expect(clusterv1.AddToScheme(scheme)).To(Succeed())
-		g.Expect(infrav2exp.AddToScheme(scheme)).To(Succeed())
+		g.Expect(infrav3exp.AddToScheme(scheme)).To(Succeed())
 
 		client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(secret, infraMachinePool, machinePool).Build()
 		ms, err = NewMachinePoolScope(MachinePoolScopeParams{
@@ -2989,27 +2989,27 @@ func TestSyncReplicasFromInstancePool(t *testing.T) {
 func TestBuildInstanceConfigurationShapeConfigCPUs(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
-		spec    *infrav2exp.ShapeConfig
+		spec    *infrav3exp.ShapeConfig
 		want    core.InstanceConfigurationLaunchInstanceShapeConfigDetails
 		wantErr string
 	}{
 		{name: "absent"},
-		{name: "empty", spec: &infrav2exp.ShapeConfig{}},
-		{name: "ocpus", spec: &infrav2exp.ShapeConfig{Ocpus: common.String("1.5")}, want: core.InstanceConfigurationLaunchInstanceShapeConfigDetails{Ocpus: common.Float32(1.5)}},
-		{name: "vcpus", spec: &infrav2exp.ShapeConfig{Vcpus: common.Int(2)}, want: core.InstanceConfigurationLaunchInstanceShapeConfigDetails{Vcpus: common.Int(2)}},
-		{name: "four vcpus", spec: &infrav2exp.ShapeConfig{Vcpus: common.Int(4)}, want: core.InstanceConfigurationLaunchInstanceShapeConfigDetails{Vcpus: common.Int(4)}},
-		{name: "zero vcpus", spec: &infrav2exp.ShapeConfig{Vcpus: common.Int(0)}, wantErr: "vcpus must be a positive multiple of 2"},
-		{name: "negative even vcpus", spec: &infrav2exp.ShapeConfig{Vcpus: common.Int(-2)}, wantErr: "vcpus must be a positive multiple of 2"},
-		{name: "negative odd vcpus", spec: &infrav2exp.ShapeConfig{Vcpus: common.Int(-1)}, wantErr: "vcpus must be a positive multiple of 2"},
-		{name: "one vcpu", spec: &infrav2exp.ShapeConfig{Vcpus: common.Int(1)}, wantErr: "vcpus must be a positive multiple of 2"},
-		{name: "three vcpus", spec: &infrav2exp.ShapeConfig{Vcpus: common.Int(3)}, wantErr: "vcpus must be a positive multiple of 2"},
-		{name: "both", spec: &infrav2exp.ShapeConfig{Ocpus: common.String("1"), Vcpus: common.Int(2)}, wantErr: "ocpus and vcpus are mutually exclusive; specify at most one"},
-		{name: "both with empty ocpus and zero vcpus", spec: &infrav2exp.ShapeConfig{Ocpus: common.String(""), Vcpus: common.Int(0)}, wantErr: "ocpus and vcpus are mutually exclusive; specify at most one"},
-		{name: "invalid ocpus only", spec: &infrav2exp.ShapeConfig{Ocpus: common.String("")}, wantErr: "ocpus provided  is not a valid floating point"},
+		{name: "empty", spec: &infrav3exp.ShapeConfig{}},
+		{name: "ocpus", spec: &infrav3exp.ShapeConfig{Ocpus: common.String("1.5")}, want: core.InstanceConfigurationLaunchInstanceShapeConfigDetails{Ocpus: common.Float32(1.5)}},
+		{name: "vcpus", spec: &infrav3exp.ShapeConfig{Vcpus: common.Int(2)}, want: core.InstanceConfigurationLaunchInstanceShapeConfigDetails{Vcpus: common.Int(2)}},
+		{name: "four vcpus", spec: &infrav3exp.ShapeConfig{Vcpus: common.Int(4)}, want: core.InstanceConfigurationLaunchInstanceShapeConfigDetails{Vcpus: common.Int(4)}},
+		{name: "zero vcpus", spec: &infrav3exp.ShapeConfig{Vcpus: common.Int(0)}, wantErr: "vcpus must be a positive multiple of 2"},
+		{name: "negative even vcpus", spec: &infrav3exp.ShapeConfig{Vcpus: common.Int(-2)}, wantErr: "vcpus must be a positive multiple of 2"},
+		{name: "negative odd vcpus", spec: &infrav3exp.ShapeConfig{Vcpus: common.Int(-1)}, wantErr: "vcpus must be a positive multiple of 2"},
+		{name: "one vcpu", spec: &infrav3exp.ShapeConfig{Vcpus: common.Int(1)}, wantErr: "vcpus must be a positive multiple of 2"},
+		{name: "three vcpus", spec: &infrav3exp.ShapeConfig{Vcpus: common.Int(3)}, wantErr: "vcpus must be a positive multiple of 2"},
+		{name: "both", spec: &infrav3exp.ShapeConfig{Ocpus: common.String("1"), Vcpus: common.Int(2)}, wantErr: "ocpus and vcpus are mutually exclusive; specify at most one"},
+		{name: "both with empty ocpus and zero vcpus", spec: &infrav3exp.ShapeConfig{Ocpus: common.String(""), Vcpus: common.Int(0)}, wantErr: "ocpus and vcpus are mutually exclusive; specify at most one"},
+		{name: "invalid ocpus only", spec: &infrav3exp.ShapeConfig{Ocpus: common.String("")}, wantErr: "ocpus provided  is not a valid floating point"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
-			ms := &MachinePoolScope{OCIMachinePool: &infrav2exp.OCIMachinePool{Spec: infrav2exp.OCIMachinePoolSpec{InstanceConfiguration: infrav2exp.InstanceConfiguration{ShapeConfig: tc.spec}}}}
+			ms := &MachinePoolScope{OCIMachinePool: &infrav3exp.OCIMachinePool{Spec: infrav3exp.OCIMachinePoolSpec{InstanceConfiguration: infrav3exp.InstanceConfiguration{ShapeConfig: tc.spec}}}}
 			got, err := ms.buildInstanceConfigurationShapeConfig()
 			if tc.wantErr != "" {
 				g.Expect(err).To(MatchError(tc.wantErr))
@@ -3020,4 +3020,50 @@ func TestBuildInstanceConfigurationShapeConfigCPUs(t *testing.T) {
 			g.Expect(got).To(Equal(tc.want))
 		})
 	}
+}
+
+func TestMachinePoolScopePatchObjectRecomputesStaleReadyCondition(t *testing.T) {
+	g := NewWithT(t)
+	mp := &infrav3exp.OCIMachinePool{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-mp",
+			Namespace: "default",
+		},
+		Status: infrav3exp.OCIMachinePoolStatus{
+			Conditions: []metav1.Condition{
+				{
+					Type:   clusterv1.ReadyCondition,
+					Status: metav1.ConditionFalse,
+					Reason: "FailedToCreateNewMachines",
+				},
+				{
+					Type:   infrav3exp.LaunchTemplateReadyCondition,
+					Status: metav1.ConditionTrue,
+					Reason: infrav3exp.LaunchTemplateReadyCondition,
+				},
+				{
+					Type:   infrav3exp.InstancePoolReadyCondition,
+					Status: metav1.ConditionFalse,
+					Reason: infrav3exp.InstancePoolNotReadyReason,
+				},
+			},
+		},
+	}
+	k8sClient := fake.NewClientBuilder().WithStatusSubresource(mp).WithObjects(mp).Build()
+	ms, err := NewMachinePoolScope(MachinePoolScopeParams{
+		Client:             k8sClient,
+		Cluster:            &clusterv1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "default"}},
+		MachinePool:        &clusterv1.MachinePool{ObjectMeta: metav1.ObjectMeta{Name: "test-mp", Namespace: "default"}},
+		OCIClusterAccessor: OCISelfManagedCluster{OCICluster: &infrastructurev1beta3.OCICluster{}},
+		OCIMachinePool:     mp,
+	})
+	g.Expect(err).NotTo(HaveOccurred())
+
+	// A new reconcile without machine reconciliation failure must not remain wedged
+	// on the stale FailedToCreateNewMachines reason from a prior reconcile.
+	g.Expect(ms.PatchObject(context.Background())).To(Succeed())
+	ready := conditions.Get(mp, clusterv1.ReadyCondition)
+	g.Expect(ready).NotTo(BeNil())
+	g.Expect(ready.Status).To(Equal(metav1.ConditionFalse))
+	g.Expect(ready.Reason).NotTo(Equal("FailedToCreateNewMachines"))
 }

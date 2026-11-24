@@ -20,12 +20,12 @@ import (
 	"context"
 
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
-	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
+	infrav3exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta3"
 	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
-	v1beta1patch "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/patch"
+	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -50,7 +50,7 @@ func (r *OCIMachinePoolMachineReconciler) Reconcile(ctx context.Context, req ctr
 	// at a later point, when machine pool machine feature improves with integration with autoscaler and deployment
 	// orchestration etc, we should improve the below logic to actually delete the machine pool machine from the underlying
 	// infra object such as OKE nodepool or instance pool etc
-	ociMachinePoolMachine := &infrav2exp.OCIMachinePoolMachine{}
+	ociMachinePoolMachine := &infrav3exp.OCIMachinePoolMachine{}
 	err := r.Get(ctx, req.NamespacedName, ociMachinePoolMachine)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -58,14 +58,14 @@ func (r *OCIMachinePoolMachineReconciler) Reconcile(ctx context.Context, req ctr
 		}
 		return ctrl.Result{}, err
 	}
-	helper, err := v1beta1patch.NewHelper(ociMachinePoolMachine, r.Client)
+	helper, err := patch.NewHelper(ociMachinePoolMachine, r.Client)
 	defer func() {
 		if err := helper.Patch(ctx, ociMachinePoolMachine); err != nil && reterr == nil {
 			reterr = err
 		}
 	}()
 	if !ociMachinePoolMachine.DeletionTimestamp.IsZero() {
-		controllerutil.RemoveFinalizer(ociMachinePoolMachine, infrav2exp.MachinePoolMachineFinalizer)
+		controllerutil.RemoveFinalizer(ociMachinePoolMachine, infrav3exp.MachinePoolMachineFinalizer)
 	}
 	return ctrl.Result{}, nil
 }
@@ -73,7 +73,7 @@ func (r *OCIMachinePoolMachineReconciler) Reconcile(ctx context.Context, req ctr
 func (r *OCIMachinePoolMachineReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
 	err := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(options).
-		For(&infrav2exp.OCIMachinePoolMachine{}).
+		For(&infrav3exp.OCIMachinePoolMachine{}).
 		WithEventFilter(predicates.ResourceNotPaused(mgr.GetScheme(), ctrl.LoggerFrom(ctx))).
 		Complete(r)
 

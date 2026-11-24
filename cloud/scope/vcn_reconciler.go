@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
@@ -109,7 +109,7 @@ func (s *ClusterScope) GetVCN(ctx context.Context) (*core.Vcn, error) {
 	return nil, nil
 }
 
-func (s *ClusterScope) UpdateVCN(ctx context.Context, vcn infrastructurev1beta2.VCN) error {
+func (s *ClusterScope) UpdateVCN(ctx context.Context, vcn infrastructurev1beta3.VCN) error {
 	updateVCNDetails := core.UpdateVcnDetails{
 		DisplayName: common.String(s.GetVcnName()),
 	}
@@ -125,7 +125,7 @@ func (s *ClusterScope) UpdateVCN(ctx context.Context, vcn infrastructurev1beta2.
 	return nil
 }
 
-func (s *ClusterScope) CreateVCN(ctx context.Context, spec infrastructurev1beta2.VCN) (*string, error) {
+func (s *ClusterScope) CreateVCN(ctx context.Context, spec infrastructurev1beta3.VCN) (*string, error) {
 	vcnDetails := core.CreateVcnDetails{
 		CompartmentId: common.String(s.GetCompartmentId()),
 		DisplayName:   common.String(s.GetVcnName()),

@@ -22,7 +22,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/compute/mock_compute"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/volume/mock_volume"
@@ -39,7 +39,7 @@ func TestBlockVolumeReconciliation(t *testing.T) {
 		ms                *MachineScope
 		mockCtrl          *gomock.Controller
 		blockVolumeClient *mock_volume.MockBlockVolumeClient
-		ociCluster        infrastructurev1beta2.OCICluster
+		ociCluster        infrastructurev1beta3.OCICluster
 	)
 
 	setup := func(t *testing.T, g *WithT) {
@@ -47,11 +47,11 @@ func TestBlockVolumeReconciliation(t *testing.T) {
 		mockCtrl = gomock.NewController(t)
 		blockVolumeClient = mock_volume.NewMockBlockVolumeClient(mockCtrl)
 		client := fake.NewClientBuilder().Build()
-		ociCluster = infrastructurev1beta2.OCICluster{
+		ociCluster = infrastructurev1beta3.OCICluster{
 			ObjectMeta: metav1.ObjectMeta{
 				UID: "uid",
 			},
-			Spec: infrastructurev1beta2.OCIClusterSpec{
+			Spec: infrastructurev1beta3.OCIClusterSpec{
 				OCIResourceIdentifier: "resource_uid",
 				CompartmentId:         "test-compartment",
 			},
@@ -59,12 +59,12 @@ func TestBlockVolumeReconciliation(t *testing.T) {
 		ms, err = NewMachineScope(MachineScopeParams{
 			BlockVolumeClient: blockVolumeClient,
 			ComputeClient:     mock_compute.NewMockComputeClient(mockCtrl),
-			OCIMachine: &infrastructurev1beta2.OCIMachine{
+			OCIMachine: &infrastructurev1beta3.OCIMachine{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-machine",
 					UID:  "machine-uid",
 				},
-				Spec: infrastructurev1beta2.OCIMachineSpec{
+				Spec: infrastructurev1beta3.OCIMachineSpec{
 					CompartmentId: "test-compartment",
 				},
 			},
@@ -94,10 +94,10 @@ func TestBlockVolumeReconciliation(t *testing.T) {
 			errorExpected: true,
 			matchError:    errors.New("list volumes failed"),
 			testSpecificSetup: func(machineScope *MachineScope, blockVolumeClient *mock_volume.MockBlockVolumeClient) {
-				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
+				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta3.BlockVolumeSpec{
 					DisplayName: common.String("test-volume"),
 					SizeInGBs:   common.Int64(50),
-					AutotunePolicies: []infrastructurev1beta2.AutotunePolicy{
+					AutotunePolicies: []infrastructurev1beta3.AutotunePolicy{
 						{AutotuneType: "PERFORMANCE_BASED", MaxVPUsPerGB: common.Int64(20)},
 					},
 					VolumeType: "PARAVIRTUALIZED",
@@ -111,10 +111,10 @@ func TestBlockVolumeReconciliation(t *testing.T) {
 			errorExpected: true,
 			matchError:    errors.New("create volume failed"),
 			testSpecificSetup: func(machineScope *MachineScope, blockVolumeClient *mock_volume.MockBlockVolumeClient) {
-				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
+				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta3.BlockVolumeSpec{
 					DisplayName: common.String("new-volume"),
 					SizeInGBs:   common.Int64(100),
-					AutotunePolicies: []infrastructurev1beta2.AutotunePolicy{
+					AutotunePolicies: []infrastructurev1beta3.AutotunePolicy{
 						{AutotuneType: "PERFORMANCE_BASED", MaxVPUsPerGB: common.Int64(20)},
 					},
 					VolumeType: "PARAVIRTUALIZED",
@@ -129,10 +129,10 @@ func TestBlockVolumeReconciliation(t *testing.T) {
 			name:          "volume created with autotune policies",
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, blockVolumeClient *mock_volume.MockBlockVolumeClient) {
-				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
+				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta3.BlockVolumeSpec{
 					DisplayName: common.String("autotune-volume"),
 					SizeInGBs:   common.Int64(50),
-					AutotunePolicies: []infrastructurev1beta2.AutotunePolicy{
+					AutotunePolicies: []infrastructurev1beta3.AutotunePolicy{
 						{AutotuneType: "DETACHED_VOLUME"},
 						{AutotuneType: "PERFORMANCE_BASED", MaxVPUsPerGB: common.Int64(20)},
 					},
@@ -163,11 +163,11 @@ func TestBlockVolumeReconciliation(t *testing.T) {
 			name:          "volume created with custom compartment id",
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, blockVolumeClient *mock_volume.MockBlockVolumeClient) {
-				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
+				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta3.BlockVolumeSpec{
 					DisplayName:   common.String("custom-compartment-volume"),
 					SizeInGBs:     common.Int64(50),
 					CompartmentId: common.String("custom-compartment"),
-					AutotunePolicies: []infrastructurev1beta2.AutotunePolicy{
+					AutotunePolicies: []infrastructurev1beta3.AutotunePolicy{
 						{AutotuneType: "PERFORMANCE_BASED", MaxVPUsPerGB: common.Int64(20)},
 					},
 					VolumeType: "PARAVIRTUALIZED",
@@ -222,7 +222,7 @@ func TestDeleteBlockVolume(t *testing.T) {
 		ms                *MachineScope
 		mockCtrl          *gomock.Controller
 		blockVolumeClient *mock_volume.MockBlockVolumeClient
-		ociCluster        infrastructurev1beta2.OCICluster
+		ociCluster        infrastructurev1beta3.OCICluster
 	)
 
 	setup := func(t *testing.T, g *WithT) {
@@ -230,11 +230,11 @@ func TestDeleteBlockVolume(t *testing.T) {
 		mockCtrl = gomock.NewController(t)
 		blockVolumeClient = mock_volume.NewMockBlockVolumeClient(mockCtrl)
 		client := fake.NewClientBuilder().Build()
-		ociCluster = infrastructurev1beta2.OCICluster{
+		ociCluster = infrastructurev1beta3.OCICluster{
 			ObjectMeta: metav1.ObjectMeta{
 				UID: "uid",
 			},
-			Spec: infrastructurev1beta2.OCIClusterSpec{
+			Spec: infrastructurev1beta3.OCIClusterSpec{
 				OCIResourceIdentifier: "resource_uid",
 				CompartmentId:         "test-compartment",
 			},
@@ -242,12 +242,12 @@ func TestDeleteBlockVolume(t *testing.T) {
 		ms, err = NewMachineScope(MachineScopeParams{
 			BlockVolumeClient: blockVolumeClient,
 			ComputeClient:     mock_compute.NewMockComputeClient(mockCtrl),
-			OCIMachine: &infrastructurev1beta2.OCIMachine{
+			OCIMachine: &infrastructurev1beta3.OCIMachine{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-machine",
 					UID:  "machine-uid",
 				},
-				Spec: infrastructurev1beta2.OCIMachineSpec{
+				Spec: infrastructurev1beta3.OCIMachineSpec{
 					CompartmentId: "test-compartment",
 				},
 			},
@@ -276,9 +276,9 @@ func TestDeleteBlockVolume(t *testing.T) {
 			name:          "volume found and deleted successfully",
 			errorExpected: false,
 			testSpecificSetup: func(machineScope *MachineScope, blockVolumeClient *mock_volume.MockBlockVolumeClient) {
-				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
+				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta3.BlockVolumeSpec{
 					DisplayName: common.String("test-volume"),
-					AutotunePolicies: []infrastructurev1beta2.AutotunePolicy{
+					AutotunePolicies: []infrastructurev1beta3.AutotunePolicy{
 						{AutotuneType: "PERFORMANCE_BASED", MaxVPUsPerGB: common.Int64(20)},
 					},
 					VolumeType: "PARAVIRTUALIZED",
@@ -308,9 +308,9 @@ func TestDeleteBlockVolume(t *testing.T) {
 			errorExpected: true,
 			matchError:    errors.New("delete volume failed"),
 			testSpecificSetup: func(machineScope *MachineScope, blockVolumeClient *mock_volume.MockBlockVolumeClient) {
-				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
+				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta3.BlockVolumeSpec{
 					DisplayName: common.String("test-volume"),
-					AutotunePolicies: []infrastructurev1beta2.AutotunePolicy{
+					AutotunePolicies: []infrastructurev1beta3.AutotunePolicy{
 						{AutotuneType: "PERFORMANCE_BASED", MaxVPUsPerGB: common.Int64(20)},
 					},
 					VolumeType: "PARAVIRTUALIZED",
@@ -365,15 +365,15 @@ func TestGetBlockVolumeDesiredName(t *testing.T) {
 		var err error
 		mockCtrl = gomock.NewController(t)
 		client := fake.NewClientBuilder().Build()
-		ociCluster := infrastructurev1beta2.OCICluster{}
+		ociCluster := infrastructurev1beta3.OCICluster{}
 		ms, err = NewMachineScope(MachineScopeParams{
 			ComputeClient:     mock_compute.NewMockComputeClient(mockCtrl),
 			BlockVolumeClient: mock_volume.NewMockBlockVolumeClient(mockCtrl),
-			OCIMachine: &infrastructurev1beta2.OCIMachine{
+			OCIMachine: &infrastructurev1beta3.OCIMachine{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-machine",
 				},
-				Spec: infrastructurev1beta2.OCIMachineSpec{},
+				Spec: infrastructurev1beta3.OCIMachineSpec{},
 			},
 			Machine: &clusterv1.Machine{},
 			Cluster: &clusterv1.Cluster{},
@@ -397,16 +397,16 @@ func TestGetBlockVolumeDesiredName(t *testing.T) {
 			name:         "returns empty when DisplayName is nil",
 			expectedName: "",
 			testSpecificSetup: func(machineScope *MachineScope) {
-				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{}
+				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta3.BlockVolumeSpec{}
 			},
 		},
 		{
 			name:         "returns DisplayName when set",
 			expectedName: "my-volume",
 			testSpecificSetup: func(machineScope *MachineScope) {
-				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
+				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta3.BlockVolumeSpec{
 					DisplayName: common.String("my-volume"),
-					AutotunePolicies: []infrastructurev1beta2.AutotunePolicy{
+					AutotunePolicies: []infrastructurev1beta3.AutotunePolicy{
 						{AutotuneType: "PERFORMANCE_BASED", MaxVPUsPerGB: common.Int64(20)},
 					},
 					VolumeType: "PARAVIRTUALIZED",
@@ -417,9 +417,9 @@ func TestGetBlockVolumeDesiredName(t *testing.T) {
 			name:         "returns empty when DisplayName is empty string",
 			expectedName: "",
 			testSpecificSetup: func(machineScope *MachineScope) {
-				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
+				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta3.BlockVolumeSpec{
 					DisplayName: common.String(""),
-					AutotunePolicies: []infrastructurev1beta2.AutotunePolicy{
+					AutotunePolicies: []infrastructurev1beta3.AutotunePolicy{
 						{AutotuneType: "PERFORMANCE_BASED", MaxVPUsPerGB: common.Int64(20)},
 					},
 					VolumeType: "PARAVIRTUALIZED",
@@ -430,9 +430,9 @@ func TestGetBlockVolumeDesiredName(t *testing.T) {
 			name:         "returns empty when DisplayName is nil",
 			expectedName: "",
 			testSpecificSetup: func(machineScope *MachineScope) {
-				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
+				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta3.BlockVolumeSpec{
 					DisplayName: nil,
-					AutotunePolicies: []infrastructurev1beta2.AutotunePolicy{
+					AutotunePolicies: []infrastructurev1beta3.AutotunePolicy{
 						{AutotuneType: "PERFORMANCE_BASED", MaxVPUsPerGB: common.Int64(20)},
 					},
 					VolumeType: "PARAVIRTUALIZED",
@@ -463,15 +463,15 @@ func TestToOCIAutotunePolicy(t *testing.T) {
 		var err error
 		mockCtrl = gomock.NewController(t)
 		client := fake.NewClientBuilder().Build()
-		ociCluster := infrastructurev1beta2.OCICluster{}
+		ociCluster := infrastructurev1beta3.OCICluster{}
 		ms, err = NewMachineScope(MachineScopeParams{
 			ComputeClient:     mock_compute.NewMockComputeClient(mockCtrl),
 			BlockVolumeClient: mock_volume.NewMockBlockVolumeClient(mockCtrl),
-			OCIMachine: &infrastructurev1beta2.OCIMachine{
+			OCIMachine: &infrastructurev1beta3.OCIMachine{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-machine",
 				},
-				Spec: infrastructurev1beta2.OCIMachineSpec{},
+				Spec: infrastructurev1beta3.OCIMachineSpec{},
 			},
 			Machine: &clusterv1.Machine{},
 			Cluster: &clusterv1.Cluster{},
@@ -495,8 +495,8 @@ func TestToOCIAutotunePolicy(t *testing.T) {
 		{
 			name: "detached volume policy",
 			testSpecificSetup: func(machineScope *MachineScope) {
-				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
-					AutotunePolicies: []infrastructurev1beta2.AutotunePolicy{
+				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta3.BlockVolumeSpec{
+					AutotunePolicies: []infrastructurev1beta3.AutotunePolicy{
 						{AutotuneType: "DETACHED_VOLUME"},
 					},
 				}
@@ -509,8 +509,8 @@ func TestToOCIAutotunePolicy(t *testing.T) {
 		{
 			name: "performance based policy",
 			testSpecificSetup: func(machineScope *MachineScope) {
-				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
-					AutotunePolicies: []infrastructurev1beta2.AutotunePolicy{
+				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta3.BlockVolumeSpec{
+					AutotunePolicies: []infrastructurev1beta3.AutotunePolicy{
 						{AutotuneType: "PERFORMANCE_BASED", MaxVPUsPerGB: common.Int64(20)},
 					},
 				}
@@ -523,8 +523,8 @@ func TestToOCIAutotunePolicy(t *testing.T) {
 		{
 			name: "multiple policies combined",
 			testSpecificSetup: func(machineScope *MachineScope) {
-				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta2.BlockVolumeSpec{
-					AutotunePolicies: []infrastructurev1beta2.AutotunePolicy{
+				machineScope.OCIMachine.Spec.BlockVolumeSpec = infrastructurev1beta3.BlockVolumeSpec{
+					AutotunePolicies: []infrastructurev1beta3.AutotunePolicy{
 						{AutotuneType: "DETACHED_VOLUME"},
 						{AutotuneType: "PERFORMANCE_BASED", MaxVPUsPerGB: common.Int64(30)},
 					},

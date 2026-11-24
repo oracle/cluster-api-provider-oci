@@ -17,15 +17,15 @@ limitations under the License.
 package scope
 
 import (
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
+	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	corev1 "k8s.io/api/core/v1"
-	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
-	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 )
 
 // OCIManagedCluster is the ClusterAccessor implementation for managed clusters(OKE)
 type OCIManagedCluster struct {
-	OCIManagedCluster *infrastructurev1beta2.OCIManagedCluster
+	OCIManagedCluster *infrastructurev1beta3.OCIManagedCluster
 }
 
 func (c OCIManagedCluster) GetNameSpace() string {
@@ -36,13 +36,12 @@ func (c OCIManagedCluster) GetRegion() string {
 	return c.OCIManagedCluster.Spec.Region
 }
 
-func (c OCIManagedCluster) GetClientOverrides() *infrastructurev1beta2.ClientOverrides {
+func (c OCIManagedCluster) GetClientOverrides() *infrastructurev1beta3.ClientOverrides {
 	return c.OCIManagedCluster.Spec.ClientOverrides
 }
 
-func (c OCIManagedCluster) MarkConditionFalse(t clusterv1beta1.ConditionType, reason string, severity clusterv1beta1.ConditionSeverity, messageFormat string, messageArgs ...interface{}) {
-	v1beta1conditions.MarkFalse(c.OCIManagedCluster, infrastructurev1beta2.ClusterReadyCondition, reason, severity, messageFormat, messageArgs...)
-
+func (c OCIManagedCluster) MarkConditionFalse(t string, reason string, messageFormat string, messageArgs ...any) {
+	ociutil.MarkConditionFalse(c.OCIManagedCluster, infrastructurev1beta3.ClusterReadyCondition, reason, messageFormat, messageArgs...)
 }
 
 func (c OCIManagedCluster) GetIdentityRef() *corev1.ObjectReference {
@@ -69,40 +68,40 @@ func (c OCIManagedCluster) GetFreeformTags() map[string]string {
 	return c.OCIManagedCluster.Spec.FreeformTags
 }
 
-func (c OCIManagedCluster) GetDRG() *infrastructurev1beta2.DRG {
+func (c OCIManagedCluster) GetDRG() *infrastructurev1beta3.DRG {
 	return c.OCIManagedCluster.Spec.NetworkSpec.VCNPeering.DRG
 }
 
-func (c OCIManagedCluster) GetVCNPeering() *infrastructurev1beta2.VCNPeering {
+func (c OCIManagedCluster) GetVCNPeering() *infrastructurev1beta3.VCNPeering {
 	return c.OCIManagedCluster.Spec.NetworkSpec.VCNPeering
 }
 
-func (c OCIManagedCluster) GetNetworkSpec() *infrastructurev1beta2.NetworkSpec {
+func (c OCIManagedCluster) GetNetworkSpec() *infrastructurev1beta3.NetworkSpec {
 	return &c.OCIManagedCluster.Spec.NetworkSpec
 }
 
-func (c OCIManagedCluster) SetControlPlaneEndpoint(endpoint clusterv1beta1.APIEndpoint) {
+func (c OCIManagedCluster) SetControlPlaneEndpoint(endpoint clusterv1.APIEndpoint) {
 	c.OCIManagedCluster.Spec.ControlPlaneEndpoint = endpoint
 }
 
-func (c OCIManagedCluster) GetControlPlaneEndpoint() clusterv1beta1.APIEndpoint {
+func (c OCIManagedCluster) GetControlPlaneEndpoint() clusterv1.APIEndpoint {
 	return c.OCIManagedCluster.Spec.ControlPlaneEndpoint
 }
 
-func (c OCIManagedCluster) GetFailureDomains() clusterv1beta1.FailureDomains {
+func (c OCIManagedCluster) GetFailureDomains() []clusterv1.FailureDomain {
 	return c.OCIManagedCluster.Status.FailureDomains
 }
 
-func (c OCIManagedCluster) SetFailureDomain(id string, spec clusterv1beta1.FailureDomainSpec) {
-	if c.OCIManagedCluster.Status.FailureDomains == nil {
-		c.OCIManagedCluster.Status.FailureDomains = make(clusterv1beta1.FailureDomains)
-	}
-	c.OCIManagedCluster.Status.FailureDomains[id] = spec
+func (c OCIManagedCluster) SetFailureDomain(id string, spec clusterv1.FailureDomain) {
+	spec.Name = id
+	c.OCIManagedCluster.Status.FailureDomains = upsertFailureDomain(c.OCIManagedCluster.Status.FailureDomains, spec)
 }
-func (c OCIManagedCluster) GetAvailabilityDomains() map[string]infrastructurev1beta2.OCIAvailabilityDomain {
+
+func (c OCIManagedCluster) GetAvailabilityDomains() map[string]infrastructurev1beta3.OCIAvailabilityDomain {
 	return c.OCIManagedCluster.Spec.AvailabilityDomains
 }
-func (c OCIManagedCluster) SetAvailabilityDomains(ads map[string]infrastructurev1beta2.OCIAvailabilityDomain) {
+
+func (c OCIManagedCluster) SetAvailabilityDomains(ads map[string]infrastructurev1beta3.OCIAvailabilityDomain) {
 	c.OCIManagedCluster.Spec.AvailabilityDomains = ads
 }
 

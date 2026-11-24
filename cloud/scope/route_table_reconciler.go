@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"strings"
 
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
@@ -60,11 +60,11 @@ func (s *ClusterScope) ReconcileRouteTable(ctx context.Context) error {
 func (s *ClusterScope) GetDesiredRouteTables() []string {
 	var desiredRouteTables []string
 	if s.IsAllSubnetsPrivate() {
-		desiredRouteTables = []string{infrastructurev1beta2.Private}
+		desiredRouteTables = []string{infrastructurev1beta3.Private}
 	} else if s.IsAllSubnetsPublic() {
-		desiredRouteTables = []string{infrastructurev1beta2.Public}
+		desiredRouteTables = []string{infrastructurev1beta3.Public}
 	} else {
-		desiredRouteTables = []string{infrastructurev1beta2.Private, infrastructurev1beta2.Public}
+		desiredRouteTables = []string{infrastructurev1beta3.Private, infrastructurev1beta3.Public}
 	}
 	return desiredRouteTables
 }
@@ -72,7 +72,7 @@ func (s *ClusterScope) GetDesiredRouteTables() []string {
 // nolint:nilnil
 func (s *ClusterScope) getRouteTable(ctx context.Context, routeTableType string) (*core.RouteTable, error) {
 	routeTableId := s.OCIClusterAccessor.GetNetworkSpec().Vcn.RouteTable.PublicRouteTableId
-	if routeTableType == infrastructurev1beta2.Private {
+	if routeTableType == infrastructurev1beta3.Private {
 		routeTableId = s.OCIClusterAccessor.GetNetworkSpec().Vcn.RouteTable.PrivateRouteTableId
 	}
 	if routeTableId != nil {
@@ -92,7 +92,7 @@ func (s *ClusterScope) getRouteTable(ctx context.Context, routeTableType string)
 	}
 	vcnId := s.getVcnId()
 	routeTableName := PublicRouteTableName
-	if routeTableType == infrastructurev1beta2.Private {
+	if routeTableType == infrastructurev1beta3.Private {
 		routeTableName = PrivateRouteTableName
 	}
 
@@ -117,7 +117,7 @@ func (s *ClusterScope) getRouteTable(ctx context.Context, routeTableType string)
 func (s *ClusterScope) CreateRouteTable(ctx context.Context, routeTableType string) (*string, error) {
 	var routeRules []core.RouteRule
 	var routeTableName string
-	if routeTableType == infrastructurev1beta2.Private {
+	if routeTableType == infrastructurev1beta3.Private {
 		routeRules = []core.RouteRule{
 			{
 				DestinationType: core.RouteRuleDestinationTypeCidrBlock,
@@ -197,7 +197,7 @@ func (s *ClusterScope) CreateRouteTable(ctx context.Context, routeTableType stri
 }
 
 func (s *ClusterScope) setRTStatus(id *string, routeTableType string) {
-	if routeTableType == infrastructurev1beta2.Private {
+	if routeTableType == infrastructurev1beta3.Private {
 		s.OCIClusterAccessor.GetNetworkSpec().Vcn.RouteTable.PrivateRouteTableId = id
 		return
 	}
@@ -232,7 +232,7 @@ func (s *ClusterScope) DeleteRouteTables(ctx context.Context) error {
 }
 
 func (s *ClusterScope) getRouteTableId(routeTableType string) *string {
-	if routeTableType == infrastructurev1beta2.Private {
+	if routeTableType == infrastructurev1beta3.Private {
 		return s.OCIClusterAccessor.GetNetworkSpec().Vcn.RouteTable.PrivateRouteTableId
 	}
 	return s.OCIClusterAccessor.GetNetworkSpec().Vcn.RouteTable.PublicRouteTableId

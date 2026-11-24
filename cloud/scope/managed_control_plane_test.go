@@ -26,7 +26,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/base/mock_base"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/containerengine/mock_containerengine"
@@ -78,31 +78,31 @@ func TestControlPlaneReconciliation(t *testing.T) {
 		mockCtrl = gomock.NewController(t)
 		okeClient = mock_containerengine.NewMockClient(mockCtrl)
 		ociClusterAccessor := OCIManagedCluster{
-			&infrastructurev1beta2.OCIManagedCluster{
+			&infrastructurev1beta3.OCIManagedCluster{
 				ObjectMeta: metav1.ObjectMeta{
 					UID: "cluster_uid",
 				},
-				Spec: infrastructurev1beta2.OCIManagedClusterSpec{
+				Spec: infrastructurev1beta3.OCIManagedClusterSpec{
 					CompartmentId: "test-compartment",
 					DefinedTags:   definedTags,
-					NetworkSpec: infrastructurev1beta2.NetworkSpec{
-						Vcn: infrastructurev1beta2.VCN{
+					NetworkSpec: infrastructurev1beta3.NetworkSpec{
+						Vcn: infrastructurev1beta3.VCN{
 							ID: common.String("vcn-id"),
-							Subnets: []*infrastructurev1beta2.Subnet{
+							Subnets: []*infrastructurev1beta3.Subnet{
 								{
-									Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+									Role: infrastructurev1beta3.ControlPlaneEndpointRole,
 									ID:   common.String("subnet-id"),
-									Type: infrastructurev1beta2.Public,
+									Type: infrastructurev1beta3.Public,
 								},
 								{
-									Role: infrastructurev1beta2.ServiceLoadBalancerRole,
+									Role: infrastructurev1beta3.ServiceLoadBalancerRole,
 									ID:   common.String("lb-subnet-id"),
 								},
 							},
-							NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
-								List: []*infrastructurev1beta2.NSG{
+							NetworkSecurityGroup: infrastructurev1beta3.NetworkSecurityGroup{
+								List: []*infrastructurev1beta3.NSG{
 									{
-										Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+										Role: infrastructurev1beta3.ControlPlaneEndpointRole,
 										ID:   common.String("nsg-id"),
 									},
 								},
@@ -115,11 +115,11 @@ func TestControlPlaneReconciliation(t *testing.T) {
 		ociClusterAccessor.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
 		cs, err = NewManagedControlPlaneScope(ManagedControlPlaneScopeParams{
 			ContainerEngineClient: okeClient,
-			OCIManagedControlPlane: &infrastructurev1beta2.OCIManagedControlPlane{
+			OCIManagedControlPlane: &infrastructurev1beta3.OCIManagedControlPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
-				Spec: infrastructurev1beta2.OCIManagedControlPlaneSpec{},
+				Spec: infrastructurev1beta3.OCIManagedControlPlaneSpec{},
 			},
 			OCIClusterAccessor: ociClusterAccessor,
 			Cluster: &clusterv1.Cluster{
@@ -198,26 +198,26 @@ func TestControlPlaneReconciliation(t *testing.T) {
 			name:          "control plane create all params",
 			errorExpected: false,
 			testSpecificSetup: func(cs *ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
-				cs.OCIManagedControlPlane.Spec = infrastructurev1beta2.OCIManagedControlPlaneSpec{
-					ClusterPodNetworkOptions: []infrastructurev1beta2.ClusterPodNetworkOptions{
+				cs.OCIManagedControlPlane.Spec = infrastructurev1beta3.OCIManagedControlPlaneSpec{
+					ClusterPodNetworkOptions: []infrastructurev1beta3.ClusterPodNetworkOptions{
 						{
-							CniType: infrastructurev1beta2.FlannelCNI,
+							CniType: infrastructurev1beta3.FlannelCNI,
 						},
 						{
-							CniType: infrastructurev1beta2.VCNNativeCNI,
+							CniType: infrastructurev1beta3.VCNNativeCNI,
 						},
 					},
-					ImagePolicyConfig: &infrastructurev1beta2.ImagePolicyConfig{
+					ImagePolicyConfig: &infrastructurev1beta3.ImagePolicyConfig{
 						IsPolicyEnabled: common.Bool(true),
-						KeyDetails: []infrastructurev1beta2.KeyDetails{{
+						KeyDetails: []infrastructurev1beta3.KeyDetails{{
 							KmsKeyId: common.String("kms-key-id"),
 						}},
 					},
-					ClusterOption: infrastructurev1beta2.ClusterOptions{
-						AdmissionControllerOptions: &infrastructurev1beta2.AdmissionControllerOptions{
+					ClusterOption: infrastructurev1beta3.ClusterOptions{
+						AdmissionControllerOptions: &infrastructurev1beta3.AdmissionControllerOptions{
 							IsPodSecurityPolicyEnabled: common.Bool(true),
 						},
-						AddOnOptions: &infrastructurev1beta2.AddOnOptions{
+						AddOnOptions: &infrastructurev1beta3.AddOnOptions{
 							IsKubernetesDashboardEnabled: common.Bool(true),
 							IsTillerEnabled:              common.Bool(false),
 						},
@@ -423,31 +423,31 @@ func TestControlPlaneUpdation(t *testing.T) {
 		mockCtrl = gomock.NewController(t)
 		okeClient = mock_containerengine.NewMockClient(mockCtrl)
 		ociClusterAccessor := OCIManagedCluster{
-			&infrastructurev1beta2.OCIManagedCluster{
+			&infrastructurev1beta3.OCIManagedCluster{
 				ObjectMeta: metav1.ObjectMeta{
 					UID: "cluster_uid",
 				},
-				Spec: infrastructurev1beta2.OCIManagedClusterSpec{
+				Spec: infrastructurev1beta3.OCIManagedClusterSpec{
 					CompartmentId: "test-compartment",
 					DefinedTags:   definedTags,
-					NetworkSpec: infrastructurev1beta2.NetworkSpec{
-						Vcn: infrastructurev1beta2.VCN{
+					NetworkSpec: infrastructurev1beta3.NetworkSpec{
+						Vcn: infrastructurev1beta3.VCN{
 							ID: common.String("vcn-id"),
-							Subnets: []*infrastructurev1beta2.Subnet{
+							Subnets: []*infrastructurev1beta3.Subnet{
 								{
-									Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+									Role: infrastructurev1beta3.ControlPlaneEndpointRole,
 									ID:   common.String("subnet-id"),
-									Type: infrastructurev1beta2.Public,
+									Type: infrastructurev1beta3.Public,
 								},
 								{
-									Role: infrastructurev1beta2.ServiceLoadBalancerRole,
+									Role: infrastructurev1beta3.ServiceLoadBalancerRole,
 									ID:   common.String("lb-subnet-id"),
 								},
 							},
-							NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
-								List: []*infrastructurev1beta2.NSG{
+							NetworkSecurityGroup: infrastructurev1beta3.NetworkSecurityGroup{
+								List: []*infrastructurev1beta3.NSG{
 									{
-										Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+										Role: infrastructurev1beta3.ControlPlaneEndpointRole,
 										ID:   common.String("nsg-id"),
 									},
 								},
@@ -460,11 +460,11 @@ func TestControlPlaneUpdation(t *testing.T) {
 		ociClusterAccessor.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
 		cs, err = NewManagedControlPlaneScope(ManagedControlPlaneScopeParams{
 			ContainerEngineClient: okeClient,
-			OCIManagedControlPlane: &infrastructurev1beta2.OCIManagedControlPlane{
+			OCIManagedControlPlane: &infrastructurev1beta3.OCIManagedControlPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
-				Spec: infrastructurev1beta2.OCIManagedControlPlaneSpec{},
+				Spec: infrastructurev1beta3.OCIManagedControlPlaneSpec{},
 			},
 			OCIClusterAccessor: ociClusterAccessor,
 			Cluster: &clusterv1.Cluster{
@@ -501,23 +501,23 @@ func TestControlPlaneUpdation(t *testing.T) {
 			name:          "control plane no change",
 			errorExpected: false,
 			testSpecificSetup: func(cs *ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
-				cs.OCIManagedControlPlane.Spec = infrastructurev1beta2.OCIManagedControlPlaneSpec{
-					ClusterPodNetworkOptions: []infrastructurev1beta2.ClusterPodNetworkOptions{
+				cs.OCIManagedControlPlane.Spec = infrastructurev1beta3.OCIManagedControlPlaneSpec{
+					ClusterPodNetworkOptions: []infrastructurev1beta3.ClusterPodNetworkOptions{
 						{
-							CniType: infrastructurev1beta2.FlannelCNI,
+							CniType: infrastructurev1beta3.FlannelCNI,
 						},
 					},
-					ImagePolicyConfig: &infrastructurev1beta2.ImagePolicyConfig{
+					ImagePolicyConfig: &infrastructurev1beta3.ImagePolicyConfig{
 						IsPolicyEnabled: common.Bool(true),
-						KeyDetails: []infrastructurev1beta2.KeyDetails{{
+						KeyDetails: []infrastructurev1beta3.KeyDetails{{
 							KmsKeyId: common.String("kms-key-id"),
 						}},
 					},
-					ClusterOption: infrastructurev1beta2.ClusterOptions{
-						AdmissionControllerOptions: &infrastructurev1beta2.AdmissionControllerOptions{
+					ClusterOption: infrastructurev1beta3.ClusterOptions{
+						AdmissionControllerOptions: &infrastructurev1beta3.AdmissionControllerOptions{
 							IsPodSecurityPolicyEnabled: common.Bool(true),
 						},
-						AddOnOptions: &infrastructurev1beta2.AddOnOptions{
+						AddOnOptions: &infrastructurev1beta3.AddOnOptions{
 							IsKubernetesDashboardEnabled: common.Bool(true),
 							IsTillerEnabled:              common.Bool(false),
 						},
@@ -577,23 +577,23 @@ func TestControlPlaneUpdation(t *testing.T) {
 			name:          "control plane no change - cluster tags change",
 			errorExpected: false,
 			testSpecificSetup: func(cs *ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
-				cs.OCIManagedControlPlane.Spec = infrastructurev1beta2.OCIManagedControlPlaneSpec{
-					ClusterPodNetworkOptions: []infrastructurev1beta2.ClusterPodNetworkOptions{
+				cs.OCIManagedControlPlane.Spec = infrastructurev1beta3.OCIManagedControlPlaneSpec{
+					ClusterPodNetworkOptions: []infrastructurev1beta3.ClusterPodNetworkOptions{
 						{
-							CniType: infrastructurev1beta2.FlannelCNI,
+							CniType: infrastructurev1beta3.FlannelCNI,
 						},
 					},
-					ImagePolicyConfig: &infrastructurev1beta2.ImagePolicyConfig{
+					ImagePolicyConfig: &infrastructurev1beta3.ImagePolicyConfig{
 						IsPolicyEnabled: common.Bool(true),
-						KeyDetails: []infrastructurev1beta2.KeyDetails{{
+						KeyDetails: []infrastructurev1beta3.KeyDetails{{
 							KmsKeyId: common.String("kms-key-id"),
 						}},
 					},
-					ClusterOption: infrastructurev1beta2.ClusterOptions{
-						AdmissionControllerOptions: &infrastructurev1beta2.AdmissionControllerOptions{
+					ClusterOption: infrastructurev1beta3.ClusterOptions{
+						AdmissionControllerOptions: &infrastructurev1beta3.AdmissionControllerOptions{
 							IsPodSecurityPolicyEnabled: common.Bool(true),
 						},
-						AddOnOptions: &infrastructurev1beta2.AddOnOptions{
+						AddOnOptions: &infrastructurev1beta3.AddOnOptions{
 							IsKubernetesDashboardEnabled: common.Bool(true),
 							IsTillerEnabled:              common.Bool(false),
 						},
@@ -681,26 +681,26 @@ func TestControlPlaneUpdation(t *testing.T) {
 			name:          "control plane change",
 			errorExpected: false,
 			testSpecificSetup: func(cs *ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
-				cs.OCIManagedControlPlane.Spec = infrastructurev1beta2.OCIManagedControlPlaneSpec{
-					ClusterPodNetworkOptions: []infrastructurev1beta2.ClusterPodNetworkOptions{
+				cs.OCIManagedControlPlane.Spec = infrastructurev1beta3.OCIManagedControlPlaneSpec{
+					ClusterPodNetworkOptions: []infrastructurev1beta3.ClusterPodNetworkOptions{
 						{
-							CniType: infrastructurev1beta2.FlannelCNI,
+							CniType: infrastructurev1beta3.FlannelCNI,
 						},
 						{
-							CniType: infrastructurev1beta2.VCNNativeCNI,
+							CniType: infrastructurev1beta3.VCNNativeCNI,
 						},
 					},
-					ImagePolicyConfig: &infrastructurev1beta2.ImagePolicyConfig{
+					ImagePolicyConfig: &infrastructurev1beta3.ImagePolicyConfig{
 						IsPolicyEnabled: common.Bool(true),
-						KeyDetails: []infrastructurev1beta2.KeyDetails{{
+						KeyDetails: []infrastructurev1beta3.KeyDetails{{
 							KmsKeyId: common.String("new-kms-key-id"),
 						}},
 					},
-					ClusterOption: infrastructurev1beta2.ClusterOptions{
-						AdmissionControllerOptions: &infrastructurev1beta2.AdmissionControllerOptions{
+					ClusterOption: infrastructurev1beta3.ClusterOptions{
+						AdmissionControllerOptions: &infrastructurev1beta3.AdmissionControllerOptions{
 							IsPodSecurityPolicyEnabled: common.Bool(true),
 						},
-						AddOnOptions: &infrastructurev1beta2.AddOnOptions{
+						AddOnOptions: &infrastructurev1beta3.AddOnOptions{
 							IsKubernetesDashboardEnabled: common.Bool(true),
 							IsTillerEnabled:              common.Bool(false),
 						},
@@ -818,17 +818,17 @@ func TestControlPlaneKubeconfigReconcile(t *testing.T) {
 		okeClient = mock_containerengine.NewMockClient(mockCtrl)
 		baseClient = mock_base.NewMockBaseClient(mockCtrl)
 		ociClusterAccessor := OCIManagedCluster{
-			&infrastructurev1beta2.OCIManagedCluster{},
+			&infrastructurev1beta3.OCIManagedCluster{},
 		}
 		ociClusterAccessor.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
 		cs, err = NewManagedControlPlaneScope(ManagedControlPlaneScopeParams{
 			ContainerEngineClient: okeClient,
 			BaseClient:            baseClient,
-			OCIManagedControlPlane: &infrastructurev1beta2.OCIManagedControlPlane{
+			OCIManagedControlPlane: &infrastructurev1beta3.OCIManagedControlPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
-				Spec: infrastructurev1beta2.OCIManagedControlPlaneSpec{},
+				Spec: infrastructurev1beta3.OCIManagedControlPlaneSpec{},
 			},
 			OCIClusterAccessor: ociClusterAccessor,
 			Cluster: &clusterv1.Cluster{
@@ -973,13 +973,13 @@ func TestAddonReconcile(t *testing.T) {
 		okeClient = mock_containerengine.NewMockClient(mockCtrl)
 		baseClient = mock_base.NewMockBaseClient(mockCtrl)
 		ociClusterAccessor := OCIManagedCluster{
-			&infrastructurev1beta2.OCIManagedCluster{},
+			&infrastructurev1beta3.OCIManagedCluster{},
 		}
 		ociClusterAccessor.OCIManagedCluster.Spec.OCIResourceIdentifier = "resource_uid"
 		cs, err = NewManagedControlPlaneScope(ManagedControlPlaneScopeParams{
 			ContainerEngineClient: okeClient,
 			BaseClient:            baseClient,
-			OCIManagedControlPlane: &infrastructurev1beta2.OCIManagedControlPlane{
+			OCIManagedControlPlane: &infrastructurev1beta3.OCIManagedControlPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
@@ -1007,14 +1007,14 @@ func TestAddonReconcile(t *testing.T) {
 		matchError          error
 		errorSubStringMatch bool
 		okeCluster          oke.Cluster
-		matchStatus         map[string]infrastructurev1beta2.AddonStatus
+		matchStatus         map[string]infrastructurev1beta3.AddonStatus
 		testSpecificSetup   func(cs *ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient)
 	}{
 		{
 			name:          "install addon",
 			errorExpected: false,
 			testSpecificSetup: func(cs *ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
-				cs.OCIManagedControlPlane.Spec.Addons = []infrastructurev1beta2.Addon{
+				cs.OCIManagedControlPlane.Spec.Addons = []infrastructurev1beta3.Addon{
 					{
 						Name: common.String("dashboard"),
 					},
@@ -1041,11 +1041,11 @@ func TestAddonReconcile(t *testing.T) {
 			name:          "install addon with config and version",
 			errorExpected: false,
 			testSpecificSetup: func(cs *ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
-				cs.OCIManagedControlPlane.Spec.Addons = []infrastructurev1beta2.Addon{
+				cs.OCIManagedControlPlane.Spec.Addons = []infrastructurev1beta3.Addon{
 					{
 						Name:    common.String("dashboard"),
 						Version: common.String("v0.1.0"),
-						Configurations: []infrastructurev1beta2.AddonConfiguration{
+						Configurations: []infrastructurev1beta3.AddonConfiguration{
 							{
 								Key:   common.String("k1"),
 								Value: common.String("v1"),
@@ -1091,10 +1091,10 @@ func TestAddonReconcile(t *testing.T) {
 			name:          "update addon",
 			errorExpected: false,
 			testSpecificSetup: func(cs *ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
-				cs.OCIManagedControlPlane.Spec.Addons = []infrastructurev1beta2.Addon{
+				cs.OCIManagedControlPlane.Spec.Addons = []infrastructurev1beta3.Addon{
 					{
 						Name: common.String("dashboard"),
-						Configurations: []infrastructurev1beta2.AddonConfiguration{
+						Configurations: []infrastructurev1beta3.AddonConfiguration{
 							{
 								Key:   common.String("k1"),
 								Value: common.String("v1"),
@@ -1143,7 +1143,7 @@ func TestAddonReconcile(t *testing.T) {
 			name:          "delete addon",
 			errorExpected: false,
 			testSpecificSetup: func(cs *ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
-				cs.OCIManagedControlPlane.Status.AddonStatus = map[string]infrastructurev1beta2.AddonStatus{
+				cs.OCIManagedControlPlane.Status.AddonStatus = map[string]infrastructurev1beta3.AddonStatus{
 					"dashboard": {
 						LifecycleState: common.String("ACTIVE"),
 					},
@@ -1174,7 +1174,7 @@ func TestAddonReconcile(t *testing.T) {
 			name:          "delete addon, already deleted",
 			errorExpected: false,
 			testSpecificSetup: func(cs *ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
-				cs.OCIManagedControlPlane.Status.AddonStatus = map[string]infrastructurev1beta2.AddonStatus{
+				cs.OCIManagedControlPlane.Status.AddonStatus = map[string]infrastructurev1beta3.AddonStatus{
 					"dashboard": {
 						LifecycleState: common.String("ACTIVE"),
 					},
@@ -1194,7 +1194,7 @@ func TestAddonReconcile(t *testing.T) {
 			name:          "addon in deleting state",
 			errorExpected: false,
 			testSpecificSetup: func(cs *ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
-				cs.OCIManagedControlPlane.Status.AddonStatus = map[string]infrastructurev1beta2.AddonStatus{
+				cs.OCIManagedControlPlane.Status.AddonStatus = map[string]infrastructurev1beta3.AddonStatus{
 					"dashboard": {
 						LifecycleState: common.String("ACTIVE"),
 					},
@@ -1219,7 +1219,7 @@ func TestAddonReconcile(t *testing.T) {
 			errorExpected: true,
 			matchError:    errors.New("install error"),
 			testSpecificSetup: func(cs *ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
-				cs.OCIManagedControlPlane.Spec.Addons = []infrastructurev1beta2.Addon{
+				cs.OCIManagedControlPlane.Spec.Addons = []infrastructurev1beta3.Addon{
 					{
 						Name: common.String("dashboard"),
 					},
@@ -1246,7 +1246,7 @@ func TestAddonReconcile(t *testing.T) {
 			name:          "addon status error",
 			errorExpected: false,
 			testSpecificSetup: func(cs *ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
-				cs.OCIManagedControlPlane.Spec.Addons = []infrastructurev1beta2.Addon{
+				cs.OCIManagedControlPlane.Spec.Addons = []infrastructurev1beta3.Addon{
 					{
 						Name: common.String("dashboard"),
 					},
@@ -1277,10 +1277,10 @@ func TestAddonReconcile(t *testing.T) {
 				Id:   common.String("id"),
 				Name: common.String("test"),
 			},
-			matchStatus: map[string]infrastructurev1beta2.AddonStatus{
+			matchStatus: map[string]infrastructurev1beta3.AddonStatus{
 				"dashboard": {
 					LifecycleState: common.String("NEEDS_ATTENTION"),
-					AddonError: &infrastructurev1beta2.AddonError{
+					AddonError: &infrastructurev1beta3.AddonError{
 						Code:    common.String("32"),
 						Message: common.String("error"),
 						Status:  common.String("status"),
@@ -1326,7 +1326,7 @@ func TestCompareSpecs(t *testing.T) {
 		var err error
 
 		ociClusterAccessor := OCIManagedCluster{
-			&infrastructurev1beta2.OCIManagedCluster{
+			&infrastructurev1beta3.OCIManagedCluster{
 				ObjectMeta: metav1.ObjectMeta{
 					UID: "cluster_uid",
 				},
@@ -1334,11 +1334,11 @@ func TestCompareSpecs(t *testing.T) {
 		}
 
 		cs, err = NewManagedControlPlaneScope(ManagedControlPlaneScopeParams{
-			OCIManagedControlPlane: &infrastructurev1beta2.OCIManagedControlPlane{
+			OCIManagedControlPlane: &infrastructurev1beta3.OCIManagedControlPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
-				Spec: infrastructurev1beta2.OCIManagedControlPlaneSpec{},
+				Spec: infrastructurev1beta3.OCIManagedControlPlaneSpec{},
 			},
 			OCIClusterAccessor: ociClusterAccessor,
 			Cluster: &clusterv1.Cluster{
@@ -1355,24 +1355,24 @@ func TestCompareSpecs(t *testing.T) {
 		mockCtrl.Finish()
 	}
 
-	specWithFields := func(version, kms string, enableDashboard bool) *infrastructurev1beta2.OCIManagedControlPlaneSpec {
-		return &infrastructurev1beta2.OCIManagedControlPlaneSpec{
+	specWithFields := func(version, kms string, enableDashboard bool) *infrastructurev1beta3.OCIManagedControlPlaneSpec {
+		return &infrastructurev1beta3.OCIManagedControlPlaneSpec{
 			Version:  common.String(version),
 			KmsKeyId: common.String(kms),
-			ClusterOption: infrastructurev1beta2.ClusterOptions{
-				AddOnOptions: &infrastructurev1beta2.AddOnOptions{
+			ClusterOption: infrastructurev1beta3.ClusterOptions{
+				AddOnOptions: &infrastructurev1beta3.AddOnOptions{
 					IsKubernetesDashboardEnabled: common.Bool(enableDashboard),
 				},
 			},
-			ImagePolicyConfig: &infrastructurev1beta2.ImagePolicyConfig{
+			ImagePolicyConfig: &infrastructurev1beta3.ImagePolicyConfig{
 				IsPolicyEnabled: common.Bool(true),
-				KeyDetails: []infrastructurev1beta2.KeyDetails{{
+				KeyDetails: []infrastructurev1beta3.KeyDetails{{
 					KmsKeyId: common.String("image-kms-id"),
 				}},
 			},
-			ClusterPodNetworkOptions: []infrastructurev1beta2.ClusterPodNetworkOptions{
+			ClusterPodNetworkOptions: []infrastructurev1beta3.ClusterPodNetworkOptions{
 				{
-					CniType: infrastructurev1beta2.VCNNativeCNI,
+					CniType: infrastructurev1beta3.VCNNativeCNI,
 				},
 			},
 		}
@@ -1380,8 +1380,8 @@ func TestCompareSpecs(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		spec1         *infrastructurev1beta2.OCIManagedControlPlaneSpec
-		spec2         *infrastructurev1beta2.OCIManagedControlPlaneSpec
+		spec1         *infrastructurev1beta3.OCIManagedControlPlaneSpec
+		spec2         *infrastructurev1beta3.OCIManagedControlPlaneSpec
 		expectedEqual bool
 	}{
 		{
