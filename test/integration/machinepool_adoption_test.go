@@ -23,9 +23,9 @@ import (
 	"time"
 
 	. "github.com/onsi/gomega"
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
-	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
+	infrav3exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta3"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
 	"github.com/oracle/oci-go-sdk/v65/core"
@@ -33,7 +33,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
-	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -64,13 +64,13 @@ func TestOCIMachinePoolAdoptsOnlyOwnedInstancePool(t *testing.T) {
 	triggerObjectReconcile(t, fixture.ociMachinePool)
 	key := client.ObjectKeyFromObject(fixture.ociMachinePool)
 	g.Eventually(func(g Gomega) {
-		stored := &infrav2exp.OCIMachinePool{}
+		stored := &infrav3exp.OCIMachinePool{}
 		g.Expect(testEnvironment.GetAPIReader().Get(testContext, key, stored)).To(Succeed())
 		g.Expect(stored.Spec.OCID).To(Equal(common.String(ownedID)))
-		g.Expect(stored.Status.Ready).To(BeFalse())
-		condition := v1beta1conditions.Get(stored, infrav2exp.InstancePoolReadyCondition)
+		g.Expect(stored.Status.Initialization.Provisioned).To(Or(BeNil(), Equal(common.Bool(false))))
+		condition := conditions.Get(stored, infrav3exp.InstancePoolReadyCondition)
 		g.Expect(condition).NotTo(BeNil())
-		g.Expect(condition.Reason).To(Equal(infrav2exp.InstancePoolNotReadyReason))
+		g.Expect(condition.Reason).To(Equal(infrav3exp.InstancePoolNotReadyReason))
 		_, pools, configCreates, _, poolCreates, _, _, _ := fakeOCI.computeManagement.counts()
 		g.Expect(pools).To(Equal(2))
 		g.Expect(configCreates).To(Equal(1))
@@ -79,11 +79,11 @@ func TestOCIMachinePoolAdoptsOnlyOwnedInstancePool(t *testing.T) {
 	fakeOCI.computeManagement.setInstancePoolState(ownedID, core.InstancePoolLifecycleStateRunning)
 	triggerObjectReconcile(t, fixture.ociMachinePool)
 	g.Eventually(func(g Gomega) {
-		stored := &infrav2exp.OCIMachinePool{}
+		stored := &infrav3exp.OCIMachinePool{}
 		g.Expect(testEnvironment.GetAPIReader().Get(testContext, key, stored)).To(Succeed())
 		g.Expect(stored.Spec.ProviderIDList).To(HaveLen(2))
 		g.Expect(stored.Status.Replicas).To(Equal(int32(2)))
-		g.Expect(stored.Status.Ready).To(BeTrue())
+		g.Expect(stored.Status.Initialization.Provisioned).To(Equal(common.Bool(true)))
 		_, _, _, _, poolCreates, poolUpdates, _, _ := fakeOCI.computeManagement.counts()
 		g.Expect(poolCreates).To(BeZero())
 		g.Expect(poolUpdates).To(Equal(1))
@@ -93,7 +93,7 @@ func TestOCIMachinePoolAdoptsOnlyOwnedInstancePool(t *testing.T) {
 	waitForInstancePoolTerminateCount(t, 1)
 	triggerObjectReconcile(t, fixture.ociMachinePool)
 	g.Eventually(func() bool {
-		err := testEnvironment.GetAPIReader().Get(testContext, key, &infrav2exp.OCIMachinePool{})
+		err := testEnvironment.GetAPIReader().Get(testContext, key, &infrav3exp.OCIMachinePool{})
 		return apierrors.IsNotFound(err)
 	}).WithTimeout(15 * time.Second).WithPolling(100 * time.Millisecond).Should(BeTrue())
 	_, pools, _, _, creates, _, terminates, _ := fakeOCI.computeManagement.counts()
@@ -120,12 +120,12 @@ func TestOCIManagedMachinePoolAdoptsOnlyOwnedNodePool(t *testing.T) {
 	triggerObjectReconcile(t, fixture.managedMachinePool)
 	key := client.ObjectKeyFromObject(fixture.managedMachinePool)
 	g.Eventually(func(g Gomega) {
-		stored := &infrav2exp.OCIManagedMachinePool{}
+		stored := &infrav3exp.OCIManagedMachinePool{}
 		g.Expect(testEnvironment.GetAPIReader().Get(testContext, key, stored)).To(Succeed())
 		g.Expect(stored.Spec.ID).To(Equal(common.String(ownedID)))
 		g.Expect(stored.Spec.ProviderIDList).To(HaveLen(2))
 		g.Expect(stored.Status.Replicas).To(Equal(int32(2)))
-		g.Expect(stored.Status.Ready).To(BeTrue())
+		g.Expect(stored.Status.Initialization.Provisioned).To(Equal(common.Bool(true)))
 		active, creates, _, _, _ := fakeOCI.oke.nodePoolCounts()
 		g.Expect(active).To(Equal(2))
 		g.Expect(creates).To(BeZero())
@@ -133,7 +133,7 @@ func TestOCIManagedMachinePoolAdoptsOnlyOwnedNodePool(t *testing.T) {
 
 	g.Expect(testEnvironment.Delete(testContext, fixture.managedMachinePool)).To(Succeed())
 	g.Eventually(func() bool {
-		err := testEnvironment.GetAPIReader().Get(testContext, key, &infrav2exp.OCIManagedMachinePool{})
+		err := testEnvironment.GetAPIReader().Get(testContext, key, &infrav3exp.OCIManagedMachinePool{})
 		return apierrors.IsNotFound(err)
 	}).WithTimeout(15 * time.Second).WithPolling(100 * time.Millisecond).Should(BeTrue())
 	active, creates, _, deletes, _ := fakeOCI.oke.nodePoolCounts()
@@ -160,12 +160,12 @@ func TestOCIVirtualMachinePoolAdoptsOnlyOwnedVirtualNodePool(t *testing.T) {
 	triggerObjectReconcile(t, fixture.virtualMachinePool)
 	key := client.ObjectKeyFromObject(fixture.virtualMachinePool)
 	g.Eventually(func(g Gomega) {
-		stored := &infrav2exp.OCIVirtualMachinePool{}
+		stored := &infrav3exp.OCIVirtualMachinePool{}
 		g.Expect(testEnvironment.GetAPIReader().Get(testContext, key, stored)).To(Succeed())
 		g.Expect(stored.Spec.ID).To(Equal(common.String(ownedID)))
 		g.Expect(stored.Spec.ProviderIDList).To(HaveLen(2))
 		g.Expect(stored.Status.Replicas).To(Equal(int32(2)))
-		g.Expect(stored.Status.Ready).To(BeTrue())
+		g.Expect(stored.Status.Initialization.Provisioned).To(Equal(common.Bool(true)))
 		active, creates, _, _, _ := fakeOCI.oke.virtualNodePoolCounts()
 		g.Expect(active).To(Equal(2))
 		g.Expect(creates).To(BeZero())
@@ -173,7 +173,7 @@ func TestOCIVirtualMachinePoolAdoptsOnlyOwnedVirtualNodePool(t *testing.T) {
 
 	g.Expect(testEnvironment.Delete(testContext, fixture.virtualMachinePool)).To(Succeed())
 	g.Eventually(func() bool {
-		err := testEnvironment.GetAPIReader().Get(testContext, key, &infrav2exp.OCIVirtualMachinePool{})
+		err := testEnvironment.GetAPIReader().Get(testContext, key, &infrav3exp.OCIVirtualMachinePool{})
 		return apierrors.IsNotFound(err)
 	}).WithTimeout(15 * time.Second).WithPolling(100 * time.Millisecond).Should(BeTrue())
 	active, creates, _, deletes, _ := fakeOCI.oke.virtualNodePoolCounts()
@@ -185,10 +185,10 @@ func TestOCIVirtualMachinePoolAdoptsOnlyOwnedVirtualNodePool(t *testing.T) {
 type instancePoolFixture struct {
 	namespace      *corev1.Namespace
 	cluster        *clusterv1.Cluster
-	ociCluster     *infrastructurev1beta2.OCICluster
+	ociCluster     *infrastructurev1beta3.OCICluster
 	bootstrap      *corev1.Secret
 	machinePool    *clusterv1.MachinePool
-	ociMachinePool *infrav2exp.OCIMachinePool
+	ociMachinePool *infrav3exp.OCIMachinePool
 }
 
 func createInstancePoolFixture(t *testing.T, externallyManaged bool, replicas int32) *instancePoolFixture {
@@ -205,9 +205,9 @@ func createInstancePoolFixture(t *testing.T, externallyManaged bool, replicas in
 	g.Expect(testEnvironment.Status().Update(testContext, storedCluster)).To(Succeed())
 	fixture.ociCluster = instancePoolOCICluster(fixture.cluster)
 	g.Expect(testEnvironment.Create(testContext, fixture.ociCluster)).To(Succeed())
-	storedOCICluster := &infrastructurev1beta2.OCICluster{}
+	storedOCICluster := &infrastructurev1beta3.OCICluster{}
 	g.Expect(testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(fixture.ociCluster), storedOCICluster)).To(Succeed())
-	storedOCICluster.Status.Ready = true
+	storedOCICluster.Status.Initialization.Provisioned = common.Bool(true)
 	g.Expect(testEnvironment.Status().Update(testContext, storedOCICluster)).To(Succeed())
 	fixture.bootstrap = &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: "instance-pool-advanced-bootstrap", Namespace: fixture.namespace.Name},
@@ -222,7 +222,7 @@ func createInstancePoolFixture(t *testing.T, externallyManaged bool, replicas in
 	fixture.ociMachinePool = instanceInfrastructureMachinePool(fixture.machinePool, fixture.cluster.Name)
 	g.Expect(testEnvironment.Create(testContext, fixture.ociMachinePool)).To(Succeed())
 	t.Cleanup(func() {
-		machines := &infrav2exp.OCIMachinePoolMachineList{}
+		machines := &infrav3exp.OCIMachinePoolMachineList{}
 		if err := testEnvironment.GetAPIReader().List(testContext, machines, client.InNamespace(fixture.namespace.Name)); err == nil {
 			for i := range machines.Items {
 				deleteAndIgnoreNotFound(t, &machines.Items[i])
@@ -238,22 +238,22 @@ func createInstancePoolFixture(t *testing.T, externallyManaged bool, replicas in
 func prepareManagedMachinePoolForAdoption(t *testing.T, fixture *managedMachinePoolFixture) {
 	t.Helper()
 	g := NewWithT(t)
-	stored := &infrav2exp.OCIManagedMachinePool{}
+	stored := &infrav3exp.OCIManagedMachinePool{}
 	g.Expect(testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(fixture.managedMachinePool), stored)).To(Succeed())
-	stored.Spec.NodePoolNodeConfig = &infrav2exp.NodePoolNodeConfig{
+	stored.Spec.NodePoolNodeConfig = &infrav3exp.NodePoolNodeConfig{
 		NsgNames: []string{"worker"},
-		PlacementConfigs: []infrav2exp.PlacementConfig{{
+		PlacementConfigs: []infrav3exp.PlacementConfig{{
 			AvailabilityDomain: common.String("integration-ad-1"),
 			FaultDomains:       []string{"FAULT-DOMAIN-1", "FAULT-DOMAIN-2", "FAULT-DOMAIN-3"},
 			SubnetName:         common.String("worker"),
 		}},
-		NodePoolPodNetworkOptionDetails: &infrav2exp.NodePoolPodNetworkOptionDetails{CniType: infrastructurev1beta2.FlannelCNI},
+		NodePoolPodNetworkOptionDetails: &infrav3exp.NodePoolPodNetworkOptionDetails{CniType: infrastructurev1beta3.FlannelCNI},
 	}
 	g.Expect(testEnvironment.Update(testContext, stored)).To(Succeed())
 }
 
 func adoptedManagedNodePool(fixture *managedMachinePoolFixture, id string, tags map[string]string, size int) oke.NodePool {
-	workerSubnetID, workerNSGID := managedNetworkIDs(fixture.managedCluster, infrastructurev1beta2.WorkerRole)
+	workerSubnetID, workerNSGID := managedNetworkIDs(fixture.managedCluster, infrastructurev1beta3.WorkerRole)
 	return oke.NodePool{
 		Id:                common.String(id),
 		LifecycleState:    oke.NodePoolLifecycleStateActive,
@@ -279,21 +279,21 @@ func adoptedManagedNodePool(fixture *managedMachinePoolFixture, id string, tags 
 func prepareVirtualMachinePoolForAdoption(t *testing.T, fixture *virtualMachinePoolFixture) {
 	t.Helper()
 	g := NewWithT(t)
-	stored := &infrav2exp.OCIVirtualMachinePool{}
+	stored := &infrav3exp.OCIVirtualMachinePool{}
 	g.Expect(testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(fixture.virtualMachinePool), stored)).To(Succeed())
-	stored.Spec.PlacementConfigs = []infrav2exp.VirtualNodepoolPlacementConfig{{
+	stored.Spec.PlacementConfigs = []infrav3exp.VirtualNodepoolPlacementConfig{{
 		AvailabilityDomain: common.String("integration-ad-1"),
 		FaultDomains:       []string{"FAULT-DOMAIN-1", "FAULT-DOMAIN-2", "FAULT-DOMAIN-3"},
 		SubnetName:         common.String("worker"),
 	}}
 	stored.Spec.NsgNames = []string{"worker"}
-	stored.Spec.PodConfiguration = infrav2exp.PodConfig{SubnetName: common.String("pod"), NsgNames: []string{"pod"}}
+	stored.Spec.PodConfiguration = infrav3exp.PodConfig{SubnetName: common.String("pod"), NsgNames: []string{"pod"}}
 	g.Expect(testEnvironment.Update(testContext, stored)).To(Succeed())
 }
 
 func adoptedVirtualNodePool(fixture *virtualMachinePoolFixture, id string, tags map[string]string, size int) oke.VirtualNodePool {
-	workerSubnetID, workerNSGID := managedNetworkIDs(fixture.managedCluster, infrastructurev1beta2.WorkerRole)
-	podSubnetID, podNSGID := managedNetworkIDs(fixture.managedCluster, infrastructurev1beta2.PodRole)
+	workerSubnetID, workerNSGID := managedNetworkIDs(fixture.managedCluster, infrastructurev1beta3.WorkerRole)
+	podSubnetID, podNSGID := managedNetworkIDs(fixture.managedCluster, infrastructurev1beta3.PodRole)
 	return oke.VirtualNodePool{
 		Id:                common.String(id),
 		LifecycleState:    oke.VirtualNodePoolLifecycleStateActive,
@@ -312,7 +312,7 @@ func adoptedVirtualNodePool(fixture *virtualMachinePoolFixture, id string, tags 
 	}
 }
 
-func managedNetworkIDs(cluster *infrastructurev1beta2.OCIManagedCluster, role infrastructurev1beta2.Role) (string, string) {
+func managedNetworkIDs(cluster *infrastructurev1beta3.OCIManagedCluster, role infrastructurev1beta3.Role) (string, string) {
 	var subnetID, nsgID string
 	for _, subnet := range cluster.Spec.NetworkSpec.Vcn.Subnets {
 		if subnet.Role == role {

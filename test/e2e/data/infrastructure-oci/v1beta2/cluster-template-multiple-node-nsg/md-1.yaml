@@ -1,4 +1,4 @@
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 kind: OCIMachineTemplate
 metadata:
   namespace: "${NAMESPACE}"
@@ -20,7 +20,7 @@ spec:
       metadata:
         ssh_authorized_keys: "${OCI_SSH_KEY}"
 ---
-apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta2
 kind: KubeadmConfigTemplate
 metadata:
   namespace: "${NAMESPACE}"
@@ -31,10 +31,12 @@ spec:
       joinConfiguration:
         nodeRegistration:
           kubeletExtraArgs:
-            cloud-provider: external
-            provider-id: oci://{{ ds["id"] }}
+            - name: cloud-provider
+              value: external
+            - name: provider-id
+              value: 'oci://{{ ds["id"] }}'
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachineDeployment
 metadata:
   namespace: "${NAMESPACE}"
@@ -43,7 +45,7 @@ spec:
   clusterName: "${CLUSTER_NAME}"
   replicas: ${WORKER_MACHINE_COUNT}
   selector:
-    matchLabels:
+    matchLabels: {}
   template:
     spec:
       clusterName: "${CLUSTER_NAME}"
@@ -51,9 +53,9 @@ spec:
       bootstrap:
         configRef:
           name: "${CLUSTER_NAME}-md-1"
-          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+          apiGroup: bootstrap.cluster.x-k8s.io
           kind: KubeadmConfigTemplate
       infrastructureRef:
         name: "${CLUSTER_NAME}-md-1"
-        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        apiGroup: infrastructure.cluster.x-k8s.io
         kind: OCIMachineTemplate

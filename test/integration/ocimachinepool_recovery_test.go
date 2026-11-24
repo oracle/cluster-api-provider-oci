@@ -25,15 +25,14 @@ import (
 	"time"
 
 	. "github.com/onsi/gomega"
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
-	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
+	infrav3exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta3"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
-	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -55,9 +54,9 @@ func TestOCIMachinePoolRecoversFromCloudFailures(t *testing.T) {
 
 	ociCluster := instancePoolOCICluster(cluster)
 	g.Expect(testEnvironment.Create(testContext, ociCluster)).To(Succeed())
-	storedOCICluster := &infrastructurev1beta2.OCICluster{}
+	storedOCICluster := &infrastructurev1beta3.OCICluster{}
 	g.Expect(testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(ociCluster), storedOCICluster)).To(Succeed())
-	storedOCICluster.Status.Ready = true
+	storedOCICluster.Status.Initialization.Provisioned = common.Bool(true)
 	g.Expect(testEnvironment.Status().Update(testContext, storedOCICluster)).To(Succeed())
 
 	bootstrapSecret := &corev1.Secret{
@@ -68,9 +67,9 @@ func TestOCIMachinePoolRecoversFromCloudFailures(t *testing.T) {
 
 	machinePool := instanceCAPIMachinePool(cluster, bootstrapSecret.Name, 2)
 	g.Expect(testEnvironment.Create(testContext, machinePool)).To(Succeed())
-	storedV1Beta1MachinePool := &clusterv1beta1.MachinePool{}
-	g.Expect(testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(machinePool), storedV1Beta1MachinePool)).To(Succeed())
-	g.Expect(storedV1Beta1MachinePool.Spec.Template.Spec.InfrastructureRef.APIVersion).To(Equal(infrav2exp.GroupVersion.String()))
+	storedMachinePool := &clusterv1.MachinePool{}
+	g.Expect(testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(machinePool), storedMachinePool)).To(Succeed())
+	g.Expect(storedMachinePool.Spec.Template.Spec.InfrastructureRef.APIGroup).To(Equal(infrav3exp.GroupVersion.Group))
 	ociMachinePool := instanceInfrastructureMachinePool(machinePool, cluster.Name)
 	g.Expect(testEnvironment.Create(testContext, ociMachinePool)).To(Succeed())
 
@@ -82,7 +81,7 @@ func TestOCIMachinePoolRecoversFromCloudFailures(t *testing.T) {
 		} {
 			fakeOCI.computeManagement.clearFailure(operation)
 		}
-		machines := &infrav2exp.OCIMachinePoolMachineList{}
+		machines := &infrav3exp.OCIMachinePoolMachineList{}
 		if err := testEnvironment.GetAPIReader().List(testContext, machines, client.InNamespace(namespace.Name)); err == nil {
 			for i := range machines.Items {
 				deleteAndIgnoreNotFound(t, &machines.Items[i])
@@ -107,13 +106,13 @@ func TestOCIMachinePoolRecoversFromCloudFailures(t *testing.T) {
 		g.Expect(configCreates).To(Equal(1))
 		g.Expect(poolCreates).To(BeZero())
 
-		stored := &infrav2exp.OCIMachinePool{}
+		stored := &infrav3exp.OCIMachinePool{}
 		g.Expect(testEnvironment.GetAPIReader().Get(testContext, ociMachinePoolKey, stored)).To(Succeed())
-		g.Expect(controllerutil.ContainsFinalizer(stored, infrav2exp.MachinePoolFinalizer)).To(BeTrue())
-		condition := v1beta1conditions.Get(stored, infrav2exp.InstancePoolReadyCondition)
+		g.Expect(controllerutil.ContainsFinalizer(stored, infrav3exp.MachinePoolFinalizer)).To(BeTrue())
+		condition := conditions.Get(stored, infrav3exp.InstancePoolReadyCondition)
 		g.Expect(condition).NotTo(BeNil())
-		g.Expect(condition.Status).To(Equal(corev1.ConditionFalse))
-		g.Expect(condition.Reason).To(Equal(infrav2exp.InstancePoolProvisionFailedReason))
+		g.Expect(condition.Status).To(Equal(metav1.ConditionFalse))
+		g.Expect(condition.Reason).To(Equal(infrav3exp.InstancePoolProvisionFailedReason))
 	}).WithTimeout(10 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
 	waitForWarningEvent(t, namespace.Name, ociMachinePool.Name, "ReconcileError", "injected instance-pool create failure")
 
@@ -126,7 +125,7 @@ func TestOCIMachinePoolRecoversFromCloudFailures(t *testing.T) {
 	updateAttempts := fakeOCI.computeManagement.operationAttemptCount(updateInstancePoolOperation)
 	fakeOCI.computeManagement.setFailure(updateInstancePoolOperation, errors.New("injected instance-pool update failure"))
 	g.Eventually(func() error {
-		stored := &infrav2exp.OCIMachinePool{}
+		stored := &infrav3exp.OCIMachinePool{}
 		if err := testEnvironment.GetAPIReader().Get(testContext, ociMachinePoolKey, stored); err != nil {
 			return err
 		}
@@ -148,7 +147,7 @@ func TestOCIMachinePoolRecoversFromCloudFailures(t *testing.T) {
 		g.Expect(poolSize).To(Equal(2))
 		g.Expect(activeConfigurationID).To(Equal(originalConfigurationID))
 
-		stored := &infrav2exp.OCIMachinePool{}
+		stored := &infrav3exp.OCIMachinePool{}
 		g.Expect(testEnvironment.GetAPIReader().Get(testContext, ociMachinePoolKey, stored)).To(Succeed())
 		g.Expect(stored.Spec.InstanceConfiguration.InstanceConfigurationId).NotTo(BeNil())
 		g.Expect(*stored.Spec.InstanceConfiguration.InstanceConfigurationId).NotTo(Equal(originalConfigurationID))
@@ -169,10 +168,10 @@ func TestOCIMachinePoolRecoversFromCloudFailures(t *testing.T) {
 	waitForComputeManagementAttempt(t, terminateInstancePoolOperation, terminateAttempts)
 	waitForWarningEvent(t, namespace.Name, ociMachinePool.Name, "FailedDelete", "injected instance-pool terminate failure")
 	g.Eventually(func(g Gomega) {
-		stored := &infrav2exp.OCIMachinePool{}
+		stored := &infrav3exp.OCIMachinePool{}
 		g.Expect(testEnvironment.GetAPIReader().Get(testContext, ociMachinePoolKey, stored)).To(Succeed())
 		g.Expect(stored.DeletionTimestamp.IsZero()).To(BeFalse())
-		g.Expect(controllerutil.ContainsFinalizer(stored, infrav2exp.MachinePoolFinalizer)).To(BeTrue())
+		g.Expect(controllerutil.ContainsFinalizer(stored, infrav3exp.MachinePoolFinalizer)).To(BeTrue())
 
 		configurations, pools, _, deletes, _, _, terminates, _ := fakeOCI.computeManagement.counts()
 		g.Expect(configurations).To(Equal(1))
@@ -191,18 +190,18 @@ func TestOCIMachinePoolRecoversFromCloudFailures(t *testing.T) {
 		g.Expect(pools).To(BeZero())
 		g.Expect(deletes).To(Equal(2))
 		g.Expect(terminates).To(Equal(1))
-		err := testEnvironment.GetAPIReader().Get(testContext, ociMachinePoolKey, &infrav2exp.OCIMachinePool{})
+		err := testEnvironment.GetAPIReader().Get(testContext, ociMachinePoolKey, &infrav3exp.OCIMachinePool{})
 		g.Expect(apierrors.IsNotFound(err)).To(BeTrue(), "expected OCI machine-pool deletion, got %v", err)
 	}).WithTimeout(20 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
 
-	machines := &infrav2exp.OCIMachinePoolMachineList{}
+	machines := &infrav3exp.OCIMachinePoolMachineList{}
 	g.Expect(testEnvironment.GetAPIReader().List(testContext, machines, client.InNamespace(namespace.Name))).To(Succeed())
 	g.Expect(machines.Items).NotTo(BeEmpty())
 	machine := machines.Items[0].DeepCopy()
-	g.Expect(controllerutil.ContainsFinalizer(machine, infrav2exp.MachinePoolMachineFinalizer)).To(BeTrue())
+	g.Expect(controllerutil.ContainsFinalizer(machine, infrav3exp.MachinePoolMachineFinalizer)).To(BeTrue())
 	g.Expect(testEnvironment.Delete(testContext, machine)).To(Succeed())
 	g.Eventually(func() bool {
-		err := testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(machine), &infrav2exp.OCIMachinePoolMachine{})
+		err := testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(machine), &infrav3exp.OCIMachinePoolMachine{})
 		return apierrors.IsNotFound(err)
 	}).WithTimeout(10 * time.Second).WithPolling(100 * time.Millisecond).Should(BeTrue())
 }

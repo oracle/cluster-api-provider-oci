@@ -24,7 +24,7 @@ import (
 	"time"
 
 	. "github.com/onsi/gomega"
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	"github.com/oracle/oci-go-sdk/v65/common"
@@ -32,9 +32,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
-	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -57,13 +56,13 @@ func TestOCIMachineRecoversFromCloudFailuresAndPendingState(t *testing.T) {
 	g.Eventually(func(g Gomega) {
 		launches, _, _ := fakeOCI.compute.counts()
 		g.Expect(launches).To(BeZero())
-		stored := &infrastructurev1beta2.OCIMachine{}
+		stored := &infrastructurev1beta3.OCIMachine{}
 		g.Expect(testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(fixture.ociMachine), stored)).To(Succeed())
-		g.Expect(controllerutil.ContainsFinalizer(stored, infrastructurev1beta2.MachineFinalizer)).To(BeTrue())
-		condition := v1beta1conditions.Get(stored, infrastructurev1beta2.InstanceReadyCondition)
+		g.Expect(controllerutil.ContainsFinalizer(stored, infrastructurev1beta3.MachineFinalizer)).To(BeTrue())
+		condition := conditions.Get(stored, infrastructurev1beta3.InstanceReadyCondition)
 		g.Expect(condition).NotTo(BeNil())
-		g.Expect(condition.Status).To(Equal(corev1.ConditionFalse))
-		g.Expect(condition.Reason).To(Equal(infrastructurev1beta2.InstanceProvisionFailedReason))
+		g.Expect(condition.Status).To(Equal(metav1.ConditionFalse))
+		g.Expect(condition.Reason).To(Equal(infrastructurev1beta3.InstanceProvisionFailedReason))
 	}).WithTimeout(10 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
 	waitForWarningEvent(t, fixture.namespace.Name, fixture.ociMachine.Name, "ReconcileError", "injected instance launch failure")
 
@@ -71,15 +70,15 @@ func TestOCIMachineRecoversFromCloudFailuresAndPendingState(t *testing.T) {
 	triggerObjectReconcile(t, fixture.ociMachine)
 	var instanceID string
 	g.Eventually(func(g Gomega) {
-		stored := &infrastructurev1beta2.OCIMachine{}
+		stored := &infrastructurev1beta3.OCIMachine{}
 		g.Expect(testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(fixture.ociMachine), stored)).To(Succeed())
 		g.Expect(stored.Spec.InstanceId).NotTo(BeNil())
 		instanceID = *stored.Spec.InstanceId
-		g.Expect(stored.Status.Ready).To(BeFalse())
-		condition := v1beta1conditions.Get(stored, infrastructurev1beta2.InstanceReadyCondition)
+		g.Expect(stored.Status.Initialization.Provisioned).To(Or(BeNil(), Equal(common.Bool(false))))
+		condition := conditions.Get(stored, infrastructurev1beta3.InstanceReadyCondition)
 		g.Expect(condition).NotTo(BeNil())
-		g.Expect(condition.Status).To(Equal(corev1.ConditionFalse))
-		g.Expect(condition.Reason).To(Equal(infrastructurev1beta2.InstanceNotReadyReason))
+		g.Expect(condition.Status).To(Equal(metav1.ConditionFalse))
+		g.Expect(condition.Reason).To(Equal(infrastructurev1beta3.InstanceNotReadyReason))
 		launches, _, _ := fakeOCI.compute.counts()
 		g.Expect(launches).To(Equal(1))
 	}).WithTimeout(10 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
@@ -93,10 +92,10 @@ func TestOCIMachineRecoversFromCloudFailuresAndPendingState(t *testing.T) {
 	g.Expect(testEnvironment.Delete(testContext, fixture.ociMachine)).To(Succeed())
 	waitForComputeAttempt(t, terminateInstanceOperation, terminateAttempts)
 	g.Eventually(func(g Gomega) {
-		stored := &infrastructurev1beta2.OCIMachine{}
+		stored := &infrastructurev1beta3.OCIMachine{}
 		g.Expect(testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(fixture.ociMachine), stored)).To(Succeed())
 		g.Expect(stored.DeletionTimestamp.IsZero()).To(BeFalse())
-		g.Expect(controllerutil.ContainsFinalizer(stored, infrastructurev1beta2.MachineFinalizer)).To(BeTrue())
+		g.Expect(controllerutil.ContainsFinalizer(stored, infrastructurev1beta3.MachineFinalizer)).To(BeTrue())
 		_, terminations, _ := fakeOCI.compute.counts()
 		g.Expect(terminations).To(BeZero())
 	}).WithTimeout(10 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
@@ -109,7 +108,7 @@ func TestOCIMachineRecoversFromCloudFailuresAndPendingState(t *testing.T) {
 	}).WithTimeout(10 * time.Second).WithPolling(100 * time.Millisecond).Should(Equal(1))
 	triggerObjectReconcile(t, fixture.ociMachine)
 	g.Eventually(func() bool {
-		err := testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(fixture.ociMachine), &infrastructurev1beta2.OCIMachine{})
+		err := testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(fixture.ociMachine), &infrastructurev1beta3.OCIMachine{})
 		return apierrors.IsNotFound(err)
 	}).WithTimeout(10 * time.Second).WithPolling(100 * time.Millisecond).Should(BeTrue())
 }
@@ -146,7 +145,7 @@ func TestOCIMachineAdoptsOnlyOwnedInstance(t *testing.T) {
 
 	g.Expect(testEnvironment.Delete(testContext, fixture.ociMachine)).To(Succeed())
 	g.Eventually(func() bool {
-		err := testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(fixture.ociMachine), &infrastructurev1beta2.OCIMachine{})
+		err := testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(fixture.ociMachine), &infrastructurev1beta3.OCIMachine{})
 		return apierrors.IsNotFound(err)
 	}).WithTimeout(10 * time.Second).WithPolling(100 * time.Millisecond).Should(BeTrue())
 	foreignAfter, ok = fakeOCI.compute.instance(wrongID)
@@ -167,17 +166,17 @@ func TestOCIMachineDeletionSucceedsWhenInstanceIsAlreadyAbsent(t *testing.T) {
 	key := client.ObjectKeyFromObject(fixture.ociMachine)
 	var instanceID string
 	g.Eventually(func(g Gomega) {
-		stored := &infrastructurev1beta2.OCIMachine{}
+		stored := &infrastructurev1beta3.OCIMachine{}
 		g.Expect(testEnvironment.GetAPIReader().Get(testContext, key, stored)).To(Succeed())
 		g.Expect(stored.Spec.InstanceId).NotTo(BeNil())
 		instanceID = *stored.Spec.InstanceId
-		g.Expect(stored.Status.Ready).To(BeTrue())
+		g.Expect(stored.Status.Initialization.Provisioned).To(Equal(common.Bool(true)))
 	}).WithTimeout(15 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
 
 	fakeOCI.compute.removeInstance(instanceID)
 	g.Expect(testEnvironment.Delete(testContext, fixture.ociMachine)).To(Succeed())
 	g.Eventually(func() bool {
-		err := testEnvironment.GetAPIReader().Get(testContext, key, &infrastructurev1beta2.OCIMachine{})
+		err := testEnvironment.GetAPIReader().Get(testContext, key, &infrastructurev1beta3.OCIMachine{})
 		return apierrors.IsNotFound(err)
 	}).WithTimeout(10 * time.Second).WithPolling(100 * time.Millisecond).Should(BeTrue())
 	_, terminations, _ := fakeOCI.compute.counts()
@@ -187,10 +186,10 @@ func TestOCIMachineDeletionSucceedsWhenInstanceIsAlreadyAbsent(t *testing.T) {
 type ociMachineFixture struct {
 	namespace       *corev1.Namespace
 	cluster         *clusterv1.Cluster
-	ociCluster      *infrastructurev1beta2.OCICluster
+	ociCluster      *infrastructurev1beta3.OCICluster
 	bootstrapSecret *corev1.Secret
 	machine         *clusterv1.Machine
-	ociMachine      *infrastructurev1beta2.OCIMachine
+	ociMachine      *infrastructurev1beta3.OCIMachine
 }
 
 func createOCIMachineFixture(t *testing.T, name, resourceIdentifier string) *ociMachineFixture {
@@ -204,14 +203,14 @@ func createOCIMachineFixture(t *testing.T, name, resourceIdentifier string) *oci
 		Spec: clusterv1.ClusterSpec{
 			Paused: common.Bool(true),
 			InfrastructureRef: clusterv1.ContractVersionedObjectReference{
-				APIGroup: infrastructurev1beta2.GroupVersion.Group,
+				APIGroup: infrastructurev1beta3.GroupVersion.Group,
 				Kind:     scope.OCIClusterKind,
 				Name:     name,
 			},
 		},
 	}
 	g.Expect(testEnvironment.Create(testContext, fixture.cluster)).To(Succeed())
-	fixture.ociCluster = &infrastructurev1beta2.OCICluster{
+	fixture.ociCluster = &infrastructurev1beta3.OCICluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
 			Namespace:   fixture.namespace.Name,
@@ -220,17 +219,17 @@ func createOCIMachineFixture(t *testing.T, name, resourceIdentifier string) *oci
 				*metav1.NewControllerRef(fixture.cluster, clusterv1.GroupVersion.WithKind("Cluster")),
 			},
 		},
-		Spec: infrastructurev1beta2.OCIClusterSpec{
+		Spec: infrastructurev1beta3.OCIClusterSpec{
 			OCIResourceIdentifier: resourceIdentifier,
 			CompartmentId:         "ocid1.compartment.oc1..integration",
 			Region:                scope.MockTestRegion,
 		},
 	}
 	g.Expect(testEnvironment.Create(testContext, fixture.ociCluster)).To(Succeed())
-	storedOCICluster := &infrastructurev1beta2.OCICluster{}
+	storedOCICluster := &infrastructurev1beta3.OCICluster{}
 	g.Expect(testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(fixture.ociCluster), storedOCICluster)).To(Succeed())
-	storedOCICluster.Status.FailureDomains = clusterv1beta1.FailureDomains{
-		"1": {Attributes: map[string]string{scope.AvailabilityDomain: "integration-ad-1", scope.FaultDomain: "FAULT-DOMAIN-1"}},
+	storedOCICluster.Status.FailureDomains = []clusterv1.FailureDomain{
+		{Name: "1", Attributes: map[string]string{scope.AvailabilityDomain: "integration-ad-1", scope.FaultDomain: "FAULT-DOMAIN-1"}},
 	}
 	g.Expect(testEnvironment.Status().Update(testContext, storedOCICluster)).To(Succeed())
 	fixture.bootstrapSecret = &corev1.Secret{
@@ -244,7 +243,7 @@ func createOCIMachineFixture(t *testing.T, name, resourceIdentifier string) *oci
 			ClusterName: name,
 			Bootstrap:   clusterv1.Bootstrap{DataSecretName: common.String(fixture.bootstrapSecret.Name)},
 			InfrastructureRef: clusterv1.ContractVersionedObjectReference{
-				APIGroup: infrastructurev1beta2.GroupVersion.Group,
+				APIGroup: infrastructurev1beta3.GroupVersion.Group,
 				Kind:     scope.OCIMachineKind,
 				Name:     name,
 			},
@@ -252,7 +251,7 @@ func createOCIMachineFixture(t *testing.T, name, resourceIdentifier string) *oci
 		},
 	}
 	g.Expect(testEnvironment.Create(testContext, fixture.machine)).To(Succeed())
-	fixture.ociMachine = &infrastructurev1beta2.OCIMachine{
+	fixture.ociMachine = &infrastructurev1beta3.OCIMachine{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: fixture.namespace.Name,
@@ -261,10 +260,10 @@ func createOCIMachineFixture(t *testing.T, name, resourceIdentifier string) *oci
 				*metav1.NewControllerRef(fixture.machine, clusterv1.GroupVersion.WithKind("Machine")),
 			},
 		},
-		Spec: infrastructurev1beta2.OCIMachineSpec{
+		Spec: infrastructurev1beta3.OCIMachineSpec{
 			ImageId: "ocid1.image.oc1..integration",
 			Shape:   "VM.Standard.E4.Flex",
-			NetworkDetails: infrastructurev1beta2.NetworkDetails{
+			NetworkDetails: infrastructurev1beta3.NetworkDetails{
 				SubnetId: common.String("ocid1.subnet.oc1..integration"),
 			},
 		},
@@ -287,15 +286,15 @@ func unpauseCluster(t *testing.T, cluster *clusterv1.Cluster) {
 	g.Expect(testEnvironment.Update(testContext, stored)).To(Succeed())
 }
 
-func waitForOCIMachineReady(t *testing.T, machine *infrastructurev1beta2.OCIMachine, instanceID string, launches int) {
+func waitForOCIMachineReady(t *testing.T, machine *infrastructurev1beta3.OCIMachine, instanceID string, launches int) {
 	t.Helper()
 	g := NewWithT(t)
 	g.Eventually(func(g Gomega) {
-		stored := &infrastructurev1beta2.OCIMachine{}
+		stored := &infrastructurev1beta3.OCIMachine{}
 		g.Expect(testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(machine), stored)).To(Succeed())
 		g.Expect(stored.Spec.InstanceId).To(Equal(common.String(instanceID)))
-		g.Expect(stored.Status.Ready).To(BeTrue())
-		g.Expect(v1beta1conditions.IsTrue(stored, infrastructurev1beta2.InstanceReadyCondition)).To(BeTrue())
+		g.Expect(stored.Status.Initialization.Provisioned).To(Equal(common.Bool(true)))
+		g.Expect(conditions.IsTrue(stored, infrastructurev1beta3.InstanceReadyCondition)).To(BeTrue())
 		actualLaunches, _, _ := fakeOCI.compute.counts()
 		g.Expect(actualLaunches).To(Equal(launches))
 	}).WithTimeout(15 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())

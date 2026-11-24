@@ -1,4 +1,4 @@
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 kind: OCIMachineTemplate
 metadata:
   namespace: "${NAMESPACE}"
@@ -17,7 +17,7 @@ spec:
           nicIndex: 1 # second nic must be used for hyper-v
       isPvEncryptionInTransitEnabled: ${OCI_NODE_PV_TRANSIT_ENCRYPTION=false}
 ---
-apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta2
 kind: KubeadmConfigTemplate
 metadata:
   namespace: "${NAMESPACE}"
@@ -29,16 +29,20 @@ spec:
         nodeRegistration:
           criSocket: npipe:////./pipe/containerd-containerd
           kubeletExtraArgs:
-            provider-id: oci://{{ ds.meta_data["instance_id"] }}
-            feature-gates: WindowsHostProcessContainers=true
-            v: "2"
-            windows-priorityclass: ABOVE_NORMAL_PRIORITY_CLASS
+            - name: provider-id
+              value: 'oci://{{ ds.meta_data["instance_id"] }}'
+            - name: feature-gates
+              value: WindowsHostProcessContainers=true
+            - name: v
+              value: "2"
+            - name: windows-priorityclass
+              value: ABOVE_NORMAL_PRIORITY_CLASS
           name: '{{ ds.meta_data["local_hostname"] }}'
       preKubeadmCommands:
         - powershell C:\Windows\Setup\Scripts\enable_second_nic.ps1
         - powershell C:\Users\opc\attach_secondary_vnic.ps1 > C:\Users\opc\attach_secondary_vnic_log.txt
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachineDeployment
 metadata:
   namespace: "${NAMESPACE}"

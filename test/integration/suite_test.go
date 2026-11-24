@@ -24,31 +24,25 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strings"
 	"testing"
 
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	"github.com/oracle/cluster-api-provider-oci/controllers"
 	expv1beta1 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta1"
 	expv1beta2 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
+	expv1beta3 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta3"
 	expcontrollers "github.com/oracle/cluster-api-provider-oci/exp/controllers"
 	testenv "github.com/oracle/cluster-api-provider-oci/internal/test/envtest"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	k8sversion "k8s.io/apimachinery/pkg/version"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/klog/v2"
-	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
-	capiconversion "sigs.k8s.io/cluster-api/core/webhooks/conversion"
-	contractutil "sigs.k8s.io/cluster-api/util/contract"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -112,28 +106,16 @@ func integrationScheme() *runtime.Scheme {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(infrastructurev1beta1.AddToScheme(scheme))
 	utilruntime.Must(infrastructurev1beta2.AddToScheme(scheme))
-	utilruntime.Must(clusterv1beta1.AddToScheme(scheme))
+	utilruntime.Must(infrastructurev1beta3.AddToScheme(scheme))
 	utilruntime.Must(clusterv1.AddToScheme(scheme))
 	utilruntime.Must(expv1beta1.AddToScheme(scheme))
 	utilruntime.Must(expv1beta2.AddToScheme(scheme))
+	utilruntime.Must(expv1beta3.AddToScheme(scheme))
 	return scheme
 }
 
 func setupManager(ctx context.Context, mgr manager.Manager) error {
-	capiconversion.SetAPIVersionGetter(func(ctx context.Context, gk schema.GroupKind) (string, error) {
-		return apiVersionForContract(ctx, mgr.GetAPIReader(), gk)
-	})
-
 	controllerOptions := controller.Options{MaxConcurrentReconciles: 1}
-	if err := ctrl.NewWebhookManagedBy(mgr, &clusterv1.Cluster{}).WithConverter(capiconversion.Cluster).Complete(); err != nil {
-		return fmt.Errorf("set up Cluster conversion: %w", err)
-	}
-	if err := ctrl.NewWebhookManagedBy(mgr, &clusterv1.Machine{}).WithConverter(capiconversion.Machine).Complete(); err != nil {
-		return fmt.Errorf("set up Machine conversion: %w", err)
-	}
-	if err := ctrl.NewWebhookManagedBy(mgr, &clusterv1.MachinePool{}).WithConverter(capiconversion.MachinePool).Complete(); err != nil {
-		return fmt.Errorf("set up MachinePool conversion: %w", err)
-	}
 	setups := []struct {
 		name  string
 		setup func() error
@@ -237,37 +219,37 @@ func setupManager(ctx context.Context, mgr manager.Manager) error {
 		{
 			name: "OCICluster webhook",
 			setup: func() error {
-				return (&infrastructurev1beta2.OCICluster{}).SetupWebhookWithManager(mgr)
+				return (&infrastructurev1beta3.OCICluster{}).SetupWebhookWithManager(mgr)
 			},
 		},
 		{
 			name: "OCIMachineTemplate webhook",
 			setup: func() error {
-				return (&infrastructurev1beta2.OCIMachineTemplate{}).SetupWebhookWithManager(mgr)
+				return (&infrastructurev1beta3.OCIMachineTemplate{}).SetupWebhookWithManager(mgr)
 			},
 		},
 		{
 			name: "OCIManagedCluster webhook",
 			setup: func() error {
-				return (&infrastructurev1beta2.OCIManagedCluster{}).SetupWebhookWithManager(mgr)
+				return (&infrastructurev1beta3.OCIManagedCluster{}).SetupWebhookWithManager(mgr)
 			},
 		},
 		{
 			name: "OCIManagedControlPlane webhook",
 			setup: func() error {
-				return (&infrastructurev1beta2.OCIManagedControlPlane{}).SetupWebhookWithManager(mgr)
+				return (&infrastructurev1beta3.OCIManagedControlPlane{}).SetupWebhookWithManager(mgr)
 			},
 		},
 		{
 			name: "OCIManagedMachinePool webhook",
 			setup: func() error {
-				return (&expv1beta2.OCIManagedMachinePool{}).SetupWebhookWithManager(mgr)
+				return (&expv1beta3.OCIManagedMachinePool{}).SetupWebhookWithManager(mgr)
 			},
 		},
 		{
 			name: "OCIVirtualMachinePool webhook",
 			setup: func() error {
-				return (&expv1beta2.OCIVirtualMachinePool{}).SetupWebhookWithManager(mgr)
+				return (&expv1beta3.OCIVirtualMachinePool{}).SetupWebhookWithManager(mgr)
 			},
 		},
 	}
@@ -278,59 +260,6 @@ func setupManager(ctx context.Context, mgr manager.Manager) error {
 		}
 	}
 	return nil
-}
-
-func apiVersionForContract(ctx context.Context, reader client.Reader, gk schema.GroupKind) (string, error) {
-	crd := &unstructured.Unstructured{}
-	crd.SetName(contractutil.CalculateCRDName(gk.Group, gk.Kind))
-	crd.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "apiextensions.k8s.io",
-		Version: "v1",
-		Kind:    "CustomResourceDefinition",
-	})
-	if err := reader.Get(ctx, client.ObjectKeyFromObject(crd), crd); err != nil {
-		return "", fmt.Errorf("get CustomResourceDefinition for %s: %w", gk, err)
-	}
-
-	var versions []string
-	for _, contractVersion := range []string{"v1beta2", "v1beta1"} {
-		value := crd.GetLabels()[clusterv1.GroupVersion.Group+"/"+contractVersion]
-		if value != "" {
-			versions = strings.Split(value, "_")
-			break
-		}
-	}
-
-	// The integration environment installs generated CRD bases directly, before
-	// Kustomize adds CAPOCI's effective contract labels. Fall back to the served
-	// versions in those bases so CAPI reference conversion can run in envtest.
-	if len(versions) == 0 {
-		crdVersions, found, err := unstructured.NestedSlice(crd.Object, "spec", "versions")
-		if err != nil {
-			return "", fmt.Errorf("read versions from %s: %w", crd.GetName(), err)
-		}
-		if !found {
-			return "", fmt.Errorf("no versions found on %s", crd.GetName())
-		}
-		for _, item := range crdVersions {
-			version, ok := item.(map[string]interface{})
-			if !ok || version["served"] != true {
-				continue
-			}
-			name, ok := version["name"].(string)
-			if ok && name != "" {
-				versions = append(versions, name)
-			}
-		}
-	}
-	if len(versions) == 0 {
-		return "", fmt.Errorf("no compatible API versions found on %s", crd.GetName())
-	}
-
-	sort.Slice(versions, func(i, j int) bool {
-		return k8sversion.CompareKubeAwareVersionStrings(versions[i], versions[j]) < 0
-	})
-	return schema.GroupVersion{Group: gk.Group, Version: versions[len(versions)-1]}.String(), nil
 }
 
 func findRepositoryRoot() (string, error) {

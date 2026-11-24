@@ -23,15 +23,15 @@ import (
 	"time"
 
 	. "github.com/onsi/gomega"
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
-	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
+	infrav3exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta3"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
-	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -52,17 +52,17 @@ func TestOCIVirtualMachinePoolLifecycle(t *testing.T) {
 
 	managedCluster := managedMachinePoolCluster(cluster)
 	g.Expect(testEnvironment.Create(testContext, managedCluster)).To(Succeed())
-	storedManagedCluster := &infrastructurev1beta2.OCIManagedCluster{}
+	storedManagedCluster := &infrastructurev1beta3.OCIManagedCluster{}
 	g.Expect(testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(managedCluster), storedManagedCluster)).To(Succeed())
-	storedManagedCluster.Status.Ready = true
+	storedManagedCluster.Status.Initialization.Provisioned = common.Bool(true)
 	g.Expect(testEnvironment.Status().Update(testContext, storedManagedCluster)).To(Succeed())
 
 	version := "v1.34.1"
 	controlPlane := managedMachinePoolControlPlane(cluster, version)
 	g.Expect(testEnvironment.Create(testContext, controlPlane)).To(Succeed())
-	storedControlPlane := &infrastructurev1beta2.OCIManagedControlPlane{}
+	storedControlPlane := &infrastructurev1beta3.OCIManagedControlPlane{}
 	g.Expect(testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(controlPlane), storedControlPlane)).To(Succeed())
-	storedControlPlane.Status.Ready = true
+	storedControlPlane.Status.Initialization.ControlPlaneInitialized = common.Bool(true)
 	g.Expect(testEnvironment.Status().Update(testContext, storedControlPlane)).To(Succeed())
 
 	machinePool := virtualCAPIMachinePool(cluster, version, 2)
@@ -71,7 +71,7 @@ func TestOCIVirtualMachinePoolLifecycle(t *testing.T) {
 	g.Expect(testEnvironment.Create(testContext, virtualMachinePool)).To(Succeed())
 
 	t.Cleanup(func() {
-		machines := &infrav2exp.OCIMachinePoolMachineList{}
+		machines := &infrav3exp.OCIMachinePoolMachineList{}
 		if err := testEnvironment.GetAPIReader().List(testContext, machines, client.InNamespace(namespace.Name)); err == nil {
 			for i := range machines.Items {
 				deleteAndIgnoreNotFound(t, &machines.Items[i])
@@ -102,12 +102,12 @@ func TestOCIVirtualMachinePoolLifecycle(t *testing.T) {
 	waitForVirtualMachinePool(t, virtualMachinePoolKey, 3, 3, 1, 1)
 
 	g.Eventually(func() error {
-		stored := &infrav2exp.OCIVirtualMachinePool{}
+		stored := &infrav3exp.OCIVirtualMachinePool{}
 		if err := testEnvironment.GetAPIReader().Get(testContext, virtualMachinePoolKey, stored); err != nil {
 			return err
 		}
 		stored.Spec.PodConfiguration.Shape = common.String("Pod.Standard.A1.Flex")
-		stored.Spec.InitialVirtualNodeLabels = []infrav2exp.KeyValue{{
+		stored.Spec.InitialVirtualNodeLabels = []infrav3exp.KeyValue{{
 			Key: common.String("pool"), Value: common.String("virtual"),
 		}}
 		return testEnvironment.Update(testContext, stored)
@@ -158,7 +158,7 @@ func TestOCIVirtualMachinePoolLifecycle(t *testing.T) {
 		active, _, _, deletes, _ := fakeOCI.oke.virtualNodePoolCounts()
 		g.Expect(active).To(BeZero())
 		g.Expect(deletes).To(Equal(1))
-		err := testEnvironment.GetAPIReader().Get(testContext, virtualMachinePoolKey, &infrav2exp.OCIVirtualMachinePool{})
+		err := testEnvironment.GetAPIReader().Get(testContext, virtualMachinePoolKey, &infrav3exp.OCIVirtualMachinePool{})
 		g.Expect(apierrors.IsNotFound(err)).To(BeTrue(), "expected virtual machine-pool deletion, got %v", err)
 	}).WithTimeout(20 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
 }
@@ -178,7 +178,7 @@ func virtualCAPIMachinePool(cluster *clusterv1.Cluster, version string, replicas
 					ClusterName: cluster.Name,
 					Bootstrap:   clusterv1.Bootstrap{DataSecretName: common.String("")},
 					InfrastructureRef: clusterv1.ContractVersionedObjectReference{
-						APIGroup: infrastructurev1beta2.GroupVersion.Group,
+						APIGroup: infrastructurev1beta3.GroupVersion.Group,
 						Kind:     scope.OCIVirtualMachinePoolKind,
 						Name:     "virtual-pool-workers",
 					},
@@ -189,8 +189,8 @@ func virtualCAPIMachinePool(cluster *clusterv1.Cluster, version string, replicas
 	}
 }
 
-func virtualInfrastructureMachinePool(machinePool *clusterv1.MachinePool, clusterName string) *infrav2exp.OCIVirtualMachinePool {
-	return &infrav2exp.OCIVirtualMachinePool{
+func virtualInfrastructureMachinePool(machinePool *clusterv1.MachinePool, clusterName string) *infrav3exp.OCIVirtualMachinePool {
+	return &infrav3exp.OCIVirtualMachinePool{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      machinePool.Name,
 			Namespace: machinePool.Namespace,
@@ -212,25 +212,25 @@ func waitForVirtualMachinePool(t *testing.T, key client.ObjectKey, replicas, mac
 		g.Expect(updateCalls).To(Equal(updates))
 		g.Expect(fakeOCI.oke.virtualNodePoolSize()).To(Equal(replicas))
 
-		stored := &infrav2exp.OCIVirtualMachinePool{}
+		stored := &infrav3exp.OCIVirtualMachinePool{}
 		g.Expect(testEnvironment.GetAPIReader().Get(testContext, key, stored)).To(Succeed())
-		g.Expect(controllerutil.ContainsFinalizer(stored, infrav2exp.VirtualMachinePoolFinalizer)).To(BeTrue())
+		g.Expect(controllerutil.ContainsFinalizer(stored, infrav3exp.VirtualMachinePoolFinalizer)).To(BeTrue())
 		g.Expect(stored.Spec.ID).NotTo(BeNil())
 		g.Expect(stored.Spec.ProviderID).NotTo(BeNil())
 		fakeSize, listCalls, lastListSize := fakeOCI.oke.virtualNodePoolDebug()
 		g.Expect(stored.Spec.ProviderIDList).To(HaveLen(replicas), "fake size %d after %d virtual-node lists; last list returned %d", fakeSize, listCalls, lastListSize)
-		g.Expect(stored.Status.Ready).To(BeTrue())
+		g.Expect(stored.Status.Initialization.Provisioned).To(Equal(common.Bool(true)))
 		g.Expect(stored.Status.Replicas).To(Equal(int32(replicas)))
 		g.Expect(stored.Status.InfrastructureMachineKind).To(Equal("OCIMachinePoolMachine"))
-		g.Expect(v1beta1conditions.IsTrue(stored, infrav2exp.VirtualNodePoolReadyCondition)).To(BeTrue())
+		g.Expect(conditions.IsTrue(stored, infrav3exp.VirtualNodePoolReadyCondition)).To(BeTrue())
 
-		machines := &infrav2exp.OCIMachinePoolMachineList{}
+		machines := &infrav3exp.OCIMachinePoolMachineList{}
 		g.Expect(testEnvironment.GetAPIReader().List(testContext, machines, client.InNamespace(key.Namespace))).To(Succeed())
 		// Core CAPI and garbage collection, which are not part of envtest,
 		// finish removing stale child infrastructure machines after scale-down.
 		g.Expect(machines.Items).To(HaveLen(machineObjects))
 		for i := range machines.Items {
-			g.Expect(machines.Items[i].Status.Ready).To(BeTrue())
+			g.Expect(machines.Items[i].Status.Initialization.Provisioned).To(Equal(common.Bool(true)))
 		}
 	}).WithTimeout(20 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
 }
@@ -265,12 +265,12 @@ func waitForVirtualNodePoolInspectionsToSettle(t *testing.T) int {
 	return 0
 }
 
-func triggerVirtualMachinePoolReconcile(t *testing.T, machinePool *infrav2exp.OCIVirtualMachinePool) {
+func triggerVirtualMachinePoolReconcile(t *testing.T, machinePool *infrav3exp.OCIVirtualMachinePool) {
 	t.Helper()
 	g := NewWithT(t)
 	_, _, _, _, inspectionsBefore := fakeOCI.oke.virtualNodePoolCounts()
 	g.Eventually(func() error {
-		stored := &infrav2exp.OCIVirtualMachinePool{}
+		stored := &infrav3exp.OCIVirtualMachinePool{}
 		if err := testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(machinePool), stored); err != nil {
 			return err
 		}

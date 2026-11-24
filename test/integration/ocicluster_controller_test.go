@@ -23,14 +23,14 @@ import (
 	"time"
 
 	. "github.com/onsi/gomega"
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
-	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -52,7 +52,7 @@ func TestOCIClusterLifecycle(t *testing.T) {
 		Spec: clusterv1.ClusterSpec{
 			Paused: common.Bool(true),
 			InfrastructureRef: clusterv1.ContractVersionedObjectReference{
-				APIGroup: infrastructurev1beta2.GroupVersion.Group,
+				APIGroup: infrastructurev1beta3.GroupVersion.Group,
 				Kind:     scope.OCIClusterKind,
 				Name:     "cluster-lifecycle",
 			},
@@ -60,7 +60,7 @@ func TestOCIClusterLifecycle(t *testing.T) {
 	}
 	g.Expect(testEnvironment.Create(testContext, cluster)).To(Succeed())
 
-	ociCluster := &infrastructurev1beta2.OCICluster{
+	ociCluster := &infrastructurev1beta3.OCICluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cluster.Name,
 			Namespace: namespace.Name,
@@ -68,24 +68,24 @@ func TestOCIClusterLifecycle(t *testing.T) {
 				*metav1.NewControllerRef(cluster, clusterv1.GroupVersion.WithKind("Cluster")),
 			},
 		},
-		Spec: infrastructurev1beta2.OCIClusterSpec{
+		Spec: infrastructurev1beta3.OCIClusterSpec{
 			CompartmentId: "ocid1.compartment.oc1..integration",
 			Region:        scope.MockTestRegion,
-			NetworkSpec: infrastructurev1beta2.NetworkSpec{
-				Vcn: infrastructurev1beta2.VCN{
+			NetworkSpec: infrastructurev1beta3.NetworkSpec{
+				Vcn: infrastructurev1beta3.VCN{
 					CIDR: "10.0.0.0/16",
-					Subnets: []*infrastructurev1beta2.Subnet{
-						{Role: infrastructurev1beta2.ControlPlaneEndpointRole, Name: "control-plane-endpoint", CIDR: "10.0.0.0/28", Type: infrastructurev1beta2.Public},
-						{Role: infrastructurev1beta2.ControlPlaneRole, Name: "control-plane", CIDR: "10.0.1.0/24", Type: infrastructurev1beta2.Private},
-						{Role: infrastructurev1beta2.ServiceLoadBalancerRole, Name: "service-lb", CIDR: "10.0.2.0/24", Type: infrastructurev1beta2.Public},
-						{Role: infrastructurev1beta2.WorkerRole, Name: "worker", CIDR: "10.0.3.0/24", Type: infrastructurev1beta2.Private},
+					Subnets: []*infrastructurev1beta3.Subnet{
+						{Role: infrastructurev1beta3.ControlPlaneEndpointRole, Name: "control-plane-endpoint", CIDR: "10.0.0.0/28", Type: infrastructurev1beta3.Public},
+						{Role: infrastructurev1beta3.ControlPlaneRole, Name: "control-plane", CIDR: "10.0.1.0/24", Type: infrastructurev1beta3.Private},
+						{Role: infrastructurev1beta3.ServiceLoadBalancerRole, Name: "service-lb", CIDR: "10.0.2.0/24", Type: infrastructurev1beta3.Public},
+						{Role: infrastructurev1beta3.WorkerRole, Name: "worker", CIDR: "10.0.3.0/24", Type: infrastructurev1beta3.Private},
 					},
-					NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
-						List: []*infrastructurev1beta2.NSG{
-							{Role: infrastructurev1beta2.ControlPlaneEndpointRole, Name: "control-plane-endpoint"},
-							{Role: infrastructurev1beta2.ControlPlaneRole, Name: "control-plane"},
-							{Role: infrastructurev1beta2.ServiceLoadBalancerRole, Name: "service-lb"},
-							{Role: infrastructurev1beta2.WorkerRole, Name: "worker"},
+					NetworkSecurityGroup: infrastructurev1beta3.NetworkSecurityGroup{
+						List: []*infrastructurev1beta3.NSG{
+							{Role: infrastructurev1beta3.ControlPlaneEndpointRole, Name: "control-plane-endpoint"},
+							{Role: infrastructurev1beta3.ControlPlaneRole, Name: "control-plane"},
+							{Role: infrastructurev1beta3.ServiceLoadBalancerRole, Name: "service-lb"},
+							{Role: infrastructurev1beta3.WorkerRole, Name: "worker"},
 						},
 					},
 				},
@@ -110,11 +110,11 @@ func TestOCIClusterLifecycle(t *testing.T) {
 
 	ociClusterKey := client.ObjectKeyFromObject(ociCluster)
 	g.Eventually(func(g Gomega) {
-		stored := &infrastructurev1beta2.OCICluster{}
+		stored := &infrastructurev1beta3.OCICluster{}
 		g.Expect(testEnvironment.GetAPIReader().Get(testContext, ociClusterKey, stored)).To(Succeed())
-		g.Expect(controllerutil.ContainsFinalizer(stored, infrastructurev1beta2.ClusterFinalizer)).To(BeTrue())
-		g.Expect(stored.Status.Ready).To(BeTrue())
-		g.Expect(v1beta1conditions.IsTrue(stored, infrastructurev1beta2.ClusterReadyCondition)).To(BeTrue())
+		g.Expect(controllerutil.ContainsFinalizer(stored, infrastructurev1beta3.ClusterFinalizer)).To(BeTrue())
+		g.Expect(stored.Status.Initialization.Provisioned).To(Equal(common.Bool(true)))
+		g.Expect(conditions.IsTrue(stored, infrastructurev1beta3.ClusterReadyCondition)).To(BeTrue())
 		g.Expect(stored.Spec.ControlPlaneEndpoint.Host).To(Equal("203.0.113.10"))
 		g.Expect(stored.Spec.ControlPlaneEndpoint.Port).To(Equal(int32(6443)))
 		g.Expect(stored.Status.FailureDomains).To(HaveLen(3))
@@ -185,7 +185,7 @@ func TestOCIClusterLifecycle(t *testing.T) {
 		activeNLBs, _, deletedNLBs := fakeOCI.nlb.counts()
 		g.Expect(activeNLBs).To(BeZero())
 		g.Expect(deletedNLBs).To(Equal(1))
-		err := testEnvironment.GetAPIReader().Get(testContext, ociClusterKey, &infrastructurev1beta2.OCICluster{})
+		err := testEnvironment.GetAPIReader().Get(testContext, ociClusterKey, &infrastructurev1beta3.OCICluster{})
 		g.Expect(apierrors.IsNotFound(err)).To(BeTrue(), "expected OCICluster deletion, got %v", err)
 	}).WithTimeout(20 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
 

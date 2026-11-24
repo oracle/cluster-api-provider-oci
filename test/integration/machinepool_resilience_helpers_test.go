@@ -22,12 +22,11 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
-	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
+	infrav3exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta3"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -35,10 +34,10 @@ import (
 type managedMachinePoolFixture struct {
 	namespace          *corev1.Namespace
 	cluster            *clusterv1.Cluster
-	managedCluster     *infrastructurev1beta2.OCIManagedCluster
-	controlPlane       *infrastructurev1beta2.OCIManagedControlPlane
+	managedCluster     *infrastructurev1beta3.OCIManagedCluster
+	controlPlane       *infrastructurev1beta3.OCIManagedControlPlane
 	machinePool        *clusterv1.MachinePool
-	managedMachinePool *infrav2exp.OCIManagedMachinePool
+	managedMachinePool *infrav3exp.OCIManagedMachinePool
 	version            string
 }
 
@@ -56,25 +55,25 @@ func createManagedMachinePoolFixture(t *testing.T, externallyManaged bool, repli
 	g.Expect(testEnvironment.Status().Update(testContext, storedCluster)).To(Succeed())
 	fixture.managedCluster = managedMachinePoolCluster(fixture.cluster)
 	g.Expect(testEnvironment.Create(testContext, fixture.managedCluster)).To(Succeed())
-	storedManagedCluster := &infrastructurev1beta2.OCIManagedCluster{}
+	storedManagedCluster := &infrastructurev1beta3.OCIManagedCluster{}
 	g.Expect(testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(fixture.managedCluster), storedManagedCluster)).To(Succeed())
-	storedManagedCluster.Status.Ready = true
+	storedManagedCluster.Status.Initialization.Provisioned = common.Bool(true)
 	g.Expect(testEnvironment.Status().Update(testContext, storedManagedCluster)).To(Succeed())
 	fixture.controlPlane = managedMachinePoolControlPlane(fixture.cluster, fixture.version)
 	g.Expect(testEnvironment.Create(testContext, fixture.controlPlane)).To(Succeed())
-	storedControlPlane := &infrastructurev1beta2.OCIManagedControlPlane{}
+	storedControlPlane := &infrastructurev1beta3.OCIManagedControlPlane{}
 	g.Expect(testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(fixture.controlPlane), storedControlPlane)).To(Succeed())
-	storedControlPlane.Status.Ready = true
+	storedControlPlane.Status.Initialization.ControlPlaneInitialized = common.Bool(true)
 	g.Expect(testEnvironment.Status().Update(testContext, storedControlPlane)).To(Succeed())
 	fixture.machinePool = managedCAPIMachinePool(fixture.cluster, fixture.version, replicas)
 	if externallyManaged {
-		fixture.machinePool.Annotations = map[string]string{clusterv1beta1.ReplicasManagedByAnnotation: "integration-test"}
+		fixture.machinePool.Annotations = map[string]string{clusterv1.ReplicasManagedByAnnotation: "integration-test"}
 	}
 	g.Expect(testEnvironment.Create(testContext, fixture.machinePool)).To(Succeed())
 	fixture.managedMachinePool = managedInfrastructureMachinePool(fixture.machinePool, fixture.cluster.Name, fixture.version)
 	g.Expect(testEnvironment.Create(testContext, fixture.managedMachinePool)).To(Succeed())
 	t.Cleanup(func() {
-		machines := &infrav2exp.OCIMachinePoolMachineList{}
+		machines := &infrav3exp.OCIMachinePoolMachineList{}
 		if err := testEnvironment.GetAPIReader().List(testContext, machines, client.InNamespace(fixture.namespace.Name)); err == nil {
 			for i := range machines.Items {
 				deleteAndIgnoreNotFound(t, &machines.Items[i])
@@ -90,10 +89,10 @@ func createManagedMachinePoolFixture(t *testing.T, externallyManaged bool, repli
 type virtualMachinePoolFixture struct {
 	namespace          *corev1.Namespace
 	cluster            *clusterv1.Cluster
-	managedCluster     *infrastructurev1beta2.OCIManagedCluster
-	controlPlane       *infrastructurev1beta2.OCIManagedControlPlane
+	managedCluster     *infrastructurev1beta3.OCIManagedCluster
+	controlPlane       *infrastructurev1beta3.OCIManagedControlPlane
 	machinePool        *clusterv1.MachinePool
-	virtualMachinePool *infrav2exp.OCIVirtualMachinePool
+	virtualMachinePool *infrav3exp.OCIVirtualMachinePool
 	version            string
 }
 
@@ -111,25 +110,25 @@ func createVirtualMachinePoolFixture(t *testing.T, externallyManaged bool, repli
 	g.Expect(testEnvironment.Status().Update(testContext, storedCluster)).To(Succeed())
 	fixture.managedCluster = managedMachinePoolCluster(fixture.cluster)
 	g.Expect(testEnvironment.Create(testContext, fixture.managedCluster)).To(Succeed())
-	storedManagedCluster := &infrastructurev1beta2.OCIManagedCluster{}
+	storedManagedCluster := &infrastructurev1beta3.OCIManagedCluster{}
 	g.Expect(testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(fixture.managedCluster), storedManagedCluster)).To(Succeed())
-	storedManagedCluster.Status.Ready = true
+	storedManagedCluster.Status.Initialization.Provisioned = common.Bool(true)
 	g.Expect(testEnvironment.Status().Update(testContext, storedManagedCluster)).To(Succeed())
 	fixture.controlPlane = managedMachinePoolControlPlane(fixture.cluster, fixture.version)
 	g.Expect(testEnvironment.Create(testContext, fixture.controlPlane)).To(Succeed())
-	storedControlPlane := &infrastructurev1beta2.OCIManagedControlPlane{}
+	storedControlPlane := &infrastructurev1beta3.OCIManagedControlPlane{}
 	g.Expect(testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(fixture.controlPlane), storedControlPlane)).To(Succeed())
-	storedControlPlane.Status.Ready = true
+	storedControlPlane.Status.Initialization.ControlPlaneInitialized = common.Bool(true)
 	g.Expect(testEnvironment.Status().Update(testContext, storedControlPlane)).To(Succeed())
 	fixture.machinePool = virtualCAPIMachinePool(fixture.cluster, fixture.version, replicas)
 	if externallyManaged {
-		fixture.machinePool.Annotations = map[string]string{clusterv1beta1.ReplicasManagedByAnnotation: "integration-test"}
+		fixture.machinePool.Annotations = map[string]string{clusterv1.ReplicasManagedByAnnotation: "integration-test"}
 	}
 	g.Expect(testEnvironment.Create(testContext, fixture.machinePool)).To(Succeed())
 	fixture.virtualMachinePool = virtualInfrastructureMachinePool(fixture.machinePool, fixture.cluster.Name)
 	g.Expect(testEnvironment.Create(testContext, fixture.virtualMachinePool)).To(Succeed())
 	t.Cleanup(func() {
-		machines := &infrav2exp.OCIMachinePoolMachineList{}
+		machines := &infrav3exp.OCIMachinePoolMachineList{}
 		if err := testEnvironment.GetAPIReader().List(testContext, machines, client.InNamespace(fixture.namespace.Name)); err == nil {
 			for i := range machines.Items {
 				deleteAndIgnoreNotFound(t, &machines.Items[i])

@@ -30,9 +30,9 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
-	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
+	infrav3exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta3"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
@@ -46,7 +46,7 @@ import (
 	"sigs.k8s.io/cluster-api/test/framework"
 	"sigs.k8s.io/cluster-api/test/framework/clusterctl"
 	"sigs.k8s.io/cluster-api/util"
-	v1beta1patch "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/patch"
+	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -291,7 +291,7 @@ var _ = Describe("Workload cluster creation", func() {
 			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
 		}, result)
 		k8sClient := bootstrapClusterProxy.GetClient()
-		ociCluster := &infrastructurev1beta1.OCICluster{}
+		ociCluster := &infrastructurev1beta3.OCICluster{}
 		ociClusterName := client.ObjectKey{
 			Namespace: namespace.Name,
 			Name:      clusterName,
@@ -303,7 +303,7 @@ var _ = Describe("Workload cluster creation", func() {
 		compartment := ociCluster.Spec.CompartmentId
 		subnetId := ""
 		for _, subnet := range ociCluster.Spec.NetworkSpec.Vcn.Subnets {
-			if subnet.Role == infrastructurev1beta1.ControlPlaneEndpointRole {
+			if subnet.Role == infrastructurev1beta3.ControlPlaneEndpointRole {
 				subnetId = *subnet.ID
 			}
 		}
@@ -376,7 +376,7 @@ var _ = Describe("Workload cluster creation", func() {
 			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
 		}, result)
 		k8sClient := bootstrapClusterProxy.GetClient()
-		ociCluster := &infrastructurev1beta1.OCICluster{}
+		ociCluster := &infrastructurev1beta3.OCICluster{}
 		ociClusterName := client.ObjectKey{
 			Namespace: namespace.Name,
 			Name:      clusterName,
@@ -408,7 +408,7 @@ var _ = Describe("Workload cluster creation", func() {
 			WaitForMachineDeployments:    e2eConfig.GetIntervals(specName, "wait-worker-nodes"),
 		}, result)
 		k8sClient := bootstrapClusterProxy.GetClient()
-		ociCluster := &infrastructurev1beta1.OCICluster{}
+		ociCluster := &infrastructurev1beta3.OCICluster{}
 		ociClusterName := client.ObjectKey{
 			Namespace: namespace.Name,
 			Name:      clusterName,
@@ -677,7 +677,7 @@ var _ = Describe("Workload cluster creation", func() {
 		ocpuPools := 0
 		for _, pool := range result.MachinePools {
 			Expect(pool.Spec.Replicas).To(Equal(pointer.Int32(1)), "MachinePool %s replicas", pool.Name)
-			ociPool := &infrav2exp.OCIMachinePool{}
+			ociPool := &infrav3exp.OCIMachinePool{}
 			Expect(bootstrapClusterProxy.GetClient().Get(ctx, client.ObjectKey{
 				Namespace: pool.Namespace, Name: pool.Spec.Template.Spec.InfrastructureRef.Name,
 			}, ociPool)).To(Succeed(), "Getting infrastructure for MachinePool %s", pool.Name)
@@ -781,13 +781,13 @@ var _ = Describe("Workload cluster creation", func() {
 
 		By("Recording the initial machine pool instance configuration ID")
 		mpKey := client.ObjectKey{Name: result.MachinePools[0].Name, Namespace: namespace.Name}
-		initialOMP := &infrav2exp.OCIMachinePool{}
+		initialOMP := &infrav3exp.OCIMachinePool{}
 		Expect(bootstrapClusterProxy.GetClient().Get(ctx, mpKey, initialOMP)).To(Succeed())
 		Expect(initialOMP.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(BeNil())
 		initialICID := *initialOMP.Spec.InstanceConfiguration.InstanceConfigurationId
 
 		By("Simulating a pre-upgrade machine pool object missing bootstrap hash annotation")
-		ompPatchHelper, err := v1beta1patch.NewHelper(initialOMP, bootstrapClusterProxy.GetClient())
+		ompPatchHelper, err := patch.NewHelper(initialOMP, bootstrapClusterProxy.GetClient())
 		Expect(err).ToNot(HaveOccurred())
 		if initialOMP.Annotations != nil {
 			delete(initialOMP.Annotations, scope.BootstrapDataHashAnnotation)
@@ -796,7 +796,7 @@ var _ = Describe("Workload cluster creation", func() {
 
 		By("Verifying bootstrap hash annotation is backfilled without instance configuration recreation")
 		Eventually(func(g Gomega) {
-			backfilledOMP := &infrav2exp.OCIMachinePool{}
+			backfilledOMP := &infrav3exp.OCIMachinePool{}
 			g.Expect(bootstrapClusterProxy.GetClient().Get(ctx, mpKey, backfilledOMP)).To(Succeed())
 			g.Expect(backfilledOMP.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(BeNil())
 			g.Expect(*backfilledOMP.Spec.InstanceConfiguration.InstanceConfigurationId).To(Equal(initialICID),
@@ -815,7 +815,7 @@ var _ = Describe("Workload cluster creation", func() {
 			Namespace:   namespace.Name,
 			ClusterName: clusterName,
 		})
-		patchHelper, err := v1beta1patch.NewHelper(controlPlane, bootstrapClusterProxy.GetClient())
+		patchHelper, err := patch.NewHelper(controlPlane, bootstrapClusterProxy.GetClient())
 		Expect(err).ToNot(HaveOccurred())
 		controlPlane.Spec.MachineTemplate.Spec.InfrastructureRef.Name = newCPMachineTemplateName
 		controlPlane.Spec.Version = upgradeVersion
@@ -832,17 +832,17 @@ var _ = Describe("Workload cluster creation", func() {
 		By("Updating machine pool instance image and waiting for a new instance configuration")
 		upgradeImageID := e2eConfig.MustGetVariable("KUBERNETES_UPGRADE_OCI_IMAGE_ID")
 		Expect(upgradeImageID).ToNot(BeEmpty())
-		ompForUpgrade := &infrav2exp.OCIMachinePool{}
+		ompForUpgrade := &infrav3exp.OCIMachinePool{}
 		Expect(bootstrapClusterProxy.GetClient().Get(ctx, mpKey, ompForUpgrade)).To(Succeed())
-		ompPatchHelper, err = v1beta1patch.NewHelper(ompForUpgrade, bootstrapClusterProxy.GetClient())
+		ompPatchHelper, err = patch.NewHelper(ompForUpgrade, bootstrapClusterProxy.GetClient())
 		Expect(err).ToNot(HaveOccurred())
 		if ompForUpgrade.Spec.InstanceConfiguration.InstanceSourceViaImageDetails == nil {
-			ompForUpgrade.Spec.InstanceConfiguration.InstanceSourceViaImageDetails = &infrav2exp.InstanceSourceViaImageConfig{}
+			ompForUpgrade.Spec.InstanceConfiguration.InstanceSourceViaImageDetails = &infrav3exp.InstanceSourceViaImageConfig{}
 		}
 		ompForUpgrade.Spec.InstanceConfiguration.InstanceSourceViaImageDetails.ImageId = common.String(upgradeImageID)
 		Expect(ompPatchHelper.Patch(ctx, ompForUpgrade)).To(Succeed())
 		Eventually(func(g Gomega) {
-			updatedOMP := &infrav2exp.OCIMachinePool{}
+			updatedOMP := &infrav3exp.OCIMachinePool{}
 			g.Expect(bootstrapClusterProxy.GetClient().Get(ctx, mpKey, updatedOMP)).To(Succeed())
 			g.Expect(updatedOMP.Spec.InstanceConfiguration.InstanceSourceViaImageDetails).ToNot(BeNil())
 			g.Expect(updatedOMP.Spec.InstanceConfiguration.InstanceSourceViaImageDetails.ImageId).ToNot(BeNil())
@@ -878,7 +878,7 @@ var _ = Describe("Workload cluster creation", func() {
 		})
 
 		By("Verifying the machine pool instance configuration was recreated after upgrade")
-		upgradedOMP := &infrav2exp.OCIMachinePool{}
+		upgradedOMP := &infrav3exp.OCIMachinePool{}
 		Expect(bootstrapClusterProxy.GetClient().Get(ctx, mpKey, upgradedOMP)).To(Succeed())
 		Expect(upgradedOMP.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(BeNil())
 		Expect(*upgradedOMP.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(Equal(initialICID),
@@ -936,7 +936,7 @@ func assertMachinePoolInstanceConfigurationStable(ctx context.Context, clusterPr
 	Eventually(func(g Gomega) {
 		for i := range baselines {
 			initial := &baselines[i]
-			ociMachinePool := &infrav2exp.OCIMachinePool{}
+			ociMachinePool := &infrav3exp.OCIMachinePool{}
 			g.Expect(lister.Get(ctx, initial.key, ociMachinePool)).To(Succeed(), "Getting OCIMachinePool %s", initial.key)
 			g.Expect(ociMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(BeNil(), "OCIMachinePool %s instance configuration ID", initial.key)
 			g.Expect(*ociMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(BeEmpty(), "OCIMachinePool %s instance configuration ID", initial.key)
@@ -951,7 +951,7 @@ func assertMachinePoolInstanceConfigurationStable(ctx context.Context, clusterPr
 
 	Consistently(func(g Gomega) {
 		for _, initial := range baselines {
-			ociMachinePool := &infrav2exp.OCIMachinePool{}
+			ociMachinePool := &infrav3exp.OCIMachinePool{}
 			g.Expect(lister.Get(ctx, initial.key, ociMachinePool)).To(Succeed(), "Getting OCIMachinePool %s", initial.key)
 			g.Expect(ociMachinePool.Generation).To(Equal(initial.generation), "OCIMachinePool %s generation", initial.key)
 			g.Expect(ociMachinePool.Spec.InstanceConfiguration.InstanceConfigurationId).ToNot(BeNil(), "OCIMachinePool %s instance configuration ID", initial.key)
@@ -972,7 +972,7 @@ func assertMachinePoolFaultDomains(ctx context.Context, clusterProxy framework.C
 	Expect(lister).ToNot(BeNil(), "clusterProxy client is required for machine pool fault domain check")
 
 	Eventually(func(g Gomega) {
-		ociMachinePool := &infrav2exp.OCIMachinePool{}
+		ociMachinePool := &infrav3exp.OCIMachinePool{}
 		err := lister.Get(ctx, client.ObjectKey{Name: machinePool.Name, Namespace: machinePool.Namespace}, ociMachinePool)
 		g.Expect(err).NotTo(HaveOccurred())
 		g.Expect(ociMachinePool.Spec.OCID).ToNot(BeNil())
@@ -1004,16 +1004,16 @@ func updateMachinePoolFaultDomains(ctx context.Context, clusterProxy framework.C
 	lister := clusterProxy.GetClient()
 	Expect(lister).ToNot(BeNil(), "clusterProxy client is required for machine pool fault domain update")
 
-	ociMachinePool := &infrav2exp.OCIMachinePool{}
+	ociMachinePool := &infrav3exp.OCIMachinePool{}
 	err := lister.Get(ctx, client.ObjectKey{Name: machinePool.Name, Namespace: machinePool.Namespace}, ociMachinePool)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(ociMachinePool.Spec.OCID).ToNot(BeNil())
 	initialInstancePoolID := *ociMachinePool.Spec.OCID
 
-	patchHelper, err := v1beta1patch.NewHelper(ociMachinePool, lister)
+	patchHelper, err := patch.NewHelper(ociMachinePool, lister)
 	Expect(err).NotTo(HaveOccurred())
 
-	ociMachinePool.Spec.PlacementDetails = []infrav2exp.PlacementDetails{
+	ociMachinePool.Spec.PlacementDetails = []infrav3exp.PlacementDetails{
 		{
 			AvailabilityDomain: 1,
 			FaultDomains:       faultDomains,
@@ -1034,7 +1034,7 @@ func assertMachinePoolInstancePoolID(ctx context.Context, clusterProxy framework
 	Expect(lister).ToNot(BeNil(), "clusterProxy client is required for machine pool instance pool ID check")
 
 	Eventually(func(g Gomega) {
-		ociMachinePool := &infrav2exp.OCIMachinePool{}
+		ociMachinePool := &infrav3exp.OCIMachinePool{}
 		err := lister.Get(ctx, client.ObjectKey{Name: machinePool.Name, Namespace: machinePool.Namespace}, ociMachinePool)
 		g.Expect(err).NotTo(HaveOccurred())
 		g.Expect(ociMachinePool.Spec.OCID).ToNot(BeNil())
@@ -1043,7 +1043,7 @@ func assertMachinePoolInstancePoolID(ctx context.Context, clusterProxy framework
 }
 
 func verifyMultipleNsgSubnet(ctx context.Context, namespace string, clusterName string, mcDeployments []*clusterv1.MachineDeployment) {
-	ociCluster := &infrastructurev1beta1.OCICluster{}
+	ociCluster := &infrastructurev1beta3.OCICluster{}
 	ociClusterName := client.ObjectKey{
 		Namespace: namespace,
 		Name:      clusterName,
@@ -1053,15 +1053,15 @@ func verifyMultipleNsgSubnet(ctx context.Context, namespace string, clusterName 
 	arrSubnets := [2]string{}
 	i := 0
 	for _, subnet := range ociCluster.Spec.NetworkSpec.Vcn.Subnets {
-		if subnet.Role == infrastructurev1beta1.WorkerRole {
+		if subnet.Role == infrastructurev1beta3.WorkerRole {
 			arrSubnets[i] = *subnet.ID
 			i++
 		}
 	}
 	i = 0
 	arrNsgs := [2]string{}
-	for _, nsg := range ociCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups {
-		if nsg.Role == infrastructurev1beta1.WorkerRole {
+	for _, nsg := range ociCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
+		if nsg.Role == infrastructurev1beta3.WorkerRole {
 			arrNsgs[i] = *nsg.ID
 			i++
 		}
@@ -1118,7 +1118,7 @@ func verifyMultipleNsgSubnet(ctx context.Context, namespace string, clusterName 
 	}
 }
 
-func validateCustonNSGNetworking(ctx context.Context, ociCluster infrastructurev1beta1.OCICluster, clusterName string, nameSpace string, machineDeployment string) error {
+func validateCustonNSGNetworking(ctx context.Context, ociCluster infrastructurev1beta3.OCICluster, clusterName string, nameSpace string, machineDeployment string) error {
 	vcnId := ociCluster.Spec.NetworkSpec.Vcn.ID
 	resp, err := vcnClient.GetVcn(ctx, core.GetVcnRequest{
 		VcnId: vcnId,
@@ -1141,16 +1141,16 @@ func validateCustonNSGNetworking(ctx context.Context, ociCluster infrastructurev
 		})
 		Expect(err).NotTo(HaveOccurred())
 		switch subnet.Role {
-		case infrastructurev1beta1.ControlPlaneEndpointRole:
+		case infrastructurev1beta3.ControlPlaneEndpointRole:
 			Expect(*resp.CidrBlock).To(Equal("15.0.0.0/28"))
 			Expect(*resp.DisplayName).To(Equal("ep-subnet"))
-		case infrastructurev1beta1.ControlPlaneRole:
+		case infrastructurev1beta3.ControlPlaneRole:
 			Expect(*resp.CidrBlock).To(Equal("15.0.5.0/28"))
 			Expect(*resp.DisplayName).To(Equal("cp-mc-subnet"))
-		case infrastructurev1beta1.WorkerRole:
+		case infrastructurev1beta3.WorkerRole:
 			Expect(*resp.CidrBlock).To(Equal("15.0.10.0/24"))
 			Expect(*resp.DisplayName).To(Equal("worker-subnet"))
-		case infrastructurev1beta1.ServiceLoadBalancerRole:
+		case infrastructurev1beta3.ServiceLoadBalancerRole:
 			Expect(*resp.CidrBlock).To(Equal("15.0.20.0/24"))
 			Expect(*resp.DisplayName).To(Equal("svc-lb-subnet"))
 		default:
@@ -1161,35 +1161,35 @@ func validateCustonNSGNetworking(ctx context.Context, ociCluster infrastructurev
 	// to make sure that the original spec was not changed, we should compare with the
 	// original unchanged spec present in the file system
 	reader, _ := os.Open(e2eConfig.MustGetVariable("NSG_CLUSTER_PATH"))
-	ociClusterOriginal := &infrastructurev1beta1.OCICluster{}
+	ociClusterOriginal := &infrastructurev1beta3.OCICluster{}
 	err = yaml.NewYAMLOrJSONDecoder(reader, 4096).Decode(ociClusterOriginal)
 	Expect(err).NotTo(HaveOccurred())
 
-	for _, nsg := range ociCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroups {
+	for _, nsg := range ociCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
 		nsgId := nsg.ID
 		resp, err := vcnClient.GetNetworkSecurityGroup(ctx, core.GetNetworkSecurityGroupRequest{
 			NetworkSecurityGroupId: nsgId,
 		})
 		Expect(err).NotTo(HaveOccurred())
 		switch nsg.Role {
-		case infrastructurev1beta1.ControlPlaneEndpointRole:
-			verifyNsg(ctx, resp, ociClusterOriginal, &ociCluster, infrastructurev1beta1.ControlPlaneEndpointRole)
+		case infrastructurev1beta3.ControlPlaneEndpointRole:
+			verifyNsg(ctx, resp, ociClusterOriginal, &ociCluster, infrastructurev1beta3.ControlPlaneEndpointRole)
 			lbId := ociCluster.Spec.NetworkSpec.APIServerLB.LoadBalancerId
 			lb, err := lbClient.GetNetworkLoadBalancer(ctx, networkloadbalancer.GetNetworkLoadBalancerRequest{
 				NetworkLoadBalancerId: lbId,
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(lb.NetworkSecurityGroupIds[0]).To(Equal(*nsgId))
-		case infrastructurev1beta1.ControlPlaneRole:
-			verifyNsg(ctx, resp, ociClusterOriginal, &ociCluster, infrastructurev1beta1.ControlPlaneRole)
+		case infrastructurev1beta3.ControlPlaneRole:
+			verifyNsg(ctx, resp, ociClusterOriginal, &ociCluster, infrastructurev1beta3.ControlPlaneRole)
 			Log("Validating control plane machine vnic NSG")
 			validateVnicNSG(ctx, clusterName, nameSpace, nsgId, "")
-		case infrastructurev1beta1.WorkerRole:
-			verifyNsg(ctx, resp, ociClusterOriginal, &ociCluster, infrastructurev1beta1.WorkerRole)
+		case infrastructurev1beta3.WorkerRole:
+			verifyNsg(ctx, resp, ociClusterOriginal, &ociCluster, infrastructurev1beta3.WorkerRole)
 			Log("Validating node machine vnic NSG")
 			validateVnicNSG(ctx, clusterName, nameSpace, nsgId, machineDeployment)
-		case infrastructurev1beta1.ServiceLoadBalancerRole:
-			verifyNsg(ctx, resp, ociClusterOriginal, &ociCluster, infrastructurev1beta1.ServiceLoadBalancerRole)
+		case infrastructurev1beta3.ServiceLoadBalancerRole:
+			verifyNsg(ctx, resp, ociClusterOriginal, &ociCluster, infrastructurev1beta3.ServiceLoadBalancerRole)
 		default:
 			return errors.New("invalid nsg role")
 		}
@@ -1249,7 +1249,7 @@ func validateVnicNSG(ctx context.Context, clusterName string, nameSpace string, 
 	}
 }
 
-func validateCustomNetworkingSeclist(ctx context.Context, ociCluster infrastructurev1beta1.OCICluster, clusterName string) error {
+func validateCustomNetworkingSeclist(ctx context.Context, ociCluster infrastructurev1beta3.OCICluster, clusterName string) error {
 	vcnId := ociCluster.Spec.NetworkSpec.Vcn.ID
 	resp, err := vcnClient.GetVcn(ctx, core.GetVcnRequest{
 		VcnId: vcnId,
@@ -1268,7 +1268,7 @@ func validateCustomNetworkingSeclist(ctx context.Context, ociCluster infrastruct
 	// to make sure that the original spec was not changed, we should compare with the
 	// original unchanged spec present in the file system
 	reader, _ := os.Open(e2eConfig.MustGetVariable("SECLIST_CLUSTER_PATH"))
-	ociClusterOriginal := &infrastructurev1beta1.OCICluster{}
+	ociClusterOriginal := &infrastructurev1beta3.OCICluster{}
 	err = yaml.NewYAMLOrJSONDecoder(reader, 4096).Decode(ociClusterOriginal)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -1279,13 +1279,13 @@ func validateCustomNetworkingSeclist(ctx context.Context, ociCluster infrastruct
 		})
 		Expect(err).NotTo(HaveOccurred())
 		switch subnet.Role {
-		case infrastructurev1beta1.ControlPlaneEndpointRole:
+		case infrastructurev1beta3.ControlPlaneEndpointRole:
 			verifySeclistSubnet(ctx, resp, ociClusterOriginal, subnet, "ep-subnet", scope.ControlPlaneEndpointSubnetDefaultCIDR)
-		case infrastructurev1beta1.ControlPlaneRole:
+		case infrastructurev1beta3.ControlPlaneRole:
 			verifySeclistSubnet(ctx, resp, ociClusterOriginal, subnet, "cp-mc-subnet", scope.ControlPlaneMachineSubnetDefaultCIDR)
-		case infrastructurev1beta1.WorkerRole:
+		case infrastructurev1beta3.WorkerRole:
 			verifySeclistSubnet(ctx, resp, ociClusterOriginal, subnet, "worker-subnet", scope.WorkerSubnetDefaultCIDR)
-		case infrastructurev1beta1.ServiceLoadBalancerRole:
+		case infrastructurev1beta3.ServiceLoadBalancerRole:
 			verifySeclistSubnet(ctx, resp, ociClusterOriginal, subnet, "svc-lb-subnet", scope.ServiceLoadBalancerDefaultCIDR)
 		default:
 			return errors.New("invalid subnet role")
@@ -1294,7 +1294,7 @@ func validateCustomNetworkingSeclist(ctx context.Context, ociCluster infrastruct
 	return nil
 }
 
-func verifySeclistSubnet(ctx context.Context, resp core.GetSubnetResponse, ociClusterOriginal *infrastructurev1beta1.OCICluster, subnet *infrastructurev1beta1.Subnet, subnetName string, cidrBlock string) {
+func verifySeclistSubnet(ctx context.Context, resp core.GetSubnetResponse, ociClusterOriginal *infrastructurev1beta3.OCICluster, subnet *infrastructurev1beta3.Subnet, subnetName string, cidrBlock string) {
 	Expect(*resp.CidrBlock).To(Equal(cidrBlock))
 	Expect(*resp.DisplayName).To(Equal(subnetName))
 	secList := resp.SecurityListIds[0]
@@ -1322,14 +1322,14 @@ func verifySeclistSubnet(ctx context.Context, resp core.GetSubnetResponse, ociCl
 	Expect(matches).To(Equal(1))
 }
 
-func verifyNsg(ctx context.Context, resp core.GetNetworkSecurityGroupResponse, ociClusterOriginal *infrastructurev1beta1.OCICluster, ociClusterActual *infrastructurev1beta1.OCICluster, role infrastructurev1beta1.Role) {
+func verifyNsg(ctx context.Context, resp core.GetNetworkSecurityGroupResponse, ociClusterOriginal *infrastructurev1beta3.OCICluster, ociClusterActual *infrastructurev1beta3.OCICluster, role infrastructurev1beta3.Role) {
 	listResponse, err := vcnClient.ListNetworkSecurityGroupSecurityRules(ctx, core.ListNetworkSecurityGroupSecurityRulesRequest{
 		NetworkSecurityGroupId: resp.Id,
 	})
 	Expect(err).NotTo(HaveOccurred())
 	ingressRules, egressRules := generateSpecFromSecurityRules(ociClusterActual, listResponse.Items)
 	matches := 0
-	for _, n := range ociClusterOriginal.Spec.NetworkSpec.Vcn.NetworkSecurityGroups {
+	for _, n := range ociClusterOriginal.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
 		if n.Role == role {
 			matches++
 			Expect(ingressRules).To(Equal(n.IngressRules))
@@ -1339,9 +1339,9 @@ func verifyNsg(ctx context.Context, resp core.GetNetworkSecurityGroupResponse, o
 	Expect(matches).To(Equal(1))
 }
 
-func generateSpecFromSecurityRules(ociClusterOriginal *infrastructurev1beta1.OCICluster, rules []core.SecurityRule) ([]infrastructurev1beta1.IngressSecurityRuleForNSG, []infrastructurev1beta1.EgressSecurityRuleForNSG) {
-	var ingressRules []infrastructurev1beta1.IngressSecurityRuleForNSG
-	var egressRules []infrastructurev1beta1.EgressSecurityRuleForNSG
+func generateSpecFromSecurityRules(ociClusterOriginal *infrastructurev1beta3.OCICluster, rules []core.SecurityRule) ([]infrastructurev1beta3.IngressSecurityRuleForNSG, []infrastructurev1beta3.EgressSecurityRuleForNSG) {
+	var ingressRules []infrastructurev1beta3.IngressSecurityRuleForNSG
+	var egressRules []infrastructurev1beta3.EgressSecurityRuleForNSG
 	for _, rule := range rules {
 		// while comparing values, the boolean value has to be always set
 		stateless := rule.IsStateless
@@ -1351,13 +1351,13 @@ func generateSpecFromSecurityRules(ociClusterOriginal *infrastructurev1beta1.OCI
 		icmpOptions, tcpOptions, udpOptions := getProtocolOptionsForSpec(rule.IcmpOptions, rule.TcpOptions, rule.UdpOptions)
 		switch rule.Direction {
 		case core.SecurityRuleDirectionIngress:
-			ingressRule := infrastructurev1beta1.IngressSecurityRuleForNSG{
-				IngressSecurityRule: infrastructurev1beta1.IngressSecurityRule{
+			ingressRule := infrastructurev1beta3.IngressSecurityRuleForNSG{
+				IngressSecurityRule: infrastructurev1beta3.IngressSecurityRule{
 					Protocol:    rule.Protocol,
 					Source:      rule.Source,
 					IcmpOptions: icmpOptions,
 					IsStateless: stateless,
-					SourceType:  infrastructurev1beta1.IngressSecurityRuleSourceTypeEnum(rule.SourceType),
+					SourceType:  infrastructurev1beta3.IngressSecurityRuleSourceTypeEnum(rule.SourceType),
 					TcpOptions:  tcpOptions,
 					UdpOptions:  udpOptions,
 					Description: rule.Description,
@@ -1365,11 +1365,11 @@ func generateSpecFromSecurityRules(ociClusterOriginal *infrastructurev1beta1.OCI
 			}
 			ingressRules = append(ingressRules, ingressRule)
 		case core.SecurityRuleDirectionEgress:
-			egressRule := infrastructurev1beta1.EgressSecurityRuleForNSG{
-				EgressSecurityRule: infrastructurev1beta1.EgressSecurityRule{
+			egressRule := infrastructurev1beta3.EgressSecurityRuleForNSG{
+				EgressSecurityRule: infrastructurev1beta3.EgressSecurityRule{
 					Destination:     rule.Destination,
 					Protocol:        rule.Protocol,
-					DestinationType: infrastructurev1beta1.EgressSecurityRuleDestinationTypeEnum(rule.DestinationType),
+					DestinationType: infrastructurev1beta3.EgressSecurityRuleDestinationTypeEnum(rule.DestinationType),
 					IcmpOptions:     icmpOptions,
 					IsStateless:     stateless,
 					TcpOptions:      tcpOptions,
@@ -1378,7 +1378,7 @@ func generateSpecFromSecurityRules(ociClusterOriginal *infrastructurev1beta1.OCI
 				},
 			}
 			if rule.DestinationType == core.SecurityRuleDestinationTypeNetworkSecurityGroup {
-				for _, nsg := range ociClusterOriginal.Spec.NetworkSpec.Vcn.NetworkSecurityGroups {
+				for _, nsg := range ociClusterOriginal.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List {
 					if reflect.DeepEqual(nsg.ID, rule.Destination) {
 						egressRule.Destination = common.String(nsg.Name)
 					}
@@ -1488,39 +1488,39 @@ func getClusterName(prefix, specName string) string {
 	return clusterName
 }
 
-func getProtocolOptionsForSpec(icmp *core.IcmpOptions, tcp *core.TcpOptions, udp *core.UdpOptions) (*infrastructurev1beta1.IcmpOptions, *infrastructurev1beta1.TcpOptions,
-	*infrastructurev1beta1.UdpOptions) {
-	var icmpOptions *infrastructurev1beta1.IcmpOptions
-	var tcpOptions *infrastructurev1beta1.TcpOptions
-	var udpOptions *infrastructurev1beta1.UdpOptions
+func getProtocolOptionsForSpec(icmp *core.IcmpOptions, tcp *core.TcpOptions, udp *core.UdpOptions) (*infrastructurev1beta3.IcmpOptions, *infrastructurev1beta3.TcpOptions,
+	*infrastructurev1beta3.UdpOptions) {
+	var icmpOptions *infrastructurev1beta3.IcmpOptions
+	var tcpOptions *infrastructurev1beta3.TcpOptions
+	var udpOptions *infrastructurev1beta3.UdpOptions
 	if icmp != nil {
-		icmpOptions = &infrastructurev1beta1.IcmpOptions{
+		icmpOptions = &infrastructurev1beta3.IcmpOptions{
 			Type: icmp.Type,
 			Code: icmp.Type,
 		}
 	}
 	if tcp != nil {
-		tcpOptions = &infrastructurev1beta1.TcpOptions{}
+		tcpOptions = &infrastructurev1beta3.TcpOptions{}
 		if tcp.DestinationPortRange != nil {
-			tcpOptions.DestinationPortRange = &infrastructurev1beta1.PortRange{}
+			tcpOptions.DestinationPortRange = &infrastructurev1beta3.PortRange{}
 			tcpOptions.DestinationPortRange.Max = tcp.DestinationPortRange.Max
 			tcpOptions.DestinationPortRange.Min = tcp.DestinationPortRange.Min
 		}
 		if tcp.SourcePortRange != nil {
-			tcpOptions.SourcePortRange = &infrastructurev1beta1.PortRange{}
+			tcpOptions.SourcePortRange = &infrastructurev1beta3.PortRange{}
 			tcpOptions.SourcePortRange.Max = tcp.SourcePortRange.Max
 			tcpOptions.SourcePortRange.Min = tcp.SourcePortRange.Min
 		}
 	}
 	if udp != nil {
-		udpOptions = &infrastructurev1beta1.UdpOptions{}
+		udpOptions = &infrastructurev1beta3.UdpOptions{}
 		if udp.DestinationPortRange != nil {
-			udpOptions.DestinationPortRange = &infrastructurev1beta1.PortRange{}
+			udpOptions.DestinationPortRange = &infrastructurev1beta3.PortRange{}
 			udpOptions.DestinationPortRange.Max = udp.DestinationPortRange.Max
 			udpOptions.DestinationPortRange.Min = udp.DestinationPortRange.Min
 		}
 		if udp.SourcePortRange != nil {
-			udpOptions.SourcePortRange = &infrastructurev1beta1.PortRange{}
+			udpOptions.SourcePortRange = &infrastructurev1beta3.PortRange{}
 			udpOptions.SourcePortRange.Max = udp.SourcePortRange.Max
 			udpOptions.SourcePortRange.Min = udp.SourcePortRange.Min
 		}
@@ -1528,7 +1528,7 @@ func getProtocolOptionsForSpec(icmp *core.IcmpOptions, tcp *core.TcpOptions, udp
 	return icmpOptions, tcpOptions, udpOptions
 }
 
-func convertSecurityListIngressRule(rule infrastructurev1beta1.IngressSecurityRule) core.IngressSecurityRule {
+func convertSecurityListIngressRule(rule infrastructurev1beta3.IngressSecurityRule) core.IngressSecurityRule {
 	var icmpOptions *core.IcmpOptions
 	var tcpOptions *core.TcpOptions
 	var udpOptions *core.UdpOptions
@@ -1551,7 +1551,7 @@ func convertSecurityListIngressRule(rule infrastructurev1beta1.IngressSecurityRu
 	}
 }
 
-func convertSecurityListEgressRule(rule infrastructurev1beta1.EgressSecurityRule) core.EgressSecurityRule {
+func convertSecurityListEgressRule(rule infrastructurev1beta3.EgressSecurityRule) core.EgressSecurityRule {
 	var icmpOptions *core.IcmpOptions
 	var tcpOptions *core.TcpOptions
 	var udpOptions *core.UdpOptions
@@ -1574,8 +1574,8 @@ func convertSecurityListEgressRule(rule infrastructurev1beta1.EgressSecurityRule
 	}
 }
 
-func getProtocolOptions(icmp *infrastructurev1beta1.IcmpOptions, tcp *infrastructurev1beta1.TcpOptions,
-	udp *infrastructurev1beta1.UdpOptions) (*core.IcmpOptions, *core.TcpOptions, *core.UdpOptions) {
+func getProtocolOptions(icmp *infrastructurev1beta3.IcmpOptions, tcp *infrastructurev1beta3.TcpOptions,
+	udp *infrastructurev1beta3.UdpOptions) (*core.IcmpOptions, *core.TcpOptions, *core.UdpOptions) {
 	var icmpOptions *core.IcmpOptions
 	var tcpOptions *core.TcpOptions
 	var udpOptions *core.UdpOptions

@@ -50,7 +50,7 @@ providers:
     versions:
       - name: v1.0.0
         value: ../../../config/default
-        contract: v1beta1
+        contract: v1beta2
         files:
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-alternative-region.yaml"
@@ -61,9 +61,8 @@ providers:
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-antrea.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-oracle-linux.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-custom-networking-seclist.yaml"
-          - sourcePath: "../data/infrastructure-oci/v1beta1/cluster-template-custom-networking-nsg.yaml"
+          - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-custom-networking-nsg.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-multiple-node-nsg.yaml"
-          - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-cluster-class.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-cluster-class/clusterclass-test-cluster-class.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-local-vcn-peering.yaml"
@@ -82,7 +81,7 @@ providers:
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-machine-with-ipv6.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-with-paravirt-bv.yaml"
           - sourcePath: "../data/infrastructure-oci/v1beta2/cluster-template-self-manage-nsg.yaml"
-          - sourcePath: "../data/infrastructure-oci/v1beta1/metadata.yaml"
+          - sourcePath: "../data/infrastructure-oci/v1beta2/metadata.yaml"
 
 variables:
   # Match the base OCI image; upgrade tests cover v1.36.2 separately.
@@ -90,7 +89,7 @@ variables:
   OCI_MANAGED_KUBERNETES_VERSION: "v1.35.2"
   OCI_MANAGED_KUBERNETES_VERSION_UPGRADE: "v1.36.1"
   EXP_CLUSTER_RESOURCE_SET: "true"
-  NODE_DRAIN_TIMEOUT: "60s"
+  NODE_DRAIN_TIMEOUT: "60"
   CI_VERSION: ""
   CNI: "${PWD}/test/e2e/data/cni/calico"
   ANTREA_CNI: "${PWD}/test/e2e/data/cni/antrea"
@@ -102,7 +101,7 @@ variables:
   KUBERNETES_UPGRADE_OCI_IMAGE_ID: "${KUBERNETES_UPGRADE_OCI_IMAGE_ID}"
   IP_FAMILY: "IPv4"
   CLUSTER_TOPOLOGY: "true"
-  NSG_CLUSTER_PATH: "${PWD}/test/e2e/data/infrastructure-oci/v1beta1/cluster-template-custom-networking-nsg/cluster.yaml"
+  NSG_CLUSTER_PATH: "${PWD}/test/e2e/data/infrastructure-oci/v1beta2/cluster-template-custom-networking-nsg/cluster.yaml"
   SECLIST_CLUSTER_PATH: "${PWD}/test/e2e/data/infrastructure-oci/v1beta2/cluster-template-custom-networking-seclist/cluster.yaml"
   LOCAL_DRG_ID: "${LOCAL_DRG_ID}"
   PEER_DRG_ID: "${PEER_DRG_ID}"

@@ -24,12 +24,12 @@ import (
 	"time"
 
 	. "github.com/onsi/gomega"
-	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
+	infrav3exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta3"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -54,13 +54,13 @@ func TestOCIManagedMachinePoolRecoversFromCloudFailuresAndAsyncStates(t *testing
 		active, creates, _, _, _ := fakeOCI.oke.nodePoolCounts()
 		g.Expect(active).To(BeZero())
 		g.Expect(creates).To(BeZero())
-		stored := &infrav2exp.OCIManagedMachinePool{}
+		stored := &infrav3exp.OCIManagedMachinePool{}
 		g.Expect(testEnvironment.GetAPIReader().Get(testContext, key, stored)).To(Succeed())
-		g.Expect(controllerutil.ContainsFinalizer(stored, infrav2exp.ManagedMachinePoolFinalizer)).To(BeTrue())
-		condition := v1beta1conditions.Get(stored, infrav2exp.NodePoolReadyCondition)
+		g.Expect(controllerutil.ContainsFinalizer(stored, infrav3exp.ManagedMachinePoolFinalizer)).To(BeTrue())
+		condition := conditions.Get(stored, infrav3exp.NodePoolReadyCondition)
 		g.Expect(condition).NotTo(BeNil())
-		g.Expect(condition.Status).To(Equal(corev1.ConditionFalse))
-		g.Expect(condition.Reason).To(Equal(infrav2exp.NodePoolProvisionFailedReason))
+		g.Expect(condition.Status).To(Equal(metav1.ConditionFalse))
+		g.Expect(condition.Reason).To(Equal(infrav3exp.NodePoolProvisionFailedReason))
 	}).WithTimeout(10 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
 	waitForWarningEvent(t, fixture.namespace.Name, fixture.managedMachinePool.Name, "ReconcileError", "injected OKE node-pool create failure")
 
@@ -71,15 +71,15 @@ func TestOCIManagedMachinePoolRecoversFromCloudFailuresAndAsyncStates(t *testing
 		active, creates, _, _, _ := fakeOCI.oke.nodePoolCounts()
 		g.Expect(active).To(Equal(1))
 		g.Expect(creates).To(Equal(1))
-		stored := &infrav2exp.OCIManagedMachinePool{}
+		stored := &infrav3exp.OCIManagedMachinePool{}
 		g.Expect(testEnvironment.GetAPIReader().Get(testContext, key, stored)).To(Succeed())
 		g.Expect(stored.Spec.ID).NotTo(BeNil())
 		nodePoolID = *stored.Spec.ID
-		g.Expect(stored.Status.Ready).To(BeFalse())
+		g.Expect(stored.Status.Initialization.Provisioned).To(Or(BeNil(), Equal(common.Bool(false))))
 		g.Expect(stored.Status.NodepoolLifecycleState).To(Equal(string(oke.NodePoolLifecycleStateCreating)))
-		condition := v1beta1conditions.Get(stored, infrav2exp.NodePoolReadyCondition)
+		condition := conditions.Get(stored, infrav3exp.NodePoolReadyCondition)
 		g.Expect(condition).NotTo(BeNil())
-		g.Expect(condition.Reason).To(Equal(infrav2exp.NodePoolNotReadyReason))
+		g.Expect(condition.Reason).To(Equal(infrav3exp.NodePoolNotReadyReason))
 	}).WithTimeout(10 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
 	fakeOCI.oke.setNodePoolState(nodePoolID, oke.NodePoolLifecycleStateActive)
 	triggerObjectReconcile(t, fixture.managedMachinePool)
@@ -90,7 +90,7 @@ func TestOCIManagedMachinePoolRecoversFromCloudFailuresAndAsyncStates(t *testing
 	fakeOCI.oke.setNodePoolUpdateState(oke.NodePoolLifecycleStateUpdating)
 	updatedVersion := "v1.34.2"
 	g.Eventually(func() error {
-		stored := &infrav2exp.OCIManagedMachinePool{}
+		stored := &infrav3exp.OCIManagedMachinePool{}
 		if err := testEnvironment.GetAPIReader().Get(testContext, key, stored); err != nil {
 			return err
 		}
@@ -127,10 +127,10 @@ func TestOCIManagedMachinePoolRecoversFromCloudFailuresAndAsyncStates(t *testing
 	g.Expect(testEnvironment.Delete(testContext, fixture.managedMachinePool)).To(Succeed())
 	waitForOKEAttempt(t, deleteNodePoolOperation, deleteAttempts)
 	g.Eventually(func(g Gomega) {
-		stored := &infrav2exp.OCIManagedMachinePool{}
+		stored := &infrav3exp.OCIManagedMachinePool{}
 		g.Expect(testEnvironment.GetAPIReader().Get(testContext, key, stored)).To(Succeed())
 		g.Expect(stored.DeletionTimestamp.IsZero()).To(BeFalse())
-		g.Expect(controllerutil.ContainsFinalizer(stored, infrav2exp.ManagedMachinePoolFinalizer)).To(BeTrue())
+		g.Expect(controllerutil.ContainsFinalizer(stored, infrav3exp.ManagedMachinePoolFinalizer)).To(BeTrue())
 		active, _, _, deletes, _ := fakeOCI.oke.nodePoolCounts()
 		g.Expect(active).To(Equal(1))
 		g.Expect(deletes).To(BeZero())
@@ -138,7 +138,7 @@ func TestOCIManagedMachinePoolRecoversFromCloudFailuresAndAsyncStates(t *testing
 	fakeOCI.oke.clearFailure(deleteNodePoolOperation)
 	triggerObjectReconcile(t, fixture.managedMachinePool)
 	g.Eventually(func() bool {
-		err := testEnvironment.GetAPIReader().Get(testContext, key, &infrav2exp.OCIManagedMachinePool{})
+		err := testEnvironment.GetAPIReader().Get(testContext, key, &infrav3exp.OCIManagedMachinePool{})
 		return apierrors.IsNotFound(err)
 	}).WithTimeout(15 * time.Second).WithPolling(100 * time.Millisecond).Should(BeTrue())
 	active, creates, updates, deletes, _ := fakeOCI.oke.nodePoolCounts()
@@ -168,13 +168,13 @@ func TestOCIVirtualMachinePoolRecoversFromCloudFailuresAndAsyncStates(t *testing
 		active, creates, _, _, _ := fakeOCI.oke.virtualNodePoolCounts()
 		g.Expect(active).To(BeZero())
 		g.Expect(creates).To(BeZero())
-		stored := &infrav2exp.OCIVirtualMachinePool{}
+		stored := &infrav3exp.OCIVirtualMachinePool{}
 		g.Expect(testEnvironment.GetAPIReader().Get(testContext, key, stored)).To(Succeed())
-		g.Expect(controllerutil.ContainsFinalizer(stored, infrav2exp.VirtualMachinePoolFinalizer)).To(BeTrue())
-		condition := v1beta1conditions.Get(stored, infrav2exp.VirtualNodePoolReadyCondition)
+		g.Expect(controllerutil.ContainsFinalizer(stored, infrav3exp.VirtualMachinePoolFinalizer)).To(BeTrue())
+		condition := conditions.Get(stored, infrav3exp.VirtualNodePoolReadyCondition)
 		g.Expect(condition).NotTo(BeNil())
-		g.Expect(condition.Status).To(Equal(corev1.ConditionFalse))
-		g.Expect(condition.Reason).To(Equal(infrav2exp.VirtualNodePoolProvisionFailedReason))
+		g.Expect(condition.Status).To(Equal(metav1.ConditionFalse))
+		g.Expect(condition.Reason).To(Equal(infrav3exp.VirtualNodePoolProvisionFailedReason))
 	}).WithTimeout(10 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
 	waitForWarningEvent(t, fixture.namespace.Name, fixture.virtualMachinePool.Name, "ReconcileError", "injected OKE virtual node-pool create failure")
 
@@ -185,15 +185,15 @@ func TestOCIVirtualMachinePoolRecoversFromCloudFailuresAndAsyncStates(t *testing
 		active, creates, _, _, _ := fakeOCI.oke.virtualNodePoolCounts()
 		g.Expect(active).To(Equal(1))
 		g.Expect(creates).To(Equal(1))
-		stored := &infrav2exp.OCIVirtualMachinePool{}
+		stored := &infrav3exp.OCIVirtualMachinePool{}
 		g.Expect(testEnvironment.GetAPIReader().Get(testContext, key, stored)).To(Succeed())
 		g.Expect(stored.Spec.ID).NotTo(BeNil())
 		poolID = *stored.Spec.ID
-		g.Expect(stored.Status.Ready).To(BeFalse())
+		g.Expect(stored.Status.Initialization.Provisioned).To(Or(BeNil(), Equal(common.Bool(false))))
 		g.Expect(stored.Status.NodepoolLifecycleState).To(Equal(string(oke.VirtualNodePoolLifecycleStateCreating)))
-		condition := v1beta1conditions.Get(stored, infrav2exp.VirtualNodePoolReadyCondition)
+		condition := conditions.Get(stored, infrav3exp.VirtualNodePoolReadyCondition)
 		g.Expect(condition).NotTo(BeNil())
-		g.Expect(condition.Reason).To(Equal(infrav2exp.VirtualNodePoolNotReadyReason))
+		g.Expect(condition.Reason).To(Equal(infrav3exp.VirtualNodePoolNotReadyReason))
 	}).WithTimeout(10 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
 	fakeOCI.oke.setVirtualNodePoolState(poolID, oke.VirtualNodePoolLifecycleStateActive)
 	triggerObjectReconcile(t, fixture.virtualMachinePool)
@@ -203,12 +203,12 @@ func TestOCIVirtualMachinePoolRecoversFromCloudFailuresAndAsyncStates(t *testing
 	fakeOCI.oke.setFailure(updateVirtualNodePoolOperation, errors.New("injected OKE virtual node-pool update failure"))
 	fakeOCI.oke.setVirtualNodePoolUpdateState(oke.VirtualNodePoolLifecycleStateUpdating)
 	g.Eventually(func() error {
-		stored := &infrav2exp.OCIVirtualMachinePool{}
+		stored := &infrav3exp.OCIVirtualMachinePool{}
 		if err := testEnvironment.GetAPIReader().Get(testContext, key, stored); err != nil {
 			return err
 		}
 		stored.Spec.PodConfiguration.Shape = common.String("Pod.Standard.A1.Flex")
-		stored.Spec.InitialVirtualNodeLabels = []infrav2exp.KeyValue{{Key: common.String("recovery"), Value: common.String("true")}}
+		stored.Spec.InitialVirtualNodeLabels = []infrav3exp.KeyValue{{Key: common.String("recovery"), Value: common.String("true")}}
 		return testEnvironment.Update(testContext, stored)
 	}).WithTimeout(10 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
 	waitForOKEAttempt(t, updateVirtualNodePoolOperation, updateAttempts)
@@ -239,10 +239,10 @@ func TestOCIVirtualMachinePoolRecoversFromCloudFailuresAndAsyncStates(t *testing
 	g.Expect(testEnvironment.Delete(testContext, fixture.virtualMachinePool)).To(Succeed())
 	waitForOKEAttempt(t, deleteVirtualNodePoolOperation, deleteAttempts)
 	g.Eventually(func(g Gomega) {
-		stored := &infrav2exp.OCIVirtualMachinePool{}
+		stored := &infrav3exp.OCIVirtualMachinePool{}
 		g.Expect(testEnvironment.GetAPIReader().Get(testContext, key, stored)).To(Succeed())
 		g.Expect(stored.DeletionTimestamp.IsZero()).To(BeFalse())
-		g.Expect(controllerutil.ContainsFinalizer(stored, infrav2exp.VirtualMachinePoolFinalizer)).To(BeTrue())
+		g.Expect(controllerutil.ContainsFinalizer(stored, infrav3exp.VirtualMachinePoolFinalizer)).To(BeTrue())
 		active, _, _, deletes, _ := fakeOCI.oke.virtualNodePoolCounts()
 		g.Expect(active).To(Equal(1))
 		g.Expect(deletes).To(BeZero())
@@ -250,7 +250,7 @@ func TestOCIVirtualMachinePoolRecoversFromCloudFailuresAndAsyncStates(t *testing
 	fakeOCI.oke.clearFailure(deleteVirtualNodePoolOperation)
 	triggerObjectReconcile(t, fixture.virtualMachinePool)
 	g.Eventually(func() bool {
-		err := testEnvironment.GetAPIReader().Get(testContext, key, &infrav2exp.OCIVirtualMachinePool{})
+		err := testEnvironment.GetAPIReader().Get(testContext, key, &infrav3exp.OCIVirtualMachinePool{})
 		return apierrors.IsNotFound(err)
 	}).WithTimeout(15 * time.Second).WithPolling(100 * time.Millisecond).Should(BeTrue())
 	active, creates, updates, deletes, _ := fakeOCI.oke.virtualNodePoolCounts()

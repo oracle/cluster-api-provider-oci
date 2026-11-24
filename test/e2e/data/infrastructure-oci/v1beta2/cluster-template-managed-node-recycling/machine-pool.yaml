@@ -1,6 +1,6 @@
 ---
 # testing nodepool without image id set
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachinePool
 metadata:
   name: ${CLUSTER_NAME}-mp-1
@@ -14,12 +14,12 @@ spec:
       bootstrap:
         dataSecretName: ""
       infrastructureRef:
-        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        apiGroup: infrastructure.cluster.x-k8s.io
         kind: OCIManagedMachinePool
         name: ${CLUSTER_NAME}-mp-1
       version: ${KUBERNETES_VERSION}
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 kind: OCIManagedMachinePool
 metadata:
   name: ${CLUSTER_NAME}-mp-1
