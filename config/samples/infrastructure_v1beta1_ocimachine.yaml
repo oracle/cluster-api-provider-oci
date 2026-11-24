@@ -1,7 +1,7 @@
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-kind: OciMachine
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
+kind: OCIMachine
 metadata:
   name: ocimachine-sample
 spec:
-  # Add fields here
-  foo: bar
+  imageId: ""
+  shape: ""

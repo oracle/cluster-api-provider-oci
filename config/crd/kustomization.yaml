@@ -4,6 +4,7 @@
 # Labels to add to all resources and selectors.
 commonLabels:
   cluster.x-k8s.io/v1beta1: v1beta1_v1beta2
+  cluster.x-k8s.io/v1beta2: v1beta3
 
 resources:
 - bases/infrastructure.cluster.x-k8s.io_ociclusters.yaml
@@ -27,12 +28,15 @@ patchesStrategicMerge:
 # patches here are for enabling the conversion webhook for each CRD
 - patches/webhook_in_ociclusters.yaml
 - patches/webhook_in_ocimachines.yaml
+- patches/webhook_in_ocimachinetemplates.yaml
 - patches/webhook_in_ociclustertemplates.yaml
 - patches/webhook_in_ocimachinepools.yaml
 - patches/webhook_in_ocimanagedclusters.yaml
+- patches/webhook_in_ocimanagedclustertemplates.yaml
 - patches/webhook_in_ocimanagedcontrolplanes.yaml
+- patches/webhook_in_ocimanagedcontrolplanetemplates.yaml
 - patches/webhook_in_ocimanagedmachinepools.yaml
-- patches/webhook_in_ocimanagedcontrolplanes.yaml
+- patches/webhook_in_ocimanagedmachinepooltemplates.yaml
 - patches/webhook_in_ociclusteridentities.yaml
 - patches/webhook_in_ocivirtualmachinepools.yaml
 - patches/webhook_in_ocimachinepoolmachines.yaml
@@ -42,12 +46,15 @@ patchesStrategicMerge:
 # patches here are for enabling the CA injection for each CRD
 - patches/cainjection_in_ociclusters.yaml
 - patches/cainjection_in_ocimachines.yaml
+- patches/cainjection_in_ocimachinetemplates.yaml
 - patches/cainjection_in_ociclustertemplates.yaml
 - patches/cainjection_in_ocimachinepools.yaml
 - patches/cainjection_in_ocimanagedclusters.yaml
+- patches/cainjection_in_ocimanagedclustertemplates.yaml
 - patches/cainjection_in_ocimanagedcontrolplanes.yaml
+- patches/cainjection_in_ocimanagedcontrolplanetemplates.yaml
 - patches/cainjection_in_ocimanagedmachinepools.yaml
-- patches/cainjection_in_ocimanagedcontrolplanes.yaml
+- patches/cainjection_in_ocimanagedmachinepooltemplates.yaml
 - patches/cainjection_in_ociclusteridentities.yaml
 - patches/cainjection_in_ocivirtualmachinepools.yaml
 - patches/cainjection_in_ocimachinepoolmachines.yaml

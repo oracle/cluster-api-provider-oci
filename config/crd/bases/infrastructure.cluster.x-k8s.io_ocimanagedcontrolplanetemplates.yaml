@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.20.0
+    controller-gen.kubebuilder.io/version: v0.16.1
   name: ocimanagedcontrolplanetemplates.infrastructure.cluster.x-k8s.io
 spec:
   group: infrastructure.cluster.x-k8s.io
@@ -367,16 +367,317 @@ spec:
                       controlPlaneEndpoint:
                         description: ControlPlaneEndpoint represents the endpoint
                           used to communicate with the control plane.
+                        minProperties: 1
                         properties:
                           host:
                             description: host is the hostname on which the API server
                               is serving.
                             maxLength: 512
+                            minLength: 1
                             type: string
                           port:
                             description: port is the port on which the API server
                               is serving.
                             format: int32
+                            maximum: 65535
+                            minimum: 1
+                            type: integer
+                        type: object
+                      id:
+                        description: ID of the OKEcluster.
+                        type: string
+                      imagePolicyConfig:
+                        description: ImagePolicyConfig defines the properties that
+                          define a image verification policy.
+                        properties:
+                          isPolicyEnabled:
+                            description: IsPolicyEnabled defines Whether the image
+                              verification policy is enabled.
+                            type: boolean
+                          keyDetails:
+                            description: KeyDetails defines a list of KMS key details.
+                            items:
+                              description: KeyDetails defines the properties that
+                                define the kms keys used by OKE for Image Signature
+                                verification.
+                              properties:
+                                keyDetails:
+                                  description: KmsKeyId defines the OCID of the KMS
+                                    key that will be used to verify whether the images
+                                    are signed by an approved source.
+                                  type: string
+                              type: object
+                            type: array
+                        type: object
+                      kmsKeyId:
+                        description: KmsKeyId defines the OCID of the KMS key to be
+                          used as the master encryption key for Kubernetes secret
+                          encryption. When used,
+                        type: string
+                      version:
+                        description: Version represents the version of the Kubernetes
+                          Cluster Control Plane.
+                        type: string
+                    type: object
+                required:
+                - spec
+                type: object
+            required:
+            - template
+            type: object
+        type: object
+    served: true
+    storage: false
+  - name: v1beta3
+    schema:
+      openAPIV3Schema:
+        description: OCIManagedControlPlaneTemplate is the Schema for the OCIManagedControlPlaneTemplates
+          API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: OCIManagedControlPlaneTemplateSpec defines the desired state
+              of OCIManagedControlPlaneTemplate.
+            properties:
+              template:
+                description: OCIManagedControlPlaneTemplateResource describes the
+                  data needed to create an OCIManagedControlPlane from a template.
+                properties:
+                  metadata:
+                    description: |-
+                      Standard object's metadata.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+                    minProperties: 1
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          annotations is an unstructured key value map stored with a resource that may be
+                          set by external tools to store and retrieve arbitrary metadata. They are not
+                          queryable and should be preserved when modifying objects.
+                          More info: http://kubernetes.io/docs/user-guide/annotations
+                        type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          labels is a map of string keys and values that can be used to organize and categorize
+                          (scope and select) objects. May match selectors of replication controllers
+                          and services.
+                          More info: http://kubernetes.io/docs/user-guide/labels
+                        type: object
+                    type: object
+                  spec:
+                    description: |-
+                      OCIManagedControlPlaneSpec defines the desired state of OCIManagedControlPlane.
+                      The properties are generated from https://docs.oracle.com/en-us/iaas/api/#/en/containerengine/20180222/datatypes/CreateClusterDetails
+                    properties:
+                      addons:
+                        description: The list of addons to be applied to the OKE cluster.
+                        items:
+                          description: Addon defines the properties of an addon.
+                          properties:
+                            configurations:
+                              description: Configurations defines a list of configurations
+                                of the addon.
+                              items:
+                                description: AddonConfiguration defines a configuration
+                                  of an addon.
+                                properties:
+                                  key:
+                                    description: The key of the configuration.
+                                    type: string
+                                  value:
+                                    description: The value of the configuration.
+                                    type: string
+                                type: object
+                              type: array
+                            name:
+                              description: Name represents the name of the addon.
+                              type: string
+                            version:
+                              description: Version represents the version of the addon.
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
+                      clusterOptions:
+                        description: ClusterOptions defines Optional attributes for
+                          the cluster.
+                        properties:
+                          addOnOptions:
+                            description: AddOnOptions defines the properties that
+                              define options for supported add-ons.
+                            properties:
+                              isKubernetesDashboardEnabled:
+                                description: IsKubernetesDashboardEnabled defines
+                                  whether or not to enable the Kubernetes Dashboard
+                                  add-on.
+                                type: boolean
+                              isTillerEnabled:
+                                description: IsKubernetesDashboardEnabled defines
+                                  whether or not to enable the Tiller add-on.
+                                type: boolean
+                            type: object
+                          admissionControllerOptions:
+                            description: AdmissionControllerOptions defines the properties
+                              that define supported admission controllers.
+                            properties:
+                              isPodSecurityPolicyEnabled:
+                                description: IsPodSecurityPolicyEnabled defines whether
+                                  or not to enable the Pod Security Policy admission
+                                  controller.
+                                type: boolean
+                            type: object
+                          openIdConnectDiscovery:
+                            description: OpenIDConnectDiscovery specifies OIDC discovery
+                              settings
+                            properties:
+                              isOpenIdConnectDiscoveryEnabled:
+                                description: IsOpenIDConnectDiscoveryEnabled defines
+                                  whether or not to enable the OIDC discovery.
+                                type: boolean
+                            type: object
+                          openIdConnectTokenAuthenticationConfig:
+                            description: OpenIDConnectTokenAuthenticationConfig
+                            properties:
+                              caCertificate:
+                                description: A Base64 encoded public RSA or ECDSA
+                                  certificates used to sign your identity provider's
+                                  web certificate.
+                                type: string
+                              clientId:
+                                description: A client id that all tokens must be issued
+                                  for.
+                                type: string
+                              groupsClaim:
+                                description: JWT claim to use as the user's group.
+                                  If the claim is present it must be an array of strings.
+                                type: string
+                              groupsPrefix:
+                                description: Prefix prepended to group claims to prevent
+                                  clashes with existing names (such as system:groups).
+                                type: string
+                              isOpenIdConnectAuthEnabled:
+                                description: IsOpenIdConnectAuthEnabled defines whether
+                                  or not to enable the OIDC authentication.
+                                type: boolean
+                              issuerUrl:
+                                description: URL of the provider that allows the API
+                                  server to discover public signing keys. Only URLs
+                                  that use the https:// scheme are accepted. This
+                                  is typically the provider's discovery URL, changed
+                                  to have an empty path.
+                                type: string
+                              requiredClaims:
+                                description: A key=value pair that describes a required
+                                  claim in the ID Token. If set, the claim is verified
+                                  to be present in the ID Token with a matching value.
+                                  Repeat this flag to specify multiple claims.
+                                items:
+                                  description: KeyValue defines the properties that
+                                    define a key value pair. This is alias to containerengine.KeyValue,
+                                    to support the sdk type
+                                  properties:
+                                    key:
+                                      description: The key of the pair.
+                                      type: string
+                                    value:
+                                      description: The value of the pair.
+                                      type: string
+                                  required:
+                                  - key
+                                  - value
+                                  type: object
+                                type: array
+                              signingAlgorithms:
+                                description: The signing algorithms accepted. Default
+                                  is ["RS256"].
+                                items:
+                                  type: string
+                                type: array
+                              usernameClaim:
+                                description: JWT claim to use as the user name. By
+                                  default sub, which is expected to be a unique identifier
+                                  of the end user. Admins can choose other claims,
+                                  such as email or name, depending on their provider.
+                                  However, claims other than email will be prefixed
+                                  with the issuer URL to prevent naming clashes with
+                                  other plugins.
+                                type: string
+                              usernamePrefix:
+                                description: 'Prefix prepended to username claims
+                                  to prevent clashes with existing names (such as
+                                  system:users). For example, the value oidc: will
+                                  create usernames like oidc:jane.doe. If this flag
+                                  isn''t provided and --oidc-username-claim is a value
+                                  other than email the prefix defaults to ( Issuer
+                                  URL )# where ( Issuer URL ) is the value of --oidc-issuer-url.
+                                  The value - can be used to disable all prefixing.'
+                                type: string
+                            required:
+                            - isOpenIdConnectAuthEnabled
+                            type: object
+                        type: object
+                      clusterPodNetworkOptions:
+                        description: ClusterPodNetworkOptions defines the available
+                          CNIs and network options for existing and new node pools
+                          of the cluster
+                        items:
+                          description: ClusterPodNetworkOptions defines the available
+                            CNIs and network options for existing and new node pools
+                            of the cluster
+                          properties:
+                            cniType:
+                              description: The CNI to be used are OCI_VCN_IP_NATIVE
+                                and FLANNEL_OVERLAY
+                              type: string
+                          type: object
+                        type: array
+                      clusterType:
+                        description: |-
+                          ClusterTypeEnum defines the type of cluster. Supported types are
+                          * `BASIC_CLUSTER`
+                          * `ENHANCED_CLUSTER`
+                        type: string
+                      controlPlaneEndpoint:
+                        description: ControlPlaneEndpoint represents the endpoint
+                          used to communicate with the control plane.
+                        minProperties: 1
+                        properties:
+                          host:
+                            description: host is the hostname on which the API server
+                              is serving.
+                            maxLength: 512
+                            minLength: 1
+                            type: string
+                          port:
+                            description: port is the port on which the API server
+                              is serving.
+                            format: int32
+                            maximum: 65535
+                            minimum: 1
                             type: integer
                         type: object
                       id:

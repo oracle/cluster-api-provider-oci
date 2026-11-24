@@ -142,16 +142,28 @@ manifests: $(CONTROLLER_GEN) ## Generate WebhookConfiguration, ClusterRole and C
 generate: $(CONTROLLER_GEN) $(CONVERSION_GEN) ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./api/..." paths="./exp/api/..."
 	$(CONVERSION_GEN) \
-		--extra-peer-dirs=sigs.k8s.io/cluster-api/api/core/v1beta1 \
+		--extra-peer-dirs=sigs.k8s.io/cluster-api/api/core/v1beta2 \
 		--output-file=zz_generated.conversion.go \
 		--go-header-file=hack/boilerplate.go.txt \
 		./api/v1beta1
 	$(CONVERSION_GEN) \
-		--extra-peer-dirs=sigs.k8s.io/cluster-api/api/core/v1beta1 \
+		--output-file=zz_generated.conversion.go \
+		--go-header-file=hack/boilerplate.go.txt \
+		./api/v1beta2
+	$(CONVERSION_GEN) \
+		--extra-peer-dirs=sigs.k8s.io/cluster-api/api/core/v1beta2 \
 		--extra-peer-dirs=github.com/oracle/cluster-api-provider-oci/api/v1beta1 \
+		--extra-peer-dirs=github.com/oracle/cluster-api-provider-oci/api/v1beta3 \
 		--output-file=zz_generated.conversion.go \
 		--go-header-file=hack/boilerplate.go.txt \
 		./exp/api/v1beta1
+	$(CONVERSION_GEN) \
+		--extra-peer-dirs=sigs.k8s.io/cluster-api/api/core/v1beta2 \
+		--extra-peer-dirs=github.com/oracle/cluster-api-provider-oci/api/v1beta2 \
+		--extra-peer-dirs=github.com/oracle/cluster-api-provider-oci/api/v1beta3 \
+		--output-file=zz_generated.conversion.go \
+		--go-header-file=hack/boilerplate.go.txt \
+		./exp/api/v1beta2
 
 fmt: ## Run go fmt against code.
 	go fmt ./...
@@ -289,7 +301,7 @@ generate-e2e-templates: $(KUSTOMIZE)
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-antrea --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-antrea.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-oracle-linux --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-oracle-linux.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-custom-networking-seclist --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-custom-networking-seclist.yaml
-	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta1/cluster-template-custom-networking-nsg --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta1/cluster-template-custom-networking-nsg.yaml
+	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-custom-networking-nsg --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-custom-networking-nsg.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-multiple-node-nsg --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-multiple-node-nsg.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-cluster-class --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-cluster-class.yaml
 	$(KUSTOMIZE) build $(OCI_TEMPLATES)/v1beta2/cluster-template-local-vcn-peering --load-restrictor LoadRestrictionsNone > $(OCI_TEMPLATES)/v1beta2/cluster-template-local-vcn-peering.yaml
