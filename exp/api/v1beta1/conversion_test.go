@@ -20,9 +20,11 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
-	"github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
+	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	"github.com/oracle/cluster-api-provider-oci/exp/api/v1beta3"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/apitesting/fuzzer"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	runtimeserializer "k8s.io/apimachinery/pkg/runtime/serializer"
 	utilconversion "sigs.k8s.io/cluster-api/util/conversion"
@@ -31,9 +33,36 @@ import (
 
 func fuzzFuncs(_ runtimeserializer.CodecFactory) []interface{} {
 	return []interface{}{
+		conditionFuzzer,
 		OCIMachinePoolFuzzer,
 		OCIMachinePoolHubFuzzer,
+		OCIManagedMachinePoolHubFuzzer,
+		OCIVirtualMachinePoolHubFuzzer,
+		OCIMachinePoolMachineHubFuzzer,
 	}
+}
+
+func conditionFuzzer(obj *infrastructurev1beta1.Condition, c randfill.Continue) {
+	c.FillNoCustom(obj)
+	obj.Severity = ""
+	converted := infrastructurev1beta1.ConvertConditionsToMeta(infrastructurev1beta1.Conditions{*obj})
+	obj.Reason = converted[0].Reason
+}
+
+func normalizeHubConditions(conds []metav1.Condition) []metav1.Condition {
+	if len(conds) == 0 {
+		return conds
+	}
+	seen := make(map[string]bool, len(conds))
+	out := make([]metav1.Condition, 0, len(conds))
+	for _, c := range conds {
+		if !seen[c.Type] {
+			seen[c.Type] = true
+			c.Reason = infrastructurev1beta1.ConvertConditionsToMeta(infrastructurev1beta1.ConvertConditionsFromMeta([]metav1.Condition{c}))[0].Reason
+			out = append(out, c)
+		}
+	}
+	return out
 }
 
 func sampleExtendedMetadata() map[string]apiextensionsv1.JSON {
@@ -45,39 +74,72 @@ func sampleExtendedMetadata() map[string]apiextensionsv1.JSON {
 
 func OCIMachinePoolFuzzer(obj *OCIMachinePool, c randfill.Continue) {
 	c.FillNoCustom(obj)
-	// nil fields which have been removed so that tests dont fail
 	if obj.Spec.InstanceConfiguration.InstanceVnicConfiguration != nil {
 		obj.Spec.InstanceConfiguration.InstanceVnicConfiguration.NSGId = nil
 		obj.Spec.InstanceConfiguration.InstanceVnicConfiguration.SubnetId = nil
 	}
-	// Replace fuzzed bytes with valid JSON so the roundtrip works
 	obj.Spec.InstanceConfiguration.ExtendedMetadata = sampleExtendedMetadata()
 }
 
-func OCIMachinePoolHubFuzzer(obj *v1beta2.OCIMachinePool, c randfill.Continue) {
+func OCIMachinePoolHubFuzzer(obj *v1beta3.OCIMachinePool, c randfill.Continue) {
 	c.FillNoCustom(obj)
-	// Replace fuzzed bytes with valid JSON so the roundtrip works
 	obj.Spec.InstanceConfiguration.ExtendedMetadata = sampleExtendedMetadata()
+	obj.Status.Conditions = normalizeHubConditions(obj.Status.Conditions)
+}
+
+func OCIManagedMachinePoolHubFuzzer(obj *v1beta3.OCIManagedMachinePool, c randfill.Continue) {
+	c.FillNoCustom(obj)
+	obj.Status.Conditions = normalizeHubConditions(obj.Status.Conditions)
+}
+
+func OCIVirtualMachinePoolHubFuzzer(obj *v1beta3.OCIVirtualMachinePool, c randfill.Continue) {
+	c.FillNoCustom(obj)
+	obj.Status.Conditions = normalizeHubConditions(obj.Status.Conditions)
+}
+
+func OCIMachinePoolMachineHubFuzzer(obj *v1beta3.OCIMachinePoolMachine, c randfill.Continue) {
+	c.FillNoCustom(obj)
+	obj.Status.Conditions = normalizeHubConditions(obj.Status.Conditions)
 }
 
 func TestFuzzyConversion(t *testing.T) {
 	g := NewWithT(t)
 	scheme := runtime.NewScheme()
 	g.Expect(AddToScheme(scheme)).To(Succeed())
-	g.Expect(v1beta2.AddToScheme(scheme)).To(Succeed())
+	g.Expect(v1beta3.AddToScheme(scheme)).To(Succeed())
 
 	t.Run("for OCIMachinePool", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
 		Scheme:      scheme,
-		Hub:         &v1beta2.OCIMachinePool{},
+		Hub:         &v1beta3.OCIMachinePool{},
 		Spoke:       &OCIMachinePool{},
 		FuzzerFuncs: []fuzzer.FuzzerFuncs{fuzzFuncs},
 	}))
 
 	t.Run("for OCIManagedMachinePool", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
 		Scheme:      scheme,
-		Hub:         &v1beta2.OCIManagedMachinePool{},
+		Hub:         &v1beta3.OCIManagedMachinePool{},
 		Spoke:       &OCIManagedMachinePool{},
 		FuzzerFuncs: []fuzzer.FuzzerFuncs{fuzzFuncs},
 	}))
 
+	t.Run("for OCIManagedMachinePoolTemplate", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
+		Scheme:      scheme,
+		Hub:         &v1beta3.OCIManagedMachinePoolTemplate{},
+		Spoke:       &OCIManagedMachinePoolTemplate{},
+		FuzzerFuncs: []fuzzer.FuzzerFuncs{fuzzFuncs},
+	}))
+
+	t.Run("for OCIVirtualMachinePool", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
+		Scheme:      scheme,
+		Hub:         &v1beta3.OCIVirtualMachinePool{},
+		Spoke:       &OCIVirtualMachinePool{},
+		FuzzerFuncs: []fuzzer.FuzzerFuncs{fuzzFuncs},
+	}))
+
+	t.Run("for OCIMachinePoolMachine", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
+		Scheme:      scheme,
+		Hub:         &v1beta3.OCIMachinePoolMachine{},
+		Spoke:       &OCIMachinePoolMachine{},
+		FuzzerFuncs: []fuzzer.FuzzerFuncs{fuzzFuncs},
+	}))
 }

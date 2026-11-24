@@ -33,8 +33,6 @@ type OCIMachineTemplateResource struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:path=ocimachinetemplates,scope=Namespaced,categories=cluster-api
-// +kubebuilder:storageversion
-
 // OCIMachineTemplate is the schema for the OCI compute instance machine template.
 type OCIMachineTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -44,8 +42,6 @@ type OCIMachineTemplate struct {
 }
 
 // +kubebuilder:object:root=true
-// +kubebuilder:storageversion
-
 // OCIMachineTemplateList contains a list of OCIMachineTemplate.
 type OCIMachineTemplateList struct {
 	metav1.TypeMeta `json:",inline"`

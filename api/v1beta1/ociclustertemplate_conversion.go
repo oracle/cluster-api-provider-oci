@@ -17,24 +17,23 @@ limitations under the License.
 package v1beta1
 
 import (
-	"github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	"github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	utilconversion "sigs.k8s.io/cluster-api/util/conversion"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 )
 
-// ConvertTo converts the v1beta1 OCIClusterTemplate receiver to a v1beta2 OCIClusterTemplate.
 func (src *OCIClusterTemplate) ConvertTo(dstRaw conversion.Hub) error {
-	dst := dstRaw.(*v1beta2.OCIClusterTemplate)
-	if err := Convert_v1beta1_OCIClusterTemplate_To_v1beta2_OCIClusterTemplate(src, dst, nil); err != nil {
+	dst := dstRaw.(*v1beta3.OCIClusterTemplate)
+	if err := Convert_v1beta1_OCIClusterTemplate_To_v1beta3_OCIClusterTemplate(src, dst, nil); err != nil {
 		return err
 	}
 
-	// Manually restore data.
-	restored := &v1beta2.OCIClusterTemplate{}
+	restored := &v1beta3.OCIClusterTemplate{}
 	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
 		return err
 	}
 
+	dst.Spec.Template.ObjectMeta = restored.Spec.Template.ObjectMeta
 	dst.Spec.Template.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.Skip = restored.Spec.Template.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.Skip
 	dst.Spec.Template.Spec.NetworkSpec.Vcn.NATGateway.Skip = restored.Spec.Template.Spec.NetworkSpec.Vcn.NATGateway.Skip
 	dst.Spec.Template.Spec.NetworkSpec.Vcn.ServiceGateway.Skip = restored.Spec.Template.Spec.NetworkSpec.Vcn.ServiceGateway.Skip
@@ -46,27 +45,22 @@ func (src *OCIClusterTemplate) ConvertTo(dstRaw conversion.Hub) error {
 	return nil
 }
 
-// ConvertFrom converts the v1beta2 OCIClusterTemplate to a v1beta1 OCIClusterTemplate.
 func (dst *OCIClusterTemplate) ConvertFrom(srcRaw conversion.Hub) error {
-	src := srcRaw.(*v1beta2.OCIClusterTemplate)
+	src := srcRaw.(*v1beta3.OCIClusterTemplate)
 
-	if err := Convert_v1beta2_OCIClusterTemplate_To_v1beta1_OCIClusterTemplate(src, dst, nil); err != nil {
+	if err := Convert_v1beta3_OCIClusterTemplate_To_v1beta1_OCIClusterTemplate(src, dst, nil); err != nil {
 		return err
 	}
 
-	// Preserve Hub data on down-conversion except for metadata.
-	return utilconversion.MarshalData(src, dst)
+	return utilconversion.MarshalDataUnsafeNoCopy(src, dst)
 }
 
-// ConvertTo converts the v1beta1 OCIMachineTemplateList receiver to a v1beta2 OCIMachineTemplateList.
 func (src *OCIClusterTemplateList) ConvertTo(dstRaw conversion.Hub) error {
-	dst := dstRaw.(*v1beta2.OCIClusterTemplateList)
-	return Convert_v1beta1_OCIClusterTemplateList_To_v1beta2_OCIClusterTemplateList(src, dst, nil)
+	dst := dstRaw.(*v1beta3.OCIClusterTemplateList)
+	return Convert_v1beta1_OCIClusterTemplateList_To_v1beta3_OCIClusterTemplateList(src, dst, nil)
 }
 
-// ConvertFrom converts the v1beta2 OCIMachineTemplateList to a v1beta1 OCIMachineTemplateList.
 func (dst *OCIClusterTemplateList) ConvertFrom(srcRaw conversion.Hub) error {
-	src := srcRaw.(*v1beta2.OCIClusterTemplateList)
-
-	return Convert_v1beta2_OCIClusterTemplateList_To_v1beta1_OCIClusterTemplateList(src, dst, nil)
+	src := srcRaw.(*v1beta3.OCIClusterTemplateList)
+	return Convert_v1beta3_OCIClusterTemplateList_To_v1beta1_OCIClusterTemplateList(src, dst, nil)
 }

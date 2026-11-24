@@ -17,92 +17,80 @@ limitations under the License.
 package v1beta1
 
 import (
-	"github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	"github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	utilconversion "sigs.k8s.io/cluster-api/util/conversion"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 )
 
-// ConvertTo converts the v1beta1 OCIMachine receiver to a v1beta2 OCIMachine.
 func (src *OCIMachine) ConvertTo(dstRaw conversion.Hub) error {
-	dst := dstRaw.(*v1beta2.OCIMachine)
-	if err := Convert_v1beta1_OCIMachine_To_v1beta2_OCIMachine(src, dst, nil); err != nil {
+	dst := dstRaw.(*v1beta3.OCIMachine)
+	if err := Convert_v1beta1_OCIMachine_To_v1beta3_OCIMachine(src, dst, nil); err != nil {
 		return err
 	}
 
-	// Manually restore data.
-	restored := &v1beta2.OCIMachine{}
+	restored := &v1beta3.OCIMachine{}
 	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
 		return err
 	}
+	if restored.Status.Initialization.Provisioned != nil && !*restored.Status.Initialization.Provisioned && !src.Status.Ready {
+		dst.Status.Initialization.Provisioned = restored.Status.Initialization.Provisioned
+	}
+	dst.Status.FailureDomain = restored.Status.FailureDomain
+	restoreMetaConditions(dst.Status.Conditions, restored.Status.Conditions)
 
 	return nil
 }
 
-// ConvertFrom converts the v1beta2 OCIMachine to a v1beta1 OCIMachine.
 func (dst *OCIMachine) ConvertFrom(srcRaw conversion.Hub) error {
-	src := srcRaw.(*v1beta2.OCIMachine)
-	if err := Convert_v1beta2_OCIMachine_To_v1beta1_OCIMachine(src, dst, nil); err != nil {
+	src := srcRaw.(*v1beta3.OCIMachine)
+	if err := Convert_v1beta3_OCIMachine_To_v1beta1_OCIMachine(src, dst, nil); err != nil {
 		return err
 	}
-	// Preserve Hub data on down-conversion except for metadata.
-	return utilconversion.MarshalData(src, dst)
+	return utilconversion.MarshalDataUnsafeNoCopy(src, dst)
 }
 
-// ConvertTo converts the v1beta1 OCIMachineList receiver to a v1beta2 OCIMachineList.
 func (src *OCIMachineList) ConvertTo(dstRaw conversion.Hub) error {
-	dst := dstRaw.(*v1beta2.OCIMachineList)
-	return Convert_v1beta1_OCIMachineList_To_v1beta2_OCIMachineList(src, dst, nil)
+	dst := dstRaw.(*v1beta3.OCIMachineList)
+	return Convert_v1beta1_OCIMachineList_To_v1beta3_OCIMachineList(src, dst, nil)
 }
 
-// ConvertFrom converts the v1beta2 OCIMachineList to a v1beta1 OCIMachineList.
 func (dst *OCIMachineList) ConvertFrom(srcRaw conversion.Hub) error {
-	src := srcRaw.(*v1beta2.OCIMachineList)
-
-	return Convert_v1beta2_OCIMachineList_To_v1beta1_OCIMachineList(src, dst, nil)
+	src := srcRaw.(*v1beta3.OCIMachineList)
+	return Convert_v1beta3_OCIMachineList_To_v1beta1_OCIMachineList(src, dst, nil)
 }
 
-// ConvertTo converts the v1beta1 OCIMachineTemplate receiver to a v1beta2 OCIMachineTemplate.
 func (r *OCIMachineTemplate) ConvertTo(dstRaw conversion.Hub) error {
-	dst := dstRaw.(*v1beta2.OCIMachineTemplate)
+	dst := dstRaw.(*v1beta3.OCIMachineTemplate)
 
-	if err := Convert_v1beta1_OCIMachineTemplate_To_v1beta2_OCIMachineTemplate(r, dst, nil); err != nil {
+	if err := Convert_v1beta1_OCIMachineTemplate_To_v1beta3_OCIMachineTemplate(r, dst, nil); err != nil {
 		return err
 	}
 
-	// Manually restore data.
-	restored := &v1beta2.OCIMachineTemplate{}
+	restored := &v1beta3.OCIMachineTemplate{}
 	if ok, err := utilconversion.UnmarshalData(r, restored); err != nil || !ok {
 		return err
 	}
+	dst.Spec.Template.ObjectMeta = restored.Spec.Template.ObjectMeta
 
 	return nil
 }
 
-// ConvertFrom converts the v1beta2 OCIMachineTemplate receiver to a v1beta1 OCIMachineTemplate.
 func (r *OCIMachineTemplate) ConvertFrom(srcRaw conversion.Hub) error {
-	src := srcRaw.(*v1beta2.OCIMachineTemplate)
+	src := srcRaw.(*v1beta3.OCIMachineTemplate)
 
-	if err := Convert_v1beta2_OCIMachineTemplate_To_v1beta1_OCIMachineTemplate(src, r, nil); err != nil {
+	if err := Convert_v1beta3_OCIMachineTemplate_To_v1beta1_OCIMachineTemplate(src, r, nil); err != nil {
 		return err
 	}
 
-	// Preserve Hub data on down-conversion.
-	if err := utilconversion.MarshalData(src, r); err != nil {
-		return err
-	}
-
-	return nil
+	return utilconversion.MarshalDataUnsafeNoCopy(src, r)
 }
 
-// ConvertTo converts the v1beta1 OCIMachineTemplateList receiver to a v1beta2 OCIMachineTemplateList.
 func (src *OCIMachineTemplateList) ConvertTo(dstRaw conversion.Hub) error {
-	dst := dstRaw.(*v1beta2.OCIMachineTemplateList)
-	return Convert_v1beta1_OCIMachineTemplateList_To_v1beta2_OCIMachineTemplateList(src, dst, nil)
+	dst := dstRaw.(*v1beta3.OCIMachineTemplateList)
+	return Convert_v1beta1_OCIMachineTemplateList_To_v1beta3_OCIMachineTemplateList(src, dst, nil)
 }
 
-// ConvertFrom converts the v1beta2 OCIMachineTemplateList to a v1beta1 OCIMachineTemplateList.
 func (dst *OCIMachineTemplateList) ConvertFrom(srcRaw conversion.Hub) error {
-	src := srcRaw.(*v1beta2.OCIMachineTemplateList)
-
-	return Convert_v1beta2_OCIMachineTemplateList_To_v1beta1_OCIMachineTemplateList(src, dst, nil)
+	src := srcRaw.(*v1beta3.OCIMachineTemplateList)
+	return Convert_v1beta3_OCIMachineTemplateList_To_v1beta1_OCIMachineTemplateList(src, dst, nil)
 }

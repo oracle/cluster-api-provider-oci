@@ -17,19 +17,18 @@ limitations under the License.
 package v1beta1
 
 import (
-	"github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	"github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	utilconversion "sigs.k8s.io/cluster-api/util/conversion"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 )
 
-// ConvertTo converts the v1beta1 OCIManagedCluster receiver to a v1beta2 OCIManagedCluster.
 func (src *OCIManagedControlPlane) ConvertTo(dstRaw conversion.Hub) error {
-	dst := dstRaw.(*v1beta2.OCIManagedControlPlane)
-	if err := Convert_v1beta1_OCIManagedControlPlane_To_v1beta2_OCIManagedControlPlane(src, dst, nil); err != nil {
+	dst := dstRaw.(*v1beta3.OCIManagedControlPlane)
+	if err := Convert_v1beta1_OCIManagedControlPlane_To_v1beta3_OCIManagedControlPlane(src, dst, nil); err != nil {
 		return err
 	}
 
-	restored := &v1beta2.OCIManagedControlPlane{}
+	restored := &v1beta3.OCIManagedControlPlane{}
 	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
 		return err
 	}
@@ -37,40 +36,49 @@ func (src *OCIManagedControlPlane) ConvertTo(dstRaw conversion.Hub) error {
 	dst.Spec.Addons = restored.Spec.Addons
 	dst.Status.AddonStatus = restored.Status.AddonStatus
 
-	// Handle ClusterOption conversion
-	// Copy OpenIdConnectDiscovery if present
 	if restored.Spec.ClusterOption.OpenIdConnectDiscovery != nil {
 		if dst.Spec.ClusterOption.OpenIdConnectDiscovery == nil {
-			dst.Spec.ClusterOption.OpenIdConnectDiscovery = &v1beta2.OpenIDConnectDiscovery{}
+			dst.Spec.ClusterOption.OpenIdConnectDiscovery = &v1beta3.OpenIDConnectDiscovery{}
 		}
 		dst.Spec.ClusterOption.OpenIdConnectDiscovery.IsOpenIdConnectDiscoveryEnabled =
 			restored.Spec.ClusterOption.OpenIdConnectDiscovery.IsOpenIdConnectDiscoveryEnabled
 	}
 
-	// Copy OpenIdConnectTokenAuthenticationConfig if present
 	if restored.Spec.ClusterOption.OpenIdConnectTokenAuthenticationConfig != nil {
 		if dst.Spec.ClusterOption.OpenIdConnectTokenAuthenticationConfig == nil {
-			dst.Spec.ClusterOption.OpenIdConnectTokenAuthenticationConfig = &v1beta2.OpenIDConnectTokenAuthenticationConfig{}
+			dst.Spec.ClusterOption.OpenIdConnectTokenAuthenticationConfig = &v1beta3.OpenIDConnectTokenAuthenticationConfig{}
 		}
 		*dst.Spec.ClusterOption.OpenIdConnectTokenAuthenticationConfig =
 			*restored.Spec.ClusterOption.OpenIdConnectTokenAuthenticationConfig
 	}
 
+	if restored.Status.Initialization.ControlPlaneInitialized != nil && !*restored.Status.Initialization.ControlPlaneInitialized && !src.Status.Initialized && !src.Status.Ready {
+		dst.Status.Initialization.ControlPlaneInitialized = restored.Status.Initialization.ControlPlaneInitialized
+	}
+	if len(restored.Status.Versions) > 0 && src.Status.Version != nil && *src.Status.Version != "" && restored.Status.Versions[0].Version == *src.Status.Version {
+		dst.Status.Versions = restored.Status.Versions
+	}
+	restoreMetaConditions(dst.Status.Conditions, restored.Status.Conditions)
+
 	return nil
 }
 
-// ConvertFrom converts receiver to a v1beta2 OCIManagedControlPlane.
 func (r *OCIManagedControlPlane) ConvertFrom(srcRaw conversion.Hub) error {
-	src := srcRaw.(*v1beta2.OCIManagedControlPlane)
+	src := srcRaw.(*v1beta3.OCIManagedControlPlane)
 
-	if err := Convert_v1beta2_OCIManagedControlPlane_To_v1beta1_OCIManagedControlPlane(src, r, nil); err != nil {
+	if err := Convert_v1beta3_OCIManagedControlPlane_To_v1beta1_OCIManagedControlPlane(src, r, nil); err != nil {
 		return err
 	}
 
-	// Preserve Hub data on down-conversion.
-	if err := utilconversion.MarshalData(src, r); err != nil {
-		return err
-	}
+	return utilconversion.MarshalDataUnsafeNoCopy(src, r)
+}
 
-	return nil
+func (src *OCIManagedControlPlaneList) ConvertTo(dstRaw conversion.Hub) error {
+	dst := dstRaw.(*v1beta3.OCIManagedControlPlaneList)
+	return Convert_v1beta1_OCIManagedControlPlaneList_To_v1beta3_OCIManagedControlPlaneList(src, dst, nil)
+}
+
+func (r *OCIManagedControlPlaneList) ConvertFrom(srcRaw conversion.Hub) error {
+	src := srcRaw.(*v1beta3.OCIManagedControlPlaneList)
+	return Convert_v1beta3_OCIManagedControlPlaneList_To_v1beta1_OCIManagedControlPlaneList(src, r, nil)
 }

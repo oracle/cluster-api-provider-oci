@@ -17,40 +17,47 @@ limitations under the License.
 package v1beta1
 
 import (
-	"github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
+	"github.com/oracle/cluster-api-provider-oci/exp/api/v1beta3"
 	utilconversion "sigs.k8s.io/cluster-api/util/conversion"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 )
 
-// ConvertTo converts the v1beta1 OCIManagedMachinePool receiver to a v1beta2 OCIManagedMachinePool.
 func (src *OCIManagedMachinePool) ConvertTo(dstRaw conversion.Hub) error {
-	dst := dstRaw.(*v1beta2.OCIManagedMachinePool)
+	dst := dstRaw.(*v1beta3.OCIManagedMachinePool)
 
-	if err := Convert_v1beta1_OCIManagedMachinePool_To_v1beta2_OCIManagedMachinePool(src, dst, nil); err != nil {
+	if err := Convert_v1beta1_OCIManagedMachinePool_To_v1beta3_OCIManagedMachinePool(src, dst, nil); err != nil {
 		return err
 	}
 
-	restored := &v1beta2.OCIManagedMachinePool{}
+	restored := &v1beta3.OCIManagedMachinePool{}
 	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
 		return err
 	}
 	dst.Spec.NodePoolCyclingDetails = restored.Spec.NodePoolCyclingDetails
+	if restored.Status.Initialization.Provisioned != nil && !*restored.Status.Initialization.Provisioned && !src.Status.Ready {
+		dst.Status.Initialization.Provisioned = restored.Status.Initialization.Provisioned
+	}
+	restoreMetaConditions(dst.Status.Conditions, restored.Status.Conditions)
 
 	return nil
 }
 
-// ConvertFrom converts receiver to a v1beta2 OCIManagedMachinePool.
 func (r *OCIManagedMachinePool) ConvertFrom(srcRaw conversion.Hub) error {
-	src := srcRaw.(*v1beta2.OCIManagedMachinePool)
+	src := srcRaw.(*v1beta3.OCIManagedMachinePool)
 
-	if err := Convert_v1beta2_OCIManagedMachinePool_To_v1beta1_OCIManagedMachinePool(src, r, nil); err != nil {
+	if err := Convert_v1beta3_OCIManagedMachinePool_To_v1beta1_OCIManagedMachinePool(src, r, nil); err != nil {
 		return err
 	}
 
-	// Preserve Hub data on down-conversion.
-	if err := utilconversion.MarshalData(src, r); err != nil {
-		return err
-	}
+	return utilconversion.MarshalDataUnsafeNoCopy(src, r)
+}
 
-	return nil
+func (src *OCIManagedMachinePoolList) ConvertTo(dstRaw conversion.Hub) error {
+	dst := dstRaw.(*v1beta3.OCIManagedMachinePoolList)
+	return Convert_v1beta1_OCIManagedMachinePoolList_To_v1beta3_OCIManagedMachinePoolList(src, dst, nil)
+}
+
+func (r *OCIManagedMachinePoolList) ConvertFrom(srcRaw conversion.Hub) error {
+	src := srcRaw.(*v1beta3.OCIManagedMachinePoolList)
+	return Convert_v1beta3_OCIManagedMachinePoolList_To_v1beta1_OCIManagedMachinePoolList(src, r, nil)
 }

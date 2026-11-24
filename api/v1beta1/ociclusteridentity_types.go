@@ -19,7 +19,6 @@ package v1beta1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 )
 
 type PrincipalType string
@@ -73,7 +72,7 @@ type AllowedNamespaces struct {
 type OCIClusterIdentityStatus struct {
 	// Conditions defines current service state of the OCIClusterIdentity.
 	// +optional
-	Conditions clusterv1beta1.Conditions `json:"conditions,omitempty"`
+	Conditions Conditions `json:"conditions,omitempty"`
 }
 
 //+kubebuilder:object:root=true

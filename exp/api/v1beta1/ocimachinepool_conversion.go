@@ -17,40 +17,46 @@ limitations under the License.
 package v1beta1
 
 import (
-	"github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
+	"github.com/oracle/cluster-api-provider-oci/exp/api/v1beta3"
 	utilconversion "sigs.k8s.io/cluster-api/util/conversion"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 )
 
-// ConvertTo converts the v1beta1 OCIMachinePool receiver to a v1beta2 OCIMachinePool.
 func (src *OCIMachinePool) ConvertTo(dstRaw conversion.Hub) error {
-	dst := dstRaw.(*v1beta2.OCIMachinePool)
+	dst := dstRaw.(*v1beta3.OCIMachinePool)
 
-	if err := Convert_v1beta1_OCIMachinePool_To_v1beta2_OCIMachinePool(src, dst, nil); err != nil {
+	if err := Convert_v1beta1_OCIMachinePool_To_v1beta3_OCIMachinePool(src, dst, nil); err != nil {
 		return err
 	}
 
-	// Manually restore data.
-	restored := &v1beta2.OCIMachinePool{}
+	restored := &v1beta3.OCIMachinePool{}
 	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
 		return err
 	}
+	if restored.Status.Initialization.Provisioned != nil && !*restored.Status.Initialization.Provisioned && !src.Status.Ready {
+		dst.Status.Initialization.Provisioned = restored.Status.Initialization.Provisioned
+	}
+	restoreMetaConditions(dst.Status.Conditions, restored.Status.Conditions)
 
 	return nil
 }
 
-// ConvertFrom converts receiver to a v1beta2 OCIManagedMachinePool.
 func (r *OCIMachinePool) ConvertFrom(srcRaw conversion.Hub) error {
-	src := srcRaw.(*v1beta2.OCIMachinePool)
+	src := srcRaw.(*v1beta3.OCIMachinePool)
 
-	if err := Convert_v1beta2_OCIMachinePool_To_v1beta1_OCIMachinePool(src, r, nil); err != nil {
+	if err := Convert_v1beta3_OCIMachinePool_To_v1beta1_OCIMachinePool(src, r, nil); err != nil {
 		return err
 	}
 
-	// Preserve Hub data on down-conversion.
-	if err := utilconversion.MarshalData(src, r); err != nil {
-		return err
-	}
+	return utilconversion.MarshalDataUnsafeNoCopy(src, r)
+}
 
-	return nil
+func (src *OCIMachinePoolList) ConvertTo(dstRaw conversion.Hub) error {
+	dst := dstRaw.(*v1beta3.OCIMachinePoolList)
+	return Convert_v1beta1_OCIMachinePoolList_To_v1beta3_OCIMachinePoolList(src, dst, nil)
+}
+
+func (r *OCIMachinePoolList) ConvertFrom(srcRaw conversion.Hub) error {
+	src := srcRaw.(*v1beta3.OCIMachinePoolList)
+	return Convert_v1beta3_OCIMachinePoolList_To_v1beta1_OCIMachinePoolList(src, r, nil)
 }

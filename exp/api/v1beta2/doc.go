@@ -14,5 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// +k8s:conversion-gen=github.com/oracle/cluster-api-provider-oci/exp/api/v1beta3
 // +groupName=infrastructure.cluster.x-k8s.io
 package v1beta2

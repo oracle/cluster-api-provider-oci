@@ -27,8 +27,6 @@ type OCIManagedMachinePoolTemplateSpec struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:path=ocimanagedmachinepooltemplates,scope=Namespaced,categories=cluster-api
-// +kubebuilder:storageversion
-
 // OCIManagedMachinePoolTemplate is the Schema for the OCIManagedMachinePoolTemplates API.
 type OCIManagedMachinePoolTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -38,8 +36,6 @@ type OCIManagedMachinePoolTemplate struct {
 }
 
 // +kubebuilder:object:root=true
-// +kubebuilder:storageversion
-
 // OCIManagedMachinePoolTemplateList contains a list of OCIManagedMachinePoolTemplate.
 type OCIManagedMachinePoolTemplateList struct {
 	metav1.TypeMeta `json:",inline"`
