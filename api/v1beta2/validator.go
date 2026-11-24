@@ -365,8 +365,11 @@ func validateSubnetCIDR(subnetCidr string, vcnCidr string, fldPath *field.Path) 
 			allErrs = append(allErrs, field.Invalid(fldPath, subnetCidr, "invalid CIDR format"))
 		}
 
-		// Check subnet is in vcnCidr if vcnCidr is set
-		if len(vcnCidr) > 0 {
+		// Check subnet is in vcnCidr if vcnCidr is set. Skip this when the subnet CIDR
+		// itself failed to parse, otherwise subnetCidrIP is nil and the containment check
+		// always fails, producing a misleading "not in VCN address space" error on top of
+		// the real "invalid CIDR format" error.
+		if err == nil && len(vcnCidr) > 0 {
 			var vcnNetwork *net.IPNet
 			if _, parseNetwork, err := net.ParseCIDR(vcnCidr); err == nil {
 				vcnNetwork = parseNetwork
