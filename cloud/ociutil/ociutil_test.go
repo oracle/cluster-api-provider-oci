@@ -17,12 +17,19 @@
 package ociutil
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
+	"strings"
 	"testing"
 
+	"github.com/golang/mock/gomock"
+	"github.com/oracle/cluster-api-provider-oci/cloud/services/networkloadbalancer/mock_nlb"
+	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
+	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
 )
 
 func TestGetCloudProviderConfig(t *testing.T) {
@@ -151,4 +158,45 @@ func (f fakeServiceError) GetCode() string {
 
 func (f fakeServiceError) GetOpcRequestID() string {
 	return ""
+}
+
+func TestAwaitNLBWorkRequestPreservesListWorkRequestErrorsError(t *testing.T) {
+	nlbClient := mock_nlb.NewMockNetworkLoadBalancerClient(gomock.NewController(t))
+	workRequestID := common.String("work-request-id")
+	compartmentID := common.String("compartment-id")
+	requestID := "test-opc-request-id"
+	originalErr := errors.New("ListWorkRequestErrors failed, opc-request-id: " + requestID)
+
+	nlbClient.EXPECT().GetWorkRequest(gomock.Any(), networkloadbalancer.GetWorkRequestRequest{
+		WorkRequestId: workRequestID,
+	}).Return(networkloadbalancer.GetWorkRequestResponse{
+		WorkRequest: networkloadbalancer.WorkRequest{
+			Status:        networkloadbalancer.OperationStatusFailed,
+			CompartmentId: compartmentID,
+		},
+	}, nil)
+	nlbClient.EXPECT().ListWorkRequestErrors(gomock.Any(), networkloadbalancer.ListWorkRequestErrorsRequest{
+		WorkRequestId: workRequestID,
+		CompartmentId: compartmentID,
+	}).Return(networkloadbalancer.ListWorkRequestErrorsResponse{}, originalErr)
+
+	result, err := AwaitNLBWorkRequest(context.Background(), nlbClient, workRequestID)
+	if result != nil {
+		t.Errorf("expected nil work request, got %v", result)
+	}
+	if !errors.Is(err, originalErr) {
+		t.Errorf("expected original ListWorkRequestErrors error, got %v", err)
+	}
+	if err == nil {
+		t.Fatal("expected an error")
+	}
+	for _, expected := range []string{
+		fmt.Sprintf("WorkRequest %s failed", *workRequestID),
+		requestID,
+		"Failed to fetch the work-request-errors using nlb client",
+	} {
+		if !strings.Contains(err.Error(), expected) {
+			t.Errorf("expected error to contain %q, got %v", expected, err)
+		}
+	}
 }
