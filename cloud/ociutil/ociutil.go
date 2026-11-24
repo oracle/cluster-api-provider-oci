@@ -88,7 +88,7 @@ func AwaitNLBWorkRequest(ctx context.Context, networkLoadBalancerClient nlb.Netw
 			final_err := errors.Errorf("WorkRequest %s failed", *workRequestId)
 			wresp, err := networkLoadBalancerClient.ListWorkRequestErrors(ctx, wreq)
 			if err != nil {
-				return false, errors.Wrap(final_err, "Failed to fetch the work-request-errors using nlb client")
+				return false, errors.Wrapf(err, "WorkRequest %s failed; Failed to fetch the work-request-errors using nlb client", *workRequestId)
 			}
 			for _, wr_err := range wresp.WorkRequestErrorCollection.Items {
 				final_err = errors.Wrapf(final_err, "%s: %s", *wr_err.Code, *wr_err.Message)
