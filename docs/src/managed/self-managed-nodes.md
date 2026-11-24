@@ -11,7 +11,7 @@ Use the template `cluster-template-managed-self-managed-nodes.yaml` as an exampl
 with a self managed CAPI machine deployment. Self managed nodes are only supported if flannel
 is used as CNI provider. The following snippet shows the relevant part of the template.
 ```yaml
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 kind: OCIMachineTemplate
 metadata:
   name: "${CLUSTER_NAME}-md-0"
@@ -20,7 +20,7 @@ spec:
     spec:
       imageId: "${OCI_MANAGED_NODE_IMAGE_ID}"
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachineDeployment
 metadata:
   name: "${CLUSTER_NAME}-md-0"
@@ -28,7 +28,7 @@ spec:
   clusterName: "${CLUSTER_NAME}"
   replicas: ${WORKER_MACHINE_COUNT}
   selector:
-    matchLabels:
+    matchLabels: {}
   template:
     spec:
       clusterName: "${CLUSTER_NAME}"
@@ -37,7 +37,7 @@ spec:
         dataSecretName: "${CLUSTER_NAME}-self-managed"
       infrastructureRef:
         name: "${CLUSTER_NAME}-md-0"
-        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        apiGroup: infrastructure.cluster.x-k8s.io
         kind: OCIMachineTemplate
 ```
 Note that CAPOCI will populate a bootstrap secret with the relevant [cloud-init][cloud-init] script required 
@@ -49,26 +49,26 @@ for the node to join the OKE cluster
 The following snippet can be used to create self managed OKE nodes backed by OCI Instance Pool[instance-pool].
 ```yaml
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachinePool
 metadata:
   name: "${CLUSTER_NAME}-mp-0"
   namespace: default
 spec:
   clusterName: "${CLUSTER_NAME}"
-  replicas: "${WORKER_MACHINE_COUNT}"
+  replicas: ${WORKER_MACHINE_COUNT}
   template:
     spec:
       bootstrap:
         dataSecretName: "${CLUSTER_NAME}-self-managed"
       clusterName: "${CLUSTER_NAME}"
       infrastructureRef:
-        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        apiGroup: infrastructure.cluster.x-k8s.io
         kind: OCIMachinePool
         name: "${CLUSTER_NAME}-mp-0"
       version: "${KUBERNETES_VERSION}"
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 kind: OCIMachinePool
 metadata:
   name: "${CLUSTER_NAME}-mp-0"

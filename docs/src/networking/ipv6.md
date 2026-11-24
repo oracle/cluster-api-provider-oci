@@ -14,7 +14,7 @@ In order to have a VM created with IPv6 Ip assigned you should have the followin
 * example:
 ```yaml
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 kind: OCICluster
 metadata:
   labels:
@@ -53,7 +53,7 @@ spec:
 * example: 
 ```yaml
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 kind: OCIMachineTemplate
 metadata:
   name: "${CLUSTER_NAME}-md-0"

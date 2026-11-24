@@ -25,7 +25,7 @@ just the new Linux machines.
 Create a file and call it `cluster-template-windows-calico-heterogeneous.yaml`. Then add the following:
 
 ```yaml
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 kind: OCIMachineTemplate
 metadata:
   name: "${CLUSTER_NAME}-md-0"
@@ -41,7 +41,7 @@ spec:
         ssh_authorized_keys: "${OCI_SSH_KEY}"
       isPvEncryptionInTransitEnabled: ${OCI_NODE_PV_TRANSIT_ENCRYPTION=true}
 ---
-apiVersion: bootstrap.cluster.x-k8s.io/v1alpha4
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta2
 kind: KubeadmConfigTemplate
 metadata:
   name: "${CLUSTER_NAME}-md-0"
@@ -51,10 +51,12 @@ spec:
       joinConfiguration:
         nodeRegistration:
           kubeletExtraArgs:
-            cloud-provider: external
-            provider-id: oci://{{ ds["id"] }}
+            - name: cloud-provider
+              value: external
+            - name: provider-id
+              value: 'oci://{{ ds["id"] }}'
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachineDeployment
 metadata:
   name: "${CLUSTER_NAME}-md-0"
@@ -62,7 +64,7 @@ spec:
   clusterName: "${CLUSTER_NAME}"
   replicas: ${NODE_MACHINE_COUNT}
   selector:
-    matchLabels:
+    matchLabels: {}
   template:
     spec:
       clusterName: "${CLUSTER_NAME}"
@@ -70,11 +72,11 @@ spec:
       bootstrap:
         configRef:
           name: "${CLUSTER_NAME}-md-0"
-          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+          apiGroup: bootstrap.cluster.x-k8s.io
           kind: KubeadmConfigTemplate
       infrastructureRef:
         name: "${CLUSTER_NAME}-md-0"
-        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        apiGroup: infrastructure.cluster.x-k8s.io
         kind: OCIMachineTemplate
 ```
 
