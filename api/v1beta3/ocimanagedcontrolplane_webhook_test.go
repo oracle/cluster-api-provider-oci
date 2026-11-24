@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta2
+package v1beta3
 
 import (
 	"context"
@@ -26,10 +26,8 @@ import (
 
 	"github.com/onsi/gomega"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 )
 
 func TestOCIManagedControlPlane_CreateDefault(t *testing.T) {
@@ -221,8 +219,8 @@ func TestOCIManagedControlPlaneWebhook_ValidateDelete(t *testing.T) {
 }
 
 func TestOCIManagedControlPlane_GetConditions(t *testing.T) {
-	want := clusterv1beta1.Conditions{
-		{Type: "Ready", Status: corev1.ConditionTrue},
+	want := []metav1.Condition{
+		{Type: "Ready", Status: metav1.ConditionTrue},
 	}
 	c := &OCIManagedControlPlane{
 		Status: OCIManagedControlPlaneStatus{
@@ -237,8 +235,8 @@ func TestOCIManagedControlPlane_GetConditions(t *testing.T) {
 }
 
 func TestOCIManagedControlPlane_SetConditions(t *testing.T) {
-	cond := clusterv1beta1.Conditions{
-		{Type: "Updated", Status: corev1.ConditionFalse},
+	cond := []metav1.Condition{
+		{Type: "Updated", Status: metav1.ConditionFalse},
 	}
 	c := &OCIManagedControlPlane{}
 

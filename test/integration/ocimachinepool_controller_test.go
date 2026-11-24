@@ -23,15 +23,15 @@ import (
 	"time"
 
 	. "github.com/onsi/gomega"
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
-	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
+	infrav3exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta3"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
-	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -52,9 +52,9 @@ func TestOCIMachinePoolLifecycle(t *testing.T) {
 
 	ociCluster := instancePoolOCICluster(cluster)
 	g.Expect(testEnvironment.Create(testContext, ociCluster)).To(Succeed())
-	storedOCICluster := &infrastructurev1beta2.OCICluster{}
+	storedOCICluster := &infrastructurev1beta3.OCICluster{}
 	g.Expect(testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(ociCluster), storedOCICluster)).To(Succeed())
-	storedOCICluster.Status.Ready = true
+	storedOCICluster.Status.Initialization.Provisioned = common.Bool(true)
 	g.Expect(testEnvironment.Status().Update(testContext, storedOCICluster)).To(Succeed())
 
 	bootstrapSecret := &corev1.Secret{
@@ -69,7 +69,7 @@ func TestOCIMachinePoolLifecycle(t *testing.T) {
 	g.Expect(testEnvironment.Create(testContext, ociMachinePool)).To(Succeed())
 
 	t.Cleanup(func() {
-		machines := &infrav2exp.OCIMachinePoolMachineList{}
+		machines := &infrav3exp.OCIMachinePoolMachineList{}
 		if err := testEnvironment.GetAPIReader().List(testContext, machines, client.InNamespace(namespace.Name)); err == nil {
 			for i := range machines.Items {
 				deleteAndIgnoreNotFound(t, &machines.Items[i])
@@ -99,7 +99,7 @@ func TestOCIMachinePoolLifecycle(t *testing.T) {
 	waitForInstanceMachinePool(t, ociMachinePoolKey, 3, 3, 3, 1, 1, 1)
 
 	g.Eventually(func() error {
-		stored := &infrav2exp.OCIMachinePool{}
+		stored := &infrav3exp.OCIMachinePool{}
 		if err := testEnvironment.GetAPIReader().Get(testContext, ociMachinePoolKey, stored); err != nil {
 			return err
 		}
@@ -158,7 +158,7 @@ func TestOCIMachinePoolLifecycle(t *testing.T) {
 		g.Expect(pools).To(BeZero())
 		g.Expect(configDeletes).To(Equal(2))
 		g.Expect(poolTerminates).To(Equal(1))
-		err := testEnvironment.GetAPIReader().Get(testContext, ociMachinePoolKey, &infrav2exp.OCIMachinePool{})
+		err := testEnvironment.GetAPIReader().Get(testContext, ociMachinePoolKey, &infrav3exp.OCIMachinePool{})
 		g.Expect(apierrors.IsNotFound(err)).To(BeTrue(), "expected OCI machine-pool deletion, got %v", err)
 	}).WithTimeout(20 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
 }
@@ -169,7 +169,7 @@ func instancePoolCAPICluster(namespace string) *clusterv1.Cluster {
 		Spec: clusterv1.ClusterSpec{
 			Paused: common.Bool(true),
 			InfrastructureRef: clusterv1.ContractVersionedObjectReference{
-				APIGroup: infrastructurev1beta2.GroupVersion.Group,
+				APIGroup: infrastructurev1beta3.GroupVersion.Group,
 				Kind:     scope.OCIClusterKind,
 				Name:     "instance-pool",
 			},
@@ -177,28 +177,28 @@ func instancePoolCAPICluster(namespace string) *clusterv1.Cluster {
 	}
 }
 
-func instancePoolOCICluster(cluster *clusterv1.Cluster) *infrastructurev1beta2.OCICluster {
-	network := infrastructurev1beta2.NetworkSpec{
-		Vcn: infrastructurev1beta2.VCN{
+func instancePoolOCICluster(cluster *clusterv1.Cluster) *infrastructurev1beta3.OCICluster {
+	network := infrastructurev1beta3.NetworkSpec{
+		Vcn: infrastructurev1beta3.VCN{
 			ID:   common.String("ocid1.vcn.oc1..instance-pool"),
 			CIDR: "10.0.0.0/16",
-			Subnets: []*infrastructurev1beta2.Subnet{
-				{Role: infrastructurev1beta2.ControlPlaneEndpointRole, Name: "control-plane-endpoint", ID: common.String("ocid1.subnet.oc1..instance-pool-1"), CIDR: "10.0.0.0/28", Type: infrastructurev1beta2.Public},
-				{Role: infrastructurev1beta2.ControlPlaneRole, Name: "control-plane", ID: common.String("ocid1.subnet.oc1..instance-pool-2"), CIDR: "10.0.1.0/24", Type: infrastructurev1beta2.Private},
-				{Role: infrastructurev1beta2.ServiceLoadBalancerRole, Name: "service-lb", ID: common.String("ocid1.subnet.oc1..instance-pool-3"), CIDR: "10.0.2.0/24", Type: infrastructurev1beta2.Public},
-				{Role: infrastructurev1beta2.WorkerRole, Name: "worker", ID: common.String("ocid1.subnet.oc1..instance-pool-4"), CIDR: "10.0.3.0/24", Type: infrastructurev1beta2.Private},
+			Subnets: []*infrastructurev1beta3.Subnet{
+				{Role: infrastructurev1beta3.ControlPlaneEndpointRole, Name: "control-plane-endpoint", ID: common.String("ocid1.subnet.oc1..instance-pool-1"), CIDR: "10.0.0.0/28", Type: infrastructurev1beta3.Public},
+				{Role: infrastructurev1beta3.ControlPlaneRole, Name: "control-plane", ID: common.String("ocid1.subnet.oc1..instance-pool-2"), CIDR: "10.0.1.0/24", Type: infrastructurev1beta3.Private},
+				{Role: infrastructurev1beta3.ServiceLoadBalancerRole, Name: "service-lb", ID: common.String("ocid1.subnet.oc1..instance-pool-3"), CIDR: "10.0.2.0/24", Type: infrastructurev1beta3.Public},
+				{Role: infrastructurev1beta3.WorkerRole, Name: "worker", ID: common.String("ocid1.subnet.oc1..instance-pool-4"), CIDR: "10.0.3.0/24", Type: infrastructurev1beta3.Private},
 			},
-			NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
-				List: []*infrastructurev1beta2.NSG{
-					{Role: infrastructurev1beta2.ControlPlaneEndpointRole, Name: "control-plane-endpoint", ID: common.String("ocid1.networksecuritygroup.oc1..instance-pool-1")},
-					{Role: infrastructurev1beta2.ControlPlaneRole, Name: "control-plane", ID: common.String("ocid1.networksecuritygroup.oc1..instance-pool-2")},
-					{Role: infrastructurev1beta2.ServiceLoadBalancerRole, Name: "service-lb", ID: common.String("ocid1.networksecuritygroup.oc1..instance-pool-3")},
-					{Role: infrastructurev1beta2.WorkerRole, Name: "worker", ID: common.String("ocid1.networksecuritygroup.oc1..instance-pool-4")},
+			NetworkSecurityGroup: infrastructurev1beta3.NetworkSecurityGroup{
+				List: []*infrastructurev1beta3.NSG{
+					{Role: infrastructurev1beta3.ControlPlaneEndpointRole, Name: "control-plane-endpoint", ID: common.String("ocid1.networksecuritygroup.oc1..instance-pool-1")},
+					{Role: infrastructurev1beta3.ControlPlaneRole, Name: "control-plane", ID: common.String("ocid1.networksecuritygroup.oc1..instance-pool-2")},
+					{Role: infrastructurev1beta3.ServiceLoadBalancerRole, Name: "service-lb", ID: common.String("ocid1.networksecuritygroup.oc1..instance-pool-3")},
+					{Role: infrastructurev1beta3.WorkerRole, Name: "worker", ID: common.String("ocid1.networksecuritygroup.oc1..instance-pool-4")},
 				},
 			},
 		},
 	}
-	return &infrastructurev1beta2.OCICluster{
+	return &infrastructurev1beta3.OCICluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cluster.Name,
 			Namespace: cluster.Namespace,
@@ -211,12 +211,12 @@ func instancePoolOCICluster(cluster *clusterv1.Cluster) *infrastructurev1beta2.O
 				*metav1.NewControllerRef(cluster, clusterv1.GroupVersion.WithKind("Cluster")),
 			},
 		},
-		Spec: infrastructurev1beta2.OCIClusterSpec{
+		Spec: infrastructurev1beta3.OCIClusterSpec{
 			OCIResourceIdentifier: "instance-pool-integration",
 			CompartmentId:         "ocid1.compartment.oc1..integration",
 			Region:                scope.MockTestRegion,
 			NetworkSpec:           network,
-			AvailabilityDomains: map[string]infrastructurev1beta2.OCIAvailabilityDomain{
+			AvailabilityDomains: map[string]infrastructurev1beta3.OCIAvailabilityDomain{
 				"integration-ad-1": {
 					Name:         "integration-ad-1",
 					FaultDomains: []string{"FAULT-DOMAIN-1", "FAULT-DOMAIN-2", "FAULT-DOMAIN-3"},
@@ -243,7 +243,7 @@ func instanceCAPIMachinePool(cluster *clusterv1.Cluster, bootstrapSecret string,
 						DataSecretName: common.String(bootstrapSecret),
 					},
 					InfrastructureRef: clusterv1.ContractVersionedObjectReference{
-						APIGroup: infrastructurev1beta2.GroupVersion.Group,
+						APIGroup: infrastructurev1beta3.GroupVersion.Group,
 						Kind:     scope.OCIMachinePoolKind,
 						Name:     "instance-pool-workers",
 					},
@@ -253,8 +253,8 @@ func instanceCAPIMachinePool(cluster *clusterv1.Cluster, bootstrapSecret string,
 	}
 }
 
-func instanceInfrastructureMachinePool(machinePool *clusterv1.MachinePool, clusterName string) *infrav2exp.OCIMachinePool {
-	return &infrav2exp.OCIMachinePool{
+func instanceInfrastructureMachinePool(machinePool *clusterv1.MachinePool, clusterName string) *infrav3exp.OCIMachinePool {
+	return &infrav3exp.OCIMachinePool{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      machinePool.Name,
 			Namespace: machinePool.Namespace,
@@ -263,14 +263,14 @@ func instanceInfrastructureMachinePool(machinePool *clusterv1.MachinePool, clust
 				*metav1.NewControllerRef(machinePool, clusterv1.GroupVersion.WithKind("MachinePool")),
 			},
 		},
-		Spec: infrav2exp.OCIMachinePoolSpec{
-			InstanceConfiguration: infrav2exp.InstanceConfiguration{
+		Spec: infrav3exp.OCIMachinePoolSpec{
+			InstanceConfiguration: infrav3exp.InstanceConfiguration{
 				Shape: common.String("VM.Standard.E4.Flex"),
-				ShapeConfig: &infrav2exp.ShapeConfig{
+				ShapeConfig: &infrav3exp.ShapeConfig{
 					Ocpus:       common.String("1"),
 					MemoryInGBs: common.String("16"),
 				},
-				InstanceSourceViaImageDetails: &infrav2exp.InstanceSourceViaImageConfig{
+				InstanceSourceViaImageDetails: &infrav3exp.InstanceSourceViaImageConfig{
 					ImageId:             common.String("ocid1.image.oc1..instance-pool-v1"),
 					BootVolumeSizeInGBs: common.Int64(50),
 				},
@@ -294,9 +294,9 @@ func waitForInstanceMachinePool(t *testing.T, key client.ObjectKey, replicas, ma
 		g.Expect(poolSize).To(Equal(replicas))
 		g.Expect(configurationID).NotTo(BeEmpty())
 
-		stored := &infrav2exp.OCIMachinePool{}
+		stored := &infrav3exp.OCIMachinePool{}
 		g.Expect(testEnvironment.GetAPIReader().Get(testContext, key, stored)).To(Succeed())
-		g.Expect(controllerutil.ContainsFinalizer(stored, infrav2exp.MachinePoolFinalizer)).To(BeTrue())
+		g.Expect(controllerutil.ContainsFinalizer(stored, infrav3exp.MachinePoolFinalizer)).To(BeTrue())
 		g.Expect(stored.Spec.OCID).NotTo(BeNil())
 		g.Expect(stored.Spec.ProviderID).NotTo(BeNil())
 		g.Expect(stored.Spec.InstanceConfiguration.InstanceConfigurationId).NotTo(BeNil())
@@ -304,12 +304,12 @@ func waitForInstanceMachinePool(t *testing.T, key client.ObjectKey, replicas, ma
 		g.Expect(stored.Spec.ProviderIDList).To(HaveLen(replicas))
 		g.Expect(stored.Annotations[scope.InstanceConfigurationHashAnnotation]).NotTo(BeEmpty())
 		g.Expect(stored.Annotations[scope.BootstrapDataHashAnnotation]).NotTo(BeEmpty())
-		g.Expect(stored.Status.Ready).To(BeTrue())
+		g.Expect(stored.Status.Initialization.Provisioned).To(Equal(common.Bool(true)))
 		g.Expect(stored.Status.Replicas).To(Equal(int32(statusReplicas)))
 		g.Expect(stored.Status.InfrastructureMachineKind).To(Equal("OCIMachinePoolMachine"))
-		g.Expect(v1beta1conditions.IsTrue(stored, infrav2exp.InstancePoolReadyCondition)).To(BeTrue())
+		g.Expect(conditions.IsTrue(stored, infrav3exp.InstancePoolReadyCondition)).To(BeTrue())
 
-		machines := &infrav2exp.OCIMachinePoolMachineList{}
+		machines := &infrav3exp.OCIMachinePoolMachineList{}
 		g.Expect(testEnvironment.GetAPIReader().List(testContext, machines, client.InNamespace(key.Namespace))).To(Succeed())
 		// Scale-down cleanup is completed by the core CAPI MachinePool controller
 		// and Kubernetes garbage collector, neither of which runs in envtest. The
@@ -317,8 +317,8 @@ func waitForInstanceMachinePool(t *testing.T, key client.ObjectKey, replicas, ma
 		// those stale children have no owner Machines.
 		g.Expect(machines.Items).To(HaveLen(machineObjects))
 		for i := range machines.Items {
-			g.Expect(machines.Items[i].Status.Ready).To(BeTrue())
-			g.Expect(machines.Items[i].Spec.MachineType).To(Equal(infrav2exp.SelfManaged))
+			g.Expect(machines.Items[i].Status.Initialization.Provisioned).To(Equal(common.Bool(true)))
+			g.Expect(machines.Items[i].Spec.MachineType).To(Equal(infrav3exp.SelfManaged))
 		}
 	}).WithTimeout(20 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
 }
@@ -362,11 +362,11 @@ func waitForInstancePoolInspectionsToSettle(t *testing.T) int {
 	return 0
 }
 
-func triggerInstanceMachinePoolReconcile(t *testing.T, machinePool *infrav2exp.OCIMachinePool) {
+func triggerInstanceMachinePoolReconcile(t *testing.T, machinePool *infrav3exp.OCIMachinePool) {
 	t.Helper()
 	g := NewWithT(t)
 	g.Eventually(func() error {
-		stored := &infrav2exp.OCIMachinePool{}
+		stored := &infrav3exp.OCIMachinePool{}
 		if err := testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(machinePool), stored); err != nil {
 			if apierrors.IsNotFound(err) {
 				return nil

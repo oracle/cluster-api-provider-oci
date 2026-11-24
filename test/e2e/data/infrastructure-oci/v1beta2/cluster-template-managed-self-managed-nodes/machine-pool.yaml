@@ -1,5 +1,5 @@
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachinePool
 metadata:
   name: "${CLUSTER_NAME}-mp-0"
@@ -13,12 +13,12 @@ spec:
         dataSecretName: "${CLUSTER_NAME}-self-managed"
       clusterName: "${CLUSTER_NAME}"
       infrastructureRef:
-        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        apiGroup: infrastructure.cluster.x-k8s.io
         kind: OCIMachinePool
         name: "${CLUSTER_NAME}-mp-0"
       version: "${KUBERNETES_VERSION}"
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 kind: OCIMachinePool
 metadata:
   name: "${CLUSTER_NAME}-mp-0"

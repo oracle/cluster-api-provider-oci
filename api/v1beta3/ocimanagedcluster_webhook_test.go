@@ -17,7 +17,7 @@
  *
  */
 
-package v1beta2
+package v1beta3
 
 import (
 	"context"
@@ -31,7 +31,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 )
 
 func TestOCIManagedCluster_ValidateCreate(t *testing.T) {
@@ -826,9 +825,9 @@ func TestOCIManagedCluster_CreateDefault(t *testing.T) {
 }
 
 func TestOCIManagedCluster_GetConditions(t *testing.T) {
-	cond := clusterv1beta1.Condition{
+	cond := metav1.Condition{
 		Type:               "Ready",
-		Status:             corev1.ConditionTrue,
+		Status:             metav1.ConditionTrue,
 		LastTransitionTime: metav1.NewTime(time.Now()),
 		Reason:             "TestReason",
 		Message:            "TestMessage",
@@ -836,7 +835,7 @@ func TestOCIManagedCluster_GetConditions(t *testing.T) {
 
 	cluster := &OCIManagedCluster{
 		Status: OCIManagedClusterStatus{
-			Conditions: clusterv1beta1.Conditions{cond},
+			Conditions: []metav1.Condition{cond},
 		},
 	}
 
@@ -850,9 +849,9 @@ func TestOCIManagedCluster_GetConditions(t *testing.T) {
 }
 
 func TestOCIManagedCluster_SetConditions(t *testing.T) {
-	cond := clusterv1beta1.Condition{
+	cond := metav1.Condition{
 		Type:               "Ready",
-		Status:             corev1.ConditionTrue,
+		Status:             metav1.ConditionTrue,
 		LastTransitionTime: metav1.NewTime(time.Now()),
 		Reason:             "TestReason",
 		Message:            "TestMessage",
@@ -860,7 +859,7 @@ func TestOCIManagedCluster_SetConditions(t *testing.T) {
 
 	cluster := &OCIManagedCluster{}
 
-	cluster.SetConditions(clusterv1beta1.Conditions{cond})
+	cluster.SetConditions([]metav1.Condition{cond})
 
 	if len(cluster.Status.Conditions) != 1 {
 		t.Errorf("SetConditions failed, expected 1 condition, got %d", len(cluster.Status.Conditions))

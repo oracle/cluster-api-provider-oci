@@ -13,7 +13,7 @@ API Server Load Balancer will be managed by CAPOCI.
 Example spec is given below
 
 ```yaml
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 kind: OCICluster
 metadata:
   name: "${CLUSTER_NAME}"
@@ -54,7 +54,7 @@ can merge the list properly when there is an update.
 Example spec is given below
 
 ```yaml
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 kind: OCICluster
 metadata:
   name: "${CLUSTER_NAME}"
@@ -108,7 +108,7 @@ This is useful for scenarios where a different persona is managing the cluster i
 The following `OCICluster` Spec includes the mandatory fields to be specified for externally managed infrastructure to work properly. In this example neither the VCN nor the network load balancer will be managed by CAPOCI.
 
 ```yaml
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 kind: OCICluster
 metadata:
   labels:
@@ -143,8 +143,8 @@ spec:
 
 ## Status
 
-As per the Cluster API Provider specification, the `OCICluster Status` Object has to be updated with `ready` status
-as well as the failure domain mapping. This has to be done after the `OCICluster` object has been created in the management cluster.
+As per the Cluster API Provider specification, the `OCICluster Status` Object has to be updated with `initialization.provisioned` status
+as well as the failure domain list. This has to be done after the `OCICluster` object has been created in the management cluster.
 The following cURL request illustrates this:
 
 Get a list of [Availability Domains](../reference/glossary.md#ad) of the region:
@@ -165,8 +165,8 @@ curl -o  -s -X PATCH -H "Accept: application/json, */*" \
 --cacert ca.crt \
 --cert client.crt \
 --key client.key \
-https://<management-plane-api-endpoint>/apis/infrastructure.cluster.x-k8s.io/v1beta2/namespaces/<cluster-namespace>/ociclusters/<cluster-name>/status \
---data '{"status":{"ready":true,"failureDomains":{"1":{"attributes":{"AvailabilityDomain":"zkJl:AP-HYDERABAD-1-AD-1","FaultDomain":"FAULT-DOMAIN-1"},"controlPlane":true},"2":{"attributes":{"AvailabilityDomain":"zkJl:AP-HYDERABAD-1-AD-1","FaultDomain":"FAULT-DOMAIN-2"},"controlPlane":true},"3":{"attributes":{"AvailabilityDomain":"zkJl:AP-HYDERABAD-1-AD-1","FaultDomain":"FAULT-DOMAIN-3"}}}}}'
+https://<management-plane-api-endpoint>/apis/infrastructure.cluster.x-k8s.io/v1beta3/namespaces/<cluster-namespace>/ociclusters/<cluster-name>/status \
+--data '{"status":{"initialization":{"provisioned":true},"failureDomains":[{"name":"1","attributes":{"AvailabilityDomain":"zkJl:AP-HYDERABAD-1-AD-1","FaultDomain":"FAULT-DOMAIN-1"},"controlPlane":true},{"name":"2","attributes":{"AvailabilityDomain":"zkJl:AP-HYDERABAD-1-AD-1","FaultDomain":"FAULT-DOMAIN-2"},"controlPlane":true},{"name":"3","attributes":{"AvailabilityDomain":"zkJl:AP-HYDERABAD-1-AD-1","FaultDomain":"FAULT-DOMAIN-3"}}]}}'
 ```
 
 For 3-AD regions, use the following cURL command to update the status object:
@@ -177,7 +177,7 @@ curl -o  -s -X PATCH -H "Accept: application/json, */*" \
 --cacert ca.crt \
 --cert client.crt \
 --key client.key \
-https://<management-plane-api-endpoint>/apis/infrastructure.cluster.x-k8s.io/v1beta2/namespaces/<cluster-namespace>/ociclusters/<cluster-name>/status \
---data '{"status":{"ready":true,"failureDomains":{"1":{"attributes":{"AvailabilityDomain":"zkJl:US-ASHBURN-1-AD-1"},"controlPlane":true},"2":{"attributes":{"AvailabilityDomain":"zkJl:US-ASHBURN-1-AD-2"},"controlPlane":true},"3":{"attributes":{"AvailabilityDomain":"zkJl:US-ASHBURN-1-AD-3"}}}}}'
+https://<management-plane-api-endpoint>/apis/infrastructure.cluster.x-k8s.io/v1beta3/namespaces/<cluster-namespace>/ociclusters/<cluster-name>/status \
+--data '{"status":{"initialization":{"provisioned":true},"failureDomains":[{"name":"1","attributes":{"AvailabilityDomain":"zkJl:US-ASHBURN-1-AD-1"},"controlPlane":true},{"name":"2","attributes":{"AvailabilityDomain":"zkJl:US-ASHBURN-1-AD-2"},"controlPlane":true},{"name":"3","attributes":{"AvailabilityDomain":"zkJl:US-ASHBURN-1-AD-3"}}]}}'
 ```
 

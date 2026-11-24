@@ -3,7 +3,7 @@ package ptr
 import (
 	"testing"
 
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 )
 
 func TestToString(t *testing.T) {
@@ -152,33 +152,33 @@ func TestToStringSlice(t *testing.T) {
 func TestToNSGSlice(t *testing.T) {
 	tests := []struct {
 		name  string
-		input []*infrastructurev1beta2.NSG
-		want  []infrastructurev1beta2.NSG
+		input []*infrastructurev1beta3.NSG
+		want  []infrastructurev1beta3.NSG
 	}{
 		{
 			name:  "nil slice",
 			input: nil,
-			want:  []infrastructurev1beta2.NSG{},
+			want:  []infrastructurev1beta3.NSG{},
 		},
 		{
 			name:  "empty slice",
-			input: []*infrastructurev1beta2.NSG{},
-			want:  []infrastructurev1beta2.NSG{},
+			input: []*infrastructurev1beta3.NSG{},
+			want:  []infrastructurev1beta3.NSG{},
 		},
 		{
 			name:  "slice with nil elements",
-			input: []*infrastructurev1beta2.NSG{nil, nil},
-			want:  []infrastructurev1beta2.NSG{{}, {}},
+			input: []*infrastructurev1beta3.NSG{nil, nil},
+			want:  []infrastructurev1beta3.NSG{{}, {}},
 		},
 		{
 			name:  "slice with non-nil elements",
-			input: []*infrastructurev1beta2.NSG{&infrastructurev1beta2.NSG{}, &infrastructurev1beta2.NSG{}},
-			want:  []infrastructurev1beta2.NSG{{}, {}},
+			input: []*infrastructurev1beta3.NSG{&infrastructurev1beta3.NSG{}, &infrastructurev1beta3.NSG{}},
+			want:  []infrastructurev1beta3.NSG{{}, {}},
 		},
 		{
 			name:  "slice with mixed nil and non-nil elements",
-			input: []*infrastructurev1beta2.NSG{nil, &infrastructurev1beta2.NSG{}, nil},
-			want:  []infrastructurev1beta2.NSG{{}, {}, {}},
+			input: []*infrastructurev1beta3.NSG{nil, &infrastructurev1beta3.NSG{}, nil},
+			want:  []infrastructurev1beta3.NSG{{}, {}, {}},
 		},
 	}
 
@@ -194,33 +194,33 @@ func TestToNSGSlice(t *testing.T) {
 func TestToSubnetSlice(t *testing.T) {
 	tests := []struct {
 		name  string
-		input []*infrastructurev1beta2.Subnet
-		want  []infrastructurev1beta2.Subnet
+		input []*infrastructurev1beta3.Subnet
+		want  []infrastructurev1beta3.Subnet
 	}{
 		{
 			name:  "nil slice",
 			input: nil,
-			want:  []infrastructurev1beta2.Subnet{},
+			want:  []infrastructurev1beta3.Subnet{},
 		},
 		{
 			name:  "empty slice",
-			input: []*infrastructurev1beta2.Subnet{},
-			want:  []infrastructurev1beta2.Subnet{},
+			input: []*infrastructurev1beta3.Subnet{},
+			want:  []infrastructurev1beta3.Subnet{},
 		},
 		{
 			name:  "slice with nil elements",
-			input: []*infrastructurev1beta2.Subnet{nil, nil},
-			want:  []infrastructurev1beta2.Subnet{{}, {}},
+			input: []*infrastructurev1beta3.Subnet{nil, nil},
+			want:  []infrastructurev1beta3.Subnet{{}, {}},
 		},
 		{
 			name:  "slice with non-nil elements",
-			input: []*infrastructurev1beta2.Subnet{&infrastructurev1beta2.Subnet{}, &infrastructurev1beta2.Subnet{}},
-			want:  []infrastructurev1beta2.Subnet{{}, {}},
+			input: []*infrastructurev1beta3.Subnet{&infrastructurev1beta3.Subnet{}, &infrastructurev1beta3.Subnet{}},
+			want:  []infrastructurev1beta3.Subnet{{}, {}},
 		},
 		{
 			name:  "slice with mixed nil and non-nil elements",
-			input: []*infrastructurev1beta2.Subnet{nil, &infrastructurev1beta2.Subnet{}, nil},
-			want:  []infrastructurev1beta2.Subnet{{}, {}, {}},
+			input: []*infrastructurev1beta3.Subnet{nil, &infrastructurev1beta3.Subnet{}, nil},
+			want:  []infrastructurev1beta3.Subnet{{}, {}, {}},
 		},
 	}
 

@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn/mock_vcn"
 	"github.com/oracle/oci-go-sdk/v65/common"
@@ -91,17 +91,17 @@ func TestClusterScope_DeleteNSGs(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		spec          infrastructurev1beta2.OCIClusterSpec
+		spec          infrastructurev1beta3.OCIClusterSpec
 		wantErr       bool
 		expectedError string
 	}{
 		{
 			name: "delete nsg is successful",
-			spec: infrastructurev1beta2.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta2.NetworkSpec{
-					Vcn: infrastructurev1beta2.VCN{
-						NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
-							List: []*infrastructurev1beta2.NSG{
+			spec: infrastructurev1beta3.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta3.NetworkSpec{
+					Vcn: infrastructurev1beta3.VCN{
+						NetworkSecurityGroup: infrastructurev1beta3.NetworkSecurityGroup{
+							List: []*infrastructurev1beta3.NSG{
 								{
 									ID: common.String("nsg1"),
 								},
@@ -117,11 +117,11 @@ func TestClusterScope_DeleteNSGs(t *testing.T) {
 		},
 		{
 			name: "nsg already deleted",
-			spec: infrastructurev1beta2.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta2.NetworkSpec{
-					Vcn: infrastructurev1beta2.VCN{
-						NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
-							List: []*infrastructurev1beta2.NSG{
+			spec: infrastructurev1beta3.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta3.NetworkSpec{
+					Vcn: infrastructurev1beta3.VCN{
+						NetworkSecurityGroup: infrastructurev1beta3.NetworkSecurityGroup{
+							List: []*infrastructurev1beta3.NSG{
 								{
 									ID: common.String("nsg_deleted"),
 								},
@@ -134,11 +134,11 @@ func TestClusterScope_DeleteNSGs(t *testing.T) {
 		},
 		{
 			name: "delete nsg error when calling get route table",
-			spec: infrastructurev1beta2.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta2.NetworkSpec{
-					Vcn: infrastructurev1beta2.VCN{
-						NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
-							List: []*infrastructurev1beta2.NSG{
+			spec: infrastructurev1beta3.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta3.NetworkSpec{
+					Vcn: infrastructurev1beta3.VCN{
+						NetworkSecurityGroup: infrastructurev1beta3.NetworkSecurityGroup{
+							List: []*infrastructurev1beta3.NSG{
 								{
 									ID: common.String("nsg_get_error"),
 								},
@@ -152,11 +152,11 @@ func TestClusterScope_DeleteNSGs(t *testing.T) {
 		},
 		{
 			name: "delete nsg error when calling delete route table",
-			spec: infrastructurev1beta2.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta2.NetworkSpec{
-					Vcn: infrastructurev1beta2.VCN{
-						NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
-							List: []*infrastructurev1beta2.NSG{
+			spec: infrastructurev1beta3.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta3.NetworkSpec{
+					Vcn: infrastructurev1beta3.VCN{
+						NetworkSecurityGroup: infrastructurev1beta3.NetworkSecurityGroup{
+							List: []*infrastructurev1beta3.NSG{
 								{
 									ID: common.String("nsg_error_delete"),
 								},
@@ -173,7 +173,7 @@ func TestClusterScope_DeleteNSGs(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ociClusterAccessor := OCISelfManagedCluster{
-				&infrastructurev1beta2.OCICluster{
+				&infrastructurev1beta3.OCICluster{
 					Spec: tt.spec,
 					ObjectMeta: metav1.ObjectMeta{
 						UID: "cluster_uid",
@@ -226,62 +226,62 @@ func TestClusterScope_ReconcileNSG(t *testing.T) {
 	}
 	updatedTags["foo"] = "bar"
 
-	customNSGIngress := []infrastructurev1beta2.IngressSecurityRuleForNSG{
+	customNSGIngress := []infrastructurev1beta3.IngressSecurityRuleForNSG{
 		{
-			IngressSecurityRule: infrastructurev1beta2.IngressSecurityRule{
+			IngressSecurityRule: infrastructurev1beta3.IngressSecurityRule{
 				Description: common.String("External access to Kubernetes API endpoint"),
 				Protocol:    common.String("6"),
-				TcpOptions: &infrastructurev1beta2.TcpOptions{
-					DestinationPortRange: &infrastructurev1beta2.PortRange{
+				TcpOptions: &infrastructurev1beta3.TcpOptions{
+					DestinationPortRange: &infrastructurev1beta3.PortRange{
 						Max: common.Int(6443),
 						Min: common.Int(6443),
 					},
 				},
-				SourceType: infrastructurev1beta2.IngressSecurityRuleSourceTypeCidrBlock,
+				SourceType: infrastructurev1beta3.IngressSecurityRuleSourceTypeCidrBlock,
 				Source:     common.String("0.0.0.0/0"),
 			},
 		},
 		{
-			IngressSecurityRule: infrastructurev1beta2.IngressSecurityRule{
+			IngressSecurityRule: infrastructurev1beta3.IngressSecurityRule{
 				Description: common.String("External access to Kubernetes API endpoint - 1"),
 				Protocol:    common.String("6"),
-				TcpOptions: &infrastructurev1beta2.TcpOptions{
-					DestinationPortRange: &infrastructurev1beta2.PortRange{
+				TcpOptions: &infrastructurev1beta3.TcpOptions{
+					DestinationPortRange: &infrastructurev1beta3.PortRange{
 						Max: common.Int(6443),
 						Min: common.Int(6443),
 					},
 				},
-				SourceType: infrastructurev1beta2.IngressSecurityRuleSourceTypeNSG,
+				SourceType: infrastructurev1beta3.IngressSecurityRuleSourceTypeNSG,
 				Source:     common.String("no-update"),
 			},
 		},
 	}
-	customNSGEgress := []infrastructurev1beta2.EgressSecurityRuleForNSG{
+	customNSGEgress := []infrastructurev1beta3.EgressSecurityRuleForNSG{
 		{
-			EgressSecurityRule: infrastructurev1beta2.EgressSecurityRule{
+			EgressSecurityRule: infrastructurev1beta3.EgressSecurityRule{
 				Description: common.String("All traffic to control plane nodes"),
 				Protocol:    common.String("6"),
-				TcpOptions: &infrastructurev1beta2.TcpOptions{
-					DestinationPortRange: &infrastructurev1beta2.PortRange{
+				TcpOptions: &infrastructurev1beta3.TcpOptions{
+					DestinationPortRange: &infrastructurev1beta3.PortRange{
 						Max: common.Int(6443),
 						Min: common.Int(6443),
 					},
 				},
-				DestinationType: infrastructurev1beta2.EgressSecurityRuleDestinationTypeCidrBlock,
+				DestinationType: infrastructurev1beta3.EgressSecurityRuleDestinationTypeCidrBlock,
 				Destination:     common.String(ControlPlaneMachineSubnetDefaultCIDR),
 			},
 		},
 		{
-			EgressSecurityRule: infrastructurev1beta2.EgressSecurityRule{
+			EgressSecurityRule: infrastructurev1beta3.EgressSecurityRule{
 				Description: common.String("All traffic to control plane nodes - 1"),
 				Protocol:    common.String("6"),
-				TcpOptions: &infrastructurev1beta2.TcpOptions{
-					DestinationPortRange: &infrastructurev1beta2.PortRange{
+				TcpOptions: &infrastructurev1beta3.TcpOptions{
+					DestinationPortRange: &infrastructurev1beta3.PortRange{
 						Max: common.Int(6443),
 						Min: common.Int(6443),
 					},
 				},
-				DestinationType: infrastructurev1beta2.EgressSecurityRuleDestinationTypeNSG,
+				DestinationType: infrastructurev1beta3.EgressSecurityRuleDestinationTypeNSG,
 				Destination:     common.String("update-rules"),
 			},
 		},
@@ -296,27 +296,27 @@ func TestClusterScope_ReconcileNSG(t *testing.T) {
 		definedTagsInterface[ns] = mapValues
 	}
 
-	customNSGEgressWithId := make([]infrastructurev1beta2.EgressSecurityRuleForNSG, len(customNSGEgress))
+	customNSGEgressWithId := make([]infrastructurev1beta3.EgressSecurityRuleForNSG, len(customNSGEgress))
 	copy(customNSGEgressWithId, customNSGEgress)
 
-	customNSGIngressWithId := make([]infrastructurev1beta2.IngressSecurityRuleForNSG, len(customNSGIngress))
+	customNSGIngressWithId := make([]infrastructurev1beta3.IngressSecurityRuleForNSG, len(customNSGIngress))
 	copy(customNSGIngressWithId, customNSGIngress)
 
 	tests := []struct {
 		name              string
-		spec              infrastructurev1beta2.OCIClusterSpec
+		spec              infrastructurev1beta3.OCIClusterSpec
 		wantErr           bool
 		expectedError     string
 		testSpecificSetup func(clusterScope *ClusterScope, nlbClient *mock_vcn.MockClient)
 	}{
 		{
 			name: "one creation - one update - one update security rule - one no update",
-			spec: infrastructurev1beta2.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta2.NetworkSpec{
-					Vcn: infrastructurev1beta2.VCN{
+			spec: infrastructurev1beta3.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta3.NetworkSpec{
+					Vcn: infrastructurev1beta3.VCN{
 						ID: common.String("vcn"),
-						NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
-							List: []*infrastructurev1beta2.NSG{
+						NetworkSecurityGroup: infrastructurev1beta3.NetworkSecurityGroup{
+							List: []*infrastructurev1beta3.NSG{
 								{
 									ID:           common.String("no-update-id"),
 									Name:         "no-update",
@@ -648,34 +648,34 @@ func TestClusterScope_ReconcileNSG(t *testing.T) {
 		},
 		{
 			name: "update failed",
-			spec: infrastructurev1beta2.OCIClusterSpec{
+			spec: infrastructurev1beta3.OCIClusterSpec{
 				CompartmentId: "foo",
 				DefinedTags:   definedTags,
-				NetworkSpec: infrastructurev1beta2.NetworkSpec{
-					Vcn: infrastructurev1beta2.VCN{
+				NetworkSpec: infrastructurev1beta3.NetworkSpec{
+					Vcn: infrastructurev1beta3.VCN{
 						ID: common.String("vcn"),
-						Subnets: []*infrastructurev1beta2.Subnet{
+						Subnets: []*infrastructurev1beta3.Subnet{
 							{
-								Role: infrastructurev1beta2.ControlPlaneEndpointRole,
-								SecurityList: &infrastructurev1beta2.SecurityList{
+								Role: infrastructurev1beta3.ControlPlaneEndpointRole,
+								SecurityList: &infrastructurev1beta3.SecurityList{
 									Name: "foo",
 								},
 							},
 							{
-								Role: infrastructurev1beta2.ServiceLoadBalancerRole,
-								SecurityList: &infrastructurev1beta2.SecurityList{
+								Role: infrastructurev1beta3.ServiceLoadBalancerRole,
+								SecurityList: &infrastructurev1beta3.SecurityList{
 									Name: "foo",
 								},
 							},
 							{
-								Role: infrastructurev1beta2.ControlPlaneRole,
-								SecurityList: &infrastructurev1beta2.SecurityList{
+								Role: infrastructurev1beta3.ControlPlaneRole,
+								SecurityList: &infrastructurev1beta3.SecurityList{
 									Name: "foo",
 								},
 							},
 						},
-						NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
-							List: []*infrastructurev1beta2.NSG{
+						NetworkSecurityGroup: infrastructurev1beta3.NetworkSecurityGroup{
+							List: []*infrastructurev1beta3.NSG{
 								{
 									ID:           common.String("update-id"),
 									Name:         "update-nsg-error",
@@ -702,37 +702,37 @@ func TestClusterScope_ReconcileNSG(t *testing.T) {
 		},
 		{
 			name: "creation failed",
-			spec: infrastructurev1beta2.OCIClusterSpec{
+			spec: infrastructurev1beta3.OCIClusterSpec{
 				CompartmentId: "foo",
 				DefinedTags:   definedTags,
 				FreeformTags: map[string]string{
 					"foo": "bar",
 				},
-				NetworkSpec: infrastructurev1beta2.NetworkSpec{
-					Vcn: infrastructurev1beta2.VCN{
+				NetworkSpec: infrastructurev1beta3.NetworkSpec{
+					Vcn: infrastructurev1beta3.VCN{
 						ID: common.String("vcn"),
-						Subnets: []*infrastructurev1beta2.Subnet{
+						Subnets: []*infrastructurev1beta3.Subnet{
 							{
-								Role: infrastructurev1beta2.ControlPlaneEndpointRole,
-								SecurityList: &infrastructurev1beta2.SecurityList{
+								Role: infrastructurev1beta3.ControlPlaneEndpointRole,
+								SecurityList: &infrastructurev1beta3.SecurityList{
 									Name: "foo",
 								},
 							},
 							{
-								Role: infrastructurev1beta2.WorkerRole,
-								SecurityList: &infrastructurev1beta2.SecurityList{
+								Role: infrastructurev1beta3.WorkerRole,
+								SecurityList: &infrastructurev1beta3.SecurityList{
 									Name: "foo",
 								},
 							},
 							{
-								Role: infrastructurev1beta2.ControlPlaneRole,
-								SecurityList: &infrastructurev1beta2.SecurityList{
+								Role: infrastructurev1beta3.ControlPlaneRole,
+								SecurityList: &infrastructurev1beta3.SecurityList{
 									Name: "foo",
 								},
 							},
 						},
-						NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
-							List: []*infrastructurev1beta2.NSG{
+						NetworkSecurityGroup: infrastructurev1beta3.NetworkSecurityGroup{
+							List: []*infrastructurev1beta3.NSG{
 								{
 									Name: "service-lb",
 									Role: "service-lb",
@@ -766,34 +766,34 @@ func TestClusterScope_ReconcileNSG(t *testing.T) {
 		},
 		{
 			name: "add rules failed",
-			spec: infrastructurev1beta2.OCIClusterSpec{
+			spec: infrastructurev1beta3.OCIClusterSpec{
 				CompartmentId: "foo",
 				DefinedTags:   definedTags,
-				NetworkSpec: infrastructurev1beta2.NetworkSpec{
-					Vcn: infrastructurev1beta2.VCN{
+				NetworkSpec: infrastructurev1beta3.NetworkSpec{
+					Vcn: infrastructurev1beta3.VCN{
 						ID: common.String("vcn"),
-						Subnets: []*infrastructurev1beta2.Subnet{
+						Subnets: []*infrastructurev1beta3.Subnet{
 							{
-								Role: infrastructurev1beta2.ControlPlaneEndpointRole,
-								SecurityList: &infrastructurev1beta2.SecurityList{
+								Role: infrastructurev1beta3.ControlPlaneEndpointRole,
+								SecurityList: &infrastructurev1beta3.SecurityList{
 									Name: "foo",
 								},
 							},
 							{
-								Role: infrastructurev1beta2.WorkerRole,
-								SecurityList: &infrastructurev1beta2.SecurityList{
+								Role: infrastructurev1beta3.WorkerRole,
+								SecurityList: &infrastructurev1beta3.SecurityList{
 									Name: "foo",
 								},
 							},
 							{
-								Role: infrastructurev1beta2.ControlPlaneRole,
-								SecurityList: &infrastructurev1beta2.SecurityList{
+								Role: infrastructurev1beta3.ControlPlaneRole,
+								SecurityList: &infrastructurev1beta3.SecurityList{
 									Name: "foo",
 								},
 							},
 						},
-						NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
-							List: []*infrastructurev1beta2.NSG{
+						NetworkSecurityGroup: infrastructurev1beta3.NetworkSecurityGroup{
+							List: []*infrastructurev1beta3.NSG{
 								{
 									ID:          common.String("loadbalancer-nsg-id"),
 									Name:        "service-lb",
@@ -829,12 +829,12 @@ func TestClusterScope_ReconcileNSG(t *testing.T) {
 		},
 		{
 			name: "nil NSG in list",
-			spec: infrastructurev1beta2.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta2.NetworkSpec{
-					Vcn: infrastructurev1beta2.VCN{
+			spec: infrastructurev1beta3.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta3.NetworkSpec{
+					Vcn: infrastructurev1beta3.VCN{
 						ID: common.String("vcn"),
-						NetworkSecurityGroup: infrastructurev1beta2.NetworkSecurityGroup{
-							List: []*infrastructurev1beta2.NSG{nil},
+						NetworkSecurityGroup: infrastructurev1beta3.NetworkSecurityGroup{
+							List: []*infrastructurev1beta3.NSG{nil},
 						},
 					},
 				},
@@ -849,7 +849,7 @@ func TestClusterScope_ReconcileNSG(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ociClusterAccessor := OCISelfManagedCluster{
-				&infrastructurev1beta2.OCICluster{
+				&infrastructurev1beta3.OCICluster{
 					ObjectMeta: metav1.ObjectMeta{
 						UID: "cluster_uid",
 					},
@@ -881,7 +881,7 @@ func TestClusterScope_ReconcileNSG(t *testing.T) {
 	}
 }
 
-func isNSGEqual(desiredNSGs []*infrastructurev1beta2.NSG, actualNSGs []*infrastructurev1beta2.NSG) bool {
+func isNSGEqual(desiredNSGs []*infrastructurev1beta3.NSG, actualNSGs []*infrastructurev1beta3.NSG) bool {
 	var found bool
 	if len(desiredNSGs) != len(actualNSGs) {
 		return false

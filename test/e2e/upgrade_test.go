@@ -27,7 +27,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -36,7 +36,7 @@ import (
 	"sigs.k8s.io/cluster-api/test/framework"
 	"sigs.k8s.io/cluster-api/test/framework/clusterctl"
 	"sigs.k8s.io/cluster-api/util"
-	v1beta1patch "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/patch"
+	"sigs.k8s.io/cluster-api/util/patch"
 )
 
 var _ = Describe("Cluster Upgrade Tests", func() {
@@ -133,7 +133,7 @@ var _ = Describe("Cluster Upgrade Tests", func() {
 			Namespace:   namespace.Name,
 			ClusterName: clusterName,
 		})
-		patchHelper, err := v1beta1patch.NewHelper(controlPlane, bootstrapClusterProxy.GetClient())
+		patchHelper, err := patch.NewHelper(controlPlane, bootstrapClusterProxy.GetClient())
 
 		upgradeVersion := e2eConfig.MustGetVariable(capi_e2e.KubernetesVersionUpgradeTo)
 		controlPlane.Spec.MachineTemplate.Spec.InfrastructureRef.Name = newCPMachineTemplateName
@@ -153,7 +153,7 @@ var _ = Describe("Cluster Upgrade Tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 		for _, deployment := range result.MachineDeployments {
 			Log(fmt.Sprintf("Patching the new kubernetes version to Machine Deployment %s/%s", deployment.Namespace, deployment.Name))
-			patchHelper, err := v1beta1patch.NewHelper(deployment, bootstrapClusterProxy.GetClient())
+			patchHelper, err := patch.NewHelper(deployment, bootstrapClusterProxy.GetClient())
 			Expect(err).ToNot(HaveOccurred())
 
 			newWorkerMachineTemplateName := fmt.Sprintf("%s-upgraded", deployment.Name)
@@ -180,21 +180,21 @@ var _ = Describe("Cluster Upgrade Tests", func() {
 	})
 })
 
-func makeOCIMachineTemplate(namespace, name string) *infrastructurev1beta1.OCIMachineTemplate {
-	ociMachine := &infrastructurev1beta1.OCIMachineTemplate{
+func makeOCIMachineTemplate(namespace, name string) *infrastructurev1beta3.OCIMachineTemplate {
+	ociMachine := &infrastructurev1beta3.OCIMachineTemplate{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: infrastructurev1beta1.OCIMachineTemplateSpec{
-			Template: infrastructurev1beta1.OCIMachineTemplateResource{
-				Spec: infrastructurev1beta1.OCIMachineSpec{
+		Spec: infrastructurev1beta3.OCIMachineTemplateSpec{
+			Template: infrastructurev1beta3.OCIMachineTemplateResource{
+				Spec: infrastructurev1beta3.OCIMachineSpec{
 					ImageId: os.Getenv("OCI_UPGRADE_IMAGE_ID"),
 					Shape:   os.Getenv("OCI_NODE_MACHINE_TYPE"),
-					InstanceOptions: &infrastructurev1beta1.InstanceOptions{
+					InstanceOptions: &infrastructurev1beta3.InstanceOptions{
 						AreLegacyImdsEndpointsDisabled: pointer.BoolPtr(true),
 					},
-					ShapeConfig: infrastructurev1beta1.ShapeConfig{
+					ShapeConfig: infrastructurev1beta3.ShapeConfig{
 						Ocpus: "1",
 					},
 					Metadata: map[string]string{

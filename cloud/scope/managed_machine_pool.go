@@ -27,20 +27,20 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/computemanagement"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/containerengine"
-	expinfra1 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
-	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
+	expinfra1 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta3"
+	infrav3exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta3"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
 	"github.com/pkg/errors"
 	"k8s.io/klog/v2/klogr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/annotations"
-	v1beta1patch "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/patch"
+	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -55,8 +55,8 @@ type ManagedMachinePoolScopeParams struct {
 	MachinePool             *clusterv1.MachinePool
 	Client                  client.Client
 	ComputeManagementClient computemanagement.Client
-	OCIManagedCluster       *infrastructurev1beta2.OCIManagedCluster
-	OCIManagedControlPlane  *infrastructurev1beta2.OCIManagedControlPlane
+	OCIManagedCluster       *infrastructurev1beta3.OCIManagedCluster
+	OCIManagedControlPlane  *infrastructurev1beta3.OCIManagedControlPlane
 	OCIManagedMachinePool   *expinfra1.OCIManagedMachinePool
 	ContainerEngineClient   containerengine.Client
 }
@@ -64,14 +64,15 @@ type ManagedMachinePoolScopeParams struct {
 type ManagedMachinePoolScope struct {
 	*logr.Logger
 	Client                  client.Client
-	patchHelper             *v1beta1patch.Helper
+	patchHelper             *patch.Helper
 	Cluster                 *clusterv1.Cluster
 	MachinePool             *clusterv1.MachinePool
 	ComputeManagementClient computemanagement.Client
-	OCIManagedCluster       *infrastructurev1beta2.OCIManagedCluster
+	OCIManagedCluster       *infrastructurev1beta3.OCIManagedCluster
 	OCIManagedMachinePool   *expinfra1.OCIManagedMachinePool
 	ContainerEngineClient   containerengine.Client
-	OCIManagedControlPlane  *infrastructurev1beta2.OCIManagedControlPlane
+	OCIManagedControlPlane  *infrastructurev1beta3.OCIManagedControlPlane
+	machineReconcileFailed  bool
 }
 
 // NewManagedMachinePoolScope creates a ManagedMachinePoolScope given the ManagedMachinePoolScopeParams
@@ -87,7 +88,7 @@ func NewManagedMachinePoolScope(params ManagedMachinePoolScopeParams) (*ManagedM
 		log := klogr.New()
 		params.Logger = &log
 	}
-	helper, err := v1beta1patch.NewHelper(params.OCIManagedMachinePool, params.Client)
+	helper, err := patch.NewHelper(params.OCIManagedMachinePool, params.Client)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init patch helper")
 	}
@@ -107,8 +108,17 @@ func NewManagedMachinePoolScope(params ManagedMachinePoolScopeParams) (*ManagedM
 	}, nil
 }
 
+// SetMachineReconcileFailed records that machine reconciliation failed during this reconcile
+// so PatchObject preserves the explicit Ready=False reason set by the controller.
+func (m *ManagedMachinePoolScope) SetMachineReconcileFailed() {
+	m.machineReconcileFailed = true
+}
+
 // PatchObject persists the cluster configuration and status.
 func (m *ManagedMachinePoolScope) PatchObject(ctx context.Context) error {
+	if !m.machineReconcileFailed {
+		ociutil.SetReadySummary(m.OCIManagedMachinePool, infrav3exp.NodePoolReadyCondition)
+	}
 	return m.patchHelper.Patch(ctx, m.OCIManagedMachinePool)
 }
 
@@ -129,7 +139,7 @@ func (m *ManagedMachinePoolScope) SetReplicaCount(count int32) {
 // GetWorkerMachineSubnet returns the WorkerRole core.Subnet id for the cluster
 func (m *ManagedMachinePoolScope) GetWorkerMachineSubnet() *string {
 	for _, subnet := range ptr.ToSubnetSlice(m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets) {
-		if subnet.Role == infrastructurev1beta2.WorkerRole {
+		if subnet.Role == infrastructurev1beta3.WorkerRole {
 			return subnet.ID
 		}
 	}
@@ -282,7 +292,7 @@ func (m *ManagedMachinePoolScope) CreateNodePool(ctx context.Context) (*oke.Node
 	}
 	podNetworkOptions := machinePool.Spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails
 	if podNetworkOptions != nil {
-		if podNetworkOptions.CniType == infrastructurev1beta2.VCNNativeCNI {
+		if podNetworkOptions.CniType == infrastructurev1beta3.VCNNativeCNI {
 			npnDetails := oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
 				PodSubnetIds: m.getPodSubnets(podNetworkOptions.VcnIpNativePodNetworkOptions.SubnetNames),
 				PodNsgIds:    m.getPodNSGs(podNetworkOptions.VcnIpNativePodNetworkOptions.NSGNames),
@@ -291,7 +301,7 @@ func (m *ManagedMachinePoolScope) CreateNodePool(ctx context.Context) (*oke.Node
 				npnDetails.MaxPodsPerNode = podNetworkOptions.VcnIpNativePodNetworkOptions.MaxPodsPerNode
 			}
 			nodeConfigDetails.NodePoolPodNetworkOptionDetails = npnDetails
-		} else if podNetworkOptions.CniType == infrastructurev1beta2.FlannelCNI {
+		} else if podNetworkOptions.CniType == infrastructurev1beta3.FlannelCNI {
 			nodeConfigDetails.NodePoolPodNetworkOptionDetails = oke.FlannelOverlayNodePoolPodNetworkOptionDetails{}
 		}
 	}
@@ -489,7 +499,7 @@ func (m *ManagedMachinePoolScope) getFreeFormTags() map[string]string {
 func (m *ManagedMachinePoolScope) getWorkerMachineSubnets() []string {
 	subnetList := make([]string, 0)
 	for _, subnet := range ptr.ToSubnetSlice(m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets) {
-		if subnet.Role == infrastructurev1beta2.WorkerRole {
+		if subnet.Role == infrastructurev1beta3.WorkerRole {
 			subnetList = append(subnetList, subnet.Name)
 		}
 	}
@@ -509,7 +519,7 @@ func (m *ManagedMachinePoolScope) getWorkerMachineNSGs() []string {
 		}
 	} else {
 		for _, nsg := range ptr.ToNSGSlice(m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List) {
-			if nsg.ID != nil && nsg.Role == infrastructurev1beta2.WorkerRole {
+			if nsg.ID != nil && nsg.Role == infrastructurev1beta3.WorkerRole {
 				nsgList = append(nsgList, *nsg.ID)
 			}
 		}
@@ -520,7 +530,7 @@ func (m *ManagedMachinePoolScope) getWorkerMachineNSGs() []string {
 func (m *ManagedMachinePoolScope) getWorkerMachineNSGList() []string {
 	nsgList := make([]string, 0)
 	for _, nsg := range ptr.ToNSGSlice(m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List) {
-		if nsg.Role == infrastructurev1beta2.WorkerRole {
+		if nsg.Role == infrastructurev1beta3.WorkerRole {
 			nsgList = append(nsgList, nsg.Name)
 		}
 	}
@@ -671,7 +681,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 
 		podNetworkOptions := spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails
 		if podNetworkOptions != nil {
-			if podNetworkOptions.CniType == infrastructurev1beta2.VCNNativeCNI {
+			if podNetworkOptions.CniType == infrastructurev1beta3.VCNNativeCNI {
 				npnDetails := oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails{
 					PodSubnetIds: m.getPodSubnets(podNetworkOptions.VcnIpNativePodNetworkOptions.SubnetNames),
 					PodNsgIds:    m.getPodNSGs(podNetworkOptions.VcnIpNativePodNetworkOptions.NSGNames),
@@ -680,7 +690,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 					npnDetails.MaxPodsPerNode = podNetworkOptions.VcnIpNativePodNetworkOptions.MaxPodsPerNode
 				}
 				nodeConfigDetails.NodePoolPodNetworkOptionDetails = npnDetails
-			} else if podNetworkOptions.CniType == infrastructurev1beta2.FlannelCNI {
+			} else if podNetworkOptions.CniType == infrastructurev1beta3.FlannelCNI {
 				nodeConfigDetails.NodePoolPodNetworkOptionDetails = oke.FlannelOverlayNodePoolPodNetworkOptionDetails{}
 			}
 		}
@@ -733,7 +743,7 @@ func (m *ManagedMachinePoolScope) UpdateNodePool(ctx context.Context, pool *oke.
 
 // setMachinePoolSpecDefaults sets the defaults in the spec as returned by OKE API. We need to set defaults here rather than webhook as
 // there is a chance user will edit the cluster
-func setMachinePoolSpecDefaults(spec *infrav2exp.OCIManagedMachinePoolSpec) {
+func setMachinePoolSpecDefaults(spec *infrav3exp.OCIManagedMachinePoolSpec) {
 	spec.ProviderIDList = nil
 	spec.ProviderID = nil
 
@@ -747,7 +757,7 @@ func setMachinePoolSpecDefaults(spec *infrav2exp.OCIManagedMachinePoolSpec) {
 	}
 	podNetworkOptions := spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails
 	if podNetworkOptions != nil {
-		if podNetworkOptions.CniType == infrastructurev1beta2.VCNNativeCNI && podNetworkOptions.VcnIpNativePodNetworkOptions.MaxPodsPerNode == nil {
+		if podNetworkOptions.CniType == infrastructurev1beta3.VCNNativeCNI && podNetworkOptions.VcnIpNativePodNetworkOptions.MaxPodsPerNode == nil {
 			// 31 is the default max pods per node returned by OKE API
 			spec.NodePoolNodeConfig.NodePoolPodNetworkOptionDetails.VcnIpNativePodNetworkOptions.MaxPodsPerNode = common.Int(31)
 		}
@@ -769,7 +779,7 @@ func (m *ManagedMachinePoolScope) getSpecFromAPIObject(pool *oke.NodePool) *expi
 		podDetails, ok := actualNodeConfigDetails.NodePoolPodNetworkOptionDetails.(oke.OciVcnIpNativeNodePoolPodNetworkOptionDetails)
 		if ok {
 			nodePoolNodeConfig.NodePoolPodNetworkOptionDetails = &expinfra1.NodePoolPodNetworkOptionDetails{
-				CniType: infrastructurev1beta2.VCNNativeCNI,
+				CniType: infrastructurev1beta3.VCNNativeCNI,
 				VcnIpNativePodNetworkOptions: expinfra1.VcnIpNativePodNetworkOptions{
 					MaxPodsPerNode: podDetails.MaxPodsPerNode,
 					NSGNames:       GetNsgNamesFromId(podDetails.PodNsgIds, m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List),
@@ -778,7 +788,7 @@ func (m *ManagedMachinePoolScope) getSpecFromAPIObject(pool *oke.NodePool) *expi
 			}
 		} else {
 			nodePoolNodeConfig.NodePoolPodNetworkOptionDetails = &expinfra1.NodePoolPodNetworkOptionDetails{
-				CniType: infrastructurev1beta2.FlannelCNI,
+				CniType: infrastructurev1beta3.FlannelCNI,
 			}
 		}
 	}

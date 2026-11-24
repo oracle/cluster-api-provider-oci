@@ -23,7 +23,7 @@ import (
 	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
 
 	"github.com/golang/mock/gomock"
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/identity/mock_identity"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn/mock_vcn"
@@ -208,32 +208,32 @@ func TestClusterScope_ReconcileRouteTable(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		spec          infrastructurev1beta2.OCIClusterSpec
+		spec          infrastructurev1beta3.OCIClusterSpec
 		wantErr       bool
 		expectedError string
 	}{
 		{
 			name: "all subnets are private and route table doesn't exists",
-			spec: infrastructurev1beta2.OCIClusterSpec{
+			spec: infrastructurev1beta3.OCIClusterSpec{
 				CompartmentId: "foo",
 				DefinedTags:   definedTags,
-				NetworkSpec: infrastructurev1beta2.NetworkSpec{
-					Vcn: infrastructurev1beta2.VCN{
-						Subnets: []*infrastructurev1beta2.Subnet{
+				NetworkSpec: infrastructurev1beta3.NetworkSpec{
+					Vcn: infrastructurev1beta3.VCN{
+						Subnets: []*infrastructurev1beta3.Subnet{
 							{
-								Type: infrastructurev1beta2.Private,
-								Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+								Type: infrastructurev1beta3.Private,
+								Role: infrastructurev1beta3.ControlPlaneEndpointRole,
 							},
 							{
-								Type: infrastructurev1beta2.Private,
-								Role: infrastructurev1beta2.ServiceLoadBalancerRole,
+								Type: infrastructurev1beta3.Private,
+								Role: infrastructurev1beta3.ServiceLoadBalancerRole,
 							},
 						},
 						ID: common.String("vcn1"),
-						ServiceGateway: infrastructurev1beta2.ServiceGateway{
+						ServiceGateway: infrastructurev1beta3.ServiceGateway{
 							Id: common.String("sgw"),
 						},
-						NATGateway: infrastructurev1beta2.NATGateway{
+						NATGateway: infrastructurev1beta3.NATGateway{
 							Id: common.String("ngw"),
 						},
 					},
@@ -243,23 +243,23 @@ func TestClusterScope_ReconcileRouteTable(t *testing.T) {
 		},
 		{
 			name: "all subnets are public and route table doesn't exists",
-			spec: infrastructurev1beta2.OCIClusterSpec{
+			spec: infrastructurev1beta3.OCIClusterSpec{
 				CompartmentId: "foo",
 				DefinedTags:   definedTags,
-				NetworkSpec: infrastructurev1beta2.NetworkSpec{
-					Vcn: infrastructurev1beta2.VCN{
-						Subnets: []*infrastructurev1beta2.Subnet{
+				NetworkSpec: infrastructurev1beta3.NetworkSpec{
+					Vcn: infrastructurev1beta3.VCN{
+						Subnets: []*infrastructurev1beta3.Subnet{
 							{
-								Type: infrastructurev1beta2.Public,
-								Role: infrastructurev1beta2.ControlPlaneRole,
+								Type: infrastructurev1beta3.Public,
+								Role: infrastructurev1beta3.ControlPlaneRole,
 							},
 							{
-								Type: infrastructurev1beta2.Public,
-								Role: infrastructurev1beta2.WorkerRole,
+								Type: infrastructurev1beta3.Public,
+								Role: infrastructurev1beta3.WorkerRole,
 							},
 						},
 						ID: common.String("vcn1"),
-						InternetGateway: infrastructurev1beta2.InternetGateway{
+						InternetGateway: infrastructurev1beta3.InternetGateway{
 							Id: common.String("igw"),
 						},
 					},
@@ -269,19 +269,19 @@ func TestClusterScope_ReconcileRouteTable(t *testing.T) {
 		},
 		{
 			name: "subnets are public and private and route table doesn't exists",
-			spec: infrastructurev1beta2.OCIClusterSpec{
+			spec: infrastructurev1beta3.OCIClusterSpec{
 				CompartmentId: "foo",
 				DefinedTags:   definedTags,
-				NetworkSpec: infrastructurev1beta2.NetworkSpec{
-					Vcn: infrastructurev1beta2.VCN{
+				NetworkSpec: infrastructurev1beta3.NetworkSpec{
+					Vcn: infrastructurev1beta3.VCN{
 						ID: common.String("vcn1"),
-						InternetGateway: infrastructurev1beta2.InternetGateway{
+						InternetGateway: infrastructurev1beta3.InternetGateway{
 							Id: common.String("igw"),
 						},
-						ServiceGateway: infrastructurev1beta2.ServiceGateway{
+						ServiceGateway: infrastructurev1beta3.ServiceGateway{
 							Id: common.String("sgw"),
 						},
-						NATGateway: infrastructurev1beta2.NATGateway{
+						NATGateway: infrastructurev1beta3.NATGateway{
 							Id: common.String("ngw"),
 						},
 					},
@@ -291,11 +291,11 @@ func TestClusterScope_ReconcileRouteTable(t *testing.T) {
 		},
 		{
 			name: "no update needed",
-			spec: infrastructurev1beta2.OCIClusterSpec{
+			spec: infrastructurev1beta3.OCIClusterSpec{
 				DefinedTags: definedTags,
-				NetworkSpec: infrastructurev1beta2.NetworkSpec{
-					Vcn: infrastructurev1beta2.VCN{
-						RouteTable: infrastructurev1beta2.RouteTable{
+				NetworkSpec: infrastructurev1beta3.NetworkSpec{
+					Vcn: infrastructurev1beta3.VCN{
+						RouteTable: infrastructurev1beta3.RouteTable{
 							PrivateRouteTableId: common.String("private"),
 							PublicRouteTableId:  common.String("public"),
 						},
@@ -306,24 +306,24 @@ func TestClusterScope_ReconcileRouteTable(t *testing.T) {
 		},
 		{
 			name: "update needed",
-			spec: infrastructurev1beta2.OCIClusterSpec{
+			spec: infrastructurev1beta3.OCIClusterSpec{
 				FreeformTags: map[string]string{
 					"foo": "bar",
 				},
 				DefinedTags: definedTags,
-				NetworkSpec: infrastructurev1beta2.NetworkSpec{
-					Vcn: infrastructurev1beta2.VCN{
-						Subnets: []*infrastructurev1beta2.Subnet{
+				NetworkSpec: infrastructurev1beta3.NetworkSpec{
+					Vcn: infrastructurev1beta3.VCN{
+						Subnets: []*infrastructurev1beta3.Subnet{
 							{
-								Type: infrastructurev1beta2.Private,
-								Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+								Type: infrastructurev1beta3.Private,
+								Role: infrastructurev1beta3.ControlPlaneEndpointRole,
 							},
 							{
-								Type: infrastructurev1beta2.Private,
-								Role: infrastructurev1beta2.ServiceLoadBalancerRole,
+								Type: infrastructurev1beta3.Private,
+								Role: infrastructurev1beta3.ServiceLoadBalancerRole,
 							},
 						},
-						RouteTable: infrastructurev1beta2.RouteTable{
+						RouteTable: infrastructurev1beta3.RouteTable{
 							PrivateRouteTableId: common.String("private"),
 						},
 					},
@@ -333,23 +333,23 @@ func TestClusterScope_ReconcileRouteTable(t *testing.T) {
 		},
 		{
 			name: "id not present in spec but found by name and no update",
-			spec: infrastructurev1beta2.OCIClusterSpec{
+			spec: infrastructurev1beta3.OCIClusterSpec{
 				CompartmentId: "foo",
 				FreeformTags: map[string]string{
 					"foo": "bar",
 				},
 				DefinedTags: definedTags,
-				NetworkSpec: infrastructurev1beta2.NetworkSpec{
-					Vcn: infrastructurev1beta2.VCN{
+				NetworkSpec: infrastructurev1beta3.NetworkSpec{
+					Vcn: infrastructurev1beta3.VCN{
 						ID: common.String("vcn"),
-						Subnets: []*infrastructurev1beta2.Subnet{
+						Subnets: []*infrastructurev1beta3.Subnet{
 							{
-								Type: infrastructurev1beta2.Private,
-								Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+								Type: infrastructurev1beta3.Private,
+								Role: infrastructurev1beta3.ControlPlaneEndpointRole,
 							},
 							{
-								Type: infrastructurev1beta2.Private,
-								Role: infrastructurev1beta2.ServiceLoadBalancerRole,
+								Type: infrastructurev1beta3.Private,
+								Role: infrastructurev1beta3.ServiceLoadBalancerRole,
 							},
 						},
 					},
@@ -359,26 +359,26 @@ func TestClusterScope_ReconcileRouteTable(t *testing.T) {
 		},
 		{
 			name: "creation failed",
-			spec: infrastructurev1beta2.OCIClusterSpec{
+			spec: infrastructurev1beta3.OCIClusterSpec{
 				CompartmentId: "foo",
 				DefinedTags:   definedTags,
-				NetworkSpec: infrastructurev1beta2.NetworkSpec{
-					Vcn: infrastructurev1beta2.VCN{
+				NetworkSpec: infrastructurev1beta3.NetworkSpec{
+					Vcn: infrastructurev1beta3.VCN{
 						ID: common.String("vcn1"),
-						ServiceGateway: infrastructurev1beta2.ServiceGateway{
+						ServiceGateway: infrastructurev1beta3.ServiceGateway{
 							Id: common.String("sgw"),
 						},
-						NATGateway: infrastructurev1beta2.NATGateway{
+						NATGateway: infrastructurev1beta3.NATGateway{
 							Id: common.String("ngw"),
 						},
-						Subnets: []*infrastructurev1beta2.Subnet{
+						Subnets: []*infrastructurev1beta3.Subnet{
 							{
-								Type: infrastructurev1beta2.Private,
-								Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+								Type: infrastructurev1beta3.Private,
+								Role: infrastructurev1beta3.ControlPlaneEndpointRole,
 							},
 							{
-								Type: infrastructurev1beta2.Private,
-								Role: infrastructurev1beta2.ServiceLoadBalancerRole,
+								Type: infrastructurev1beta3.Private,
+								Role: infrastructurev1beta3.ServiceLoadBalancerRole,
 							},
 						},
 					},
@@ -389,22 +389,22 @@ func TestClusterScope_ReconcileRouteTable(t *testing.T) {
 		},
 		{
 			name: "route table creation skip",
-			spec: infrastructurev1beta2.OCIClusterSpec{
+			spec: infrastructurev1beta3.OCIClusterSpec{
 				CompartmentId: "foo",
 				DefinedTags:   definedTags,
-				NetworkSpec: infrastructurev1beta2.NetworkSpec{
-					Vcn: infrastructurev1beta2.VCN{
+				NetworkSpec: infrastructurev1beta3.NetworkSpec{
+					Vcn: infrastructurev1beta3.VCN{
 						ID: common.String("vcn1"),
-						NATGateway: infrastructurev1beta2.NATGateway{
+						NATGateway: infrastructurev1beta3.NATGateway{
 							Id: common.String("ngw"),
 						},
-						ServiceGateway: infrastructurev1beta2.ServiceGateway{
+						ServiceGateway: infrastructurev1beta3.ServiceGateway{
 							Id: common.String("sgw"),
 						},
-						RouteTable: infrastructurev1beta2.RouteTable{
+						RouteTable: infrastructurev1beta3.RouteTable{
 							Skip: true,
 						},
-						Subnets: []*infrastructurev1beta2.Subnet{
+						Subnets: []*infrastructurev1beta3.Subnet{
 							{
 								Type: infrastructurev1beta1.Private,
 								Role: infrastructurev1beta1.ControlPlaneEndpointRole,
@@ -424,7 +424,7 @@ func TestClusterScope_ReconcileRouteTable(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ociClusterAccessor := OCISelfManagedCluster{
-				&infrastructurev1beta2.OCICluster{
+				&infrastructurev1beta3.OCICluster{
 					ObjectMeta: metav1.ObjectMeta{
 						UID: "cluster_uid",
 					},
@@ -461,7 +461,7 @@ func TestClusterScope_ReconcileRouteTable(t *testing.T) {
 func TestClusterScope_CreateRouteTable(t *testing.T) {
 	type args struct {
 		routeTableType string
-		spec           infrastructurev1beta2.OCIClusterSpec
+		spec           infrastructurev1beta3.OCIClusterSpec
 		setupMock      func(t *testing.T, vcn *mock_vcn.MockClient)
 	}
 	tests := []struct {
@@ -473,16 +473,16 @@ func TestClusterScope_CreateRouteTable(t *testing.T) {
 		{
 			name: "private without peering (NAT + Service routes only)",
 			args: args{
-				routeTableType: infrastructurev1beta2.Private,
-				spec: infrastructurev1beta2.OCIClusterSpec{
+				routeTableType: infrastructurev1beta3.Private,
+				spec: infrastructurev1beta3.OCIClusterSpec{
 					CompartmentId: "comp",
-					NetworkSpec: infrastructurev1beta2.NetworkSpec{
-						Vcn: infrastructurev1beta2.VCN{
+					NetworkSpec: infrastructurev1beta3.NetworkSpec{
+						Vcn: infrastructurev1beta3.VCN{
 							ID: common.String("vcn1"),
-							NATGateway: infrastructurev1beta2.NATGateway{
+							NATGateway: infrastructurev1beta3.NATGateway{
 								Id: common.String("ngw"),
 							},
-							ServiceGateway: infrastructurev1beta2.ServiceGateway{
+							ServiceGateway: infrastructurev1beta3.ServiceGateway{
 								Id: common.String("sgw"),
 							},
 						},
@@ -552,22 +552,22 @@ func TestClusterScope_CreateRouteTable(t *testing.T) {
 		{
 			name: "private with peering (adds DRG peer routes)",
 			args: args{
-				routeTableType: infrastructurev1beta2.Private,
-				spec: infrastructurev1beta2.OCIClusterSpec{
+				routeTableType: infrastructurev1beta3.Private,
+				spec: infrastructurev1beta3.OCIClusterSpec{
 					CompartmentId: "comp",
-					NetworkSpec: infrastructurev1beta2.NetworkSpec{
-						VCNPeering: &infrastructurev1beta2.VCNPeering{
-							DRG: &infrastructurev1beta2.DRG{ID: common.String("drg-id")},
-							PeerRouteRules: []infrastructurev1beta2.PeerRouteRule{
+					NetworkSpec: infrastructurev1beta3.NetworkSpec{
+						VCNPeering: &infrastructurev1beta3.VCNPeering{
+							DRG: &infrastructurev1beta3.DRG{ID: common.String("drg-id")},
+							PeerRouteRules: []infrastructurev1beta3.PeerRouteRule{
 								{VCNCIDRRange: "10.1.0.0/16"},
 							},
 						},
-						Vcn: infrastructurev1beta2.VCN{
+						Vcn: infrastructurev1beta3.VCN{
 							ID: common.String("vcn1"),
-							NATGateway: infrastructurev1beta2.NATGateway{
+							NATGateway: infrastructurev1beta3.NATGateway{
 								Id: common.String("ngw"),
 							},
-							ServiceGateway: infrastructurev1beta2.ServiceGateway{
+							ServiceGateway: infrastructurev1beta3.ServiceGateway{
 								Id: common.String("sgw"),
 							},
 						},
@@ -650,21 +650,21 @@ func TestClusterScope_CreateRouteTable(t *testing.T) {
 		{
 			name: "private with peering but DRG is nil",
 			args: args{
-				routeTableType: infrastructurev1beta2.Private,
-				spec: infrastructurev1beta2.OCIClusterSpec{
+				routeTableType: infrastructurev1beta3.Private,
+				spec: infrastructurev1beta3.OCIClusterSpec{
 					CompartmentId: "comp",
-					NetworkSpec: infrastructurev1beta2.NetworkSpec{
-						VCNPeering: &infrastructurev1beta2.VCNPeering{
+					NetworkSpec: infrastructurev1beta3.NetworkSpec{
+						VCNPeering: &infrastructurev1beta3.VCNPeering{
 							DRG:                      nil, // Intentionally set to nil
-							PeerRouteRules:           []infrastructurev1beta2.PeerRouteRule{{VCNCIDRRange: "10.1.0.0/16"}},
+							PeerRouteRules:           []infrastructurev1beta3.PeerRouteRule{{VCNCIDRRange: "10.1.0.0/16"}},
 							RemotePeeringConnections: nil,
 						},
-						Vcn: infrastructurev1beta2.VCN{
+						Vcn: infrastructurev1beta3.VCN{
 							ID: common.String("vcn1"),
-							NATGateway: infrastructurev1beta2.NATGateway{
+							NATGateway: infrastructurev1beta3.NATGateway{
 								Id: common.String("ngw"),
 							},
-							ServiceGateway: infrastructurev1beta2.ServiceGateway{
+							ServiceGateway: infrastructurev1beta3.ServiceGateway{
 								Id: common.String("sgw"),
 							},
 						},
@@ -681,20 +681,20 @@ func TestClusterScope_CreateRouteTable(t *testing.T) {
 		{
 			name: "private with peering but DRG ID is nil",
 			args: args{
-				routeTableType: infrastructurev1beta2.Private,
-				spec: infrastructurev1beta2.OCIClusterSpec{
+				routeTableType: infrastructurev1beta3.Private,
+				spec: infrastructurev1beta3.OCIClusterSpec{
 					CompartmentId: "comp",
-					NetworkSpec: infrastructurev1beta2.NetworkSpec{
-						VCNPeering: &infrastructurev1beta2.VCNPeering{
-							DRG:            &infrastructurev1beta2.DRG{ID: nil},
-							PeerRouteRules: []infrastructurev1beta2.PeerRouteRule{{VCNCIDRRange: "10.1.0.0/16"}},
+					NetworkSpec: infrastructurev1beta3.NetworkSpec{
+						VCNPeering: &infrastructurev1beta3.VCNPeering{
+							DRG:            &infrastructurev1beta3.DRG{ID: nil},
+							PeerRouteRules: []infrastructurev1beta3.PeerRouteRule{{VCNCIDRRange: "10.1.0.0/16"}},
 						},
-						Vcn: infrastructurev1beta2.VCN{
+						Vcn: infrastructurev1beta3.VCN{
 							ID: common.String("vcn1"),
-							NATGateway: infrastructurev1beta2.NATGateway{
+							NATGateway: infrastructurev1beta3.NATGateway{
 								Id: common.String("ngw"),
 							},
-							ServiceGateway: infrastructurev1beta2.ServiceGateway{
+							ServiceGateway: infrastructurev1beta3.ServiceGateway{
 								Id: common.String("sgw"),
 							},
 						},
@@ -722,7 +722,7 @@ func TestClusterScope_CreateRouteTable(t *testing.T) {
 
 			l := log.FromContext(context.Background())
 			ociClusterAccessor := OCISelfManagedCluster{
-				OCICluster: &infrastructurev1beta2.OCICluster{
+				OCICluster: &infrastructurev1beta3.OCICluster{
 					ObjectMeta: metav1.ObjectMeta{UID: "cluster_uid"},
 					Spec:       tt.args.spec,
 				},
@@ -801,16 +801,16 @@ func TestClusterScope_DeleteRouteTables(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		spec          infrastructurev1beta2.OCIClusterSpec
+		spec          infrastructurev1beta3.OCIClusterSpec
 		wantErr       bool
 		expectedError string
 	}{
 		{
 			name: "delete route table is successful",
-			spec: infrastructurev1beta2.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta2.NetworkSpec{
-					Vcn: infrastructurev1beta2.VCN{
-						RouteTable: infrastructurev1beta2.RouteTable{
+			spec: infrastructurev1beta3.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta3.NetworkSpec{
+					Vcn: infrastructurev1beta3.VCN{
+						RouteTable: infrastructurev1beta3.RouteTable{
 							PrivateRouteTableId: common.String("private_id"),
 							PublicRouteTableId:  common.String("public_id"),
 						},
@@ -821,20 +821,20 @@ func TestClusterScope_DeleteRouteTables(t *testing.T) {
 		},
 		{
 			name: "route table already deleted",
-			spec: infrastructurev1beta2.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta2.NetworkSpec{
-					Vcn: infrastructurev1beta2.VCN{
-						Subnets: []*infrastructurev1beta2.Subnet{
+			spec: infrastructurev1beta3.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta3.NetworkSpec{
+					Vcn: infrastructurev1beta3.VCN{
+						Subnets: []*infrastructurev1beta3.Subnet{
 							{
-								Type: infrastructurev1beta2.Private,
-								Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+								Type: infrastructurev1beta3.Private,
+								Role: infrastructurev1beta3.ControlPlaneEndpointRole,
 							},
 							{
-								Type: infrastructurev1beta2.Private,
-								Role: infrastructurev1beta2.ServiceLoadBalancerRole,
+								Type: infrastructurev1beta3.Private,
+								Role: infrastructurev1beta3.ServiceLoadBalancerRole,
 							},
 						},
-						RouteTable: infrastructurev1beta2.RouteTable{
+						RouteTable: infrastructurev1beta3.RouteTable{
 							PrivateRouteTableId: common.String("rt_deleted"),
 						},
 					},
@@ -844,20 +844,20 @@ func TestClusterScope_DeleteRouteTables(t *testing.T) {
 		},
 		{
 			name: "delete route table error when calling get route table",
-			spec: infrastructurev1beta2.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta2.NetworkSpec{
-					Vcn: infrastructurev1beta2.VCN{
-						Subnets: []*infrastructurev1beta2.Subnet{
+			spec: infrastructurev1beta3.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta3.NetworkSpec{
+					Vcn: infrastructurev1beta3.VCN{
+						Subnets: []*infrastructurev1beta3.Subnet{
 							{
-								Type: infrastructurev1beta2.Private,
-								Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+								Type: infrastructurev1beta3.Private,
+								Role: infrastructurev1beta3.ControlPlaneEndpointRole,
 							},
 							{
-								Type: infrastructurev1beta2.Private,
-								Role: infrastructurev1beta2.ServiceLoadBalancerRole,
+								Type: infrastructurev1beta3.Private,
+								Role: infrastructurev1beta3.ServiceLoadBalancerRole,
 							},
 						},
-						RouteTable: infrastructurev1beta2.RouteTable{
+						RouteTable: infrastructurev1beta3.RouteTable{
 							PrivateRouteTableId: common.String("private_id_error"),
 						},
 					},
@@ -868,20 +868,20 @@ func TestClusterScope_DeleteRouteTables(t *testing.T) {
 		},
 		{
 			name: "delete route table error when calling delete route table",
-			spec: infrastructurev1beta2.OCIClusterSpec{
-				NetworkSpec: infrastructurev1beta2.NetworkSpec{
-					Vcn: infrastructurev1beta2.VCN{
-						Subnets: []*infrastructurev1beta2.Subnet{
+			spec: infrastructurev1beta3.OCIClusterSpec{
+				NetworkSpec: infrastructurev1beta3.NetworkSpec{
+					Vcn: infrastructurev1beta3.VCN{
+						Subnets: []*infrastructurev1beta3.Subnet{
 							{
-								Type: infrastructurev1beta2.Private,
-								Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+								Type: infrastructurev1beta3.Private,
+								Role: infrastructurev1beta3.ControlPlaneEndpointRole,
 							},
 							{
-								Type: infrastructurev1beta2.Private,
-								Role: infrastructurev1beta2.ServiceLoadBalancerRole,
+								Type: infrastructurev1beta3.Private,
+								Role: infrastructurev1beta3.ServiceLoadBalancerRole,
 							},
 						},
-						RouteTable: infrastructurev1beta2.RouteTable{
+						RouteTable: infrastructurev1beta3.RouteTable{
 							PrivateRouteTableId: common.String("private_id_error_delete"),
 						},
 					},
@@ -895,7 +895,7 @@ func TestClusterScope_DeleteRouteTables(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ociClusterAccessor := OCISelfManagedCluster{
-				&infrastructurev1beta2.OCICluster{
+				&infrastructurev1beta3.OCICluster{
 					Spec: tt.spec,
 					ObjectMeta: metav1.ObjectMeta{
 						UID: "cluster_uid",

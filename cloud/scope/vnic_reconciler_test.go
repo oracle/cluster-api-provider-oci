@@ -23,7 +23,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/compute/mock_compute"
 	"github.com/oracle/oci-go-sdk/v65/common"
@@ -31,7 +31,6 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -42,7 +41,7 @@ func TestReconcileVnicAttachment(t *testing.T) {
 		ms            *MachineScope
 		mockCtrl      *gomock.Controller
 		computeClient *mock_compute.MockComputeClient
-		ociCluster    infrastructurev1beta2.OCICluster
+		ociCluster    infrastructurev1beta3.OCICluster
 	)
 
 	setup := func(t *testing.T, g *WithT) {
@@ -60,24 +59,24 @@ func TestReconcileVnicAttachment(t *testing.T) {
 		mockCtrl = gomock.NewController(t)
 		computeClient = mock_compute.NewMockComputeClient(mockCtrl)
 		client := fake.NewClientBuilder().WithObjects(secret).Build()
-		ociCluster = infrastructurev1beta2.OCICluster{
+		ociCluster = infrastructurev1beta3.OCICluster{
 			ObjectMeta: metav1.ObjectMeta{
 				UID: "uid",
 			},
-			Spec: infrastructurev1beta2.OCIClusterSpec{
+			Spec: infrastructurev1beta3.OCIClusterSpec{
 				OCIResourceIdentifier: "resource_uid",
 			},
 		}
 		ociCluster.Spec.ControlPlaneEndpoint.Port = 6443
 		ms, err = NewMachineScope(MachineScopeParams{
 			ComputeClient: computeClient,
-			OCIMachine: &infrastructurev1beta2.OCIMachine{
+			OCIMachine: &infrastructurev1beta3.OCIMachine{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
-				Spec: infrastructurev1beta2.OCIMachineSpec{
+				Spec: infrastructurev1beta3.OCIMachineSpec{
 					CompartmentId: "testCompartment",
-					VnicAttachments: []infrastructurev1beta2.VnicAttachment{
+					VnicAttachments: []infrastructurev1beta3.VnicAttachment{
 						{
 							DisplayName: common.String("VnicTest"),
 							NicIndex:    common.Int(0),
@@ -232,7 +231,7 @@ func TestReconcileVnicAttachment(t *testing.T) {
 			matchError:    fmt.Errorf("cannot attach multiple vnics to ControlPlane machines"),
 			testSpecificSetup: func(machineScope *MachineScope, computeClient *mock_compute.MockComputeClient) {
 				ms.Machine.ObjectMeta.Labels = make(map[string]string)
-				ms.Machine.ObjectMeta.Labels[clusterv1beta1.MachineControlPlaneLabel] = "Test"
+				ms.Machine.ObjectMeta.Labels[clusterv1.MachineControlPlaneLabel] = "Test"
 			},
 		},
 	}

@@ -1,4 +1,4 @@
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 kind: OCIMachineTemplate
 metadata:
   namespace: "${NAMESPACE}"
@@ -8,7 +8,7 @@ spec:
     spec:
       imageId: "${OCI_ORACLE_LINUX_IMAGE_ID}"
 ---
-apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta2
 kind: KubeadmConfigTemplate
 metadata:
   namespace: "${NAMESPACE}"

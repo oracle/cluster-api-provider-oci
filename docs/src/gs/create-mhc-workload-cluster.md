@@ -53,24 +53,27 @@ new nodes once the MHC is deployed.
 
 Finally, create a file named `control-plane-mhc.yaml` that has this content: 
 ```yaml
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachineHealthCheck
 metadata:
   name: "<your-cluster-name>-control-plane-unhealthy-5m"
 spec:
   clusterName: "<your-cluster-name>"
-  maxUnhealthy: 100%
-  nodeStartupTimeout: 10m
   selector:
     matchLabels:
       controlplane.remediation: ""
-  unhealthyConditions:
-    - type: Ready
-      status: Unknown
-      timeout: 300s
-    - type: Ready
-      status: "False"
-      timeout: 300s
+  checks:
+    nodeStartupTimeoutSeconds: 600
+    unhealthyNodeConditions:
+      - type: Ready
+        status: Unknown
+        timeoutSeconds: 300
+      - type: Ready
+        status: "False"
+        timeoutSeconds: 300
+  remediation:
+    triggerIf:
+      unhealthyLessThanOrEqualTo: 100%
 ```
 
 Then on the management cluster run `kubectl apply -f control-plane-mhc.yaml`.
@@ -105,24 +108,27 @@ new nodes once the MHC is deployed.
 
 Finally, create a file named `machine-mhc.yaml` that has this content:
 ```yaml
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachineHealthCheck
 metadata:
   name: "<your-cluster-name>-stage-md-unhealthy-5m"
 spec:
   clusterName: "oci-cluster-stage"
-  maxUnhealthy: 100%
-  nodeStartupTimeout: 10m
   selector:
     matchLabels:
       machine.remediation: ""
-  unhealthyConditions:
-    - type: Ready
-      status: Unknown
-      timeout: 300s
-    - type: Ready
-      status: "False"
-      timeout: 300s
+  checks:
+    nodeStartupTimeoutSeconds: 600
+    unhealthyNodeConditions:
+      - type: Ready
+        status: Unknown
+        timeoutSeconds: 300
+      - type: Ready
+        status: "False"
+        timeoutSeconds: 300
+  remediation:
+    triggerIf:
+      unhealthyLessThanOrEqualTo: 100%
 ```
 
 Then on the management cluster run `kubectl apply -f machine-mhc.yaml`.

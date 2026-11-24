@@ -3,7 +3,6 @@ package v1beta2
 import (
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 )
 
 const (
@@ -213,7 +212,7 @@ type OCIManagedMachinePoolStatus struct {
 	Ready bool `json:"ready"`
 	// NetworkSpec encapsulates all things related to OCI network.
 	// +optional
-	Conditions clusterv1beta1.Conditions `json:"conditions,omitempty"`
+	Conditions infrastructurev1beta2.Conditions `json:"conditions,omitempty"`
 
 	// +optional
 	NodepoolLifecycleState string `json:"nodepoolLifecycleState,omitempty"`
@@ -233,8 +232,6 @@ type OCIManagedMachinePoolStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-// +kubebuilder:storageversion
-
 // OCIManagedMachinePool is the Schema for the ocimanagedmachinepool API.
 type OCIManagedMachinePool struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -245,8 +242,6 @@ type OCIManagedMachinePool struct {
 }
 
 //+kubebuilder:object:root=true
-// +kubebuilder:storageversion
-
 // OCIManagedMachinePoolList contains a list of OCIManagedMachinePool.
 type OCIManagedMachinePoolList struct {
 	metav1.TypeMeta `json:",inline"`
@@ -255,12 +250,12 @@ type OCIManagedMachinePoolList struct {
 }
 
 // GetConditions returns the list of conditions for an OCIMachine API object.
-func (m *OCIManagedMachinePool) GetConditions() clusterv1beta1.Conditions {
+func (m *OCIManagedMachinePool) GetConditions() infrastructurev1beta2.Conditions {
 	return m.Status.Conditions
 }
 
 // SetConditions will set the given conditions on an OCIMachine object.
-func (m *OCIManagedMachinePool) SetConditions(conditions clusterv1beta1.Conditions) {
+func (m *OCIManagedMachinePool) SetConditions(conditions infrastructurev1beta2.Conditions) {
 	m.Status.Conditions = conditions
 }
 

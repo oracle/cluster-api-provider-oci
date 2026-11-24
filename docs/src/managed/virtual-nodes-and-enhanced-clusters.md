@@ -12,7 +12,7 @@ The following `OCIManagedControlPlane` snippet can be used to create an enhanced
 
 ```yaml
 kind: OCIManagedControlPlane
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 spec:
   clusterType: "ENHANCED_CLUSTER"
 ```
@@ -23,7 +23,7 @@ The following `OCIVirtualMachinePool` snippet can be used to create a Virtual No
 API Docs][api-docs] to see all the supported parameters of `OCIVirtualMachinePool`.
 
 ```yaml
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 kind: OCIVirtualMachinePool
 spec:
 ```

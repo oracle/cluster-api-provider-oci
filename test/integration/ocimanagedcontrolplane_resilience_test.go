@@ -25,7 +25,7 @@ import (
 	"time"
 
 	. "github.com/onsi/gomega"
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	"github.com/oracle/oci-go-sdk/v65/common"
@@ -34,7 +34,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
-	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -60,9 +60,9 @@ func TestOCIManagedControlPlaneRecoversFromCloudFailuresAndAsyncStates(t *testin
 		active, creates, _, _, _ := fakeOCI.oke.counts()
 		g.Expect(active).To(BeZero())
 		g.Expect(creates).To(BeZero())
-		stored := &infrastructurev1beta2.OCIManagedControlPlane{}
+		stored := &infrastructurev1beta3.OCIManagedControlPlane{}
 		g.Expect(testEnvironment.GetAPIReader().Get(testContext, controlPlaneKey, stored)).To(Succeed())
-		g.Expect(controllerutil.ContainsFinalizer(stored, infrastructurev1beta2.ControlPlaneFinalizer)).To(BeTrue())
+		g.Expect(controllerutil.ContainsFinalizer(stored, infrastructurev1beta3.ControlPlaneFinalizer)).To(BeTrue())
 	}).WithTimeout(10 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
 	waitForWarningEvent(t, fixture.namespace.Name, fixture.controlPlane.Name, "ReconcileError", "injected OKE cluster create failure")
 
@@ -74,15 +74,15 @@ func TestOCIManagedControlPlaneRecoversFromCloudFailuresAndAsyncStates(t *testin
 		g.Expect(active).To(Equal(1))
 		g.Expect(creates).To(Equal(1))
 		g.Expect(kubeconfigs).To(BeZero())
-		stored := &infrastructurev1beta2.OCIManagedControlPlane{}
+		stored := &infrastructurev1beta3.OCIManagedControlPlane{}
 		g.Expect(testEnvironment.GetAPIReader().Get(testContext, controlPlaneKey, stored)).To(Succeed())
 		g.Expect(stored.Spec.ID).NotTo(BeNil())
 		clusterID = *stored.Spec.ID
-		g.Expect(stored.Status.Ready).To(BeFalse())
-		condition := v1beta1conditions.Get(stored, infrastructurev1beta2.ControlPlaneReadyCondition)
+		g.Expect(stored.Status.Initialization.ControlPlaneInitialized).To(Or(BeNil(), Equal(common.Bool(false))))
+		condition := conditions.Get(stored, infrastructurev1beta3.ControlPlaneReadyCondition)
 		g.Expect(condition).NotTo(BeNil())
-		g.Expect(condition.Status).To(Equal(corev1.ConditionFalse))
-		g.Expect(condition.Reason).To(Equal(infrastructurev1beta2.ControlPlaneNotReadyReason))
+		g.Expect(condition.Status).To(Equal(metav1.ConditionFalse))
+		g.Expect(condition.Reason).To(Equal(infrastructurev1beta3.ControlPlaneNotReadyReason))
 	}).WithTimeout(10 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
 
 	fakeOCI.oke.setFailure(createKubeconfigOperation, errors.New("injected kubeconfig create failure"))
@@ -103,7 +103,7 @@ func TestOCIManagedControlPlaneRecoversFromCloudFailuresAndAsyncStates(t *testin
 	fakeOCI.oke.setClusterUpdateState(oke.ClusterLifecycleStateUpdating)
 	updatedVersion := "v1.34.2"
 	g.Eventually(func() error {
-		stored := &infrastructurev1beta2.OCIManagedControlPlane{}
+		stored := &infrastructurev1beta3.OCIManagedControlPlane{}
 		if err := testEnvironment.GetAPIReader().Get(testContext, controlPlaneKey, stored); err != nil {
 			return err
 		}
@@ -139,10 +139,10 @@ func TestOCIManagedControlPlaneRecoversFromCloudFailuresAndAsyncStates(t *testin
 	g.Expect(testEnvironment.Delete(testContext, fixture.controlPlane)).To(Succeed())
 	waitForOKEAttempt(t, deleteClusterOperation, deleteAttempts)
 	g.Eventually(func(g Gomega) {
-		stored := &infrastructurev1beta2.OCIManagedControlPlane{}
+		stored := &infrastructurev1beta3.OCIManagedControlPlane{}
 		g.Expect(testEnvironment.GetAPIReader().Get(testContext, controlPlaneKey, stored)).To(Succeed())
 		g.Expect(stored.DeletionTimestamp.IsZero()).To(BeFalse())
-		g.Expect(controllerutil.ContainsFinalizer(stored, infrastructurev1beta2.ControlPlaneFinalizer)).To(BeTrue())
+		g.Expect(controllerutil.ContainsFinalizer(stored, infrastructurev1beta3.ControlPlaneFinalizer)).To(BeTrue())
 		active, _, _, deletes, _ := fakeOCI.oke.counts()
 		g.Expect(active).To(Equal(1))
 		g.Expect(deletes).To(BeZero())
@@ -156,7 +156,7 @@ func TestOCIManagedControlPlaneRecoversFromCloudFailuresAndAsyncStates(t *testin
 	}).WithTimeout(10 * time.Second).WithPolling(100 * time.Millisecond).Should(Equal(1))
 	triggerObjectReconcile(t, fixture.controlPlane)
 	g.Eventually(func() bool {
-		err := testEnvironment.GetAPIReader().Get(testContext, controlPlaneKey, &infrastructurev1beta2.OCIManagedControlPlane{})
+		err := testEnvironment.GetAPIReader().Get(testContext, controlPlaneKey, &infrastructurev1beta3.OCIManagedControlPlane{})
 		return apierrors.IsNotFound(err)
 	}).WithTimeout(10 * time.Second).WithPolling(100 * time.Millisecond).Should(BeTrue())
 }
@@ -182,7 +182,7 @@ func TestOCIManagedControlPlaneAdoptsOnlyOwnedOKECluster(t *testing.T) {
 
 	g.Expect(testEnvironment.Delete(testContext, fixture.controlPlane)).To(Succeed())
 	g.Eventually(func() bool {
-		err := testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(fixture.controlPlane), &infrastructurev1beta2.OCIManagedControlPlane{})
+		err := testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(fixture.controlPlane), &infrastructurev1beta3.OCIManagedControlPlane{})
 		return apierrors.IsNotFound(err)
 	}).WithTimeout(10 * time.Second).WithPolling(100 * time.Millisecond).Should(BeTrue())
 	active, creates, _, deletes, _ := fakeOCI.oke.counts()
@@ -194,8 +194,8 @@ func TestOCIManagedControlPlaneAdoptsOnlyOwnedOKECluster(t *testing.T) {
 type managedControlPlaneFixture struct {
 	namespace      *corev1.Namespace
 	cluster        *clusterv1.Cluster
-	managedCluster *infrastructurev1beta2.OCIManagedCluster
-	controlPlane   *infrastructurev1beta2.OCIManagedControlPlane
+	managedCluster *infrastructurev1beta3.OCIManagedCluster
+	controlPlane   *infrastructurev1beta3.OCIManagedControlPlane
 	version        string
 }
 
@@ -209,8 +209,8 @@ func createManagedControlPlaneFixture(t *testing.T, name, resourceIdentifier str
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: fixture.namespace.Name},
 		Spec: clusterv1.ClusterSpec{
 			Paused:            common.Bool(true),
-			InfrastructureRef: clusterv1.ContractVersionedObjectReference{APIGroup: infrastructurev1beta2.GroupVersion.Group, Kind: scope.OCIManagedClusterKind, Name: name},
-			ControlPlaneRef:   clusterv1.ContractVersionedObjectReference{APIGroup: infrastructurev1beta2.GroupVersion.Group, Kind: "OCIManagedControlPlane", Name: name},
+			InfrastructureRef: clusterv1.ContractVersionedObjectReference{APIGroup: infrastructurev1beta3.GroupVersion.Group, Kind: scope.OCIManagedClusterKind, Name: name},
+			ControlPlaneRef:   clusterv1.ContractVersionedObjectReference{APIGroup: infrastructurev1beta3.GroupVersion.Group, Kind: "OCIManagedControlPlane", Name: name},
 		},
 	}
 	g.Expect(testEnvironment.Create(testContext, fixture.cluster)).To(Succeed())
@@ -222,13 +222,13 @@ func createManagedControlPlaneFixture(t *testing.T, name, resourceIdentifier str
 	for i, nsg := range network.Vcn.NetworkSecurityGroup.List {
 		nsg.ID = common.String("ocid1.networksecuritygroup.oc1.." + name + "-" + strconv.Itoa(i+1))
 	}
-	fixture.managedCluster = &infrastructurev1beta2.OCIManagedCluster{
+	fixture.managedCluster = &infrastructurev1beta3.OCIManagedCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name, Namespace: fixture.namespace.Name,
 			Annotations:     map[string]string{clusterv1.ManagedByAnnotation: "integration-test"},
 			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(fixture.cluster, clusterv1.GroupVersion.WithKind("Cluster"))},
 		},
-		Spec: infrastructurev1beta2.OCIManagedClusterSpec{
+		Spec: infrastructurev1beta3.OCIManagedClusterSpec{
 			OCIResourceIdentifier: resourceIdentifier,
 			CompartmentId:         "ocid1.compartment.oc1..integration",
 			Region:                scope.MockTestRegion,
@@ -236,16 +236,16 @@ func createManagedControlPlaneFixture(t *testing.T, name, resourceIdentifier str
 		},
 	}
 	g.Expect(testEnvironment.Create(testContext, fixture.managedCluster)).To(Succeed())
-	storedManagedCluster := &infrastructurev1beta2.OCIManagedCluster{}
+	storedManagedCluster := &infrastructurev1beta3.OCIManagedCluster{}
 	g.Expect(testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(fixture.managedCluster), storedManagedCluster)).To(Succeed())
-	storedManagedCluster.Status.Ready = true
+	storedManagedCluster.Status.Initialization.Provisioned = common.Bool(true)
 	g.Expect(testEnvironment.Status().Update(testContext, storedManagedCluster)).To(Succeed())
-	fixture.controlPlane = &infrastructurev1beta2.OCIManagedControlPlane{
+	fixture.controlPlane = &infrastructurev1beta3.OCIManagedControlPlane{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name, Namespace: fixture.namespace.Name,
 			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(fixture.cluster, clusterv1.GroupVersion.WithKind("Cluster"))},
 		},
-		Spec: infrastructurev1beta2.OCIManagedControlPlaneSpec{Version: common.String(fixture.version)},
+		Spec: infrastructurev1beta3.OCIManagedControlPlaneSpec{Version: common.String(fixture.version)},
 	}
 	g.Expect(testEnvironment.Create(testContext, fixture.controlPlane)).To(Succeed())
 	t.Cleanup(func() {
@@ -286,12 +286,12 @@ func waitForManagedControlPlaneReady(t *testing.T, fixture *managedControlPlaneF
 	t.Helper()
 	g := NewWithT(t)
 	g.Eventually(func(g Gomega) {
-		stored := &infrastructurev1beta2.OCIManagedControlPlane{}
+		stored := &infrastructurev1beta3.OCIManagedControlPlane{}
 		g.Expect(testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(fixture.controlPlane), stored)).To(Succeed())
 		g.Expect(stored.Spec.ID).To(Equal(common.String(clusterID)))
-		g.Expect(stored.Status.Ready).To(BeTrue())
-		g.Expect(stored.Status.Initialized).To(BeTrue())
-		g.Expect(v1beta1conditions.IsTrue(stored, infrastructurev1beta2.ControlPlaneReadyCondition)).To(BeTrue())
+		g.Expect(stored.Status.Initialization.ControlPlaneInitialized).To(Equal(common.Bool(true)))
+		g.Expect(stored.Status.Initialization.ControlPlaneInitialized).To(Equal(common.Bool(true)))
+		g.Expect(conditions.IsTrue(stored, infrastructurev1beta3.ControlPlaneReadyCondition)).To(BeTrue())
 		active, createCalls, _, _, kubeconfigs := fakeOCI.oke.counts()
 		g.Expect(active).To(BeNumerically(">=", 1))
 		g.Expect(createCalls).To(Equal(creates))
@@ -300,13 +300,13 @@ func waitForManagedControlPlaneReady(t *testing.T, fixture *managedControlPlaneF
 	}).WithTimeout(20 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
 }
 
-func waitForManagedControlPlaneVersion(t *testing.T, controlPlane *infrastructurev1beta2.OCIManagedControlPlane, version string) {
+func waitForManagedControlPlaneVersion(t *testing.T, controlPlane *infrastructurev1beta3.OCIManagedControlPlane, version string) {
 	t.Helper()
 	g := NewWithT(t)
 	g.Eventually(func(g Gomega) {
-		stored := &infrastructurev1beta2.OCIManagedControlPlane{}
+		stored := &infrastructurev1beta3.OCIManagedControlPlane{}
 		g.Expect(testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(controlPlane), stored)).To(Succeed())
-		g.Expect(stored.Status.Version).To(Equal(common.String(version)))
-		g.Expect(stored.Status.Ready).To(BeTrue())
+		g.Expect(stored.Status.Versions).To(Equal([]clusterv1.StatusVersion{{Version: version}}))
+		g.Expect(stored.Status.Initialization.ControlPlaneInitialized).To(Equal(common.Bool(true)))
 	}).WithTimeout(15 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
 }

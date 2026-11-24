@@ -1,4 +1,4 @@
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: Cluster
 metadata:
   labels:
@@ -7,17 +7,15 @@ metadata:
   namespace: "${NAMESPACE}"
 spec:
   infrastructureRef:
-    apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+    apiGroup: infrastructure.cluster.x-k8s.io
     kind: OCIManagedCluster
     name: "${CLUSTER_NAME}"
-    namespace: "${NAMESPACE}"
   controlPlaneRef:
-    apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+    apiGroup: infrastructure.cluster.x-k8s.io
     kind: OCIManagedControlPlane
     name: "${CLUSTER_NAME}"
-    namespace: "${NAMESPACE}"
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 kind: OCIManagedCluster
 metadata:
   namespace: "${NAMESPACE}"
@@ -236,7 +234,7 @@ spec:
           type: private
 ---
 kind: OCIManagedControlPlane
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 metadata:
   name: "${CLUSTER_NAME}"
   namespace: "${NAMESPACE}"
@@ -245,7 +243,7 @@ spec:
   clusterPodNetworkOptions:
   - cniType: "FLANNEL_OVERLAY"
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachinePool
 metadata:
   name: ${CLUSTER_NAME}-mp-0
@@ -259,12 +257,12 @@ spec:
       bootstrap:
         dataSecretName: ""
       infrastructureRef:
-        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        apiGroup: infrastructure.cluster.x-k8s.io
         kind: OCIManagedMachinePool
         name: ${CLUSTER_NAME}-mp-0
       version: ${KUBERNETES_VERSION}
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 kind: OCIManagedMachinePool
 metadata:
   name: ${CLUSTER_NAME}-mp-0

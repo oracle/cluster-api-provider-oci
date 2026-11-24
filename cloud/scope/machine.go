@@ -27,7 +27,7 @@ import (
 	"strconv"
 
 	"github.com/go-logr/logr"
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/compute"
@@ -45,10 +45,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2/klogr"
 	"k8s.io/utils/pointer"
-	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
-	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
-	v1beta1patch "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/patch"
+	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -63,7 +61,7 @@ type MachineScopeParams struct {
 	ComputeClient             compute.ComputeClient
 	BlockVolumeClient         volume.BlockVolumeClient
 	OCIClusterAccessor        OCIClusterAccessor
-	OCIMachine                *infrastructurev1beta2.OCIMachine
+	OCIMachine                *infrastructurev1beta3.OCIMachine
 	VCNClient                 vcn.Client
 	NetworkLoadBalancerClient nlb.NetworkLoadBalancerClient
 	LoadBalancerClient        lb.LoadBalancerClient
@@ -73,13 +71,13 @@ type MachineScopeParams struct {
 type MachineScope struct {
 	*logr.Logger
 	Client                    client.Client
-	patchHelper               *v1beta1patch.Helper
+	patchHelper               *patch.Helper
 	Cluster                   *clusterv1.Cluster
 	Machine                   *clusterv1.Machine
 	ComputeClient             compute.ComputeClient
 	BlockVolumeClient         volume.BlockVolumeClient
 	OCIClusterAccessor        OCIClusterAccessor
-	OCIMachine                *infrastructurev1beta2.OCIMachine
+	OCIMachine                *infrastructurev1beta3.OCIMachine
 	VCNClient                 vcn.Client
 	NetworkLoadBalancerClient nlb.NetworkLoadBalancerClient
 	LoadBalancerClient        lb.LoadBalancerClient
@@ -99,7 +97,7 @@ func NewMachineScope(params MachineScopeParams) (*MachineScope, error) {
 		log := klogr.New()
 		params.Logger = &log
 	}
-	helper, err := v1beta1patch.NewHelper(params.OCIMachine, params.Client)
+	helper, err := patch.NewHelper(params.OCIMachine, params.Client)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init patch helper")
 	}
@@ -122,7 +120,7 @@ func NewMachineScope(params MachineScopeParams) (*MachineScope, error) {
 }
 
 func (m *MachineScope) BlockVolumeSpecNotEmpty(ctx context.Context) bool {
-	return !reflect.DeepEqual(m.OCIMachine.Spec.BlockVolumeSpec, infrastructurev1beta2.BlockVolumeSpec{})
+	return !reflect.DeepEqual(m.OCIMachine.Spec.BlockVolumeSpec, infrastructurev1beta3.BlockVolumeSpec{})
 }
 
 func (m *MachineScope) listBlockVolumeAttachmentResponse(ctx context.Context, instanceId *string, page *string) (core.ListVolumeAttachmentsResponse, error) {
@@ -188,12 +186,12 @@ func (m *MachineScope) attachBlockVolumeToInstance(ctx context.Context, instance
 
 	// Attach the block volume to the instance
 	var attachDetails core.AttachVolumeDetails
-	if infrastructurev1beta2.VolumeType(m.OCIMachine.Spec.BlockVolumeSpec.VolumeType) == infrastructurev1beta2.IscsiType {
+	if infrastructurev1beta3.VolumeType(m.OCIMachine.Spec.BlockVolumeSpec.VolumeType) == infrastructurev1beta3.IscsiType {
 		attachDetails = core.AttachIScsiVolumeDetails{
 			VolumeId:   common.String(bvId),
 			InstanceId: instance.Id,
 		}
-	} else if infrastructurev1beta2.VolumeType(m.OCIMachine.Spec.BlockVolumeSpec.VolumeType) == infrastructurev1beta2.ParavirtualizedType {
+	} else if infrastructurev1beta3.VolumeType(m.OCIMachine.Spec.BlockVolumeSpec.VolumeType) == infrastructurev1beta3.ParavirtualizedType {
 		attachDetails = core.AttachParavirtualizedVolumeDetails{
 			VolumeId:   common.String(bvId),
 			InstanceId: instance.Id,
@@ -269,7 +267,7 @@ func (m *MachineScope) GetOrCreateMachine(ctx context.Context) (*core.Instance, 
 	}
 
 	shapeConfig := core.LaunchInstanceShapeConfigDetails{}
-	if (m.OCIMachine.Spec.ShapeConfig != infrastructurev1beta2.ShapeConfig{}) {
+	if (m.OCIMachine.Spec.ShapeConfig != infrastructurev1beta3.ShapeConfig{}) {
 		ocpuString := m.OCIMachine.Spec.ShapeConfig.Ocpus
 		if ocpuString != "" {
 			ocpus, err := strconv.ParseFloat(ocpuString, 32)
@@ -538,12 +536,13 @@ func (m *MachineScope) resolveAvailabilityAndFaultDomain() (string, string, bool
 	}
 	m.Logger.Info("Failure Domain being used", "failure-domain", failureDomainIndex)
 
-	fdEntry, exists := m.OCIClusterAccessor.GetFailureDomains()[failureDomainKey]
+	fdEntry, exists := findFailureDomain(m.OCIClusterAccessor.GetFailureDomains(), failureDomainKey)
 	if !exists {
 		err := errors.New("failure domain not found in cluster failure domains")
 		m.Logger.Error(err, "Failure domain not found", "failure-domain", failureDomainKey)
 		return "", "", false, err
 	}
+	m.OCIMachine.Status.FailureDomain = failureDomainKey
 	availabilityDomain := fdEntry.Attributes[AvailabilityDomain]
 	faultDomain := fdEntry.Attributes[FaultDomain]
 
@@ -672,7 +671,7 @@ func (m *MachineScope) GetMachineByDisplayName(ctx context.Context, name string)
 
 // PatchObject persists the cluster configuration and status.
 func (m *MachineScope) PatchObject(ctx context.Context) error {
-	v1beta1conditions.SetSummary(m.OCIMachine)
+	ociutil.SetReadySummary(m.OCIMachine, infrastructurev1beta3.InstanceReadyCondition)
 	return m.patchHelper.Patch(ctx, m.OCIMachine)
 }
 
@@ -712,19 +711,14 @@ func (m *MachineScope) GetInstanceId() *string {
 	return m.OCIMachine.Spec.InstanceId
 }
 
-// SetReady sets the OCIMachine Ready Status.
+// SetReady sets the OCIMachine initialization provisioned status.
 func (m *MachineScope) SetReady() {
-	m.OCIMachine.Status.Ready = true
+	m.OCIMachine.Status.Initialization.Provisioned = common.Bool(true)
 }
 
-// SetNotReady sets the OCIMachine Ready Status to false.
-func (m *MachineScope) SetNotReady() {
-	m.OCIMachine.Status.Ready = false
-}
-
-// IsReady returns the ready status of the machine.
+// IsReady returns the initialization provisioned status of the machine.
 func (m *MachineScope) IsReady() bool {
-	return m.OCIMachine.Status.Ready
+	return m.OCIMachine.Status.Initialization.Provisioned != nil && *m.OCIMachine.Status.Initialization.Provisioned
 }
 
 // SetFailureMessage sets the OCIMachine status error message.
@@ -756,7 +750,7 @@ func (m *MachineScope) GetMachineIPFromStatus() (string, error) {
 		return "", errors.New("could not find machine IP Address in status object")
 	}
 	for _, ip := range machine.Status.Addresses {
-		if ip.Type == clusterv1beta1.MachineInternalIP {
+		if ip.Type == clusterv1.MachineInternalIP {
 			return ip.Address, nil
 		}
 	}
@@ -825,7 +819,7 @@ func (m *MachineScope) ReconcileCreateInstanceOnLB(ctx context.Context) error {
 	loadbalancerType := m.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerType
 	// By default, the load balancer type is Network Load Balancer
 	// Unless user specifies the load balancer type to be LBaaS
-	if loadbalancerType == infrastructurev1beta2.LoadBalancerTypeLB {
+	if loadbalancerType == infrastructurev1beta3.LoadBalancerTypeLB {
 		lb, err := m.LoadBalancerClient.GetLoadBalancer(ctx, loadbalancer.GetLoadBalancerRequest{
 			LoadBalancerId: loadbalancerId,
 		})
@@ -916,7 +910,7 @@ func (m *MachineScope) ReconcileDeleteInstanceOnLB(ctx context.Context) error {
 	loadbalancerId := m.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerId
 	// Check the load balancer type
 	loadbalancerType := m.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerType
-	if loadbalancerType == infrastructurev1beta2.LoadBalancerTypeLB {
+	if loadbalancerType == infrastructurev1beta3.LoadBalancerTypeLB {
 		lb, err := m.LoadBalancerClient.GetLoadBalancer(ctx, loadbalancer.GetLoadBalancerRequest{
 			LoadBalancerId: loadbalancerId,
 		})
@@ -1029,7 +1023,7 @@ func (m *MachineScope) containsLBBackend(backendSet loadbalancer.BackendSet, bac
 
 // IsControlPlane returns true if the machine is a control plane.
 func (m *MachineScope) IsControlPlane() bool {
-	_, ok := m.Machine.Labels[clusterv1beta1.MachineControlPlaneLabel]
+	_, ok := m.Machine.Labels[clusterv1.MachineControlPlaneLabel]
 	return ok
 }
 
@@ -1042,7 +1036,7 @@ func (m *MachineScope) getCompartmentId() string {
 
 func (m *MachineScope) getGetControlPlaneMachineSubnet() *string {
 	for _, subnet := range ptr.ToSubnetSlice(m.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets) {
-		if subnet.Role == infrastructurev1beta2.ControlPlaneRole {
+		if subnet.Role == infrastructurev1beta3.ControlPlaneRole {
 			return subnet.ID
 		}
 	}
@@ -1052,7 +1046,7 @@ func (m *MachineScope) getGetControlPlaneMachineSubnet() *string {
 func (m *MachineScope) getGetControlPlaneMachineNSGs() []string {
 	nsgs := make([]string, 0)
 	for _, nsg := range ptr.ToNSGSlice(m.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List) {
-		if nsg.Role == infrastructurev1beta2.ControlPlaneRole {
+		if nsg.Role == infrastructurev1beta3.ControlPlaneRole {
 			if nsg.ID != nil {
 				nsgs = append(nsgs, *nsg.ID)
 			}
@@ -1074,7 +1068,7 @@ func (m *MachineScope) getMachineSubnet(name string) (*string, error) {
 
 func (m *MachineScope) getWorkerMachineSubnet() *string {
 	for _, subnet := range ptr.ToSubnetSlice(m.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets) {
-		if subnet.Role == infrastructurev1beta2.WorkerRole {
+		if subnet.Role == infrastructurev1beta3.WorkerRole {
 			// if a subnet name is defined, use the correct subnet
 			if m.OCIMachine.Spec.SubnetName != "" {
 				if m.OCIMachine.Spec.SubnetName == subnet.Name {
@@ -1104,7 +1098,7 @@ func (m *MachineScope) getWorkerMachineNSGs() []string {
 	} else {
 		nsgs := make([]string, 0)
 		for _, nsg := range ptr.ToNSGSlice(m.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List) {
-			if nsg.Role == infrastructurev1beta2.WorkerRole {
+			if nsg.Role == infrastructurev1beta3.WorkerRole {
 				if nsg.ID != nil {
 					nsgs = append(nsgs, *nsg.ID)
 				}
@@ -1206,7 +1200,7 @@ func (m *MachineScope) getPlatformConfig() core.PlatformConfig {
 	platformConfig := m.OCIMachine.Spec.PlatformConfig
 	if platformConfig != nil {
 		switch platformConfig.PlatformConfigType {
-		case infrastructurev1beta2.PlatformConfigTypeAmdRomeBmGpu:
+		case infrastructurev1beta3.PlatformConfigTypeAmdRomeBmGpu:
 			numaNodesPerSocket, _ := core.GetMappingAmdRomeBmGpuPlatformConfigNumaNodesPerSocketEnum(string(platformConfig.AmdRomeBmGpuPlatformConfig.NumaNodesPerSocket))
 			return core.AmdRomeBmGpuPlatformConfig{
 				IsSecureBootEnabled:                      platformConfig.AmdRomeBmGpuPlatformConfig.IsSecureBootEnabled,
@@ -1219,7 +1213,7 @@ func (m *MachineScope) getPlatformConfig() core.PlatformConfig {
 				IsInputOutputMemoryManagementUnitEnabled: platformConfig.AmdRomeBmGpuPlatformConfig.IsInputOutputMemoryManagementUnitEnabled,
 				NumaNodesPerSocket:                       numaNodesPerSocket,
 			}
-		case infrastructurev1beta2.PlatformConfigTypeAmdRomeBm:
+		case infrastructurev1beta3.PlatformConfigTypeAmdRomeBm:
 			numaNodesPerSocket, _ := core.GetMappingAmdRomeBmPlatformConfigNumaNodesPerSocketEnum(string(platformConfig.AmdRomeBmPlatformConfig.NumaNodesPerSocket))
 			return core.AmdRomeBmPlatformConfig{
 				IsSecureBootEnabled:                      platformConfig.AmdRomeBmPlatformConfig.IsSecureBootEnabled,
@@ -1233,7 +1227,7 @@ func (m *MachineScope) getPlatformConfig() core.PlatformConfig {
 				PercentageOfCoresEnabled:                 platformConfig.AmdRomeBmPlatformConfig.PercentageOfCoresEnabled,
 				NumaNodesPerSocket:                       numaNodesPerSocket,
 			}
-		case infrastructurev1beta2.PlatformConfigTypeIntelIcelakeBm:
+		case infrastructurev1beta3.PlatformConfigTypeIntelIcelakeBm:
 			numaNodesPerSocket, _ := core.GetMappingIntelIcelakeBmPlatformConfigNumaNodesPerSocketEnum(string(platformConfig.IntelIcelakeBmPlatformConfig.NumaNodesPerSocket))
 			return core.IntelIcelakeBmPlatformConfig{
 				IsSecureBootEnabled:                      platformConfig.IntelIcelakeBmPlatformConfig.IsSecureBootEnabled,
@@ -1245,28 +1239,28 @@ func (m *MachineScope) getPlatformConfig() core.PlatformConfig {
 				IsInputOutputMemoryManagementUnitEnabled: platformConfig.IntelIcelakeBmPlatformConfig.IsInputOutputMemoryManagementUnitEnabled,
 				NumaNodesPerSocket:                       numaNodesPerSocket,
 			}
-		case infrastructurev1beta2.PlatformConfigTypeAmdvm:
+		case infrastructurev1beta3.PlatformConfigTypeAmdvm:
 			return core.AmdVmPlatformConfig{
 				IsSecureBootEnabled:            platformConfig.AmdVmPlatformConfig.IsSecureBootEnabled,
 				IsTrustedPlatformModuleEnabled: platformConfig.AmdVmPlatformConfig.IsTrustedPlatformModuleEnabled,
 				IsMeasuredBootEnabled:          platformConfig.AmdVmPlatformConfig.IsMeasuredBootEnabled,
 				IsMemoryEncryptionEnabled:      platformConfig.AmdVmPlatformConfig.IsMemoryEncryptionEnabled,
 			}
-		case infrastructurev1beta2.PlatformConfigTypeIntelVm:
+		case infrastructurev1beta3.PlatformConfigTypeIntelVm:
 			return core.IntelVmPlatformConfig{
 				IsSecureBootEnabled:            platformConfig.IntelVmPlatformConfig.IsSecureBootEnabled,
 				IsTrustedPlatformModuleEnabled: platformConfig.IntelVmPlatformConfig.IsTrustedPlatformModuleEnabled,
 				IsMeasuredBootEnabled:          platformConfig.IntelVmPlatformConfig.IsMeasuredBootEnabled,
 				IsMemoryEncryptionEnabled:      platformConfig.IntelVmPlatformConfig.IsMemoryEncryptionEnabled,
 			}
-		case infrastructurev1beta2.PlatformConfigTypeIntelSkylakeBm:
+		case infrastructurev1beta3.PlatformConfigTypeIntelSkylakeBm:
 			return core.IntelSkylakeBmPlatformConfig{
 				IsSecureBootEnabled:            platformConfig.IntelSkylakeBmPlatformConfig.IsSecureBootEnabled,
 				IsTrustedPlatformModuleEnabled: platformConfig.IntelSkylakeBmPlatformConfig.IsTrustedPlatformModuleEnabled,
 				IsMeasuredBootEnabled:          platformConfig.IntelSkylakeBmPlatformConfig.IsMeasuredBootEnabled,
 				IsMemoryEncryptionEnabled:      platformConfig.IntelSkylakeBmPlatformConfig.IsMemoryEncryptionEnabled,
 			}
-		case infrastructurev1beta2.PlatformConfigTypeAmdMilanBm:
+		case infrastructurev1beta3.PlatformConfigTypeAmdMilanBm:
 			numaNodesPerSocket, _ := core.GetMappingAmdMilanBmPlatformConfigNumaNodesPerSocketEnum(string(platformConfig.AmdMilanBmPlatformConfig.NumaNodesPerSocket))
 			return core.AmdMilanBmPlatformConfig{
 				IsSecureBootEnabled:                      platformConfig.AmdMilanBmPlatformConfig.IsSecureBootEnabled,
@@ -1295,9 +1289,9 @@ func (m *MachineScope) getLaunchVolumeAttachments() []core.LaunchAttachVolumeDet
 	var volumes []core.LaunchAttachVolumeDetails
 
 	for _, attachment := range volumeAttachmentsInSpec {
-		if attachment.Type == infrastructurev1beta2.IscsiType {
+		if attachment.Type == infrastructurev1beta3.IscsiType {
 			volumes = append(volumes, getIscsiVolumeAttachment(attachment.IscsiAttachment))
-		} else if attachment.Type == infrastructurev1beta2.ParavirtualizedType {
+		} else if attachment.Type == infrastructurev1beta3.ParavirtualizedType {
 			volumes = append(volumes, getParavirtualizedVolumeAttachment(attachment.ParavirtualizedAttachment))
 		} else {
 			m.Logger.Info("Unknown attachment type not supported")
@@ -1306,7 +1300,7 @@ func (m *MachineScope) getLaunchVolumeAttachments() []core.LaunchAttachVolumeDet
 	return volumes
 }
 
-func getIscsiVolumeAttachment(attachment infrastructurev1beta2.LaunchIscsiVolumeAttachment) core.LaunchAttachIScsiVolumeDetails {
+func getIscsiVolumeAttachment(attachment infrastructurev1beta3.LaunchIscsiVolumeAttachment) core.LaunchAttachIScsiVolumeDetails {
 	var volumeDetails core.LaunchAttachIScsiVolumeDetails
 
 	if attachment.VolumeId != nil {
@@ -1335,7 +1329,7 @@ func getIscsiVolumeAttachment(attachment infrastructurev1beta2.LaunchIscsiVolume
 	return volumeDetails
 }
 
-func getParavirtualizedVolumeAttachment(attachment infrastructurev1beta2.LaunchParavirtualizedVolumeAttachment) core.LaunchAttachParavirtualizedVolumeDetails {
+func getParavirtualizedVolumeAttachment(attachment infrastructurev1beta3.LaunchParavirtualizedVolumeAttachment) core.LaunchAttachParavirtualizedVolumeDetails {
 	var volumeDetails core.LaunchAttachParavirtualizedVolumeDetails
 
 	if attachment.VolumeId != nil {
@@ -1360,7 +1354,7 @@ func getParavirtualizedVolumeAttachment(attachment infrastructurev1beta2.LaunchP
 	return volumeDetails
 }
 
-func getLaunchCreateVolumeDetails(attributes infrastructurev1beta2.LaunchCreateVolumeFromAttributes) core.LaunchCreateVolumeFromAttributes {
+func getLaunchCreateVolumeDetails(attributes infrastructurev1beta3.LaunchCreateVolumeFromAttributes) core.LaunchCreateVolumeFromAttributes {
 	return core.LaunchCreateVolumeFromAttributes{
 		SizeInGBs:     attributes.SizeInGBs,
 		DisplayName:   attributes.DisplayName,
@@ -1370,14 +1364,14 @@ func getLaunchCreateVolumeDetails(attributes infrastructurev1beta2.LaunchCreateV
 	}
 }
 
-func getEncryptionType(transitType infrastructurev1beta2.EncryptionInTransitTypeEnum) core.EncryptionInTransitTypeEnum {
+func getEncryptionType(transitType infrastructurev1beta3.EncryptionInTransitTypeEnum) core.EncryptionInTransitTypeEnum {
 	if transitType == "" {
 		return ""
 	}
 	switch transitType {
-	case infrastructurev1beta2.EncryptionInTransitTypeNone:
+	case infrastructurev1beta3.EncryptionInTransitTypeNone:
 		return core.EncryptionInTransitTypeNone
-	case infrastructurev1beta2.EncryptionInTransitTypeBmEncryptionInTransit:
+	case infrastructurev1beta3.EncryptionInTransitTypeBmEncryptionInTransit:
 		return core.EncryptionInTransitTypeBmEncryptionInTransit
 	}
 	return ""

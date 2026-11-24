@@ -27,21 +27,20 @@ import (
 	"reflect"
 
 	"github.com/go-logr/logr"
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/computemanagement"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/containerengine"
-	expinfra1 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
-	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
+	expinfra1 "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta3"
+	infrav3exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta3"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
 	"github.com/pkg/errors"
 	"k8s.io/klog/v2/klogr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
-	capierrors "sigs.k8s.io/cluster-api/api/deprecated/errors"
 	"sigs.k8s.io/cluster-api/util/annotations"
-	v1beta1patch "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/patch"
+	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -56,8 +55,8 @@ type VirtualMachinePoolScopeParams struct {
 	MachinePool             *clusterv1.MachinePool
 	Client                  client.Client
 	ComputeManagementClient computemanagement.Client
-	OCIManagedCluster       *infrastructurev1beta2.OCIManagedCluster
-	OCIManagedControlPlane  *infrastructurev1beta2.OCIManagedControlPlane
+	OCIManagedCluster       *infrastructurev1beta3.OCIManagedCluster
+	OCIManagedControlPlane  *infrastructurev1beta3.OCIManagedControlPlane
 	OCIVirtualMachinePool   *expinfra1.OCIVirtualMachinePool
 	ContainerEngineClient   containerengine.Client
 }
@@ -65,14 +64,15 @@ type VirtualMachinePoolScopeParams struct {
 type VirtualMachinePoolScope struct {
 	*logr.Logger
 	Client                  client.Client
-	patchHelper             *v1beta1patch.Helper
+	patchHelper             *patch.Helper
 	Cluster                 *clusterv1.Cluster
 	MachinePool             *clusterv1.MachinePool
 	ComputeManagementClient computemanagement.Client
-	OCIManagedCluster       *infrastructurev1beta2.OCIManagedCluster
+	OCIManagedCluster       *infrastructurev1beta3.OCIManagedCluster
 	OCIVirtualMachinePool   *expinfra1.OCIVirtualMachinePool
 	ContainerEngineClient   containerengine.Client
-	OCIManagedControlPlane  *infrastructurev1beta2.OCIManagedControlPlane
+	OCIManagedControlPlane  *infrastructurev1beta3.OCIManagedControlPlane
+	machineReconcileFailed  bool
 }
 
 // NewVirtualMachinePoolScope creates a VirtualMachinePoolScope given the VirtualMachinePoolScopeParams
@@ -88,7 +88,7 @@ func NewVirtualMachinePoolScope(params VirtualMachinePoolScopeParams) (*VirtualM
 		log := klogr.New()
 		params.Logger = &log
 	}
-	helper, err := v1beta1patch.NewHelper(params.OCIVirtualMachinePool, params.Client)
+	helper, err := patch.NewHelper(params.OCIVirtualMachinePool, params.Client)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init patch helper")
 	}
@@ -107,8 +107,17 @@ func NewVirtualMachinePoolScope(params VirtualMachinePoolScopeParams) (*VirtualM
 	}, nil
 }
 
+// SetMachineReconcileFailed records that machine reconciliation failed during this reconcile
+// so PatchObject preserves the explicit Ready=False reason set by the controller.
+func (m *VirtualMachinePoolScope) SetMachineReconcileFailed() {
+	m.machineReconcileFailed = true
+}
+
 // PatchObject persists the cluster configuration and status.
 func (m *VirtualMachinePoolScope) PatchObject(ctx context.Context) error {
+	if !m.machineReconcileFailed {
+		ociutil.SetReadySummary(m.OCIVirtualMachinePool, infrav3exp.VirtualNodePoolReadyCondition)
+	}
 	return m.patchHelper.Patch(ctx, m.OCIVirtualMachinePool)
 }
 
@@ -117,8 +126,8 @@ func (m *VirtualMachinePoolScope) Close(ctx context.Context) error {
 	return m.PatchObject(ctx)
 }
 
-// SetFailureReason sets the OCIMachine status error reason.
-func (m *VirtualMachinePoolScope) SetFailureReason(v capierrors.MachinePoolStatusFailure) {
+// SetFailureReason sets the OCIVirtualMachinePool status error reason.
+func (m *VirtualMachinePoolScope) SetFailureReason(v string) {
 	m.OCIVirtualMachinePool.Status.FailureReason = &v
 }
 
@@ -129,7 +138,7 @@ func (m *VirtualMachinePoolScope) SetReplicaCount(count int32) {
 // GetWorkerMachineSubnet returns the WorkerRole core.Subnet id for the cluster
 func (m *VirtualMachinePoolScope) GetWorkerMachineSubnet() *string {
 	for _, subnet := range ptr.ToSubnetSlice(m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets) {
-		if subnet.Role == infrastructurev1beta2.WorkerRole {
+		if subnet.Role == infrastructurev1beta3.WorkerRole {
 			return subnet.ID
 		}
 	}
@@ -137,8 +146,8 @@ func (m *VirtualMachinePoolScope) GetWorkerMachineSubnet() *string {
 }
 
 // ListandSetMachinePoolInstances retrieves a virtual node pools instances and sets them in the ProviderIDList
-func (m *VirtualMachinePoolScope) ListandSetMachinePoolInstances(ctx context.Context, nodePool *oke.VirtualNodePool) ([]infrav2exp.OCIMachinePoolMachine, error) {
-	machines := make([]infrav2exp.OCIMachinePoolMachine, 0)
+func (m *VirtualMachinePoolScope) ListandSetMachinePoolInstances(ctx context.Context, nodePool *oke.VirtualNodePool) ([]infrav3exp.OCIMachinePoolMachine, error) {
+	machines := make([]infrav3exp.OCIMachinePoolMachine, 0)
 	var page *string
 	for {
 		reqList := oke.ListVirtualNodesRequest{
@@ -156,22 +165,24 @@ func (m *VirtualMachinePoolScope) ListandSetMachinePoolInstances(ctx context.Con
 				node.LifecycleState == oke.VirtualNodeLifecycleStateFailed {
 				continue
 			}
-			ready := false
+			var provisioned *bool
 			if node.LifecycleState == oke.VirtualNodeLifecycleStateActive {
-				ready = true
+				provisioned = common.Bool(true)
 			}
-			machines = append(machines, infrav2exp.OCIMachinePoolMachine{
+			machines = append(machines, infrav3exp.OCIMachinePoolMachine{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: *node.DisplayName,
 				},
-				Spec: infrav2exp.OCIMachinePoolMachineSpec{
+				Spec: infrav3exp.OCIMachinePoolMachineSpec{
 					OCID:         node.Id,
 					ProviderID:   node.Id,
 					InstanceName: node.DisplayName,
-					MachineType:  infrav2exp.Virtual,
+					MachineType:  infrav3exp.Virtual,
 				},
-				Status: infrav2exp.OCIMachinePoolMachineStatus{
-					Ready: ready,
+				Status: infrav3exp.OCIMachinePoolMachineStatus{
+					Initialization: infrav3exp.OCIMachinePoolMachineInitializationStatus{
+						Provisioned: provisioned,
+					},
 				},
 			})
 		}
@@ -377,7 +388,7 @@ func (m *VirtualMachinePoolScope) getFreeFormTags() map[string]string {
 func (m *VirtualMachinePoolScope) getWorkerMachineSubnets() []string {
 	subnetList := make([]string, 0)
 	for _, subnet := range ptr.ToSubnetSlice(m.OCIManagedCluster.Spec.NetworkSpec.Vcn.Subnets) {
-		if subnet.Role == infrastructurev1beta2.WorkerRole {
+		if subnet.Role == infrastructurev1beta3.WorkerRole {
 			subnetList = append(subnetList, subnet.Name)
 		}
 	}
@@ -397,7 +408,7 @@ func (m *VirtualMachinePoolScope) getWorkerMachineNSGs() []string {
 		}
 	} else {
 		for _, nsg := range ptr.ToNSGSlice(m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List) {
-			if nsg.Role == infrastructurev1beta2.WorkerRole {
+			if nsg.Role == infrastructurev1beta3.WorkerRole {
 				nsgList = append(nsgList, ptr.ToString(nsg.ID))
 			}
 		}
@@ -408,7 +419,7 @@ func (m *VirtualMachinePoolScope) getWorkerMachineNSGs() []string {
 func (m *VirtualMachinePoolScope) getWorkerMachineNSGList() []string {
 	nsgList := make([]string, 0)
 	for _, nsg := range ptr.ToNSGSlice(m.OCIManagedCluster.Spec.NetworkSpec.Vcn.NetworkSecurityGroup.List) {
-		if nsg.Role == infrastructurev1beta2.WorkerRole {
+		if nsg.Role == infrastructurev1beta3.WorkerRole {
 			nsgList = append(nsgList, nsg.Name)
 		}
 	}
@@ -543,7 +554,7 @@ func (m *VirtualMachinePoolScope) UpdateVirtualNodePool(ctx context.Context, poo
 
 // setVirtualMachinePoolSpecDefaults sets the defaults in the spec as returned by OKE API. We need to set defaults here rather than webhook as
 // there is a chance user will edit the cluster
-func setVirtualMachinePoolSpecDefaults(spec *infrav2exp.OCIVirtualMachinePoolSpec) {
+func setVirtualMachinePoolSpecDefaults(spec *infrav3exp.OCIVirtualMachinePoolSpec) {
 	spec.ProviderIDList = nil
 	spec.ProviderID = nil
 }

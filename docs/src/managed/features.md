@@ -8,7 +8,7 @@ OKE [Node Pool Cycling][node-pool-cycling] can be used during Kubernetes version
 the nodes such that all the nodes of a Node Pool is running on the newer Kubernetes version. The following
 `OCIManagedMachinePool` spec can be used to specify Node Pool cycling option.
 ```yaml
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 kind: OCIManagedMachinePool
 spec:
   nodePoolCyclingDetails:
@@ -21,7 +21,7 @@ installed in the OKE cluster.
 
 ```yaml
 kind: OCIManagedControlPlane
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 spec:
   clusterType: "ENHANCED_CLUSTER"
   addons:

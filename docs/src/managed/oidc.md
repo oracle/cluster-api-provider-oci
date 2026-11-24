@@ -17,7 +17,7 @@ The example below shows how to update the CAPOCI configuration to include the OI
 
 ```
 kind: OCIManagedControlPlane
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 metadata:
   name: "${CLUSTER_NAME}"
   namespace: "${NAMESPACE}"

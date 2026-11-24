@@ -19,7 +19,6 @@ package v1beta2
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 )
 
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
@@ -68,7 +67,7 @@ type OCIClusterSpec struct {
 
 	// ControlPlaneEndpoint represents the endpoint used to communicate with the control plane.
 	// +optional
-	ControlPlaneEndpoint clusterv1beta1.APIEndpoint `json:"controlPlaneEndpoint"`
+	ControlPlaneEndpoint APIEndpoint `json:"controlPlaneEndpoint"`
 
 	// AvailabilityDomains encapsulates the clusters Availability Domain (AD) information in a map
 	// where the map key is the AD name and the struct is details about the AD.
@@ -85,19 +84,17 @@ type OCIClusterSpec struct {
 // OCIClusterStatus defines the observed state of OCICluster
 type OCIClusterStatus struct {
 	// +optional
-	FailureDomains clusterv1beta1.FailureDomains `json:"failureDomains,omitempty"`
+	FailureDomains FailureDomains `json:"failureDomains,omitempty"`
 
 	// +optional
 	Ready bool `json:"ready"`
 	// NetworkSpec encapsulates all things related to OCI network.
 	// +optional
-	Conditions clusterv1beta1.Conditions `json:"conditions,omitempty"`
+	Conditions Conditions `json:"conditions,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-// +kubebuilder:storageversion
-
 // OCICluster is the Schema for the ociclusters API.
 type OCICluster struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -108,8 +105,6 @@ type OCICluster struct {
 }
 
 //+kubebuilder:object:root=true
-// +kubebuilder:storageversion
-
 // OCIClusterList contains a list of OCICluster.
 type OCIClusterList struct {
 	metav1.TypeMeta `json:",inline"`
@@ -187,12 +182,12 @@ type ClientOverrides struct {
 }
 
 // GetConditions returns the list of conditions for an OCICluster API object.
-func (c *OCICluster) GetConditions() clusterv1beta1.Conditions {
+func (c *OCICluster) GetConditions() Conditions {
 	return c.Status.Conditions
 }
 
 // SetConditions will set the given conditions on an OCICluster object.
-func (c *OCICluster) SetConditions(conditions clusterv1beta1.Conditions) {
+func (c *OCICluster) SetConditions(conditions Conditions) {
 	c.Status.Conditions = conditions
 }
 

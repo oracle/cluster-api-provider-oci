@@ -1,5 +1,5 @@
 kind: OCIMachineTemplate
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 metadata:
   namespace: "${NAMESPACE}"
   name: "${CLUSTER_NAME}-control-plane"

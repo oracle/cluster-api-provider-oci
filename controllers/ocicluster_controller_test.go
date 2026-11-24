@@ -22,18 +22,16 @@ import (
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	mock_scope "github.com/oracle/cluster-api-provider-oci/cloud/scope/mocks"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/pkg/errors"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
-	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
-	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -115,18 +113,18 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 		r          OCIClusterReconciler
 		mockCtrl   *gomock.Controller
 		recorder   *record.FakeRecorder
-		ociCluster *infrastructurev1beta2.OCICluster
+		ociCluster *infrastructurev1beta3.OCICluster
 		cs         *mock_scope.MockClusterScopeClient
 	)
 
 	setup := func(t *testing.T, g *WithT) {
 		mockCtrl = gomock.NewController(t)
 		cs = mock_scope.NewMockClusterScopeClient(mockCtrl)
-		ociCluster = &infrastructurev1beta2.OCICluster{
+		ociCluster = &infrastructurev1beta3.OCICluster{
 			TypeMeta:   metav1.TypeMeta{},
 			ObjectMeta: metav1.ObjectMeta{},
-			Spec:       infrastructurev1beta2.OCIClusterSpec{},
-			Status:     infrastructurev1beta2.OCIClusterStatus{},
+			Spec:       infrastructurev1beta3.OCIClusterSpec{},
+			Status:     infrastructurev1beta3.OCIClusterStatus{},
 		}
 		recorder = record.NewFakeRecorder(20)
 		client := fake.NewClientBuilder().WithObjects(getSecret()).Build()
@@ -146,13 +144,13 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 		expectedEvent      string
 		eventNotExpected   string
 		conditionAssertion conditionAssertion
-		testSpecificSetup  func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster)
+		testSpecificSetup  func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta3.OCICluster)
 	}{
 		{
 			name:               "all success",
-			expectedEvent:      infrastructurev1beta2.DRGRPCAttachmentEventReady,
-			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionTrue, "", ""},
-			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
+			expectedEvent:      infrastructurev1beta3.DRGRPCAttachmentEventReady,
+			conditionAssertion: conditionAssertion{infrastructurev1beta3.ClusterReadyCondition, metav1.ConditionTrue, ""},
+			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta3.OCICluster) {
 				cs.EXPECT().SetRegionCode(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileDRG(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileVCN(context.Background()).Return(nil)
@@ -171,10 +169,10 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 		{
 			name:               "drg reconciliation failure",
 			expectedEvent:      "ReconcileError",
-			eventNotExpected:   infrastructurev1beta2.DrgEventReady,
+			eventNotExpected:   infrastructurev1beta3.DrgEventReady,
 			errorExpected:      true,
-			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityError, infrastructurev1beta2.DrgReconciliationFailedReason},
-			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
+			conditionAssertion: conditionAssertion{infrastructurev1beta3.ClusterReadyCondition, metav1.ConditionFalse, infrastructurev1beta3.DrgReconciliationFailedReason},
+			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta3.OCICluster) {
 				cs.EXPECT().SetRegionCode(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileDRG(context.Background()).Return(errors.New("some error"))
 			},
@@ -182,10 +180,10 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 		{
 			name:               "vcn reconciliation failure",
 			expectedEvent:      "ReconcileError",
-			eventNotExpected:   infrastructurev1beta2.VcnEventReady,
+			eventNotExpected:   infrastructurev1beta3.VcnEventReady,
 			errorExpected:      true,
-			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityError, infrastructurev1beta2.VcnReconciliationFailedReason},
-			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
+			conditionAssertion: conditionAssertion{infrastructurev1beta3.ClusterReadyCondition, metav1.ConditionFalse, infrastructurev1beta3.VcnReconciliationFailedReason},
+			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta3.OCICluster) {
 				cs.EXPECT().SetRegionCode(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileDRG(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileVCN(context.Background()).Return(errors.New("some error"))
@@ -194,10 +192,10 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 		{
 			name:               "internet gateway reconciliation failure",
 			expectedEvent:      "ReconcileError",
-			eventNotExpected:   infrastructurev1beta2.InternetGatewayEventReady,
+			eventNotExpected:   infrastructurev1beta3.InternetGatewayEventReady,
 			errorExpected:      true,
-			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityError, infrastructurev1beta2.InternetGatewayReconciliationFailedReason},
-			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
+			conditionAssertion: conditionAssertion{infrastructurev1beta3.ClusterReadyCondition, metav1.ConditionFalse, infrastructurev1beta3.InternetGatewayReconciliationFailedReason},
+			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta3.OCICluster) {
 				cs.EXPECT().SetRegionCode(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileDRG(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileVCN(context.Background()).Return(nil)
@@ -207,10 +205,10 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 		{
 			name:               "nat gateway reconciliation failure",
 			expectedEvent:      "ReconcileError",
-			eventNotExpected:   infrastructurev1beta2.NatEventReady,
+			eventNotExpected:   infrastructurev1beta3.NatEventReady,
 			errorExpected:      true,
-			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityError, infrastructurev1beta2.NatGatewayReconciliationFailedReason},
-			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
+			conditionAssertion: conditionAssertion{infrastructurev1beta3.ClusterReadyCondition, metav1.ConditionFalse, infrastructurev1beta3.NatGatewayReconciliationFailedReason},
+			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta3.OCICluster) {
 				cs.EXPECT().SetRegionCode(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileDRG(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileVCN(context.Background()).Return(nil)
@@ -221,10 +219,10 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 		{
 			name:               "service gateway reconciliation failure",
 			expectedEvent:      "ReconcileError",
-			eventNotExpected:   infrastructurev1beta2.ServiceGatewayEventReady,
+			eventNotExpected:   infrastructurev1beta3.ServiceGatewayEventReady,
 			errorExpected:      true,
-			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityError, infrastructurev1beta2.ServiceGatewayReconciliationFailedReason},
-			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
+			conditionAssertion: conditionAssertion{infrastructurev1beta3.ClusterReadyCondition, metav1.ConditionFalse, infrastructurev1beta3.ServiceGatewayReconciliationFailedReason},
+			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta3.OCICluster) {
 				cs.EXPECT().SetRegionCode(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileDRG(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileVCN(context.Background()).Return(nil)
@@ -236,10 +234,10 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 		{
 			name:               "nsg reconciliation failure",
 			expectedEvent:      "ReconcileError",
-			eventNotExpected:   infrastructurev1beta2.NetworkSecurityEventReady,
+			eventNotExpected:   infrastructurev1beta3.NetworkSecurityEventReady,
 			errorExpected:      true,
-			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityError, infrastructurev1beta2.NSGReconciliationFailedReason},
-			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
+			conditionAssertion: conditionAssertion{infrastructurev1beta3.ClusterReadyCondition, metav1.ConditionFalse, infrastructurev1beta3.NSGReconciliationFailedReason},
+			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta3.OCICluster) {
 				cs.EXPECT().SetRegionCode(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileDRG(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileVCN(context.Background()).Return(nil)
@@ -252,10 +250,10 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 		{
 			name:               "route table reconciliation failure",
 			expectedEvent:      "ReconcileError",
-			eventNotExpected:   infrastructurev1beta2.RouteTableEventReady,
+			eventNotExpected:   infrastructurev1beta3.RouteTableEventReady,
 			errorExpected:      true,
-			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityError, infrastructurev1beta2.RouteTableReconciliationFailedReason},
-			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
+			conditionAssertion: conditionAssertion{infrastructurev1beta3.ClusterReadyCondition, metav1.ConditionFalse, infrastructurev1beta3.RouteTableReconciliationFailedReason},
+			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta3.OCICluster) {
 				cs.EXPECT().SetRegionCode(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileDRG(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileVCN(context.Background()).Return(nil)
@@ -269,10 +267,10 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 		{
 			name:               "subnet reconciliation failure",
 			expectedEvent:      "ReconcileError",
-			eventNotExpected:   infrastructurev1beta2.SubnetEventReady,
+			eventNotExpected:   infrastructurev1beta3.SubnetEventReady,
 			errorExpected:      true,
-			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityError, infrastructurev1beta2.SubnetReconciliationFailedReason},
-			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
+			conditionAssertion: conditionAssertion{infrastructurev1beta3.ClusterReadyCondition, metav1.ConditionFalse, infrastructurev1beta3.SubnetReconciliationFailedReason},
+			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta3.OCICluster) {
 				cs.EXPECT().SetRegionCode(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileDRG(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileVCN(context.Background()).Return(nil)
@@ -287,10 +285,10 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 		{
 			name:               "api server lb reconciliation failure",
 			expectedEvent:      "ReconcileError",
-			eventNotExpected:   infrastructurev1beta2.ApiServerLoadBalancerEventReady,
+			eventNotExpected:   infrastructurev1beta3.ApiServerLoadBalancerEventReady,
 			errorExpected:      true,
-			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityError, infrastructurev1beta2.APIServerLoadBalancerFailedReason},
-			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
+			conditionAssertion: conditionAssertion{infrastructurev1beta3.ClusterReadyCondition, metav1.ConditionFalse, infrastructurev1beta3.APIServerLoadBalancerFailedReason},
+			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta3.OCICluster) {
 				cs.EXPECT().SetRegionCode(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileDRG(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileVCN(context.Background()).Return(nil)
@@ -309,10 +307,10 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 		{
 			name:               "failure domain reconciliation failure",
 			expectedEvent:      "ReconcileError",
-			eventNotExpected:   infrastructurev1beta2.FailureDomainEventReady,
+			eventNotExpected:   infrastructurev1beta3.FailureDomainEventReady,
 			errorExpected:      true,
-			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityError, infrastructurev1beta2.FailureDomainFailedReason},
-			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
+			conditionAssertion: conditionAssertion{infrastructurev1beta3.ClusterReadyCondition, metav1.ConditionFalse, infrastructurev1beta3.FailureDomainFailedReason},
+			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta3.OCICluster) {
 				cs.EXPECT().SetRegionCode(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileDRG(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileVCN(context.Background()).Return(nil)
@@ -330,10 +328,10 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 		{
 			name:               "drg vcn attachment reconciliation failure",
 			expectedEvent:      "ReconcileError",
-			eventNotExpected:   infrastructurev1beta2.DRGVCNAttachmentEventReady,
+			eventNotExpected:   infrastructurev1beta3.DRGVCNAttachmentEventReady,
 			errorExpected:      true,
-			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityError, infrastructurev1beta2.DRGVCNAttachmentReconciliationFailedReason},
-			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
+			conditionAssertion: conditionAssertion{infrastructurev1beta3.ClusterReadyCondition, metav1.ConditionFalse, infrastructurev1beta3.DRGVCNAttachmentReconciliationFailedReason},
+			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta3.OCICluster) {
 				cs.EXPECT().SetRegionCode(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileDRG(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileVCN(context.Background()).Return(nil)
@@ -349,10 +347,10 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 		{
 			name:               "drg rpc attachment reconciliation failure",
 			expectedEvent:      "ReconcileError",
-			eventNotExpected:   infrastructurev1beta2.DRGRPCAttachmentEventReady,
+			eventNotExpected:   infrastructurev1beta3.DRGRPCAttachmentEventReady,
 			errorExpected:      true,
-			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityError, infrastructurev1beta2.DRGRPCAttachmentReconciliationFailedReason},
-			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
+			conditionAssertion: conditionAssertion{infrastructurev1beta3.ClusterReadyCondition, metav1.ConditionFalse, infrastructurev1beta3.DRGRPCAttachmentReconciliationFailedReason},
+			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta3.OCICluster) {
 				cs.EXPECT().SetRegionCode(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileDRG(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileVCN(context.Background()).Return(nil)
@@ -368,9 +366,9 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 		},
 		{
 			name:               "skip vcn reconciliation",
-			expectedEvent:      infrastructurev1beta2.ApiServerLoadBalancerEventReady,
-			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionTrue, "", ""},
-			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
+			expectedEvent:      infrastructurev1beta3.ApiServerLoadBalancerEventReady,
+			conditionAssertion: conditionAssertion{infrastructurev1beta3.ClusterReadyCondition, metav1.ConditionTrue, ""},
+			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta3.OCICluster) {
 				ociCluster.Spec.NetworkSpec.SkipNetworkManagement = true
 				cs.EXPECT().ReconcileFailureDomains(context.Background()).Return(nil)
 				cs.EXPECT().ReconcileApiServerNLB(context.Background()).Return(nil)
@@ -386,12 +384,15 @@ func TestOCIClusterReconciler_reconcile(t *testing.T) {
 			tc.testSpecificSetup(cs, ociCluster)
 			ctx := context.Background()
 			_, err := r.reconcile(ctx, log.FromContext(ctx), cs, ociCluster)
-			actual := v1beta1conditions.Get(ociCluster, tc.conditionAssertion.conditionType)
+			actual := conditions.Get(ociCluster, tc.conditionAssertion.conditionType)
 			g.Expect(actual).To(Not(BeNil()))
 			g.Expect(actual.Type).To(Equal(tc.conditionAssertion.conditionType))
 			g.Expect(actual.Status).To(Equal(tc.conditionAssertion.status))
-			g.Expect(actual.Severity).To(Equal(tc.conditionAssertion.severity))
-			g.Expect(actual.Reason).To(Equal(tc.conditionAssertion.reason))
+			if tc.conditionAssertion.reason != "" {
+				g.Expect(actual.Reason).To(Equal(tc.conditionAssertion.reason))
+			} else if tc.conditionAssertion.status == metav1.ConditionTrue {
+				g.Expect(actual.Reason).To(Equal(tc.conditionAssertion.conditionType))
+			}
 
 			if tc.errorExpected {
 				g.Expect(err).To(Not(BeNil()))
@@ -413,18 +414,18 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 		r          OCIClusterReconciler
 		mockCtrl   *gomock.Controller
 		recorder   *record.FakeRecorder
-		ociCluster *infrastructurev1beta2.OCICluster
+		ociCluster *infrastructurev1beta3.OCICluster
 		cs         *mock_scope.MockClusterScopeClient
 	)
 
 	setup := func(t *testing.T, g *WithT) {
 		mockCtrl = gomock.NewController(t)
 		cs = mock_scope.NewMockClusterScopeClient(mockCtrl)
-		ociCluster = &infrastructurev1beta2.OCICluster{
+		ociCluster = &infrastructurev1beta3.OCICluster{
 			TypeMeta:   metav1.TypeMeta{},
 			ObjectMeta: metav1.ObjectMeta{},
-			Spec:       infrastructurev1beta2.OCIClusterSpec{},
-			Status:     infrastructurev1beta2.OCIClusterStatus{},
+			Spec:       infrastructurev1beta3.OCIClusterSpec{},
+			Status:     infrastructurev1beta3.OCIClusterStatus{},
 		}
 		recorder = record.NewFakeRecorder(10)
 		client := fake.NewClientBuilder().WithObjects(getSecret()).Build()
@@ -443,11 +444,11 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 		errorExpected      bool
 		expectedEvent      string
 		conditionAssertion conditionAssertion
-		testSpecificSetup  func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster)
+		testSpecificSetup  func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta3.OCICluster)
 	}{
 		{
 			name: "all success",
-			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
+			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta3.OCICluster) {
 				cs.EXPECT().DeleteApiServerNLB(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGRPCAttachment(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGVCNAttachment(context.Background()).Return(nil)
@@ -466,8 +467,8 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 			name:               "drg rpc delete failure",
 			expectedEvent:      "ReconcileError",
 			errorExpected:      true,
-			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityError, infrastructurev1beta2.DRGRPCAttachmentReconciliationFailedReason},
-			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
+			conditionAssertion: conditionAssertion{infrastructurev1beta3.ClusterReadyCondition, metav1.ConditionFalse, infrastructurev1beta3.DRGRPCAttachmentReconciliationFailedReason},
+			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta3.OCICluster) {
 				cs.EXPECT().DeleteApiServerNLB(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGRPCAttachment(context.Background()).Return(errors.New("some error"))
 			},
@@ -476,8 +477,8 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 			name:               "drg vcn attachment delete failure",
 			expectedEvent:      "ReconcileError",
 			errorExpected:      true,
-			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityError, infrastructurev1beta2.DRGVCNAttachmentReconciliationFailedReason},
-			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
+			conditionAssertion: conditionAssertion{infrastructurev1beta3.ClusterReadyCondition, metav1.ConditionFalse, infrastructurev1beta3.DRGVCNAttachmentReconciliationFailedReason},
+			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta3.OCICluster) {
 				cs.EXPECT().DeleteApiServerNLB(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGRPCAttachment(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGVCNAttachment(context.Background()).Return(errors.New("some error"))
@@ -487,8 +488,8 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 			name:               "api server lb delete failure",
 			expectedEvent:      "ReconcileError",
 			errorExpected:      true,
-			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityError, infrastructurev1beta2.APIServerLoadBalancerFailedReason},
-			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
+			conditionAssertion: conditionAssertion{infrastructurev1beta3.ClusterReadyCondition, metav1.ConditionFalse, infrastructurev1beta3.APIServerLoadBalancerFailedReason},
+			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta3.OCICluster) {
 				cs.EXPECT().DeleteApiServerNLB(context.Background()).Return(errors.New("some error"))
 			},
 		},
@@ -496,8 +497,8 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 			name:               "api server lb delete failure",
 			expectedEvent:      "ReconcileError",
 			errorExpected:      true,
-			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityError, infrastructurev1beta2.APIServerLoadBalancerFailedReason},
-			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
+			conditionAssertion: conditionAssertion{infrastructurev1beta3.ClusterReadyCondition, metav1.ConditionFalse, infrastructurev1beta3.APIServerLoadBalancerFailedReason},
+			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta3.OCICluster) {
 				cs.EXPECT().DeleteApiServerNLB(context.Background()).Return(errors.New("some error"))
 			},
 		},
@@ -505,8 +506,8 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 			name:               "nsg delete failure",
 			expectedEvent:      "ReconcileError",
 			errorExpected:      true,
-			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityError, infrastructurev1beta2.NSGReconciliationFailedReason},
-			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
+			conditionAssertion: conditionAssertion{infrastructurev1beta3.ClusterReadyCondition, metav1.ConditionFalse, infrastructurev1beta3.NSGReconciliationFailedReason},
+			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta3.OCICluster) {
 				cs.EXPECT().DeleteApiServerNLB(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGRPCAttachment(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGVCNAttachment(context.Background()).Return(nil)
@@ -517,8 +518,8 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 			name:               "subnet delete failure",
 			expectedEvent:      "ReconcileError",
 			errorExpected:      true,
-			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityError, infrastructurev1beta2.SubnetReconciliationFailedReason},
-			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
+			conditionAssertion: conditionAssertion{infrastructurev1beta3.ClusterReadyCondition, metav1.ConditionFalse, infrastructurev1beta3.SubnetReconciliationFailedReason},
+			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta3.OCICluster) {
 				cs.EXPECT().DeleteApiServerNLB(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGRPCAttachment(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGVCNAttachment(context.Background()).Return(nil)
@@ -530,8 +531,8 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 			name:               "route table delete failure",
 			expectedEvent:      "ReconcileError",
 			errorExpected:      true,
-			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityError, infrastructurev1beta2.RouteTableReconciliationFailedReason},
-			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
+			conditionAssertion: conditionAssertion{infrastructurev1beta3.ClusterReadyCondition, metav1.ConditionFalse, infrastructurev1beta3.RouteTableReconciliationFailedReason},
+			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta3.OCICluster) {
 				cs.EXPECT().DeleteApiServerNLB(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGRPCAttachment(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGVCNAttachment(context.Background()).Return(nil)
@@ -544,8 +545,8 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 			name:               "security list delete failure",
 			expectedEvent:      "ReconcileError",
 			errorExpected:      true,
-			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityError, infrastructurev1beta2.SecurityListReconciliationFailedReason},
-			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
+			conditionAssertion: conditionAssertion{infrastructurev1beta3.ClusterReadyCondition, metav1.ConditionFalse, infrastructurev1beta3.SecurityListReconciliationFailedReason},
+			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta3.OCICluster) {
 				cs.EXPECT().DeleteApiServerNLB(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGRPCAttachment(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGVCNAttachment(context.Background()).Return(nil)
@@ -559,8 +560,8 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 			name:               "service gateway delete failure",
 			expectedEvent:      "ReconcileError",
 			errorExpected:      true,
-			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityError, infrastructurev1beta2.ServiceGatewayReconciliationFailedReason},
-			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
+			conditionAssertion: conditionAssertion{infrastructurev1beta3.ClusterReadyCondition, metav1.ConditionFalse, infrastructurev1beta3.ServiceGatewayReconciliationFailedReason},
+			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta3.OCICluster) {
 				cs.EXPECT().DeleteApiServerNLB(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGRPCAttachment(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGVCNAttachment(context.Background()).Return(nil)
@@ -575,8 +576,8 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 			name:               "nat gateway delete failure",
 			expectedEvent:      "ReconcileError",
 			errorExpected:      true,
-			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityError, infrastructurev1beta2.NatGatewayReconciliationFailedReason},
-			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
+			conditionAssertion: conditionAssertion{infrastructurev1beta3.ClusterReadyCondition, metav1.ConditionFalse, infrastructurev1beta3.NatGatewayReconciliationFailedReason},
+			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta3.OCICluster) {
 				cs.EXPECT().DeleteApiServerNLB(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGRPCAttachment(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGVCNAttachment(context.Background()).Return(nil)
@@ -592,8 +593,8 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 			name:               "internet gateway delete failure",
 			expectedEvent:      "ReconcileError",
 			errorExpected:      true,
-			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityError, infrastructurev1beta2.InternetGatewayReconciliationFailedReason},
-			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
+			conditionAssertion: conditionAssertion{infrastructurev1beta3.ClusterReadyCondition, metav1.ConditionFalse, infrastructurev1beta3.InternetGatewayReconciliationFailedReason},
+			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta3.OCICluster) {
 				cs.EXPECT().DeleteApiServerNLB(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGRPCAttachment(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGVCNAttachment(context.Background()).Return(nil)
@@ -610,8 +611,8 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 			name:               "delete vcn failure",
 			expectedEvent:      "ReconcileError",
 			errorExpected:      true,
-			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityError, infrastructurev1beta2.VcnReconciliationFailedReason},
-			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
+			conditionAssertion: conditionAssertion{infrastructurev1beta3.ClusterReadyCondition, metav1.ConditionFalse, infrastructurev1beta3.VcnReconciliationFailedReason},
+			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta3.OCICluster) {
 				cs.EXPECT().DeleteApiServerNLB(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGRPCAttachment(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGVCNAttachment(context.Background()).Return(nil)
@@ -629,8 +630,8 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 			name:               "delete drg failure",
 			expectedEvent:      "ReconcileError",
 			errorExpected:      true,
-			conditionAssertion: conditionAssertion{infrastructurev1beta2.ClusterReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityError, infrastructurev1beta2.DrgReconciliationFailedReason},
-			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
+			conditionAssertion: conditionAssertion{infrastructurev1beta3.ClusterReadyCondition, metav1.ConditionFalse, infrastructurev1beta3.DrgReconciliationFailedReason},
+			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta3.OCICluster) {
 				cs.EXPECT().DeleteApiServerNLB(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGRPCAttachment(context.Background()).Return(nil)
 				cs.EXPECT().DeleteDRGVCNAttachment(context.Background()).Return(nil)
@@ -647,7 +648,7 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 		},
 		{
 			name: "skip vcn deletion",
-			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta2.OCICluster) {
+			testSpecificSetup: func(cs *mock_scope.MockClusterScopeClient, ociCluster *infrastructurev1beta3.OCICluster) {
 				ociCluster.Spec.NetworkSpec.SkipNetworkManagement = true
 				cs.EXPECT().DeleteApiServerNLB(context.Background()).Return(nil)
 			},
@@ -662,13 +663,16 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 			tc.testSpecificSetup(cs, ociCluster)
 			ctx := context.Background()
 			_, err := r.reconcileDelete(ctx, log.FromContext(ctx), cs, ociCluster)
-			actual := v1beta1conditions.Get(ociCluster, tc.conditionAssertion.conditionType)
+			actual := conditions.Get(ociCluster, tc.conditionAssertion.conditionType)
 			if tc.conditionAssertion != (conditionAssertion{}) {
 				g.Expect(actual).To(Not(BeNil()))
 				g.Expect(actual.Type).To(Equal(tc.conditionAssertion.conditionType))
 				g.Expect(actual.Status).To(Equal(tc.conditionAssertion.status))
-				g.Expect(actual.Severity).To(Equal(tc.conditionAssertion.severity))
-				g.Expect(actual.Reason).To(Equal(tc.conditionAssertion.reason))
+				if tc.conditionAssertion.reason != "" {
+					g.Expect(actual.Reason).To(Equal(tc.conditionAssertion.reason))
+				} else if tc.conditionAssertion.status == metav1.ConditionTrue {
+					g.Expect(actual.Reason).To(Equal(tc.conditionAssertion.conditionType))
+				}
 			}
 
 			if tc.errorExpected {
@@ -683,15 +687,15 @@ func TestOCIClusterReconciler_reconcileDelete(t *testing.T) {
 	}
 }
 
-func getOciClusterWithNoOwner() *infrastructurev1beta2.OCICluster {
-	ociCluster := &infrastructurev1beta2.OCICluster{
+func getOciClusterWithNoOwner() *infrastructurev1beta3.OCICluster {
+	ociCluster := &infrastructurev1beta3.OCICluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-cluster",
 			Namespace: "test",
 		},
-		Spec: infrastructurev1beta2.OCIClusterSpec{
+		Spec: infrastructurev1beta3.OCIClusterSpec{
 			CompartmentId: "test",
-			ControlPlaneEndpoint: clusterv1beta1.APIEndpoint{
+			ControlPlaneEndpoint: clusterv1.APIEndpoint{
 				Port: 6443,
 			},
 		},
@@ -700,7 +704,7 @@ func getOciClusterWithNoOwner() *infrastructurev1beta2.OCICluster {
 	return ociCluster
 }
 
-func getOCIClusterWithOwner() *infrastructurev1beta2.OCICluster {
+func getOCIClusterWithOwner() *infrastructurev1beta3.OCICluster {
 	ociCluster := getOciClusterWithNoOwner()
 	ociCluster.OwnerReferences = []metav1.OwnerReference{
 		{

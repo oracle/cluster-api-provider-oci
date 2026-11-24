@@ -27,8 +27,6 @@ type OCIManagedClusterTemplateSpec struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:path=ocimanagedclustertemplates,scope=Namespaced,categories=cluster-api
-// +kubebuilder:storageversion
-
 // OCIManagedClusterTemplate is the Schema for the ocimanagedclustertemplates API.
 type OCIManagedClusterTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -38,8 +36,6 @@ type OCIManagedClusterTemplate struct {
 }
 
 // +kubebuilder:object:root=true
-// +kubebuilder:storageversion
-
 // OCIManagedClusterTemplateList contains a list of OCIManagedClusterTemplate.
 type OCIManagedClusterTemplateList struct {
 	metav1.TypeMeta `json:",inline"`

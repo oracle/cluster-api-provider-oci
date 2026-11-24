@@ -1,5 +1,5 @@
 kind: OCIMachineTemplate
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 metadata:
   namespace: "${NAMESPACE}"
   name: "${CLUSTER_NAME}-control-plane"
@@ -9,7 +9,7 @@ spec:
       imageId: "${OCI_ORACLE_LINUX_IMAGE_ID}"
 ---
 kind: KubeadmControlPlane
-apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+apiVersion: controlplane.cluster.x-k8s.io/v1beta2
 metadata:
   namespace: "${NAMESPACE}"
   name: "${CLUSTER_NAME}-control-plane"

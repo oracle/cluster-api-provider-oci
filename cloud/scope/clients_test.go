@@ -23,7 +23,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	"github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/cluster-api-provider-oci/cloud/config"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn/mock_vcn"
 	"github.com/oracle/cluster-api-provider-oci/version"
@@ -64,7 +64,7 @@ func TestClients_NewClientProviderWithClientOverrides(t *testing.T) {
 		t.Errorf("Expected error:%v to not equal nil", err)
 	}
 
-	clientOverrides := &v1beta2.ClientOverrides{
+	clientOverrides := &v1beta3.ClientOverrides{
 		ComputeClientUrl:             common.String("ComputeClientUrl"),
 		ComputeManagementClientUrl:   common.String("ComputeManagementClientUrl"),
 		VCNClientUrl:                 common.String("VCNClientUrl"),
@@ -105,7 +105,7 @@ func TestClients_NewClientProviderWithMissingOverrides(t *testing.T) {
 		t.Errorf("Expected error:%v to not equal nil", err)
 	}
 
-	clientOverrides := &v1beta2.ClientOverrides{
+	clientOverrides := &v1beta3.ClientOverrides{
 		ComputeClientUrl:           common.String("ComputeClientUrl"),
 		ComputeManagementClientUrl: common.String("ComputeManagementClientUrl"),
 		//VCNClientUrl is missing,

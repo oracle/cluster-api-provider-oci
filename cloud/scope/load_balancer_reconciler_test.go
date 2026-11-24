@@ -24,7 +24,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/loadbalancer/mock_lb"
 	"github.com/oracle/oci-go-sdk/v65/common"
@@ -50,12 +50,12 @@ func TestLBReconciliation(t *testing.T) {
 		lbClient = mock_lb.NewMockLoadBalancerClient(mockCtrl)
 		client := fake.NewClientBuilder().Build()
 		ociClusterAccessor = OCISelfManagedCluster{
-			&infrastructurev1beta2.OCICluster{
+			&infrastructurev1beta3.OCICluster{
 				ObjectMeta: metav1.ObjectMeta{
 					UID:  "a",
 					Name: "cluster",
 				},
-				Spec: infrastructurev1beta2.OCIClusterSpec{
+				Spec: infrastructurev1beta3.OCIClusterSpec{
 					CompartmentId:         "compartment-id",
 					OCIResourceIdentifier: "resource_uid",
 				},
@@ -224,24 +224,24 @@ func TestLBReconciliation(t *testing.T) {
 			name:          "create load balancer more than one subnet",
 			errorExpected: false,
 			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient) {
-				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta2.Subnet{
+				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta3.Subnet{
 					{
-						Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+						Role: infrastructurev1beta3.ControlPlaneEndpointRole,
 						ID:   common.String("s1"),
 					},
 					{
-						Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+						Role: infrastructurev1beta3.ControlPlaneEndpointRole,
 						ID:   common.String("s2"),
 					},
 				}
-				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup = infrastructurev1beta2.NetworkSecurityGroup{
-					List: []*infrastructurev1beta2.NSG{
+				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup = infrastructurev1beta3.NetworkSecurityGroup{
+					List: []*infrastructurev1beta3.NSG{
 						{
-							Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+							Role: infrastructurev1beta3.ControlPlaneEndpointRole,
 							ID:   common.String("nsg1"),
 						},
 						{
-							Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+							Role: infrastructurev1beta3.ControlPlaneEndpointRole,
 							ID:   common.String("nsg2"),
 						},
 					},
@@ -323,20 +323,20 @@ func TestLBReconciliation(t *testing.T) {
 			name:          "create load balancer",
 			errorExpected: false,
 			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient) {
-				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta2.Subnet{
+				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta3.Subnet{
 					{
-						Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+						Role: infrastructurev1beta3.ControlPlaneEndpointRole,
 						ID:   common.String("s1"),
 					},
 				}
-				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup = infrastructurev1beta2.NetworkSecurityGroup{
-					List: []*infrastructurev1beta2.NSG{
+				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup = infrastructurev1beta3.NetworkSecurityGroup{
+					List: []*infrastructurev1beta3.NSG{
 						{
-							Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+							Role: infrastructurev1beta3.ControlPlaneEndpointRole,
 							ID:   common.String("nsg1"),
 						},
 						{
-							Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+							Role: infrastructurev1beta3.ControlPlaneEndpointRole,
 							ID:   common.String("nsg2"),
 						},
 					},
@@ -420,9 +420,9 @@ func TestLBReconciliation(t *testing.T) {
 			errorSubStringMatch: true,
 			matchError:          errors.New("request failed"),
 			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient) {
-				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta2.Subnet{
+				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta3.Subnet{
 					{
-						Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+						Role: infrastructurev1beta3.ControlPlaneEndpointRole,
 						ID:   common.String("s1"),
 					},
 				}
@@ -473,9 +473,9 @@ func TestLBReconciliation(t *testing.T) {
 			errorSubStringMatch: true,
 			matchError:          errors.New("No more Ip available in CIDR 1.1.1.1/1: WorkRequest opc-wr-id failed"),
 			testSpecificSetup: func(clusterScope *ClusterScope, lbClient *mock_lb.MockLoadBalancerClient) {
-				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta2.Subnet{
+				clusterScope.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets = []*infrastructurev1beta3.Subnet{
 					{
-						Role: infrastructurev1beta2.ControlPlaneEndpointRole,
+						Role: infrastructurev1beta3.ControlPlaneEndpointRole,
 						ID:   common.String("s1"),
 					},
 				}
@@ -690,12 +690,12 @@ func TestLBDeletion(t *testing.T) {
 		lbClient = mock_lb.NewMockLoadBalancerClient(mockCtrl)
 		client := fake.NewClientBuilder().Build()
 		ociClusterAccessor = OCISelfManagedCluster{
-			&infrastructurev1beta2.OCICluster{
+			&infrastructurev1beta3.OCICluster{
 				ObjectMeta: metav1.ObjectMeta{
 					UID:  "a",
 					Name: "cluster",
 				},
-				Spec: infrastructurev1beta2.OCIClusterSpec{
+				Spec: infrastructurev1beta3.OCIClusterSpec{
 					CompartmentId:         "compartment-id",
 					OCIResourceIdentifier: "resource_uid",
 				},

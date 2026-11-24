@@ -22,7 +22,7 @@ import (
 
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/pkg/errors"
@@ -53,7 +53,7 @@ func (m *MachineScope) ReconcileVnicAttachments(ctx context.Context) error {
 	return nil
 }
 
-func (m *MachineScope) createVnicAttachment(ctx context.Context, spec infrastructurev1beta2.VnicAttachment) (*string, error) {
+func (m *MachineScope) createVnicAttachment(ctx context.Context, spec infrastructurev1beta3.VnicAttachment) (*string, error) {
 	vnicName := spec.DisplayName
 
 	// Default to machine subnet if spec doesn't supply one
@@ -100,7 +100,7 @@ func (m *MachineScope) createVnicAttachment(ctx context.Context, spec infrastruc
 	return resp.Id, nil
 }
 
-func (m *MachineScope) vnicAttachmentExists(ctx context.Context, vnic infrastructurev1beta2.VnicAttachment) bool {
+func (m *MachineScope) vnicAttachmentExists(ctx context.Context, vnic infrastructurev1beta3.VnicAttachment) bool {
 
 	found := false
 	var page *string

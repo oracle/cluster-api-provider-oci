@@ -23,13 +23,13 @@ import (
 	"fmt"
 	"strings"
 
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
 	"github.com/pkg/errors"
-	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 )
 
 // ReconcileApiServerNLB tries to move the Network Load Balancer to the desired OCICluster Spec
@@ -50,7 +50,7 @@ func (s *ClusterScope) ReconcileApiServerNLB(ctx context.Context) error {
 		}
 		networkSpec := s.OCIClusterAccessor.GetNetworkSpec()
 		networkSpec.APIServerLB.LoadBalancerId = nlb.Id
-		s.OCIClusterAccessor.SetControlPlaneEndpoint(clusterv1beta1.APIEndpoint{
+		s.OCIClusterAccessor.SetControlPlaneEndpoint(clusterv1.APIEndpoint{
 			Host: *lbIP,
 			Port: s.APIServerPort(),
 		})
@@ -67,7 +67,7 @@ func (s *ClusterScope) ReconcileApiServerNLB(ctx context.Context) error {
 	}
 	networkSpec := s.OCIClusterAccessor.GetNetworkSpec()
 	networkSpec.APIServerLB.LoadBalancerId = nlbID
-	s.OCIClusterAccessor.SetControlPlaneEndpoint(clusterv1beta1.APIEndpoint{
+	s.OCIClusterAccessor.SetControlPlaneEndpoint(clusterv1.APIEndpoint{
 		Host: *nlbIP,
 		Port: s.APIServerPort(),
 	})
@@ -101,8 +101,8 @@ func (s *ClusterScope) DeleteApiServerNLB(ctx context.Context) error {
 }
 
 // NLBSpec builds the Network LoadBalancer from the ClusterScope and returns it
-func (s *ClusterScope) NLBSpec() infrastructurev1beta2.LoadBalancer {
-	nlbSpec := infrastructurev1beta2.LoadBalancer{
+func (s *ClusterScope) NLBSpec() infrastructurev1beta3.LoadBalancer {
+	nlbSpec := infrastructurev1beta3.LoadBalancer{
 		Name:    s.GetControlPlaneLoadBalancerName(),
 		NLBSpec: s.OCIClusterAccessor.GetNetworkSpec().APIServerLB.NLBSpec,
 	}
@@ -119,7 +119,7 @@ func (s *ClusterScope) GetControlPlaneLoadBalancerName() string {
 }
 
 // UpdateNLB updates an existing Network Load Balancer's DisplayName and health checker configuration.
-func (s *ClusterScope) UpdateNLB(ctx context.Context, nlb infrastructurev1beta2.LoadBalancer) error {
+func (s *ClusterScope) UpdateNLB(ctx context.Context, nlb infrastructurev1beta3.LoadBalancer) error {
 	nlbId := s.OCIClusterAccessor.GetNetworkSpec().APIServerLB.LoadBalancerId
 	updateLBDetails := networkloadbalancer.UpdateNetworkLoadBalancerDetails{
 		DisplayName: common.String(nlb.Name),
@@ -176,7 +176,7 @@ func (s *ClusterScope) UpdateNLB(ctx context.Context, nlb infrastructurev1beta2.
 //
 // See https://docs.oracle.com/en-us/iaas/Content/NetworkLoadBalancer/overview.htm for more details on the Network
 // Load Balancer
-func (s *ClusterScope) CreateNLB(ctx context.Context, lb infrastructurev1beta2.LoadBalancer) (*string, *string, error) {
+func (s *ClusterScope) CreateNLB(ctx context.Context, lb infrastructurev1beta3.LoadBalancer) (*string, *string, error) {
 	isPreserverSourceIp := lb.NLBSpec.BackendSetDetails.IsPreserveSource
 	if isPreserverSourceIp == nil {
 		isPreserverSourceIp = common.Bool(false)
@@ -205,7 +205,7 @@ func (s *ClusterScope) CreateNLB(ctx context.Context, lb infrastructurev1beta2.L
 	}
 	var controlPlaneEndpointSubnets []string
 	for _, subnet := range ptr.ToSubnetSlice(s.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets) {
-		if subnet.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
+		if subnet.Role == infrastructurev1beta3.ControlPlaneEndpointRole {
 			if subnet.ID != nil {
 				controlPlaneEndpointSubnets = append(controlPlaneEndpointSubnets, *subnet.ID)
 			}
@@ -237,7 +237,7 @@ func (s *ClusterScope) CreateNLB(ctx context.Context, lb infrastructurev1beta2.L
 	}
 	nsgs := make([]string, 0)
 	for _, nsg := range ptr.ToNSGSlice(s.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List) {
-		if nsg.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
+		if nsg.Role == infrastructurev1beta3.ControlPlaneEndpointRole {
 			if nsg.ID != nil {
 				nsgs = append(nsgs, *nsg.ID)
 			}
@@ -298,7 +298,7 @@ func (s *ClusterScope) getNetworkLoadbalancerIp(nlb networkloadbalancer.NetworkL
 
 // IsNLBEqual determines if the actual networkloadbalancer.NetworkLoadBalancer is equal to the desired.
 // Equality is determined by DisplayName and the health checker configuration on the backend set.
-func (s *ClusterScope) IsNLBEqual(actual *networkloadbalancer.NetworkLoadBalancer, desired infrastructurev1beta2.LoadBalancer) bool {
+func (s *ClusterScope) IsNLBEqual(actual *networkloadbalancer.NetworkLoadBalancer, desired infrastructurev1beta3.LoadBalancer) bool {
 	if desired.Name != *actual.DisplayName {
 		return false
 	}
@@ -401,7 +401,7 @@ func (s *ClusterScope) GetNetworkLoadBalancers(ctx context.Context) (*networkloa
 	return nil, nil
 }
 
-func (s *ClusterScope) buildNLBHealthChecker(spec infrastructurev1beta2.HealthChecker) (*networkloadbalancer.HealthChecker, error) {
+func (s *ClusterScope) buildNLBHealthChecker(spec infrastructurev1beta3.HealthChecker) (*networkloadbalancer.HealthChecker, error) {
 	protocol := networkloadbalancer.HealthCheckProtocolsHttps
 	if spec.Protocol != nil && strings.TrimSpace(*spec.Protocol) != "" {
 		value := strings.ToUpper(strings.TrimSpace(*spec.Protocol))

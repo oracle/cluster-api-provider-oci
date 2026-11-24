@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	cloudutil "github.com/oracle/cluster-api-provider-oci/cloud/util"
@@ -34,11 +34,9 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
-	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/annotations"
-	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -73,7 +71,7 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	logger := log.FromContext(ctx)
 	logger.Info("Got reconciliation event for machine")
 
-	ociMachine := &infrastructurev1beta2.OCIMachine{}
+	ociMachine := &infrastructurev1beta3.OCIMachine{}
 	err := r.Get(ctx, req.NamespacedName, ociMachine)
 
 	if err != nil {
@@ -109,7 +107,7 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, nil
 	}
 
-	ociCluster := &infrastructurev1beta2.OCICluster{}
+	ociCluster := &infrastructurev1beta3.OCICluster{}
 	ociClusterName := client.ObjectKey{
 		Namespace: cluster.Namespace,
 		Name:      cluster.Spec.InfrastructureRef.Name,
@@ -127,7 +125,7 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 	} else if cluster.Spec.InfrastructureRef.Kind == "OCIManagedCluster" {
 		// check for oci managed cluster
-		ociManagedCluster := &infrastructurev1beta2.OCIManagedCluster{}
+		ociManagedCluster := &infrastructurev1beta3.OCIManagedCluster{}
 		ociManagedClusterName := client.ObjectKey{
 			Namespace: cluster.Namespace,
 			Name:      cluster.Spec.InfrastructureRef.Name,
@@ -186,25 +184,25 @@ func (r *OCIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *OCIMachineReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
-	clusterToObjectFunc, err := util.ClusterToTypedObjectsMapper(r.Client, &infrastructurev1beta2.OCIMachineList{}, mgr.GetScheme())
+	clusterToObjectFunc, err := util.ClusterToTypedObjectsMapper(r.Client, &infrastructurev1beta3.OCIMachineList{}, mgr.GetScheme())
 	if err != nil {
 		return errors.Wrapf(err, "failed to create mapper for Cluster to OCIMachines")
 	}
 	err = ctrl.NewControllerManagedBy(mgr).
 		WithOptions(options).
-		For(&infrastructurev1beta2.OCIMachine{}).
+		For(&infrastructurev1beta3.OCIMachine{}).
 		WithEventFilter(predicates.ResourceNotPaused(mgr.GetScheme(), ctrl.LoggerFrom(ctx))).
 		Watches(
 			&clusterv1.Machine{},
-			handler.EnqueueRequestsFromMapFunc(util.MachineToInfrastructureMapFunc(infrastructurev1beta2.
+			handler.EnqueueRequestsFromMapFunc(util.MachineToInfrastructureMapFunc(infrastructurev1beta3.
 				GroupVersion.WithKind(scope.OCIMachineKind))),
 		).
 		Watches(
-			&infrastructurev1beta2.OCICluster{},
+			&infrastructurev1beta3.OCICluster{},
 			handler.EnqueueRequestsFromMapFunc(r.OCIClusterToOCIMachines()),
 		).
 		Watches(
-			&infrastructurev1beta2.OCIManagedCluster{},
+			&infrastructurev1beta3.OCIManagedCluster{},
 			handler.EnqueueRequestsFromMapFunc(r.OCIManagedClusterToOCIMachines()),
 		).
 		Watches(
@@ -227,7 +225,7 @@ func (r *OCIMachineReconciler) OCIClusterToOCIMachines() handler.MapFunc {
 		log := ctrl.LoggerFrom(ctx)
 		result := []ctrl.Request{}
 
-		c, ok := o.(*infrastructurev1beta2.OCICluster)
+		c, ok := o.(*infrastructurev1beta3.OCICluster)
 		if !ok {
 			log.Error(errors.Errorf("expected a OCICluster but got a %T", o), "failed to get OCIMachine for OCICluster")
 			return nil
@@ -265,7 +263,7 @@ func (r *OCIMachineReconciler) OCIManagedClusterToOCIMachines() handler.MapFunc 
 		log := ctrl.LoggerFrom(ctx)
 		result := []ctrl.Request{}
 
-		c, ok := o.(*infrastructurev1beta2.OCIManagedCluster)
+		c, ok := o.(*infrastructurev1beta3.OCIManagedCluster)
 		if !ok {
 			log.Error(errors.Errorf("expected a OCICluster but got a %T", o), "failed to get OCIMachine for OCICluster")
 			return nil
@@ -332,19 +330,19 @@ func (r *OCIMachineReconciler) recordErrorsOnFailedWorkRequest(ctx context.Conte
 }
 
 func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) (ctrl.Result, error) {
-	controllerutil.AddFinalizer(machineScope.OCIMachine, infrastructurev1beta2.MachineFinalizer)
+	controllerutil.AddFinalizer(machineScope.OCIMachine, infrastructurev1beta3.MachineFinalizer)
 	machine := machineScope.OCIMachine
 	infraMachine := machineScope.Machine
 
 	annotations := infraMachine.GetAnnotations()
 	deleteMachineOnTermination := false
 	if annotations != nil {
-		_, deleteMachineOnTermination = annotations[infrastructurev1beta2.DeleteMachineOnInstanceTermination]
+		_, deleteMachineOnTermination = annotations[infrastructurev1beta3.DeleteMachineOnInstanceTermination]
 	}
 	// Ensure bootstrap data is available and populated (compatible with CAPI v1beta2).
 	if machineScope.Machine.Spec.Bootstrap.DataSecretName == nil {
-		r.Recorder.Event(machine, corev1.EventTypeNormal, infrastructurev1beta2.WaitingForBootstrapDataReason, "Bootstrap data secret reference is not yet available")
-		v1beta1conditions.MarkFalse(machine, infrastructurev1beta2.InstanceReadyCondition, infrastructurev1beta2.WaitingForBootstrapDataReason, clusterv1beta1.ConditionSeverityInfo, "")
+		r.Recorder.Event(machine, corev1.EventTypeNormal, infrastructurev1beta3.WaitingForBootstrapDataReason, "Bootstrap data secret reference is not yet available")
+		ociutil.MarkConditionFalse(machine, infrastructurev1beta3.InstanceReadyCondition, infrastructurev1beta3.WaitingForBootstrapDataReason, "")
 		logger.Info("Bootstrap data secret reference is not yet available")
 		return ctrl.Result{}, nil
 	}
@@ -352,7 +350,7 @@ func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.
 	instance, err := r.getOrCreate(ctx, machineScope)
 	if err != nil {
 		r.Recorder.Event(machine, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "Failed to reconcile OCIMachine").Error())
-		v1beta1conditions.MarkFalse(machine, infrastructurev1beta2.InstanceReadyCondition, infrastructurev1beta2.InstanceProvisionFailedReason, clusterv1beta1.ConditionSeverityError, "")
+		ociutil.MarkConditionFalse(machine, infrastructurev1beta3.InstanceReadyCondition, infrastructurev1beta3.InstanceProvisionFailedReason, "")
 		return ctrl.Result{}, errors.Wrapf(err, "failed to reconcile OCI Machine %s/%s", machineScope.OCIMachine.Namespace, machineScope.OCIMachine.Name)
 	}
 
@@ -365,12 +363,11 @@ func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.
 	switch instance.LifecycleState {
 	case core.InstanceLifecycleStateProvisioning, core.InstanceLifecycleStateStarting:
 		machineScope.Info("Instance is pending")
-		v1beta1conditions.MarkFalse(machineScope.OCIMachine, infrastructurev1beta2.InstanceReadyCondition, infrastructurev1beta2.InstanceNotReadyReason, clusterv1beta1.ConditionSeverityInfo, "")
+		ociutil.MarkConditionFalse(machineScope.OCIMachine, infrastructurev1beta3.InstanceReadyCondition, infrastructurev1beta3.InstanceNotReadyReason, "")
 		return reconcile.Result{RequeueAfter: 10 * time.Second}, nil
 	case core.InstanceLifecycleStateStopping, core.InstanceLifecycleStateStopped, core.InstanceLifecycleStateMoving:
-		machineScope.SetNotReady()
 		machineScope.Info(fmt.Sprintf("Instance is in %s state and not ready", instance.LifecycleState))
-		v1beta1conditions.MarkFalse(machineScope.OCIMachine, infrastructurev1beta2.InstanceReadyCondition, infrastructurev1beta2.InstanceNotReadyReason, clusterv1beta1.ConditionSeverityInfo, "")
+		ociutil.MarkConditionFalse(machineScope.OCIMachine, infrastructurev1beta3.InstanceReadyCondition, infrastructurev1beta3.InstanceNotReadyReason, "")
 		return reconcile.Result{}, nil
 	case core.InstanceLifecycleStateRunning:
 		machineScope.Info("Instance is active")
@@ -379,13 +376,13 @@ func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.
 			ipAddress, err := machineScope.GetInstanceIp(ctx)
 			if err != nil {
 				r.Recorder.Event(machine, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to reconcile OCIMachine").Error())
-				v1beta1conditions.MarkFalse(machineScope.OCIMachine, infrastructurev1beta2.InstanceReadyCondition, infrastructurev1beta2.InstanceIPAddressNotFound, clusterv1beta1.ConditionSeverityError, "")
+				ociutil.MarkConditionFalse(machineScope.OCIMachine, infrastructurev1beta3.InstanceReadyCondition, infrastructurev1beta3.InstanceIPAddressNotFound, "")
 				return ctrl.Result{}, err
 			}
-			machine.Status.Addresses = []clusterv1beta1.MachineAddress{
+			machine.Status.Addresses = []clusterv1.MachineAddress{
 				{
 					Address: *ipAddress,
-					Type:    clusterv1beta1.MachineInternalIP,
+					Type:    clusterv1.MachineInternalIP,
 				},
 			}
 		}
@@ -393,7 +390,7 @@ func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.
 			err := machineScope.ReconcileCreateInstanceOnLB(ctx)
 			if err != nil {
 				r.Recorder.Event(machine, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to reconcile OCIMachine").Error())
-				v1beta1conditions.MarkFalse(machineScope.OCIMachine, infrastructurev1beta2.InstanceReadyCondition, infrastructurev1beta2.InstanceLBBackendAdditionFailedReason, clusterv1beta1.ConditionSeverityError, "")
+				ociutil.MarkConditionFalse(machineScope.OCIMachine, infrastructurev1beta3.InstanceReadyCondition, infrastructurev1beta3.InstanceLBBackendAdditionFailedReason, "")
 				return ctrl.Result{}, err
 			}
 			machineScope.Info("Instance is added to the control plane LB")
@@ -403,19 +400,18 @@ func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.
 			err := machineScope.ReconcileVnicAttachments(ctx)
 			if err != nil {
 				r.Recorder.Event(machine, corev1.EventTypeWarning, "ReconcileError", errors.Wrapf(err, "failed to reconcile OCIMachine").Error())
-				v1beta1conditions.MarkFalse(machineScope.OCIMachine, infrastructurev1beta2.InstanceReadyCondition,
-					infrastructurev1beta2.InstanceVnicAttachmentFailedReason, clusterv1beta1.ConditionSeverityError, "")
+				ociutil.MarkConditionFalse(machineScope.OCIMachine, infrastructurev1beta3.InstanceReadyCondition, infrastructurev1beta3.InstanceVnicAttachmentFailedReason, "")
 				return ctrl.Result{}, err
 			}
 			machineScope.Info("Instance vnic attachment success")
-			r.Recorder.Eventf(machineScope.OCIMachine, corev1.EventTypeNormal, infrastructurev1beta2.InstanceVnicAttachmentReady,
+			r.Recorder.Eventf(machineScope.OCIMachine, corev1.EventTypeNormal, infrastructurev1beta3.InstanceVnicAttachmentReady,
 				"VNICs have been attached to instance.")
 		}
 
 		// record the event only when machine goes from not ready to ready state
 		r.Recorder.Eventf(machine, corev1.EventTypeNormal, "InstanceReady",
 			"Instance is in ready state")
-		v1beta1conditions.MarkTrue(machineScope.OCIMachine, infrastructurev1beta2.InstanceReadyCondition)
+		ociutil.MarkConditionTrue(machineScope.OCIMachine, infrastructurev1beta3.InstanceReadyCondition)
 		machineScope.SetReady()
 		if deleteMachineOnTermination {
 			// typically, if the VM is terminated, we should get machine events, so ideally, the 300 seconds
@@ -433,8 +429,7 @@ func (r *OCIMachineReconciler) reconcileNormal(ctx context.Context, logger logr.
 		}
 		fallthrough
 	default:
-		machineScope.SetNotReady()
-		v1beta1conditions.MarkFalse(machineScope.OCIMachine, infrastructurev1beta2.InstanceReadyCondition, infrastructurev1beta2.InstanceProvisionFailedReason, clusterv1beta1.ConditionSeverityError, "")
+		ociutil.MarkConditionFalse(machineScope.OCIMachine, infrastructurev1beta3.InstanceReadyCondition, infrastructurev1beta3.InstanceProvisionFailedReason, "")
 		machineScope.SetFailureReason(cloudutil.CreateError)
 		machineScope.SetFailureMessage(errors.Errorf("Instance status %q is unexpected", instance.LifecycleState))
 		return r.recordErrorsOnFailedWorkRequest(ctx, logger, machineScope, instance)
@@ -459,7 +454,7 @@ func (r *OCIMachineReconciler) reconcileDelete(ctx context.Context, logger logr.
 			if err != nil {
 				return reconcile.Result{}, err
 			}
-			v1beta1conditions.MarkFalse(machineScope.OCIMachine, infrastructurev1beta2.InstanceReadyCondition, infrastructurev1beta2.InstanceNotFoundReason, clusterv1beta1.ConditionSeverityInfo, "")
+			ociutil.MarkConditionFalse(machineScope.OCIMachine, infrastructurev1beta3.InstanceReadyCondition, infrastructurev1beta3.InstanceNotFoundReason, "")
 			machineScope.Info("Instance is not found, may have been deleted")
 			if hasBlockVolume {
 				if err = machineScope.DeleteBlockVolume(ctx); err != nil {
@@ -468,7 +463,7 @@ func (r *OCIMachineReconciler) reconcileDelete(ctx context.Context, logger logr.
 
 				}
 			}
-			controllerutil.RemoveFinalizer(machineScope.OCIMachine, infrastructurev1beta2.MachineFinalizer)
+			controllerutil.RemoveFinalizer(machineScope.OCIMachine, infrastructurev1beta3.MachineFinalizer)
 			return reconcile.Result{}, nil
 		} else {
 			return reconcile.Result{}, err
@@ -476,7 +471,7 @@ func (r *OCIMachineReconciler) reconcileDelete(ctx context.Context, logger logr.
 	}
 	if instance == nil {
 		machineScope.Info("Instance is not found, may have been deleted")
-		controllerutil.RemoveFinalizer(machineScope.OCIMachine, infrastructurev1beta2.MachineFinalizer)
+		controllerutil.RemoveFinalizer(machineScope.OCIMachine, infrastructurev1beta3.MachineFinalizer)
 		return reconcile.Result{}, nil
 	}
 
@@ -487,7 +482,7 @@ func (r *OCIMachineReconciler) reconcileDelete(ctx context.Context, logger logr.
 		machineScope.Info("Instance is terminating")
 		return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 	case core.InstanceLifecycleStateTerminated:
-		v1beta1conditions.MarkFalse(machineScope.OCIMachine, infrastructurev1beta2.InstanceReadyCondition, infrastructurev1beta2.InstanceTerminatedReason, clusterv1beta1.ConditionSeverityInfo, "")
+		ociutil.MarkConditionFalse(machineScope.OCIMachine, infrastructurev1beta3.InstanceReadyCondition, infrastructurev1beta3.InstanceTerminatedReason, "")
 		if hasBlockVolume {
 			if err = machineScope.DeleteBlockVolume(ctx); err != nil {
 				logger.Info("Requeueing reconciliation", "reason:", err.Error(), "after:", 5*time.Second)
@@ -495,7 +490,7 @@ func (r *OCIMachineReconciler) reconcileDelete(ctx context.Context, logger logr.
 
 			}
 		}
-		controllerutil.RemoveFinalizer(machineScope.OCIMachine, infrastructurev1beta2.MachineFinalizer)
+		controllerutil.RemoveFinalizer(machineScope.OCIMachine, infrastructurev1beta3.MachineFinalizer)
 		machineScope.Info("Instance is deleted")
 		r.Recorder.Eventf(machineScope.OCIMachine, corev1.EventTypeNormal,
 			"InstanceTerminated", "Deleted the instance")
@@ -512,7 +507,7 @@ func (r *OCIMachineReconciler) reconcileDelete(ctx context.Context, logger logr.
 			machineScope.Error(err, "Error deleting Instance")
 			return ctrl.Result{}, errors.Wrapf(err, "error deleting instance %s", machineScope.Name())
 		}
-		v1beta1conditions.MarkFalse(machineScope.OCIMachine, infrastructurev1beta2.InstanceReadyCondition, infrastructurev1beta2.InstanceTerminatingReason, clusterv1beta1.ConditionSeverityInfo, "")
+		ociutil.MarkConditionFalse(machineScope.OCIMachine, infrastructurev1beta3.InstanceReadyCondition, infrastructurev1beta3.InstanceTerminatingReason, "")
 		r.Recorder.Eventf(machineScope.OCIMachine, corev1.EventTypeNormal,
 			"InstanceTerminating", "Terminating the instance")
 		return reconcile.Result{RequeueAfter: 30 * time.Second}, nil

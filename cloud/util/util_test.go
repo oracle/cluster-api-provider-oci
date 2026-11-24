@@ -22,18 +22,18 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/cluster-api-provider-oci/cloud/config"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
-	infrav2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
+	infrav3exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta3"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2/klogr"
-	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -46,10 +46,10 @@ func testScheme() *runtime.Scheme {
 	_ = corev1.AddToScheme(scheme)
 	// CAPI core APIs v1beta2 and deprecated v1beta1
 	_ = clusterv1.AddToScheme(scheme)
-	_ = clusterv1beta1.AddToScheme(scheme)
+	_ = clusterv1.AddToScheme(scheme)
 	// Provider infra APIs
-	_ = infrastructurev1beta2.AddToScheme(scheme)
-	_ = infrav2exp.AddToScheme(scheme)
+	_ = infrastructurev1beta3.AddToScheme(scheme)
+	_ = infrav3exp.AddToScheme(scheme)
 	return scheme
 }
 
@@ -60,7 +60,7 @@ func TestGetClusterIdentityFromRef(t *testing.T) {
 		ref           *corev1.ObjectReference
 		objects       []client.Object
 		errorExpected bool
-		expectedSpec  infrastructurev1beta2.OCIClusterIdentitySpec
+		expectedSpec  infrastructurev1beta3.OCIClusterIdentitySpec
 	}{
 		{
 			name:      "simple",
@@ -71,21 +71,21 @@ func TestGetClusterIdentityFromRef(t *testing.T) {
 				Name:       "test-identity",
 				APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
 			},
-			objects: []client.Object{&infrastructurev1beta2.OCIClusterIdentity{
+			objects: []client.Object{&infrastructurev1beta3.OCIClusterIdentity{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-identity",
 					Namespace: "default",
 				},
-				Spec: infrastructurev1beta2.OCIClusterIdentitySpec{
-					Type: infrastructurev1beta2.UserPrincipal,
+				Spec: infrastructurev1beta3.OCIClusterIdentitySpec{
+					Type: infrastructurev1beta3.UserPrincipal,
 					PrincipalSecret: corev1.SecretReference{
 						Name:      "test",
 						Namespace: "test",
 					},
 				},
 			}},
-			expectedSpec: infrastructurev1beta2.OCIClusterIdentitySpec{
-				Type: infrastructurev1beta2.UserPrincipal,
+			expectedSpec: infrastructurev1beta3.OCIClusterIdentitySpec{
+				Type: infrastructurev1beta3.UserPrincipal,
 				PrincipalSecret: corev1.SecretReference{
 					Name:      "test",
 					Namespace: "test",
@@ -126,7 +126,7 @@ func TestGetOrBuildClientFromIdentity(t *testing.T) {
 	testCases := []struct {
 		name            string
 		namespace       string
-		clusterIdentity *infrastructurev1beta2.OCIClusterIdentity
+		clusterIdentity *infrastructurev1beta3.OCIClusterIdentity
 		objects         []client.Object
 		errorExpected   bool
 		defaultRegion   string
@@ -134,9 +134,9 @@ func TestGetOrBuildClientFromIdentity(t *testing.T) {
 		{
 			name:      "error - secret not found",
 			namespace: "default",
-			clusterIdentity: &infrastructurev1beta2.OCIClusterIdentity{
-				Spec: infrastructurev1beta2.OCIClusterIdentitySpec{
-					Type: infrastructurev1beta2.UserPrincipal,
+			clusterIdentity: &infrastructurev1beta3.OCIClusterIdentity{
+				Spec: infrastructurev1beta3.OCIClusterIdentitySpec{
+					Type: infrastructurev1beta3.UserPrincipal,
 					PrincipalSecret: corev1.SecretReference{
 						Name:      "test",
 						Namespace: "test",
@@ -149,8 +149,8 @@ func TestGetOrBuildClientFromIdentity(t *testing.T) {
 		{
 			name:      "error - invalid principal type",
 			namespace: "default",
-			clusterIdentity: &infrastructurev1beta2.OCIClusterIdentity{
-				Spec: infrastructurev1beta2.OCIClusterIdentitySpec{
+			clusterIdentity: &infrastructurev1beta3.OCIClusterIdentity{
+				Spec: infrastructurev1beta3.OCIClusterIdentitySpec{
 					Type: "invalid",
 				},
 			},
@@ -160,9 +160,9 @@ func TestGetOrBuildClientFromIdentity(t *testing.T) {
 		{
 			name:      "secret found",
 			namespace: "default",
-			clusterIdentity: &infrastructurev1beta2.OCIClusterIdentity{
-				Spec: infrastructurev1beta2.OCIClusterIdentitySpec{
-					Type: infrastructurev1beta2.UserPrincipal,
+			clusterIdentity: &infrastructurev1beta3.OCIClusterIdentity{
+				Spec: infrastructurev1beta3.OCIClusterIdentitySpec{
+					Type: infrastructurev1beta3.UserPrincipal,
 					PrincipalSecret: corev1.SecretReference{
 						Name:      "test",
 						Namespace: "test",
@@ -198,7 +198,7 @@ func TestIsClusterNamespaceAllowed(t *testing.T) {
 	testCases := []struct {
 		name              string
 		namespace         string
-		allowedNamespaces *infrastructurev1beta2.AllowedNamespaces
+		allowedNamespaces *infrastructurev1beta3.AllowedNamespaces
 		objects           []client.Object
 		expected          bool
 	}{
@@ -211,14 +211,14 @@ func TestIsClusterNamespaceAllowed(t *testing.T) {
 		{
 			name:              "empty allowednamespace, allowed",
 			namespace:         "default",
-			allowedNamespaces: &infrastructurev1beta2.AllowedNamespaces{},
+			allowedNamespaces: &infrastructurev1beta3.AllowedNamespaces{},
 			objects:           []client.Object{},
 			expected:          true,
 		},
 		{
 			name:      "not allowed",
 			namespace: "test",
-			allowedNamespaces: &infrastructurev1beta2.AllowedNamespaces{
+			allowedNamespaces: &infrastructurev1beta3.AllowedNamespaces{
 				NamespaceList: []string{"test123"},
 			},
 			objects:  []client.Object{},
@@ -227,7 +227,7 @@ func TestIsClusterNamespaceAllowed(t *testing.T) {
 		{
 			name:      "allowed",
 			namespace: "test",
-			allowedNamespaces: &infrastructurev1beta2.AllowedNamespaces{
+			allowedNamespaces: &infrastructurev1beta3.AllowedNamespaces{
 				NamespaceList: []string{"test"},
 			},
 			objects:  []client.Object{},
@@ -236,7 +236,7 @@ func TestIsClusterNamespaceAllowed(t *testing.T) {
 		{
 			name:      "empty label selector",
 			namespace: "test",
-			allowedNamespaces: &infrastructurev1beta2.AllowedNamespaces{
+			allowedNamespaces: &infrastructurev1beta3.AllowedNamespaces{
 				Selector: &metav1.LabelSelector{},
 			},
 			objects:  []client.Object{},
@@ -245,7 +245,7 @@ func TestIsClusterNamespaceAllowed(t *testing.T) {
 		{
 			name:      "allowed label selector",
 			namespace: "test",
-			allowedNamespaces: &infrastructurev1beta2.AllowedNamespaces{
+			allowedNamespaces: &infrastructurev1beta3.AllowedNamespaces{
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{"key": "value"},
 				},
@@ -284,7 +284,7 @@ func TestCreateClientProviderFromClusterIdentity(t *testing.T) {
 			name:      "error - secret not found",
 			namespace: "default",
 			clusterAccessor: scope.OCISelfManagedCluster{
-				OCICluster: &infrastructurev1beta2.OCICluster{},
+				OCICluster: &infrastructurev1beta3.OCICluster{},
 			},
 			ref: &corev1.ObjectReference{
 				Kind:       "OCIClusterIdentity",
@@ -292,13 +292,13 @@ func TestCreateClientProviderFromClusterIdentity(t *testing.T) {
 				Name:       "test-identity",
 				APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
 			},
-			objects: []client.Object{&infrastructurev1beta2.OCIClusterIdentity{
+			objects: []client.Object{&infrastructurev1beta3.OCIClusterIdentity{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-identity",
 					Namespace: "default",
 				},
-				Spec: infrastructurev1beta2.OCIClusterIdentitySpec{
-					Type: infrastructurev1beta2.UserPrincipal,
+				Spec: infrastructurev1beta3.OCIClusterIdentitySpec{
+					Type: infrastructurev1beta3.UserPrincipal,
 					PrincipalSecret: corev1.SecretReference{
 						Name:      "test",
 						Namespace: "test",
@@ -343,9 +343,9 @@ func TestInitClientsAndRegion(t *testing.T) {
 			namespace:     "default",
 			defaultRegion: "ashburn-1",
 			clusterAccessor: scope.OCISelfManagedCluster{
-				OCICluster: &infrastructurev1beta2.OCICluster{
-					Spec: infrastructurev1beta2.OCIClusterSpec{
-						ClientOverrides: &infrastructurev1beta2.ClientOverrides{
+				OCICluster: &infrastructurev1beta3.OCICluster{
+					Spec: infrastructurev1beta3.OCIClusterSpec{
+						ClientOverrides: &infrastructurev1beta3.ClientOverrides{
 							CertOverride: &corev1.SecretReference{
 								Name:      "certSecret",
 								Namespace: "default",
@@ -354,13 +354,13 @@ func TestInitClientsAndRegion(t *testing.T) {
 					},
 				},
 			},
-			objects: []client.Object{&infrastructurev1beta2.OCIClusterIdentity{
+			objects: []client.Object{&infrastructurev1beta3.OCIClusterIdentity{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-identity",
 					Namespace: "default",
 				},
-				Spec: infrastructurev1beta2.OCIClusterIdentitySpec{
-					Type: infrastructurev1beta2.UserPrincipal,
+				Spec: infrastructurev1beta3.OCIClusterIdentitySpec{
+					Type: infrastructurev1beta3.UserPrincipal,
 					PrincipalSecret: corev1.SecretReference{
 						Name:      "test",
 						Namespace: "test",
@@ -384,9 +384,9 @@ func TestInitClientsAndRegion(t *testing.T) {
 			namespace:     "default",
 			defaultRegion: "ashburn-1",
 			clusterAccessor: scope.OCISelfManagedCluster{
-				OCICluster: &infrastructurev1beta2.OCICluster{
-					Spec: infrastructurev1beta2.OCIClusterSpec{
-						ClientOverrides: &infrastructurev1beta2.ClientOverrides{
+				OCICluster: &infrastructurev1beta3.OCICluster{
+					Spec: infrastructurev1beta3.OCIClusterSpec{
+						ClientOverrides: &infrastructurev1beta3.ClientOverrides{
 							CertOverride: &corev1.SecretReference{
 								Name:      "certSecret",
 								Namespace: "default",
@@ -395,13 +395,13 @@ func TestInitClientsAndRegion(t *testing.T) {
 					},
 				},
 			},
-			objects: []client.Object{&infrastructurev1beta2.OCIClusterIdentity{
+			objects: []client.Object{&infrastructurev1beta3.OCIClusterIdentity{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-identity",
 					Namespace: "default",
 				},
-				Spec: infrastructurev1beta2.OCIClusterIdentitySpec{
-					Type: infrastructurev1beta2.UserPrincipal,
+				Spec: infrastructurev1beta3.OCIClusterIdentitySpec{
+					Type: infrastructurev1beta3.UserPrincipal,
 					PrincipalSecret: corev1.SecretReference{
 						Name:      "test",
 						Namespace: "test",
@@ -426,9 +426,9 @@ func TestInitClientsAndRegion(t *testing.T) {
 			namespace:     "default",
 			defaultRegion: "ashburn-1",
 			clusterAccessor: scope.OCISelfManagedCluster{
-				OCICluster: &infrastructurev1beta2.OCICluster{
-					Spec: infrastructurev1beta2.OCIClusterSpec{
-						ClientOverrides: &infrastructurev1beta2.ClientOverrides{
+				OCICluster: &infrastructurev1beta3.OCICluster{
+					Spec: infrastructurev1beta3.OCIClusterSpec{
+						ClientOverrides: &infrastructurev1beta3.ClientOverrides{
 							CertOverride: &corev1.SecretReference{
 								Name:      "certSecret",
 								Namespace: "default",
@@ -437,13 +437,13 @@ func TestInitClientsAndRegion(t *testing.T) {
 					},
 				},
 			},
-			objects: []client.Object{&infrastructurev1beta2.OCIClusterIdentity{
+			objects: []client.Object{&infrastructurev1beta3.OCIClusterIdentity{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-identity",
 					Namespace: "default",
 				},
-				Spec: infrastructurev1beta2.OCIClusterIdentitySpec{
-					Type: infrastructurev1beta2.UserPrincipal,
+				Spec: infrastructurev1beta3.OCIClusterIdentitySpec{
+					Type: infrastructurev1beta3.UserPrincipal,
 					PrincipalSecret: corev1.SecretReference{
 						Name:      "test",
 						Namespace: "test",
@@ -487,15 +487,15 @@ func TestCreateManagedMachinesIfNotExists(t *testing.T) {
 		cluster              *clusterv1.Cluster
 		clusterAccessor      scope.OCIClusterAccessor
 		clientProvider       *scope.ClientProvider
-		specMachines         []infrav2exp.OCIMachinePoolMachine
-		machineTypEnum       infrav2exp.MachineTypeEnum
+		specMachines         []infrav3exp.OCIMachinePoolMachine
+		machineTypEnum       infrav3exp.MachineTypeEnum
 		infraMachinePoolName string
 		infraMachinePoolKind string
 		infraMachinePoolUid  types.UID
 		errorMessage         string
 		setup                func(t *test)
 		validate             func(g *WithT, t *test)
-		createPoolMachines   []infrav2exp.OCIMachinePoolMachine
+		createPoolMachines   []infrav3exp.OCIMachinePoolMachine
 	}
 	testCases := []test{
 		{
@@ -503,7 +503,7 @@ func TestCreateManagedMachinesIfNotExists(t *testing.T) {
 			namespace:            "default",
 			infraMachinePoolName: "test",
 			errorExpected:        false,
-			machineTypEnum:       infrav2exp.SelfManaged,
+			machineTypEnum:       infrav3exp.SelfManaged,
 			machinePool: &clusterv1.MachinePool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
@@ -514,42 +514,42 @@ func TestCreateManagedMachinesIfNotExists(t *testing.T) {
 					Name: "test",
 				},
 			},
-			specMachines: []infrav2exp.OCIMachinePoolMachine{
+			specMachines: []infrav3exp.OCIMachinePoolMachine{
 				{
-					Spec: infrav2exp.OCIMachinePoolMachineSpec{
+					Spec: infrav3exp.OCIMachinePoolMachineSpec{
 						OCID:         common.String("id-1"),
 						InstanceName: common.String("name-1"),
 						ProviderID:   common.String("oci://id-1"),
-						MachineType:  infrav2exp.SelfManaged,
+						MachineType:  infrav3exp.SelfManaged,
 					},
 				},
 				{
-					Spec: infrav2exp.OCIMachinePoolMachineSpec{
+					Spec: infrav3exp.OCIMachinePoolMachineSpec{
 						OCID:         common.String("id-2"),
 						InstanceName: common.String("name-2"),
 						ProviderID:   common.String("oci://id-2"),
-						MachineType:  infrav2exp.SelfManaged,
+						MachineType:  infrav3exp.SelfManaged,
 					},
 				},
 			},
 			setup: func(t *test) {
-				t.client = interceptor.NewClient(fake.NewClientBuilder().WithScheme(testScheme()).WithObjects().Build(), interceptor.Funcs{
+				t.client = interceptor.NewClient(fake.NewClientBuilder().WithScheme(testScheme()).WithStatusSubresource(&infrav3exp.OCIMachinePoolMachine{}).WithObjects().Build(), interceptor.Funcs{
 					Create: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
-						m := obj.(*infrav2exp.OCIMachinePoolMachine)
+						m := obj.(*infrav3exp.OCIMachinePoolMachine)
 						t.createPoolMachines = append(t.createPoolMachines, *m)
-						return nil
+						return client.Create(ctx, obj, opts...)
 					},
 				})
 			},
 			validate: func(g *WithT, t *test) {
 				g.Expect(len(t.createPoolMachines)).To(Equal(2))
 				machine := t.createPoolMachines[0]
-				g.Expect(machine.Spec.MachineType).To(Equal(infrav2exp.SelfManaged))
+				g.Expect(machine.Spec.MachineType).To(Equal(infrav3exp.SelfManaged))
 				g.Expect(*machine.Spec.InstanceName).To(Equal("name-1"))
 				g.Expect(*machine.Spec.ProviderID).To(Equal("oci://id-1"))
 				g.Expect(*machine.Spec.OCID).To(Equal("id-1"))
 				machine = t.createPoolMachines[1]
-				g.Expect(machine.Spec.MachineType).To(Equal(infrav2exp.SelfManaged))
+				g.Expect(machine.Spec.MachineType).To(Equal(infrav3exp.SelfManaged))
 				g.Expect(*machine.Spec.InstanceName).To(Equal("name-2"))
 				g.Expect(*machine.Spec.ProviderID).To(Equal("oci://id-2"))
 				g.Expect(*machine.Spec.OCID).To(Equal("id-2"))
@@ -560,7 +560,7 @@ func TestCreateManagedMachinesIfNotExists(t *testing.T) {
 			namespace:            "default",
 			infraMachinePoolName: "test",
 			errorExpected:        false,
-			machineTypEnum:       infrav2exp.SelfManaged,
+			machineTypEnum:       infrav3exp.SelfManaged,
 			machinePool: &clusterv1.MachinePool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
@@ -571,18 +571,18 @@ func TestCreateManagedMachinesIfNotExists(t *testing.T) {
 					Name: "test",
 				},
 			},
-			specMachines: []infrav2exp.OCIMachinePoolMachine{
+			specMachines: []infrav3exp.OCIMachinePoolMachine{
 				{
-					Spec: infrav2exp.OCIMachinePoolMachineSpec{
+					Spec: infrav3exp.OCIMachinePoolMachineSpec{
 						OCID:         common.String("id-1"),
 						InstanceName: common.String("name-1"),
 						ProviderID:   common.String("oci://id-1"),
-						MachineType:  infrav2exp.SelfManaged,
+						MachineType:  infrav3exp.SelfManaged,
 					},
 				},
 			},
 			setup: func(t *test) {
-				t.client = interceptor.NewClient(fake.NewClientBuilder().WithScheme(testScheme()).WithObjects(&infrav2exp.OCIMachinePoolMachine{
+				m := &infrav3exp.OCIMachinePoolMachine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "default",
@@ -591,15 +591,16 @@ func TestCreateManagedMachinesIfNotExists(t *testing.T) {
 							clusterv1.MachinePoolNameLabel: "test",
 						},
 					},
-					Spec: infrav2exp.OCIMachinePoolMachineSpec{
+					Spec: infrav3exp.OCIMachinePoolMachineSpec{
 						OCID:         common.String("id-1"),
 						InstanceName: common.String("name-1"),
 						ProviderID:   common.String("oci://id-1"),
-						MachineType:  infrav2exp.SelfManaged,
+						MachineType:  infrav3exp.SelfManaged,
 					},
-				}).Build(), interceptor.Funcs{
+				}
+				t.client = interceptor.NewClient(fake.NewClientBuilder().WithScheme(testScheme()).WithStatusSubresource(m).WithObjects(m).Build(), interceptor.Funcs{
 					Create: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
-						m := obj.(*infrav2exp.OCIMachinePoolMachine)
+						m := obj.(*infrav3exp.OCIMachinePoolMachine)
 						t.createPoolMachines = append(t.createPoolMachines, *m)
 						return nil
 					},
@@ -614,7 +615,7 @@ func TestCreateManagedMachinesIfNotExists(t *testing.T) {
 			namespace:            "default",
 			infraMachinePoolName: "test",
 			errorExpected:        false,
-			machineTypEnum:       infrav2exp.SelfManaged,
+			machineTypEnum:       infrav3exp.SelfManaged,
 			machinePool: &clusterv1.MachinePool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
@@ -625,46 +626,129 @@ func TestCreateManagedMachinesIfNotExists(t *testing.T) {
 					Name: "test",
 				},
 			},
-			specMachines: []infrav2exp.OCIMachinePoolMachine{
+			specMachines: []infrav3exp.OCIMachinePoolMachine{
 				{
-					Spec: infrav2exp.OCIMachinePoolMachineSpec{
+					Spec: infrav3exp.OCIMachinePoolMachineSpec{
 						OCID:         common.String("id-1"),
 						InstanceName: common.String("name-1"),
 						ProviderID:   common.String("oci://id-1"),
-						MachineType:  infrav2exp.SelfManaged,
+						MachineType:  infrav3exp.SelfManaged,
 					},
-					Status: infrav2exp.OCIMachinePoolMachineStatus{
-						Ready: true,
+					Status: infrav3exp.OCIMachinePoolMachineStatus{
+						Initialization: infrav3exp.OCIMachinePoolMachineInitializationStatus{
+							Provisioned: common.Bool(true),
+						},
 					},
 				},
 			},
 			setup: func(t *test) {
-				m := &infrav2exp.OCIMachinePoolMachine{
+				m := &infrav3exp.OCIMachinePoolMachine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "default",
 						Labels: map[string]string{
-							clusterv1beta1.ClusterNameLabel:     "test",
-							clusterv1beta1.MachinePoolNameLabel: "test",
+							clusterv1.ClusterNameLabel:     "test",
+							clusterv1.MachinePoolNameLabel: "test",
 						},
 					},
-					Spec: infrav2exp.OCIMachinePoolMachineSpec{
+					Spec: infrav3exp.OCIMachinePoolMachineSpec{
 						OCID:         common.String("id-1"),
 						InstanceName: common.String("name-1"),
 						ProviderID:   common.String("oci://id-1"),
-						MachineType:  infrav2exp.SelfManaged,
+						MachineType:  infrav3exp.SelfManaged,
 					},
 				}
 				t.client = interceptor.NewClient(fake.NewClientBuilder().WithScheme(testScheme()).WithStatusSubresource(m).WithObjects(m).Build(), interceptor.Funcs{
 					SubResourcePatch: func(ctx context.Context, client client.Client, subResourceName string, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption) error {
-						m := obj.(*infrav2exp.OCIMachinePoolMachine)
+						if err := client.SubResource(subResourceName).Patch(ctx, obj, patch, opts...); err != nil {
+							return err
+						}
+						m := obj.(*infrav3exp.OCIMachinePoolMachine)
 						t.createPoolMachines = append(t.createPoolMachines, *m)
 						return nil
 					},
 				})
 			},
 			validate: func(g *WithT, t *test) {
-				g.Expect(len(t.createPoolMachines)).To(Equal(1))
+				g.Expect(len(t.createPoolMachines)).To(BeNumerically(">=", 1))
+				updated := &infrav3exp.OCIMachinePoolMachine{}
+				g.Expect(t.client.Get(context.Background(), client.ObjectKey{Namespace: "default", Name: "test"}, updated)).To(Succeed())
+				g.Expect(updated.Status.Initialization.Provisioned).To(Equal(common.Bool(true)))
+				readyCond := conditions.Get(updated, clusterv1.ReadyCondition)
+				g.Expect(readyCond).ToNot(BeNil())
+				g.Expect(readyCond.Status).To(Equal(metav1.ConditionTrue))
+			},
+		},
+		{
+			name:                 "non-running machine stays unprovisioned with Ready=False across reconciles",
+			namespace:            "default",
+			infraMachinePoolName: "test",
+			errorExpected:        false,
+			machineTypEnum:       infrav3exp.SelfManaged,
+			machinePool: &clusterv1.MachinePool{
+				ObjectMeta: metav1.ObjectMeta{Name: "test"},
+			},
+			cluster: &clusterv1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{Name: "test"},
+			},
+			specMachines: []infrav3exp.OCIMachinePoolMachine{
+				{
+					Spec: infrav3exp.OCIMachinePoolMachineSpec{
+						OCID:         common.String("id-provisioning"),
+						InstanceName: common.String("name-provisioning"),
+						ProviderID:   common.String("oci://id-provisioning"),
+						MachineType:  infrav3exp.SelfManaged,
+					},
+					Status: infrav3exp.OCIMachinePoolMachineStatus{
+						Initialization: infrav3exp.OCIMachinePoolMachineInitializationStatus{
+							Provisioned: common.Bool(false),
+						},
+					},
+				},
+			},
+			setup: func(t *test) {
+				t.client = fake.NewClientBuilder().WithScheme(testScheme()).WithStatusSubresource(&infrav3exp.OCIMachinePoolMachine{}).Build()
+			},
+			validate: func(g *WithT, t *test) {
+				// Simulate second reconcile while instance is still provisioning.
+				params := MachineParams{
+					Client:               t.client,
+					MachinePool:          t.machinePool,
+					Cluster:              t.cluster,
+					InfraMachinePoolName: t.infraMachinePoolName,
+					InfraMachinePoolKind: t.infraMachinePoolKind,
+					InfraMachinePoolUID:  t.infraMachinePoolUid,
+					Namespace:            t.namespace,
+					SpecInfraMachines:    t.specMachines,
+					Logger:               &log,
+				}
+				g.Expect(CreateMachinePoolMachinesIfNotExists(context.Background(), params)).To(Succeed())
+
+				list := &infrav3exp.OCIMachinePoolMachineList{}
+				g.Expect(t.client.List(context.Background(), list, client.InNamespace("default"))).To(Succeed())
+				g.Expect(list.Items).To(HaveLen(1))
+				g.Expect(list.Items[0].Status.Initialization.Provisioned).To(BeNil())
+				ready := conditions.Get(&list.Items[0], clusterv1.ReadyCondition)
+				g.Expect(ready).NotTo(BeNil())
+				g.Expect(ready.Status).To(Equal(metav1.ConditionFalse))
+
+				// Once running, Provisioned latches to true and Ready becomes True.
+				t.specMachines[0].Status.Initialization.Provisioned = common.Bool(true)
+				g.Expect(CreateMachinePoolMachinesIfNotExists(context.Background(), params)).To(Succeed())
+				g.Expect(t.client.List(context.Background(), list, client.InNamespace("default"))).To(Succeed())
+				g.Expect(list.Items[0].Status.Initialization.Provisioned).To(Equal(common.Bool(true)))
+				ready = conditions.Get(&list.Items[0], clusterv1.ReadyCondition)
+				g.Expect(ready).NotTo(BeNil())
+				g.Expect(ready.Status).To(Equal(metav1.ConditionTrue))
+
+				// If later non-running, Provisioned remains latched true while Ready becomes False.
+				t.specMachines[0].Status.Initialization.Provisioned = nil
+				g.Expect(CreateMachinePoolMachinesIfNotExists(context.Background(), params)).To(Succeed())
+				g.Expect(t.client.List(context.Background(), list, client.InNamespace("default"))).To(Succeed())
+				g.Expect(list.Items[0].Status.Initialization.Provisioned).To(Equal(common.Bool(true)))
+				ready = conditions.Get(&list.Items[0], clusterv1.ReadyCondition)
+				g.Expect(ready).NotTo(BeNil())
+				g.Expect(ready.Status).To(Equal(metav1.ConditionFalse))
 			},
 		},
 	}
@@ -701,8 +785,8 @@ func TestDeleteManagedMachinesIfNotExists(t *testing.T) {
 		cluster              *clusterv1.Cluster
 		clusterAccessor      scope.OCIClusterAccessor
 		clientProvider       *scope.ClientProvider
-		specMachines         []infrav2exp.OCIMachinePoolMachine
-		machineTypEnum       infrav2exp.MachineTypeEnum
+		specMachines         []infrav3exp.OCIMachinePoolMachine
+		machineTypEnum       infrav3exp.MachineTypeEnum
 		infraMachinePoolName string
 		infraMachinePoolKind string
 		infraMachinePoolUid  types.UID
@@ -717,7 +801,7 @@ func TestDeleteManagedMachinesIfNotExists(t *testing.T) {
 			namespace:            "default",
 			infraMachinePoolName: "test",
 			errorExpected:        false,
-			machineTypEnum:       infrav2exp.SelfManaged,
+			machineTypEnum:       infrav3exp.SelfManaged,
 			machinePool: &clusterv1.MachinePool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
@@ -729,27 +813,27 @@ func TestDeleteManagedMachinesIfNotExists(t *testing.T) {
 				},
 			},
 			setup: func(t *test) {
-				t.client = interceptor.NewClient(fake.NewClientBuilder().WithScheme(testScheme()).WithObjects(&infrav2exp.OCIMachinePoolMachine{
+				t.client = interceptor.NewClient(fake.NewClientBuilder().WithScheme(testScheme()).WithObjects(&infrav3exp.OCIMachinePoolMachine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "default",
 						Labels: map[string]string{
-							clusterv1beta1.ClusterNameLabel:     "test",
-							clusterv1beta1.MachinePoolNameLabel: "test",
+							clusterv1.ClusterNameLabel:     "test",
+							clusterv1.MachinePoolNameLabel: "test",
 						},
 						OwnerReferences: []metav1.OwnerReference{
 							{
 								Kind:       "Machine",
 								Name:       "test-machine",
-								APIVersion: clusterv1beta1.GroupVersion.String(),
+								APIVersion: clusterv1.GroupVersion.String(),
 							},
 						},
 					},
-					Spec: infrav2exp.OCIMachinePoolMachineSpec{
+					Spec: infrav3exp.OCIMachinePoolMachineSpec{
 						OCID:         common.String("id-1"),
 						InstanceName: common.String("name-1"),
 						ProviderID:   common.String("oci://id-1"),
-						MachineType:  infrav2exp.SelfManaged,
+						MachineType:  infrav3exp.SelfManaged,
 					},
 				}, &clusterv1.Machine{
 					ObjectMeta: metav1.ObjectMeta{
@@ -779,7 +863,7 @@ func TestDeleteManagedMachinesIfNotExists(t *testing.T) {
 			namespace:            "default",
 			infraMachinePoolName: "test",
 			errorExpected:        false,
-			machineTypEnum:       infrav2exp.SelfManaged,
+			machineTypEnum:       infrav3exp.SelfManaged,
 			machinePool: &clusterv1.MachinePool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
@@ -791,27 +875,27 @@ func TestDeleteManagedMachinesIfNotExists(t *testing.T) {
 				},
 			},
 			setup: func(t *test) {
-				t.client = interceptor.NewClient(fake.NewClientBuilder().WithScheme(testScheme()).WithObjects(&infrav2exp.OCIMachinePoolMachine{
+				t.client = interceptor.NewClient(fake.NewClientBuilder().WithScheme(testScheme()).WithObjects(&infrav3exp.OCIMachinePoolMachine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "default",
 						Labels: map[string]string{
-							clusterv1beta1.ClusterNameLabel:     "test",
-							clusterv1beta1.MachinePoolNameLabel: "test",
+							clusterv1.ClusterNameLabel:     "test",
+							clusterv1.MachinePoolNameLabel: "test",
 						},
 						OwnerReferences: []metav1.OwnerReference{
 							{
 								Kind:       "Machine",
 								Name:       "test-machine",
-								APIVersion: clusterv1beta1.GroupVersion.String(),
+								APIVersion: clusterv1.GroupVersion.String(),
 							},
 						},
 					},
-					Spec: infrav2exp.OCIMachinePoolMachineSpec{
+					Spec: infrav3exp.OCIMachinePoolMachineSpec{
 						OCID:         common.String("id-1"),
 						InstanceName: common.String("name-1"),
 						ProviderID:   common.String("oci://id-1"),
-						MachineType:  infrav2exp.SelfManaged,
+						MachineType:  infrav3exp.SelfManaged,
 					},
 				}).Build(), interceptor.Funcs{
 					Delete: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
@@ -827,7 +911,7 @@ func TestDeleteManagedMachinesIfNotExists(t *testing.T) {
 			namespace:            "default",
 			infraMachinePoolName: "test",
 			errorExpected:        true,
-			machineTypEnum:       infrav2exp.SelfManaged,
+			machineTypEnum:       infrav3exp.SelfManaged,
 			machinePool: &clusterv1.MachinePool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
@@ -839,27 +923,27 @@ func TestDeleteManagedMachinesIfNotExists(t *testing.T) {
 				},
 			},
 			setup: func(t *test) {
-				t.client = interceptor.NewClient(fake.NewClientBuilder().WithScheme(testScheme()).WithObjects(&infrav2exp.OCIMachinePoolMachine{
+				t.client = interceptor.NewClient(fake.NewClientBuilder().WithScheme(testScheme()).WithObjects(&infrav3exp.OCIMachinePoolMachine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "default",
 						Labels: map[string]string{
-							clusterv1beta1.ClusterNameLabel:     "test",
-							clusterv1beta1.MachinePoolNameLabel: "test",
+							clusterv1.ClusterNameLabel:     "test",
+							clusterv1.MachinePoolNameLabel: "test",
 						},
 						OwnerReferences: []metav1.OwnerReference{
 							{
 								Kind:       "Machine",
 								Name:       "test-machine",
-								APIVersion: clusterv1beta1.GroupVersion.String(),
+								APIVersion: clusterv1.GroupVersion.String(),
 							},
 						},
 					},
-					Spec: infrav2exp.OCIMachinePoolMachineSpec{
+					Spec: infrav3exp.OCIMachinePoolMachineSpec{
 						OCID:         common.String("id-1"),
 						InstanceName: common.String("name-1"),
 						ProviderID:   common.String("oci://id-1"),
-						MachineType:  infrav2exp.SelfManaged,
+						MachineType:  infrav3exp.SelfManaged,
 					},
 				}).Build(), interceptor.Funcs{
 					Delete: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
@@ -898,14 +982,14 @@ func TestDeleteManagedMachinesIfNotExists(t *testing.T) {
 func TestGetOCIClientCertFromSecret(t *testing.T) {
 	testCases := []struct {
 		name          string
-		overrides     *infrastructurev1beta2.ClientOverrides
+		overrides     *infrastructurev1beta3.ClientOverrides
 		objects       []client.Object
 		errorExpected bool
 		errorMessage  string
 	}{
 		{
 			name: "NPE case - nil CertOverride",
-			overrides: &infrastructurev1beta2.ClientOverrides{
+			overrides: &infrastructurev1beta3.ClientOverrides{
 				CertOverride: nil, // This should cause NPE
 			},
 			objects:       []client.Object{},

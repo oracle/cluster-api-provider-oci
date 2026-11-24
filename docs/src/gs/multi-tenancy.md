@@ -44,7 +44,7 @@ spec:
     namespace: default
   allowedNamespaces: {}
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 kind: OCICluster
 metadata:
   labels:
@@ -53,7 +53,7 @@ metadata:
 spec:
   compartmentId: "${OCI_COMPARTMENT_ID}"
   identityRef:
-    apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
     kind: OCIClusterIdentity
     name: cluster-identity
     namespace: default
@@ -74,7 +74,7 @@ spec shown below uses Instance Principals.
 
 ```yaml
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 kind: OCIClusterIdentity
 metadata:
   name: cluster-identity
@@ -91,7 +91,7 @@ Cluster Identity supports [Workload][workload] access to OCI resources also know
 
 ```yaml
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 kind: OCIClusterIdentity
 metadata:
   name: cluster-identity

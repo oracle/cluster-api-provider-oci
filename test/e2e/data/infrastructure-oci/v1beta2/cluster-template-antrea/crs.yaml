@@ -11,7 +11,7 @@ binaryData:
 ---
 # ClusterResourceSet object with
 # a selector that targets all the Cluster with label cni=${CLUSTER_NAME}-crs-0
-apiVersion: addons.cluster.x-k8s.io/v1beta1
+apiVersion: addons.cluster.x-k8s.io/v1beta2
 kind: ClusterResourceSet
 metadata:
   namespace: "${NAMESPACE}"

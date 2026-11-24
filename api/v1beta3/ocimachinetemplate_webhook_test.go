@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta2
+package v1beta3
 
 import (
 	"context"
@@ -23,8 +23,6 @@ import (
 	"testing"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
-
 	"github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -192,24 +190,24 @@ func TestOCIMachineTemplate_ValidateUpdate(t *testing.T) {
 func TestOCIMachine_GetConditions(t *testing.T) {
 	tests := []struct {
 		name       string
-		conditions clusterv1beta1.Conditions
+		conditions []metav1.Condition
 	}{
 		{
 			name: "non-empty conditions",
-			conditions: clusterv1beta1.Conditions{
+			conditions: []metav1.Condition{
 				{
 					Type:   "Ready",
-					Status: corev1.ConditionTrue,
+					Status: metav1.ConditionTrue,
 				},
 				{
 					Type:   "Provisioned",
-					Status: corev1.ConditionFalse,
+					Status: metav1.ConditionFalse,
 				},
 			},
 		},
 		{
 			name:       "empty conditions",
-			conditions: clusterv1beta1.Conditions{},
+			conditions: []metav1.Condition{},
 		},
 	}
 
@@ -222,7 +220,7 @@ func TestOCIMachine_GetConditions(t *testing.T) {
 			}
 
 			if got := m.GetConditions(); !reflect.DeepEqual(got, tt.conditions) {
-				t.Errorf("GetConditions() = %v, want %v", tt.conditions, tt.conditions)
+				t.Errorf("GetConditions() = %v, want %v", got, tt.conditions)
 			}
 		})
 	}
@@ -231,24 +229,24 @@ func TestOCIMachine_GetConditions(t *testing.T) {
 func TestOCIMachine_SetConditions(t *testing.T) {
 	tests := []struct {
 		name       string
-		conditions clusterv1beta1.Conditions
+		conditions []metav1.Condition
 	}{
 		{
 			name: "set non-empty conditions",
-			conditions: clusterv1beta1.Conditions{
+			conditions: []metav1.Condition{
 				{
 					Type:   "Ready",
-					Status: corev1.ConditionTrue,
+					Status: metav1.ConditionTrue,
 				},
 				{
 					Type:   "Provisioned",
-					Status: corev1.ConditionFalse,
+					Status: metav1.ConditionFalse,
 				},
 			},
 		},
 		{
 			name:       "set empty conditions",
-			conditions: clusterv1beta1.Conditions{},
+			conditions: []metav1.Condition{},
 		},
 	}
 

@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.20.0
+    controller-gen.kubebuilder.io/version: v0.16.1
   name: ocimanagedcontrolplanes.infrastructure.cluster.x-k8s.io
 spec:
   group: infrastructure.cluster.x-k8s.io
@@ -139,42 +139,32 @@ spec:
                     operational state.
                   properties:
                     lastTransitionTime:
-                      description: |-
-                        lastTransitionTime is the last time the condition transitioned from one status to another.
-                        This should be when the underlying condition changed. If that is not known, then using the time when
-                        the API field changed is acceptable.
+                      description: lastTransitionTime is the last time the condition
+                        transitioned from one status to another.
                       format: date-time
                       type: string
                     message:
-                      description: |-
-                        message is a human readable message indicating details about the transition.
-                        This field may be empty.
+                      description: message is a human readable message indicating
+                        details about the transition.
                       maxLength: 10240
                       minLength: 1
                       type: string
                     reason:
-                      description: |-
-                        reason is the reason for the condition's last transition in CamelCase.
-                        The specific API may choose whether or not this field is considered a guaranteed API.
-                        This field may be empty.
+                      description: reason is the reason for the condition's last transition
+                        in CamelCase.
                       maxLength: 256
                       minLength: 1
                       type: string
                     severity:
-                      description: |-
-                        severity provides an explicit classification of Reason code, so the users or machines can immediately
-                        understand the current situation and act accordingly.
-                        The Severity field MUST be set only when Status=False.
+                      description: severity provides an explicit classification of
+                        Reason code.
                       maxLength: 32
                       type: string
                     status:
                       description: status of the condition, one of True, False, Unknown.
                       type: string
                     type:
-                      description: |-
-                        type of condition in CamelCase or in foo.example.com/CamelCase.
-                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions
-                        can be useful (see .node.status.conditions), the ability to deconflict is important.
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
                       maxLength: 256
                       minLength: 1
                       type: string
@@ -391,14 +381,18 @@ spec:
               controlPlaneEndpoint:
                 description: ControlPlaneEndpoint represents the endpoint used to
                   communicate with the control plane.
+                minProperties: 1
                 properties:
                   host:
                     description: host is the hostname on which the API server is serving.
                     maxLength: 512
+                    minLength: 1
                     type: string
                   port:
                     description: port is the port on which the API server is serving.
                     format: int32
+                    maximum: 65535
+                    minimum: 1
                     type: integer
                 type: object
               id:
@@ -478,42 +472,32 @@ spec:
                     operational state.
                   properties:
                     lastTransitionTime:
-                      description: |-
-                        lastTransitionTime is the last time the condition transitioned from one status to another.
-                        This should be when the underlying condition changed. If that is not known, then using the time when
-                        the API field changed is acceptable.
+                      description: lastTransitionTime is the last time the condition
+                        transitioned from one status to another.
                       format: date-time
                       type: string
                     message:
-                      description: |-
-                        message is a human readable message indicating details about the transition.
-                        This field may be empty.
+                      description: message is a human readable message indicating
+                        details about the transition.
                       maxLength: 10240
                       minLength: 1
                       type: string
                     reason:
-                      description: |-
-                        reason is the reason for the condition's last transition in CamelCase.
-                        The specific API may choose whether or not this field is considered a guaranteed API.
-                        This field may be empty.
+                      description: reason is the reason for the condition's last transition
+                        in CamelCase.
                       maxLength: 256
                       minLength: 1
                       type: string
                     severity:
-                      description: |-
-                        severity provides an explicit classification of Reason code, so the users or machines can immediately
-                        understand the current situation and act accordingly.
-                        The Severity field MUST be set only when Status=False.
+                      description: severity provides an explicit classification of
+                        Reason code.
                       maxLength: 32
                       type: string
                     status:
                       description: status of the condition, one of True, False, Unknown.
                       type: string
                     type:
-                      description: |-
-                        type of condition in CamelCase or in foo.example.com/CamelCase.
-                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions
-                        can be useful (see .node.status.conditions), the ability to deconflict is important.
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
                       maxLength: 256
                       minLength: 1
                       type: string
@@ -534,6 +518,410 @@ spec:
                 description: Version represents the current Kubernetes version for
                   the control plane.
                 type: string
+            type: object
+        type: object
+    served: true
+    storage: false
+    subresources:
+      status: {}
+  - additionalPrinterColumns:
+    - description: Cluster
+      jsonPath: .metadata.labels['cluster\.x-k8s\.io/cluster-name']
+      name: Cluster
+      type: string
+    - description: Managed control plane is ready
+      jsonPath: .status.conditions[?(@.type=="Ready")].status
+      name: Ready
+      type: string
+    - description: Managed control plane is available
+      jsonPath: .status.conditions[?(@.type=="Available")].status
+      name: Available
+      type: string
+    - description: Managed control plane is initialized
+      jsonPath: .status.initialization.controlPlaneInitialized
+      name: Initialized
+      type: boolean
+    - description: API Endpoint
+      jsonPath: .spec.controlPlaneEndpoint.host
+      name: Endpoint
+      type: string
+    - description: Time duration since creation of OCIManagedControlPlane
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1beta3
+    schema:
+      openAPIV3Schema:
+        description: OCIManagedControlPlane is the Schema for the ocimanagedcontrolplane
+          API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              OCIManagedControlPlaneSpec defines the desired state of OCIManagedControlPlane.
+              The properties are generated from https://docs.oracle.com/en-us/iaas/api/#/en/containerengine/20180222/datatypes/CreateClusterDetails
+            properties:
+              addons:
+                description: The list of addons to be applied to the OKE cluster.
+                items:
+                  description: Addon defines the properties of an addon.
+                  properties:
+                    configurations:
+                      description: Configurations defines a list of configurations
+                        of the addon.
+                      items:
+                        description: AddonConfiguration defines a configuration of
+                          an addon.
+                        properties:
+                          key:
+                            description: The key of the configuration.
+                            type: string
+                          value:
+                            description: The value of the configuration.
+                            type: string
+                        type: object
+                      type: array
+                    name:
+                      description: Name represents the name of the addon.
+                      type: string
+                    version:
+                      description: Version represents the version of the addon.
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
+              clusterOptions:
+                description: ClusterOptions defines Optional attributes for the cluster.
+                properties:
+                  addOnOptions:
+                    description: AddOnOptions defines the properties that define options
+                      for supported add-ons.
+                    properties:
+                      isKubernetesDashboardEnabled:
+                        description: IsKubernetesDashboardEnabled defines whether
+                          or not to enable the Kubernetes Dashboard add-on.
+                        type: boolean
+                      isTillerEnabled:
+                        description: IsKubernetesDashboardEnabled defines whether
+                          or not to enable the Tiller add-on.
+                        type: boolean
+                    type: object
+                  admissionControllerOptions:
+                    description: AdmissionControllerOptions defines the properties
+                      that define supported admission controllers.
+                    properties:
+                      isPodSecurityPolicyEnabled:
+                        description: IsPodSecurityPolicyEnabled defines whether or
+                          not to enable the Pod Security Policy admission controller.
+                        type: boolean
+                    type: object
+                  openIdConnectDiscovery:
+                    description: OpenIDConnectDiscovery specifies OIDC discovery settings
+                    properties:
+                      isOpenIdConnectDiscoveryEnabled:
+                        description: IsOpenIDConnectDiscoveryEnabled defines whether
+                          or not to enable the OIDC discovery.
+                        type: boolean
+                    type: object
+                  openIdConnectTokenAuthenticationConfig:
+                    description: OpenIDConnectTokenAuthenticationConfig
+                    properties:
+                      caCertificate:
+                        description: A Base64 encoded public RSA or ECDSA certificates
+                          used to sign your identity provider's web certificate.
+                        type: string
+                      clientId:
+                        description: A client id that all tokens must be issued for.
+                        type: string
+                      groupsClaim:
+                        description: JWT claim to use as the user's group. If the
+                          claim is present it must be an array of strings.
+                        type: string
+                      groupsPrefix:
+                        description: Prefix prepended to group claims to prevent clashes
+                          with existing names (such as system:groups).
+                        type: string
+                      isOpenIdConnectAuthEnabled:
+                        description: IsOpenIdConnectAuthEnabled defines whether or
+                          not to enable the OIDC authentication.
+                        type: boolean
+                      issuerUrl:
+                        description: URL of the provider that allows the API server
+                          to discover public signing keys. Only URLs that use the
+                          https:// scheme are accepted. This is typically the provider's
+                          discovery URL, changed to have an empty path.
+                        type: string
+                      requiredClaims:
+                        description: A key=value pair that describes a required claim
+                          in the ID Token. If set, the claim is verified to be present
+                          in the ID Token with a matching value. Repeat this flag
+                          to specify multiple claims.
+                        items:
+                          description: KeyValue defines the properties that define
+                            a key value pair. This is alias to containerengine.KeyValue,
+                            to support the sdk type
+                          properties:
+                            key:
+                              description: The key of the pair.
+                              type: string
+                            value:
+                              description: The value of the pair.
+                              type: string
+                          required:
+                          - key
+                          - value
+                          type: object
+                        type: array
+                      signingAlgorithms:
+                        description: The signing algorithms accepted. Default is ["RS256"].
+                        items:
+                          type: string
+                        type: array
+                      usernameClaim:
+                        description: JWT claim to use as the user name. By default
+                          sub, which is expected to be a unique identifier of the
+                          end user. Admins can choose other claims, such as email
+                          or name, depending on their provider. However, claims other
+                          than email will be prefixed with the issuer URL to prevent
+                          naming clashes with other plugins.
+                        type: string
+                      usernamePrefix:
+                        description: 'Prefix prepended to username claims to prevent
+                          clashes with existing names (such as system:users). For
+                          example, the value oidc: will create usernames like oidc:jane.doe.
+                          If this flag isn''t provided and --oidc-username-claim is
+                          a value other than email the prefix defaults to ( Issuer
+                          URL )# where ( Issuer URL ) is the value of --oidc-issuer-url.
+                          The value - can be used to disable all prefixing.'
+                        type: string
+                    required:
+                    - isOpenIdConnectAuthEnabled
+                    type: object
+                type: object
+              clusterPodNetworkOptions:
+                description: ClusterPodNetworkOptions defines the available CNIs and
+                  network options for existing and new node pools of the cluster
+                items:
+                  description: ClusterPodNetworkOptions defines the available CNIs
+                    and network options for existing and new node pools of the cluster
+                  properties:
+                    cniType:
+                      description: The CNI to be used are OCI_VCN_IP_NATIVE and FLANNEL_OVERLAY
+                      type: string
+                  type: object
+                type: array
+              clusterType:
+                description: |-
+                  ClusterTypeEnum defines the type of cluster. Supported types are
+                  * `BASIC_CLUSTER`
+                  * `ENHANCED_CLUSTER`
+                type: string
+              controlPlaneEndpoint:
+                description: ControlPlaneEndpoint represents the endpoint used to
+                  communicate with the control plane.
+                minProperties: 1
+                properties:
+                  host:
+                    description: host is the hostname on which the API server is serving.
+                    maxLength: 512
+                    minLength: 1
+                    type: string
+                  port:
+                    description: port is the port on which the API server is serving.
+                    format: int32
+                    maximum: 65535
+                    minimum: 1
+                    type: integer
+                type: object
+              id:
+                description: ID of the OKEcluster.
+                type: string
+              imagePolicyConfig:
+                description: ImagePolicyConfig defines the properties that define
+                  a image verification policy.
+                properties:
+                  isPolicyEnabled:
+                    description: IsPolicyEnabled defines Whether the image verification
+                      policy is enabled.
+                    type: boolean
+                  keyDetails:
+                    description: KeyDetails defines a list of KMS key details.
+                    items:
+                      description: KeyDetails defines the properties that define the
+                        kms keys used by OKE for Image Signature verification.
+                      properties:
+                        keyDetails:
+                          description: KmsKeyId defines the OCID of the KMS key that
+                            will be used to verify whether the images are signed by
+                            an approved source.
+                          type: string
+                      type: object
+                    type: array
+                type: object
+              kmsKeyId:
+                description: KmsKeyId defines the OCID of the KMS key to be used as
+                  the master encryption key for Kubernetes secret encryption. When
+                  used,
+                type: string
+              version:
+                description: Version represents the version of the Kubernetes Cluster
+                  Control Plane.
+                type: string
+            type: object
+          status:
+            description: OCIManagedControlPlaneStatus defines the observed state of
+              OCIManagedControlPlane
+            properties:
+              addonStatus:
+                additionalProperties:
+                  description: AddonStatus defines the status of an Addon.
+                  properties:
+                    addonError:
+                      description: AddonError defines the error encountered by the
+                        Addon.
+                      properties:
+                        code:
+                          description: Code defines a  short error code that defines
+                            the upstream error, meant for programmatic parsing.
+                          type: string
+                        message:
+                          description: Message defines a human-readable error string
+                            of the upstream error.
+                          type: string
+                        status:
+                          description: Status defines the status of the HTTP response
+                            encountered in the upstream error.
+                          type: string
+                      type: object
+                    currentlyInstalledVersion:
+                      description: Version represents the version of the addon.
+                      type: string
+                    lifecycleState:
+                      description: LifecycleState defines the lifecycle state of the
+                        addon.
+                      type: string
+                  type: object
+                description: AddonStatus represents the status of the addon.
+                type: object
+              conditions:
+                description: conditions represents the observations of an OCIManagedControlPlane's
+                  current state.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                maxItems: 32
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              initialization:
+                description: |-
+                  initialization provides observations of the OCIManagedControlPlane initialization process.
+                  NOTE: Fields in this struct are part of the Cluster API contract and are used to orchestrate initial Cluster provisioning.
+                minProperties: 1
+                properties:
+                  controlPlaneInitialized:
+                    description: |-
+                      controlPlaneInitialized is true when the control plane provider reports that the Kubernetes control plane is initialized.
+                      NOTE: this field is part of the Cluster API contract, and it is used to orchestrate initial Cluster provisioning.
+                    type: boolean
+                type: object
+              versions:
+                description: versions is the aggregated Kubernetes versions in this
+                  control plane.
+                items:
+                  description: StatusVersion groups version-related status information.
+                  properties:
+                    replicas:
+                      description: replicas is the number of replicas at this version.
+                      format: int32
+                      minimum: 1
+                      type: integer
+                    version:
+                      description: version is the Kubernetes version.
+                      maxLength: 256
+                      minLength: 1
+                      type: string
+                  required:
+                  - version
+                  type: object
+                maxItems: 100
+                minItems: 1
+                type: array
+                x-kubernetes-list-map-keys:
+                - version
+                x-kubernetes-list-type: map
             type: object
         type: object
     served: true

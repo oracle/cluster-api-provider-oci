@@ -182,7 +182,7 @@ This is an example file using a modified version of `cluster-template-failure-do
 to target AD 2 (example: `US-ASHBURN-AD-2`). 
 
 ```yaml
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: Cluster
 metadata:
   labels:
@@ -199,17 +199,15 @@ spec:
       cidrBlocks:
         - ${SERVICE_CIDR:="10.128.0.0/12"}
   infrastructureRef:
-    apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+    apiGroup: infrastructure.cluster.x-k8s.io
     kind: OCICluster
     name: "${CLUSTER_NAME}"
-    namespace: "${NAMESPACE}"
   controlPlaneRef:
-    apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+    apiGroup: controlplane.cluster.x-k8s.io
     kind: KubeadmControlPlane
     name: "${CLUSTER_NAME}-control-plane"
-    namespace: "${NAMESPACE}"
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 kind: OCICluster
 metadata:
   labels:
@@ -219,7 +217,7 @@ spec:
   compartmentId: "${OCI_COMPARTMENT_ID}"
 ---
 kind: KubeadmControlPlane
-apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+apiVersion: controlplane.cluster.x-k8s.io/v1beta2
 metadata:
   name: "${CLUSTER_NAME}-control-plane"
   namespace: "${NAMESPACE}"
@@ -227,36 +225,34 @@ spec:
   version: "${KUBERNETES_VERSION}"
   replicas: ${CONTROL_PLANE_MACHINE_COUNT}
   machineTemplate:
-    infrastructureRef:
-      kind: OCIMachineTemplate
-      apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
-      name: "${CLUSTER_NAME}-control-plane"
-      namespace: "${NAMESPACE}"
+    spec:
+      infrastructureRef:
+        kind: OCIMachineTemplate
+        apiGroup: infrastructure.cluster.x-k8s.io
+        name: "${CLUSTER_NAME}-control-plane"
   kubeadmConfigSpec:
     clusterConfiguration:
-      kubernetesVersion: ${KUBERNETES_VERSION}
       apiServer:
         certSANs: [localhost, 127.0.0.1]
-      dns: {}
-      etcd: {}
-      networking: {}
-      scheduler: {}
     initConfiguration:
       nodeRegistration:
         criSocket: /var/run/containerd/containerd.sock
         kubeletExtraArgs:
-          cloud-provider: external
-          provider-id: oci://{{ ds["id"] }}
+          - name: cloud-provider
+            value: external
+          - name: provider-id
+            value: 'oci://{{ ds["id"] }}'
     joinConfiguration:
-      discovery: {}
       nodeRegistration:
         criSocket: /var/run/containerd/containerd.sock
         kubeletExtraArgs:
-          cloud-provider: external
-          provider-id: oci://{{ ds["id"] }}
+          - name: cloud-provider
+            value: external
+          - name: provider-id
+            value: 'oci://{{ ds["id"] }}'
 ---
 kind: OCIMachineTemplate
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 metadata:
   name: "${CLUSTER_NAME}-control-plane"
 spec:
@@ -271,7 +267,7 @@ spec:
         ssh_authorized_keys: "${OCI_SSH_KEY}"
       isPvEncryptionInTransitEnabled: ${OCI_CONTROL_PLANE_PV_TRANSIT_ENCRYPTION=true}
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 kind: OCIMachineTemplate
 metadata:
   name: "${CLUSTER_NAME}-md"
@@ -287,7 +283,7 @@ spec:
         ssh_authorized_keys: "${OCI_SSH_KEY}"
       isPvEncryptionInTransitEnabled: ${OCI_NODE_PV_TRANSIT_ENCRYPTION=true}
 ---
-apiVersion: bootstrap.cluster.x-k8s.io/v1alpha4
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta2
 kind: KubeadmConfigTemplate
 metadata:
   name: "${CLUSTER_NAME}-md"
@@ -297,10 +293,12 @@ spec:
       joinConfiguration:
         nodeRegistration:
           kubeletExtraArgs:
-            cloud-provider: external
-            provider-id: oci://{{ ds["id"] }}
+            - name: cloud-provider
+              value: external
+            - name: provider-id
+              value: 'oci://{{ ds["id"] }}'
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachineDeployment
 metadata:
   name: "${CLUSTER_NAME}-fd-2-md-0"
@@ -308,7 +306,7 @@ spec:
   clusterName: "${CLUSTER_NAME}"
   replicas: ${NODE_MACHINE_COUNT}
   selector:
-    matchLabels:
+    matchLabels: {}
   template:
     spec:
       clusterName: "${CLUSTER_NAME}"
@@ -316,11 +314,11 @@ spec:
       bootstrap:
         configRef:
           name: "${CLUSTER_NAME}-md"
-          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+          apiGroup: bootstrap.cluster.x-k8s.io
           kind: KubeadmConfigTemplate
       infrastructureRef:
         name: "${CLUSTER_NAME}-md"
-        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        apiGroup: infrastructure.cluster.x-k8s.io
         kind: OCIMachineTemplate
       # Cluster-API calls them Failure Domains while OCI calls them Availability Domains
       # In the example this would be targeting US-ASHBURN-AD-2

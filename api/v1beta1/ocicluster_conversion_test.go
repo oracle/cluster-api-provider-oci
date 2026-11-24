@@ -20,7 +20,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	"github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 )
@@ -62,7 +62,7 @@ func TestOCICluster_ConvertTo(t *testing.T) {
 				},
 			},
 			args: args{
-				dstRaw: &v1beta2.OCICluster{},
+				dstRaw: &v1beta3.OCICluster{},
 			},
 			wantErr: false,
 		},
@@ -83,14 +83,14 @@ func TestOCICluster_ConvertTo(t *testing.T) {
 	}
 }
 
-func Test_convertv1beta1NSGListTov1beta2NSGList(t *testing.T) {
+func Test_convertv1beta1NSGListTov1beta3NSGList(t *testing.T) {
 	type args struct {
 		in []*NSG
 	}
 	tests := []struct {
 		name    string
 		args    args
-		want    []*v1beta2.NSG
+		want    []*v1beta3.NSG
 		wantErr bool
 	}{
 		{
@@ -101,7 +101,7 @@ func Test_convertv1beta1NSGListTov1beta2NSGList(t *testing.T) {
 					{ID: func() *string { s := "nsg2"; return &s }(), Name: "NSG-2"},
 				},
 			},
-			want: []*v1beta2.NSG{
+			want: []*v1beta3.NSG{
 				{ID: func() *string { s := "nsg1"; return &s }(), Name: "NSG-1"},
 				{ID: func() *string { s := "nsg2"; return &s }(), Name: "NSG-2"},
 			},
@@ -115,7 +115,7 @@ func Test_convertv1beta1NSGListTov1beta2NSGList(t *testing.T) {
 					nil,
 				},
 			},
-			want: []*v1beta2.NSG{
+			want: []*v1beta3.NSG{
 				{ID: func() *string { s := "nsg1"; return &s }(), Name: "NSG-1"},
 				nil,
 			},
@@ -126,27 +126,27 @@ func Test_convertv1beta1NSGListTov1beta2NSGList(t *testing.T) {
 			args: args{
 				in: []*NSG{},
 			},
-			want:    []*v1beta2.NSG{},
+			want:    []*v1beta3.NSG{},
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := convertv1beta1NSGListTov1beta2NSGList(tt.args.in)
+			got, err := convertv1beta1NSGListTov1beta3NSGList(tt.args.in)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("convertv1beta1NSGListTov1beta2NSGList() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("convertv1beta1NSGListTov1beta3NSGList() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("convertv1beta1NSGListTov1beta2NSGList() = %v, want %v", got, tt.want)
+				t.Errorf("convertv1beta1NSGListTov1beta3NSGList() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func Test_convertv1beta2NSGListTov1beta1NSGList(t *testing.T) {
+func Test_convertv1beta3NSGListTov1beta1NSGList(t *testing.T) {
 	type args struct {
-		in []*v1beta2.NSG
+		in []*v1beta3.NSG
 	}
 	tests := []struct {
 		name    string
@@ -157,7 +157,7 @@ func Test_convertv1beta2NSGListTov1beta1NSGList(t *testing.T) {
 		{
 			name: "normal conversion",
 			args: args{
-				in: []*v1beta2.NSG{
+				in: []*v1beta3.NSG{
 					{ID: func() *string { s := "nsg1"; return &s }(), Name: "NSG-1"},
 					{ID: func() *string { s := "nsg2"; return &s }(), Name: "NSG-2"},
 				},
@@ -171,7 +171,7 @@ func Test_convertv1beta2NSGListTov1beta1NSGList(t *testing.T) {
 		{
 			name: "slice contains nil",
 			args: args{
-				in: []*v1beta2.NSG{
+				in: []*v1beta3.NSG{
 					{ID: func() *string { s := "nsg1"; return &s }(), Name: "NSG-1"},
 					nil,
 				},
@@ -185,7 +185,7 @@ func Test_convertv1beta2NSGListTov1beta1NSGList(t *testing.T) {
 		{
 			name: "empty slice",
 			args: args{
-				in: []*v1beta2.NSG{},
+				in: []*v1beta3.NSG{},
 			},
 			want:    []*NSG{},
 			wantErr: false,
@@ -193,13 +193,13 @@ func Test_convertv1beta2NSGListTov1beta1NSGList(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := convertv1beta2NSGListTov1beta1NSGList(tt.args.in)
+			got, err := convertv1beta3NSGListTov1beta1NSGList(tt.args.in)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("convertv1beta2NSGListTov1beta1NSGList() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("convertv1beta3NSGListTov1beta1NSGList() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("convertv1beta2NSGListTov1beta1NSGList() = %v, want %v", got, tt.want)
+				t.Errorf("convertv1beta3NSGListTov1beta1NSGList() = %v, want %v", got, tt.want)
 			}
 		})
 	}

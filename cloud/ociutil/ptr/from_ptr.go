@@ -1,6 +1,6 @@
 package ptr
 
-import infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+import infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 
 // ToString returns string value dereferenced if the passed
 // in pointer was not nil. Returns a string zero value if the
@@ -70,8 +70,8 @@ func ToStringSlice(vs []*string) []string {
 // ToNSGSlice returns a slice of NSG values, that are
 // dereferenced if the passed in pointer was not nil. Returns an empty slice
 // zero value if the pointer was nil.
-func ToNSGSlice(vs []*infrastructurev1beta2.NSG) []infrastructurev1beta2.NSG {
-	ps := make([]infrastructurev1beta2.NSG, len(vs))
+func ToNSGSlice(vs []*infrastructurev1beta3.NSG) []infrastructurev1beta3.NSG {
+	ps := make([]infrastructurev1beta3.NSG, len(vs))
 	for i, v := range vs {
 		if v != nil {
 			ps[i] = *v
@@ -84,8 +84,8 @@ func ToNSGSlice(vs []*infrastructurev1beta2.NSG) []infrastructurev1beta2.NSG {
 // ToSubnetSlice returns a slice of Subnet values, that are
 // dereferenced if the passed in pointer was not nil. Returns an empty slice
 // zero value if the pointer was nil.
-func ToSubnetSlice(vs []*infrastructurev1beta2.Subnet) []infrastructurev1beta2.Subnet {
-	ps := make([]infrastructurev1beta2.Subnet, len(vs))
+func ToSubnetSlice(vs []*infrastructurev1beta3.Subnet) []infrastructurev1beta3.Subnet {
+	ps := make([]infrastructurev1beta3.Subnet, len(vs))
 	for i, v := range vs {
 		if v != nil {
 			ps[i] = *v

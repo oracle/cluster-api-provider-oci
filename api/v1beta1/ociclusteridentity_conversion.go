@@ -17,35 +17,42 @@ limitations under the License.
 package v1beta1
 
 import (
-	"github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	"github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	utilconversion "sigs.k8s.io/cluster-api/util/conversion"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 )
 
-// ConvertTo converts the v1beta1 OCIClusterIdentity receiver to a v1beta2 OCIClusterIdentity.
 func (src *OCIClusterIdentity) ConvertTo(dstRaw conversion.Hub) error {
-	dst := dstRaw.(*v1beta2.OCIClusterIdentity)
-	if err := Convert_v1beta1_OCIClusterIdentity_To_v1beta2_OCIClusterIdentity(src, dst, nil); err != nil {
+	dst := dstRaw.(*v1beta3.OCIClusterIdentity)
+	if err := Convert_v1beta1_OCIClusterIdentity_To_v1beta3_OCIClusterIdentity(src, dst, nil); err != nil {
 		return err
 	}
 
-	// Manually restore data.
-	restored := &v1beta2.OCIClusterIdentity{}
+	restored := &v1beta3.OCIClusterIdentity{}
 	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
 		return err
 	}
+	restoreMetaConditions(dst.Status.Conditions, restored.Status.Conditions)
 
 	return nil
 }
 
-// ConvertFrom converts the v1beta2 OCIClusterIdentity to a v1beta1 OCIClusterIdentity.
 func (dst *OCIClusterIdentity) ConvertFrom(srcRaw conversion.Hub) error {
-	src := srcRaw.(*v1beta2.OCIClusterIdentity)
+	src := srcRaw.(*v1beta3.OCIClusterIdentity)
 
-	if err := Convert_v1beta2_OCIClusterIdentity_To_v1beta1_OCIClusterIdentity(src, dst, nil); err != nil {
+	if err := Convert_v1beta3_OCIClusterIdentity_To_v1beta1_OCIClusterIdentity(src, dst, nil); err != nil {
 		return err
 	}
 
-	// Preserve Hub data on down-conversion except for metadata.
-	return utilconversion.MarshalData(src, dst)
+	return utilconversion.MarshalDataUnsafeNoCopy(src, dst)
+}
+
+func (src *OCIClusterIdentityList) ConvertTo(dstRaw conversion.Hub) error {
+	dst := dstRaw.(*v1beta3.OCIClusterIdentityList)
+	return Convert_v1beta1_OCIClusterIdentityList_To_v1beta3_OCIClusterIdentityList(src, dst, nil)
+}
+
+func (dst *OCIClusterIdentityList) ConvertFrom(srcRaw conversion.Hub) error {
+	src := srcRaw.(*v1beta3.OCIClusterIdentityList)
+	return Convert_v1beta3_OCIClusterIdentityList_To_v1beta1_OCIClusterIdentityList(src, dst, nil)
 }

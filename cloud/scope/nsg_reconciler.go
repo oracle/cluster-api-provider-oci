@@ -22,7 +22,7 @@ import (
 	"reflect"
 	"strings"
 
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
 	"github.com/oracle/oci-go-sdk/v65/common"
@@ -85,18 +85,18 @@ func (s *ClusterScope) ReconcileNSG(ctx context.Context) error {
 	return nil
 }
 
-func (s *ClusterScope) adjustNSGRulesSpec(desiredNSG *infrastructurev1beta2.NSG, nsgList []*infrastructurev1beta2.NSG) {
-	ingressRules := make([]infrastructurev1beta2.IngressSecurityRuleForNSG, 0)
+func (s *ClusterScope) adjustNSGRulesSpec(desiredNSG *infrastructurev1beta3.NSG, nsgList []*infrastructurev1beta3.NSG) {
+	ingressRules := make([]infrastructurev1beta3.IngressSecurityRuleForNSG, 0)
 	for _, ingressRule := range desiredNSG.IngressRules {
-		if ingressRule.SourceType == infrastructurev1beta2.IngressSecurityRuleSourceTypeServiceCidrBlock {
+		if ingressRule.SourceType == infrastructurev1beta3.IngressSecurityRuleSourceTypeServiceCidrBlock {
 			ingressRule.Source = common.String(fmt.Sprintf("all-%s-services-in-oracle-services-network", strings.ToLower(s.RegionKey)))
 		}
 		ingressRules = append(ingressRules, ingressRule)
 	}
 	desiredNSG.IngressRules = ingressRules
-	egressRules := make([]infrastructurev1beta2.EgressSecurityRuleForNSG, 0)
+	egressRules := make([]infrastructurev1beta3.EgressSecurityRuleForNSG, 0)
 	for _, egressRule := range desiredNSG.EgressRules {
-		if egressRule.DestinationType == infrastructurev1beta2.EgressSecurityRuleDestinationTypeServiceCidrBlock {
+		if egressRule.DestinationType == infrastructurev1beta3.EgressSecurityRuleDestinationTypeServiceCidrBlock {
 			egressRule.Destination = common.String(fmt.Sprintf("all-%s-services-in-oracle-services-network", strings.ToLower(s.RegionKey)))
 		}
 		egressRules = append(egressRules, egressRule)
@@ -105,7 +105,7 @@ func (s *ClusterScope) adjustNSGRulesSpec(desiredNSG *infrastructurev1beta2.NSG,
 }
 
 // nolint:nilnil
-func (s *ClusterScope) GetNSG(ctx context.Context, spec infrastructurev1beta2.NSG) (*core.NetworkSecurityGroup, error) {
+func (s *ClusterScope) GetNSG(ctx context.Context, spec infrastructurev1beta3.NSG) (*core.NetworkSecurityGroup, error) {
 	nsgOCID := spec.ID
 	if nsgOCID != nil {
 		resp, err := s.VCNClient.GetNetworkSecurityGroup(ctx, core.GetNetworkSecurityGroupRequest{
@@ -165,11 +165,11 @@ func (s *ClusterScope) DeleteNSGs(ctx context.Context) error {
 	return nil
 }
 
-func (s *ClusterScope) GetNSGSpec() []*infrastructurev1beta2.NSG {
+func (s *ClusterScope) GetNSGSpec() []*infrastructurev1beta3.NSG {
 	return s.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List
 }
 
-func (s *ClusterScope) IsNSGExitsByRole(role infrastructurev1beta2.Role) bool {
+func (s *ClusterScope) IsNSGExitsByRole(role infrastructurev1beta3.Role) bool {
 	for _, nsg := range s.GetNSGSpec() {
 		if role == nsg.Role {
 			return true
@@ -179,7 +179,7 @@ func (s *ClusterScope) IsNSGExitsByRole(role infrastructurev1beta2.Role) bool {
 }
 
 // IsNSGEqual compares the actual and desired NSG using name.
-func (s *ClusterScope) IsNSGEqual(actual *core.NetworkSecurityGroup, desired infrastructurev1beta2.NSG) bool {
+func (s *ClusterScope) IsNSGEqual(actual *core.NetworkSecurityGroup, desired infrastructurev1beta3.NSG) bool {
 	if *actual.DisplayName != desired.Name {
 		return false
 	}
@@ -187,10 +187,10 @@ func (s *ClusterScope) IsNSGEqual(actual *core.NetworkSecurityGroup, desired inf
 }
 
 // UpdateNSGSecurityRulesIfNeeded updates NSG rules if required by comparing actual and desired.
-func (s *ClusterScope) UpdateNSGSecurityRulesIfNeeded(ctx context.Context, desired infrastructurev1beta2.NSG,
+func (s *ClusterScope) UpdateNSGSecurityRulesIfNeeded(ctx context.Context, desired infrastructurev1beta3.NSG,
 	nsgId *string) (bool, error) {
-	var ingressRulesToAdd []infrastructurev1beta2.IngressSecurityRuleForNSG
-	var egressRulesToAdd []infrastructurev1beta2.EgressSecurityRuleForNSG
+	var ingressRulesToAdd []infrastructurev1beta3.IngressSecurityRuleForNSG
+	var egressRulesToAdd []infrastructurev1beta3.EgressSecurityRuleForNSG
 	var securityRulesToRemove []string
 	var isNSGUpdated bool
 	listSecurityRulesResponse, err := s.VCNClient.ListNetworkSecurityGroupSecurityRules(ctx, core.ListNetworkSecurityGroupSecurityRulesRequest{
@@ -291,7 +291,7 @@ func (s *ClusterScope) UpdateNSGSecurityRulesIfNeeded(ctx context.Context, desir
 	return isNSGUpdated, nil
 }
 
-func (s *ClusterScope) UpdateNSG(ctx context.Context, nsgSpec infrastructurev1beta2.NSG) error {
+func (s *ClusterScope) UpdateNSG(ctx context.Context, nsgSpec infrastructurev1beta3.NSG) error {
 	updateNSGDetails := core.UpdateNetworkSecurityGroupDetails{
 		DisplayName: common.String(nsgSpec.Name),
 	}
@@ -307,8 +307,8 @@ func (s *ClusterScope) UpdateNSG(ctx context.Context, nsgSpec infrastructurev1be
 	return nil
 }
 
-func (s *ClusterScope) generateAddSecurityRuleFromSpec(ingressRules []infrastructurev1beta2.IngressSecurityRuleForNSG,
-	egressRules []infrastructurev1beta2.EgressSecurityRuleForNSG) []core.AddSecurityRuleDetails {
+func (s *ClusterScope) generateAddSecurityRuleFromSpec(ingressRules []infrastructurev1beta3.IngressSecurityRuleForNSG,
+	egressRules []infrastructurev1beta3.EgressSecurityRuleForNSG) []core.AddSecurityRuleDetails {
 	var securityRules []core.AddSecurityRuleDetails
 	var icmpOptions *core.IcmpOptions
 	var tcpOptions *core.TcpOptions
@@ -332,7 +332,7 @@ func (s *ClusterScope) generateAddSecurityRuleFromSpec(ingressRules []infrastruc
 			TcpOptions:  tcpOptions,
 			UdpOptions:  udpOptions,
 		}
-		if ingressRule.SourceType == infrastructurev1beta2.IngressSecurityRuleSourceTypeNSG {
+		if ingressRule.SourceType == infrastructurev1beta3.IngressSecurityRuleSourceTypeNSG {
 			secRule.Source = getNsgIdFromName(ingressRule.Source, s.GetNSGSpec())
 		}
 		securityRules = append(securityRules, secRule)
@@ -355,7 +355,7 @@ func (s *ClusterScope) generateAddSecurityRuleFromSpec(ingressRules []infrastruc
 			TcpOptions:      tcpOptions,
 			UdpOptions:      udpOptions,
 		}
-		if egressRule.DestinationType == infrastructurev1beta2.EgressSecurityRuleDestinationTypeNSG {
+		if egressRule.DestinationType == infrastructurev1beta3.EgressSecurityRuleDestinationTypeNSG {
 			secRule.Destination = getNsgIdFromName(egressRule.Destination, s.GetNSGSpec())
 		}
 		securityRules = append(securityRules, secRule)
@@ -363,9 +363,9 @@ func (s *ClusterScope) generateAddSecurityRuleFromSpec(ingressRules []infrastruc
 	return securityRules
 }
 
-func (s *ClusterScope) generateSpecFromSecurityRules(rules []core.SecurityRule, nsgId *string) (map[string]infrastructurev1beta2.IngressSecurityRuleForNSG, map[string]infrastructurev1beta2.EgressSecurityRuleForNSG) {
-	var ingressRules = make(map[string]infrastructurev1beta2.IngressSecurityRuleForNSG)
-	var egressRules = make(map[string]infrastructurev1beta2.EgressSecurityRuleForNSG)
+func (s *ClusterScope) generateSpecFromSecurityRules(rules []core.SecurityRule, nsgId *string) (map[string]infrastructurev1beta3.IngressSecurityRuleForNSG, map[string]infrastructurev1beta3.EgressSecurityRuleForNSG) {
+	var ingressRules = make(map[string]infrastructurev1beta3.IngressSecurityRuleForNSG)
+	var egressRules = make(map[string]infrastructurev1beta3.EgressSecurityRuleForNSG)
 	var stateless *bool
 	for _, rule := range rules {
 
@@ -376,13 +376,13 @@ func (s *ClusterScope) generateSpecFromSecurityRules(rules []core.SecurityRule, 
 		}
 		switch rule.Direction {
 		case core.SecurityRuleDirectionIngress:
-			ingressRule := infrastructurev1beta2.IngressSecurityRuleForNSG{
-				IngressSecurityRule: infrastructurev1beta2.IngressSecurityRule{
+			ingressRule := infrastructurev1beta3.IngressSecurityRuleForNSG{
+				IngressSecurityRule: infrastructurev1beta3.IngressSecurityRule{
 					Protocol:    rule.Protocol,
 					Source:      rule.Source,
 					IcmpOptions: icmpOptions,
 					IsStateless: stateless,
-					SourceType:  infrastructurev1beta2.IngressSecurityRuleSourceTypeEnum(rule.SourceType),
+					SourceType:  infrastructurev1beta3.IngressSecurityRuleSourceTypeEnum(rule.SourceType),
 					TcpOptions:  tcpOptions,
 					UdpOptions:  udpOptions,
 					Description: rule.Description,
@@ -393,11 +393,11 @@ func (s *ClusterScope) generateSpecFromSecurityRules(rules []core.SecurityRule, 
 			}
 			ingressRules[*rule.Id] = ingressRule
 		case core.SecurityRuleDirectionEgress:
-			egressRule := infrastructurev1beta2.EgressSecurityRuleForNSG{
-				EgressSecurityRule: infrastructurev1beta2.EgressSecurityRule{
+			egressRule := infrastructurev1beta3.EgressSecurityRuleForNSG{
+				EgressSecurityRule: infrastructurev1beta3.EgressSecurityRule{
 					Destination:     rule.Destination,
 					Protocol:        rule.Protocol,
-					DestinationType: infrastructurev1beta2.EgressSecurityRuleDestinationTypeEnum(rule.DestinationType),
+					DestinationType: infrastructurev1beta3.EgressSecurityRuleDestinationTypeEnum(rule.DestinationType),
 					IcmpOptions:     icmpOptions,
 					IsStateless:     stateless,
 					TcpOptions:      tcpOptions,
@@ -415,8 +415,8 @@ func (s *ClusterScope) generateSpecFromSecurityRules(rules []core.SecurityRule, 
 
 }
 
-func (s *ClusterScope) AddNSGSecurityRules(ctx context.Context, nsgId *string, ingress []infrastructurev1beta2.IngressSecurityRuleForNSG,
-	egress []infrastructurev1beta2.EgressSecurityRuleForNSG) error {
+func (s *ClusterScope) AddNSGSecurityRules(ctx context.Context, nsgId *string, ingress []infrastructurev1beta3.IngressSecurityRuleForNSG,
+	egress []infrastructurev1beta3.EgressSecurityRuleForNSG) error {
 	securityRules := s.generateAddSecurityRuleFromSpec(ingress, egress)
 
 	_, err := s.VCNClient.AddNetworkSecurityGroupSecurityRules(ctx, core.AddNetworkSecurityGroupSecurityRulesRequest{
@@ -432,7 +432,7 @@ func (s *ClusterScope) AddNSGSecurityRules(ctx context.Context, nsgId *string, i
 	return nil
 }
 
-func (s *ClusterScope) CreateNSG(ctx context.Context, nsg infrastructurev1beta2.NSG) (*string, error) {
+func (s *ClusterScope) CreateNSG(ctx context.Context, nsg infrastructurev1beta3.NSG) (*string, error) {
 	createNetworkSecurityGroupDetails := core.CreateNetworkSecurityGroupDetails{
 		CompartmentId: common.String(s.GetCompartmentId()),
 		VcnId:         s.getVcnId(),
@@ -452,39 +452,39 @@ func (s *ClusterScope) CreateNSG(ctx context.Context, nsg infrastructurev1beta2.
 	return nsgResponse.Id, nil
 }
 
-func getProtocolOptionsForSpec(icmp *core.IcmpOptions, tcp *core.TcpOptions, udp *core.UdpOptions) (*infrastructurev1beta2.IcmpOptions, *infrastructurev1beta2.TcpOptions,
-	*infrastructurev1beta2.UdpOptions) {
-	var icmpOptions *infrastructurev1beta2.IcmpOptions
-	var tcpOptions *infrastructurev1beta2.TcpOptions
-	var udpOptions *infrastructurev1beta2.UdpOptions
+func getProtocolOptionsForSpec(icmp *core.IcmpOptions, tcp *core.TcpOptions, udp *core.UdpOptions) (*infrastructurev1beta3.IcmpOptions, *infrastructurev1beta3.TcpOptions,
+	*infrastructurev1beta3.UdpOptions) {
+	var icmpOptions *infrastructurev1beta3.IcmpOptions
+	var tcpOptions *infrastructurev1beta3.TcpOptions
+	var udpOptions *infrastructurev1beta3.UdpOptions
 	if icmp != nil {
-		icmpOptions = &infrastructurev1beta2.IcmpOptions{
+		icmpOptions = &infrastructurev1beta3.IcmpOptions{
 			Type: icmp.Type,
 			Code: icmp.Code,
 		}
 	}
 	if tcp != nil {
-		tcpOptions = &infrastructurev1beta2.TcpOptions{}
+		tcpOptions = &infrastructurev1beta3.TcpOptions{}
 		if tcp.DestinationPortRange != nil {
-			tcpOptions.DestinationPortRange = &infrastructurev1beta2.PortRange{}
+			tcpOptions.DestinationPortRange = &infrastructurev1beta3.PortRange{}
 			tcpOptions.DestinationPortRange.Max = tcp.DestinationPortRange.Max
 			tcpOptions.DestinationPortRange.Min = tcp.DestinationPortRange.Min
 		}
 		if tcp.SourcePortRange != nil {
-			tcpOptions.SourcePortRange = &infrastructurev1beta2.PortRange{}
+			tcpOptions.SourcePortRange = &infrastructurev1beta3.PortRange{}
 			tcpOptions.SourcePortRange.Max = tcp.SourcePortRange.Max
 			tcpOptions.SourcePortRange.Min = tcp.SourcePortRange.Min
 		}
 	}
 	if udp != nil {
-		udpOptions = &infrastructurev1beta2.UdpOptions{}
+		udpOptions = &infrastructurev1beta3.UdpOptions{}
 		if udp.DestinationPortRange != nil {
-			udpOptions.DestinationPortRange = &infrastructurev1beta2.PortRange{}
+			udpOptions.DestinationPortRange = &infrastructurev1beta3.PortRange{}
 			udpOptions.DestinationPortRange.Max = udp.DestinationPortRange.Max
 			udpOptions.DestinationPortRange.Min = udp.DestinationPortRange.Min
 		}
 		if udp.SourcePortRange != nil {
-			udpOptions.SourcePortRange = &infrastructurev1beta2.PortRange{}
+			udpOptions.SourcePortRange = &infrastructurev1beta3.PortRange{}
 			udpOptions.SourcePortRange.Max = udp.SourcePortRange.Max
 			udpOptions.SourcePortRange.Min = udp.SourcePortRange.Min
 		}
@@ -492,7 +492,7 @@ func getProtocolOptionsForSpec(icmp *core.IcmpOptions, tcp *core.TcpOptions, udp
 	return icmpOptions, tcpOptions, udpOptions
 }
 
-func getNsgIdFromName(nsgName *string, list []*infrastructurev1beta2.NSG) *string {
+func getNsgIdFromName(nsgName *string, list []*infrastructurev1beta3.NSG) *string {
 	nsgSlice := ptr.ToNSGSlice(list)
 	for i := range nsgSlice {
 		if nsgSlice[i].Name == *nsgName {
@@ -502,7 +502,7 @@ func getNsgIdFromName(nsgName *string, list []*infrastructurev1beta2.NSG) *strin
 	return nil
 }
 
-func getNsgNameFromId(nsgId *string, list []*infrastructurev1beta2.NSG) *string {
+func getNsgNameFromId(nsgId *string, list []*infrastructurev1beta3.NSG) *string {
 	if nsgId == nil {
 		return nil
 	}

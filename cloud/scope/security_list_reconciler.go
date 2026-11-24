@@ -23,7 +23,7 @@ import (
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
 
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/pkg/errors"
@@ -54,7 +54,7 @@ func (s *ClusterScope) DeleteSecurityLists(ctx context.Context) error {
 	return nil
 }
 
-func (s *ClusterScope) CreateSecurityList(ctx context.Context, secList infrastructurev1beta2.SecurityList) (*string, error) {
+func (s *ClusterScope) CreateSecurityList(ctx context.Context, secList infrastructurev1beta3.SecurityList) (*string, error) {
 	var ingressRules []core.IngressSecurityRule
 	var egressRules []core.EgressSecurityRule
 	for _, rule := range secList.EgressRules {
@@ -89,7 +89,7 @@ func (s *ClusterScope) CreateSecurityList(ctx context.Context, secList infrastru
 	return securityListResponse.Id, nil
 }
 
-func (s *ClusterScope) IsSecurityListEqual(actual core.SecurityList, desired infrastructurev1beta2.SecurityList) bool {
+func (s *ClusterScope) IsSecurityListEqual(actual core.SecurityList, desired infrastructurev1beta3.SecurityList) bool {
 	if *actual.DisplayName != desired.Name {
 		return false
 	}
@@ -127,7 +127,7 @@ func (s *ClusterScope) IsSecurityListEqual(actual core.SecurityList, desired inf
 	return true
 }
 
-func (s *ClusterScope) UpdateSecurityList(ctx context.Context, securityListSpec infrastructurev1beta2.SecurityList) error {
+func (s *ClusterScope) UpdateSecurityList(ctx context.Context, securityListSpec infrastructurev1beta3.SecurityList) error {
 	var ingressRules []core.IngressSecurityRule
 	var egressRules []core.EgressSecurityRule
 
@@ -164,7 +164,7 @@ func (s *ClusterScope) UpdateSecurityList(ctx context.Context, securityListSpec 
 	return nil
 }
 
-func convertSecurityListIngressRule(rule infrastructurev1beta2.IngressSecurityRule) core.IngressSecurityRule {
+func convertSecurityListIngressRule(rule infrastructurev1beta3.IngressSecurityRule) core.IngressSecurityRule {
 	var icmpOptions *core.IcmpOptions
 	var tcpOptions *core.TcpOptions
 	var udpOptions *core.UdpOptions
@@ -187,7 +187,7 @@ func convertSecurityListIngressRule(rule infrastructurev1beta2.IngressSecurityRu
 	}
 }
 
-func convertSecurityListEgressRule(rule infrastructurev1beta2.EgressSecurityRule) core.EgressSecurityRule {
+func convertSecurityListEgressRule(rule infrastructurev1beta3.EgressSecurityRule) core.EgressSecurityRule {
 	var icmpOptions *core.IcmpOptions
 	var tcpOptions *core.TcpOptions
 	var udpOptions *core.UdpOptions
@@ -210,8 +210,8 @@ func convertSecurityListEgressRule(rule infrastructurev1beta2.EgressSecurityRule
 	}
 }
 
-func getProtocolOptions(icmp *infrastructurev1beta2.IcmpOptions, tcp *infrastructurev1beta2.TcpOptions,
-	udp *infrastructurev1beta2.UdpOptions) (*core.IcmpOptions, *core.TcpOptions, *core.UdpOptions) {
+func getProtocolOptions(icmp *infrastructurev1beta3.IcmpOptions, tcp *infrastructurev1beta3.TcpOptions,
+	udp *infrastructurev1beta3.UdpOptions) (*core.IcmpOptions, *core.TcpOptions, *core.UdpOptions) {
 	var icmpOptions *core.IcmpOptions
 	var tcpOptions *core.TcpOptions
 	var udpOptions *core.UdpOptions
@@ -250,7 +250,7 @@ func getProtocolOptions(icmp *infrastructurev1beta2.IcmpOptions, tcp *infrastruc
 	return icmpOptions, tcpOptions, udpOptions
 }
 
-func (s *ClusterScope) IsSecurityListExitsByRole(role infrastructurev1beta2.Role) bool {
+func (s *ClusterScope) IsSecurityListExitsByRole(role infrastructurev1beta3.Role) bool {
 	for _, subnet := range ptr.ToSubnetSlice(s.GetSubnetsSpec()) {
 		if role == subnet.Role {
 			if subnet.SecurityList != nil {
@@ -262,7 +262,7 @@ func (s *ClusterScope) IsSecurityListExitsByRole(role infrastructurev1beta2.Role
 }
 
 // nolint:nilnil
-func (s *ClusterScope) GetSecurityList(ctx context.Context, spec infrastructurev1beta2.SecurityList) (*core.SecurityList, error) {
+func (s *ClusterScope) GetSecurityList(ctx context.Context, spec infrastructurev1beta3.SecurityList) (*core.SecurityList, error) {
 	securityListOcid := spec.ID
 	if securityListOcid != nil {
 		resp, err := s.VCNClient.GetSecurityList(ctx, core.GetSecurityListRequest{

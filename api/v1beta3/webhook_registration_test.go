@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta2_test
+package v1beta3_test
 
 import (
 	"bytes"
@@ -27,8 +27,8 @@ import (
 	"testing"
 
 	jsonpatch "github.com/evanphx/json-patch/v5"
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
-	infrastructurev1beta2exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
+	infrastructurev1beta3exp "github.com/oracle/cluster-api-provider-oci/exp/api/v1beta3"
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -45,12 +45,12 @@ import (
 func TestWebhookRegistrationServesAdmissionReviews(t *testing.T) {
 	kubernetesVersion := "v1.35.0"
 	invalidateMachineTemplate := func(object runtime.Object) string {
-		object.(*infrastructurev1beta2.OCIMachineTemplate).Spec.Template.Spec.Shape = ""
+		object.(*infrastructurev1beta3.OCIMachineTemplate).Spec.Template.Spec.Shape = ""
 		return "spec.template.spec.shape"
 	}
 	invalidateManagedMachinePool := func(object runtime.Object) string {
 		version := "not-a-version"
-		object.(*infrastructurev1beta2exp.OCIManagedMachinePool).Spec.Version = &version
+		object.(*infrastructurev1beta3exp.OCIManagedMachinePool).Spec.Version = &version
 		return "spec.version"
 	}
 	tests := []struct {
@@ -66,62 +66,62 @@ func TestWebhookRegistrationServesAdmissionReviews(t *testing.T) {
 	}{
 		{
 			name: "OCICluster",
-			object: &infrastructurev1beta2.OCICluster{
-				Spec: infrastructurev1beta2.OCIClusterSpec{
+			object: &infrastructurev1beta3.OCICluster{
+				Spec: infrastructurev1beta3.OCIClusterSpec{
 					CompartmentId:         "ocid1.compartment.oc1..test",
 					OCIResourceIdentifier: "registration-test",
 				},
 			},
 			kind: "OCICluster",
 			setup: func(mgr ctrl.Manager) error {
-				return (&infrastructurev1beta2.OCICluster{}).SetupWebhookWithManager(mgr)
+				return (&infrastructurev1beta3.OCICluster{}).SetupWebhookWithManager(mgr)
 			},
 			wantAdmissionWebhooks: 2,
 			defaultPath:           []string{"spec", "networkSpec", "apiServerLoadBalancer", "networkVisibility"},
-			wantDefault:           string(infrastructurev1beta2.LBNetworkVisibilityInherited),
+			wantDefault:           string(infrastructurev1beta3.LBNetworkVisibilityInherited),
 			invalidCreate: func(object runtime.Object) string {
-				object.(*infrastructurev1beta2.OCICluster).Spec.CompartmentId = "invalid"
+				object.(*infrastructurev1beta3.OCICluster).Spec.CompartmentId = "invalid"
 				return "spec.compartmentId"
 			},
 			invalidUpdate: func(object runtime.Object) string {
-				object.(*infrastructurev1beta2.OCICluster).Spec.Region = "us-ashburn-1"
+				object.(*infrastructurev1beta3.OCICluster).Spec.Region = "us-ashburn-1"
 				return "spec.region"
 			},
 		},
 		{
 			name: "OCIManagedCluster",
-			object: &infrastructurev1beta2.OCIManagedCluster{
-				Spec: infrastructurev1beta2.OCIManagedClusterSpec{
+			object: &infrastructurev1beta3.OCIManagedCluster{
+				Spec: infrastructurev1beta3.OCIManagedClusterSpec{
 					CompartmentId:         "ocid1.compartment.oc1..test",
 					OCIResourceIdentifier: "registration-test",
 				},
 			},
 			kind: "OCIManagedCluster",
 			setup: func(mgr ctrl.Manager) error {
-				return (&infrastructurev1beta2.OCIManagedCluster{}).SetupWebhookWithManager(mgr)
+				return (&infrastructurev1beta3.OCIManagedCluster{}).SetupWebhookWithManager(mgr)
 			},
 			wantAdmissionWebhooks: 2,
 			defaultPath:           []string{"spec", "networkSpec", "vcn", "cidr"},
-			wantDefault:           infrastructurev1beta2.VcnDefaultCidr,
+			wantDefault:           infrastructurev1beta3.VcnDefaultCidr,
 			invalidCreate: func(object runtime.Object) string {
-				object.(*infrastructurev1beta2.OCIManagedCluster).Spec.CompartmentId = "invalid"
+				object.(*infrastructurev1beta3.OCIManagedCluster).Spec.CompartmentId = "invalid"
 				return "spec.compartmentId"
 			},
 			invalidUpdate: func(object runtime.Object) string {
-				object.(*infrastructurev1beta2.OCIManagedCluster).Spec.Region = "us-ashburn-1"
+				object.(*infrastructurev1beta3.OCIManagedCluster).Spec.Region = "us-ashburn-1"
 				return "spec.region"
 			},
 		},
 		{
 			name:   "OCIManagedControlPlane",
-			object: &infrastructurev1beta2.OCIManagedControlPlane{},
+			object: &infrastructurev1beta3.OCIManagedControlPlane{},
 			kind:   "OCIManagedControlPlane",
 			setup: func(mgr ctrl.Manager) error {
-				return (&infrastructurev1beta2.OCIManagedControlPlane{}).SetupWebhookWithManager(mgr)
+				return (&infrastructurev1beta3.OCIManagedControlPlane{}).SetupWebhookWithManager(mgr)
 			},
 			wantAdmissionWebhooks: 2,
 			defaultPath:           []string{"spec", "clusterPodNetworkOptions"},
-			wantDefault:           []interface{}{map[string]interface{}{"cniType": string(infrastructurev1beta2.VCNNativeCNI)}},
+			wantDefault:           []interface{}{map[string]interface{}{"cniType": string(infrastructurev1beta3.VCNNativeCNI)}},
 			invalidCreate: func(object runtime.Object) string {
 				object.(metav1.Object).SetName(strings.Repeat("a", 32))
 				return "Name"
@@ -130,16 +130,16 @@ func TestWebhookRegistrationServesAdmissionReviews(t *testing.T) {
 		},
 		{
 			name: "OCIMachineTemplate",
-			object: &infrastructurev1beta2.OCIMachineTemplate{
-				Spec: infrastructurev1beta2.OCIMachineTemplateSpec{
-					Template: infrastructurev1beta2.OCIMachineTemplateResource{
-						Spec: infrastructurev1beta2.OCIMachineSpec{Shape: "VM.Standard.E4.Flex"},
+			object: &infrastructurev1beta3.OCIMachineTemplate{
+				Spec: infrastructurev1beta3.OCIMachineTemplateSpec{
+					Template: infrastructurev1beta3.OCIMachineTemplateResource{
+						Spec: infrastructurev1beta3.OCIMachineSpec{Shape: "VM.Standard.E4.Flex"},
 					},
 				},
 			},
 			kind: "OCIMachineTemplate",
 			setup: func(mgr ctrl.Manager) error {
-				return (&infrastructurev1beta2.OCIMachineTemplate{}).SetupWebhookWithManager(mgr)
+				return (&infrastructurev1beta3.OCIMachineTemplate{}).SetupWebhookWithManager(mgr)
 			},
 			wantAdmissionWebhooks: 1,
 			invalidCreate:         invalidateMachineTemplate,
@@ -147,26 +147,26 @@ func TestWebhookRegistrationServesAdmissionReviews(t *testing.T) {
 		},
 		{
 			name: "OCIManagedMachinePool",
-			object: &infrastructurev1beta2exp.OCIManagedMachinePool{
-				Spec: infrastructurev1beta2exp.OCIManagedMachinePoolSpec{Version: &kubernetesVersion},
+			object: &infrastructurev1beta3exp.OCIManagedMachinePool{
+				Spec: infrastructurev1beta3exp.OCIManagedMachinePoolSpec{Version: &kubernetesVersion},
 			},
 			kind: "OCIManagedMachinePool",
 			setup: func(mgr ctrl.Manager) error {
-				return (&infrastructurev1beta2exp.OCIManagedMachinePool{}).SetupWebhookWithManager(mgr)
+				return (&infrastructurev1beta3exp.OCIManagedMachinePool{}).SetupWebhookWithManager(mgr)
 			},
 			wantAdmissionWebhooks: 2,
 			defaultPath:           []string{"spec", "nodePoolNodeConfig", "nodePoolPodNetworkOptionDetails", "cniType"},
-			wantDefault:           string(infrastructurev1beta2.VCNNativeCNI),
+			wantDefault:           string(infrastructurev1beta3.VCNNativeCNI),
 			invalidCreate:         invalidateManagedMachinePool,
 			invalidUpdate:         invalidateManagedMachinePool,
 		},
 		{
 			name: "OCIVirtualMachinePool",
 			// Create and update validators currently accept all decoded objects.
-			object: &infrastructurev1beta2exp.OCIVirtualMachinePool{},
+			object: &infrastructurev1beta3exp.OCIVirtualMachinePool{},
 			kind:   "OCIVirtualMachinePool",
 			setup: func(mgr ctrl.Manager) error {
-				return (&infrastructurev1beta2exp.OCIVirtualMachinePool{}).SetupWebhookWithManager(mgr)
+				return (&infrastructurev1beta3exp.OCIVirtualMachinePool{}).SetupWebhookWithManager(mgr)
 			},
 			wantAdmissionWebhooks: 2,
 			defaultPath:           []string{"spec", "podConfiguration", "shape"},
@@ -177,10 +177,10 @@ func TestWebhookRegistrationServesAdmissionReviews(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			scheme := runtime.NewScheme()
-			if err := infrastructurev1beta2.AddToScheme(scheme); err != nil {
+			if err := infrastructurev1beta3.AddToScheme(scheme); err != nil {
 				t.Fatalf("add infrastructure API types to scheme: %v", err)
 			}
-			if err := infrastructurev1beta2exp.AddToScheme(scheme); err != nil {
+			if err := infrastructurev1beta3exp.AddToScheme(scheme); err != nil {
 				t.Fatalf("add experimental infrastructure API types to scheme: %v", err)
 			}
 
@@ -198,8 +198,8 @@ func TestWebhookRegistrationServesAdmissionReviews(t *testing.T) {
 			}
 
 			gvk := schema.GroupVersionKind{
-				Group:   infrastructurev1beta2.GroupVersion.Group,
-				Version: infrastructurev1beta2.GroupVersion.Version,
+				Group:   infrastructurev1beta3.GroupVersion.Group,
+				Version: infrastructurev1beta3.GroupVersion.Version,
 				Kind:    tt.kind,
 			}
 			object := tt.object.DeepCopyObject()

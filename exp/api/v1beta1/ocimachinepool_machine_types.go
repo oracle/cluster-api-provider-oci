@@ -17,8 +17,8 @@ limitations under the License.
 package v1beta1
 
 import (
+	infrastructurev1beta1 "github.com/oracle/cluster-api-provider-oci/api/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 )
 
 // +kubebuilder:object:generate=true
@@ -58,7 +58,7 @@ type OCIMachinePoolMachineStatus struct {
 
 	// Conditions defines current service state of the OCIMachinePool.
 	// +optional
-	Conditions clusterv1beta1.Conditions `json:"conditions,omitempty"`
+	Conditions infrastructurev1beta1.Conditions `json:"conditions,omitempty"`
 }
 
 //+kubebuilder:object:root=true

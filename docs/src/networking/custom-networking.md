@@ -14,7 +14,7 @@ The `OCICluster` spec in the cluster templates can be modified to customize the 
 The spec below shows how to change the CIDR range of the VCN from the default `10.0.0.0/16` to `172.16.0.0/16`.
 
 ```yaml
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 kind: OCICluster
 metadata:
   name: "${CLUSTER_NAME}"
@@ -49,7 +49,7 @@ The spec below shows how to change the default NSG rules.
 
 ```yaml
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 kind: OCICluster
 metadata:
   name: "${CLUSTER_NAME}"
@@ -177,7 +177,7 @@ The spec below shows how to implement the security posture using security lists 
 
 ```yaml
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 kind: OCICluster
 metadata:
   name: "${CLUSTER_NAME}"
@@ -289,7 +289,7 @@ use [OCI Load Balancer][oci-lb] as the API Server load balancer. The change from
 `loadBalancerType` field to "lb" in the `OCICluster` resource.
 
 ```yaml
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 kind: OCICluster
 metadata:
   name: "${CLUSTER_NAME}"
@@ -308,7 +308,7 @@ The following spec shows an example for this scenario.
 
 ```yaml
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 kind: OCICluster
 metadata:
   name: "${CLUSTER_NAME}"
@@ -347,7 +347,7 @@ must be defined in the template, CAPOCI will not lookup Network Security Group f
 
 ```yaml
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 kind: OCICluster
 metadata:
   name: "${CLUSTER_NAME}"

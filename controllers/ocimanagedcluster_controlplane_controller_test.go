@@ -18,13 +18,14 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"io"
 	"strings"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/scope"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/base/mock_base"
@@ -38,9 +39,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/client-go/tools/record"
-	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
-	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -61,13 +61,15 @@ func TestControlPlaneReconciliation(t *testing.T) {
 	teardown := func(t *testing.T, g *WithT) {
 		mockCtrl.Finish()
 	}
-	notReadyCluster := &infrastructurev1beta2.OCIManagedCluster{
+	notReadyCluster := &infrastructurev1beta3.OCIManagedCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "oci-cluster",
 			Namespace: "test",
 		},
-		Status: infrastructurev1beta2.OCIManagedClusterStatus{
-			Ready: false,
+		Status: infrastructurev1beta3.OCIManagedClusterStatus{
+			Initialization: infrastructurev1beta3.OCIManagedClusterInitializationStatus{
+				Provisioned: common.Bool(false),
+			},
 		},
 	}
 	tests := []struct {
@@ -160,7 +162,7 @@ func TestControlPlaneReconciliationFunction(t *testing.T) {
 		r                      OCIManagedClusterControlPlaneReconciler
 		mockCtrl               *gomock.Controller
 		recorder               *record.FakeRecorder
-		ociManagedControlPlane *infrastructurev1beta2.OCIManagedControlPlane
+		ociManagedControlPlane *infrastructurev1beta3.OCIManagedControlPlane
 		okeClient              *mock_containerengine.MockClient
 		ms                     *scope.ManagedControlPlaneScope
 		baseClient             *mock_base.MockBaseClient
@@ -229,7 +231,7 @@ func TestControlPlaneReconciliationFunction(t *testing.T) {
 		{
 			name:               "control plane in creating state",
 			errorExpected:      false,
-			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.ControlPlaneReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityInfo, infrastructurev1beta2.ControlPlaneNotReadyReason}},
+			conditionAssertion: []conditionAssertion{{infrastructurev1beta3.ControlPlaneReadyCondition, metav1.ConditionFalse, infrastructurev1beta3.ControlPlaneNotReadyReason}},
 			testSpecificSetup: func(controlPlaneScope *scope.ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
 				okeClient.EXPECT().GetCluster(gomock.Any(), gomock.Eq(oke.GetClusterRequest{
 					ClusterId: common.String("test"),
@@ -246,7 +248,7 @@ func TestControlPlaneReconciliationFunction(t *testing.T) {
 		{
 			name:               "control plane create",
 			errorExpected:      false,
-			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.ControlPlaneReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityInfo, infrastructurev1beta2.ControlPlaneNotReadyReason}},
+			conditionAssertion: []conditionAssertion{{infrastructurev1beta3.ControlPlaneReadyCondition, metav1.ConditionFalse, infrastructurev1beta3.ControlPlaneNotReadyReason}},
 			testSpecificSetup: func(controlPlaneScope *scope.ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
 				ociManagedControlPlane.Spec.ID = nil
 				okeClient.EXPECT().ListClusters(gomock.Any(), gomock.Any()).
@@ -275,7 +277,7 @@ func TestControlPlaneReconciliationFunction(t *testing.T) {
 		{
 			name:               "control plane is created, no update",
 			errorExpected:      false,
-			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.ControlPlaneReadyCondition, corev1.ConditionTrue, "", ""}},
+			conditionAssertion: []conditionAssertion{{infrastructurev1beta3.ControlPlaneReadyCondition, metav1.ConditionTrue, ""}},
 			testSpecificSetup: func(controlPlaneScope *scope.ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
 				okeClient.EXPECT().GetCluster(gomock.Any(), gomock.Eq(oke.GetClusterRequest{
 					ClusterId: common.String("test"),
@@ -345,7 +347,7 @@ func TestControlPlaneReconciliationFunction(t *testing.T) {
 		{
 			name:               "control plane in created, update",
 			errorExpected:      false,
-			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.ControlPlaneReadyCondition, corev1.ConditionTrue, "", ""}},
+			conditionAssertion: []conditionAssertion{{infrastructurev1beta3.ControlPlaneReadyCondition, metav1.ConditionTrue, ""}},
 			testSpecificSetup: func(controlPlaneScope *scope.ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
 				okeClient.EXPECT().GetCluster(gomock.Any(), gomock.Eq(oke.GetClusterRequest{
 					ClusterId: common.String("test"),
@@ -416,7 +418,7 @@ func TestControlPlaneReconciliationFunction(t *testing.T) {
 		{
 			name:               "control plane in error state",
 			errorExpected:      true,
-			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.ControlPlaneReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityError, infrastructurev1beta2.ControlPlaneProvisionFailedReason}},
+			conditionAssertion: []conditionAssertion{{infrastructurev1beta3.ControlPlaneReadyCondition, metav1.ConditionFalse, infrastructurev1beta3.ControlPlaneProvisionFailedReason}},
 			testSpecificSetup: func(controlPlaneScope *scope.ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
 				okeClient.EXPECT().GetCluster(gomock.Any(), gomock.Eq(oke.GetClusterRequest{
 					ClusterId: common.String("test"),
@@ -428,6 +430,35 @@ func TestControlPlaneReconciliationFunction(t *testing.T) {
 							FreeformTags:   tags,
 						},
 					}, nil)
+			},
+		},
+		{
+			name:               "control plane kubeconfig creation fails before setting initialized",
+			errorExpected:      true,
+			conditionAssertion: []conditionAssertion{{infrastructurev1beta3.ControlPlaneReadyCondition, metav1.ConditionTrue, ""}},
+			testSpecificSetup: func(controlPlaneScope *scope.ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
+				okeClient.EXPECT().GetCluster(gomock.Any(), gomock.Eq(oke.GetClusterRequest{
+					ClusterId: common.String("test"),
+				})).
+					Return(oke.GetClusterResponse{
+						Cluster: oke.Cluster{
+							Id:                common.String("test"),
+							Name:              common.String("test"),
+							CompartmentId:     common.String("test-compartment"),
+							VcnId:             common.String("vcn-id"),
+							KubernetesVersion: common.String("v1.24.5"),
+							FreeformTags:      tags,
+							LifecycleState:    oke.ClusterLifecycleStateActive,
+							Endpoints: &oke.ClusterEndpoints{
+								PublicEndpoint:  common.String("public"),
+								PrivateEndpoint: common.String("private"),
+							},
+						},
+					}, nil)
+				okeClient.EXPECT().CreateKubeconfig(gomock.Any(), gomock.Eq(oke.CreateKubeconfigRequest{
+					ClusterId: common.String("test"),
+				})).
+					Return(oke.CreateKubeconfigResponse{}, errors.New("kubeconfig error"))
 			},
 		},
 		{
@@ -467,6 +498,9 @@ func TestControlPlaneReconciliationFunction(t *testing.T) {
 			if len(tc.conditionAssertion) > 0 {
 				expectControlPlaneConditions(g, ociManagedControlPlane, tc.conditionAssertion)
 			}
+			if tc.name == "control plane kubeconfig creation fails before setting initialized" {
+				g.Expect(ociManagedControlPlane.Status.Initialization.ControlPlaneInitialized).To(BeNil())
+			}
 		})
 	}
 }
@@ -476,7 +510,7 @@ func TestControlPlaneDeletionFunction(t *testing.T) {
 		r                      OCIManagedClusterControlPlaneReconciler
 		mockCtrl               *gomock.Controller
 		recorder               *record.FakeRecorder
-		ociManagedControlPlane *infrastructurev1beta2.OCIManagedControlPlane
+		ociManagedControlPlane *infrastructurev1beta3.OCIManagedControlPlane
 		okeClient              *mock_containerengine.MockClient
 		ms                     *scope.ManagedControlPlaneScope
 		baseClient             *mock_base.MockBaseClient
@@ -529,7 +563,7 @@ func TestControlPlaneDeletionFunction(t *testing.T) {
 		{
 			name:               "control plane to be deleted",
 			errorExpected:      false,
-			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.ControlPlaneReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityWarning, infrastructurev1beta2.ControlPlaneDeletionInProgress}},
+			conditionAssertion: []conditionAssertion{{infrastructurev1beta3.ControlPlaneReadyCondition, metav1.ConditionFalse, infrastructurev1beta3.ControlPlaneDeletionInProgress}},
 			testSpecificSetup: func(controlPlaneScope *scope.ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
 				okeClient.EXPECT().GetCluster(gomock.Any(), gomock.Eq(oke.GetClusterRequest{
 					ClusterId: common.String("test"),
@@ -550,7 +584,7 @@ func TestControlPlaneDeletionFunction(t *testing.T) {
 		{
 			name:               "control plane not found",
 			errorExpected:      false,
-			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.ControlPlaneNotFoundReason, corev1.ConditionTrue, "", ""}},
+			conditionAssertion: []conditionAssertion{{infrastructurev1beta3.ControlPlaneReadyCondition, metav1.ConditionFalse, infrastructurev1beta3.ControlPlaneNotFoundReason}},
 			testSpecificSetup: func(controlPlaneScope *scope.ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
 				okeClient.EXPECT().GetCluster(gomock.Any(), gomock.Eq(oke.GetClusterRequest{
 					ClusterId: common.String("test"),
@@ -561,7 +595,7 @@ func TestControlPlaneDeletionFunction(t *testing.T) {
 		{
 			name:               "control plane deleting",
 			errorExpected:      false,
-			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.ControlPlaneReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityWarning, infrastructurev1beta2.ControlPlaneDeletionInProgress}},
+			conditionAssertion: []conditionAssertion{{infrastructurev1beta3.ControlPlaneReadyCondition, metav1.ConditionFalse, infrastructurev1beta3.ControlPlaneDeletionInProgress}},
 			testSpecificSetup: func(controlPlaneScope *scope.ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
 				okeClient.EXPECT().GetCluster(gomock.Any(), gomock.Eq(oke.GetClusterRequest{
 					ClusterId: common.String("test"),
@@ -578,7 +612,7 @@ func TestControlPlaneDeletionFunction(t *testing.T) {
 		{
 			name:               "control plane deleted",
 			errorExpected:      false,
-			conditionAssertion: []conditionAssertion{{infrastructurev1beta2.ControlPlaneReadyCondition, corev1.ConditionFalse, clusterv1beta1.ConditionSeverityWarning, infrastructurev1beta2.ControlPlaneDeletedReason}},
+			conditionAssertion: []conditionAssertion{{infrastructurev1beta3.ControlPlaneReadyCondition, metav1.ConditionFalse, infrastructurev1beta3.ControlPlaneDeletedReason}},
 			testSpecificSetup: func(controlPlaneScope *scope.ManagedControlPlaneScope, okeClient *mock_containerengine.MockClient) {
 				okeClient.EXPECT().GetCluster(gomock.Any(), gomock.Eq(oke.GetClusterRequest{
 					ClusterId: common.String("test"),
@@ -605,6 +639,9 @@ func TestControlPlaneDeletionFunction(t *testing.T) {
 			if len(tc.conditionAssertion) > 0 {
 				expectControlPlaneConditions(g, ociManagedControlPlane, tc.conditionAssertion)
 			}
+			if tc.name == "control plane kubeconfig creation fails before setting initialized" {
+				g.Expect(ociManagedControlPlane.Status.Initialization.ControlPlaneInitialized).To(BeNil())
+			}
 			if tc.errorExpected {
 				g.Expect(err).To(Not(BeNil()))
 			} else {
@@ -617,14 +654,14 @@ func TestControlPlaneDeletionFunction(t *testing.T) {
 	}
 }
 
-func getControlPlanePoolWithNoOwner() *infrastructurev1beta2.OCIManagedControlPlane {
+func getControlPlanePoolWithNoOwner() *infrastructurev1beta3.OCIManagedControlPlane {
 	ociControlplane := getOCIManagedControlPlane()
 	ociControlplane.OwnerReferences = []metav1.OwnerReference{}
 	return ociControlplane
 }
 
-func getOCIManagedControlPlane() *infrastructurev1beta2.OCIManagedControlPlane {
-	return &infrastructurev1beta2.OCIManagedControlPlane{
+func getOCIManagedControlPlane() *infrastructurev1beta3.OCIManagedControlPlane {
+	return &infrastructurev1beta3.OCIManagedControlPlane{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
 			Namespace: "test",
@@ -645,24 +682,24 @@ func getOCIManagedControlPlane() *infrastructurev1beta2.OCIManagedControlPlane {
 				},
 			},
 		},
-		Spec: infrastructurev1beta2.OCIManagedControlPlaneSpec{
+		Spec: infrastructurev1beta3.OCIManagedControlPlaneSpec{
 			ID: common.String("test"),
-			ClusterPodNetworkOptions: []infrastructurev1beta2.ClusterPodNetworkOptions{
+			ClusterPodNetworkOptions: []infrastructurev1beta3.ClusterPodNetworkOptions{
 				{
-					CniType: infrastructurev1beta2.FlannelCNI,
+					CniType: infrastructurev1beta3.FlannelCNI,
 				},
 			},
-			ImagePolicyConfig: &infrastructurev1beta2.ImagePolicyConfig{
+			ImagePolicyConfig: &infrastructurev1beta3.ImagePolicyConfig{
 				IsPolicyEnabled: common.Bool(true),
-				KeyDetails: []infrastructurev1beta2.KeyDetails{{
+				KeyDetails: []infrastructurev1beta3.KeyDetails{{
 					KmsKeyId: common.String("kms-key-id"),
 				}},
 			},
-			ClusterOption: infrastructurev1beta2.ClusterOptions{
-				AdmissionControllerOptions: &infrastructurev1beta2.AdmissionControllerOptions{
+			ClusterOption: infrastructurev1beta3.ClusterOptions{
+				AdmissionControllerOptions: &infrastructurev1beta3.AdmissionControllerOptions{
 					IsPodSecurityPolicyEnabled: common.Bool(true),
 				},
-				AddOnOptions: &infrastructurev1beta2.AddOnOptions{
+				AddOnOptions: &infrastructurev1beta3.AddOnOptions{
 					IsKubernetesDashboardEnabled: common.Bool(true),
 					IsTillerEnabled:              common.Bool(false),
 				},
@@ -673,15 +710,18 @@ func getOCIManagedControlPlane() *infrastructurev1beta2.OCIManagedControlPlane {
 	}
 }
 
-func expectControlPlaneConditions(g *WithT, m *infrastructurev1beta2.OCIManagedControlPlane, expected []conditionAssertion) {
+func expectControlPlaneConditions(g *WithT, m *infrastructurev1beta3.OCIManagedControlPlane, expected []conditionAssertion) {
 	g.Expect(len(m.Status.Conditions)).To(BeNumerically(">=", len(expected)), "number of conditions")
 	for _, c := range expected {
-		actual := v1beta1conditions.Get(m, c.conditionType)
+		actual := conditions.Get(m, c.conditionType)
 		g.Expect(actual).To(Not(BeNil()))
 		g.Expect(actual.Type).To(Equal(c.conditionType))
 		g.Expect(actual.Status).To(Equal(c.status))
-		g.Expect(actual.Severity).To(Equal(c.severity))
-		g.Expect(actual.Reason).To(Equal(c.reason))
+		if c.reason != "" {
+			g.Expect(actual.Reason).To(Equal(c.reason))
+		} else if c.status == metav1.ConditionTrue {
+			g.Expect(actual.Reason).To(Equal(c.conditionType))
+		}
 	}
 }
 

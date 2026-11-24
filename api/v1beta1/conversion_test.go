@@ -17,929 +17,246 @@
 package v1beta1
 
 import (
+	"sort"
 	"testing"
 
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/apitesting/fuzzer"
-	"k8s.io/apimachinery/pkg/conversion"
-
 	. "github.com/onsi/gomega"
-	"github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	"github.com/oracle/cluster-api-provider-oci/api/v1beta3"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/apitesting/fuzzer"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	runtimeserializer "k8s.io/apimachinery/pkg/runtime/serializer"
-	"sigs.k8s.io/cluster-api/api/core/v1beta1"
-	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
+	"k8s.io/utils/ptr"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	utilconversion "sigs.k8s.io/cluster-api/util/conversion"
 	"sigs.k8s.io/randfill"
 )
 
 func fuzzFuncs(_ runtimeserializer.CodecFactory) []interface{} {
 	return []interface{}{
+		conditionFuzzer,
+		controlPlaneStatusFuzzer,
 		OCIMachineFuzzer,
 		OCIMachineHubFuzzer,
 		OCIMachineTemplateFuzzer,
 		OCIMachineTemplateHubFuzzer,
 		OCIClusterFuzzer,
+		OCIClusterHubFuzzer,
 		OCIClusterTemplateFuzzer,
 		OCIManagedClusterFuzzer,
+		OCIManagedClusterHubFuzzer,
+		OCIManagedClusterTemplateFuzzer,
+		OCIManagedControlPlaneHubFuzzer,
+		OCIClusterIdentityHubFuzzer,
+	}
+}
+
+func conditionFuzzer(obj *Condition, c randfill.Continue) {
+	c.FillNoCustom(obj)
+	obj.Severity = ""
+	obj.Reason = sanitizeConditionReason(obj.Reason, obj.Type, obj.Status)
+}
+
+func controlPlaneStatusFuzzer(obj *OCIManagedControlPlaneStatus, c randfill.Continue) {
+	c.FillNoCustom(obj)
+	obj.Ready = obj.Initialized
+	if obj.Version != nil && *obj.Version == "" {
+		obj.Version = nil
+	}
+}
+
+func normalizeHubFailureDomains(fds []clusterv1.FailureDomain) []clusterv1.FailureDomain {
+	if len(fds) == 0 {
+		return nil
+	}
+	seen := make(map[string]clusterv1.FailureDomain, len(fds))
+	for _, fd := range fds {
+		if fd.ControlPlane == nil {
+			fd.ControlPlane = ptr.To(false)
+		}
+		if len(fd.Attributes) == 0 {
+			fd.Attributes = nil
+		}
+		seen[fd.Name] = fd
+	}
+	names := make([]string, 0, len(seen))
+	for name := range seen {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	out := make([]clusterv1.FailureDomain, 0, len(names))
+	for _, name := range names {
+		out = append(out, seen[name])
+	}
+	return out
+}
+
+func normalizeHubConditions(conds []metav1.Condition) []metav1.Condition {
+	if len(conds) == 0 {
+		return conds
+	}
+	seen := make(map[string]bool, len(conds))
+	out := make([]metav1.Condition, 0, len(conds))
+	for _, c := range conds {
+		if !seen[c.Type] {
+			seen[c.Type] = true
+			c.Reason = sanitizeConditionReason(c.Reason, ConditionType(c.Type), corev1.ConditionStatus(c.Status))
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+func clearRemovedNSGRuleIDs(nsgs []*NSG) {
+	for _, nsg := range nsgs {
+		if nsg != nil {
+			for i := range nsg.IngressRules {
+				nsg.IngressRules[i].ID = nil
+			}
+			for i := range nsg.EgressRules {
+				nsg.EgressRules[i].ID = nil
+			}
+		}
 	}
 }
 
 func OCIMachineFuzzer(obj *OCIMachine, c randfill.Continue) {
 	c.FillNoCustom(obj)
-	// nil fields which have been removed so that tests dont fail
 	obj.Spec.NSGName = ""
 	obj.Spec.ExtendedMetadata = nil
 }
 
 func OCIClusterFuzzer(obj *OCICluster, c randfill.Continue) {
 	c.FillNoCustom(obj)
-	// nil fields which have been removed so that tests dont fail
-	for _, nsg := range obj.Spec.NetworkSpec.Vcn.NetworkSecurityGroups {
-		if nsg != nil {
-			ingressRules := make([]IngressSecurityRuleForNSG, len(nsg.IngressRules))
-			for _, rule := range nsg.IngressRules {
-				rule.ID = nil
-				ingressRules = append(ingressRules, rule)
-			}
-			nsg.IngressRules = ingressRules
+	clearRemovedNSGRuleIDs(obj.Spec.NetworkSpec.Vcn.NetworkSecurityGroups)
+}
 
-			egressRules := make([]EgressSecurityRuleForNSG, len(nsg.EgressRules))
-			for _, rule := range nsg.EgressRules {
-				(&rule).ID = nil
-				egressRules = append(egressRules, rule)
-			}
-			nsg.EgressRules = egressRules
-		}
-	}
+func OCIClusterHubFuzzer(obj *v1beta3.OCICluster, c randfill.Continue) {
+	c.FillNoCustom(obj)
+	obj.Status.FailureDomains = normalizeHubFailureDomains(obj.Status.FailureDomains)
+	obj.Status.Conditions = normalizeHubConditions(obj.Status.Conditions)
 }
 
 func OCIClusterTemplateFuzzer(obj *OCIClusterTemplate, c randfill.Continue) {
 	c.FillNoCustom(obj)
-	// nil fields which have been removed so that tests dont fail
-	for _, nsg := range obj.Spec.Template.Spec.NetworkSpec.Vcn.NetworkSecurityGroups {
-		if nsg != nil {
-			ingressRules := make([]IngressSecurityRuleForNSG, len(nsg.IngressRules))
-			for _, rule := range nsg.IngressRules {
-				rule.ID = nil
-				ingressRules = append(ingressRules, rule)
-			}
-			nsg.IngressRules = ingressRules
-
-			egressRules := make([]EgressSecurityRuleForNSG, len(nsg.EgressRules))
-			for _, rule := range nsg.EgressRules {
-				(&rule).ID = nil
-				egressRules = append(egressRules, rule)
-			}
-			nsg.EgressRules = egressRules
-		}
-	}
+	clearRemovedNSGRuleIDs(obj.Spec.Template.Spec.NetworkSpec.Vcn.NetworkSecurityGroups)
 }
 
 func OCIMachineTemplateFuzzer(obj *OCIMachineTemplate, c randfill.Continue) {
 	c.FillNoCustom(obj)
-	// nil fields which ave been removed so that tests dont fail
 	obj.Spec.Template.Spec.NSGName = ""
 	obj.Spec.Template.Spec.ExtendedMetadata = nil
 }
 
-func OCIMachineHubFuzzer(obj *v1beta2.OCIMachine, c randfill.Continue) {
+func OCIMachineHubFuzzer(obj *v1beta3.OCIMachine, c randfill.Continue) {
 	c.FillNoCustom(obj)
 	obj.Spec.ExtendedMetadata = nil
+	obj.Status.Conditions = normalizeHubConditions(obj.Status.Conditions)
 }
 
-func OCIMachineTemplateHubFuzzer(obj *v1beta2.OCIMachineTemplate, c randfill.Continue) {
+func OCIMachineTemplateHubFuzzer(obj *v1beta3.OCIMachineTemplate, c randfill.Continue) {
 	c.FillNoCustom(obj)
 	obj.Spec.Template.Spec.ExtendedMetadata = nil
 }
 
 func OCIManagedClusterFuzzer(obj *OCIManagedCluster, c randfill.Continue) {
 	c.FillNoCustom(obj)
-	// nil fields which have been removed so that tests dont fail
-	for _, nsg := range obj.Spec.NetworkSpec.Vcn.NetworkSecurityGroups {
-		if nsg != nil {
-			ingressRules := make([]IngressSecurityRuleForNSG, len(nsg.IngressRules))
-			for _, rule := range nsg.IngressRules {
-				rule.ID = nil
-				ingressRules = append(ingressRules, rule)
-			}
-			nsg.IngressRules = ingressRules
+	clearRemovedNSGRuleIDs(obj.Spec.NetworkSpec.Vcn.NetworkSecurityGroups)
+}
 
-			egressRules := make([]EgressSecurityRuleForNSG, len(nsg.EgressRules))
-			for _, rule := range nsg.EgressRules {
-				(&rule).ID = nil
-				egressRules = append(egressRules, rule)
-			}
-			nsg.EgressRules = egressRules
+func OCIManagedClusterTemplateFuzzer(obj *OCIManagedClusterTemplate, c randfill.Continue) {
+	c.FillNoCustom(obj)
+	clearRemovedNSGRuleIDs(obj.Spec.Template.Spec.NetworkSpec.Vcn.NetworkSecurityGroups)
+}
+
+func OCIManagedClusterHubFuzzer(obj *v1beta3.OCIManagedCluster, c randfill.Continue) {
+	c.FillNoCustom(obj)
+	obj.Status.FailureDomains = normalizeHubFailureDomains(obj.Status.FailureDomains)
+	obj.Status.Conditions = normalizeHubConditions(obj.Status.Conditions)
+}
+
+func OCIManagedControlPlaneHubFuzzer(obj *v1beta3.OCIManagedControlPlane, c randfill.Continue) {
+	c.FillNoCustom(obj)
+	obj.Status.Conditions = normalizeHubConditions(obj.Status.Conditions)
+	for i := range obj.Status.Versions {
+		if obj.Status.Versions[i].Version == "" {
+			obj.Status.Versions[i].Version = "v1.32.0"
 		}
 	}
+}
+
+func OCIClusterIdentityHubFuzzer(obj *v1beta3.OCIClusterIdentity, c randfill.Continue) {
+	c.FillNoCustom(obj)
+	obj.Status.Conditions = normalizeHubConditions(obj.Status.Conditions)
 }
 
 func TestFuzzyConversion(t *testing.T) {
 	g := NewWithT(t)
 	scheme := runtime.NewScheme()
 	g.Expect(AddToScheme(scheme)).To(Succeed())
-	g.Expect(v1beta2.AddToScheme(scheme)).To(Succeed())
+	g.Expect(v1beta3.AddToScheme(scheme)).To(Succeed())
 
 	t.Run("for OCICluster", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
 		Scheme:      scheme,
-		Hub:         &v1beta2.OCICluster{},
+		Hub:         &v1beta3.OCICluster{},
 		Spoke:       &OCICluster{},
 		FuzzerFuncs: []fuzzer.FuzzerFuncs{fuzzFuncs},
 	}))
 
 	t.Run("for OCIClusterTemplate", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
 		Scheme:      scheme,
-		Hub:         &v1beta2.OCIClusterTemplate{},
+		Hub:         &v1beta3.OCIClusterTemplate{},
 		Spoke:       &OCIClusterTemplate{},
 		FuzzerFuncs: []fuzzer.FuzzerFuncs{fuzzFuncs},
 	}))
 
 	t.Run("for OCIMachine", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
 		Scheme:      scheme,
-		Hub:         &v1beta2.OCIMachine{},
+		Hub:         &v1beta3.OCIMachine{},
 		Spoke:       &OCIMachine{},
 		FuzzerFuncs: []fuzzer.FuzzerFuncs{fuzzFuncs},
 	}))
 
 	t.Run("for OCIMachineTemplate", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
 		Scheme:      scheme,
-		Hub:         &v1beta2.OCIMachineTemplate{},
+		Hub:         &v1beta3.OCIMachineTemplate{},
 		Spoke:       &OCIMachineTemplate{},
 		FuzzerFuncs: []fuzzer.FuzzerFuncs{fuzzFuncs},
 	}))
 
 	t.Run("for OCIClusterIdentity", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
 		Scheme:      scheme,
-		Hub:         &v1beta2.OCIClusterIdentity{},
+		Hub:         &v1beta3.OCIClusterIdentity{},
 		Spoke:       &OCIClusterIdentity{},
 		FuzzerFuncs: []fuzzer.FuzzerFuncs{fuzzFuncs},
 	}))
 
 	t.Run("for OCIManagedControlPlane", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
 		Scheme:      scheme,
-		Hub:         &v1beta2.OCIManagedControlPlane{},
+		Hub:         &v1beta3.OCIManagedControlPlane{},
 		Spoke:       &OCIManagedControlPlane{},
 		FuzzerFuncs: []fuzzer.FuzzerFuncs{fuzzFuncs},
 	}))
 
 	t.Run("for OCIManagedCluster", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
 		Scheme:      scheme,
-		Hub:         &v1beta2.OCIManagedCluster{},
+		Hub:         &v1beta3.OCIManagedCluster{},
 		Spoke:       &OCIManagedCluster{},
 		FuzzerFuncs: []fuzzer.FuzzerFuncs{fuzzFuncs},
 	}))
 
+	t.Run("for OCIManagedClusterTemplate", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
+		Scheme:      scheme,
+		Hub:         &v1beta3.OCIManagedClusterTemplate{},
+		Spoke:       &OCIManagedClusterTemplate{},
+		FuzzerFuncs: []fuzzer.FuzzerFuncs{fuzzFuncs},
+	}))
+
+	t.Run("for OCIManagedControlPlaneTemplate", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
+		Scheme:      scheme,
+		Hub:         &v1beta3.OCIManagedControlPlaneTemplate{},
+		Spoke:       &OCIManagedControlPlaneTemplate{},
+		FuzzerFuncs: []fuzzer.FuzzerFuncs{fuzzFuncs},
+	}))
 }
-
-func TestConvert_v1beta1_VCN_To_v1beta2_VCN(t *testing.T) {
-	type args struct {
-		in  *VCN
-		out *v1beta2.VCN
-		s   conversion.Scope
-	}
-
-	// helper variables for pointers
-	id := "vcn-1"
-
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "normal conversion",
-			args: args{
-				in: &VCN{
-					ID:   &id,
-					CIDR: "10.0.0.0/16",
-					Name: "test-vcn",
-				},
-				out: &v1beta2.VCN{},
-				s:   nil, // assuming Scope is not used in this test
-			},
-			wantErr: false,
-		},
-		{
-			name: "partial input",
-			args: args{
-				in: &VCN{
-					ID: &id,
-				},
-				out: &v1beta2.VCN{},
-				s:   nil,
-			},
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := Convert_v1beta1_VCN_To_v1beta2_VCN(tt.args.in, tt.args.out, tt.args.s); (err != nil) != tt.wantErr {
-				t.Errorf("Convert_v1beta1_VCN_To_v1beta2_VCN() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func TestConvert_v1beta2_VCN_To_v1beta1_VCN(t *testing.T) {
-	type args struct {
-		in  *v1beta2.VCN
-		out *VCN
-		s   conversion.Scope
-	}
-
-	// helper variables for pointers
-	id := "vcn-1"
-
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "normal conversion",
-			args: args{
-				in: &v1beta2.VCN{
-					ID:   &id,           // keep pointer for ID
-					CIDR: "10.0.0.0/16", // plain string
-					Name: "test-vcn",    // plain string
-				},
-				out: &VCN{},
-				s:   nil,
-			},
-			wantErr: false,
-		},
-		{
-			name: "partial input",
-			args: args{
-				in: &v1beta2.VCN{
-					ID: &id, // pointer
-				},
-				out: &VCN{},
-				s:   nil,
-			},
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := Convert_v1beta2_VCN_To_v1beta1_VCN(tt.args.in, tt.args.out, tt.args.s); (err != nil) != tt.wantErr {
-				t.Errorf("Convert_v1beta2_VCN_To_v1beta1_VCN() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func TestConvert_v1beta1_OCIClusterStatus_To_v1beta2_OCIClusterStatus(t *testing.T) {
-	type args struct {
-		in  *OCIClusterStatus
-		out *v1beta2.OCIClusterStatus
-		s   conversion.Scope
-	}
-
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "normal conversion",
-			args: args{
-				in: &OCIClusterStatus{
-					Ready: true,
-					AvailabilityDomains: map[string]OCIAvailabilityDomain{
-						"AD-1": {
-							Name:         "Uocm:PHX-AD-1",
-							FaultDomains: []string{"FAULT-DOMAIN-1", "FAULT-DOMAIN-2", "FAULT-DOMAIN-3"},
-						},
-					},
-				},
-				out: &v1beta2.OCIClusterStatus{},
-				s:   nil,
-			},
-			wantErr: false,
-		},
-		{
-			name: "partial input",
-			args: args{
-				in: &OCIClusterStatus{
-					Ready: true,
-				},
-				out: &v1beta2.OCIClusterStatus{},
-				s:   nil,
-			},
-			wantErr: false,
-		},
-		{
-			name: "empty input",
-			args: args{
-				in:  &OCIClusterStatus{},
-				out: &v1beta2.OCIClusterStatus{},
-				s:   nil,
-			},
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := Convert_v1beta1_OCIClusterStatus_To_v1beta2_OCIClusterStatus(tt.args.in, tt.args.out, tt.args.s); (err != nil) != tt.wantErr {
-				t.Errorf("Convert_v1beta1_OCIClusterStatus_To_v1beta2_OCIClusterStatus() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func TestConvert_v1beta2_OCIClusterSpec_To_v1beta1_OCIClusterSpec(t *testing.T) {
-	type args struct {
-		in  *v1beta2.OCIClusterSpec
-		out *OCIClusterSpec
-		s   conversion.Scope
-	}
-
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "normal conversion",
-			args: args{
-				in: &v1beta2.OCIClusterSpec{
-					Region: "us-phoenix-1",
-					AvailabilityDomains: map[string]v1beta2.OCIAvailabilityDomain{
-						"AD-1": {
-							Name:         "Uocm:PHX-AD-1",
-							FaultDomains: []string{"FAULT-DOMAIN-1", "FAULT-DOMAIN-2", "FAULT-DOMAIN-3"},
-						},
-					},
-				},
-				out: &OCIClusterSpec{},
-				s:   nil,
-			},
-			wantErr: false,
-		},
-		{
-			name: "partial input",
-			args: args{
-				in: &v1beta2.OCIClusterSpec{
-					Region: "us-phoenix-1",
-				},
-				out: &OCIClusterSpec{},
-				s:   nil,
-			},
-			wantErr: false,
-		},
-		{
-			name: "empty input",
-			args: args{
-				in:  &v1beta2.OCIClusterSpec{},
-				out: &OCIClusterSpec{},
-				s:   nil,
-			},
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := Convert_v1beta2_OCIClusterSpec_To_v1beta1_OCIClusterSpec(tt.args.in, tt.args.out, tt.args.s); (err != nil) != tt.wantErr {
-				t.Errorf("Convert_v1beta2_OCIClusterSpec_To_v1beta1_OCIClusterSpec() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func TestConvert_v1beta1_EgressSecurityRuleForNSG_To_v1beta2_EgressSecurityRuleForNSG(t *testing.T) {
-	type args struct {
-		in  *EgressSecurityRuleForNSG
-		out *v1beta2.EgressSecurityRuleForNSG
-		s   conversion.Scope
-	}
-
-	// Example inline variables for pointer fields
-	destination := "10.0.0.0/16"
-	description := "test rule"
-	protocol := "6" // TCP
-	stateless := true
-
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "normal conversion",
-			args: args{
-				in: &EgressSecurityRuleForNSG{
-					EgressSecurityRule: EgressSecurityRule{
-						Destination:     &destination,
-						Description:     &description,
-						Protocol:        &protocol,
-						DestinationType: "CIDR_BLOCK",
-						IsStateless:     &stateless,
-					},
-				},
-				out: &v1beta2.EgressSecurityRuleForNSG{},
-				s:   nil,
-			},
-			wantErr: false,
-		},
-		{
-			name: "partial input",
-			args: args{
-				in: &EgressSecurityRuleForNSG{
-					EgressSecurityRule: EgressSecurityRule{
-						Destination: &destination,
-					},
-				},
-				out: &v1beta2.EgressSecurityRuleForNSG{},
-				s:   nil,
-			},
-			wantErr: false,
-		},
-		{
-			name: "empty input",
-			args: args{
-				in:  &EgressSecurityRuleForNSG{},
-				out: &v1beta2.EgressSecurityRuleForNSG{},
-				s:   nil,
-			},
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := Convert_v1beta1_EgressSecurityRuleForNSG_To_v1beta2_EgressSecurityRuleForNSG(tt.args.in, tt.args.out, tt.args.s); (err != nil) != tt.wantErr {
-				t.Errorf("Convert_v1beta1_EgressSecurityRuleForNSG_To_v1beta2_EgressSecurityRuleForNSG() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func TestConvert_v1beta1_IngressSecurityRuleForNSG_To_v1beta2_IngressSecurityRuleForNSG(t *testing.T) {
-	type args struct {
-		in  *IngressSecurityRuleForNSG
-		out *v1beta2.IngressSecurityRuleForNSG
-		s   conversion.Scope
-	}
-
-	source := "192.168.0.0/24"
-	protocol := "6" // TCP
-	description := "allow http"
-	stateless := false
-
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "full rule",
-			args: args{
-				in: &IngressSecurityRuleForNSG{
-					IngressSecurityRule: IngressSecurityRule{
-						Source:      &source,
-						Description: &description,
-						Protocol:    &protocol,
-						SourceType:  "CIDR_BLOCK",
-						IsStateless: &stateless,
-					},
-				},
-				out: &v1beta2.IngressSecurityRuleForNSG{},
-				s:   nil,
-			},
-			wantErr: false,
-		},
-		{
-			name: "partial rule",
-			args: args{
-				in: &IngressSecurityRuleForNSG{
-					IngressSecurityRule: IngressSecurityRule{
-						Source: &source,
-					},
-				},
-				out: &v1beta2.IngressSecurityRuleForNSG{},
-				s:   nil,
-			},
-			wantErr: false,
-		},
-		{
-			name: "empty rule",
-			args: args{
-				in:  &IngressSecurityRuleForNSG{},
-				out: &v1beta2.IngressSecurityRuleForNSG{},
-				s:   nil,
-			},
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := Convert_v1beta1_IngressSecurityRuleForNSG_To_v1beta2_IngressSecurityRuleForNSG(tt.args.in, tt.args.out, tt.args.s); (err != nil) != tt.wantErr {
-				t.Errorf("Convert_v1beta1_IngressSecurityRuleForNSG_To_v1beta2_IngressSecurityRuleForNSG() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func TestConvert_v1beta1_NetworkDetails_To_v1beta2_NetworkDetails(t *testing.T) {
-	type args struct {
-		in  *NetworkDetails
-		out *v1beta2.NetworkDetails
-		s   conversion.Scope
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "full network details",
-			args: args{
-				in: &NetworkDetails{
-					SubnetId:               func() *string { s := "subnet-123"; return &s }(),
-					AssignIpv6Ip:           true,
-					AssignPublicIp:         false,
-					SubnetName:             "my-subnet",
-					NSGIds:                 []string{"nsg-1", "nsg-2"},
-					SkipSourceDestCheck:    func() *bool { b := true; return &b }(),
-					NsgNames:               []string{"nsg-a", "nsg-b"},
-					HostnameLabel:          func() *string { s := "host1"; return &s }(),
-					DisplayName:            func() *string { s := "display"; return &s }(),
-					AssignPrivateDnsRecord: func() *bool { b := false; return &b }(),
-				},
-				out: &v1beta2.NetworkDetails{},
-				s:   nil,
-			},
-			wantErr: false,
-		},
-		{
-			name: "partial network details",
-			args: args{
-				in: &NetworkDetails{
-					SubnetName: "default-subnet",
-				},
-				out: &v1beta2.NetworkDetails{},
-				s:   nil,
-			},
-			wantErr: false,
-		},
-		{
-			name: "empty network details",
-			args: args{
-				in:  &NetworkDetails{},
-				out: &v1beta2.NetworkDetails{},
-				s:   nil,
-			},
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := Convert_v1beta1_NetworkDetails_To_v1beta2_NetworkDetails(tt.args.in, tt.args.out, tt.args.s); (err != nil) != tt.wantErr {
-				t.Errorf("Convert_v1beta1_NetworkDetails_To_v1beta2_NetworkDetails() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func TestConvert_v1beta1_OCIMachineSpec_To_v1beta2_OCIMachineSpec(t *testing.T) {
-	type args struct {
-		in  *OCIMachineSpec
-		out *v1beta2.OCIMachineSpec
-		s   conversion.Scope
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "all fields populated",
-			args: args{
-				in: &OCIMachineSpec{
-					Shape: "VM.Standard.E4.Flex",
-					ShapeConfig: ShapeConfig{
-						Ocpus:       "2",
-						MemoryInGBs: "16",
-					},
-					BootVolumeSizeInGBs: "100",
-					NetworkDetails: NetworkDetails{
-						SubnetName:     "subnet-a",
-						AssignPublicIp: true,
-					},
-				},
-				out: &v1beta2.OCIMachineSpec{},
-				s:   nil,
-			},
-			wantErr: false,
-		},
-		{
-			name: "minimal spec",
-			args: args{
-				in: &OCIMachineSpec{
-					Shape: "VM.Standard2.1",
-				},
-				out: &v1beta2.OCIMachineSpec{},
-				s:   nil,
-			},
-			wantErr: false,
-		},
-		{
-			name: "empty struct",
-			args: args{
-				in:  &OCIMachineSpec{},
-				out: &v1beta2.OCIMachineSpec{},
-				s:   nil,
-			},
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := Convert_v1beta1_OCIMachineSpec_To_v1beta2_OCIMachineSpec(tt.args.in, tt.args.out, tt.args.s); (err != nil) != tt.wantErr {
-				t.Errorf("Convert_v1beta1_OCIMachineSpec_To_v1beta2_OCIMachineSpec() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func TestConvert_v1beta2_LoadBalancer_To_v1beta1_LoadBalancer(t *testing.T) {
-	type args struct {
-		in  *v1beta2.LoadBalancer
-		out *LoadBalancer
-		s   conversion.Scope
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "all fields populated",
-			args: args{
-				in: &v1beta2.LoadBalancer{
-					Name:             "lb-test",
-					LoadBalancerId:   func() *string { s := "lb-ocid"; return &s }(),
-					LoadBalancerType: "NLB",
-				},
-				out: &LoadBalancer{},
-				s:   nil,
-			},
-			wantErr: false,
-		},
-		{
-			name: "minimal load balancer",
-			args: args{
-				in: &v1beta2.LoadBalancer{
-					Name: "lb-test",
-				},
-				out: &LoadBalancer{},
-				s:   nil,
-			},
-			wantErr: false,
-		},
-		{
-			name: "empty struct",
-			args: args{
-				in:  &v1beta2.LoadBalancer{},
-				out: &LoadBalancer{},
-				s:   nil,
-			},
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := Convert_v1beta2_LoadBalancer_To_v1beta1_LoadBalancer(tt.args.in, tt.args.out, tt.args.s); (err != nil) != tt.wantErr {
-				t.Errorf("Convert_v1beta2_LoadBalancer_To_v1beta1_LoadBalancer() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func TestNetworkVisibility_RoundTrip(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name       string
-		visibility v1beta2.LBNetworkVisibility
-	}{
-		{
-			name:       "Public survives round trip",
-			visibility: v1beta2.LBNetworkVisibilityPublic,
-		},
-		{
-			name:       "Private survives round trip",
-			visibility: v1beta2.LBNetworkVisibilityPrivate,
-		},
-		{
-			name:       "Inherited survives round trip",
-			visibility: v1beta2.LBNetworkVisibilityInherited,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			source := &v1beta2.LoadBalancer{
-				NetworkVisibility: tt.visibility,
-			}
-			intermediate := &LoadBalancer{}
-			err := Convert_v1beta2_LoadBalancer_To_v1beta1_LoadBalancer(source, intermediate, nil)
-			if err != nil {
-				t.Fatalf("Convert_v1beta2_LoadBalancer_To_v1beta1_LoadBalancer() error = %v", err)
-			}
-
-			dest := &v1beta2.LoadBalancer{}
-			err = Convert_v1beta1_LoadBalancer_To_v1beta2_LoadBalancer(intermediate, dest, nil)
-			if err != nil {
-				t.Fatalf("Convert_v1beta1_LoadBalancer_To_v1beta2_LoadBalancer() error = %v", err)
-			}
-
-			if dest.NetworkVisibility != tt.visibility {
-				t.Fatalf("expected NetworkVisibility %q, got %q", tt.visibility, dest.NetworkVisibility)
-			}
-		})
-	}
-}
-
-func TestConvert_v1beta2_OCIManagedControlPlaneStatus_To_v1beta1_OCIManagedControlPlaneStatus(t *testing.T) {
-	type args struct {
-		in  *v1beta2.OCIManagedControlPlaneStatus
-		out *OCIManagedControlPlaneStatus
-		s   conversion.Scope
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "all fields populated",
-			args: args{
-				in: &v1beta2.OCIManagedControlPlaneStatus{
-					Ready:       true,
-					Version:     func() *string { s := "v1.29.0"; return &s }(),
-					Initialized: true,
-					Conditions: v1beta1.Conditions{
-						{
-							Type:   "Available",
-							Status: v1.ConditionTrue,
-						},
-					},
-				},
-				out: &OCIManagedControlPlaneStatus{},
-				s:   nil,
-			},
-			wantErr: false,
-		},
-		{
-			name: "minimal status",
-			args: args{
-				in: &v1beta2.OCIManagedControlPlaneStatus{
-					Ready: true,
-				},
-				out: &OCIManagedControlPlaneStatus{},
-				s:   nil,
-			},
-			wantErr: false,
-		},
-		{
-			name: "empty status",
-			args: args{
-				in:  &v1beta2.OCIManagedControlPlaneStatus{},
-				out: &OCIManagedControlPlaneStatus{},
-				s:   nil,
-			},
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := Convert_v1beta2_OCIManagedControlPlaneStatus_To_v1beta1_OCIManagedControlPlaneStatus(tt.args.in, tt.args.out, tt.args.s); (err != nil) != tt.wantErr {
-				t.Errorf("Convert_v1beta2_OCIManagedControlPlaneStatus_To_v1beta1_OCIManagedControlPlaneStatus() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func TestConvert_v1beta2_OCIManagedControlPlaneSpec_To_v1beta1_OCIManagedControlPlaneSpec(t *testing.T) {
-	type args struct {
-		in  *v1beta2.OCIManagedControlPlaneSpec
-		out *OCIManagedControlPlaneSpec
-		s   conversion.Scope
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "almost all fields populated",
-			args: args{
-				in: &v1beta2.OCIManagedControlPlaneSpec{
-					Version: func() *string { s := "v1.29.0"; return &s }(),
-					ControlPlaneEndpoint: clusterv1beta1.APIEndpoint{
-						Host: "1.2.3.4",
-						Port: 6443,
-					},
-				},
-				out: &OCIManagedControlPlaneSpec{},
-				s:   nil,
-			},
-			wantErr: false,
-		},
-		{
-			name: "minimal spec",
-			args: args{
-				in: &v1beta2.OCIManagedControlPlaneSpec{
-					Version: func() *string { s := "v1.29.0"; return &s }(),
-				},
-				out: &OCIManagedControlPlaneSpec{},
-				s:   nil,
-			},
-			wantErr: false,
-		},
-		{
-			name: "empty spec",
-			args: args{
-				in:  &v1beta2.OCIManagedControlPlaneSpec{},
-				out: &OCIManagedControlPlaneSpec{},
-				s:   nil,
-			},
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := Convert_v1beta2_OCIManagedControlPlaneSpec_To_v1beta1_OCIManagedControlPlaneSpec(tt.args.in, tt.args.out, tt.args.s); (err != nil) != tt.wantErr {
-				t.Errorf("Convert_v1beta2_OCIManagedControlPlaneSpec_To_v1beta1_OCIManagedControlPlaneSpec() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-// func TestConvert_v1beta1_OCIManagedClusterStatus_To_v1beta2_OCIManagedClusterStatus(t *testing.T) {
-// 	type args struct {
-// 		in  *OCIManagedClusterStatus
-// 		out *v1beta2.OCIManagedClusterStatus
-// 		s   conversion.Scope
-// 	}
-// 	tests := []struct {
-// 		name    string
-// 		args    args
-// 		wantErr bool
-// 	}{
-// 		// TODO: Add test cases.
-// 	}
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			if err := Convert_v1beta1_OCIManagedClusterStatus_To_v1beta2_OCIManagedClusterStatus(tt.args.in, tt.args.out, tt.args.s); (err != nil) != tt.wantErr {
-// 				t.Errorf("Convert_v1beta1_OCIManagedClusterStatus_To_v1beta2_OCIManagedClusterStatus() error = %v, wantErr %v", err, tt.wantErr)
-// 			}
-// 		})
-// 	}
-// }
-
-// func TestConvert_v1beta2_OCIManagedClusterSpec_To_v1beta1_OCIManagedClusterSpec(t *testing.T) {
-// 	type args struct {
-// 		in  *v1beta2.OCIManagedClusterSpec
-// 		out *OCIManagedClusterSpec
-// 		s   conversion.Scope
-// 	}
-// 	tests := []struct {
-// 		name    string
-// 		args    args
-// 		wantErr bool
-// 	}{
-// 		// TODO: Add test cases.
-// 	}
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			if err := Convert_v1beta2_OCIManagedClusterSpec_To_v1beta1_OCIManagedClusterSpec(tt.args.in, tt.args.out, tt.args.s); (err != nil) != tt.wantErr {
-// 				t.Errorf("Convert_v1beta2_OCIManagedClusterSpec_To_v1beta1_OCIManagedClusterSpec() error = %v, wantErr %v", err, tt.wantErr)
-// 			}
-// 		})
-// 	}
-// }
-
-// func TestConvert_v1beta2_ClusterOptions_To_v1beta1_ClusterOptions(t *testing.T) {
-// 	type args struct {
-// 		in  *v1beta2.ClusterOptions
-// 		out *ClusterOptions
-// 		s   conversion.Scope
-// 	}
-// 	tests := []struct {
-// 		name    string
-// 		args    args
-// 		wantErr bool
-// 	}{
-// 		// TODO: Add test cases.
-// 	}
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			if err := Convert_v1beta2_ClusterOptions_To_v1beta1_ClusterOptions(tt.args.in, tt.args.out, tt.args.s); (err != nil) != tt.wantErr {
-// 				t.Errorf("Convert_v1beta2_ClusterOptions_To_v1beta1_ClusterOptions() error = %v, wantErr %v", err, tt.wantErr)
-// 			}
-// 		})
-// 	}
-// }

@@ -27,7 +27,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
+	infrastructurev1beta3 "github.com/oracle/cluster-api-provider-oci/api/v1beta3"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
 	baseclient "github.com/oracle/cluster-api-provider-oci/cloud/services/base"
@@ -42,9 +42,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/klog/v2/klogr"
-	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
-	v1beta1patch "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/patch"
+	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/cluster-api/util/kubeconfig"
 	"sigs.k8s.io/cluster-api/util/secret"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -64,7 +63,7 @@ type ManagedControlPlaneScopeParams struct {
 	ContainerEngineClient  containerengine.Client
 	BaseClient             baseclient.BaseClient
 	ClientProvider         *ClientProvider
-	OCIManagedControlPlane *infrastructurev1beta2.OCIManagedControlPlane
+	OCIManagedControlPlane *infrastructurev1beta3.OCIManagedControlPlane
 	OCIClusterAccessor     OCIClusterAccessor
 	RegionIdentifier       string
 }
@@ -76,10 +75,10 @@ type ManagedControlPlaneScope struct {
 	ContainerEngineClient  containerengine.Client
 	BaseClient             baseclient.BaseClient
 	ClientProvider         *ClientProvider
-	OCIManagedControlPlane *infrastructurev1beta2.OCIManagedControlPlane
+	OCIManagedControlPlane *infrastructurev1beta3.OCIManagedControlPlane
 	OCIClusterAccessor     OCIClusterAccessor
 	RegionIdentifier       string
-	patchHelper            *v1beta1patch.Helper
+	patchHelper            *patch.Helper
 }
 
 // NewManagedControlPlaneScope creates a ManagedControlPlaneScope given the ManagedControlPlaneScopeParams
@@ -130,9 +129,9 @@ func (s *ManagedControlPlaneScope) GetOrCreateControlPlane(ctx context.Context) 
 	podNetworks := make([]oke.ClusterPodNetworkOptionDetails, 0)
 	if len(controlPlaneSpec.ClusterPodNetworkOptions) > 0 {
 		for _, cniOption := range controlPlaneSpec.ClusterPodNetworkOptions {
-			if cniOption.CniType == infrastructurev1beta2.FlannelCNI {
+			if cniOption.CniType == infrastructurev1beta3.FlannelCNI {
 				podNetworks = append(podNetworks, oke.FlannelOverlayClusterPodNetworkOptionDetails{})
-			} else if cniOption.CniType == infrastructurev1beta2.VCNNativeCNI {
+			} else if cniOption.CniType == infrastructurev1beta3.VCNNativeCNI {
 				podNetworks = append(podNetworks, oke.OciVcnIpNativeClusterPodNetworkOptionDetails{})
 			}
 		}
@@ -192,7 +191,7 @@ func (s *ManagedControlPlaneScope) GetOrCreateControlPlane(ctx context.Context) 
 			createOptions.OpenIdConnectTokenAuthenticationConfig.GroupsPrefix = oidcConfig.GroupsPrefix
 		}
 		if oidcConfig.RequiredClaims != nil {
-			// Convert []infrastructurev1beta2.KeyValue to []containerengine.KeyValue
+			// Convert []infrastructurev1beta3.KeyValue to []containerengine.KeyValue
 			requiredClaims := make([]oke.KeyValue, len(oidcConfig.RequiredClaims))
 			for i, rc := range oidcConfig.RequiredClaims {
 				requiredClaims[i] = oke.KeyValue(rc)
@@ -273,12 +272,12 @@ func (s *ManagedControlPlaneScope) GetOrCreateControlPlane(ctx context.Context) 
 	return s.getOKEClusterFromOCID(ctx, clusterId)
 }
 
-func getOKEClusterTypeFromSpecType(controlPlaneSpec infrastructurev1beta2.OCIManagedControlPlaneSpec) oke.ClusterTypeEnum {
+func getOKEClusterTypeFromSpecType(controlPlaneSpec infrastructurev1beta3.OCIManagedControlPlaneSpec) oke.ClusterTypeEnum {
 	if controlPlaneSpec.ClusterType != "" {
 		switch controlPlaneSpec.ClusterType {
-		case infrastructurev1beta2.BasicClusterType:
+		case infrastructurev1beta3.BasicClusterType:
 			return oke.ClusterTypeBasicCluster
-		case infrastructurev1beta2.EnhancedClusterType:
+		case infrastructurev1beta3.EnhancedClusterType:
 			return oke.ClusterTypeEnhancedCluster
 		default:
 			break
@@ -387,7 +386,7 @@ func (s *ManagedControlPlaneScope) getFreeFormTags() map[string]string {
 func (s *ManagedControlPlaneScope) getServiceLbSubnets() []string {
 	subnets := make([]string, 0)
 	for _, subnet := range ptr.ToSubnetSlice(s.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets) {
-		if subnet.Role == infrastructurev1beta2.ServiceLoadBalancerRole {
+		if subnet.Role == infrastructurev1beta3.ServiceLoadBalancerRole {
 			subnets = append(subnets, ptr.ToString(subnet.ID))
 		}
 	}
@@ -396,7 +395,7 @@ func (s *ManagedControlPlaneScope) getServiceLbSubnets() []string {
 
 func (s *ManagedControlPlaneScope) getControlPlaneEndpointSubnet() *string {
 	for _, subnet := range ptr.ToSubnetSlice(s.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets) {
-		if subnet.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
+		if subnet.Role == infrastructurev1beta3.ControlPlaneEndpointRole {
 			return subnet.ID
 		}
 	}
@@ -406,7 +405,7 @@ func (s *ManagedControlPlaneScope) getControlPlaneEndpointSubnet() *string {
 func (s *ManagedControlPlaneScope) getControlPlaneEndpointNSGList() []string {
 	nsgs := make([]string, 0)
 	for _, nsg := range ptr.ToNSGSlice(s.OCIClusterAccessor.GetNetworkSpec().Vcn.NetworkSecurityGroup.List) {
-		if nsg.Role == infrastructurev1beta2.ControlPlaneEndpointRole {
+		if nsg.Role == infrastructurev1beta3.ControlPlaneEndpointRole {
 			nsgs = append(nsgs, *nsg.ID)
 		}
 	}
@@ -416,7 +415,7 @@ func (s *ManagedControlPlaneScope) getControlPlaneEndpointNSGList() []string {
 // IsControlPlaneEndpointSubnetPublic returns true if the control plane endpoint subnet is public
 func (s *ManagedControlPlaneScope) IsControlPlaneEndpointSubnetPublic() bool {
 	for _, subnet := range ptr.ToSubnetSlice(s.OCIClusterAccessor.GetNetworkSpec().Vcn.Subnets) {
-		if subnet.Role == infrastructurev1beta2.ControlPlaneEndpointRole && subnet.Type == infrastructurev1beta2.Public {
+		if subnet.Role == infrastructurev1beta3.ControlPlaneEndpointRole && subnet.Type == infrastructurev1beta3.Public {
 			return true
 		}
 	}
@@ -431,7 +430,7 @@ func (s *ManagedControlPlaneScope) DeleteOKECluster(ctx context.Context, cluster
 }
 
 func (s *ManagedControlPlaneScope) createCAPIKubeconfigSecret(ctx context.Context, okeCluster *oke.Cluster, clusterRef types.NamespacedName) error {
-	controllerOwnerRef := *metav1.NewControllerRef(s.OCIManagedControlPlane, infrastructurev1beta2.GroupVersion.WithKind("OCIManagedControlPlane"))
+	controllerOwnerRef := *metav1.NewControllerRef(s.OCIManagedControlPlane, infrastructurev1beta3.GroupVersion.WithKind("OCIManagedControlPlane"))
 	req := oke.CreateKubeconfigRequest{ClusterId: okeCluster.Id}
 	response, err := s.ContainerEngineClient.CreateKubeconfig(ctx, req)
 	if err != nil {
@@ -535,14 +534,14 @@ func (s *ManagedControlPlaneScope) ReconcileKubeconfig(ctx context.Context, okeC
 	}
 
 	// Set initialized to true to indicate the kubconfig has been created
-	s.OCIManagedControlPlane.Status.Initialized = true
+	s.OCIManagedControlPlane.Status.Initialization.ControlPlaneInitialized = common.Bool(true)
 
 	return nil
 }
 
 // ReconcileBootstrapSecret reconciles the bootsrap secret which will be used by self managed nodes
 func (s *ManagedControlPlaneScope) ReconcileBootstrapSecret(ctx context.Context, okeCluster *oke.Cluster) error {
-	controllerOwnerRef := *metav1.NewControllerRef(s.OCIManagedControlPlane, infrastructurev1beta2.GroupVersion.WithKind("OCIManagedControlPlane"))
+	controllerOwnerRef := *metav1.NewControllerRef(s.OCIManagedControlPlane, infrastructurev1beta3.GroupVersion.WithKind("OCIManagedControlPlane"))
 	secretName := fmt.Sprintf("%s-self-managed", s.Cluster.Name)
 	secretKey := client.ObjectKey{
 		Namespace: s.Cluster.Namespace,
@@ -718,7 +717,7 @@ func (s *ManagedControlPlaneScope) UpdateControlPlane(ctx context.Context, okeCl
 				updateOptions.OpenIdConnectTokenAuthenticationConfig.GroupsPrefix = oidcConfig.GroupsPrefix
 			}
 			if oidcConfig.RequiredClaims != nil {
-				// Convert []infrastructurev1beta2.KeyValue to []containerengine.KeyValue
+				// Convert []infrastructurev1beta3.KeyValue to []containerengine.KeyValue
 				requiredClaims := make([]oke.KeyValue, len(oidcConfig.RequiredClaims))
 				for i, rc := range oidcConfig.RequiredClaims {
 					requiredClaims[i] = oke.KeyValue(rc)
@@ -767,7 +766,7 @@ func (s *ManagedControlPlaneScope) UpdateControlPlane(ctx context.Context, okeCl
 }
 
 // compareSpecs compares two OCIManagedControlPlaneSpec objects for equality
-func (s *ManagedControlPlaneScope) compareSpecs(spec1, spec2 *infrastructurev1beta2.OCIManagedControlPlaneSpec) bool {
+func (s *ManagedControlPlaneScope) compareSpecs(spec1, spec2 *infrastructurev1beta3.OCIManagedControlPlaneSpec) bool {
 	if spec1 == nil || spec2 == nil {
 		return spec1 == spec2
 	}
@@ -783,61 +782,61 @@ func (s *ManagedControlPlaneScope) compareSpecs(spec1, spec2 *infrastructurev1be
 
 // setControlPlaneSpecDefaults sets the defaults in the spec as returned by OKE API. We need to set defaults here rather than webhook as well as
 // there is a chance user will edit the cluster
-func setControlPlaneSpecDefaults(spec *infrastructurev1beta2.OCIManagedControlPlaneSpec) {
-	spec.ControlPlaneEndpoint = clusterv1beta1.APIEndpoint{}
+func setControlPlaneSpecDefaults(spec *infrastructurev1beta3.OCIManagedControlPlaneSpec) {
+	spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{}
 	if spec.ClusterType == "" {
-		spec.ClusterType = infrastructurev1beta2.BasicClusterType
+		spec.ClusterType = infrastructurev1beta3.BasicClusterType
 	}
 	spec.Addons = nil
 	if spec.ImagePolicyConfig == nil {
-		spec.ImagePolicyConfig = &infrastructurev1beta2.ImagePolicyConfig{
+		spec.ImagePolicyConfig = &infrastructurev1beta3.ImagePolicyConfig{
 			IsPolicyEnabled: common.Bool(false),
-			KeyDetails:      make([]infrastructurev1beta2.KeyDetails, 0),
+			KeyDetails:      make([]infrastructurev1beta3.KeyDetails, 0),
 		}
 	}
 	if spec.ClusterOption.AdmissionControllerOptions == nil {
-		spec.ClusterOption.AdmissionControllerOptions = &infrastructurev1beta2.AdmissionControllerOptions{
+		spec.ClusterOption.AdmissionControllerOptions = &infrastructurev1beta3.AdmissionControllerOptions{
 			IsPodSecurityPolicyEnabled: common.Bool(false),
 		}
 	}
 	if spec.ClusterOption.AddOnOptions == nil {
-		spec.ClusterOption.AddOnOptions = &infrastructurev1beta2.AddOnOptions{
+		spec.ClusterOption.AddOnOptions = &infrastructurev1beta3.AddOnOptions{
 			IsTillerEnabled:              common.Bool(false),
 			IsKubernetesDashboardEnabled: common.Bool(false),
 		}
 	}
 }
 
-func (s *ManagedControlPlaneScope) getSpecFromActual(cluster *oke.Cluster) *infrastructurev1beta2.OCIManagedControlPlaneSpec {
-	spec := infrastructurev1beta2.OCIManagedControlPlaneSpec{
+func (s *ManagedControlPlaneScope) getSpecFromActual(cluster *oke.Cluster) *infrastructurev1beta3.OCIManagedControlPlaneSpec {
+	spec := infrastructurev1beta3.OCIManagedControlPlaneSpec{
 		Version:  cluster.KubernetesVersion,
 		KmsKeyId: cluster.KmsKeyId,
 		ID:       cluster.Id,
 		Addons:   nil,
 	}
 	if cluster.ImagePolicyConfig != nil {
-		keys := make([]infrastructurev1beta2.KeyDetails, 0)
+		keys := make([]infrastructurev1beta3.KeyDetails, 0)
 		for _, key := range cluster.ImagePolicyConfig.KeyDetails {
-			keys = append(keys, infrastructurev1beta2.KeyDetails{
+			keys = append(keys, infrastructurev1beta3.KeyDetails{
 				KmsKeyId: key.KmsKeyId,
 			})
 		}
-		spec.ImagePolicyConfig = &infrastructurev1beta2.ImagePolicyConfig{
+		spec.ImagePolicyConfig = &infrastructurev1beta3.ImagePolicyConfig{
 			IsPolicyEnabled: cluster.ImagePolicyConfig.IsPolicyEnabled,
 			KeyDetails:      keys,
 		}
 	}
 	if len(cluster.ClusterPodNetworkOptions) > 0 {
-		podNetworks := make([]infrastructurev1beta2.ClusterPodNetworkOptions, 0)
+		podNetworks := make([]infrastructurev1beta3.ClusterPodNetworkOptions, 0)
 		for _, cniOption := range cluster.ClusterPodNetworkOptions {
 			_, ok := cniOption.(oke.OciVcnIpNativeClusterPodNetworkOptionDetails)
 			if ok {
-				podNetworks = append(podNetworks, infrastructurev1beta2.ClusterPodNetworkOptions{
-					CniType: infrastructurev1beta2.VCNNativeCNI,
+				podNetworks = append(podNetworks, infrastructurev1beta3.ClusterPodNetworkOptions{
+					CniType: infrastructurev1beta3.VCNNativeCNI,
 				})
 			} else {
-				podNetworks = append(podNetworks, infrastructurev1beta2.ClusterPodNetworkOptions{
-					CniType: infrastructurev1beta2.FlannelCNI,
+				podNetworks = append(podNetworks, infrastructurev1beta3.ClusterPodNetworkOptions{
+					CniType: infrastructurev1beta3.FlannelCNI,
 				})
 			}
 		}
@@ -845,28 +844,28 @@ func (s *ManagedControlPlaneScope) getSpecFromActual(cluster *oke.Cluster) *infr
 	}
 	if cluster.Options != nil {
 		if cluster.Options.AdmissionControllerOptions != nil {
-			spec.ClusterOption.AdmissionControllerOptions = &infrastructurev1beta2.AdmissionControllerOptions{
+			spec.ClusterOption.AdmissionControllerOptions = &infrastructurev1beta3.AdmissionControllerOptions{
 				IsPodSecurityPolicyEnabled: cluster.Options.AdmissionControllerOptions.IsPodSecurityPolicyEnabled,
 			}
 		}
 		if cluster.Options.AddOns != nil {
-			spec.ClusterOption.AddOnOptions = &infrastructurev1beta2.AddOnOptions{
+			spec.ClusterOption.AddOnOptions = &infrastructurev1beta3.AddOnOptions{
 				IsTillerEnabled:              cluster.Options.AddOns.IsTillerEnabled,
 				IsKubernetesDashboardEnabled: cluster.Options.AddOns.IsKubernetesDashboardEnabled,
 			}
 		}
 		if cluster.Options.OpenIdConnectDiscovery != nil {
-			spec.ClusterOption.OpenIdConnectDiscovery = &infrastructurev1beta2.OpenIDConnectDiscovery{
+			spec.ClusterOption.OpenIdConnectDiscovery = &infrastructurev1beta3.OpenIDConnectDiscovery{
 				IsOpenIdConnectDiscoveryEnabled: cluster.Options.OpenIdConnectDiscovery.IsOpenIdConnectDiscoveryEnabled,
 			}
 		}
 		if cluster.Options.OpenIdConnectTokenAuthenticationConfig != nil {
 			oidcConfig := cluster.Options.OpenIdConnectTokenAuthenticationConfig
-			requiredClaims := make([]infrastructurev1beta2.KeyValue, len(oidcConfig.RequiredClaims))
+			requiredClaims := make([]infrastructurev1beta3.KeyValue, len(oidcConfig.RequiredClaims))
 			for i, rc := range oidcConfig.RequiredClaims {
-				requiredClaims[i] = infrastructurev1beta2.KeyValue(rc)
+				requiredClaims[i] = infrastructurev1beta3.KeyValue(rc)
 			}
-			spec.ClusterOption.OpenIdConnectTokenAuthenticationConfig = &infrastructurev1beta2.OpenIDConnectTokenAuthenticationConfig{
+			spec.ClusterOption.OpenIdConnectTokenAuthenticationConfig = &infrastructurev1beta3.OpenIDConnectTokenAuthenticationConfig{
 				IsOpenIdConnectAuthEnabled: *oidcConfig.IsOpenIdConnectAuthEnabled,
 				IssuerUrl:                  oidcConfig.IssuerUrl,
 				ClientId:                   oidcConfig.ClientId,
@@ -883,13 +882,13 @@ func (s *ManagedControlPlaneScope) getSpecFromActual(cluster *oke.Cluster) *infr
 	if cluster.Type != "" {
 		switch cluster.Type {
 		case oke.ClusterTypeBasicCluster:
-			spec.ClusterType = infrastructurev1beta2.BasicClusterType
+			spec.ClusterType = infrastructurev1beta3.BasicClusterType
 			break
 		case oke.ClusterTypeEnhancedCluster:
-			spec.ClusterType = infrastructurev1beta2.EnhancedClusterType
+			spec.ClusterType = infrastructurev1beta3.EnhancedClusterType
 			break
 		default:
-			spec.ClusterType = infrastructurev1beta2.BasicClusterType
+			spec.ClusterType = infrastructurev1beta3.BasicClusterType
 			break
 		}
 	}
@@ -934,7 +933,7 @@ func (s *ManagedControlPlaneScope) ReconcileAddons(ctx context.Context, okeClust
 					return err
 				}
 				// add it to status, details will be reconciled in next loop
-				status := infrastructurev1beta2.AddonStatus{
+				status := infrastructurev1beta3.AddonStatus{
 					LifecycleState: common.String(string(oke.AddonLifecycleStateCreating)),
 				}
 				s.OCIManagedControlPlane.SetAddonStatus(*addon.Name, status)
@@ -964,14 +963,14 @@ func (s *ManagedControlPlaneScope) ReconcileAddons(ctx context.Context, okeClust
 	return nil
 }
 
-func (s *ManagedControlPlaneScope) getStatus(addon oke.Addon) infrastructurev1beta2.AddonStatus {
+func (s *ManagedControlPlaneScope) getStatus(addon oke.Addon) infrastructurev1beta3.AddonStatus {
 	// update status of the addon
-	status := infrastructurev1beta2.AddonStatus{
+	status := infrastructurev1beta3.AddonStatus{
 		LifecycleState:            common.String(string(addon.LifecycleState)),
 		CurrentlyInstalledVersion: addon.CurrentInstalledVersion,
 	}
 	if addon.AddonError != nil {
-		status.AddonError = &infrastructurev1beta2.AddonError{
+		status.AddonError = &infrastructurev1beta3.AddonError{
 			Status:  addon.AddonError.Status,
 			Code:    addon.AddonError.Code,
 			Message: addon.AddonError.Message,
@@ -980,7 +979,7 @@ func (s *ManagedControlPlaneScope) getStatus(addon oke.Addon) infrastructurev1be
 	return status
 }
 
-func (s *ManagedControlPlaneScope) handleExistingAddon(ctx context.Context, okeCluster *oke.Cluster, addon oke.Addon, addonInSpec infrastructurev1beta2.Addon) error {
+func (s *ManagedControlPlaneScope) handleExistingAddon(ctx context.Context, okeCluster *oke.Cluster, addon oke.Addon, addonInSpec infrastructurev1beta3.Addon) error {
 	// if the addon can be updated do so
 	// if the addon is already in updating state, or in failed state, do not update
 	s.Info(fmt.Sprintf("Reconciling addon %s with lifecycle state %s", *addon.Name, string(addon.LifecycleState)))
@@ -1048,7 +1047,7 @@ func (s *ManagedControlPlaneScope) handleDeletedAddon(ctx context.Context, okeCl
 	return nil
 }
 
-func getAddonConfigurations(configurations []infrastructurev1beta2.AddonConfiguration) []oke.AddonConfiguration {
+func getAddonConfigurations(configurations []infrastructurev1beta3.AddonConfiguration) []oke.AddonConfiguration {
 	if len(configurations) == 0 {
 		return nil
 	}
@@ -1062,13 +1061,13 @@ func getAddonConfigurations(configurations []infrastructurev1beta2.AddonConfigur
 	return config
 }
 
-func getActualAddonConfigurations(addonConfigurations []oke.AddonConfiguration) []infrastructurev1beta2.AddonConfiguration {
+func getActualAddonConfigurations(addonConfigurations []oke.AddonConfiguration) []infrastructurev1beta3.AddonConfiguration {
 	if len(addonConfigurations) == 0 {
 		return nil
 	}
-	config := make([]infrastructurev1beta2.AddonConfiguration, len(addonConfigurations))
+	config := make([]infrastructurev1beta3.AddonConfiguration, len(addonConfigurations))
 	for i, c := range addonConfigurations {
-		config[i] = infrastructurev1beta2.AddonConfiguration{
+		config[i] = infrastructurev1beta3.AddonConfiguration{
 			Key:   c.Key,
 			Value: c.Value,
 		}
@@ -1076,7 +1075,7 @@ func getActualAddonConfigurations(addonConfigurations []oke.AddonConfiguration) 
 	return config
 }
 
-func getAddon(addons []infrastructurev1beta2.Addon, name string) *infrastructurev1beta2.Addon {
+func getAddon(addons []infrastructurev1beta3.Addon, name string) *infrastructurev1beta3.Addon {
 	for i, addon := range addons {
 		if ptr.StringEquals(addon.Name, name) {
 			return &addons[i]
