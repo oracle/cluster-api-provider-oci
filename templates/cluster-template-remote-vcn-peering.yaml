@@ -1,4 +1,4 @@
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: Cluster
 metadata:
   labels:
@@ -15,17 +15,15 @@ spec:
       cidrBlocks:
         - ${SERVICE_CIDR:="10.128.0.0/12"}
   infrastructureRef:
-    apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+    apiGroup: infrastructure.cluster.x-k8s.io
     kind: OCICluster
     name: "${CLUSTER_NAME}"
-    namespace: "${NAMESPACE}"
   controlPlaneRef:
-    apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+    apiGroup: controlplane.cluster.x-k8s.io
     kind: KubeadmControlPlane
     name: "${CLUSTER_NAME}-control-plane"
-    namespace: "${NAMESPACE}"
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 kind: OCICluster
 metadata:
   namespace: "${NAMESPACE}"
@@ -204,7 +202,6 @@ spec:
                   destinationType: CIDR_BLOCK
                   isStateless: false
                   protocol: all
-                id: C2F829
             ingressRules:
               - ingressRule:
                   description: Inbound SSH traffic to worker node
@@ -351,7 +348,7 @@ spec:
           type: private
 ---
 kind: KubeadmControlPlane
-apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+apiVersion: controlplane.cluster.x-k8s.io/v1beta2
 metadata:
   name: "${CLUSTER_NAME}-control-plane"
   namespace: "${NAMESPACE}"
@@ -359,36 +356,34 @@ spec:
   version: "${KUBERNETES_VERSION}"
   replicas: ${CONTROL_PLANE_MACHINE_COUNT}
   machineTemplate:
-    infrastructureRef:
-      kind: OCIMachineTemplate
-      apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
-      name: "${CLUSTER_NAME}-control-plane"
-      namespace: "${NAMESPACE}"
+    spec:
+      infrastructureRef:
+        kind: OCIMachineTemplate
+        apiGroup: infrastructure.cluster.x-k8s.io
+        name: "${CLUSTER_NAME}-control-plane"
   kubeadmConfigSpec:
     clusterConfiguration:
-      kubernetesVersion: ${KUBERNETES_VERSION}
       apiServer:
         certSANs: [localhost, 127.0.0.1]
-      dns: {}
-      etcd: {}
-      networking: {}
-      scheduler: {}
     initConfiguration:
       nodeRegistration:
         criSocket: /var/run/containerd/containerd.sock
         kubeletExtraArgs:
-          cloud-provider: external
-          provider-id: oci://{{ ds["id"] }}
+          - name: cloud-provider
+            value: external
+          - name: provider-id
+            value: 'oci://{{ ds["id"] }}'
     joinConfiguration:
-      discovery: {}
       nodeRegistration:
         criSocket: /var/run/containerd/containerd.sock
         kubeletExtraArgs:
-          cloud-provider: external
-          provider-id: oci://{{ ds["id"] }}
+          - name: cloud-provider
+            value: external
+          - name: provider-id
+            value: 'oci://{{ ds["id"] }}'
 ---
 kind: OCIMachineTemplate
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 metadata:
   namespace: "${NAMESPACE}"
   name: "${CLUSTER_NAME}-control-plane"
@@ -407,7 +402,7 @@ spec:
       instanceOptions:
         areLegacyImdsEndpointsDisabled: true
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta3
 kind: OCIMachineTemplate
 metadata:
   namespace: "${NAMESPACE}"
@@ -427,7 +422,7 @@ spec:
       instanceOptions:
         areLegacyImdsEndpointsDisabled: true
 ---
-apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta2
 kind: KubeadmConfigTemplate
 metadata:
   namespace: "${NAMESPACE}"
@@ -438,10 +433,12 @@ spec:
       joinConfiguration:
         nodeRegistration:
           kubeletExtraArgs:
-            cloud-provider: external
-            provider-id: oci://{{ ds["id"] }}
+            - name: cloud-provider
+              value: external
+            - name: provider-id
+              value: 'oci://{{ ds["id"] }}'
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachineDeployment
 metadata:
   namespace: "${NAMESPACE}"
@@ -450,7 +447,7 @@ spec:
   clusterName: "${CLUSTER_NAME}"
   replicas: ${NODE_MACHINE_COUNT}
   selector:
-    matchLabels:
+    matchLabels: {}
   template:
     spec:
       clusterName: "${CLUSTER_NAME}"
@@ -458,9 +455,9 @@ spec:
       bootstrap:
         configRef:
           name: "${CLUSTER_NAME}-md-0"
-          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+          apiGroup: bootstrap.cluster.x-k8s.io
           kind: KubeadmConfigTemplate
       infrastructureRef:
         name: "${CLUSTER_NAME}-md-0"
-        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        apiGroup: infrastructure.cluster.x-k8s.io
         kind: OCIMachineTemplate
