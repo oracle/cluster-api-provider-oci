@@ -283,11 +283,14 @@ func (s *ClusterScope) getNetworkLoadbalancerIp(nlb networkloadbalancer.NetworkL
 	}
 	if ptr.ToBool(nlb.IsPrivate) {
 		nlbIp = nlb.IpAddresses[0].IpAddress
-	} else {
-		for _, ip := range nlb.IpAddresses {
-			if *ip.IsPublic {
-				nlbIp = ip.IpAddress
-			}
+		if nlbIp == nil {
+			return nil, errors.New("nlb does not have valid private ip address")
+		}
+		return nlbIp, nil
+	}
+	for _, ip := range nlb.IpAddresses {
+		if ptr.ToBool(ip.IsPublic) {
+			nlbIp = ip.IpAddress
 		}
 	}
 	if nlbIp == nil {
