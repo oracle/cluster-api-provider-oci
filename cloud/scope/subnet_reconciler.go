@@ -19,9 +19,9 @@ package scope
 import (
 	"context"
 	"fmt"
-	"net"
+	"net/netip"
 	"slices"
-	"strings"
+	"strconv"
 
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
@@ -104,7 +104,6 @@ func (s *ClusterScope) ReconcileSubnet(ctx context.Context) error {
 }
 
 func (s *ClusterScope) CreateSubnet(ctx context.Context, spec infrastructurev1beta2.Subnet) (*string, error) {
-	var err error
 	var routeTable *string
 	var isPrivate bool
 	if spec.Type == infrastructurev1beta2.Private {
@@ -114,35 +113,19 @@ func (s *ClusterScope) CreateSubnet(ctx context.Context, spec infrastructurev1be
 		routeTable = s.getRouteTableId(infrastructurev1beta2.Public)
 	}
 
-	resp, err := s.VCNClient.GetVcn(ctx, core.GetVcnRequest{VcnId: s.getVcnId()})
-
-	var ipv6subnetCIDR_Ptr *string
-
-	// Constructing IPv6 Subnet CIDR
-	if len(resp.Vcn.Ipv6CidrBlocks) > 0 {
-
-		// VCNs can have multiple IPv6 CIDR Blocks, and the CIDR block with IPv6 GUA Allocated by Oracle is the first (index 0) in the list
-		vcnCIDR := resp.Vcn.Ipv6CidrBlocks[0]
-
-		// Split CIDR block into hextets
-		ip, _, err := net.ParseCIDR(vcnCIDR)
+	var ipv6CIDR *string
+	if spec.Ipv6CidrBlockHextet != nil {
+		resp, err := s.VCNClient.GetVcn(ctx, core.GetVcnRequest{VcnId: s.getVcnId()})
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to parse IPv6 CIDR block")
+			return nil, errors.Wrap(err, "failed to get VCN for IPv6 subnet creation")
 		}
-		hextets := strings.Split(ip.String(), ":")
-
-		// Modify the 4th hextet (index 3) of vcn CIDR to reflect the subnet CIDR with Ipv6CidrBlockHextet value in it
-		if len(hextets) >= 4 {
-			originalHextet := hextets[3]
-			if len(originalHextet) < 4 {
-				originalHextet = fmt.Sprintf("%04s", originalHextet)
+		if len(resp.Vcn.Ipv6CidrBlocks) > 0 {
+			// OCI lists the Oracle-assigned IPv6 prefix first.
+			cidr, err := ipv6SubnetCIDR(resp.Vcn.Ipv6CidrBlocks[0], *spec.Ipv6CidrBlockHextet)
+			if err != nil {
+				return nil, err
 			}
-			newHextet := originalHextet[:2] + *spec.Ipv6CidrBlockHextet
-			hextets[3] = newHextet
-
-			// Reconstruct the IPv6 address with a /64 CIDR for the subnet
-			ipv6subnetCIDR := strings.Join(hextets, ":") + "/64"
-			ipv6subnetCIDR_Ptr = &ipv6subnetCIDR
+			ipv6CIDR = common.String(cidr)
 		}
 	}
 
@@ -157,7 +140,7 @@ func (s *ClusterScope) CreateSubnet(ctx context.Context, spec infrastructurev1be
 		FreeformTags:            s.GetFreeFormTags(),
 		DefinedTags:             s.GetDefinedTags(),
 		DnsLabel:                spec.DnsLabel,
-		Ipv6CidrBlock:           ipv6subnetCIDR_Ptr,
+		Ipv6CidrBlock:           ipv6CIDR,
 	}
 
 	if spec.SecurityList != nil {
@@ -172,6 +155,24 @@ func (s *ClusterScope) CreateSubnet(ctx context.Context, spec infrastructurev1be
 	}
 	s.Logger.Info("Successfully created the subnet", "subnet", *subnetResponse.Subnet.Id)
 	return subnetResponse.Subnet.Id, nil
+}
+
+func ipv6SubnetCIDR(vcnCIDR, hextet string) (string, error) {
+	prefix, err := netip.ParsePrefix(vcnCIDR)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to parse IPv6 CIDR block")
+	}
+	if !prefix.Addr().Is6() || prefix.Bits() != 56 {
+		return "", fmt.Errorf("expected an IPv6 /56 VCN prefix, got %q", vcnCIDR)
+	}
+	subnetID, err := strconv.ParseUint(hextet, 16, 8)
+	if err != nil {
+		return "", errors.Wrapf(err, "invalid IPv6 subnet hextet %q", hextet)
+	}
+	// A /64 subnet of a /56 VCN keeps the first seven bytes and sets the eighth.
+	addr := prefix.Masked().Addr().As16()
+	addr[7] = byte(subnetID)
+	return netip.PrefixFrom(netip.AddrFrom16(addr), 64).String(), nil
 }
 
 func (s *ClusterScope) UpdateSubnet(ctx context.Context, spec infrastructurev1beta2.Subnet) error {
