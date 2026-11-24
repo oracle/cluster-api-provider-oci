@@ -673,7 +673,11 @@ func (m *MachineScope) GetMachineByDisplayName(ctx context.Context, name string)
 // PatchObject persists the cluster configuration and status.
 func (m *MachineScope) PatchObject(ctx context.Context) error {
 	v1beta1conditions.SetSummary(m.OCIMachine)
-	return m.patchHelper.Patch(ctx, m.OCIMachine)
+	return m.patchHelper.Patch(ctx, m.OCIMachine, v1beta1patch.WithOwnedConditions{
+		Conditions: []clusterv1beta1.ConditionType{clusterv1beta1.ReadyCondition, infrastructurev1beta2.InstanceReadyCondition},
+	}, v1beta1patch.WithOwnedV1Beta2Conditions{
+		Conditions: []string{clusterv1.ReadyCondition, clusterv1.DeletingCondition, string(infrastructurev1beta2.InstanceReadyCondition)},
+	})
 }
 
 // Close closes the current scope persisting the cluster configuration and status.

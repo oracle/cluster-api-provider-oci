@@ -238,8 +238,7 @@ func createManagedControlPlaneFixture(t *testing.T, name, resourceIdentifier str
 	g.Expect(testEnvironment.Create(testContext, fixture.managedCluster)).To(Succeed())
 	storedManagedCluster := &infrastructurev1beta2.OCIManagedCluster{}
 	g.Expect(testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(fixture.managedCluster), storedManagedCluster)).To(Succeed())
-	storedManagedCluster.Status.Ready = true
-	g.Expect(testEnvironment.Status().Update(testContext, storedManagedCluster)).To(Succeed())
+	setLegacyReady(t, storedManagedCluster, true)
 	fixture.controlPlane = &infrastructurev1beta2.OCIManagedControlPlane{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name, Namespace: fixture.namespace.Name,

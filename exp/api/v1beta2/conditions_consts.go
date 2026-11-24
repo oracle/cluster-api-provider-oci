@@ -19,6 +19,17 @@ package v1beta2
 import clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 
 const (
+	// MachinePoolMachinesReadyCondition reports whether the member records were reconciled successfully.
+	MachinePoolMachinesReadyCondition = "MachinePoolMachinesReady"
+	// WaitingForControlPlaneReason indicates that the managed control plane is not ready.
+	WaitingForControlPlaneReason = "WaitingForControlPlane"
+	// NodePoolUpdatingReason indicates that a managed or virtual node pool is updating.
+	NodePoolUpdatingReason = "Updating"
+	// FailedToCreateNewMachinesReason indicates that member records could not be created or updated.
+	FailedToCreateNewMachinesReason = "FailedToCreateNewMachines"
+	// FailedToDeleteOrphanedMachinesReason indicates that orphaned member records could not be deleted.
+	FailedToDeleteOrphanedMachinesReason = "FailedToDeleteOrphanedMachines"
+
 	// InstancePoolReadyCondition reports on current status of the Instance Pool. Ready indicates the group is provisioned.
 	InstancePoolReadyCondition clusterv1beta1.ConditionType = "InstancePoolReady"
 	// InstancePoolNotFoundReason used when the Instance Pool couldn't be retrieved.

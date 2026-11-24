@@ -54,8 +54,7 @@ func TestOCIMachinePoolLifecycle(t *testing.T) {
 	g.Expect(testEnvironment.Create(testContext, ociCluster)).To(Succeed())
 	storedOCICluster := &infrastructurev1beta2.OCICluster{}
 	g.Expect(testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(ociCluster), storedOCICluster)).To(Succeed())
-	storedOCICluster.Status.Ready = true
-	g.Expect(testEnvironment.Status().Update(testContext, storedOCICluster)).To(Succeed())
+	setLegacyReady(t, storedOCICluster, true)
 
 	bootstrapSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: "instance-pool-bootstrap", Namespace: namespace.Name},
@@ -305,6 +304,12 @@ func waitForInstanceMachinePool(t *testing.T, key client.ObjectKey, replicas, ma
 		g.Expect(stored.Annotations[scope.InstanceConfigurationHashAnnotation]).NotTo(BeEmpty())
 		g.Expect(stored.Annotations[scope.BootstrapDataHashAnnotation]).NotTo(BeEmpty())
 		g.Expect(stored.Status.Ready).To(BeTrue())
+		// Core CAPI/GC are absent here, so orphan cleanup can remain blocked after scale-down.
+		if machineObjects > replicas {
+			expectModernHealth(g, stored, "Ready", metav1.ConditionFalse)
+		} else {
+			expectModernHealth(g, stored, "Ready", metav1.ConditionTrue)
+		}
 		g.Expect(stored.Status.Replicas).To(Equal(int32(statusReplicas)))
 		g.Expect(stored.Status.InfrastructureMachineKind).To(Equal("OCIMachinePoolMachine"))
 		g.Expect(v1beta1conditions.IsTrue(stored, infrav2exp.InstancePoolReadyCondition)).To(BeTrue())
@@ -318,6 +323,11 @@ func waitForInstanceMachinePool(t *testing.T, key client.ObjectKey, replicas, ma
 		g.Expect(machines.Items).To(HaveLen(machineObjects))
 		for i := range machines.Items {
 			g.Expect(machines.Items[i].Status.Ready).To(BeTrue())
+			if machines.Items[i].DeletionTimestamp.IsZero() {
+				expectModernHealth(g, &machines.Items[i], "Ready", metav1.ConditionTrue)
+			} else {
+				expectModernHealth(g, &machines.Items[i], "Ready", metav1.ConditionFalse)
+			}
 			g.Expect(machines.Items[i].Spec.MachineType).To(Equal(infrav2exp.SelfManaged))
 		}
 	}).WithTimeout(20 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())

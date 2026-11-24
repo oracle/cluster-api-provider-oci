@@ -533,11 +533,11 @@ func TestCreateManagedMachinesIfNotExists(t *testing.T) {
 				},
 			},
 			setup: func(t *test) {
-				t.client = interceptor.NewClient(fake.NewClientBuilder().WithScheme(testScheme()).WithObjects().Build(), interceptor.Funcs{
+				t.client = interceptor.NewClient(fake.NewClientBuilder().WithStatusSubresource(&infrav2exp.OCIMachinePoolMachine{}).WithScheme(testScheme()).WithObjects().Build(), interceptor.Funcs{
 					Create: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
 						m := obj.(*infrav2exp.OCIMachinePoolMachine)
 						t.createPoolMachines = append(t.createPoolMachines, *m)
-						return nil
+						return client.Create(ctx, obj, opts...)
 					},
 				})
 			},
@@ -582,7 +582,7 @@ func TestCreateManagedMachinesIfNotExists(t *testing.T) {
 				},
 			},
 			setup: func(t *test) {
-				t.client = interceptor.NewClient(fake.NewClientBuilder().WithScheme(testScheme()).WithObjects(&infrav2exp.OCIMachinePoolMachine{
+				t.client = interceptor.NewClient(fake.NewClientBuilder().WithStatusSubresource(&infrav2exp.OCIMachinePoolMachine{}).WithScheme(testScheme()).WithObjects(&infrav2exp.OCIMachinePoolMachine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "default",
@@ -601,7 +601,7 @@ func TestCreateManagedMachinesIfNotExists(t *testing.T) {
 					Create: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
 						m := obj.(*infrav2exp.OCIMachinePoolMachine)
 						t.createPoolMachines = append(t.createPoolMachines, *m)
-						return nil
+						return client.Create(ctx, obj, opts...)
 					},
 				})
 			},
@@ -659,12 +659,15 @@ func TestCreateManagedMachinesIfNotExists(t *testing.T) {
 					SubResourcePatch: func(ctx context.Context, client client.Client, subResourceName string, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption) error {
 						m := obj.(*infrav2exp.OCIMachinePoolMachine)
 						t.createPoolMachines = append(t.createPoolMachines, *m)
-						return nil
+						return client.SubResource(subResourceName).Patch(ctx, obj, patch, opts...)
 					},
 				})
 			},
 			validate: func(g *WithT, t *test) {
-				g.Expect(len(t.createPoolMachines)).To(Equal(1))
+				stored := &infrav2exp.OCIMachinePoolMachine{}
+				g.Expect(t.client.Get(context.Background(), client.ObjectKey{Namespace: "default", Name: "test"}, stored)).To(Succeed())
+				g.Expect(stored.Status.Ready).To(BeTrue())
+				g.Expect(stored.Status.V1Beta2).NotTo(BeNil())
 			},
 		},
 	}
@@ -673,8 +676,10 @@ func TestCreateManagedMachinesIfNotExists(t *testing.T) {
 			g := NewWithT(t)
 			tt.setup(&tt)
 			params := MachineParams{
-				tt.client, tt.machinePool,
-				tt.cluster, tt.infraMachinePoolName, tt.infraMachinePoolKind, tt.infraMachinePoolUid, tt.namespace, tt.specMachines, &log,
+				Client: tt.client, MachinePool: tt.machinePool, Cluster: tt.cluster,
+				InfraMachinePoolName: tt.infraMachinePoolName, InfraMachinePoolKind: tt.infraMachinePoolKind,
+				InfraMachinePoolUID: tt.infraMachinePoolUid, Namespace: tt.namespace,
+				SpecInfraMachines: tt.specMachines, Logger: &log,
 			}
 			err := CreateMachinePoolMachinesIfNotExists(context.Background(), params)
 			if tt.errorExpected {
@@ -879,8 +884,10 @@ func TestDeleteManagedMachinesIfNotExists(t *testing.T) {
 			g := NewWithT(t)
 			tt.setup(&tt)
 			params := MachineParams{
-				tt.client, tt.machinePool,
-				tt.cluster, tt.infraMachinePoolName, tt.infraMachinePoolKind, tt.infraMachinePoolUid, tt.namespace, tt.specMachines, &log,
+				Client: tt.client, MachinePool: tt.machinePool, Cluster: tt.cluster,
+				InfraMachinePoolName: tt.infraMachinePoolName, InfraMachinePoolKind: tt.infraMachinePoolKind,
+				InfraMachinePoolUID: tt.infraMachinePoolUid, Namespace: tt.namespace,
+				SpecInfraMachines: tt.specMachines, Logger: &log,
 			}
 			err := DeleteOrphanedMachinePoolMachines(context.Background(), params)
 			if tt.errorExpected {

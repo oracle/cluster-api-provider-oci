@@ -58,14 +58,12 @@ func createManagedMachinePoolFixture(t *testing.T, externallyManaged bool, repli
 	g.Expect(testEnvironment.Create(testContext, fixture.managedCluster)).To(Succeed())
 	storedManagedCluster := &infrastructurev1beta2.OCIManagedCluster{}
 	g.Expect(testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(fixture.managedCluster), storedManagedCluster)).To(Succeed())
-	storedManagedCluster.Status.Ready = true
-	g.Expect(testEnvironment.Status().Update(testContext, storedManagedCluster)).To(Succeed())
+	setLegacyReady(t, storedManagedCluster, true)
 	fixture.controlPlane = managedMachinePoolControlPlane(fixture.cluster, fixture.version)
 	g.Expect(testEnvironment.Create(testContext, fixture.controlPlane)).To(Succeed())
 	storedControlPlane := &infrastructurev1beta2.OCIManagedControlPlane{}
 	g.Expect(testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(fixture.controlPlane), storedControlPlane)).To(Succeed())
-	storedControlPlane.Status.Ready = true
-	g.Expect(testEnvironment.Status().Update(testContext, storedControlPlane)).To(Succeed())
+	setLegacyReady(t, storedControlPlane, true)
 	fixture.machinePool = managedCAPIMachinePool(fixture.cluster, fixture.version, replicas)
 	if externallyManaged {
 		fixture.machinePool.Annotations = map[string]string{clusterv1beta1.ReplicasManagedByAnnotation: "integration-test"}
@@ -113,14 +111,12 @@ func createVirtualMachinePoolFixture(t *testing.T, externallyManaged bool, repli
 	g.Expect(testEnvironment.Create(testContext, fixture.managedCluster)).To(Succeed())
 	storedManagedCluster := &infrastructurev1beta2.OCIManagedCluster{}
 	g.Expect(testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(fixture.managedCluster), storedManagedCluster)).To(Succeed())
-	storedManagedCluster.Status.Ready = true
-	g.Expect(testEnvironment.Status().Update(testContext, storedManagedCluster)).To(Succeed())
+	setLegacyReady(t, storedManagedCluster, true)
 	fixture.controlPlane = managedMachinePoolControlPlane(fixture.cluster, fixture.version)
 	g.Expect(testEnvironment.Create(testContext, fixture.controlPlane)).To(Succeed())
 	storedControlPlane := &infrastructurev1beta2.OCIManagedControlPlane{}
 	g.Expect(testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(fixture.controlPlane), storedControlPlane)).To(Succeed())
-	storedControlPlane.Status.Ready = true
-	g.Expect(testEnvironment.Status().Update(testContext, storedControlPlane)).To(Succeed())
+	setLegacyReady(t, storedControlPlane, true)
 	fixture.machinePool = virtualCAPIMachinePool(fixture.cluster, fixture.version, replicas)
 	if externallyManaged {
 		fixture.machinePool.Annotations = map[string]string{clusterv1beta1.ReplicasManagedByAnnotation: "integration-test"}

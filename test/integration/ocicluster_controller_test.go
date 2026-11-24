@@ -114,6 +114,7 @@ func TestOCIClusterLifecycle(t *testing.T) {
 		g.Expect(testEnvironment.GetAPIReader().Get(testContext, ociClusterKey, stored)).To(Succeed())
 		g.Expect(controllerutil.ContainsFinalizer(stored, infrastructurev1beta2.ClusterFinalizer)).To(BeTrue())
 		g.Expect(stored.Status.Ready).To(BeTrue())
+		expectModernHealth(g, stored, "Ready", metav1.ConditionTrue)
 		g.Expect(v1beta1conditions.IsTrue(stored, infrastructurev1beta2.ClusterReadyCondition)).To(BeTrue())
 		g.Expect(stored.Spec.ControlPlaneEndpoint.Host).To(Equal("203.0.113.10"))
 		g.Expect(stored.Spec.ControlPlaneEndpoint.Port).To(Equal(int32(6443)))

@@ -82,7 +82,7 @@ func TestOCIManagedClusterReconciler_Reconcile(t *testing.T) {
 			defer teardown(t, g)
 			setup(t, g)
 
-			client := fake.NewClientBuilder().WithObjects(tc.objects...).Build()
+			client := fake.NewClientBuilder().WithObjects(tc.objects...).WithStatusSubresource(tc.objects...).Build()
 			r = OCIManagedClusterReconciler{
 				Client:   client,
 				Scheme:   runtime.NewScheme(),

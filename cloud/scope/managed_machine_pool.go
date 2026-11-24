@@ -38,6 +38,7 @@ import (
 	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
 	"github.com/pkg/errors"
 	"k8s.io/klog/v2/klogr"
+	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	v1beta1patch "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/patch"
@@ -109,7 +110,11 @@ func NewManagedMachinePoolScope(params ManagedMachinePoolScopeParams) (*ManagedM
 
 // PatchObject persists the cluster configuration and status.
 func (m *ManagedMachinePoolScope) PatchObject(ctx context.Context) error {
-	return m.patchHelper.Patch(ctx, m.OCIManagedMachinePool)
+	return m.patchHelper.Patch(ctx, m.OCIManagedMachinePool, v1beta1patch.WithOwnedConditions{
+		Conditions: []clusterv1beta1.ConditionType{clusterv1beta1.ReadyCondition, infrav2exp.NodePoolReadyCondition},
+	}, v1beta1patch.WithOwnedV1Beta2Conditions{
+		Conditions: []string{clusterv1.ReadyCondition, clusterv1.DeletingCondition, string(infrav2exp.NodePoolReadyCondition), infrav2exp.MachinePoolMachinesReadyCondition},
+	})
 }
 
 // Close closes the current scope persisting the cluster configuration and status.

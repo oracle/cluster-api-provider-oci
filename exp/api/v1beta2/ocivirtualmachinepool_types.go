@@ -120,6 +120,19 @@ type OCIVirtualMachinePoolStatus struct {
 	// InfrastructureMachineKind is the kind of the infrastructure resources behind MachinePool Machines.
 	// +optional
 	InfrastructureMachineKind string `json:"infrastructureMachineKind,omitempty"`
+
+	// V1Beta2 groups the fields used for the CAPI v1beta2 contract transition.
+	// +optional
+	V1Beta2 *OCIVirtualMachinePoolV1Beta2Status `json:"v1beta2,omitempty"`
+}
+
+// OCIVirtualMachinePoolV1Beta2Status groups the standard conditions used during the CAPI v1beta2 contract transition.
+type OCIVirtualMachinePoolV1Beta2Status struct {
+	// Conditions represents the observations of the resource's current state.
+	// +optional
+	// +listType=map
+	// +listMapKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -156,4 +169,20 @@ func (m *OCIVirtualMachinePool) SetConditions(conditions clusterv1beta1.Conditio
 
 func init() {
 	SchemeBuilder.Register(&OCIVirtualMachinePool{}, &OCIVirtualMachinePoolList{})
+}
+
+// GetV1Beta2Conditions returns the standard conditions for this object.
+func (c *OCIVirtualMachinePool) GetV1Beta2Conditions() []metav1.Condition {
+	if c.Status.V1Beta2 == nil {
+		return nil
+	}
+	return c.Status.V1Beta2.Conditions
+}
+
+// SetV1Beta2Conditions sets the standard conditions for this object.
+func (c *OCIVirtualMachinePool) SetV1Beta2Conditions(conditions []metav1.Condition) {
+	if c.Status.V1Beta2 == nil {
+		c.Status.V1Beta2 = &OCIVirtualMachinePoolV1Beta2Status{}
+	}
+	c.Status.V1Beta2.Conditions = conditions
 }

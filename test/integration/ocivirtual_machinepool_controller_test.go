@@ -54,16 +54,14 @@ func TestOCIVirtualMachinePoolLifecycle(t *testing.T) {
 	g.Expect(testEnvironment.Create(testContext, managedCluster)).To(Succeed())
 	storedManagedCluster := &infrastructurev1beta2.OCIManagedCluster{}
 	g.Expect(testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(managedCluster), storedManagedCluster)).To(Succeed())
-	storedManagedCluster.Status.Ready = true
-	g.Expect(testEnvironment.Status().Update(testContext, storedManagedCluster)).To(Succeed())
+	setLegacyReady(t, storedManagedCluster, true)
 
 	version := "v1.34.1"
 	controlPlane := managedMachinePoolControlPlane(cluster, version)
 	g.Expect(testEnvironment.Create(testContext, controlPlane)).To(Succeed())
 	storedControlPlane := &infrastructurev1beta2.OCIManagedControlPlane{}
 	g.Expect(testEnvironment.GetAPIReader().Get(testContext, client.ObjectKeyFromObject(controlPlane), storedControlPlane)).To(Succeed())
-	storedControlPlane.Status.Ready = true
-	g.Expect(testEnvironment.Status().Update(testContext, storedControlPlane)).To(Succeed())
+	setLegacyReady(t, storedControlPlane, true)
 
 	machinePool := virtualCAPIMachinePool(cluster, version, 2)
 	g.Expect(testEnvironment.Create(testContext, machinePool)).To(Succeed())
@@ -220,6 +218,12 @@ func waitForVirtualMachinePool(t *testing.T, key client.ObjectKey, replicas, mac
 		fakeSize, listCalls, lastListSize := fakeOCI.oke.virtualNodePoolDebug()
 		g.Expect(stored.Spec.ProviderIDList).To(HaveLen(replicas), "fake size %d after %d virtual-node lists; last list returned %d", fakeSize, listCalls, lastListSize)
 		g.Expect(stored.Status.Ready).To(BeTrue())
+		// Core CAPI/GC are absent here, so orphan cleanup can remain blocked after scale-down.
+		if machineObjects > replicas {
+			expectModernHealth(g, stored, "Ready", metav1.ConditionFalse)
+		} else {
+			expectModernHealth(g, stored, "Ready", metav1.ConditionTrue)
+		}
 		g.Expect(stored.Status.Replicas).To(Equal(int32(replicas)))
 		g.Expect(stored.Status.InfrastructureMachineKind).To(Equal("OCIMachinePoolMachine"))
 		g.Expect(v1beta1conditions.IsTrue(stored, infrav2exp.VirtualNodePoolReadyCondition)).To(BeTrue())
@@ -231,6 +235,11 @@ func waitForVirtualMachinePool(t *testing.T, key client.ObjectKey, replicas, mac
 		g.Expect(machines.Items).To(HaveLen(machineObjects))
 		for i := range machines.Items {
 			g.Expect(machines.Items[i].Status.Ready).To(BeTrue())
+			if machines.Items[i].DeletionTimestamp.IsZero() {
+				expectModernHealth(g, &machines.Items[i], "Ready", metav1.ConditionTrue)
+			} else {
+				expectModernHealth(g, &machines.Items[i], "Ready", metav1.ConditionFalse)
+			}
 		}
 	}).WithTimeout(20 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
 }

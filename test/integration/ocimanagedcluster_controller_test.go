@@ -121,6 +121,7 @@ func TestOCIManagedClusterControlPlaneLifecycle(t *testing.T) {
 		g.Expect(testEnvironment.GetAPIReader().Get(testContext, managedClusterKey, storedManagedCluster)).To(Succeed())
 		g.Expect(controllerutil.ContainsFinalizer(storedManagedCluster, infrastructurev1beta2.ManagedClusterFinalizer)).To(BeTrue())
 		g.Expect(storedManagedCluster.Status.Ready).To(BeTrue())
+		expectModernHealth(g, storedManagedCluster, "Ready", metav1.ConditionTrue)
 		g.Expect(v1beta1conditions.IsTrue(storedManagedCluster, infrastructurev1beta2.ClusterReadyCondition)).To(BeTrue())
 		g.Expect(storedManagedCluster.Spec.ControlPlaneEndpoint.Host).To(Equal("198.51.100.10"))
 		g.Expect(storedManagedCluster.Spec.ControlPlaneEndpoint.Port).To(Equal(int32(6443)))
@@ -132,6 +133,7 @@ func TestOCIManagedClusterControlPlaneLifecycle(t *testing.T) {
 		g.Expect(storedControlPlane.Spec.ControlPlaneEndpoint.Host).To(Equal("198.51.100.10"))
 		g.Expect(storedControlPlane.Status.Ready).To(BeTrue())
 		g.Expect(storedControlPlane.Status.Initialized).To(BeTrue())
+		expectModernHealth(g, storedControlPlane, "Available", metav1.ConditionTrue)
 		g.Expect(storedControlPlane.Status.Version).To(Equal(common.String(version)))
 		g.Expect(v1beta1conditions.IsTrue(storedControlPlane, infrastructurev1beta2.ControlPlaneReadyCondition)).To(BeTrue())
 

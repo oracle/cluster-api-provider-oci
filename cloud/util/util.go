@@ -42,6 +42,8 @@ import (
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util"
+	"sigs.k8s.io/cluster-api/util/annotations"
+	v1beta2conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions/v1beta2"
 	v1beta1patch "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/patch"
 	"sigs.k8s.io/cluster-api/util/labels/format"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -342,6 +344,9 @@ func CreateClientProviderFromClusterIdentity(ctx context.Context, client client.
 // CreateMachinePoolMachinesIfNotExists creates the machine pool machines if not exists. This method lists the existing
 // machines in the clusters and does a diff, and creates any missing machines based on the spec provided.
 func CreateMachinePoolMachinesIfNotExists(ctx context.Context, params MachineParams) error {
+	if machinePoolProducerPaused(params) {
+		return nil
+	}
 
 	machineList, err := getMachinepoolMachines(ctx, params.Client, params.MachinePool, params.Cluster, params.Namespace)
 	if err != nil {
@@ -350,7 +355,9 @@ func CreateMachinePoolMachinesIfNotExists(ctx context.Context, params MachinePar
 
 	instanceNameToMachinePoolMachine := make(map[string]infrav2exp.OCIMachinePoolMachine)
 	for _, machine := range machineList.Items {
-		instanceNameToMachinePoolMachine[*machine.Spec.OCID] = machine
+		if machine.Spec.OCID != nil {
+			instanceNameToMachinePoolMachine[*machine.Spec.OCID] = machine
+		}
 	}
 
 	for _, specMachine := range params.SpecInfraMachines {
@@ -358,18 +365,27 @@ func CreateMachinePoolMachinesIfNotExists(ctx context.Context, params MachinePar
 			continue
 		}
 		if actualMachine, exists := instanceNameToMachinePoolMachine[*specMachine.Spec.OCID]; exists {
-			if !reflect.DeepEqual(specMachine.Status.Ready, actualMachine.Status.Ready) {
-				params.Logger.Info("Setting status of machine to active", "machine", actualMachine.Name)
-
-				helper, err := v1beta1patch.NewHelper(&actualMachine, params.Client)
-				if err != nil {
-					return err
-				}
-				actualMachine.Status.Ready = true
-				err = helper.Patch(ctx, &actualMachine)
-				if err != nil {
-					return err
-				}
+			if !actualMachine.DeletionTimestamp.IsZero() || annotations.HasPaused(&actualMachine) {
+				continue
+			}
+			helper, err := v1beta1patch.NewHelper(&actualMachine, params.Client)
+			if err != nil {
+				return err
+			}
+			actualMachine.Status.Ready = actualMachine.Status.Ready || specMachine.Status.Ready
+			memberStatus, memberReason := metav1.ConditionFalse, clusterv1.NotReadyReason
+			if specMachine.Status.Ready {
+				memberStatus, memberReason = metav1.ConditionTrue, clusterv1.ReadyReason
+			}
+			v1beta2conditions.Set(&actualMachine, metav1.Condition{
+				Type:   clusterv1.ReadyCondition,
+				Status: memberStatus,
+				Reason: memberReason,
+			})
+			if err := helper.Patch(ctx, &actualMachine, v1beta1patch.WithOwnedV1Beta2Conditions{
+				Conditions: []string{clusterv1.ReadyCondition},
+			}); err != nil {
+				return err
 			}
 			continue
 		}
@@ -401,12 +417,31 @@ func CreateMachinePoolMachinesIfNotExists(ctx context.Context, params MachinePar
 				MachineType:  specMachine.Spec.MachineType,
 			},
 		}
-		infraMachine.Status.Ready = specMachine.Status.Ready
 		controllerutil.AddFinalizer(infraMachine, infrav2exp.MachinePoolMachineFinalizer)
 		params.Logger.Info("Creating machinepool  machine", "machine", infraMachine.Name, "instanceName", specMachine.Name)
 
 		if err := params.Client.Create(ctx, infraMachine); err != nil {
 			return errors.Wrap(err, "failed to create machine")
+		}
+		// The API server strips status from Create when /status is enabled.
+		helper, err := v1beta1patch.NewHelper(infraMachine, params.Client)
+		if err != nil {
+			return err
+		}
+		infraMachine.Status.Ready = infraMachine.Status.Ready || specMachine.Status.Ready
+		memberStatus, memberReason := metav1.ConditionFalse, clusterv1.NotReadyReason
+		if specMachine.Status.Ready {
+			memberStatus, memberReason = metav1.ConditionTrue, clusterv1.ReadyReason
+		}
+		v1beta2conditions.Set(infraMachine, metav1.Condition{
+			Type:   clusterv1.ReadyCondition,
+			Status: memberStatus,
+			Reason: memberReason,
+		})
+		if err := helper.Patch(ctx, infraMachine, v1beta1patch.WithOwnedV1Beta2Conditions{
+			Conditions: []string{clusterv1.ReadyCondition},
+		}); err != nil {
+			return errors.Wrap(err, "failed to set machine status")
 		}
 	}
 
@@ -429,6 +464,9 @@ func getMachinepoolMachines(ctx context.Context, c client.Client, machinePool *c
 // DeleteOrphanedMachinePoolMachines deletes the machine pool machines which are not required. This method lists the
 // existing machines in the clusters and does a diff with the spec and deletes any machines which are missing from the spec.
 func DeleteOrphanedMachinePoolMachines(ctx context.Context, params MachineParams) error {
+	if machinePoolProducerPaused(params) {
+		return nil
+	}
 	machineList, err := getMachinepoolMachines(ctx, params.Client, params.MachinePool, params.Cluster, params.Namespace)
 	if err != nil {
 		return err
@@ -507,6 +545,7 @@ func getRegionInfoFromInstanceMetadataServiceProd() ([]byte, error) {
 // MachineParams specifies the params required to create or delete machinepool machines.
 // Infra machine pool specifed below refers to OCIManagedMachinePool/OCIMachinePool/OCIVirtualMachinePool
 type MachineParams struct {
+	InfraMachinePool     client.Object
 	Client               client.Client                      // the kubernetes client
 	MachinePool          *clusterv1.MachinePool             // the corresponding machinepool
 	Cluster              *clusterv1.Cluster                 // the corresponding cluster
@@ -516,4 +555,15 @@ type MachineParams struct {
 	Namespace            string                             // the namespace in which machinepool machine has to be created
 	SpecInfraMachines    []infrav2exp.OCIMachinePoolMachine // the spec of actual machines in the pool
 	Logger               *logr.Logger                       // the logger which has to be used
+}
+
+func machinePoolProducerPaused(params MachineParams) bool {
+	if params.Cluster != nil && params.Cluster.Spec.Paused != nil && *params.Cluster.Spec.Paused {
+		return true
+	}
+	if params.InfraMachinePool != nil {
+		_, paused := params.InfraMachinePool.GetAnnotations()["cluster.x-k8s.io/paused"]
+		return paused
+	}
+	return false
 }

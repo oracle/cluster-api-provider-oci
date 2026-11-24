@@ -30,6 +30,7 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -38,6 +39,7 @@ import (
 	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	v1beta1conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions"
+	v1beta2conditions "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/conditions/v1beta2"
 	v1beta1patch "sigs.k8s.io/cluster-api/util/deprecated/v1beta1/patch"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -83,6 +85,7 @@ func (r *OCIManagedClusterControlPlaneReconciler) Reconcile(ctx context.Context,
 		}
 		return ctrl.Result{}, err
 	}
+
 	// Fetch the Cluster.
 	cluster, err := util.GetOwnerCluster(ctx, r.Client, controlPlane.ObjectMeta)
 	if err != nil {
@@ -143,8 +146,56 @@ func (r *OCIManagedClusterControlPlaneReconciler) Reconcile(ctx context.Context,
 	defer func() {
 		logger.Info("Closing control plane scope")
 		v1beta1conditions.SetSummary(controlPlane)
+		if !controlPlane.GetDeletionTimestamp().IsZero() {
+			v1beta2conditions.Set(controlPlane, metav1.Condition{
+				Type:   clusterv1.DeletingCondition,
+				Status: metav1.ConditionTrue,
+				Reason: clusterv1.DeletingReason,
+			})
+			v1beta2conditions.Set(controlPlane, metav1.Condition{
+				Type:    clusterv1.AvailableCondition,
+				Status:  metav1.ConditionFalse,
+				Reason:  clusterv1.DeletingReason,
+				Message: "Infrastructure is being deleted",
+			})
+		} else {
+			v1beta2conditions.Set(controlPlane, metav1.Condition{
+				Type:   clusterv1.DeletingCondition,
+				Status: metav1.ConditionFalse,
+				Reason: clusterv1.NotDeletingReason,
+			})
+			if reterr != nil {
+				v1beta2conditions.Set(controlPlane, metav1.Condition{
+					Type:    clusterv1.AvailableCondition,
+					Status:  metav1.ConditionFalse,
+					Reason:  infrastructurev1beta2.ReconcileFailedReason,
+					Message: "Please check controller logs for errors",
+				})
+			} else if !controlPlane.Status.Ready || !controlPlane.Status.Initialized {
+				v1beta2conditions.Set(controlPlane, metav1.Condition{
+					Type:    clusterv1.AvailableCondition,
+					Status:  metav1.ConditionFalse,
+					Reason:  infrastructurev1beta2.ControlPlaneNotInitializedReason,
+					Message: "Waiting for the managed endpoint and kubeconfig",
+				})
+			} else {
+				componentConditions := []string{string(infrastructurev1beta2.ControlPlaneReadyCondition)}
+				if err := v1beta2conditions.SetSummaryCondition(controlPlane, controlPlane, clusterv1.AvailableCondition, v1beta2conditions.ForConditionTypes(componentConditions)); err != nil {
+					v1beta2conditions.Set(controlPlane, metav1.Condition{
+						Type:    clusterv1.AvailableCondition,
+						Status:  metav1.ConditionUnknown,
+						Reason:  infrastructurev1beta2.NotReconciledReason,
+						Message: err.Error(),
+					})
+				}
+			}
+		}
 
-		if err := helper.Patch(ctx, controlPlane); err != nil && reterr == nil {
+		if err := helper.Patch(ctx, controlPlane, v1beta1patch.WithOwnedConditions{
+			Conditions: []clusterv1beta1.ConditionType{clusterv1beta1.ReadyCondition, infrastructurev1beta2.ControlPlaneReadyCondition},
+		}, v1beta1patch.WithOwnedV1Beta2Conditions{
+			Conditions: []string{clusterv1.AvailableCondition, clusterv1.DeletingCondition, string(infrastructurev1beta2.ControlPlaneReadyCondition)},
+		}); err != nil && reterr == nil {
 			reterr = err
 		}
 	}()
@@ -195,12 +246,22 @@ func (r *OCIManagedClusterControlPlaneReconciler) reconcile(ctx context.Context,
 	case containerengine.ClusterLifecycleStateCreating:
 		controlPlaneScope.Info("Managed control plane is pending")
 		v1beta1conditions.MarkFalse(controlPlane, infrastructurev1beta2.ControlPlaneReadyCondition, infrastructurev1beta2.ControlPlaneNotReadyReason, clusterv1beta1.ConditionSeverityInfo, "")
+		v1beta2conditions.Set(controlPlane, metav1.Condition{
+			Type:   string(infrastructurev1beta2.ControlPlaneReadyCondition),
+			Status: metav1.ConditionFalse,
+			Reason: infrastructurev1beta2.ControlPlaneNotReadyReason,
+		})
 		return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 	case containerengine.ClusterLifecycleStateUpdating:
 		controlPlaneScope.Info("Managed control plane is updating")
 		r.Recorder.Eventf(controlPlane, corev1.EventTypeNormal, "ControlPlaneUpdating",
 			"Managed control plane is in updating state")
 		v1beta1conditions.MarkTrue(controlPlane, infrastructurev1beta2.ControlPlaneReadyCondition)
+		v1beta2conditions.Set(controlPlane, metav1.Condition{
+			Type:   string(infrastructurev1beta2.ControlPlaneReadyCondition),
+			Status: metav1.ConditionTrue,
+			Reason: clusterv1.ReadyReason,
+		})
 		return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 	case containerengine.ClusterLifecycleStateActive:
 		controlPlaneScope.Info("Managed control plane is active", "endpoints", okeControlPlane.Endpoints)
@@ -220,6 +281,11 @@ func (r *OCIManagedClusterControlPlaneReconciler) reconcile(ctx context.Context,
 		r.Recorder.Eventf(controlPlane, corev1.EventTypeNormal, "ControlPlaneReady",
 			"Managed control plane is in ready state")
 		v1beta1conditions.MarkTrue(controlPlane, infrastructurev1beta2.ControlPlaneReadyCondition)
+		v1beta2conditions.Set(controlPlane, metav1.Condition{
+			Type:   string(infrastructurev1beta2.ControlPlaneReadyCondition),
+			Status: metav1.ConditionTrue,
+			Reason: clusterv1.ReadyReason,
+		})
 
 		controlPlaneScope.OCIManagedControlPlane.Status.Ready = true
 		err := controlPlaneScope.ReconcileKubeconfig(ctx, okeControlPlane)
@@ -244,6 +310,11 @@ func (r *OCIManagedClusterControlPlaneReconciler) reconcile(ctx context.Context,
 		return reconcile.Result{RequeueAfter: 180 * time.Second}, nil
 	default:
 		v1beta1conditions.MarkFalse(controlPlane, infrastructurev1beta2.ControlPlaneReadyCondition, infrastructurev1beta2.ControlPlaneProvisionFailedReason, clusterv1beta1.ConditionSeverityError, "")
+		v1beta2conditions.Set(controlPlane, metav1.Condition{
+			Type:   string(infrastructurev1beta2.ControlPlaneReadyCondition),
+			Status: metav1.ConditionFalse,
+			Reason: infrastructurev1beta2.ControlPlaneProvisionFailedReason,
+		})
 		r.Recorder.Eventf(controlPlane, corev1.EventTypeWarning, "ReconcileError",
 			"Managed control plane has invalid lifecycle state %s", okeControlPlane.LifecycleState)
 		return reconcile.Result{}, errors.New(fmt.Sprintf("Control plane has invalid lifecycle state %s", okeControlPlane.LifecycleState))
@@ -336,6 +407,11 @@ func (r *OCIManagedClusterControlPlaneReconciler) reconcileDelete(ctx context.Co
 			controllerutil.RemoveFinalizer(controlPlaneScope.OCIManagedControlPlane, infrastructurev1beta2.ControlPlaneFinalizer)
 			controlPlaneScope.Info("Cluster is not found, may have been deleted")
 			v1beta1conditions.MarkTrue(controlPlaneScope.OCIManagedControlPlane, infrastructurev1beta2.ControlPlaneNotFoundReason)
+			v1beta2conditions.Set(controlPlaneScope.OCIManagedControlPlane, metav1.Condition{
+				Type:   string(infrastructurev1beta2.ControlPlaneReadyCondition),
+				Status: metav1.ConditionFalse,
+				Reason: infrastructurev1beta2.ControlPlaneNotFoundReason,
+			})
 			controlPlaneScope.OCIManagedControlPlane.Status.Ready = false
 			return reconcile.Result{}, nil
 		} else {
@@ -355,11 +431,21 @@ func (r *OCIManagedClusterControlPlaneReconciler) reconcileDelete(ctx context.Co
 	case containerengine.ClusterLifecycleStateDeleting:
 		controlPlane.Status.Ready = false
 		v1beta1conditions.MarkFalse(controlPlane, infrastructurev1beta2.ControlPlaneReadyCondition, infrastructurev1beta2.ControlPlaneDeletionInProgress, clusterv1beta1.ConditionSeverityWarning, "")
+		v1beta2conditions.Set(controlPlane, metav1.Condition{
+			Type:   string(infrastructurev1beta2.ControlPlaneReadyCondition),
+			Status: metav1.ConditionFalse,
+			Reason: infrastructurev1beta2.ControlPlaneDeletionInProgress,
+		})
 		r.Recorder.Eventf(controlPlane, corev1.EventTypeWarning, "DeletionInProgress", "Managed control plane deletion in progress")
 		controlPlaneScope.Info("Managed control plane is deleting")
 		return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 	case containerengine.ClusterLifecycleStateDeleted:
 		v1beta1conditions.MarkFalse(controlPlane, infrastructurev1beta2.ControlPlaneReadyCondition, infrastructurev1beta2.ControlPlaneDeletedReason, clusterv1beta1.ConditionSeverityWarning, "")
+		v1beta2conditions.Set(controlPlane, metav1.Condition{
+			Type:   string(infrastructurev1beta2.ControlPlaneReadyCondition),
+			Status: metav1.ConditionFalse,
+			Reason: infrastructurev1beta2.ControlPlaneDeletedReason,
+		})
 		controllerutil.RemoveFinalizer(controlPlane, infrastructurev1beta2.ControlPlaneFinalizer)
 		controlPlaneScope.Info("Managed control plane is deleted")
 		return reconcile.Result{}, nil
@@ -369,6 +455,11 @@ func (r *OCIManagedClusterControlPlaneReconciler) reconcileDelete(ctx context.Co
 			return ctrl.Result{}, errors.Wrapf(err, "error deleting cluster %s", controlPlaneScope.GetClusterName())
 		}
 		v1beta1conditions.MarkFalse(controlPlane, infrastructurev1beta2.ControlPlaneReadyCondition, infrastructurev1beta2.ControlPlaneDeletionInProgress, clusterv1beta1.ConditionSeverityWarning, "")
+		v1beta2conditions.Set(controlPlane, metav1.Condition{
+			Type:   string(infrastructurev1beta2.ControlPlaneReadyCondition),
+			Status: metav1.ConditionFalse,
+			Reason: infrastructurev1beta2.ControlPlaneDeletionInProgress,
+		})
 		return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 	}
 }

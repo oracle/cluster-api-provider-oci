@@ -77,8 +77,7 @@ func TestManagerAndAdmissionWebhooks(t *testing.T) {
 		return false
 	}).WithTimeout(10 * time.Second).WithPolling(100 * time.Millisecond).Should(BeTrue())
 
-	storedControlPlane.Status.Ready = true
-	g.Expect(testEnvironment.Status().Update(testContext, storedControlPlane)).To(Succeed())
+	setLegacyReady(t, storedControlPlane, true)
 	g.Eventually(func(g Gomega) {
 		updated := &infrastructurev1beta2.OCIManagedControlPlane{}
 		g.Expect(testEnvironment.GetAPIReader().Get(testContext, key, updated)).To(Succeed())
