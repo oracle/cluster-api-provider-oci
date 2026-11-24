@@ -24,6 +24,7 @@ import (
 	"github.com/golang/mock/gomock"
 	infrastructurev1beta2 "github.com/oracle/cluster-api-provider-oci/api/v1beta2"
 	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil"
+	"github.com/oracle/cluster-api-provider-oci/cloud/ociutil/ptr"
 	"github.com/oracle/cluster-api-provider-oci/cloud/services/vcn/mock_vcn"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
@@ -32,6 +33,41 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
+
+func TestClusterScope_CreateSubnetIPv6(t *testing.T) {
+	for _, tt := range []struct {
+		name, vcnCIDR, hextet, want string
+	}{
+		{"compressed fourth group", "2603:c020:1f::/56", "01", "2603:c020:1f:1::/64"},
+		{"nonzero fourth group", "2603:c020:2a:8400::/56", "01", "2603:c020:2a:8401::/64"},
+		{"highest subnet number", "2603:c020:2a:8400::/56", "ff", "2603:c020:2a:84ff::/64"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			logger := log.FromContext(ctx)
+			vcnClient := mock_vcn.NewMockClient(gomock.NewController(t))
+			scope := &ClusterScope{
+				VCNClient:          vcnClient,
+				OCIClusterAccessor: OCISelfManagedCluster{&infrastructurev1beta2.OCICluster{}},
+				Logger:             &logger,
+			}
+			vcnClient.EXPECT().GetVcn(gomock.Any(), gomock.Any()).Return(core.GetVcnResponse{
+				Vcn: core.Vcn{Ipv6CidrBlocks: []string{tt.vcnCIDR}},
+			}, nil)
+			vcnClient.EXPECT().CreateSubnet(gomock.Any(), gomock.Any()).DoAndReturn(
+				func(_ context.Context, req core.CreateSubnetRequest) (core.CreateSubnetResponse, error) {
+					if got := ptr.ToString(req.Ipv6CidrBlock); got != tt.want {
+						t.Errorf("CreateSubnet IPv6 CIDR = %q, want %q", got, tt.want)
+					}
+					return core.CreateSubnetResponse{Subnet: core.Subnet{Id: common.String("subnet")}}, nil
+				})
+			_, err := scope.CreateSubnet(ctx, infrastructurev1beta2.Subnet{Ipv6CidrBlockHextet: &tt.hextet})
+			if err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
 
 func TestClusterScope_ReconcileSubnet(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
@@ -174,14 +210,6 @@ func TestClusterScope_ReconcileSubnet(t *testing.T) {
 			},
 			wantErr: false,
 			testSpecificSetup: func(clusterScope *ClusterScope, nlbClient *mock_vcn.MockClient) {
-				vcnClient.EXPECT().GetVcn(gomock.Any(), gomock.Eq(core.GetVcnRequest{
-					VcnId: common.String("vcn"),
-				})).
-					Return(core.GetVcnResponse{
-						Vcn: core.Vcn{
-							Id: common.String("vcn"),
-						},
-					}, nil).Times(2)
 				vcnClient.EXPECT().ListSubnets(gomock.Any(), gomock.Eq(core.ListSubnetsRequest{
 					CompartmentId: common.String("foo"),
 					DisplayName:   common.String("creation_needed"),
