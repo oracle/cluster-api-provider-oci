@@ -182,10 +182,6 @@ var _ = Describe("Workload cluster creation", func() {
 
 	It("Oracle Linux - With 1 control-plane nodes and 1 worker nodes [DailyTests]", func() {
 		clusterName = getClusterName(clusterNamePrefix, "oracle-linux")
-		kubernetesVersion := e2eConfig.GetVariableOrEmpty("KUBERNETES_VERSION_ORACLE_LINUX")
-		if kubernetesVersion == "" {
-			kubernetesVersion = e2eConfig.MustGetVariable(capi_e2e.KubernetesVersion)
-		}
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
 			ConfigCluster: clusterctl.ConfigClusterInput{
@@ -196,7 +192,7 @@ var _ = Describe("Workload cluster creation", func() {
 				Flavor:                   "oracle-linux",
 				Namespace:                namespace.Name,
 				ClusterName:              clusterName,
-				KubernetesVersion:        kubernetesVersion,
+				KubernetesVersion:        e2eConfig.MustGetVariable(capi_e2e.KubernetesVersion),
 				ControlPlaneMachineCount: pointer.Int64(1),
 				WorkerMachineCount:       pointer.Int64(1),
 			},
@@ -756,6 +752,7 @@ var _ = Describe("Workload cluster creation", func() {
 	})
 
 	It("Machine Pool - Upgrade [DailyTests]", func() {
+		useUpgradeSourceImage()
 		Expect(e2eConfig.Variables).To(HaveKey(capi_e2e.KubernetesVersionUpgradeFrom))
 		Expect(e2eConfig.Variables).To(HaveKey(capi_e2e.KubernetesVersionUpgradeTo))
 

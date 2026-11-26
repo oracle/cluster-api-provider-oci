@@ -103,6 +103,7 @@ var _ = Describe("Cluster Upgrade Tests", func() {
 	})
 
 	It("Upgrade of control-plane nodes and worker nodes [DailyTests]", func() {
+		useUpgradeSourceImage()
 		clusterName = getClusterName(clusterNamePrefix, "upgrade")
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: bootstrapClusterProxy,
@@ -179,6 +180,12 @@ var _ = Describe("Cluster Upgrade Tests", func() {
 		}
 	})
 })
+
+func useUpgradeSourceImage() {
+	if imageID := os.Getenv("OCI_UPGRADE_SOURCE_IMAGE_ID"); imageID != "" {
+		GinkgoT().Setenv("OCI_IMAGE_ID", imageID)
+	}
+}
 
 func makeOCIMachineTemplate(namespace, name string) *infrastructurev1beta1.OCIMachineTemplate {
 	ociMachine := &infrastructurev1beta1.OCIMachineTemplate{

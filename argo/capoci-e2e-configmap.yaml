@@ -23,5 +23,8 @@ data:
   oci_alternative_region_image_id: "ocid1.image.oc1..example"
   oci_managed_node_image_id: "ocid1.image.oc1..example"
 
+  # OPTIONAL: image with the upgrade-from Kubernetes version; defaults to oci_image_id.
+  oci_upgrade_source_image_id: ""
+
   # OPTIONAL: registry used by the workflow (container overrides the parameter if this is set)
   registry: "ghcr.io/oracle"

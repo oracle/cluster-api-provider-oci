@@ -53,9 +53,10 @@ make test-integration
    ```bash
   export OCI_COMPARTMENT_ID=<>
   export OCI_IMAGE_ID=<>
+  # Set this to the image with the upgrade-from Kubernetes version; defaults to OCI_IMAGE_ID.
+  export OCI_UPGRADE_SOURCE_IMAGE_ID=<The image to start upgrade tests>
   export OCI_UPGRADE_IMAGE_ID=<The image to be upgraded to in the upgrade test, image with newer verions of kubernetes)>
   export OCI_ORACLE_LINUX_IMAGE_ID=<The Oracle Linux Image>
-  # For an alternate Oracle Linux image, export KUBERNETES_VERSION_ORACLE_LINUX to match its installed Kubernetes version.
   export OCI_MANAGED_NODE_IMAGE_ID=<The image to be used for provisioning managed nodepools>
    ```
 # Execute the test script

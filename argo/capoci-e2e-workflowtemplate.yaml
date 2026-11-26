@@ -14,8 +14,9 @@
 #     - oci_upgrade_image_id
 #     - oci_alternative_region_image_id
 #     - oci_managed_node_image_id
-#   Additional key (optional):
+#   Additional keys (optional):
 #     - registry
+#     - oci_upgrade_source_image_id (image with the upgrade-from Kubernetes version)
 #
 # Example to create the ConfigMap (adjust values as appropriate):
 #   kubectl apply -f argo/capoci-e2e-configmap.yaml
@@ -233,6 +234,12 @@ spec:
             value: "{{workflow.parameters.oci_alternative_region_image_id}}"
 
           # Optional envs used by templates/config
+          - name: OCI_UPGRADE_SOURCE_IMAGE_ID
+            valueFrom:
+              configMapKeyRef:
+                name: argo-capoci-e2e-config
+                key: oci_upgrade_source_image_id
+                optional: true
           - name: OCI_WINDOWS_IMAGE_ID
             value: "{{workflow.parameters.oci_windows_image_id}}"
           - name: OCI_SSH_KEY
