@@ -752,6 +752,7 @@ var _ = Describe("Workload cluster creation", func() {
 	})
 
 	It("Machine Pool - Upgrade [DailyTests]", func() {
+		useUpgradeSourceImage()
 		Expect(e2eConfig.Variables).To(HaveKey(capi_e2e.KubernetesVersionUpgradeFrom))
 		Expect(e2eConfig.Variables).To(HaveKey(capi_e2e.KubernetesVersionUpgradeTo))
 

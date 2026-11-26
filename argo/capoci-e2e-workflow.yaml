@@ -20,6 +20,7 @@
 # Notes:
 # - USE_INSTANCE_PRINCIPAL_B64 commonly needs "dHJ1ZQ==" for true, "ZmFsc2U=" for false (base64).
 # - If OCI_SSH_KEY is omitted, the script will generate a temporary key.
+# - Set oci_upgrade_source_image_id to the image with the upgrade-from Kubernetes version.
 # - REGISTRY defaults to ghcr.io/oracle; override if pushing to your org's registry.
 # - git_ref defaults to main
 # - git_repo defaults to https://github.com/oracle/cluster-api-provider-oci.git
@@ -67,6 +68,8 @@ spec:
         value: ""
 
       # Optional image IDs
+      - name: oci_upgrade_source_image_id
+        value: ""
       - name: oci_windows_image_id
         value: ""
 
@@ -197,6 +200,8 @@ spec:
             value: "{{workflow.parameters.oci_alternative_region_image_id}}"
 
           # Optional envs used by templates/config
+          - name: OCI_UPGRADE_SOURCE_IMAGE_ID
+            value: "{{workflow.parameters.oci_upgrade_source_image_id}}"
           - name: OCI_WINDOWS_IMAGE_ID
             value: "{{workflow.parameters.oci_windows_image_id}}"
           - name: OCI_SSH_KEY
